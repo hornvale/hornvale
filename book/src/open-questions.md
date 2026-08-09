@@ -74,6 +74,147 @@ property of **plans written as literal code listings**, which get reviewed for
 faithful transcription and not for whether the predicate they contain is the
 one the spec asked for.
 
+A fourth campaign puts the sharpening where the *repair* is. The Collation
+(2026-08-06) produced the same shape from its own plan text — a spec promising
+one test asserting a generated matrix's per-column figures equal the per-corpus
+reports' own, and a plan listing that asserted only that the rendered document
+*contains* each corpus id and each denominator, which any cell reading
+`(217/409)` satisfies. Review caught that. The replacement was a whole-file
+byte comparison of the matrix against its own committed copy, **proved to fire
+by a mutation**, and it passed a second review on that proof — while still
+being unable to fail for the reason the spec named, because the two figures
+came from duplicated tally code and rebaselining accepts both documents in the
+same pass. The whole-branch review caught the second one, and settled it by
+running the finding's own scenario: perturb one renderer, rebaseline, and watch
+the byte check go green while a cross-derivation test stays red. So making a
+check fail on command is necessary and is **not** sufficient: the mutation has
+to be the failure the check was promised against, and a check written to
+replace one that could not fire inherits the burden of proof rather than the
+credit.
+
+A fifth campaign closes a corner instead of finding a new instance of one.
+The Assay (2026-08-07) is a worked instance of decision 0097's middle
+corner — the check that cries wolf, sitting beside the check that cannot
+fire (this chapter's original floor) and the drift check with no anchor
+(The Named). Three gate-resident tests were sweeping up to 200 worlds each
+to answer an existence claim — does a live prediction crisis occur
+*somewhere*, does every `Hydro` variant appear *somewhere*, does some world
+win every toponymic concept — the exact shape 0097 names as deciding on
+whichever single draw happens to sit nearest a hunt's break condition.
+Moving them onto the census's 1,000-world fixture, as a coverage table and
+a measured rate rather than a boolean the next campaign's true change could
+flip, is what 0097 §2 prescribed and had not yet been built. The mechanism
+this campaign shipped to make that safe — a tripwire that rebuilds three
+fixed seeds every commit and compares them against the fixture — was itself
+proven by mutation before anything moved onto it, per this chapter's own
+standing practice: a corrupted fixture cell turns it red, naming the metric,
+the seed, and both values; restoring the cell turns it green again. The
+same campaign also produced a sixth instance of a lesson this chapter has
+tracked under other names since The Timekeeper — a claim of absence
+asserted from an incomplete search, this time by the controller itself,
+mid-sentence while cataloguing five other agents making the identical
+error, caught only because the dispatch had told the correcting agent to
+verify rather than comply. See `docs/retrospectives/the-reassay.md` for the
+full account, including a naming collision with an unrelated, already-shipped
+campaign that shares this one's title — itself one more claim of absence
+("the name is free") nobody checked.
+
+A sixth campaign adds a corner none of the five describes. The Digest
+(2026-08-08) set out to codify what the project holds about itself, and its
+central task was halted early on the conclusion that the intended finding did
+not exist: a rule forbidding numbered identifiers in the idea registry was
+enforced by a gate check that passed, against a frozen fixture that the live
+corpus matched exactly, with zero identifiers outside the list. Every
+observation was correct. The conclusion was wrong. The fixture was written
+seventeen days *after* the rule took effect, and in that interval the corpus
+grew from 171 numbered identifiers to 403 — so the freeze grandfathered 232
+violations and the check has been certifying conformance to them ever since.
+This is not a check that cannot fire, nor one without an anchor, nor one whose
+generator and verifier are never paired: it fires, it is anchored, it is
+paired, and it is green for the right reasons. The defect is that its
+**baseline was cut after the damage**, which is invisible in current state by
+construction and recoverable only from history. So the floor gains a question
+to ask of any conforms-to-a-frozen-list check: *when was the list written, and
+what was already true when it was?* The campaign's delta view answers it by
+reading git rather than the working tree, which is the only place the answer
+lives. The retraction itself is worth recording — the wrong conclusion was
+reached twice in one day by the same reasoning, first from a 1,055-commit-stale
+timing baseline, and was overturned by a human disagreeing with an artifact
+that looked authoritative.
+
+Two campaigns reached this thread independently on the same day, from opposite
+ends of it — one from a check that could not fire, one from a check that fired
+wrongly. That they collided here, in a merge, is itself the strongest evidence
+the chapter offers about how common the family is.
+
+A seventh campaign finds the family in a place none of the six had looked. The
+Domesday (2026-08-08) built a generated survey of the thousand-world census
+whose whole purpose is finding weaknesses, and produced three unenforced guards
+*inside the detector module itself*: a rendered sentence whose stated rule was
+false as worded, a hand-frozen roster of measured crates with no live guard
+beside a partner roster that had one, and a boundary test that re-implemented
+the membership filter in its own body instead of calling the code it tested, so
+emptying the real function left it green. A fourth, caught earlier, was a quine
+— a test asserting the survey never builds a world, implemented by scanning its
+own source for forbidden identifiers, which were present in that file by
+definition. All four were found by an independent reimplementation that *ran*
+the system rather than reading it. Knowing this failure mode confers no immunity
+to it, which is now demonstrated rather than suspected.
+
+The same campaign extends the family beyond checks entirely, and that is the new
+corner. A **metric** can be unable to fire. The chorus sky-calibration metric is
+a Kendall tau over [−1, +1] that reads exactly −1.000 on all one thousand
+worlds, because it correlates a culture's sky capability against its sky-domain
+distortion — and distortion in that domain is the fraction of sky facts lost,
+while a sky fact is lost precisely when capability falls below the fact's
+threshold. The two series are coupled through the same comparison, so every
+strictly-comparable pair is discordant and the coefficient saturates by
+construction. It is anchored, paired, drift-checked, current, and read by a
+preregistered study — and it carries no information about any world. So the
+floor gains a second question, asked of measurements rather than of checks:
+*can this metric take a different value on a different world, and if not, what
+is the study reading it actually scoring?*
+
+An eighth campaign, landing the same day, moves the finding from the check to the *order of its
+repair*. The Assize (2026-08-08) inherited a queued task reading "mechanize the
+prose discriminator" — the cost batteries' rule for telling a contended run
+from a regression, written in a module doc and applied by hand. Measured
+against the run it was written for, the rule gives the **wrong answer**:
+`genesis` at 2.09x its recorded basis with four control metrics at 0.96-1.29x
+reads, under "a real regression is LOCAL", as a regression — while a quiet box
+builds the same world in 3948 ms against a 13000 ms ceiling. The rule fails
+because the five metrics have different resource profiles, only one of them
+sculpting terrain, so a saturated runner starves exactly one and uniformity was
+never the right test. Executing the task as written would have promoted a wrong
+predicate from prose into code, where it would carry the authority of having
+been computed. **A criterion earns mechanization by being correct, not by being
+written down**; and the corrected version paid at once, finding a real localised
+cost increase on its first run and bisecting it to a single commit while four
+named sibling candidates moved it by zero.
+
+The same campaign supplies the corner's other half, from its own repair. The
+mechanized verdict then gave a confident wrong answer on a *second* battery,
+because the two files' bases had been measured on different machines and the
+heavy tier runs on only one of them — a ratio across two machines measures the
+machines. The fix is the shape this chapter keeps arriving at: a check that
+**states its own applicability** and declines rather than computing, printing
+"bases were measured on aarch64-10, this is x86_64-40" and suppressing only the
+ratio-derived claim while the raw milliseconds stand.
+
+Two smaller instances from the same campaign are worth the floor's attention
+because neither is a test. A committed, published artifact carried a headline
+line reading `0 migration events (floor 5). PASS` — a verdict string never
+wired to any check at all, which is this chapter's original floor in its purest
+form (a check that cannot fire, with no check behind it) and which stayed
+invisible for as long as the number it reported was healthy. And a rank-order
+bound adopted to replace a rotted threshold turned out to be **unfalsifiable by
+the only two mutation controls its file carries** — the correlation moves 0.831
+to 0.127 under one of them and never crosses zero. It was retained, relabelled
+in place as a directional record rather than a proven guard, and the tempting
+threshold that *would* have made it fire was refused because it would have been
+chosen for firing. Disclosing an unfalsifiable check beats quietly shipping one,
+which is this chapter's practice working rather than a new failure.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -88,12 +229,38 @@ confidence tier for the same structural reason: each migration's central
 claim, *this changed nothing*, was scored by the world itself — every
 committed artifact regenerated byte-identical — rather than by anyone's
 judgment ([The Datum](./chronicle/the-datum.md),
-[Temperature](./chronicle/temperature.md)). The same substrate now scores its
+[Temperature](./chronicle/temperature.md)).
+
+That confidence is well placed and slightly too narrow, and
+[The Benchmark](./chronicle/the-benchmark.md) says where. "This changed
+nothing" is a strong claim about a migration, scoreable by the world — and it
+is silent about whether the migration was *complete*. The elevation wave
+introduced `ReferenceElevation` and left its sea-level-relative sibling
+unbuilt on a stated condition; the condition was later met, nothing watched
+for it, and the gap held a real defect that banded three quarters of a world's
+land into a marine relief class and published it. A vocabulary can be
+byte-identically correct at every step and still be missing the term that
+would have made a wrong reading unsayable. So the tier is right about what it
+measures and should not be read as covering coverage: the substrate scores
+*changes* against itself honestly, and does not yet score its own gaps.
+
+The same substrate now scores its
 own *completeness*: [The Correspondence](./chronicle/the-correspondence.md) made
 every modeled concept account for its manifestation across the lexical,
 perceptual, and cognitive ledgers or record a typed void, so a drift-checked
 trial balance — not a reviewer's memory — reports what the world models but
 cannot yet name, perceive, or think.
+
+That instrument sat at zero for its whole life until
+[The Vernacular](./chronicle/the-vernacular.md) put the first entries in it: nine
+concepts declaring, in the registry rather than in a comment, that a star's
+spectral class is real and that no culture here can name it. The sharpening is
+worth the tier it sits at, because it is about the *instrument* and not the
+reading. A trial balance that can report a class and never has is not yet known
+to work — and this one, once exercised, immediately found that its own claim
+evaporated across a save boundary and that the language layer was minting words
+for concepts the registry had just declared unnameable. Confidence here rests on
+a ledger having been *made to answer*, not on its having been built.
 
 **The divergence method** — once the year-one research bet, now the project's
 own instrument of proof. Generate two worlds differing in a single pin, hold
@@ -111,7 +278,59 @@ authored parameter vectors grew different languages and religions, verified by
 a 500/500 null control and a blind-attribution metric pinned honest at 0.875
 ([The Meeting](./chronicle/18-the-meeting.md)). This is no longer *the actual
 research*; it is how the research checks itself, and it is applied afresh to
-every new layer.
+every new layer. [The Pigment](./chronicle/the-pigment.md) applied it to
+colour and got the sharpest instance yet, because the observer parameter is a
+single scalar: two peoples differing only in night vision descend Berlin &
+Kay's ladder to different depths, so the same iron-rich outcrop under the
+same light is *yellow* to a goblin and *red* to a kobold — neither holding
+the word *brown* that is actually nearest. Self-scorable, and already scored:
+the census pins mean hue-depth at 4 and 2 respectively, and flattening the
+derivation reddens the claim.
+
+*Sharpened by [The Beholding](./chronicle/the-beholding.md) (2026-08-07),
+which pushed the same single scalar past the word and into the picture.* Two
+observers derived from nothing but night vision now emit different pixels
+from the same rock in the same light, and the pixels are captioned with what
+the projection dropped. What makes this a sharpening rather than a repeat is
+the shape of its central claim: the prediction that a dichromat separates red
+from green less than a trichromat does was frozen **false**, on a measurement
+taken before any code existed, with a standing instruction to ship the null.
+It came true — 0.0541 against 0.0680 — without a single constant moving,
+because the falsification had correctly diagnosed the *metric* rather than
+the model. A chromaticity that counts an achromatic channel makes every eye
+with a rod a trichromat. That is the divergence method turned on its own
+instrument, which is a stronger result than another confirmation would have
+been, and it lowers rather than raises the confidence owed to any
+observer-varying claim whose metric has not itself been probed.
+
+*[The Lantern](./chronicle/the-lantern.md) (2026-08-08) paid that debt on the
+very next claim, and the payment is the reason the tier holds.* It set out to
+show that a rod-dominant eye sees where a human does not, and the claim held at
+the model level — at an illuminance of `1.6e-6` a human's emitted colour is
+`[0, 0, 0]` and a kobold's is not, with the kobold's three slots **equal**,
+which is what proves the pixel came from the achromatic path rather than from a
+cone channel that happened to survive. But two constants in that term turned out
+to be load-bearing, and both are the metric-not-model failure this bet was just
+warned about. Normalizing each observer's rod by *its own* curve would have
+divided a species' night vision straight back out and rendered a kobold
+pixel-for-pixel identical to a human — the divergence computed correctly and
+attributed to nothing. And at unit gain the rod's image falls below one screen
+count *everywhere in its own regime*, so the term would have shipped green and
+changed no pixel anywhere. Both were caught by probing the instrument rather
+than by reading the result, which is the practice the previous paragraph asked
+for; neither was visible in a passing test. The bet stays where it is, and what
+this adds is a second worked instance of the same discipline rather than a
+second confirmation.
+
+The same campaign supplies the sharper caution about *populations*. Its material
+claim — that two settlements on different bedrock produce visibly different
+walls — held across 1505 settlements over eight seeds, at a median of 41 `u8`
+steps out of 255. The tenth percentile is 1, and every sampled flagship
+settlement stands on the same rock class, plausibly because the biggest
+settlements go where the rivers are ([The Confluence](./chronicle/the-confluence.md)).
+So the population varies and the head of it does not, and a possession always
+starts at the head. A divergence claim measured over a population is not
+automatically a claim about what anyone will see.
 
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no
@@ -146,6 +365,238 @@ measured, on a people authored for desert that has no desert at all. The
 gradient claim and the conservation guarantee are untouched; what is now known
 to be beyond the prior is *placing a species where its traits say it belongs*.
 
+*Partially re-scored up by [The Warren](./chronicle/the-warren.md), which
+supplies the first counterexample to the "can only modulate, never select"
+half.* The reasoning above is sound about the **condition product** —
+four tolerances multiplied together, each bounded in the unit interval, cannot
+overcome a supply term spanning orders of magnitude. But it silently assumes
+that a species' traits reach capacity *only* through that product. A realm does
+not. A kind that declares itself subterranean is scored against the chamber
+rather than the hillside **and multiplied by whether the cell holds a cave at
+all** — a hard zero, not a bounded tolerance, on eighty-eight percent of land.
+Measured over twenty-five worlds: 390,813 land cells with non-zero fit fall to
+46,993, and no supply magnitude anywhere recovers the excluded ones.
+
+So the sentence needs a qualifier rather than a reversal. *An authored
+tolerance* can only modulate. *An authored realm* selects, absolutely, and is
+the first mechanism in the model that places a species where its traits say it
+belongs by excluding everywhere else. The scope of the win is narrow and worth
+stating: it is one binary axis, carried by two fauna kinds, and it does nothing
+for the desert-authored people that started this paragraph — a surface kind
+still has no gate to be excluded by. Whether that generalises past caves is
+open, and is the first thing a campaign placing a *people* underground will
+find out.
+
+*Re-scored down by [The Keeping](./chronicle/the-keeping.md), which contradicts
+the sentence immediately above.* The gradient claim is **not** untouched — not
+because the gradient is wrong, but because the measurement offered for it could
+not have disconfirmed it. The polar term of that ratio is exactly zero often
+enough that the metric floors it at one percent of a baseline unit to avoid a
+division by zero, so a ratio computed against a floored zero is largely a
+statement about the floor. The figure is recorded in the metric's own
+documentation, one line from the claim it undermines. Two further problems ride
+along: roughly one world in twenty is tidally locked, and a locked world's warmth
+is organised around the point beneath its star rather than by latitude, so a
+tropical-versus-polar comparison on those worlds samples hot and cold ground
+alike and reports almost no gradient — they sit inside the pinned average, in
+exactly the failure mode this section claims clearance from. And the productivity
+field is not the published model its own documentation cites: that model rises
+monotonically with temperature and never reaches zero, while the implementation
+is a symmetric tent that reaches zero a little above freezing, which is why no
+world is inhabited cold.
+
+What survives untouched is the **conservation** guarantee — the sum of every
+settlement's population equalling the sum of the field is by-construction
+arithmetic, not a measured bet, and nothing here touches it. What is demoted is
+the *evidential standing* of the gradient claim, which is a subtler and more
+uncomfortable thing than being wrong: the reading itself is plausible, sitting
+inside the band the published model predicts from theory alone. It was the
+evidence that was not evidence. This chapter's own standard — preregistered,
+measured, frozen only after confirmation — was met in form and not in substance,
+and the campaign that found it was looking for something else entirely.
+
+The Vacancy's re-score deserves credit here for seeing the symptom first: it
+recorded that capacity is *"a supply term spanning orders of magnitude multiplied
+by a condition product bounded in the unit interval,"* so an authored niche *"can
+only modulate the primary-production signal, never select against it."* That is
+the same defect, named a campaign early. The Keeping supplies the cause — the base
+field takes the scarcer of its two limits while the layer above it multiplies four
+tolerances together, so one half of the model obeys the law of the minimum and the
+other half does not — and measures the resulting compression at roughly fourfold.
+
+*Re-scored again by [The Tilth](./chronicle/the-tilth.md) and
+[The Tense](./chronicle/the-tense.md), which move the claim sideways rather than
+up or down.* The prior is now a strictly finer object than the one this section
+was written about, in two independent ways: capacity carries a **species** index
+(a cell is worth an amount *to someone*, so an authored niche can select rather
+than only modulate — the defect The Vacancy named and The Keeping traced) and an
+**era** index (so a glacial maximum makes ground poor instead of switching it
+off). Three mutually inconsistent oracles for the word "habitable" — an era mask,
+a capacity test, and a separate refugia rule, the first two disagreeing over
+roughly half of all land — collapsed to one (decision 0107).
+
+None of that is yet a promotion, and the reason is worth stating precisely. What
+the arc bought is that the model can now *express* the thing it was previously
+unable to say; what it did not buy is evidence that the values are right. The
+gradient claim's evidential standing, which The Keeping demoted, is untouched
+here — the floored-polar-term problem and the tidally-locked worlds inside the
+pinned average are both exactly as they were. And the change has a measured cost
+that no one predicted: replacing a gate with a continuous squeeze **compresses
+the variance between worlds**. A seed that had been permanently dead now carries
+36 communities across 70 sites; the flagship seed fell from 209 settlements to
+122, its chief settlements losing a third to a half of their people. Dead worlds
+live and rich worlds thin.
+
+The thousand-world census puts a number on the lower half at the close, and it
+is larger than the anecdote suggested: **231 of a thousand worlds could not seat
+a goblin flagship before, and one cannot after.** A quarter of the sample
+crossed from nameless to peopled, which is a real gain in how much of the seed
+space is worth visiting, and it is the half of this trade that is unambiguously
+good. The same census found flagships moving decisively inland — 73% coastal to
+22% — which nothing predicted and which no bet in this chapter had claimed
+either way.
+
+Whether the middle those worlds are converging on is
+the right middle is a question about the scale constant and the response curves,
+and it is open — but it is now *separable* from the structure, which it was not
+before, because the gate and the scale used to be the same knob.
+
+Two known defects are named and unstarted rather than fixed. Capacity reads each
+cell's **mean** temperature, and by Jensen's inequality that misestimates any
+nonlinear response — overestimating near the optimum, underestimating in the
+tails, and the tails are where refugia live. And `per_species_capacity` computes
+a **fundamental** niche (could this species live here alone) while the bake reads
+it as a **realized** one (does this species live here); ecology has kept those
+apart since Hutchinson, and competition exists downstream without ever feeding
+back.
+
+*Re-scored sideways again by [The Delvers](./chronicle/the-delvers.md)
+(2026-08-07), which measured which layer of the prior actually does the
+selecting — and then found that selecting is not the same as separating.* Three
+results, in the order they arrive. First, **which axis binds is an authoring
+choice, not a model constraint**, and it has a closed form. The condition
+response floors its buffer-able axes at the sovereignty floor and passes
+elevation a literal zero, so elevation is the limiting axis on every cell of
+every world exactly when a kind's authored elevation devotion falls below that
+floor — no terrain enters the derivation. Confirmed in both directions over
+three seeds: the two dwarves authored below their floors are elevation-bound on
+100.00% of land, and the one authored above binds there on 8.64–31.59%. That
+reproduces from arithmetic alone the earlier measurement that elevation binds
+everywhere for goblin, gnoll and human, and reclassifies it: the climate axes
+were silent because of how the roster had been written, not because the model
+cannot hear them. Second, the same kind authored above its floor has its
+temperature or moisture curve binding on **67–91% of land** while both
+below-floor dwarves read exactly 0.00% on every climate axis — so an authored
+climate niche demonstrably can select, which the paragraphs above had left as an
+open question for a surface kind. Third, and the reason this is a sideways move
+rather than a promotion: decomposing capacity into its two factors and
+correlating the supply factor alone across kind pairs returns
+**0.99935–0.99996 on all nine measurements** — over this family the supply term
+is very nearly kind-independent, so *every scrap* of per-kind spatial structure
+comes from the tolerance layer. That is a sharper statement than "an authored
+tolerance can only modulate," and it is deliberately narrower than it sounds:
+the correlation is scale-invariant, so it measures how supply **sorts** cells,
+not how large it is, and the standing claim that supply's magnitude drowns the
+niche is neither confirmed nor discharged by it.
+
+**What that bought, and what it did not, is the finding.** The kind whose
+climate niche actually binds is the one *least* separated from its neighbour —
+capacity correlation 0.86–0.98 against the hill dwarf, above the frozen
+threshold on two seeds of three, a refuted prediction pinned as a witness so a
+later separation reddens rather than passing silently. Meanwhile the pair
+differing in nothing but an elevation optimum, 150 m against 900 m, separates to
+0.69–0.76. **Binding and differentiating are not the same property**, and
+nothing in this chapter had distinguished them before; a niche can be read, be
+correctly coupled, dominate the limiting product, and still leave two peoples
+ecological synonyms. The prior's honest position is therefore that it can now
+place a species where its traits say it belongs, and still cannot be relied on
+to place two species *differently* on that basis.
+
+One thing this campaign was expected to settle and did not: the question left
+above — whether a realm's hard gate generalises past caves, "the first thing a
+campaign placing a *people* underground will find out" — is **still open**. Two
+subterranean dwarves were authored and then cut mid-campaign, because they had
+been given a *low elevation above sea level* to mean *deep*, and depth below the
+surface and height above the sea are different quantities: a chamber under a
+mountain sits high, and the curve as written selected lowland marshes. The
+roster that shipped is entirely of the surface. Placing a people underground now
+waits on the underworld being declared as **places** — biomes, the way the sea's
+depth layers already are — rather than as a coordinate pushed through a
+tolerance curve.
+
+*Re-scored twice by [The Range](./chronicle/the-range.md) (2026-08-08), once
+against a claim this chapter already makes and once against The Delvers'
+result. The two moves are independent and are kept apart deliberately.*
+
+**First, and this is a confidence-lowering event about how a claim got here:
+the realm sentence above was asserted before it was true.** *"An authored realm
+selects, absolutely"* was a true statement about a **readout** and a false one
+about the **world**. The gate reached `per_species_suitability`, whose only
+production caller is a demography report — its own comment says the figure is
+never serialized and never identity — while the function that decides where
+settlements actually go took no realm parameter and applied no realm gate at
+all. Declaring a peopled kind `Subterranean` moves that readout from 99.49% to
+5.62% of land and moves the committed seed-42 world by **zero bytes**: the same
+hash, the same 7,764 facts, the same flagship village, with three positive
+controls run before the null was believed. The Range repaired the identity
+path, so the sentence is true now, and nothing about the twenty-five-world
+exclusion measurement was wrong — it measured a quantity no world reads.
+
+What should lose confidence is the *procedure that produced the sentence*. The
+measurement behind it is the one the peoples programme mandates, and it scored
+the top rung of the programme's own probe-validity ladder, whose fourth and
+highest rung reads "the readout differentiates the axis". A mechanism can be
+authorable, read, correctly coupled and demonstrably differentiating, and still
+never touch a world; until this campaign the programme had no rung in which
+that sentence could be said. There is now a fifth — **reaches world identity**,
+scored by perturbing the axis and asking whether the committed world changed.
+Rung four remains necessary. It had simply been reading as sufficient.
+
+**Second, and this sharpens The Delvers rather than reversing it: a preference
+applied *outside* the limiting product both binds and differentiates.** The
+Range added a biome affinity — a per-kind, per-biome multiplier applied beside
+the realm mask rather than folded in as a fifth tolerance axis — and froze two
+predictions before the rows existed. Both were confirmed. The arid share of
+gnoll's settlements rose from 0.000 to 0.500, against a baseline captured by
+running the test red on an empty registry, so a downward-only mask **relocates**
+rather than merely thinning. And mean pairwise Pearson correlation between
+gnoll's capacity field and the other peopled kinds' **fell on all three seeds a
+previous campaign published** — 0.851 → 0.795, 0.790 → 0.706, 0.857 → 0.806,
+with all twenty-four individual pairs down, the instrument cross-checked
+against a previously published pair value to six places.
+
+The honest reading is not that The Delvers was wrong. It is that the two
+campaigns applied a preference at **different points in the same pipeline**.
+The Delvers' climate niche sits *inside* the Liebig minimum, where it competes
+with an elevation axis passed a literal zero rather than the sovereignty floor,
+and a factor the minimum discards cannot separate anything. The Range's biome
+affinity multiplies the product from outside, where it cannot be discarded. So
+the candidate this chapter now holds is that **where in the pipeline a
+preference is applied decides whether it can differentiate, not merely whether
+it binds** — a structural property, not a fact about niches.
+
+It is held as a candidate and not as a law, on two grounds. It rests on one
+mechanism and two authored occupants. And the alternative reading survives the
+evidence: the falls are real but modest, gnoll still correlating at 0.71–0.93
+with most peoples afterwards, so the peoples may be so alike in their surviving
+tolerances that no factor of this kind could pull them far apart. Pearson is
+scale-invariant besides, so this measures how the fields **sort** cells, not how
+large they are — the same scope limit The Delvers' own supply-factor correlation
+carries.
+
+**A third thing was measured and is deliberately left without a cause.** One
+authored row redistributed the entire placement. On seed 7 the total moved 274
+→ 287 while gnoll — the kind whose affinity was declared — stayed at 4 and
+bugbear went 49 → 153. The attribution is proven rather than argued: the
+campaign's second occupant is fauna, chosen so that exactly one *peopled* kind's
+placement could move, and a test rebuilds three seeds with and without its row
+and asserts the complete list of (people, cell) placements is identical. So
+every movement is gnoll's row alone. **Why one row moves everyone is not
+established, and no mechanism is narrated here.** What the chapter should carry
+is the magnitude: authoring an ecological preference for one kind is not a local
+edit to that kind, and a future occupant should expect to move every people's
+numbers.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -160,7 +611,31 @@ right shape. The bet has now been confirmed on the *producer* side as well:
 climate's felt weather — through a `Domain`-trait roster that lets any domain
 contribute observations without editing the composition root or a sibling, so
 the stream is no longer sky-bound and religion can grow weather-gods where the
-land is harsh. The scene seam has since crossed a repository boundary: an
+land is harsh.
+
+The bet has now also been tested on the channel's *payload*, and the original
+shape was wrong in one respect. A phenomenon carried a `description` string
+alongside its salience, and the forecast treated that as harmless — prose the
+consumer could ignore. It was not harmless, for a reason the interface's own
+design implies: an observer context deliberately carries no species, so a
+producer cannot know who is looking, and a stored sentence could only ever be
+culture-neutral or wrong. The field's *type* guaranteed a leak that no amount of
+producer discipline could close. [The Vernacular](./chronicle/the-vernacular.md)
+deleted it and moved rendering to the windows, where a speaker is known — and
+found the string had been serving as a **sort key**, so its removal reordered
+tied phenomena and, through a positional join, moved two deities' periods. The
+test written to prove the description was not load-bearing had compared the
+gloss *after* the ordering ran, and so had never looked at order at all.
+
+What the bet gets right is confirmed and sharpened: the channel generalizes
+because it carries *what was observed*, not *how to say it*. What it got wrong
+was assuming a description could ride along inertly. It could not, and the
+correction is that a phenomenon now carries a referent and no text. One
+qualification stands unresolved: `SkyReport` and `ClimateReport` still carry
+domain-resident prose of the same shape, so the guarantee is currently true of
+the phenomena channel rather than of the simulation.
+
+The scene seam has since crossed a repository boundary: an
 external client now consumes the same documents through a versioned wasm
 catalog, byte-identical across platforms
 ([Goldengrove](./chronicle/goldengrove.md), decision 0055). It has also
@@ -353,6 +828,67 @@ recomputes, or for a save-format-class document whose meaning changes are epoch
 events; the end-to-end fixture for a document the client merely parses.** Where
 neither holds, a second committed copy is only a thing to drift.
 
+**Re-scored by [The Panes](./chronicle/the-panes.md) (2026-08-06): the bet
+The Snapshot deliberately declined to take has now been taken.** That campaign
+proved the emit seam by moving an *existing* pane onto the document, and said
+plainly why — a second pane that nothing could contradict would have proved
+nothing. The Panes added the second pane. It is the harder direction, because
+the redaction boundary is only as real as the first consumer that could have
+violated it and did not: a map pane is precisely the pane most tempted to
+reach outside its channel for world truth, and the shape of the schema is what
+stops it. The channel carries **semantic content, never a picture** — cells,
+not glyphs — so the sim never learns how anything is drawn, and the client
+renders from one document rather than from two sources that could disagree.
+Both panes are now pure functions of one snapshot, which is the structural
+form of the claim rather than a discipline anyone must keep.
+
+Two things sharpen the score rather than merely confirming it. First, the cost
+was **measured, not asserted**: a session-level benchmark this campaign built
+prices the emit at 1.249 ms against a 0.173 ms baseline, and the payload
+growth is band-dependent in a way a single figure hides — 2.73× out of doors,
+1.17× indoors. The bet's premise is that the emit is cheap enough to pay every
+turn; that is now a number rather than an expectation, and it paid down a
+re-measurement another campaign had left owed. Second, the bet's *weakest*
+seam showed itself at the merge, not during the work. A tagged union over
+bands is an enumeration of another part of the sim's state space, and a
+parallel campaign added a band to that space while this one ran. The merge was
+textually clean; nothing in either campaign's documents mentions the other's
+surface; the two agreed only because both happened to guard on the same
+condition. **The generalisable lesson is that an emit whose shape mirrors
+sim state inherits that state's growth, and no gate asks whether the mirror is
+still total.** The seam held, and it held for a reason no test had stated —
+which is the kind of pass worth recording as a narrower confidence, not a
+wider one.
+
+**Re-scored again by [The Sighting](./chronicle/the-sighting.md) (2026-08-07):
+the redaction boundary stopped being merely structural and started
+withholding.** Both prior tests proved the boundary by building panes that
+*could* have reached outside their channel and did not; nothing had yet
+required the sim to remove something a pane would otherwise have shown. This
+campaign does, and the score improves for a reason that is not the one the bet
+anticipated. The withholding turned out to be far harder to make **total** than
+to make correct: the narrowing predicate was right in its first commit and
+still leaked four times, through `examine`, a needs report, a provoke line, and
+a tick's motion narration. Every leak was a surface that *narrated* a creature
+rather than one that *returned* one, so none of them appeared in any
+enumeration of the channel's readers. The generalisable form is that
+**introducing an invariant silently promotes every existing reader of the
+underlying data into a potential violation of it, and nothing in the repository
+enumerates that set** — the emit seam's own shape does not help, because the
+last mile of every channel is prose, and prose cannot be audited for what it
+happens to mention. The structural claim survives and is now load-bearing; what
+narrows is the confidence that a structurally-correct boundary is
+automatically an *observed* one.
+
+Two smaller corrections the same campaign forces on this chapter's arithmetic.
+The bet's cost premise has been priced through the **actual** wasm boundary for
+the first time — a turn measures 1.57–1.78× native, not the 3.6–3.8× every
+derived browser figure here was multiplied by, so the seam is roughly twice as
+cheap in the browser as this chapter had assumed. And the payload growth this
+campaign added is eleven bytes, against a per-turn derivation cost of about
+3.7 ms in release: the bytes were never the term worth watching, the derivation
+is.
+
 Every test of this bet so far has pushed on the *producer* side — new source
 classes, new layers, new document shapes. [The Vigil](./chronicle/the-vigil.md)
 pushed on the **observer** side instead, and the interface took it without
@@ -544,6 +1080,28 @@ reading the picture did. What changed is that "the render depicts something the
 command language denies" has stopped being a thing a human must remember to look
 for.
 
+**Re-scored again by [The Handle](./chronicle/the-handle.md) (2026-08-06), which
+refutes that last sentence and narrows the row.** The parity contract was real
+and it held — for the floor plan it was written against. It said nothing about
+the other four surfaces that name things: the room's own prose, the sky, the
+chart legend, and the underworld. All four were denying nouns they had just
+printed, and the way it came to light was a human reading a transcript and
+saying so, which is exactly what the sentence claimed had stopped being
+necessary. Six of the seven significant words in the starting room's catalog did
+not resolve.
+
+The correction is about the *scope of a mechanization*, not its value. A check
+converts the row it covers and leaves the rest of the ledger reading as though
+it were covered too — which is the more dangerous state, because the lament that
+"only a human noticed" gets quietly retired while remaining true everywhere the
+check does not reach. The Handle widens the check from one render to every
+catalog surface, and it also finds the limit of the wider version: the check
+asserts that *declared* nouns resolve, and is structurally blind to
+over-admission, which a mutation demonstrated and only a separate,
+opposite-facing test caught. So the row now reads: parity is mechanized in both
+the plan and the prose, in one direction, and the second direction is held by
+regression tests rather than by a rule.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
@@ -620,6 +1178,50 @@ the *instrument* — an acceptance protocol verified byte-identity with a comman
 that could not, by construction, reflect the layer being changed, and four
 stages of evidence were vacuous before anyone noticed. The check that a
 measurement can move at all belongs beside the measurement, not after it.
+
+[The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
+about weather and world structure that no earlier chapter entry had staked,
+and it too came back **no** — a double falsification rather than a single
+one. It froze, before any code existed, that a weather-gated modifier on the
+connection graph's edge conductance (mud and snowpack lowering it, frozen
+ground raising it back) would move the passable fraction of the world's
+connection graph by a global, latitude-graded amount: at least a 5% median
+swing across two hundred generated worlds (the systemic-effect bet), growing
+toward the poles where weather is harshest (the where-it-shows-up bet).
+Neither held. The measured median swing is **0.95%**, an order of magnitude
+under the floor, and the swing that does exist runs backward: equatorial
+cells swing furthest (0.0224), temperate cells less (0.0021), and polar
+cells swing **exactly zero** — not merely small, zero on the nose, across
+every sampled seed.
+
+The mechanism is the durable part, and it generalizes past this one
+measurement: **seasonal variation lives where conditions alternate, not
+where they are extreme.** A permanently frozen polar cell has one season,
+all year, so it never crosses the conductance threshold in either
+direction; an equatorial cell, wet in one season and dry in the next, is
+exactly the alternation the instrument can detect. Extremity without
+alternation is stasis. Two checks confirmed the null was real rather than
+the instrument being blind: a synthetic all-or-nothing probe (every land
+edge fully open one day, fully closed the next) registered swings ten to
+twenty times the measured median when an effect of that size was
+deliberately manufactured, and across a full year only about 4% of real
+land edges ever cross the passability threshold at all — most of the graph
+is simply always-open or always-closed, regardless of season, which is the
+mechanistic reason the systemic swing is small. This null joins the
+chapter's growing record of preregistered predictions that came back no —
+alongside the fire-warmth bet above and the conflict-cascade criticality
+bet below — each recorded as a finding rather than a failure, because a
+chapter that only reports confirmations is measuring taste, not the world.
+
+What the null does not settle is stated in the chronicle rather than
+smoothed over. The measured quantity is **passability** — whether a route
+is open at all — not **cost**, how much slower or harder a route becomes
+while it stays open; a large seasonal cost effect could sit entirely
+beneath this instrument's threshold-crossing view and be invisible to it.
+And the result is a claim about **land only**: water edges were
+deliberately left ungated this campaign, so "the poles do not vary" may be
+true for land and false for the sea ice that borders it, on coastlines
+whose land itself never varies because it is permanently frozen.
 
 ## Precedented but nontrivial (moderate confidence)
 
@@ -791,6 +1393,26 @@ its honest size.
    metric measures. So the caution generalizes: *an instrument scores a bet
    only if something reads it AND the instrument is itself current*, and
    nothing in this repo reddens when a deliberate duplicate falls behind.
+
+   **The Domesday adds the third clause (2026-08-08), and it is the one that
+   bites hardest.** *An instrument scores a bet only if it measures the quantity
+   the bet is about.* The census's most-cited climate finding — that the climate
+   is not merely cold but near-uninfluenced by its own astronomy — was drawn
+   from twenty-three astronomy metrics, not one of which is insolation, stellar
+   luminosity, or orbital distance. The facts exist and are committed to every
+   world's ledger; `anchor-orbit-au` and `insolation-rel` sit in the same
+   registration block as `brightening-per-gyr`, which the census does read. The
+   evidence for *astronomy does not drive climate* is therefore a single
+   orbital-period proxy, and the driver itself was never in the dataset. The
+   conclusion may well survive measurement — the survey takes no position on
+   that — but its current standing is weaker than the sentence it produced, and
+   the first campaign to read all 193 metrics at once is what made that visible.
+   The same survey found the complementary gap in the other direction: fourteen
+   biology metrics are frozen across all thousand worlds because species life
+   history is a pure allometric function of authored mass, class and schedule,
+   so no world quantity reaches any creature's physiology. Between the two, the
+   census's coverage of *what influences what* is materially thinner than its
+   193-metric breadth suggested.
 
    That campaign also moved the self-scorable half in both directions at once.
    Sonority sequencing made pronounceability a property held **by
@@ -1026,6 +1648,110 @@ back geometric, the right conclusion is that this world does not sit at a
 critical point, and this chapter should record that as settled rather than
 open.**
 
+### The third ask is being spent elsewhere (2026-07-29)
+
+That test — *materially different, or a rephrasing?* — has now been applied,
+and the answer is that the connected-cascade question **does not clear its own
+bar by much**, while a different question clears it easily. This chapter is
+therefore rescored: the criticality bet is **not** being asked a third time in
+the form above, and the depth-and-collapse-release levers are **deferred, not
+refuted**.
+
+The reason is that three campaigns have been measuring the size distribution of
+**events** — how long a cascade of displacements runs — while the property the
+project actually wants from its history is a distribution over **entities**:
+how large the largest polity gets, how unequal holdings become, whether an
+empire is a thing a world can produce at all. Those are different variables with
+different mechanisms and different literatures. Event-size criticality is
+Bak–Tang–Wiesenfeld, and the conduction diagnosis is correct on its own terms.
+Entity-size heaviness is Gibrat and Kesten — a random *multiplicative* factor
+against a reflecting lower barrier — which is the standard account of Zipf's law
+for city sizes and of the empire-area distributions. **Hornvale has never
+measured it, and the bake has no empire-size metric at all.**
+
+Reading the mechanism against that second literature explains the two nulls
+without appealing to conduction, and the reading was verified in source rather
+than reasoned about. A Kesten process needs a per-entity random multiplier that
+persists. The bake's strength is `(population + stores × 0.5) × tech_weight`.
+Population is logistic, so its growth is *anti*-proportional to its size near
+capacity. Stores decay at 0.95 per epoch to a fixed point set by inflow, and are
+destroyed on a community's closure. `tech_weight` takes four values capping at
+3.0, is driven by absolute year, and its per-people head start is a draw in
+[0, 300) years against era boundaries at 400/900/1400 — so **the world's only
+irreversible advantage provably converges to zero relative value at year 1400**.
+Every multiplier in the model is shared, capped, or mean-reverting, and no two
+communities of one people differ in any authored dimension at all. A model with
+no persistent per-entity multiplicative heterogeneity cannot produce a heavy
+entity-size tail, and would not do so even with a conduction medium added.
+
+*Re-scored in part by [The Tolerance](./chronicle/the-tolerance.md) (2026-08-05),
+which voids one clause of the paragraph immediately above and leaves the more
+important one standing.* That campaign made a people a distribution rather than
+a point: each settlement now draws its own threat response from its
+people's authored mean and dispersion, keyed on where and when it was founded
+and fixed for the life of the community. So the clause **"no two communities of
+one people differ in any authored dimension at all" is no longer true** — two
+towns of one people, on different ground in different centuries, hold genuinely
+different temperaments, and the between-settlement variance in that dimension
+went from exactly zero to 0.010–0.113 depending on the people. The heterogeneity
+is persistent and per-entity, which is two of the three properties a Kesten
+process wants.
+
+The third it does not have, and that is the part this chapter must not round
+away. The drawn quantity enters the model as a **gate on a decision** — a
+community above the threshold may take the initiative, one below it may not —
+not as a **multiplier on strength**. Strength is still
+`(population + stores × 0.5) × tech_weight`, and every term in it is still
+shared, capped, or mean-reverting; nothing about the disposition draw multiplies
+anything. A heterogeneous *propensity to act* changes which communities move and
+therefore how the history branches, but it does not give a community a
+persistent random factor on its own growth, which is the specific thing the
+literature says a heavy entity-size tail requires. So the correct rescore is
+narrow: **the diagnosis loses its "no heterogeneity exists" clause and keeps its
+"no multiplicative heterogeneity exists" clause**, and the entity-size
+prediction is unchanged. Nothing here was measured against M2 — The Tolerance
+preregistered variance and rate hypotheses, not a size distribution — so this is
+a correction to the *argument*, not a new reading of the *bet*. A campaign that
+wants to test the Kesten account now has a cheaper route to it than it did: the
+authoring pattern for per-entity variation exists and is proven, and what
+remains is to point one at a multiplicative term instead of a threshold.
+
+One detail sharpens this rather than softening it, and it is the same point
+clause 3 above makes about asymptotes. The new heterogeneity is drawn from a
+**uniform** on ±√3σ, clamped to the axis — so it is not merely
+non-multiplicative, it is *bounded*, and the probability of a settlement
+exceeding its people's support is exactly zero rather than small. Per-entity
+variation now exists in this world; **rare** per-entity variation still does
+not. The build constraint this chapter already owes a successor campaign is
+unchanged, and one more mechanism now sits inside its scope.
+
+**What replaces the bet is narrower, and it is a different shape of claim.**
+Not a power law: a **sigmoid**. The wager is that annihilation, coexistence and
+domination lie on one saturating response, that the middle is where nearly every
+world sits, and that both extremes are **reachable but rare** — a world with no
+goblins, and a world under one government, each possible and each unusual. This
+is preregisterable, it is falsifiable in both directions, and it is a claim
+about a distribution the Laboratory can compute over seeds rather than about a
+scaling exponent that needs 1.5 decades of support to be well-posed at all.
+
+It also carries a structural requirement the previous framing never surfaced,
+recorded as [decision 0096](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+clause 3: rare extremes need **asymptotes, not clamps**. Hornvale's saturating
+bounds are presently clamps — population against capacity, `tech_weight` against
+3.0, `coexist.rs`'s viability `FLOOR` — and the probability of exceeding a clamp
+is exactly zero at any input. On the current response forms the tails are not
+rare; they are impossible. That is a build constraint, not a tuning target, and
+it is the first thing a successor campaign owes this chapter.
+
+**Confidence: low, and deliberately so.** The sigmoid has not been measured, the
+claim that per-world conditions vary widely enough to reach either tail is
+**unverified**, and this chapter should not be read as predicting the result. The
+one thing it does now assert with the same confidence as the two falsifications
+above it is the diagnosis: **this world's history evaluates every people on a
+single scalar axis, and on one axis weakness is absolute.** That is checkable in
+forty lines of source, it is the standing charge decision 0096 opens, and it is
+why the third ask is being spent on a second axis rather than on a deeper graph.
+
 One further note the campaign earns a place for, because it bears on how much
 any of the above should be trusted. *The Tithe* amended its own specification
 **five times, four of them following a disappointing measurement** — and that
@@ -1037,3 +1763,128 @@ confidence score is only as good as the disclosure attached to the measurement
 under it: the number here is a falsification, which is the direction that
 *cannot* be manufactured by adding mechanisms, and that asymmetry is the reason
 the rescore is trustworthy despite the amendment count.
+
+### The sigmoid's first axis is measured, and the null is in (2026-08-02)
+
+*The Contour* built the cheapest test of the sigmoid wager's own diagnosis —
+a second contest axis, uncorrelated with strength, entering at the raid
+dominance test — deliberately touching no authored species data, so that if
+it moved nothing the two costlier campaigns behind it (*The Appraisal*,
+*The Deviation*) would be worth reconsidering for one campaign's price rather
+than three. It moved nothing. Both of the wager's own preregistered halves
+are now measured, matched against a frozen thirty-seed baseline, and both are
+null:
+
+- **M3 (peoples-alive-at-bake-end) fell, fractionally, rather than rising.**
+  The entire thirty-seed delta is one world losing one people; every other
+  seed's count is byte-identical to baseline, including the exact set of six
+  extinction seeds. The mechanism rescued zero worlds from total extinction
+  and caused zero new ones.
+- **M2 (the entity-size distribution — the sigmoid's own headline variable)
+  stayed geometric.** Mean, median and IQR sit within a few percent of
+  baseline at both thirty and a hundred seeds; the one statistic that moved
+  cleanly (max/median) moves inside the band a single outlier seed produces,
+  not a distributional shift.
+
+Per §4.3 of the spec, both conditions being met is the null the chapter
+above already named as the informative branch: **a second contest axis,
+uncorrelated with the first and entering at the decision point, is not
+sufficient to hold diversity open in this world** — a finding about decision
+0096 clause 1's *chosen mechanism*, not about the axiom, and one that sends
+the sequence back to design rather than forward to *The Appraisal*.
+
+**The null itself decomposes, and the decomposition is the part this chapter
+must not round away.** `peoples-alive-at-bake-end` is discrete and bounded at
+five, the roster's own size, and the baseline sits at that ceiling in 76.7%
+of worlds already. "M3 rises" was close to unfalsifiable *upward*: in
+twenty-three of thirty seeds the metric could not rise, because all five
+peoples were already alive. So the null is really two claims of unequal
+strength. **"Does not rescue worlds from extinction" is strong** — six
+extinction seeds at baseline, six live, the identical seed set, a detectable
+effect measured at exactly zero. **"Does not improve diversity in surviving
+worlds" is untested**, because the instrument is saturated at its ceiling in
+twenty-three of the twenty-four surviving worlds. The spec asked for a second
+half of M3 — the effective-diversity reading `coexist.rs` already computes in
+space, which would have headroom inside an all-five-peoples world that a bare
+count cannot see — and only the count was ever wired up. Building that half
+now, immediately after a disappointing count, would have the *shape* of
+metric-chasing even with clean logic behind it, so it is deliberately
+deferred to whichever campaign answers this chapter next, with its own
+headroom declared in the preregistration before any code exists.
+
+**Rescore.** The sigmoid wager's confidence stays **low**, but the character
+of the "low" has changed, and the gradient should say so precisely: it was
+*unmeasured* when the bet above was struck; it is now *measured on one axis
+and null there*, with the other, headroom-bearing axis still unmeasured
+rather than merely undiscussed. That is a materially weaker position for the
+multi-axis thesis than "unmeasured" was, and a materially stronger one than
+"falsified outright" would be — decision 0096 clause 1 is not itself
+falsified by one mechanism's failure to move one metric, but it has now spent
+its cheapest test and has one clean finding to show for it: position, alone,
+is not the term that holds diversity open here.
+
+**Re-measured after the epoch (2026-08-02).** Position-aware conflict draws
+no new stream, but it changes every world's committed history, and the
+`history/bake` label was bumped to `/v2` to say so honestly (decision 0006).
+That re-mints every draw a second time on top of the mechanism's own effect,
+so the numbers above were re-measured on a fresh matched pair taken entirely
+on the post-epoch derivation rather than trusted to still describe the
+shipped world. Neither null moved: M3 is still falsified, M2 still stayed
+geometric, and the extinction set is unchanged in both identity and size
+across the epoch — the strongest form the "does not rescue from extinction"
+half of the decomposition above can take. **This rescore is unchanged and
+stands as written.** One thing about *how* the null holds did shift: where
+the pre-epoch reading found a single seed accounting for the whole M3 delta,
+the post-epoch reading finds two seeds moving in opposite directions that
+cancel exactly — the mechanism is visibly live at the individual-world
+level, it simply does not net into more diversity. Full numbers:
+`docs/superpowers/plans/the-contour-baseline-v2.md`.
+
+**The saturation half of that decomposition has now been tested, by a campaign
+that shares none of its nouns, and it survives.** The argument above turns on a
+number that was never a property of the world: the diversity count is bounded by
+*the roster's own size*, so with five peoples in play "M3 rises" was close to
+unfalsifiable upward. The obvious reading of that is that the ceiling was too
+low — that a larger roster would hand the instrument the headroom it lacked.
+[The Delvers](./chronicle/the-delvers.md) (2026-08-07) raised the ceiling by half
+again, from six settling peoples to nine, and **the saturation did not move**.
+Across the same thousand-world census: before, 971 of 1000 worlds ended the bake
+holding every one of the six, mean 5.961; after, 967 of 1000 hold every one of
+the nine, mean 8.956. Three more peoples, three more survivors, and the share of
+worlds pinned against the ceiling fell by four tenths of a percent.
+
+That is a finding about the **instrument**, not about the mechanism — no second
+contest axis was added and nothing here retests decision 0096. But it closes off
+the cheapest hope this chapter had for the untested half of the null. The count
+was not saturated because the roster was small; it is saturated because
+extinction is rare in this world at any roster size, and a metric bounded by the
+roster will therefore sit on its bound however far the bound is moved. The
+effective-diversity reading the spec asked for and never wired up is now the
+*only* way to test "does not improve diversity in surviving worlds," rather than
+one of two, and enlarging the roster is struck off as an alternative. Its
+headroom must still be declared in a preregistration before any code exists.
+
+A related bound was found to have the same defect and was repaired in passing.
+The coexistence calibration's ceiling on per-cell claimed diversity had been
+frozen as a bare `3.0`, justified in its own text as comfortably below
+undifferentiated sharing — where the diversity reading approaches *the species
+count*. So `3.0` was never an absolute quantity either; it was three quarters of
+a four-species roster, with the dependency compiled into a literal and invisible
+until a second roster size existed. It is now derived from the live count and
+reproduces `3.0` exactly at a roster of four, which is the strongest form this
+repair can take — a no-op at the roster the bound was written for. The floor
+stays absolute, because monoculture drives the reading to one however many
+peoples exist; only the ceiling ever scaled. This is a post-unblinding change to
+a preregistered bound, made deliberately, and it re-derives the bound's *rule*
+rather than fitting its *value*.
+
+The margin is the part worth keeping. Re-measured on the roster that actually
+shipped, the mean per-cell claimed diversity is **3.0101** — so the retired
+literal would have failed by one hundredth, which is what a compiled-in
+dependency looks like when it rots: not a loud failure that names its cause, but
+a hair over a line, in exactly the shape most likely to be read as noise and
+quietly re-pinned. Against the derived ceiling the same reading is 25% of
+undifferentiated sharing where the original band permitted 75%, so the world is
+if anything more differentiated than the bound was written to allow. Both halves
+of that sentence are only sayable because the bound was re-derived rather than
+re-fitted.

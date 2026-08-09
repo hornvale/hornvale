@@ -32,6 +32,34 @@
 //! fixture stays a base-generated witness, not one authored by the code it
 //! is meant to check.
 
+//! ## Why a change to ONE species' niche drifts EVERY creature's trace
+//!
+//! Recorded because it is not obvious and it has now cost one investigation
+//! (The Deep Realm, Task 6, ledger #28). Re-authoring the xorn's and rust
+//! monster's condition niches drifted this fixture by ~1e-4 on the arousal of
+//! *unrelated peopled creatures* — human, goblin, hobgoblin — at an unchanged
+//! roster and tick count.
+//!
+//! The tempting explanation is a shared resource-competition normalisation.
+//! **There is none:** `per_species_suitability` hoists the supply fields out
+//! of its per-species loop, so each species' suitability is computed
+//! independently of every other's niche. The real path is longer:
+//!
+//! ```text
+//!   a species' condition niche
+//!     -> per_species_suitability
+//!     -> the demography report      (a COEXISTENCE FIT over the whole roster)
+//!     -> predator_pressure_from / prey_pressure_from   (SHARED fields)
+//!     -> every other creature's danger-sense and hunger
+//!     -> its affect arousal
+//! ```
+//!
+//! So the blast radius of *any* niche edit is every creature in the trace, not
+//! just the species edited. If this fixture drifts after a change that looks
+//! unrelated to the creatures whose lines moved, check whether the change
+//! touched anything the demography fit reads before concluding something is
+//! wrong.
+
 use hornvale_kernel::quantize::quantize;
 use hornvale_lab::health::simulate_world;
 
@@ -73,17 +101,72 @@ fn digest(world: &hornvale_kernel::World) -> String {
 #[test]
 fn seed_42_affect_trace_reproduces_the_pinned_bytes() {
     let world = world();
+    // ONE world build, two guarantees. These were two tests until The Tense
+    // measured what that cost: nextest is process-per-test (see
+    // `windows/lab/CLAUDE.md`), so a separate coverage test cannot share this
+    // build and simply pays for seed 42 twice — 22 s of the gate to re-derive a
+    // digest computed three lines up. Ordering matters and is deliberate: the
+    // byte pin runs FIRST, and the coverage floor runs after it, so a
+    // `REBASELINE=1` accept still has to clear the floor. That is exactly the
+    // case the ratchet exists for.
+    let digest_for_coverage = digest(&world);
     hornvale_kernel::golden::assert_golden(
         std::path::Path::new(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/tests/fixtures/affect-trace-seed-42.txt"
         )),
-        &digest(&world),
+        &digest_for_coverage,
         "the seed-42 affect trace moved — the-waymark's plan-cache/geometry- \
          memo work must be VALUE-preserving (a cache changes WHEN a search \
          runs, never WHAT it returns); a diff here means some change altered \
          what a creature feels, not just how fast, and needs investigation \
          before acceptance",
+    );
+
+    // The fixture's COVERAGE, ratcheted — added by The Tense (2026-08-05) because
+    // accepting that campaign's regeneration silently narrowed what the golden
+    // above witnesses, and nothing would have said so.
+    //
+    // The golden is a byte pin. A byte pin cannot tell "the values moved" from
+    // "the trace stopped exercising half the affect space", and the two want
+    // opposite responses. Measured across The Tense's regeneration:
+    //
+    // ```text
+    //   peoples sampled   bugbear 2, hobgoblin 1, human 1, gnoll 2   ->  bugbear 1, hobgoblin 5
+    //   affect labels     Content Eager Searching Helpless Lost Frustrated  ->  first four only
+    //   (solitaries rust-monster / otyugh / xorn / carrion-crawler: 1 each, unchanged)
+    // ```
+    //
+    // **`Lost` and `Frustrated` are no longer reached at all**, and they were the
+    // only negative-valence affect anywhere in the fixture — all nine lines of it
+    // sat on the two gnolls, which the re-placement removed from the sample. That
+    // is a real loss in what this witness can catch, and it is recorded as a debt
+    // rather than accepted: the floor below is the ACHIEVED value, and 6 is the
+    // target to get back to. Deliberately not weakened to track a future fall —
+    // the same posture `menagerie`'s preregistered `>= 6` dominant target takes.
+
+    let digest = digest_for_coverage;
+    let labels: std::collections::BTreeSet<&str> = digest
+        .lines()
+        .filter_map(|l| l.split("label=").nth(1))
+        .filter_map(|r| r.split_whitespace().next())
+        .collect();
+    let peoples: std::collections::BTreeSet<&str> = digest
+        .lines()
+        .filter_map(|l| l.split("species=").nth(1))
+        .collect();
+    assert!(
+        labels.len() >= 4,
+        "the affect trace exercises only {} distinct labels ({labels:?}) — it reached six \
+         before The Tense, and a byte golden cannot tell a narrowing sample from a value \
+         change. Do NOT lower this floor; the target is to restore Lost and Frustrated.",
+        labels.len()
+    );
+    assert!(
+        peoples.len() >= 6,
+        "the affect trace samples only {} distinct species ({peoples:?}); a homogeneous \
+         sample makes the golden a witness to one creature's life rather than the roster's",
+        peoples.len()
     );
 }
 

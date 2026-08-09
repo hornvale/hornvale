@@ -74,7 +74,7 @@ fn settlements_by_cell(world: &World, species: &str) -> BTreeMap<u32, EntityId> 
 /// coexistence stack (decision-ledger #49): a species pin now selects a
 /// **deterministic restricted roster**, not a population-preserving mask.
 /// Because settlement genesis packs species competitively against a
-/// shared per-cell capacity (`niche_per_species_k`), pinning `--species X`
+/// shared per-cell capacity (`per_species_suitability`), pinning `--species X`
 /// removes X's competitors and legitimately changes X's own density on
 /// cells it still holds — the old "population unchanged vs. unpinned"
 /// contract no longer holds by construction, and asserting it would be
@@ -227,14 +227,28 @@ fn gaps_have_reasons() {
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
     // Substrings drawn directly from worldgen's `experiential_reason`/
-    // `perceptual_reason` and lexicon's own composed compound-gap messages
-    // — every reason `build_lexicon` can produce matches at least one.
+    // `perceptual_reason`, lexicon's own composed compound-gap messages, and
+    // astronomy's `Void::Unnamed` text for the objectively unnameable
+    // spectral classes — every reason `build_lexicon` can produce matches at
+    // least one.
+    //
+    // **This list is a hand-maintained allowlist over strings production
+    // composes elsewhere, and nothing ties the two together.** The Watershed's
+    // staple gap (`"{species} lives by {subsistence} here and raises no
+    // staple"`, `windows/worldgen/src/lib.rs`) shipped without a marker and
+    // stayed green for as long as seed 42 happened to settle no speaker on a
+    // cell that both grows a crop and is worked by herding/fishing/foraging.
+    // The Range moved gnoll onto exactly such a cell and this test went red on
+    // a production string that had always been legitimate. Adding a gap reason
+    // means adding its marker here; the test cannot tell you that itself.
     let markers = [
         "night-vision",
         "no settlement",
         "has no exposure",
         "no compound recipe",
         "needs",
+        "encountered the main sequence",
+        "raises no staple",
     ];
 
     // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
@@ -252,6 +266,7 @@ fn gaps_have_reasons() {
                 let text = match reason {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
+                    GapReason::Unnameable(s) => s,
                 };
                 assert!(
                     !text.is_empty(),

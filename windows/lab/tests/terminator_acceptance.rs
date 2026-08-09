@@ -128,6 +128,9 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
 /// the measured falsification (see the module doc): the payoff did not
 /// land, and the assertion says so honestly rather than asserting an
 /// unmet floor.
+/// claim: rate(forall-seed, ambient == n, eternal == 0, cyclic == 0) —
+/// off-gate (heavy:); a reachability scan (locked.len() >= MIN_LOCKED) feeds
+/// the pinned-count readout
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {

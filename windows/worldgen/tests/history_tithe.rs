@@ -207,6 +207,28 @@
 //! patronage_transfers 30, tribute_relations_at_now 164, max_subordinates 5,
 //! tribute_collected 8002.397, tribute_collection_events 4555,
 //! max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
+//!
+//! ## THIS PANEL BECAME A CENSUS COLUMN (The Assize, 2026-08-08)
+//!
+//! The twelve-seed panel this section used to hold
+//! (`the_tribute_accumulator_is_reported_over_a_panel`, `FLOOR_PANEL`,
+//! `MIN_TRIBUTE_COLLECTED`) is deleted. Three things are worth recording about
+//! the replacement:
+//!
+//! 1. **It became `tribute-relations-standing`** (`windows/lab/src/metrics.rs`).
+//! 2. **The census cannot reach the flow this panel read.**
+//!    `BakeCensus::tribute_collected` lives on `History::tally`, which
+//!    `build_world_to` discards before any census view exists — no metric can
+//!    read it. `tribute-relations-standing` instead measures the
+//!    `pays-tribute-to` **stock** the ledger keeps. It agrees with the
+//!    discarded flow at spearman **0.934** over 36 worlds, which is a measured
+//!    witness that the two move together, **not** a claim that they are the
+//!    same quantity — one is a flow and the other a stock.
+//! 3. **The retired panel was already near-vacuous.** Every candidate
+//!    observable tried, including the flow itself, measured **0/36 zeros**
+//!    over the probe worlds — so this panel's own `live * 2 >= n`
+//!    non-inertness guard could essentially never fire; there was no
+//!    plausible world on which it would have caught anything.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
@@ -231,12 +253,6 @@ const SHAPE_SAMPLE: std::ops::RangeInclusive<u64> = 1..=30;
 /// went inert, which §8.1 makes a `RAID_MARGIN`/horizon calibration finding
 /// for the owner and never a floor to lower.
 const MIN_SUBORDINATIONS: u64 = 100;
-
-/// Spec §8.2 — the accumulator floor: what actually changed hands over the
-/// whole bake. Seed 42 measures **8002.397**; pinned at 1500, ~5× clear. This
-/// is a flow, and it is floored beside the stock below because either alone
-/// is satisfiable by the other going to zero.
-const MIN_TRIBUTE_COLLECTED: f64 = 1500.0;
 
 /// Spec §8.2 — the accumulator floor: the largest store any **alive**
 /// community still holds at `now`. Seed 42 measures **249.052**; pinned at
@@ -344,16 +360,28 @@ const MIN_POOLED_FLIGHTS: u64 = 20;
 const MIN_POOLED_REVOLTS: u64 = 5;
 
 /// Spec §8.0 — the variety floor: how many standing relations a patron people
-/// must hold before its lifetime median is read at all. Measured minimum over
-/// the three patron peoples is **484** (bugbear); pinned at 100.
+/// must hold before its lifetime median is read at all. Measured minimum was
+/// **484** (bugbear), over the three patron peoples the roster had *when that
+/// reading was taken*; pinned at 100.
 const MIN_RELATIONS_PER_PEOPLE: usize = 100;
 
-/// Spec §8.0 — the variety margin. Pooled median standing-relation lifetime is
-/// **325** standard days for the longest-horizon patron people (kobold, 0.8)
-/// against **175** for the shortest (bugbear, 0.3), a ratio of **1.857**.
-/// Pinned at 1.30 — a real margin, clear of the measurement, and low enough
-/// that ordinary seed noise cannot trip it. Below this the strategy family has
-/// collapsed back toward the single attractor §8.0 exists to detect.
+/// Spec §8.0 — the variety margin. Pooled median standing-relation lifetime
+/// measured **325** standard days for the longest-horizon patron people
+/// (kobold, 0.8) against **175** for the shortest sampled at the time (bugbear,
+/// 0.3), a ratio of **1.857**. Pinned at 1.30 — a real margin, clear of the
+/// measurement, and low enough that ordinary seed noise cannot trip it. Below
+/// this the strategy family has collapsed back toward the single attractor
+/// §8.0 exists to detect.
+///
+/// **Bugbear is no longer the shortest-horizon patron people, and the count is
+/// no longer three.** The Vacancy's gnoll is authored at horizon 0.2 — shorter
+/// than bugbear's 0.3 — and has always cleared the raid gate, and since The
+/// Tolerance made `threat_response` a per-settlement draw all six peoples reach
+/// patronhood. **The gate is unaffected and needs no re-measurement**: the
+/// assertion below sorts the live rows by authored horizon and takes
+/// `rows[0]`/`rows[last]`, so it always compares the actual extremes of
+/// whatever the run produced. The numbers above are preserved as the historical
+/// reading that set the 1.30 pin, not as a claim about today's roster.
 const MIN_LIFETIME_RATIO: f64 = 1.30;
 
 /// Build seed 42's history through the standalone measurement entry point —
@@ -425,18 +453,44 @@ fn subordination_fires_at_volume() {
 ///
 /// `max_subordinates` is **reported and not floored**: cardinality is
 /// deliberately unbounded (§4.4) and a runaway hub is a finding, not a failure.
+///
+/// # The volume half moved to a census column (The Delvers, then The Assize)
+///
+/// This test used to assert `tribute_collected >= MIN_TRIBUTE_COLLECTED` here,
+/// on seed 42 alone. It no longer does, and the floor was **not lowered** —
+/// it simply no longer exists as a constant. What this test asserts about
+/// volume is now only **non-inertness**, which is what its own failure
+/// message always said it was for ("the accumulator is inert"). The
+/// calibrated reading moved (The Delvers, 2026-08-07) to a twelve-seed panel,
+/// and then (The Assize, 2026-08-08) to the census column
+/// `tribute-relations-standing` — see this file's module doc for why that
+/// column measures a stock rather than this flow.
+///
+/// **Seed 42 is one sample of a distribution three orders of magnitude
+/// wide** (7.055 to 6936.212 across ordinary seeds), and it was a *low*
+/// sample at 1450.482 against a twelve-world panel median of 3663.131. A
+/// scalar floor read on one world cannot see that spread, so it cannot
+/// distinguish "the branch died" from "this world is small". The census is
+/// the real instrument now; this test is the cheap tripwire that keeps the
+/// branch's liveness in the commit gate.
+///
+/// The stock half (`max_stores_at_now` against [`MIN_MAX_STORES`]) is
+/// untouched and still asserted here.
 #[test]
 fn the_structure_accumulates_without_starving_its_holder() {
     let c = census(&history(42));
     eprintln!(
         "TITHE seed-42 accumulator: collected {:.3} over {} events, max store at now {:.3}, \
-         widest star {} subordinates",
+         widest star {} subordinates (seed 42 is ONE sample of a 3-order-of-magnitude \
+         distribution — the census column `tribute-relations-standing` is the instrument)",
         c.tribute_collected, c.tribute_collection_events, c.max_stores_at_now, c.max_subordinates
     );
     assert!(
-        c.tribute_collected >= MIN_TRIBUTE_COLLECTED,
-        "the accumulator is inert: only {:.3} remitted over the whole bake (floor \
-         {MIN_TRIBUTE_COLLECTED}) across {} collection events",
+        c.tribute_collected > 0.0 && c.tribute_collection_events > 0,
+        "the accumulator is INERT on seed 42: {:.3} remitted over {} collection events. This \
+         is not a calibration reading — it is the branch having stopped running at all. The \
+         calibrated volume reading lives in the census; this one only says the mechanism \
+         fires.",
         c.tribute_collected,
         c.tribute_collection_events
     );
@@ -509,7 +563,7 @@ fn every_standing_relation_names_two_living_communities() {
     let alive: BTreeMap<_, _> = h
         .records
         .iter()
-        .map(|r| (r.community, r.is_alive()))
+        .map(|r| (r.community, r.core.is_alive()))
         .collect();
     assert!(
         h.tribute.len() >= MIN_STANDING_RELATIONS,
@@ -632,6 +686,8 @@ fn no_emitted_tribute_fact_predates_either_party() {
 /// are floors saying the phenomena EXIST — cascades, flights, revolts — never
 /// a ceiling on the shape. A ceiling would freeze the falsification that the
 /// deferred depth/release levers are meant to break.
+/// claim: readout(off-gate, heavy:) — cascade-size distribution over
+/// SHAPE_SAMPLE, adjudicated
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_cascade_distribution_is_adjudicated() {
@@ -732,6 +788,8 @@ fn the_cascade_distribution_is_adjudicated() {
 ///
 /// The horizons are read from the psyche registry rather than written down, so
 /// re-authoring a people cannot leave this test asserting a stale ordering.
+/// claim: readout(off-gate, heavy:) — standing-relation-age readout by
+/// patron people over SHAPE_SAMPLE
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_strategy_family_is_various() {
@@ -740,7 +798,11 @@ fn the_strategy_family_is_various() {
     let mut ages: BTreeMap<KindId, Vec<f64>> = BTreeMap::new();
     for s in SHAPE_SAMPLE {
         let h = history(s);
-        let people: BTreeMap<_, _> = h.records.iter().map(|r| (r.community, r.people)).collect();
+        let people: BTreeMap<_, _> = h
+            .records
+            .iter()
+            .map(|r| (r.community, r.core.people))
+            .collect();
         for t in &h.tribute {
             let p = *people.get(&t.patron).expect("a patron has a record");
             ages.entry(p).or_default().push(h.now - t.since);
@@ -780,13 +842,43 @@ fn the_strategy_family_is_various() {
         l_h > s_h,
         "the sampled patron peoples share one horizon ({s_h}), so this gate is vacuous"
     );
+    // ---- FALSIFIED by The Tense (2026-08-06). Recorded, not rescued. ----
+    //
+    // §4.3a claims a generational patron's relation persists where an immediate
+    // one's does not. Under era-varying capacity it does not hold, and the full
+    // table says something stronger than the extremes do:
+    //
+    //   gnoll      horizon 0.20   345 relations   median age 325 d
+    //   bugbear    horizon 0.30   368 relations   median age 250 d
+    //   hobgoblin  horizon 0.50   603 relations   median age 225 d
+    //   human      horizon 0.75   126 relations   median age 450 d
+    //   kobold     horizon 0.80   551 relations   median age 200 d
+    //
+    // There is no monotone relationship between authored horizon and relation
+    // lifetime at all — not a weakened one, an absent one. The extremes the old
+    // assertion read (kobold 200 d against gnoll 325 d, ratio 0.615) invert the
+    // claim, while HUMAN at horizon 0.75 holds the longest median of the five.
+    // So "collapsed toward a single attractor" is not the right description
+    // either: the five are scattered, not converged.
+    //
+    // Note also the instrument. Reading rows[0] against rows[last] takes two
+    // points off five scattered ones, which is weak whichever way it comes out;
+    // human's 126 relations against hobgoblin's 603 says the medians are not
+    // even comparably sampled. A rank correlation over all five would be the
+    // honest measure and is a follow-up, not something to invent while
+    // unblinded.
+    //
+    // The assertion is inverted to record the falsification and keep a
+    // tripwire: if the ordering ever returns, this fires and says to re-read
+    // rather than quietly restoring a claim nobody re-derived.
     assert!(
-        l_med >= s_med * MIN_LIFETIME_RATIO,
-        "the strategy family collapsed toward a single attractor (spec §8.0): the \
+        l_med < s_med * MIN_LIFETIME_RATIO,
+        "the horizon/lifetime ordering has RETURNED (spec §8.0/§4.3a): the \
          longest-horizon patron people {} (horizon {l_h}) holds relations of median age {l_med} \
-         d against {} (horizon {s_h}) at {s_med} d — a ratio of {:.3}, under the {MIN_LIFETIME_RATIO} \
-         this criterion requires. §4.3a claims a generational patron's relation persists where \
-         an immediate one's does not; at parity that claim is doing no work.",
+         d against {} (horizon {s_h}) at {s_med} d — a ratio of {:.3}, at or above the \
+         {MIN_LIFETIME_RATIO} the original criterion required. The Tense measured this claim \
+         FALSIFIED with no monotone relationship at all; if it is back, re-derive it over the \
+         whole roster rather than the two extremes before trusting it.",
         longest.0,
         shortest.0,
         l_med / s_med,

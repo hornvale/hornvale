@@ -30,6 +30,9 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     .unwrap()
 }
 
+/// claim: invariant(census: none yet) — noun_class/day_schema biconditional
+/// over a targeted seed set, with an embedded vacuity guard
+/// (any_animate_sky) riding on the same sweep
 #[test]
 fn the_coherence_law() {
     // Every placed culture: noun_class_from(.., "sun") is Animate IFF
@@ -140,6 +143,8 @@ fn morphology_is_deterministic() {
     );
 }
 
+/// claim: readout — prints the drawn depth triple per seed x species,
+/// morphology depth landscape over seeds 1..=3
 #[test]
 fn depth_landscape_measured() {
     // Sweep seeds 1..=3 x placed species: print + pin the drawn depth
@@ -177,21 +182,53 @@ fn depth_landscape_measured() {
     // seed 2). The Vacancy T9 adds a fifth people (the gnoll), which also
     // places at every seed 1..=3; the landscape is now the full 15-row (5
     // peoples x 3 seeds) grid — re-measured and re-pinned exactly below.
+    //
+    // The Generalist re-pin (2026-08-03): human is a sixth Settled people
+    // and places at every seed 1..=3 too, growing the grid to the full
+    // 18-row (6 peoples x 3 seeds) landscape — re-measured and re-pinned
+    // exactly below.
+    //
+    // The Delvers re-pin (C2c, 2026-08-07): the three dwarves are Settled
+    // peoples seven through nine and every one of them places at every
+    // seed 1..=3, so the grid is the full 27-row (9 peoples x 3 seeds)
+    // landscape. **The eighteen pre-existing rows are byte-identical** —
+    // re-measured, not assumed: a people's morphological depth is drawn per
+    // people and does not move when the roster around it grows, even though
+    // settlement PLACEMENT moved everywhere (which is what redecided the
+    // lexicons' exposure, a different quantity).
+    //
+    // **The roster cut to three (spec §11) moved NOTHING here.** This grid
+    // was first pinned at 33 rows with five dwarves; withdrawing duergar and
+    // mountain-dwarf deleted their six rows and left the other twenty-seven
+    // byte-identical, which is the same per-people independence stated above,
+    // now measured in the shrinking direction as well as the growing one.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
+        (1, "desert-dwarf", MorphDepth::None, MorphDepth::None),
         (1, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
+        (1, "gully-dwarf", MorphDepth::None, MorphDepth::None),
+        (1, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
+        (1, "human", MorphDepth::Affix, MorphDepth::Affix),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
+        (2, "desert-dwarf", MorphDepth::Particle, MorphDepth::None),
         (2, "gnoll", MorphDepth::None, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
+        (2, "gully-dwarf", MorphDepth::None, MorphDepth::Particle),
+        (2, "hill-dwarf", MorphDepth::Particle, MorphDepth::Particle),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
+        (2, "human", MorphDepth::None, MorphDepth::None),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
+        (3, "desert-dwarf", MorphDepth::Affix, MorphDepth::None),
         (3, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
+        (3, "gully-dwarf", MorphDepth::None, MorphDepth::None),
+        (3, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
+        (3, "human", MorphDepth::Particle, MorphDepth::None),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),
     ];
     assert_eq!(

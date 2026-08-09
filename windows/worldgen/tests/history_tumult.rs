@@ -212,6 +212,8 @@ fn cascades_do_not_depopulate_the_world() {
 /// all — `MIN_POOLED_CASCADES`. No ceiling is asserted on the shape: the
 /// deferred dominance-hierarchy slice is supposed to break this shape, and a
 /// pin against it would freeze the falsification instead of recording it.
+/// claim: readout(off-gate, heavy:) — cascade-size distribution over
+/// SHAPE_SAMPLE, with pooled revolt/flight counts, adjudicated
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn cascade_sizes_are_measured_and_the_shape_adjudicated() {

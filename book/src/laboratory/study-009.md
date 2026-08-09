@@ -10,7 +10,7 @@ single place, and to add the one control the year still owed: a **null
 control** that rules out the alternative explanation — that the divergence is
 not authored structure at all, but two different draws off one seed wearing
 the costume of culture. The comparative suite says the two peoples differ
-decisively; the null control says a people identical to the baseline does
+decisively; the null control says a people identical to the manikin does
 *not*. Only both together close the year's exit criterion.
 
 **A note on scale and provenance.** This study spans two committed
@@ -118,7 +118,8 @@ peoples differ; a skeptic answers that *any* two draws off one seed differ,
 so a decisive 0.875 could be stream noise dressed as culture. The control
 that rules this out is a **distributional twin**: a third people,
 `goblin-twin`, carrying the goblin's exact vectors — every scalar at 0.5,
-every enumeration at its goblin variant. A vector identical to the baseline
+every enumeration at its goblin variant — which is to say, exactly the
+manikin's values. A vector identical to the manikin
 cannot move a formula *constructed* to reduce to identity there, so the twin
 must be structurally indistinguishable from the goblin. If it diverged
 anyway, the divergence would be noise; that it does not is the proof the

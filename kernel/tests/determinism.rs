@@ -4,7 +4,7 @@
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConstantField, EntityId, Fact, Field, ObserverContext, PhenomenaSource, Phenomenon, Position,
-    Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
+    Referent, Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 
 struct MiniSun;
@@ -13,7 +13,7 @@ impl PhenomenaSource for MiniSun {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: "celestial-body".to_string(),
-            description: "a golden sun fixed at zenith".to_string(),
+            referent: Referent::of("sun"),
             period_days: None,
             salience: 1.0,
             venue: Venue::DaySky,
@@ -104,6 +104,8 @@ fn same_seed_yields_byte_identical_worlds() {
     assert_eq!(mini_genesis(Seed(42)), mini_genesis(Seed(42)));
 }
 
+/// claim: reachability(seed: 1..=4) — non-degeneracy: mini_genesis is not a
+/// constant function
 #[test]
 fn different_seeds_yield_different_worlds() {
     // Village naming draws from the seed, so worlds should differ.

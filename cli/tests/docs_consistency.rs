@@ -907,7 +907,10 @@ fn the_history_page_prose_names_the_cell_it_renders() {
     assert_eq!(
         cited, rendered,
         "history-seed-42.md prose cites cell {cited} but renders cell {rendered} — \
-         the hand-authored half has gone stale against the generated half"
+         the framing prose in scripts/regenerate-artifacts.sh (the `history_site` \
+         block, ~lines 219-243) has gone stale against the rendered column. Fix \
+         the printf literals there, not this generated .md file — it is \
+         overwritten wholesale on the next `make rebaseline`."
     );
 
     assert!(
@@ -935,13 +938,38 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         .split_once("```text")
         .expect("the page has a fenced render block");
 
-    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll"] {
+    // The Generalist added a sixth people (human); appended so this loop
+    // still covers every settling people if the hand-authored prose is ever
+    // edited to name one (Fix round 1, Finding 1's shape, caught by a
+    // follow-up grep rather than a live failure — the guard below only
+    // checks names the prose actually contains, so this was dormant, not
+    // red).
+    //
+    // The Delvers (C2c) appends the dwarf family's three, taking the settling
+    // roster to nine. **This list is authored and the roster is not**, so it
+    // goes stale silently and in the safe-looking direction: a missing people
+    // makes the guard check LESS, never fail, which is why the note above
+    // records the last omission as "dormant, not red". Anyone adding a
+    // settling kind must append it here.
+    for people in [
+        "bugbear",
+        "hobgoblin",
+        "kobold",
+        "goblin",
+        "gnoll",
+        "human",
+        "desert-dwarf",
+        "gully-dwarf",
+        "hill-dwarf",
+    ] {
         if prose.to_lowercase().contains(people) {
             assert!(
                 block.to_lowercase().contains(people),
                 "history-seed-42.md prose names {people}s, but no {people} appears \
-                 in the rendered column — the hand-authored half has gone stale \
-                 against the generated half"
+                 in the rendered column — fix the framing prose in \
+                 scripts/regenerate-artifacts.sh (the `history_site` block, \
+                 ~lines 219-243), not this generated .md file, which is \
+                 overwritten wholesale on the next `make rebaseline`."
             );
         }
     }
@@ -954,8 +982,10 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         assert!(
             !year.is_empty() && block.contains(&format!("year {year}")),
             "history-seed-42.md prose cites the year {year}, which the rendered \
-             column never reports — the hand-authored half has gone stale against \
-             the generated half"
+             column never reports — fix the framing prose in \
+             scripts/regenerate-artifacts.sh (the `history_site` block, \
+             ~lines 219-243), not this generated .md file, which is \
+             overwritten wholesale on the next `make rebaseline`."
         );
     }
 }

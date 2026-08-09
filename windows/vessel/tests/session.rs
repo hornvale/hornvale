@@ -22,6 +22,8 @@ fn opts() -> PossessOpts {
         day: WorldTime { day: 0.0 },
         echo: false,
         wild_agents: true,
+        eyes: hornvale_vessel::eyes::Eyes::Own,
+        lens: hornvale_vessel::lens::Lens::Off,
     }
 }
 
@@ -124,9 +126,9 @@ fn examine_honors_the_contract_and_release_ends() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let f = s.focalized().unwrap();
-    for (noun, detail) in &f.nouns {
-        match s.handle(&format!("examine {noun}")) {
-            Turn::Out(t) => assert_eq!(&t, detail, "examine renders the datum"),
+    for n in &f.nouns {
+        match s.handle(&format!("examine {}", n.display)) {
+            Turn::Out(t) => assert_eq!(&t, &n.datum, "examine renders the datum"),
             _ => panic!("examine must not release"),
         }
     }
@@ -278,6 +280,8 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
     )
     .unwrap();
@@ -309,8 +313,11 @@ fn the_stitch_law_end_to_end() {
         // merge): Xobo -> Booko — the 19 toponymic/quality concepts Task 3
         // registered shift the proto-root walk, so every lexicon-derived
         // name re-draws. The rebase onto The Toponym's cohort ordering
-        // re-draws them once more: Booko -> Xoaboa. Moon count ("two"),
-        // subject and sentence frame unchanged at every step.
+        // re-draws them once more: Booko -> Xoaboa. The Contour's epoch v2
+        // (2026-08-02, history/bake/v2) re-mints the draw again: Xoaboa ->
+        // Pao. The Tense (2026-08-05) re-mints it once more, and it lands back
+        // where it already was two renames ago: Pao -> Xoaboa. Moon count
+        // ("two"), subject and sentence frame unchanged at every step.
         after.contains("Xoaboa has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
@@ -327,6 +334,8 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
     )
     .unwrap();
@@ -408,6 +417,8 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -419,6 +430,8 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
         std::io::Cursor::new(script),
         &mut out_b,
@@ -617,25 +630,58 @@ fn the_water_column_is_a_place_you_can_be() {
     // A fixed compass cycle cannot make progress on a 3-exit triangular mesh;
     // biasing the attempts westward drifts the walker to the coast, and the
     // failed attempts are harmless no-ops.
+    //
+    // The loop stops when `dive` SUCCEEDS, not when `look` merely mentions open
+    // water, and The Tense is what showed the difference matters: the walker
+    // reached a look containing "Open water" while standing somewhere `dive`
+    // answered "There is no water here to go down into." The old condition was
+    // a proxy for the precondition rather than the precondition, so the test
+    // dived from dry land and read the failure as a column. Ask the verb.
+    //
+    // The budget is 3000 (was 600) because seed 42's re-placement seats the
+    // possession much further inland — water is first reachable around
+    // iteration 2400, measured.
     let mut afloat = String::new();
-    for _ in 0..600 {
+    for _ in 0..3000 {
         for d in ["w", "nw", "sw"] {
             s.handle(d);
         }
-        if let Turn::Out(t) = s.handle("look")
-            && t.contains("Open water")
+        let Turn::Out(look) = s.handle("look") else {
+            continue;
+        };
+        if !look.contains("Open water") {
+            continue;
+        }
+        if let Turn::Out(probe) = s.handle("dive")
+            && !probe.contains("no water here")
         {
-            afloat = t;
+            s.handle("surface");
+            afloat = look;
             break;
         }
     }
     assert!(
         !afloat.is_empty(),
-        "the walker never reached water; the column cannot be tested"
+        "the walker never reached a divable water column; it cannot be tested"
     );
 
     // On the surface: afloat on open water, not standing in the floor's biome.
     assert!(afloat.contains("Open water —"), "{afloat}");
+
+    // A direction this cell ACTUALLY offers, read off the surface `look`
+    // before diving. Hardcoding `n` was wrong and The Tense exposed it: the
+    // mesh is triangular, every cell offers one of two exit triads, and the
+    // exit check runs BEFORE the submersion rule — so on a cell without `n`
+    // the reply is "No way n from here." and the lateral-refusal claim below
+    // is never reached. The test would have gone green on a refusal it was not
+    // testing for, which is worse than the red.
+    let lateral_dir = afloat
+        .lines()
+        .find(|l| l.starts_with("Ways on"))
+        .and_then(|l| l.trim_end_matches('.').split(": ").nth(1))
+        .and_then(|w| w.split(", ").next())
+        .expect("open water reports its ways")
+        .to_lowercase();
 
     // Down: a different place at the same coordinate.
     let under = match s.handle("dive") {
@@ -652,7 +698,7 @@ fn the_water_column_is_a_place_you_can_be() {
     );
 
     // Lateral movement is refused while under, and says so diegetically.
-    let lateral = match s.handle("n") {
+    let lateral = match s.handle(&lateral_dir) {
         Turn::Out(t) => t,
         _ => panic!("must not release"),
     };
@@ -684,4 +730,117 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
         _ => panic!("must not release"),
     };
     assert!(up.contains("already at the surface"), "{up}");
+}
+
+/// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
+/// the absence — the first of the three outcomes `dive`'s own doc warns a
+/// descent verb must distinguish. The other two (a cave whose entrance is
+/// SEALED vs. a cave that actually descends) are exercised in
+/// `windows/vessel/src/session.rs`'s own internal tests
+/// (`delve_has_three_distinguishable_outcomes`), which need a hand-picked
+/// cave cell — a terrain cell spans many walk-band rooms, so a test cannot
+/// reliably steer a walk to land on one specific outcome, let alone a
+/// SEALED one specifically (only ~48.5% of caves, Task 3), and only
+/// `session.rs`'s own tests can reach the private `delve_at` seam that
+/// sidesteps needing to.
+///
+/// This mirrors `there_is_nothing_to_dive_into_on_dry_land` exactly: the
+/// flagship's own starting cell has no cave (measured, not assumed — the
+/// seed-42 fixture's cave count over land is nonzero but sparse, and the
+/// starting cell is never one of them), so no walk is needed to observe this
+/// outcome.
+#[test]
+fn there_is_no_cave_at_the_flagships_own_starting_cell() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let out = match s.handle("delve") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(out.contains("no cave here"), "{out}");
+    let up = match s.handle("climb") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(
+        up.contains("not underground"),
+        "climb with nothing to climb out of must name that: {up}"
+    );
+}
+
+/// Bare `eyes` names whose eyes the chart is coloured through and the arity
+/// of what they see (The Beholding, Task 5).
+#[test]
+fn the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let out = match s.handle("eyes") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("eyes must not release"),
+    };
+    let species = s.agent().species.clone();
+    assert!(
+        out.contains(&species),
+        "the report must name whose eyes: {out}"
+    );
+    assert!(out.contains("channel"), "and the arity: {out}");
+}
+
+/// `eyes <name>` switches whose eyes colour the chart, and an unknown name
+/// refuses loudly rather than guessing — naming what was asked for and
+/// listing the roster (The Beholding, Task 5).
+#[test]
+fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let before = s.purview(0).unwrap();
+    s.handle("eyes kobold");
+    let after = s.purview(0).unwrap();
+    if s.agent().species != "kobold" {
+        assert_ne!(
+            before.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
+            after.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
+            "switching eyes must change the chart"
+        );
+    }
+    let refusal = match s.handle("eyes wyvern") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("eyes must not release"),
+    };
+    assert!(
+        refusal.contains("wyvern"),
+        "name what was refused: {refusal}"
+    );
+    assert!(
+        refusal.contains("bugbear"),
+        "and list the roster: {refusal}"
+    );
+}
+
+/// `map` draws the colour lens by default (Task 4's headline claim: a
+/// possession sees as its own kind does, not a human narrator) and falls all
+/// the way back to the plain terrain lens — no colour, no escape sequence —
+/// when the eyes are declined (The Beholding, Task 5).
+#[test]
+fn map_renders_the_colour_lens_unless_the_eyes_are_off() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let lit = match s.handle("map") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("map must not release"),
+    };
+    assert!(
+        lit.contains("[lens: colour"),
+        "possession draws the colour lens: {lit}"
+    );
+    s.handle("eyes off");
+    let bare = match s.handle("map") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("map must not release"),
+    };
+    assert!(
+        bare.contains("[lens: terrain"),
+        "eyes off falls back to terrain: {bare}"
+    );
+    assert!(!bare.contains('\u{1b}'), "and emits no escape sequences");
 }

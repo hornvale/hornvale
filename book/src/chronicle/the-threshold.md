@@ -109,6 +109,25 @@ observation about the world as it now is, awaiting a measurement of its own.
 
 What is claimed is narrower and safer: a fire never makes a creature colder.
 
+## A later note: the watchdog moved out from under it
+
+A later campaign had to shrink the measurement this section describes — the
+same real-population check, grown too slow to keep paying for on every
+commit, replanted onto a small, deliberately built scene instead of the whole
+world. The safety half survived the move intact: a fire still may never make
+a creature colder, asserted now on the smaller scene rather than the full
+population, and it holds there for the same reason it held here — not
+because the fire was proven weak, but because the scene sits deep enough in
+the cold that neither arm has anywhere left to move.
+
+The magnitude half did not survive the move. "The delta stays near where it
+was recorded" was a bound over a population that keeps growing as other work
+reshapes the world's history, and a small built scene has no such population
+to bound. That bound is not asserted anywhere today. Relocating it to where
+the full population is still measured — the periodic census, as a rate
+rather than a gate assertion — was named as the right home for it and left
+undone, an open debt rather than a quiet loss.
+
 ## What was found by making something move
 
 Twice, a thing that had been checked turned out to have been checked for the

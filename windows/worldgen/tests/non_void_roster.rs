@@ -15,7 +15,7 @@
 //! World-building idiom reused verbatim from `occupancy_readout.rs`
 //! (`hornvale_worldgen::build_world`, `WorldComponents::assemble`,
 //! `terrain_of`/`climate_of`/`sky_of` "reconstruct, never store"). The
-//! per-species K comes from [`hornvale_worldgen::niche_per_species_k`], whose
+//! per-species K comes from [`hornvale_worldgen::per_species_suitability`], whose
 //! returned `u32` is a **build-local dense index, not identity** (see its doc
 //! comment) - it is the position in the `species_biosphere` slice passed in,
 //! so the index -> [`hornvale_kernel::KindId`] mapping here is rebuilt fresh,
@@ -30,7 +30,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, niche_per_species_k,
+    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
     sky_of, terrain_of,
 };
 use std::collections::BTreeSet;
@@ -49,12 +49,48 @@ const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // The build-local dense index -> KindId mapping, built from the exact
-    // same `wc.biosphere` ordering passed to `niche_per_species_k` below
-    // (ascending-KindId order, per `niche_per_species_k`'s doc comment) so
+    // same `wc.biosphere` ordering passed to `per_species_suitability` below
+    // (ascending-KindId order, per `per_species_suitability`'s doc comment) so
     // the returned `u32` tags resolve to the correct kind.
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
+    // THE LIVE `biome_affinity` REGISTRY, not an all-`None` stand-in — and this
+    // is the one place on the branch where that distinction has teeth.
+    //
+    // This test is the ghost guard: "a kind can be authored, load, satisfy every
+    // referential-integrity check, and still have K = 0 on every cell of every
+    // world". A biome affinity is a per-biome MULTIPLIER on exactly that K, and
+    // it is the only mechanism in the codebase that can push a kind's field
+    // toward zero across a whole class of biomes at once. A guard against
+    // vanishing kinds that is handed `None` for every kind is structurally blind
+    // to the newest way a kind can vanish — it would keep passing while the
+    // shipped registry drove a row's factor to a value no cell could clear.
+    //
+    // Same `wc.biosphere` order as `bios` and `realm`, so the three slices stay
+    // index-aligned; a kind absent from the sparse store resolves to `None`,
+    // which task 3's `an_absent_affinity_is_bit_identical` proved is the
+    // unrestricted 1.0 no-op. That is what makes threading the real store safe
+    // for the 27 kinds that carry no row: they are scored exactly as before, and
+    // only the two occupants see anything new.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| wc.biome_affinity.get(k).cloned())
+        .collect();
 
     let world = build_world(
         Seed(seed),
@@ -81,8 +117,8 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let ks = niche_per_species_k(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+    let ks = per_species_suitability(
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
     let mut viable = BTreeSet::new();
@@ -95,6 +131,11 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     viable
 }
 
+/// claim: reachability(seed: [1,7,42,99]) — the fourth hunt Task 1's audit
+/// found (docs/audits/the-assay-build-volume-audit.md §2.4); own doc: "a
+/// 'somewhere, ever' existence check". Same destination as hydro_witness/
+/// exposure — a coverage-table census metric — but not migrated by this
+/// campaign's tranche
 #[test]
 fn every_kind_is_viable_somewhere() {
     // A small seed set: this is a "somewhere, ever" existence check, not a

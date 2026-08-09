@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod astar;
+pub mod color;
 pub mod component;
 pub mod domain;
 pub mod ecology;
@@ -30,6 +31,10 @@ pub mod units;
 pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
+pub use color::{
+    BAND_CENTERS_NM, BANDS, ChannelRole, Illuminant, Mixture, Observer, Projection, Reflectance,
+    Signal, Spectrum, standard_observer,
+};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
@@ -42,8 +47,8 @@ pub use ledger::{EntityId, Fact, KindId, Ledger, LedgerError, Value};
 pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, VISIBILITY_FLOOR, Venue,
-    Visibility, observe,
+    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, VISIBILITY_FLOOR,
+    Venue, Visibility, observe,
 };
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;
@@ -55,6 +60,7 @@ pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
 pub use units::{
-    Mass, Precipitation, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years,
+    Mass, Precipitation, ReferenceElevation, SeaLevelHeight, TempAnomaly, Temperature, UnitError,
+    Years,
 };
 pub use world::{INSTANCE_OF, KERNEL_CORE_PREDICATES, NAME, NAME_GLOSS, World};

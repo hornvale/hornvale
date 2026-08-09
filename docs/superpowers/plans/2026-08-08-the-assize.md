@@ -1,0 +1,1202 @@
+# The Assize Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Clear all five red heavy-tier tests at main, so that C2d (The Radiation) starts on a tier whose failures are unambiguous.
+
+**Architecture:** Five independent instrument repairs, sorted by defect class rather than by symptom (spec §1.1). Two become census columns; two get their bounds re-derived from mechanisms instead of refitted; one is a fixture regeneration with a preregistered claim re-checked. **No product code changes anywhere** — no kernel, no domain, no provider, no save format.
+
+**Tech Stack:** Rust 2024, `cargo nextest`, the `windows/lab` metric registry, `scripts/census-run.sh`.
+
+**Spec:** `docs/superpowers/specs/2026-08-08-the-assize-design.md`
+
+## Global Constraints
+
+- **No ceiling, floor or bound is raised to clear a measurement.** Any threshold that moves is re-derived from a mechanism and says so at its definition. `NONRAIDER_MAX` is never raised from 0.25.
+- **`heavy:` ignore reasons are ONE verbatim string**, compared by equality at `cli/tests/heavy_tier.rs`. The canonical string is exactly:
+  `heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full`
+  Never paraphrase it.
+- **The claim-shape lint is default-deny** (`cli/tests/claim_shape.rs`, decision 0093). Every seed-looping test needs `/// claim: <shape>(...)`, assigned from what the test *asserts*, not from its name.
+- **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting uses `total_cmp`.
+- **No new external dependencies.** Allowlist is `serde`, `serde_json`, `libm`.
+- **`std::time::Instant` is banned except in the existing benchmark harnesses**, which already carry scoped `#[allow(clippy::disallowed_types)]`.
+- **Every crate sets `#![warn(missing_docs)]`.** Every new `pub` item, field and variant gets a one-line doc comment.
+- **Run `cargo fmt` as the final step before every commit.** fmt-gate skips are the most common review finding.
+- **Every mutation test must prove it mutated:** assert the target text exists before substituting. A no-op mutation produces false green.
+- **Working directory discipline:** every mutating command carries its path explicitly (`git -C <worktree>`, absolute paths in redirects). Stage explicit paths — **never `git add -A`**; a parallel subagent's in-flight edits get swept in.
+
+**Worktree:** `/Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-assize`, branch `the-assize`.
+
+---
+
+### Task 1: The occupancy readout — regenerate, and correct the claim
+
+**Files:**
+- Modify: `windows/worldgen/tests/fixtures/occupancy.csv` (regenerated; **already done in the worktree** — verify, do not re-run unless it is missing)
+- Modify: `windows/worldgen/tests/occupancy_readout.rs:221-300` (the doc block on `each_target_region_gains_a_top_ranked_occupant`)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: nothing. Self-contained.
+
+**Context:** The fixture is stale. `regenerate_occupancy_readout` (`:212`) is deliberately **not** `heavy:`-ignored, because running it in `gate-full` would let the artifact self-heal past its own drift check. It is a by-hand run.
+
+- [ ] **Step 1: Confirm the fixture is regenerated and the drift check passes**
+
+```bash
+cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-assize
+git diff --stat -- windows/worldgen/tests/fixtures/occupancy.csv
+# expect: 60 insertions(+), 24 deletions(-)
+cargo test -p hornvale-worldgen --test occupancy_readout occupancy_readout_is_current -- --ignored --nocapture
+```
+
+Expected: PASS. If the fixture is not modified, run `regenerate_occupancy_readout` first:
+`cargo test -p hornvale-worldgen --test occupancy_readout regenerate_occupancy_readout -- --ignored`
+
+- [ ] **Step 2: Re-derive the attribution yourself — do not copy it from the spec**
+
+The spec states two disjoint causes. **Re-derive them**; an inherited attribution is a hypothesis, and this file has already recorded two under-checked attributions.
+
+```bash
+git show HEAD:windows/worldgen/tests/fixtures/occupancy.csv > /tmp/occ-old.csv
+python3 - <<'EOF'
+import csv
+load=lambda p:list(csv.DictReader(open(p)))
+old,new=load('/tmp/occ-old.csv'),load('windows/worldgen/tests/fixtures/occupancy.csv')
+ok,nk={r['kind'] for r in old},{r['kind'] for r in new}
+oi={(r['kind'],r['biome']):r for r in old}; ni={(r['kind'],r['biome']):r for r in new}
+ch=[k for k in oi if k in ni and oi[k]!=ni[k]]
+from collections import Counter
+print('kinds added  :',sorted(nk-ok))
+print('kinds removed:',sorted(ok-nk))
+print('changed rows :',len(ch),'by kind:',Counter(k for k,_ in ch).most_common())
+print('identical    :',sum(1 for k in oi if k in ni and oi[k]==ni[k]))
+EOF
+```
+
+Expected: added `['desert-dwarf','gully-dwarf','hill-dwarf']`; 24 changed rows, all `rust-monster` (12) and `xorn` (12); 326 identical. **Confirm the realm-gate cause** — `git show 643d3c68 --stat` and read its message, which names those two kinds.
+
+- [ ] **Step 3: Re-check exit criterion 6 — do not re-pin it**
+
+```bash
+python3 - <<'EOF'
+import csv
+new=list(csv.DictReader(open('windows/worldgen/tests/fixtures/occupancy.csv')))
+newly=["giant-scorpion","giant-hyena","dire-wolf","rhinoceros",
+       "giant-constrictor-snake","carrion-crawler","shrieker","gnoll"]
+for region in ['desert','savanna','taiga']:
+    cand=sorted(((float(r['mean_k']),r['kind']) for r in new if r['biome']==region),reverse=True)
+    best=next(((v,k) for v,k in cand if k in newly),None)
+    rank=next((i+1 for i,(v,k) in enumerate(cand) if k in newly),None)
+    print('%-8s top=%-16s %.4f | best newly-authored=%-16s %.4f (rank %d of %d)'
+          % (region,cand[0][1],cand[0][0],best[1],best[0],rank,len(cand)))
+EOF
+```
+
+Expected: `desert top=otyugh 0.0470`, `savanna top=treant 0.0822`, `taiga top=treant 0.0545`; best newly-authored is `carrion-crawler` in all three, at ranks 2 / 4 / 3.
+
+- [ ] **Step 4: Rewrite the doc block with the measured values**
+
+Replace the three-row table at `occupancy_readout.rs:227-231` and the sentences that depend on it. The corrected content must state:
+
+```
+/// | region | new kinds present | top occupant |
+/// |---|---|---|
+/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **otyugh** (0.0470) — NOT met |
+/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | **treant** (0.0822) — NOT met |
+/// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | **treant** (0.0545) — NOT met |
+```
+
+and must say, in prose:
+
+1. **EC6 is met in ZERO of three regions, not one** — and it always was. The previous table claimed `giant-scorpion` (0.0177) topped desert. `giant-scorpion`'s desert `mean_k` is **0.0359**, it is not the top occupant, and it is not even the best newly-authored kind there (`carrion-crawler`, rank 2 of 26).
+2. **All three region rows are byte-identical before and after this regeneration.** The drift never touched EC6's subject, so the 2026-08-05 "witnesses refreshed, verdict unchanged" pass did not re-read the quantity the test computes. **This is the third under-checked attribution recorded against this file.**
+3. **The drift has two disjoint causes**, with the measured decomposition from Step 2, and `643d3c68` cited for the realm gate.
+4. The `BIO-supply-drowns-niche` diagnosis is **strengthened**, not weakened: all three regions are topped by a sessile autotroph or a detritivore.
+
+**Do not change the test body, the `newly_authored` list, or the `#[ignore]` reason.** Its failure is the record.
+
+- [ ] **Step 5: Verify nothing else moved, then commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-worldgen --all-targets -- -D warnings
+git add windows/worldgen/tests/fixtures/occupancy.csv windows/worldgen/tests/occupancy_readout.rs
+git commit -m "test(the-assize): regenerate the occupancy readout; EC6 was never met
+
+Two disjoint causes, measured rather than inherited: +36 rows are C2c's three
+dwarves, and the 24 CHANGED rows are only rust-monster and xorn — the realm
+gate (643d3c68), whose own commit message names exactly those two kinds. 326
+of 350 shared rows are byte-identical.
+
+The Vacancy's exit criterion 6 is met in ZERO of three regions, not the one
+its doc claimed. desert's top occupant is otyugh (0.0470), not giant-scorpion
+(0.0177, a figure matching nothing in the fixture; its actual desert mean_k is
+0.0359). All three region rows are byte-identical across this regeneration, so
+the claim was already false at the fixture it was written against — the third
+under-checked attribution this one file has recorded."
+```
+
+---
+
+### Task 2: The cost gates — correct the discriminator, then mechanize it
+
+**Files:**
+- Modify: `cli/tests/scene_cost.rs` (module doc §"The observed failure mode"; add basis constants; add the verdict block)
+- Modify: `cli/tests/session_cost.rs` (module doc; add basis constants; add the verdict block)
+- Modify: `docs/retrospectives/the-confusion.md` (the cost-ceiling follow-up)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: nothing. Self-contained.
+
+**Context:** The retrospective claims `scene_cost` asserts before printing. It does not — `:319-325` print, `:327-349` assert. Worse, the documented discriminator ("uniform inflation = machine; local = regression") gives the **wrong answer** on the real data, because the five metrics have different resource profiles.
+
+- [ ] **Step 1: Reproduce the evidence yourself**
+
+```bash
+ssh lefford 'd=/tmp/hornvale-heavy; l=$(ls -t "$d"/heavy-*.log|head -1); grep -A6 "genesis  *[0-9]" "$l"|head -8'
+```
+
+Expected:
+```
+genesis              13187.1 ms (budget 13000)
+SceneContext::build    1277.5 ms (budget 2700)
+tiles(512)+json       4207.4 ms (budget 8700)
+small docs+json          2.6 ms (budget 5.2) [12712 B]
+region per tile        266.7 ms (budget 420)
+```
+
+All five printed, on a failing run. That is the disproof of the retrospective's claim.
+
+- [ ] **Step 2: Add a basis constant beside each budget in `scene_cost.rs`**
+
+The measured values already live in the doc comments; promote them to code so a ratio is computable. Insert next to each existing budget constant:
+
+```rust
+/// The measured value `GENESIS_BUDGET_MS` was set from: 6318.6 ms, host
+/// `lefford`, dev profile, 2026-07-29 (The Cistern, slowest of three runs).
+/// A CONSTANT rather than prose so the failure path can compute a ratio —
+/// the discriminator below is arithmetic, not an instruction to the reader.
+const GENESIS_BASIS_MS: f64 = 6318.6;
+/// The measured basis for `CONTEXT_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const CONTEXT_BASIS_MS: f64 = 1308.0;
+/// The measured basis for `TILES_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const TILES_BASIS_MS: f64 = 4319.9;
+/// The measured basis for `SMALL_DOCS_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const SMALL_DOCS_BASIS_MS: f64 = 2.7;
+/// The measured basis for `REGION_PER_TILE_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const REGION_PER_TILE_BASIS_MS: f64 = 206.1;
+
+/// How far a CONTROL metric may drift from its basis before the run stops
+/// counting as "the controls held". Set at 1.5x: the widest control movement
+/// ever recorded on a run diagnosed as contention is 1.29x
+/// (`region per tile`, 2026-08-08), and the narrowest inflation on a run
+/// diagnosed as uniform contention is 1.79x (`.config/nextest.toml`, run B).
+/// The gap between those two is where this sits. It gates a DIAGNOSTIC
+/// MESSAGE, never a pass/fail — no assertion reads it.
+const CONTROL_TOLERANCE: f64 = 1.5;
+```
+
+- [ ] **Step 3: Replace the printout with a ratio table and a computed verdict**
+
+Replace `scene_cost.rs:319-325` with:
+
+```rust
+    // Named so the verdict below can speak about them: `genesis` is the only
+    // metric here that sculpts terrain across a large grid, and the other
+    // four run against an already-built world. That difference in RESOURCE
+    // PROFILE — not any difference in code health — is why a saturated runner
+    // moves genesis alone. See the module doc.
+    let measured: [(&str, f64, f64, f64); 5] = [
+        ("genesis", genesis_ms, GENESIS_BUDGET_MS, GENESIS_BASIS_MS),
+        ("SceneContext::build", context_ms, CONTEXT_BUDGET_MS, CONTEXT_BASIS_MS),
+        ("tiles(512)+json", tiles_ms, TILES_BUDGET_MS, TILES_BASIS_MS),
+        ("small docs+json", small_ms, SMALL_DOCS_BUDGET_MS, SMALL_DOCS_BASIS_MS),
+        ("region per tile", per_tile_ms, REGION_PER_TILE_BUDGET_MS, REGION_PER_TILE_BASIS_MS),
+    ];
+    for (name, got, budget, basis) in measured {
+        println!("{name:<20}{got:9.1} ms (budget {budget:>8}) {:5.2}x basis {basis}", got / basis);
+    }
+    println!("small docs payload {small_bytes} B");
+
+    // THE DISCRIMINATOR, as arithmetic. `genesis` is the contention-sensitive
+    // metric; the other four are the CONTROL SET. Controls holding while
+    // genesis inflates is the machine. Any control moving is the code.
+    let controls_over: Vec<&str> = measured
+        .iter()
+        .skip(1)
+        .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
+        .map(|(name, _, _, _)| *name)
+        .collect();
+    if controls_over.is_empty() {
+        println!(
+            "VERDICT: all 4 controls within {CONTROL_TOLERANCE}x of basis. A genesis \
+             breach here reads as CONTENTION, not a regression — re-run on a quiet box \
+             to confirm before touching any constant."
+        );
+    } else {
+        println!(
+            "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
+             signature — look at the code before blaming the box.",
+            controls_over.len()
+        );
+    }
+```
+
+- [ ] **Step 4: Correct the module doc's discriminator**
+
+Rewrite the `## The observed failure mode is contention, and it is legible` section. It must now say:
+
+- The old rule — *"all five inflated by roughly 3x... a real regression is local"* — **is wrong as stated**, and is corrected here rather than merely mechanized.
+- Show the 2026-08-08 counter-example (genesis 2.09x, the four controls 0.96–1.29x) and state that the old rule classifies it as a regression while a quiet box measures genesis at **3947.9 ms against a 13000 ms ceiling**.
+- State the corrected rule: the five metrics have **different resource profiles**. `genesis` sculpts terrain across a large grid; the other four read an already-built world. A saturated runner starves the bandwidth-bound phase and leaves the cache-resident ones alone, so **contention here is expected to be LOCAL to genesis**. Uniformity was never the right test.
+- Keep the 2026-07-29 and 2026-07-28 measured bases verbatim — every ceiling names the value it ratcheted from and that chain must stay readable.
+- **The ratchet rule is unchanged and no ceiling moves in this campaign.**
+
+- [ ] **Step 5: Apply the same treatment to `session_cost.rs`**
+
+Same shape, with `Session::start` as the contention-sensitive metric (it builds a world) and the per-turn metrics as the control set. Add `START_BASIS_MS`, `TURN_BASIS_MS`, `INDOOR_SNAPSHOT_BASIS_MS` from the values already in that file's doc comments — **read them out of the file, do not invent them**. Replace the "Read a red run as contention before suspecting the code" paragraph with a pointer to the corrected rule in `scene_cost.rs` and the same resource-profile reasoning.
+
+Note the 2026-08-08 reading for the record: `Session::start` 7714 ms **passed** (budget 10500) while `handle+snapshot+json` 9.543 (budget 8) and `indoor snapshot+json` 46.705 (budget 18) failed — the control passed and the turn metrics blew, which the corrected rule reads as **worth looking at the code**, unlike the old one.
+
+- [ ] **Step 6: Verify both gates still pass on this quiet box, with the verdict line visible**
+
+```bash
+cargo test -p hornvale --test scene_cost -- --ignored --nocapture 2>&1 | tail -12
+cargo test -p hornvale --test session_cost -- --ignored --nocapture 2>&1 | tail -12
+```
+
+Expected: both PASS, each printing a ratio column and `VERDICT: all N controls within 1.5x of basis`.
+
+- [ ] **Step 7: Prove the verdict discriminates — a verdict that only ever prints one branch is not a discriminator**
+
+Temporarily set `TILES_BASIS_MS` to `50.0` (forcing a control far over tolerance), re-run, and confirm the **other** branch prints. Assert the target text exists before substituting:
+
+```bash
+grep -q 'const TILES_BASIS_MS: f64 = 4319.9;' cli/tests/scene_cost.rs || { echo "TARGET NOT FOUND"; exit 1; }
+sed -i '' 's/const TILES_BASIS_MS: f64 = 4319.9;/const TILES_BASIS_MS: f64 = 50.0;/' cli/tests/scene_cost.rs
+cargo test -p hornvale --test scene_cost -- --ignored --nocapture 2>&1 | grep VERDICT
+# expect: VERDICT: 1 control(s) moved: ["tiles(512)+json"]. This is NOT the contention signature...
+sed -i '' 's/const TILES_BASIS_MS: f64 = 50.0;/const TILES_BASIS_MS: f64 = 4319.9;/' cli/tests/scene_cost.rs
+grep -q 'const TILES_BASIS_MS: f64 = 4319.9;' cli/tests/scene_cost.rs || { echo "REVERT FAILED"; exit 1; }
+```
+
+- [ ] **Step 8: Correct the retrospective**
+
+In `docs/retrospectives/the-confusion.md`, replace the follow-up bullet beginning *"The heavy tier runs wall-clock cost ceilings on a box the heavy tier is saturating."* The correction must:
+
+- state plainly that the follow-up's claim (*"`scene_cost` asserts on the first budget it checks... never measures the four metrics"*) **was wrong**, and that all five were printed in the very run it describes;
+- quote the five-line log excerpt from Step 1;
+- state the sharper finding: applying the documented discriminator to that data classifies the run as a **regression**, and the correct answer was reached only by overruling the discriminator with a quiet-box re-measure;
+- name the cause — different resource profiles — and point at the corrected rule now in `scene_cost.rs`.
+
+Frame it as a correction, not a quiet edit. That retrospective's own subject is inherited diagnoses; an incorrect follow-up inside it is the same failure recurring.
+
+- [ ] **Step 9: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale --all-targets -- -D warnings
+git add cli/tests/scene_cost.rs cli/tests/session_cost.rs docs/retrospectives/the-confusion.md
+git commit -m "test(the-assize): the cost gates' contention discriminator was wrong, not just unmechanized
+
+The Confusion's follow-up said scene_cost asserts before printing, so a
+contended run never measures the four control metrics. It prints all five at
+:319-325 and asserts at :327 — and all five are in the very heavy-run log the
+follow-up describes.
+
+The sharper finding: applying the DOCUMENTED discriminator to that data gives
+the wrong answer. genesis moved 2.09x its basis while the four controls sat at
+0.96-1.29x, so 'a real regression is LOCAL' classifies it as a regression. It
+is not: a quiet box builds the same world in 3947.9 ms against a 13000 ms
+ceiling. The rule fails because the five metrics have different RESOURCE
+PROFILES — genesis is the only one that sculpts terrain, so it is the only one
+a saturated runner starves.
+
+Bases are now constants, the failure path prints ratio-to-basis and a computed
+verdict, and the rule is corrected before being mechanized. No ceiling moves."
+```
+
+---
+
+### Task 3: `disposition_calibration` — adjudicate the falsification
+
+**Files:**
+- Modify: `windows/lab/tests/disposition_calibration.rs`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: nothing. Self-contained.
+
+**Context:** This test predicted its own red and forbade retuning. Its ceiling and separation halves are falsified; its ordering claim survives at ρ = 0.831. It also asserts **inside its loop**, so it reported one breach of three and never reached the separation check.
+
+- [ ] **Step 1: Reproduce the full table before changing anything**
+
+```bash
+cargo test -p hornvale-lab --test disposition_calibration -- --ignored --nocapture 2>&1 | tee /tmp/hv-disp-before.txt | grep "re-seated"
+```
+
+Expected (roughly; exact rates may differ slightly off-lefford — record what you get):
+```
+KindId("bugbear"): re-seated 28/60 = 0.467       KindId("gnoll"): 27/60 = 0.450
+KindId("desert-dwarf"): 20/60 = 0.333            KindId("goblin"): 18/60 = 0.300
+KindId("gully-dwarf"): 3/60 = 0.050              KindId("hill-dwarf"): 26/60 = 0.433
+KindId("hobgoblin"): 36/60 = 0.600               KindId("human"): 20/60 = 0.333
+KindId("kobold"): 43/59 = 0.729
+```
+
+**If your rates differ materially from these, stop and report it** — that is a finding about the box or about drift since the heavy run, and the adjudication below is written against these numbers.
+
+- [ ] **Step 2: Replace the assertion block — collect, then assert once**
+
+Replace the `for k in &abstainers { ... }` / `for k in &raiders { ... }` blocks and the separation assertion. The new body collects every rate first, prints the whole table, and asserts at the end:
+
+```rust
+    // COLLECT FIRST, ASSERT LAST. The previous shape asserted inside the
+    // abstainer loop and stopped at the first breach in BTreeMap order, so it
+    // reported `desert-dwarf` and never reached `goblin`, `human`, or the
+    // separation check at all — three of four abstainers were over the bound
+    // and the failure named one. An instrument must not destroy the evidence
+    // its own diagnosis needs.
+    let raider_rates: Vec<(KindId, f64)> = raiders.iter().map(|k| (*k, rate(k))).collect();
+    let abstainer_rates: Vec<(KindId, f64)> = abstainers.iter().map(|k| (*k, rate(k))).collect();
+
+    let weakest_raider = raider_rates.iter().map(|(_, r)| *r).fold(f64::INFINITY, f64::min);
+    let strongest_abstainer = abstainer_rates.iter().map(|(_, r)| *r).fold(0.0f64, f64::max);
+    let separation = weakest_raider / strongest_abstainer.max(f64::MIN_POSITIVE);
+
+    println!(
+        "raiders (>= {RAID_DISPOSITION_MIN}): {raider_rates:?}\n\
+         abstainers: {abstainer_rates:?}\n\
+         weakest raider {weakest_raider:.3}, strongest abstainer {strongest_abstainer:.3}, \
+         separation {separation:.3}"
+    );
+
+    // Every raider clears the floor. This half of the original preregistration
+    // SURVIVED the dissolution and is unchanged at 0.30.
+    let under: Vec<(KindId, f64)> = raider_rates
+        .iter()
+        .copied()
+        .filter(|(_, r)| *r < RAIDER_MIN)
+        .collect();
+    assert!(
+        under.is_empty(),
+        "{} raiding people(s) below the {RAIDER_MIN} floor: {under:?} — a people authored \
+         above the gate that almost never re-seats means the raid branch stopped running \
+         for it. Full table above.",
+        under.len()
+    );
+```
+
+- [ ] **Step 3: Add the span guard, then the two sign claims**
+
+Append, in this order — the span guard must come first because it is what makes the correlation non-vacuous:
+
+```rust
+    // THE SPAN GUARD, and it is load-bearing rather than decorative. Both of
+    // this file's mutation controls (forcing `takes_the_initiative` to `true`
+    // and to `false`) move every people's rate in the SAME direction, so the
+    // rates collapse toward equal and any rank correlation over them becomes
+    // noise of arbitrary sign. Without this, `rho > 0` below would not
+    // reliably redden under either mutation — i.e. the correlation alone is
+    // not an anti-vacuity guard, and this is what makes it safe to assert.
+    let mut all: Vec<f64> = raider_rates
+        .iter()
+        .chain(abstainer_rates.iter())
+        .map(|(_, r)| *r)
+        .collect();
+    all.sort_by(f64::total_cmp);
+    let span = all[all.len() - 1] - all[0];
+    assert!(
+        span >= MIN_RATE_SPAN,
+        "the roster's re-selection rates span only {span:.3} ({:.3}..{:.3}) — every people \
+         behaves the same, so the ordering claim below would be reading noise. This is what \
+         both mutation controls look like.",
+        all[0],
+        all[all.len() - 1]
+    );
+
+    // PRIMARY: the weakest raider re-seats more often than the strongest
+    // abstainer. This is the campaign's ORIGINAL preregistered claim with the
+    // fitted magnitude stripped off and the direction kept — a sign claim, so
+    // a thin margin is the correct condition and NOT a reason to raise it.
+    assert!(
+        separation > 1.0,
+        "the raid disposition no longer orders flagship re-selection at all: weakest raider \
+         {weakest_raider:.3} <= strongest abstainer {strongest_abstainer:.3} (separation \
+         {separation:.3}). Full table above."
+    );
+
+    // SECONDARY: monotone across the WHOLE roster, which a min-versus-max
+    // comparison can miss. Sign only — see this module's doc for why the
+    // measured 0.831 is a witness and not the threshold.
+    let pairs: Vec<(f64, f64)> = raiders
+        .iter()
+        .chain(abstainers.iter())
+        .map(|k| {
+            let disp = wc.psyche.get(k).expect("a partitioned people has a psyche row");
+            (disp.threat_response, rate(k))
+        })
+        .collect();
+    let rho = spearman(&pairs);
+    println!("spearman(threat_response, re-selection rate) = {rho:.4} over {} peoples", pairs.len());
+    assert!(
+        rho > 0.0,
+        "flagship re-selection is no longer monotone in authored threat_response \
+         (spearman {rho:.4}). The per-settlement draw predicts a positive sign; a \
+         non-positive one means the gate stopped reading the authored mean."
+    );
+```
+
+Add the constant and the helper. `spearman` must handle ties with average ranks:
+
+```rust
+/// The minimum spread the roster's re-selection rates must show before the
+/// rank correlation below is read. Not calibrated from data: it is set just
+/// above zero, because its job is to separate "the peoples differ at all"
+/// from "every rate is the same value", which is what both mutation controls
+/// produce. The shipped roster spans 0.679 (0.050 to 0.729).
+const MIN_RATE_SPAN: f64 = 0.05;
+
+/// Spearman rank correlation over `(x, y)` pairs, ties taking average ranks.
+/// Deterministic: `total_cmp` throughout, no float equality.
+fn spearman(pairs: &[(f64, f64)]) -> f64 {
+    fn ranks(v: &[f64]) -> Vec<f64> {
+        let mut idx: Vec<usize> = (0..v.len()).collect();
+        idx.sort_by(|a, b| v[*a].total_cmp(&v[*b]));
+        let mut out = vec![0.0; v.len()];
+        let mut i = 0;
+        while i < idx.len() {
+            let mut j = i;
+            while j + 1 < idx.len() && v[idx[j + 1]].total_cmp(&v[idx[i]]) == std::cmp::Ordering::Equal {
+                j += 1;
+            }
+            let avg = (i + j) as f64 / 2.0;
+            for k in i..=j {
+                out[idx[k]] = avg;
+            }
+            i = j + 1;
+        }
+        out
+    }
+    let (xs, ys): (Vec<f64>, Vec<f64>) = pairs.iter().copied().unzip();
+    let (rx, ry) = (ranks(&xs), ranks(&ys));
+    let n = rx.len() as f64;
+    let (mx, my) = (rx.iter().sum::<f64>() / n, ry.iter().sum::<f64>() / n);
+    let num: f64 = rx.iter().zip(&ry).map(|(a, b)| (a - mx) * (b - my)).sum();
+    let den = (rx.iter().map(|a| (a - mx).powi(2)).sum::<f64>()
+        * ry.iter().map(|b| (b - my).powi(2)).sum::<f64>())
+    .sqrt();
+    if den == 0.0 { 0.0 } else { num / den }
+}
+```
+
+- [ ] **Step 3b: Before deleting `NONRAIDER_MAX`, find every reference to it**
+
+It is intra-doc-linked from the module doc (``[`NONRAIDER_MAX`]``), and a
+dangling intra-doc link is a rustdoc warning that `-D warnings` catches at the
+doctest step rather than at the test step — i.e. late, in the final gate.
+
+```bash
+grep -rn "NONRAIDER_MAX" windows/lab/ cli/ docs/ book/
+```
+
+Every hit must be removed or rewritten as prose naming it *retired*. Verify with
+`cargo test -p hornvale-lab --doc` before committing.
+
+- [ ] **Step 4: Demote `SEPARATION_FACTOR` and record the collapse**
+
+`SEPARATION_FACTOR = 2.0` is no longer asserted. Keep it as a documented constant and print the comparison, so the collapse stays visible:
+
+```rust
+    println!(
+        "separation {separation:.3} against the RETIRED preregistered factor \
+         {SEPARATION_FACTOR} — reported, not asserted. Measured 2.55 at the pre-Tolerance \
+         roster (0.426 / 0.167); it is now 1.30 (0.433 / 0.333)."
+    );
+```
+
+Update its doc comment to say it is retired from assertion, why, and what replaced it.
+
+- [ ] **Step 5: Unit-test `spearman` against ground truth stated by hand**
+
+The helper is new code and must not be trusted because the battery is green. Add a non-ignored unit test:
+
+```rust
+#[test]
+fn spearman_reads_known_orderings() {
+    let up: Vec<(f64, f64)> = vec![(1.0, 10.0), (2.0, 20.0), (3.0, 30.0)];
+    assert!((spearman(&up) - 1.0).abs() < 1e-12, "perfect ascent is +1");
+    let down: Vec<(f64, f64)> = vec![(1.0, 30.0), (2.0, 20.0), (3.0, 10.0)];
+    assert!((spearman(&down) + 1.0).abs() < 1e-12, "perfect descent is -1");
+    let flat: Vec<(f64, f64)> = vec![(1.0, 5.0), (2.0, 5.0), (3.0, 5.0)];
+    assert_eq!(spearman(&flat), 0.0, "no variance in y is 0, not NaN");
+}
+```
+
+Run: `cargo test -p hornvale-lab --test disposition_calibration spearman_reads_known_orderings`
+Expected: PASS.
+
+- [ ] **Step 6: Rewrite the module doc's preregistration block**
+
+The `> **Preregistered:**` block must now record the adjudication:
+
+- the original claim, and that it is **FALSIFIED in two of three halves** — the ceiling (3 of 4 abstainers breach) and the separation factor (2.55 → 1.30);
+- that the raider floor **held** at 0.433 against 0.30;
+- that the **ordering survived** at ρ = 0.831, and that this is what The Tolerance's per-settlement draw predicts — the hard partition at 0.6 is what died, not the direction;
+- the full nine-people table from Step 1;
+- **that this is a post-hoc re-derivation**, stated plainly, with every new bound set from the mechanism (a draw around an authored mean predicts monotonicity and predicts only the *sign*) and **no measured value used as a threshold**;
+- **the honest cost:** a sign claim is a weaker discriminator than the ceiling it replaces, chosen because it is the strongest claim the shipped physics supports;
+- that `NONRAIDER_MAX` was **not** raised, and is deleted rather than moved.
+
+- [ ] **Step 7: Prove both mutation controls still redden**
+
+The file claims mutation-verification in both directions. That claim must be re-established against the new assertions, not inherited. In `windows/worldgen/src/history_bake.rs`, find `takes_the_initiative` and force each branch in turn. **Assert the target exists before substituting**, and confirm the RED is an assertion failure, not a compile error:
+
+```bash
+grep -n "fn takes_the_initiative" -A 6 windows/worldgen/src/history_bake.rs
+# Force TRUE, run, expect RED naming the span guard or the separation claim.
+# Force FALSE, run, expect RED likewise.
+# Revert, re-run, expect GREEN.
+```
+
+Record which assertion caught each mutation in the module doc. **If either mutation passes, stop and report** — that is a vacuous guard and the design is wrong.
+
+- [ ] **Step 8: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-lab --all-targets -- -D warnings
+cargo test -p hornvale-lab --test disposition_calibration -- --ignored --nocapture 2>&1 | tail -20
+git add windows/lab/tests/disposition_calibration.rs
+git commit -m "test(the-assize): adjudicate the disposition calibration — the partition died, the ordering held
+
+The battery predicted this red and forbade retuning. Adjudicated rather than
+adjusted:
+
+  RAIDER_MIN 0.30      weakest raider 0.433                    HOLDS
+  NONRAIDER_MAX 0.25   breached by 3 of 4 abstainers           FALSIFIED
+  SEPARATION 2.0       0.433/0.333 = 1.30, was 2.55            FALSIFIED
+  spearman(threat_response, rate) = 0.831                      ORDERING HOLDS
+
+Three of four abstainers breached, not the one the failure named: the test
+asserted inside its loop and stopped at the first in BTreeMap order, never
+reaching goblin, human, or the separation check. It now collects and asserts
+once.
+
+What died is the hard partition at 0.6, exactly as this file's own doc
+predicted when The Tolerance replaced an authored-mean comparison with a
+per-settlement DRAW. Replaced by sign claims set from that mechanism:
+separation > 1.0 (primary), spearman > 0 (secondary), and a span guard that is
+load-bearing — both mutation controls move every rate together, so the
+correlation alone would not reliably redden under them.
+
+Post-hoc re-derivation, labelled as one. No measured value is used as a
+threshold; NONRAIDER_MAX is deleted, never raised."
+```
+
+---
+
+### Task 4: The `climate-displacement-events` census column
+
+**Files:**
+- Modify: `windows/lab/src/metrics.rs` (the `registry()` history family; the worldgen `use` block at :17; the registry-size assertion at ~:7537)
+
+**Interfaces:**
+- Consumes: `hornvale_worldgen::migration_events(&World) -> u64` — **read the signature before using it** (`windows/worldgen/src/history_emit.rs:586`).
+- Produces: census column `"climate-displacement-events"`, consumed by Task 7's calibration test.
+
+**Context:** Reuse `migration_events` unchanged. The census must measure the *same quantity* the retiring battery did; reimplementing the fold would silently make it a different measurement.
+
+- [ ] **Step 1: Add `migration_events` to the worldgen import block**
+
+`windows/lab/src/metrics.rs:17-24`. Insert alphabetically into the existing braces.
+
+- [ ] **Step 2: Add the metric**
+
+Place it beside the raid metrics (the history family, near `raid-victim-rate` at ~:3631):
+
+```rust
+        // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
+        // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
+        // seed 42 alone, and `history_sundering.rs` reported the same quantity
+        // over twelve worlds. Measured over 48 worlds the distribution is
+        // bimodal with deciles [0, 0, 3, 5, 111, 291, 578] and is **exactly
+        // zero on 6 of 48 worlds** — so a single-seed firing gate has a ~12.5%
+        // failure rate by construction, and the nine-seed sweep that asserted
+        // it per seed was passing on luck.
+        //
+        // Calls `migration_events` rather than re-folding the ledger here: the
+        // census must measure the SAME quantity the battery did, and a second
+        // implementation would silently become a different measurement.
+        Metric {
+            name: "climate-displacement-events",
+            doc: "How many occupations on this world ended in climate-driven migration \
+                  (`occ-cause` = `migrated`), excluding conquest-relocations — the \
+                  displacement mechanic's volume (The Assize). Replaces the seed-42 gate in \
+                  `cli/tests/history_battery.rs` and the twelve-seed panel in \
+                  `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit \
+                  in single digits and a minority run to the hundreds, and a real minority \
+                  measure zero — a mild deep past, not an inert bake. Absent on a world \
+                  with no occupation records.",
+            summary: SummaryKind::Numeric {
+                // Straddling the measured bimodality rather than spreading evenly:
+                // the lower edges resolve the crowded 0-10 mode, the upper ones the
+                // long tail that runs to 578.
+                bucket_edges: &[0.0, 1.0, 5.0, 25.0, 100.0, 300.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(migration_events(v.world()) as f64)
+            }),
+        },
+```
+
+- [ ] **Step 3: Bump the registry-size assertion, adding provenance**
+
+At `windows/lab/src/metrics.rs`, the `assert_eq!(registry().len(), 191);`. Change to `192` and **append** a provenance comment above it — do not replace the existing ones. That line has already caught three pairs of parallel campaigns reconciling to a wrong number:
+
+```rust
+        // +1 for THE TARE (climate-displacement-events, retiring
+        // `history_battery`'s seed-42 gate and `history_sundering`'s
+        // twelve-seed panel). A second Tare column follows immediately below.
+```
+
+- [ ] **Step 4: Verify it compiles and the registry test passes**
+
+```bash
+cargo test -p hornvale-lab --lib metrics 2>&1 | tail -20
+```
+Expected: the registry-size test passes at 192.
+
+- [ ] **Step 5: Verify the column actually reads on a live world**
+
+```bash
+cargo run --release -p hornvale -- lab list-metrics | grep climate-displacement
+```
+Expected: the metric is listed.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-lab --all-targets -- -D warnings
+git add windows/lab/src/metrics.rs
+git commit -m "feat(lab): climate-displacement-events — the census column that retires the seed-42 gate
+
+Measured over 48 worlds the distribution is bimodal, deciles
+[0, 0, 3, 5, 111, 291, 578], and exactly ZERO on 6 of 48. A single-seed
+'does displacement fire' gate therefore has a ~12.5% failure rate by
+construction, and history_battery's nine-seed sweep was asserting it per seed
+and passing on luck.
+
+Calls migration_events unchanged rather than re-folding the ledger: the census
+must measure the same quantity the battery did.
+
+Registry 191 -> 192."
+```
+
+---
+
+### Task 5: The `tribute-relations-standing` census column
+
+**Files:**
+- Modify: `windows/lab/src/metrics.rs` (the metric; the registry-size assertion 192 → 193)
+
+**Interfaces:**
+- Consumes: `hornvale_history::PAYS_TRIBUTE_TO`, already imported via `hornvale_history` (a declared dependency, `windows/lab/Cargo.toml:22`).
+- Produces: census column `"tribute-relations-standing"`, consumed by Task 7's calibration test.
+
+**Context:** The retiring panel asserts on `BakeCensus::tribute_collected`, a flow on `History::tally`, which `build_world_to` discards. Only the `pays-tribute-to` stock reaches the ledger. Chosen over three alternatives by measurement (spec §3.3).
+
+- [ ] **Step 1: Add the metric**
+
+```rust
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Assize).
+        // `windows/worldgen/tests/history_tithe.rs` asserted on
+        // `BakeCensus::tribute_collected` — a FLOW integrated inside
+        // `History::tally`, which `build_world_to` DISCARDS before any census
+        // view exists. The world is designed to remember who owes whom, not
+        // how much has been paid, so this measures the stock the world keeps
+        // rather than proxying the flow it throws away.
+        //
+        // CHOSEN BY MEASUREMENT over three alternatives, all scored against
+        // the bake's own `tribute_collected` over 36 worlds:
+        //     stock (this column)          spearman +0.9344
+        //     SUM(now - since)                      +0.8909
+        //     distinct patrons                      +0.8419
+        //     largest patron's share                -0.7692  (partly arithmetic:
+        //                                    top >= 1/stock, decaying to -0.539
+        //                                    once small worlds are excluded)
+        // A normalized share was also tried and is markedly WORSE:
+        // `stock / occupations` scores +0.623 against this column's +0.934.
+        // The flow tracks the absolute number of relations, not a rate.
+        //
+        // An invariant sibling ("does every patron reference resolve", the
+        // shape of `raid-attribution-unresolved`) was DECLINED as structurally
+        // vacuous: `history_emit.rs` already `.expect`s that a tribute patron
+        // names a minted community, so such a column could only ever fire on
+        // hand-built input.
+        Metric {
+            name: "tribute-relations-standing",
+            doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
+                  at `now` — the subordination stock (The Assize). Replaces \
+                  `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
+                  panel, whose quantity lives on the bake's discarded tally and is \
+                  unreachable from any census metric. Agrees with that flow at spearman \
+                  0.934 over 36 worlds — a measured witness, NOT an equivalence: this is \
+                  a stock and that was a flow. Absent on a world with no occupation \
+                  records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 25.0, 60.0, 100.0, 150.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                let standing = v
+                    .world()
+                    .ledger
+                    .find(hornvale_history::PAYS_TRIBUTE_TO)
+                    .count();
+                MetricValue::Number(standing as f64)
+            }),
+        },
+```
+
+- [ ] **Step 2: Bump the registry-size assertion to 193**
+
+Extend the Tare provenance comment added in Task 4 to name both columns and say why the second exists.
+
+- [ ] **Step 3: Verify**
+
+```bash
+cargo test -p hornvale-lab --lib metrics 2>&1 | tail -20
+cargo run --release -p hornvale -- lab list-metrics | grep tribute-relations
+```
+Expected: registry test passes at 193; the metric is listed.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-lab --all-targets -- -D warnings
+git add windows/lab/src/metrics.rs
+git commit -m "feat(lab): tribute-relations-standing — the stock the world keeps
+
+The retiring panel asserts on a FLOW that build_world_to discards. The world
+is designed to remember who owes whom, not how much has been paid, so this
+measures the stock.
+
+Chosen by measurement over three alternatives (36 worlds, against the bake's
+own flow): stock +0.934, relation-years +0.891, patrons +0.842, top-share
+-0.769 (substantially arithmetic). A normalized share scores +0.623 against
+the raw count's +0.934.
+
+An invariant sibling was declined as structurally vacuous — emit_history
+already expects what it would assert.
+
+Registry 192 -> 193."
+```
+
+---
+
+### Task 6: Retire the single-seed gate and both panels
+
+**Files:**
+- Modify: `cli/tests/history_battery.rs` (the seed-42 assertion at :190; the per-seed assertion at :226)
+- Modify: `windows/worldgen/tests/history_sundering.rs` (delete `the_migration_distribution_is_reported_over_a_panel`, `FLOOR_PANEL`, `MIN_MIGRATION_EVENTS`)
+- Modify: `windows/worldgen/tests/history_tithe.rs` (delete `the_tribute_accumulator_is_reported_over_a_panel`, its `FLOOR_PANEL`, `MIN_TRIBUTE_COLLECTED`)
+
+**Interfaces:**
+- Consumes: the two columns from Tasks 4 and 5.
+- Produces: nothing.
+
+**Context:** Each retirement must leave a pointer at the census column that replaced it. Deleting a guard without saying where its question went is how a question gets silently dropped.
+
+- [ ] **Step 1: `history_battery.rs` — remove the two migration assertions, keep everything else**
+
+Delete the `assert!(mig42 > 0, ...)` block at :190-194 and the `assert!(r.migration > 0, ...)` block at :226-231. Replace each with a comment naming `climate-displacement-events`.
+
+**Keep**: `mig42` itself (the report artifact prints it), `SWEEP_MIGRATION_FLOOR`'s pooled volume claim, the territory-separation gate, the stratigraphy gate, and the median depth/capacity-correlation gate. **Keep the report artifact's shape unchanged** — migration stays a reported column.
+
+Update the `/// claim:` line to drop the per-seed firing floor it no longer asserts. Update the module doc to record that the seed-42 and per-seed displacement assertions moved to the census, and why (the 12.5% zero rate).
+
+- [ ] **Step 2: Verify the battery still passes and the artifact is unchanged**
+
+```bash
+cargo test -p hornvale --test history_battery -- --ignored --nocapture 2>&1 | tail -20
+git diff --stat -- book/src/laboratory/generated/the-history/
+```
+Expected: PASS. **The artifact diff must be empty** — if `rows.csv` or `summary.md` moved, the report shape changed and that is not intended.
+
+- [ ] **Step 3: `history_sundering.rs` — delete the migration panel**
+
+Remove `the_migration_distribution_is_reported_over_a_panel`, `FLOOR_PANEL`, `MIN_MIGRATION_EVENTS`, and any now-unused imports (`collapse_events`, `migration_events` — check with clippy). Leave `isolation_predicts_divergence` and `MAX_COLLAPSE_SHARE` untouched.
+
+Replace the `## THIS PANEL IS A STOPGAP — IT SHOULD BECOME A CENSUS TEST` section with a short note recording that it did become one, naming `climate-displacement-events`, and stating the measured reason (bimodal, zero on 6 of 48 worlds, so no small panel resolves it).
+
+- [ ] **Step 4: `history_tithe.rs` — delete the tribute panel**
+
+Remove `the_tribute_accumulator_is_reported_over_a_panel`, `FLOOR_PANEL`, `MIN_TRIBUTE_COLLECTED` and now-unused imports. Replace its stopgap section with a note that must record **all three** of:
+
+1. it became `tribute-relations-standing`;
+2. **the census cannot reach the flow** — `tribute_collected` lives on `History::tally`, discarded by `build_world_to` — so the column measures the stock, agreeing at spearman 0.934 over 36 worlds, which is a witness and not an equivalence;
+3. **the retired panel was already near-vacuous**: every candidate observable and the flow itself measured `0/36` zeros, so `live * 2 >= n` could essentially never fire.
+
+- [ ] **Step 5: Verify both files still pass and nothing else broke**
+
+```bash
+cargo test -p hornvale-worldgen --test history_sundering -- --ignored --nocapture 2>&1 | tail -10
+cargo test -p hornvale-worldgen --test history_tithe -- --ignored --nocapture 2>&1 | tail -10
+cargo test -p hornvale --test heavy_tier 2>&1 | tail -10
+cargo test -p hornvale --test claim_shape 2>&1 | tail -10
+```
+Expected: all PASS. `heavy_tier` and `claim_shape` are the two lints most likely to catch a botched deletion.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo fmt
+cargo clippy --workspace --all-targets -- -D warnings
+git add cli/tests/history_battery.rs windows/worldgen/tests/history_sundering.rs windows/worldgen/tests/history_tithe.rs
+git commit -m "test(the-assize): retire the seed-42 displacement gate and both twelve-seed panels
+
+Each retirement leaves a pointer at the census column that took its question.
+
+history_battery loses its seed-42 mig42>0 assertion and the per-seed firing
+assertion inside the sweep — both are the same defect, and both were passing
+on luck at a 12.5% per-world zero rate. Its pooled volume floor, territory,
+stratigraphy and correlation gates are untouched, and the report artifact's
+shape does not change.
+
+The Sundering panel is superseded exactly. The Tithe panel is replaced by a
+stock, because the census cannot reach the flow — and it was already
+near-vacuous: every candidate and the flow itself measured 0/36 zeros, so its
+live*2>=n guard could never fire."
+```
+
+---
+
+### Task 7: Calibration tests for the two new columns
+
+**Files:**
+- Modify: `windows/lab/tests/calibration.rs` (append beside `raiding_occurs_across_the_census_and_both_sides_agree`)
+
+**Interfaces:**
+- Consumes: `seeded_nums(&DRIFT, name) -> Vec<(u64, f64)>` (`calibration.rs:3157`); columns from Tasks 4 and 5.
+- Produces: nothing.
+
+**Context:** **These tests will be RED until Task 9's census regen** — the committed fixture has no such columns, and `seeded_nums` panics with "the census carries {name}". That is expected and is the structural window §7 describes. Do not "fix" it by weakening the test.
+
+- [ ] **Step 1: Write the displacement calibration test**
+
+```rust
+/// Displacement fires across the census, and its distribution is the reason
+/// the single-seed gates were retired rather than re-pinned.
+///
+/// The ZERO SHARE is printed, never asserted. It is the number that justified
+/// the migration — a bound on it would re-create, one level up, exactly the
+/// defect of pinning a wide distribution to a value someone happened to see.
+/// claim: rate(census: climate-displacement-events, all rows) — the pooled
+/// count clears an inertness floor and no world reports a negative or
+/// non-finite count
+#[test]
+fn climate_displacement_fires_across_the_census() {
+    let events = seeded_nums(&DRIFT, "climate-displacement-events");
+    assert!(
+        !events.is_empty(),
+        "climate-displacement-events was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, n) in &events {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: displacement count {n} is not a non-negative finite number"
+        );
+    }
+    let pooled: f64 = events.iter().map(|(_, n)| n).sum();
+    // An inertness floor, not a target: set orders of magnitude under the
+    // measurement and orders of magnitude above what a dead bake would leave.
+    // Read pooled rather than per-seed precisely because 12.5% of worlds
+    // legitimately measure zero.
+    assert!(
+        pooled >= 1000.0,
+        "displacement has gone inert across the whole census: {pooled} events over {} \
+         worlds. This is not a floor to lower — it means the migration branch stopped \
+         running.",
+        events.len()
+    );
+    let zeros = events.iter().filter(|(_, n)| *n == 0.0).count();
+    let mut sorted: Vec<f64> = events.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    println!(
+        "climate displacement over {} census worlds: zero on {zeros} ({:.1}%), median {}, \
+         max {} — REPORTED, not asserted",
+        events.len(),
+        100.0 * zeros as f64 / events.len() as f64,
+        sorted[sorted.len() / 2],
+        sorted[sorted.len() - 1]
+    );
+}
+```
+
+- [ ] **Step 2: Write the tribute calibration test, whose teeth are the span**
+
+```rust
+/// The tribute stock is alive and VARIES across the census.
+///
+/// The span is the assertion with teeth, and deliberately so. The panel this
+/// replaces asserted only non-inertness, and every candidate observable —
+/// including the bake's own flow — measured 0 zeros over 36 worlds, so that
+/// guard could essentially never fire. A constant column is a broken fold,
+/// and it is the failure this can actually see.
+/// claim: rate(census: tribute-relations-standing, all rows) — the column
+/// spans a real range and no world reports a negative or non-finite count
+#[test]
+fn the_tribute_stock_varies_across_the_census() {
+    let stock = seeded_nums(&DRIFT, "tribute-relations-standing");
+    assert!(
+        !stock.is_empty(),
+        "tribute-relations-standing was Absent on every census world"
+    );
+    for (seed, n) in &stock {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: tribute stock {n} is not a non-negative finite number"
+        );
+    }
+    let mut sorted: Vec<f64> = stock.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    let (lo, hi) = (sorted[0], sorted[sorted.len() - 1]);
+    assert!(
+        hi - lo >= 10.0,
+        "the tribute stock is effectively constant across {} census worlds ({lo}..{hi}) \
+         — a column that reads the same number everywhere is a broken fold, not a \
+         finding about worlds",
+        stock.len()
+    );
+    let zeros = stock.iter().filter(|(_, n)| *n == 0.0).count();
+    println!(
+        "tribute stock over {} census worlds: {lo}..{hi}, median {}, zero on {zeros} \
+         — the zero count is REPORTED; a 36-world probe saw none, and the census is \
+         the first instrument that could",
+        stock.len(),
+        sorted[sorted.len() / 2]
+    );
+}
+```
+
+- [ ] **Step 3: Confirm the expected RED, and confirm it is the RIGHT red**
+
+```bash
+cargo test -p hornvale-lab --test calibration climate_displacement_fires 2>&1 | tail -15
+```
+Expected: FAIL with `the census carries climate-displacement-events` — i.e. the fixture lacks the column, **not** an assertion failure. Any other message means something is wrong with the metric, not with the fixture.
+
+- [ ] **Step 3b: Mutation-prove that both calibration tests DISCRIMINATE**
+
+Spec §2.4 requires a mutation proof. Task 4 reuses `migration_events` unchanged
+— the fold is pre-existing and already covered — so what needs proving is that
+these two GUARDS can fail at all. A guard whose only observed state is green is
+indistinguishable from one that computes nothing.
+
+This cannot run against the fixture until Task 9. **Run it immediately after the
+regen** and record the result in each test's doc comment.
+
+Assert the target exists BEFORE substituting — a no-op mutation produces a false
+green, which is worse than no mutation:
+
+```bash
+grep -q 'pooled >= 1000.0' windows/lab/tests/calibration.rs || { echo "TARGET NOT FOUND"; exit 1; }
+sed -i '' 's/pooled >= 1000.0/pooled >= 1e12/' windows/lab/tests/calibration.rs
+cargo test -p hornvale-lab --test calibration climate_displacement_fires > /tmp/hv-mut1.log 2>&1; echo "exit=$?"
+grep -E "panicked|inert across the whole census" /tmp/hv-mut1.log
+sed -i '' 's/pooled >= 1e12/pooled >= 1000.0/' windows/lab/tests/calibration.rs
+```
+
+Then the same for the tribute span guard:
+
+```bash
+grep -q 'hi - lo >= 10.0' windows/lab/tests/calibration.rs || { echo "TARGET NOT FOUND"; exit 1; }
+sed -i '' 's/hi - lo >= 10.0/hi - lo >= 1e12/' windows/lab/tests/calibration.rs
+cargo test -p hornvale-lab --test calibration the_tribute_stock_varies > /tmp/hv-mut2.log 2>&1; echo "exit=$?"
+grep -E "panicked|effectively constant" /tmp/hv-mut2.log
+sed -i '' 's/hi - lo >= 1e12/hi - lo >= 10.0/' windows/lab/tests/calibration.rs
+```
+
+Confirm both reverts landed:
+
+```bash
+grep -q 'pooled >= 1000.0' windows/lab/tests/calibration.rs \
+  && grep -q 'hi - lo >= 10.0' windows/lab/tests/calibration.rs \
+  || { echo "REVERT FAILED"; exit 1; }
+```
+
+Each RED must be an **assertion failure naming the guard**, never a compile
+error. A compile-error red proves nothing about an assertion.
+
+- [ ] **Step 4: Commit (knowingly red)**
+
+```bash
+cargo fmt
+git add windows/lab/tests/calibration.rs
+git commit -m "test(lab): calibration for the two Tare census columns (red until the regen)
+
+Both read the committed fixture, which does not carry these columns until the
+census regenerates on the canonical box. That window is structural, not a
+mistake — see the plan's sequencing section.
+
+The displacement test asserts a pooled inertness floor and reports the zero
+share without pinning it: bounding the number that justified the migration
+would re-create the same defect one level up.
+
+The tribute test's teeth are a SPAN assertion. The panel it replaces asserted
+only non-inertness, and every candidate observable measured zero zeros over 36
+worlds, so that guard could never fire."
+```
+
+---
+
+### Task 8: Regenerate the non-census artifacts
+
+**Files:**
+- Modify: whatever `make rebaseline` writes under `book/src/gallery/`, `book/src/reference/`, `book/src/laboratory/`, `docs/audits/`
+
+**Interfaces:** Consumes Tasks 4–6. Produces a clean artifact tree for Task 9.
+
+- [ ] **Step 1: Rebaseline and review the diff rather than committing it blind**
+
+```bash
+make rebaseline
+git diff --stat book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+```
+
+Two changes are **expected**: the `streams`/`concepts` reference dumps are untouched (no new stream labels), and `docs/audits/type-audit-report.md` may move if any `pub` boundary changed. **The lab study fixtures under `book/src/laboratory/` will NOT gain the new columns here** — `make rebaseline` skips censuses. If they do change, stop and investigate.
+
+- [ ] **Step 2: Accept drifted byte goldens only if the diff is understood**
+
+```bash
+make rebaseline-goldens
+git diff --stat
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+git commit -m "chore(the-assize): rebaseline the non-census artifacts"
+```
+
+---
+
+### Task 9: The census regen (CONTROLLER TASK — not a subagent)
+
+**Authorized by Nathan at G3, 2026-08-08.** Runs on **lefford**, the canonical box (decisions 0063 / 0079). Do not delegate this; it holds the box's write claim.
+
+- [ ] **Step 1: Push the branch and confirm the box is free**
+
+```bash
+git -C <worktree> push -u origin the-assize
+bash scripts/census-run.sh status
+```
+
+- [ ] **Step 2: Run the sanctioned refresh**
+
+Use `scripts/census-run.sh`, **not** `HV_CENSUS=1 bash scripts/regenerate-artifacts.sh` — only the wrapper ledgers the run in `docs/timings.md`. Expect ~7 minutes.
+
+- [ ] **Step 3: Prove the regen is additive before believing it**
+
+Every CSV line will read as "changed" because two columns were inserted. That is not evidence the physics moved. Diff the **shared** columns:
+
+```bash
+make lab-diff STUDY=the-census
+```
+
+Expected: the two new columns appear and **no pre-existing column moves**. If a shared column moved, stop — that is a finding, and this campaign changed no product code, so it should be impossible.
+
+- [ ] **Step 4: Confirm the fixture header differs by exactly two columns**
+
+```bash
+head -1 book/src/laboratory/generated/the-census/rows.csv | tr ',' '\n' | sort > /tmp/after.txt
+git show HEAD:book/src/laboratory/generated/the-census/rows.csv | head -1 | tr ',' '\n' | sort > /tmp/before.txt
+diff /tmp/before.txt /tmp/after.txt
+```
+Expected: exactly two additions, `climate-displacement-events` and `tribute-relations-standing`.
+
+- [ ] **Step 5: Run the harness gate and re-sync the SQL tripwire**
+
+```bash
+make census-check
+```
+
+A census re-pin touches four files, not one — the `golden-pins.sql` tripwire must be re-synced **in the same commit**, because splitting them defeats the tripwire.
+
+- [ ] **Step 6: Re-check every calibration CLAIM, re-pin only the WITNESSES**
+
+Enumerate what actually went red in ONE pass — never re-run the suite to grep a
+second line:
+
+```bash
+cargo nextest run --workspace --no-fail-fast > /tmp/hv-postcensus.log 2>&1; echo "exit=$?"
+grep -E "^ *FAIL" /tmp/hv-postcensus.log
+```
+
+Each affected test carries a directional or structural **claim** (the science)
+and an exact measured **witness** (the drift pin). **Only witnesses may be
+re-pinned.** For each red:
+
+1. Decide which of the two it is. If a *claim* broke, that is a finding — and
+   this campaign changed no product code, so it should be impossible. Stop and
+   report it.
+2. Re-check the claim **with its margin**, and record the margin rather than
+   "still passes".
+3. Flag rather than quietly re-pin any margin that **narrowed**, and any floor
+   that **rose to the highest that row has recorded** — that is the shape its
+   own defect would take if it returned.
+
+The Delvers moved eleven witnesses this way; expect a comparable number.
+
+- [ ] **Step 7: Commit the census, the tripwire and the witnesses together**
+
+---
+
+### Task 10: Close
+
+- [ ] **Step 1: Verify no `heavy:`-tagged test remains deliberately red**
+
+```bash
+grep -rEA1 '#\[ignore = "heavy:' --include='*.rs' . | grep -oE 'fn [a-z0-9_]+' | sed 's/^fn //' | sort -u | wc -l
+```
+
+Then amend `TOOL-heavy-tier-red-allowlist` in `book/src/frontier/idea-registry.md` with the measured result. Its premise is that `disposition_calibration` is permanently red; Task 3 removes that. **Verify, do not assume.**
+
+- [ ] **Step 2: Registry rows — scan before writing**
+
+`grep` the registry first. Amend `PROC-floors-erode-unseen` with this campaign's witness (it already covers the age-of-criterion idea and is better framed than a new row would be — filing a duplicate is the failure that once minted a duplicate `TOOL-24`). Add **one** genuinely new row: *a bound should name the quantity it is a function of*.
+
+- [ ] **Step 3: Chronicle, gradient, retrospective**
+
+`book/src/chronicle/the-assize.md`; re-score any Confidence Gradient bet this moved; `docs/retrospectives/the-assize.md`. Promote the decision ledger's findings into the retrospective **before** the worktree is torn down — it is git-ignored and dies with the checkout.
+
+The retrospective must carry, at minimum: the five-not-three count; that a failure message's self-explanation was wrong for the second and third times; that the author's own predictions were refuted **six** times across this campaign (three mechanisms in the tribute probe, plus relation-years, plus the ρ-only bound, plus the "both panels are equivalent" split) while every measurement held; and that "move it to the census" was the wrong universal cure.
+
+- [ ] **Step 4: Absorb main, full gate, heavy tier**
+
+```bash
+make preflight            # from the branch
+make gate                 # ~15 min; budget timeout 3600000
+make heavy-remote REF=<full-sha>   # a SHA, not a branch name
+```
+
+- [ ] **Step 5: G6 — present the post-G3 ledger digest to Nathan and STOP.**
+
+Then `closing-a-campaign`, unchanged.
+
+
+---
+
+**STATUS: SHIPPED** (merged 2026-08-08). Three of five heavy-tier reds cleared and confirmed on the canonical box; the two cost gates remain red for a characterized cross-machine calibration defect, half-fixed here (`canonical_host()`) and half deferred to `TOOL-canonical-host-timing-migration`. See `book/src/chronicle/the-assize.md` and `docs/retrospectives/the-assize.md`.

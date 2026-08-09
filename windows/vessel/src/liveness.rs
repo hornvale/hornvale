@@ -227,8 +227,8 @@ fn learned_helplessness(last_drank: f64, day: f64) -> bool {
 /// (§6, `time_horizon`). One authored judgment call, kept well under the
 /// thirst cycle (`act/rise ≈ 5.7` days) so even full foresight only shifts the
 /// seek a couple of days early — never to a zero-urgency creature (`rise ×
-/// this < act`, so the effective threshold stays positive). The goblin
-/// baseline (`time_horizon == 0.5`) thus leads by one day; a myopic species
+/// this < act`, so the effective threshold stays positive). The manikin's
+/// neutral midpoint (`time_horizon == 0.5`) thus leads by one day; a myopic species
 /// (`0`) leads by none, exactly the pre-anticipation model.
 const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
@@ -2572,10 +2572,11 @@ pub struct Danger<'a> {
     pub dread: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
 }
 
-/// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
+/// The boldness at which fear is felt AS IS (unscaled) — the steady value the
 /// dial is centered on (The Mettle). `MindVector.threat_response` uses `0.5` as
-/// its flee/stand midpoint, and the goblin (and every psyche-less beast) sits
-/// here, so this baseline keeps them byte-identical.
+/// its flee/stand midpoint, the manikin's neutral value; goblin's authored row
+/// (and every psyche-less beast's fallback) sits here, so this centering keeps
+/// them byte-identical.
 const BOLDNESS_STEADY: f64 = 0.5;
 
 /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
@@ -9711,7 +9712,8 @@ mod tests {
     }
 
     /// The default mortal threat niche (The Bane) — dreads the uncanny fully
-    /// (weight `1`) and heat/cold at the goblinoid-neutral derived level. Used by
+    /// (weight `1`) and heat/cold at the level derived from
+    /// [`DEFAULT_TEMPERATURE_NICHE`]. Used by
     /// tests that plant an UNCANNY hazard and expect the old scalar behaviour:
     /// `threat_value` reduces to the planted uncanny, so the pre-Bane danger
     /// tests stay byte-identical.
@@ -11650,7 +11652,7 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // A representative spread of thirst states; each must arbitrate ==
-        // decide. Latency 0.5 (the goblin baseline) — irrelevant here since
+        // decide. Latency 0.5 (the manikin's neutral midpoint) — irrelevant here since
         // only one drive is ever active, which is exactly the point.
         let views = [
             // parched, at home, knows water → plan's first step toward water

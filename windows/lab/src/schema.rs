@@ -48,6 +48,8 @@ pub fn render_schema(result: &RunResult, csv: &str, backfilled: bool) -> String 
             "name": metric.name,
             "doc": metric.doc,
             "rung": rung,
+            "domain": metric.domain.as_str(),
+            "role": metric.role.as_str(),
         });
         match &metric.summary {
             SummaryKind::Categorical => {
@@ -206,6 +208,21 @@ mod tests {
         assert_eq!(locked["kind"], "flag");
         assert_eq!(cols.last().unwrap()["name"], "refusal");
         assert_eq!(cols.last().unwrap()["kind"], "categorical");
+    }
+
+    #[test]
+    fn schema_carries_domain_and_role() {
+        let result = build_result();
+        let csv = crate::runner::render_csv(&result);
+        let json = render_schema(&result, &csv, false);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("schema parses");
+        let cols = v["columns"].as_array().expect("columns");
+        let star = cols
+            .iter()
+            .find(|c| c["name"] == "star-class")
+            .expect("star-class present");
+        assert_eq!(star["domain"], "astronomy");
+        assert_eq!(star["role"], "descriptor");
     }
 
     #[test]

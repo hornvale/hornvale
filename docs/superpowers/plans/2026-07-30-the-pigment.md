@@ -57,6 +57,19 @@ derived at the emit boundary, so no epoch is owed.
   whole-suite duration.** That is a regression the baseline must absorb
   *deliberately*: 0088's rule is to re-record in the same commit that caused
   the shift. Task 10 does this.
+- **Two clippy lints bite every band loop, found in Task 1.** Writing
+  `for b in 0..BANDS { out[b] = out[b] + x }` fails `-D warnings` twice:
+  `needless_range_loop` and `assign_op_pattern`. Use
+  `for (accumulated, band) in out.iter_mut().zip(other) { *accumulated += … }`.
+  Tasks 2 and 4 both contain band loops of exactly that shape. **`+=` on
+  `f64` is a plain unfused `fadd` and is the sanctioned accumulate** — never
+  "fix" it toward `mul_add`.
+- **Never `assert_eq!` a computed float against a tidy decimal.** Task 1's
+  plan text asserted `0.5` for `0.25*0.2 + 0.75*0.6`, which is real-number
+  arithmetic; in binary the answer is one ULP lower, and the *only* way to
+  reach `0.5` is the forbidden fused `mul_add`. Use dyadic inputs (quarters,
+  eighths) when stating a law, so the computation is exact and `assert_eq!`
+  witnesses bit-exactness rather than approximate agreement.
 - **`make gate` is ~15 min, not the ~4 min decision 0040 budgeted** (934.5 s
   measured on a quiet Mac, 2026-07-29). Iterate with the per-crate commands
   each task gives; the full gate belongs at the end, not in the loop.
@@ -166,20 +179,52 @@ mod tests {
 
     #[test]
     fn area_mixing_is_the_weighted_arithmetic_mean() {
+        // Dyadic inputs, so the whole computation is EXACT in binary and
+        // assert_eq! states the law without depending on rounding.
+        // Do NOT use tidy decimals like 0.2/0.6 here: they are inexact in
+        // binary, and the only arithmetic that reaches the tidy answer is a
+        // fused mul_add — which this campaign forbids. See the sibling test
+        // below, which uses exactly those values on purpose.
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
+        let mixed = Mixture::new(vec![a, b], vec![0.25, 0.75]).unwrap().integrate();
+        // 0.25*0.25 + 0.75*0.75 = 0.0625 + 0.5625 = 0.625, exactly.
+        assert_eq!(mixed.get()[0], 0.625);
+    }
+
+    #[test]
+    fn area_mixing_does_not_fuse_its_multiply_and_add() {
+        // The guard for the workspace rule that `a * b + c` and
+        // `a.mul_add(b, c)` are never mixed. These inputs DISTINGUISH the
+        // two: unfused rounds twice and lands one ULP below 0.5; fused
+        // rounds once and reaches 0.5. The literal is a fingerprint of the
+        // unfused implementation — a failure reading `right: 0.5` means
+        // someone introduced a mul_add.
         let a = Reflectance::new([0.2; BANDS]).unwrap();
         let b = Reflectance::new([0.6; BANDS]).unwrap();
         let mixed = Mixture::new(vec![a, b], vec![0.25, 0.75]).unwrap().integrate();
-        // 0.25*0.2 + 0.75*0.6 = 0.05 + 0.45 = 0.5
-        assert_eq!(mixed.get()[0], 0.5);
+        assert_eq!(mixed.get()[0], 0.499_999_999_999_999_94);
     }
 
     #[test]
     fn a_mixture_normalizes_its_weights() {
-        let a = Reflectance::new([0.2; BANDS]).unwrap();
-        let b = Reflectance::new([0.6; BANDS]).unwrap();
+        // Dyadic again; 1/4 and 3/4 are exact, so normalization introduces
+        // no rounding either.
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
         // Weights 1 and 3 are the same mixture as 0.25 and 0.75.
         let mixed = Mixture::new(vec![a, b], vec![1.0, 3.0]).unwrap().integrate();
-        assert_eq!(mixed.get()[0], 0.5);
+        assert_eq!(mixed.get()[0], 0.625);
+    }
+
+    #[test]
+    fn a_mixture_keeps_its_components_reachable() {
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
+        let m = Mixture::new(vec![a, b], vec![1.0, 3.0]).unwrap();
+        assert_eq!(m.components().len(), 2);
+        assert_eq!(m.components()[0].get()[0], 0.25);
+        assert_eq!(m.weights(), &[1.0, 3.0]);
     }
 
     #[test]
@@ -414,8 +459,13 @@ impl Mixture {
         let mut out = [0.0f64; BANDS];
         for (component, weight) in self.components.iter().zip(&self.weights) {
             let share = weight / total;
-            for b in 0..BANDS {
-                out[b] = out[b] + component.get()[b] * share;
+            // `iter_mut().zip()`, NOT `for b in 0..BANDS { out[b] = out[b] + … }`
+            // — that shape fails `clippy -D warnings` twice over
+            // (`needless_range_loop` and `assign_op_pattern`). `+=` on f64 is
+            // a plain unfused `fadd` and is the sanctioned accumulate; do not
+            // "fix" it toward `mul_add`.
+            for (accumulated, band) in out.iter_mut().zip(component.get()) {
+                *accumulated += band * share;
             }
         }
         // Normalized weights sum to 1 and every component band is within
@@ -1627,7 +1677,25 @@ so a term added to one and not the other cannot fail silently."
 
 ---
 
-### Task 7: Naming — and the campaign's two falsifiable claims
+### Task 7: Naming — and the campaign's falsifiable claims
+
+**Preregistration note (added after Task 4, before this task's code
+exists).** The campaign shipped its spec with two claims. Task 4's
+measurement of `at_elevation` added a third, and the reason it was added
+matters more than the claim: between 85° and 2° the illuminant does not
+only redden, it *dims about eightfold*. Naming compares in signal space, so
+a dimmed sample drifts toward the dark exemplar for reasons unrelated to
+hue — which means the original claim 2 is satisfiable by "everything is
+dark at dusk." True, real, and not what this campaign is about.
+
+Claim 2b isolates the interesting half by renormalizing both illuminants to
+equal peak radiance. It is preregistered *here*, before `name_color` is
+written, which is the whole point of decision 0016 — a claim frozen after
+seeing the result it describes is not a claim.
+
+**A null on 2b is a finding and ships as the headline.** Several campaigns
+in this repo have done exactly that. Do not retune an exemplar or a
+scattering constant to rescue it.
 
 **Files:**
 - Create: `windows/worldgen/src/color_naming.rs`
@@ -1657,7 +1725,7 @@ Create `windows/worldgen/tests/color_naming.rs`:
 //! that cannot fail is a decoration, not a finding.
 
 use hornvale_astronomy::illuminant::{at_elevation, daylight};
-use hornvale_kernel::color::{Reflectance, standard_observer};
+use hornvale_kernel::color::{Illuminant, Reflectance, standard_observer};
 use hornvale_language::PackDepths;
 use hornvale_worldgen::color_naming::name_color;
 
@@ -1714,6 +1782,69 @@ fn the_same_outcrop_is_named_differently_at_noon_and_at_dusk() {
     assert_ne!(
         noon, dusk,
         "the outcrop was '{noon}' at both noon and dusk — the illuminant did nothing"
+    );
+}
+
+/// CLAIM 2b — the *hue* name moves too, not merely the lightness.
+///
+/// **Why this claim exists, and why it is preregistered here rather than
+/// discovered later.** Task 4 measured what `at_elevation` actually does
+/// between 85° and 2°: it does not only redden, it *dims*, and it dims
+/// hard — total sensed signal on a grey surface falls about eightfold, and
+/// per-band survival spans six orders of magnitude. Naming compares in
+/// signal space, so a dimmed sample drifts toward the dark exemplar for a
+/// reason that has nothing to do with hue.
+///
+/// Claim 2 above is therefore satisfiable by a trivial mechanism —
+/// "everything is dark at dusk" — which is true, and real, and not what
+/// the campaign is about. This claim isolates the interesting half: with
+/// the illuminant renormalized so noon and dusk deliver the same peak
+/// radiance, does the *shape* change alone still move the name?
+///
+/// **A null here is a publishable finding, not a failure.** If the hue
+/// name does not move once lightness is controlled, then Hornvale's
+/// colour-vs-time story is a lightness story, and the chronicle should say
+/// exactly that rather than dressing it up. Do not retune an exemplar or a
+/// scattering constant to rescue it — record the measured distances and
+/// report the null. (Spec risk 3; decision 0016.)
+#[test]
+fn the_hue_name_moves_even_with_lightness_controlled() {
+    let star = hornvale_astronomy::star::generate_star(test_astronomy_seed());
+    let base = daylight(&star);
+    let eye = standard_observer();
+    let speaker = PackDepths { hue: 5, luminance: 3 };
+
+    // Renormalize each illuminant to peak 1.0, so the two differ in
+    // spectral SHAPE only and carry identical peak radiance.
+    let peak_normalized = |light: &Illuminant| -> Illuminant {
+        let mut bands = *light.get();
+        let peak = bands.iter().copied().fold(0.0f64, f64::max);
+        assert!(peak > 0.0, "an illuminant with no peak cannot be normalized");
+        for b in bands.iter_mut() {
+            *b /= peak;
+        }
+        Illuminant::new(bands).expect("rescaling a valid illuminant leaves it valid")
+    };
+
+    let noon = name_color(
+        &ochre(),
+        &peak_normalized(&at_elevation(&base, 85.0)),
+        &eye,
+        &speaker,
+    );
+    let dusk = name_color(
+        &ochre(),
+        &peak_normalized(&at_elevation(&base, 2.0)),
+        &eye,
+        &speaker,
+    );
+
+    assert_ne!(
+        noon, dusk,
+        "with lightness controlled the outcrop was '{noon}' at both times — \
+         the colour-vs-time result is a LIGHTNESS result only. That is a \
+         finding: record the measured signal distances in the chronicle and \
+         re-word the campaign's claim. Do not retune anything to rescue it."
     );
 }
 
@@ -1801,17 +1932,37 @@ Create `windows/worldgen/src/color_naming.rs`:
 ```rust
 //! Naming a colour through a speaker's own lexicon.
 //!
-//! The comparison happens in *signal space*: the sample and every candidate
-//! exemplar are pushed through the same illuminant and the same observer,
-//! then the nearest exemplar wins. Because exemplars are reflectances
-//! rather than finished colours, this works unchanged for an observer with
-//! any channel count.
+//! The sample and every candidate exemplar are pushed through the same
+//! illuminant and the same observer before anything is compared. Because
+//! exemplars are reflectances rather than finished colours, this works
+//! unchanged for an observer with any channel count.
+//!
+//! **Two axes, not one — and this is a correction the spec did not have.**
+//! The spec proposed "nearest exemplar in signal space." Task 6 measured
+//! the seven exemplars and that design cannot work: raw signal distance is
+//! dominated by brightness, so `brown` comes out nearest neighbour to four
+//! of the seven terms and the whole dim corner {dark, red, brown, green,
+//! blue} collapses inside d < 0.87 while `light` and `yellow` sit 2.1–5.2
+//! away. A raw-distance namer would say "brown" for almost everything and
+//! would essentially never say "light" or "yellow".
+//!
+//! Chromaticity alone fails the other way: `dark` and `light` have the
+//! *same* neutral chromaticity by construction (0.0210 apart, the
+//! numerical floor), so nothing chromatic can separate them.
+//!
+//! The fix was already in the repo's data model. `color_pack`'s hue ladder
+//! puts `dark`/`light` at **rank 1** — Berlin & Kay's stage I is
+//! achromatic, macro-black against macro-white — and `PackDepths` carries
+//! `hue` and `luminance` as separate fields. Naming therefore decides on
+//! the axis the term actually lives on: luminance for the achromatic pair,
+//! chromaticity for the five hue terms. Collapsing both into one metric was
+//! the mistake.
 //!
 //! The lexicon filter is `in_ladder`, unmodified. This module adds no gate
 //! of its own — a gate at the point of use would change nothing, because
 //! the lexicon has already filtered.
 
-use hornvale_kernel::color::{Illuminant, Observer, Reflectance};
+use hornvale_kernel::color::{Illuminant, Observer, Reflectance, Signal};
 use hornvale_language::{PackDepths, color_pack, hue_exemplar, in_ladder};
 
 /// The word this speaker reaches for, given what it can see and what its
@@ -1824,6 +1975,71 @@ use hornvale_language::{PackDepths, color_pack, hue_exemplar, in_ladder};
 /// Every lexicon holds rank-1 terms (`dark` and `light` are the first stage
 /// of the ladder), so there is always at least one candidate.
 /// type-audit: bare-ok(identifier-text: return)
+/// The achromatic terms — Berlin & Kay's stage I, `color_pack`'s hue-ladder
+/// rank 1. These are *luminance* terms: `dark` and `light` have the same
+/// neutral chromaticity by construction (measured 0.0210 apart, which is the
+/// numerical floor), so no chromaticity metric can ever separate them and
+/// they are decided on brightness instead.
+/// type-audit: bare-ok(identifier-text)
+const ACHROMATIC: [&str; 2] = ["dark", "light"];
+
+/// How far a sample's chromaticity must sit from neutral before it earns a
+/// hue name rather than an achromatic one.
+///
+/// **Derived from measurement, not tuned to taste.** Task 6 sensed all seven
+/// exemplars under Sol daylight and measured each chromatic exemplar's
+/// chromaticity distance from neutral: green 0.0852, yellow 0.1558, brown
+/// 0.1668, blue 0.2616, red 0.2701. Green is the closest, so half of green's
+/// distance cleanly admits every authored hue term while still rejecting a
+/// genuinely grey surface. Changing this number changes which surfaces get
+/// hue names at all — treat it as a threshold with a stated derivation, and
+/// re-derive it rather than nudging it if the exemplars ever move.
+/// type-audit: bare-ok(ratio)
+const ACHROMATIC_THRESHOLD: f64 = 0.04;
+
+/// Chromaticity: the signal normalized to unit sum, which strips brightness
+/// and leaves only the *proportion* between channels.
+///
+/// Returns `None` for a signal with no energy — a surface in total darkness
+/// has no chromaticity, and inventing one would be a division by zero
+/// dressed up as a colour.
+fn chromaticity(signal: &Signal) -> Option<Vec<f64>> {
+    let mut total = 0.0;
+    for v in signal.get() {
+        total += *v;
+    }
+    if total <= 0.0 {
+        return None;
+    }
+    Some(signal.get().iter().map(|v| v / total).collect())
+}
+
+/// Euclidean distance between two chromaticities, or `f64::INFINITY` if they
+/// come from observers of different arity and are not comparable.
+/// type-audit: bare-ok(ratio: return)
+fn chromatic_distance(a: &[f64], b: &[f64]) -> f64 {
+    if a.len() != b.len() {
+        return f64::INFINITY;
+    }
+    let mut sum = 0.0;
+    for (x, y) in a.iter().zip(b) {
+        let d = x - y;
+        sum += d * d;
+    }
+    sum.sqrt()
+}
+
+/// Total sensed energy — the brightness axis, used to split `dark` from
+/// `light`.
+/// type-audit: bare-ok(ratio: return)
+fn luminance(signal: &Signal) -> f64 {
+    let mut total = 0.0;
+    for v in signal.get() {
+        total += *v;
+    }
+    total
+}
+
 pub fn name_color(
     sample: &Reflectance,
     light: &Illuminant,
@@ -1832,18 +2048,84 @@ pub fn name_color(
 ) -> &'static str {
     let seen = observer.sense(sample, light);
 
-    let mut best: Option<(&'static str, u8, f64)> = None;
+    // Partition the terms this speaker actually holds into the two axes the
+    // ladder already distinguishes.
+    let mut achromatic: Vec<&'static str> = Vec::new();
+    let mut chromatic: Vec<&'static str> = Vec::new();
     for entry in color_pack() {
-        if !in_ladder(entry, depths) {
+        if !in_ladder(entry, depths) || hue_exemplar(entry.concept).is_none() {
+            // Not held, or a luminance-ladder term (gloom/shadow/starlit),
+            // which describes ambient darkness rather than a surface.
             continue;
         }
-        let Some(exemplar) = hue_exemplar(entry.concept) else {
-            // A luminance term: it describes ambient darkness, not a
-            // surface, so it is not a candidate for naming one.
+        if ACHROMATIC.contains(&entry.concept) {
+            achromatic.push(entry.concept);
+        } else {
+            chromatic.push(entry.concept);
+        }
+    }
+
+    // The achromatic decision, used both as the fallback and as the answer
+    // for a genuinely grey surface. Self-calibrating: the split sits at the
+    // midpoint between the `dark` and `light` exemplars sensed under THIS
+    // light, so it needs no absolute constant and moves correctly at dusk.
+    let achromatic_answer = || -> &'static str {
+        let held_dark = achromatic.contains(&"dark");
+        let held_light = achromatic.contains(&"light");
+        match (held_dark, held_light) {
+            (true, false) => "dark",
+            (false, true) => "light",
+            _ => {
+                let d = luminance(&observer.sense(
+                    &hue_exemplar("dark").expect("dark is a hue term"),
+                    light,
+                ));
+                let l = luminance(&observer.sense(
+                    &hue_exemplar("light").expect("light is a hue term"),
+                    light,
+                ));
+                if luminance(&seen) < (d + l) / 2.0 {
+                    "dark"
+                } else {
+                    "light"
+                }
+            }
+        }
+    };
+
+    if chromatic.is_empty() {
+        return achromatic_answer();
+    }
+
+    let (Some(seen_chroma), Some(neutral)) = (
+        chromaticity(&seen),
+        chromaticity(&observer.sense(
+            &hue_exemplar("dark").expect("dark is a hue term"),
+            light,
+        )),
+    ) else {
+        // No energy at all: nothing is visible, so the honest answer is the
+        // achromatic one rather than an invented hue.
+        return achromatic_answer();
+    };
+
+    if chromatic_distance(&seen_chroma, &neutral) < ACHROMATIC_THRESHOLD {
+        return achromatic_answer();
+    }
+
+    let mut best: Option<(&'static str, u8, f64)> = None;
+    for concept in chromatic {
+        let exemplar = hue_exemplar(concept).expect("chromatic terms have exemplars");
+        let Some(exemplar_chroma) = chromaticity(&observer.sense(&exemplar, light)) else {
             continue;
         };
-        let distance = seen.distance_to(&observer.sense(&exemplar, light));
-        let candidate = (entry.concept, entry.ladder_rank, distance);
+        let distance = chromatic_distance(&seen_chroma, &exemplar_chroma);
+        let rank = color_pack()
+            .iter()
+            .find(|e| e.concept == concept)
+            .map(|e| e.ladder_rank)
+            .unwrap_or(u8::MAX);
+        let candidate = (concept, rank, distance);
         best = Some(match best {
             None => candidate,
             Some(current) => {
@@ -1856,10 +2138,8 @@ pub fn name_color(
         });
     }
 
-    // `color_pack`'s rank-1 entries are always in ladder, so this is
-    // unreachable in practice; naming `dark` is the honest fallback rather
-    // than a panic in a presentation path.
-    best.map(|(concept, _, _)| concept).unwrap_or("dark")
+    best.map(|(concept, _, _)| concept)
+        .unwrap_or_else(achromatic_answer)
 }
 
 /// Whether `candidate` beats `current`: nearer wins; on an exact tie the
@@ -2167,6 +2447,34 @@ choice the caller must declare, not one the builder may invent."
 ---
 
 ### Task 9: The `colour` lens
+
+**What the rocks actually look like (measured in Task 5, under Sol
+daylight, at the silica values `classify_rock` really hands these
+classes).** Do not be surprised by these, and **do not retune the endmember
+table to make them prettier**:
+
+| rock | silica | sRGB | reads as |
+|---|---|---|---|
+| granite | 0.85 | `#BABAB0` | pale grey |
+| basalt | 0.15 | `#6E6D61` | dark grey |
+| ironstone | 0.30 | `#8F8262` | tan / khaki |
+
+Granite-vs-basalt is a strong unambiguous lightness split, which is right.
+**Ironstone lands tan rather than red**, and the mechanism is understood:
+its reflectance peaks in bands 7–9 (summing 1.86) exactly where the
+observer's long channel has fallen to 1.11 and its medium channel to 0.33,
+so most of the iron's reflected energy arrives where the eye barely
+responds. Its warmth is therefore blue-*deficiency* (R−B = 45) rather than
+red-dominance (R−G = 11).
+
+**This is the correct answer, not a defect.** `IRON_OXIDE` is ~0.83× the
+`red` exemplar in shape, so pure iron sits squarely in the red family; the
+tan comes from the 45% neutral silicate it is mixed with, which is what
+ironstone actually is. Real ochre is tan-brown. Steepening the iron curve
+to produce "red rocks" would be tuning toward a desired picture rather than
+from the mineralogy, and it would also corrupt Task 7's naming — ironstone
+naming as *brown* is precisely what makes claim 1 legible, since a kobold
+at ladder depth 2 cannot say brown and must fall back.
 
 **Files:**
 - Modify: `windows/scene/src/surrounds_ascii.rs` (the `SURROUNDS_LENSES` const near line 11, and `render_surrounds_ascii` at line 63)
@@ -2499,7 +2807,28 @@ Read each hit and update anything the campaign falsified. Memory
 check gates only the generated half — so grep the printf paragraphs in
 `scripts/regenerate-artifacts.sh` too.
 
-- [ ] **Step 6: The full gate**
+- [ ] **Step 6: Regenerate the type-audit report**
+
+**This is known-stale and owed — do not skip it.** Every task in this
+campaign adds `pub`-boundary items, and `docs/audits/type-audit-report.md`
+drifts on each one. Measured after Task 3: `bare-ok(count)` 337→341,
+`bare-ok(constructor-edge)` 49→56, `bare-ok(ratio)` 489→496, and five other
+rows.
+
+The trap is that **`make gate` runs the type-audit `check`, not the
+`report`** — so this drift is invisible to every gate the campaign has run
+and only surfaces in the artifact drift check. One regen here covers the
+whole campaign:
+
+```bash
+cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+make rebaseline
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+```
+
+Expected: the report changes (commit it); everything else empty.
+
+- [ ] **Step 7: The full gate**
 
 ```bash
 make gate
@@ -2510,7 +2839,7 @@ so the scoped gates are not sufficient — memory
 `full-gate-before-pushing-boundary-changes`. Confirm no other session is
 gating first.
 
-- [ ] **Step 7: Re-record the duration baseline**
+- [ ] **Step 8: Re-record the duration baseline**
 
 This campaign adds roughly forty tests, so the whole-suite duration moves.
 Decision 0088's rule is that a deliberate regression is re-recorded **in the
@@ -2545,7 +2874,7 @@ distrust a red alarm from a busy machine.
 
 Commit the moved baseline together with the campaign's final state.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 cargo fmt

@@ -44,9 +44,10 @@ The tool tracks tag **positions**. When you **move a tagged primitive** — e.g.
 lift a `plate_of: &CellMap<u32>` param out of three functions into a new
 struct field — the old functions' tags go **stale** ("stale tag position")
 and the new struct field is **untagged**. Both fail `check`, and the committed
-report goes stale too. This is invisible to unit tests and to the
-gallery/reference/laboratory drift check (the report lives in `docs/audits/`,
-which that subset excludes). **After any pub-boundary signature change: run
+report goes stale too. This is invisible to unit tests and to a
+gallery/reference/laboratory-only drift check (the report lives in
+`docs/audits/`, which that subset excludes — the full check adds `docs/audits`
+and `docs/digest`). **After any pub-boundary signature change: run
 `type-audit check` and regenerate the report — or just run the full `make
 gate`.** A commit that skipped this briefly left `main` gate-failing.
 

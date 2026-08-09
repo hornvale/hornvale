@@ -2,7 +2,7 @@
 //! (model card: L = M^3.5; habitable zone 0.95√L–1.37√L AU).
 
 use crate::streams;
-use crate::units::{Au, Gyr, HabitableZone, SolarLuminosities, SolarMasses};
+use crate::units::{Au, Gyr, HabitableZone, Kelvin, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
@@ -24,6 +24,13 @@ pub struct Star {
     /// those stay exactly `M^3.5`-derived so age can never move a world's
     /// insolation, orbit admission, or climate.
     pub age: Gyr,
+    /// Effective surface temperature in kelvin (derived from `mass`, not
+    /// drawn — so it consumes no draw, adds no stream label, and owes no
+    /// epoch). **Does not feed `luminosity`, `habitable_zone`, insolation,
+    /// orbit admission, or climate** — the same containment rule `age`
+    /// carries. It exists so the star's light has a spectrum; nothing
+    /// physical downstream may consult it.
+    pub t_eff: Kelvin,
 }
 
 /// The main-sequence bound on a drawn age. **Not 13.8 Gyr**: this is a bound,
@@ -39,6 +46,20 @@ pub const T_MAX: Gyr = Gyr(15.0);
 /// exists exactly once.
 fn t_ms_of_mass(mass: f64) -> f64 {
     10.0 * math::powf(mass, -2.5)
+}
+
+/// Effective temperature from mass, on the raw mass value.
+///
+/// The repo already fixes both relations this needs: `L = M^3.5`
+/// (`generate_star`) and `R = M^0.8` ([`sun_angular_diameter_rel`]'s declared
+/// approximation). Stefan–Boltzmann gives `L = 4πR²σT⁴`, so
+/// `T⁴ ∝ L/R² = M^3.5 / M^1.6 = M^1.9`, hence `T ∝ M^0.475`. Calibrated on
+/// Sol at 5772 K.
+///
+/// Declared approximation, not a stellar-structure model — the same standing
+/// [`main_sequence_lifetime`] has.
+fn t_eff_of_mass(mass: f64) -> f64 {
+    5772.0 * math::powf(mass, 0.475)
 }
 
 /// Main-sequence lifetime: t_MS = 10 Gyr · M^-2.5 (declared approximation —
@@ -59,20 +80,89 @@ pub fn planet_age(star: &Star) -> Gyr {
     Gyr((star.age.0 - 0.05).max(0.0))
 }
 
+/// The nine spectral classes, paired with the **author's-frame** display each
+/// renders as. The concept ids are what the ledger commits (part 2 registered
+/// all nine with `lexeme: Absent(Void::Unnamed(..))` — real, and nameable by
+/// nobody in this world); the display strings are Morgan–Keenan taxonomy, which
+/// the campaign permits in the author's ground-truth register on the same
+/// footing as °C or solar masses: units are the author's frame, names are the
+/// world's. A creature never says these.
+/// type-audit: bare-ok(identifier-text)
+pub const SPECTRAL_CLASSES: [(&str, &str); 9] = [
+    ("orange-dwarf", "orange dwarf (K)"),
+    ("yellow-dwarf", "yellow dwarf (G)"),
+    ("yellow-white-dwarf", "yellow-white dwarf (F)"),
+    ("red-dwarf", "red dwarf"),
+    ("sun-like-star", "sun-like star"),
+    ("white-dwarf", "white dwarf"),
+    ("orange-giant", "orange giant"),
+    ("red-giant", "red giant"),
+    ("blue-giant", "blue giant"),
+];
+
+/// The registered concept a display string names, or `None` if it names none.
+/// The parse direction: `windows/book`'s `fact_for` reads rendered prose back
+/// into a fact and needs this to recover the committed id.
+/// type-audit: bare-ok(identifier-text: display), bare-ok(identifier-text: return)
+pub fn class_concept(display: &str) -> Option<&'static str> {
+    SPECTRAL_CLASSES
+        .iter()
+        .find(|(_, d)| *d == display)
+        .map(|(c, _)| *c)
+}
+
+/// This domain's Common words: the concepts whose ids are not words, paired
+/// with the author's-frame display. The composition root declares these into
+/// the `CommonVocabulary`; a domain may not reach into `domains/language`'s
+/// map itself.
+///
+/// This is the **only** render direction now. The Vernacular's Task 4 retired
+/// `class_display`, the per-concept lookup `windows/book` and
+/// `windows/explain` used to call: a caller rendering a spectral class into
+/// Common goes through the assembled `CommonVocabulary`, so its word passes
+/// the same declared-word seam as every other concept's. [`class_concept`]
+/// remains for the parse direction, which no vocabulary provides.
+/// type-audit: bare-ok(identifier-text)
+pub fn common_words() -> &'static [(&'static str, &'static str)] {
+    &SPECTRAL_CLASSES
+}
+
+/// The class name for a drawn mass, on the raw mass value — the exact
+/// `if mass.0 < 0.8 { … }` chain `generate_star` built inline, extracted so
+/// the boundaries have a name and a test can reach them directly.
+fn class_name_of_mass(mass: f64) -> &'static str {
+    if mass < 0.8 {
+        "orange dwarf (K)"
+    } else if mass < 1.05 {
+        "yellow dwarf (G)"
+    } else {
+        "yellow-white dwarf (F)"
+    }
+}
+
+/// The registered concept for a star of this mass — the ledger's own value,
+/// derived from the physics rather than parsed back out of a display string.
+/// Boundaries are `class_name_of_mass`'s; the two are two views of one
+/// decision, and `the_concept_and_the_display_are_derived_from_the_same_mass`
+/// pins them together.
+/// type-audit: bare-ok(ratio: mass), bare-ok(identifier-text: return)
+pub fn class_concept_of_mass(mass: f64) -> &'static str {
+    if mass < 0.8 {
+        "orange-dwarf"
+    } else if mass < 1.05 {
+        "yellow-dwarf"
+    } else {
+        "yellow-white-dwarf"
+    }
+}
+
 /// Generate the star from the astronomy domain seed.
 pub fn generate_star(astronomy_seed: Seed) -> Star {
     let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
     let mass = SolarMasses(0.6 + stream.next_f64() * 0.8);
     let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
     let sqrt_l = luminosity.0.sqrt();
-    let class_name = if mass.0 < 0.8 {
-        "orange dwarf (K)"
-    } else if mass.0 < 1.05 {
-        "yellow dwarf (G)"
-    } else {
-        "yellow-white dwarf (F)"
-    }
-    .to_string();
+    let class_name = class_name_of_mass(mass.0).to_string();
     let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
     let age =
         Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
@@ -83,6 +173,7 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
         habitable_zone: HabitableZone::new(Au(0.95 * sqrt_l), Au(1.37 * sqrt_l))
             .expect("0.95√L < 1.37√L for all L > 0"),
         age,
+        t_eff: Kelvin(t_eff_of_mass(mass.0)),
     }
 }
 
@@ -138,8 +229,20 @@ pub fn insolation_rel_at(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    /// The render direction, as a test-local lookup. Production code goes
+    /// through the assembled `CommonVocabulary` (Task 4 retired the public
+    /// `class_display`), but these tests are about the TABLE's own
+    /// bijectivity, so they read the table directly rather than through a
+    /// vocabulary this crate may not depend on.
+    pub(crate) fn display_of(concept: &str) -> Option<&'static str> {
+        SPECTRAL_CLASSES
+            .iter()
+            .find(|(c, _)| *c == concept)
+            .map(|(_, d)| *d)
+    }
 
     #[test]
     fn star_is_deterministic_and_in_range() {
@@ -171,6 +274,7 @@ mod tests {
             habitable_zone: HabitableZone::new(Au::new(0.95).unwrap(), Au::new(1.37).unwrap())
                 .unwrap(),
             age: Gyr::new(4.5).unwrap(),
+            t_eff: Kelvin::new(5772.0).unwrap(),
         };
         assert!((sun_angular_diameter_rel(&sol, Au::new(1.0).unwrap()) - 1.0).abs() < 1e-12);
         // A heavier star seen from a wider orbit: θ = M^0.8 / a.
@@ -192,6 +296,7 @@ mod tests {
         assert!((insolation_rel(&star, &anchor) - expected).abs() < 1e-12);
     }
 
+    /// claim: invariant(forall-seed) — class_name tracks mass thresholds
     #[test]
     fn class_names_track_mass() {
         for seed in 0..32 {
@@ -278,6 +383,7 @@ mod tests {
         assert!(light > 30.0, "0.6 Msun t_MS = {light}");
     }
 
+    /// claim: invariant(forall-seed) — drawn age stays within the guard-rail band
     #[test]
     fn age_stays_inside_the_guard_rails_and_the_bound() {
         for seed in 0..200u64 {
@@ -331,5 +437,139 @@ mod tests {
     #[test]
     fn age_is_deterministic() {
         assert_eq!(generate_star(Seed(42)).age, generate_star(Seed(42)).age);
+    }
+
+    #[test]
+    fn effective_temperature_spans_the_expected_range_across_the_mass_draw() {
+        // The mass draw is 0.6 + u*0.8, so 0.6..1.4 solar masses.
+        // T = 5772 * M^0.475 gives 4528.4 K at 0.6 and 6772.3 K at 1.4.
+        let cool = t_eff_of_mass(0.6);
+        let hot = t_eff_of_mass(1.4);
+        assert!((cool - 4528.4).abs() < 0.1, "cool end was {cool}");
+        assert!((hot - 6772.3).abs() < 0.1, "hot end was {hot}");
+    }
+
+    #[test]
+    fn a_solar_mass_star_is_solar_temperature() {
+        assert!((t_eff_of_mass(1.0) - 5772.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_derived_temperature_agrees_with_the_existing_class_name() {
+        // generate_star labels K below 0.8 solar masses, G below 1.05, F
+        // above. Published main-sequence boundaries are ~5300 K (K/G) and
+        // ~5900 K (G/F). If the derived temperature disagreed with the
+        // label the star already carries, the world would contradict
+        // itself in print.
+        let kg_boundary = t_eff_of_mass(0.8);
+        let gf_boundary = t_eff_of_mass(1.05);
+        assert!(
+            (5000.0..5400.0).contains(&kg_boundary),
+            "K/G boundary landed at {kg_boundary} K, outside the published band"
+        );
+        assert!(
+            (5800.0..6100.0).contains(&gf_boundary),
+            "G/F boundary landed at {gf_boundary} K, outside the published band"
+        );
+    }
+
+    /// The containment rule `age` already carries (see the doc comment on
+    /// [`Star::t_eff`]): `t_eff` must reach colour and nothing else. Asserted
+    /// by *perturbation*, not by re-deriving the same star twice — two
+    /// identical generations agree on every field whether or not `t_eff`
+    /// leaks, so that form of the test could never fail. Here the temperature
+    /// is forced to a wildly un-solar value and every physical consumer in
+    /// the crate must return exactly what it returned before.
+    #[test]
+    fn effective_temperature_is_contained_and_moves_nothing_else() {
+        use crate::pins::SkyPins;
+        use crate::units::StdDays;
+        let star = generate_star(Seed(42));
+        assert_eq!(star.t_eff, generate_star(Seed(42)).t_eff);
+
+        let anchor = crate::anchor::generate_anchor(Seed(42), &star, &SkyPins::default()).unwrap();
+        let mut hot = star.clone();
+        hot.t_eff = Kelvin(30_000.0);
+
+        assert_eq!(hot.luminosity, star.luminosity);
+        assert_eq!(hot.habitable_zone.inner(), star.habitable_zone.inner());
+        assert_eq!(hot.habitable_zone.outer(), star.habitable_zone.outer());
+        assert_eq!(hot.age, star.age);
+        assert_eq!(main_sequence_lifetime(&hot), main_sequence_lifetime(&star));
+        assert_eq!(planet_age(&hot), planet_age(&star));
+        assert_eq!(brightening_per_gyr(&hot), brightening_per_gyr(&star));
+        assert_eq!(
+            insolation_rel(&hot, &anchor),
+            insolation_rel(&star, &anchor)
+        );
+        assert_eq!(
+            insolation_rel_at(&hot, &anchor, StdDays(GYR_DAYS)),
+            insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS))
+        );
+        assert_eq!(
+            luminosity_at(&hot, StdDays(GYR_DAYS)),
+            luminosity_at(&star, StdDays(GYR_DAYS))
+        );
+        assert_eq!(
+            sun_angular_diameter_rel(&hot, Au(1.0)),
+            sun_angular_diameter_rel(&star, Au(1.0))
+        );
+    }
+
+    /// The table is a bijection: every concept has exactly one display string and
+    /// every display string maps back to the concept it came from. The round-trip
+    /// matters because `windows/book` parses rendered prose back into a fact (The
+    /// Echo's transfer law), so render and parse must be inverse or a recovered
+    /// fact stops equalling the committed one.
+    #[test]
+    fn concept_and_display_round_trip_in_both_directions() {
+        for (concept, display) in SPECTRAL_CLASSES {
+            assert_eq!(
+                class_concept(display),
+                Some(concept),
+                "{display:?} must parse back to {concept:?}"
+            );
+            assert_eq!(
+                display_of(concept),
+                Some(display),
+                "{concept:?} must render as {display:?}"
+            );
+        }
+        assert_eq!(class_concept("a star"), None);
+        assert_eq!(display_of("not-a-class"), None);
+    }
+
+    /// Every string `class_name_of_mass` can mint is registered in the table
+    /// (producer ⊆ table) — this is the direction actually tested. It does
+    /// NOT test the converse: the table may carry (and does — six of nine
+    /// entries here are minted only by `neighborhood::class_name`, never by
+    /// this crate's own mass-boundary chain) classes this function never
+    /// mints. A bogus tenth row added to `SPECTRAL_CLASSES` would pass this
+    /// test undetected.
+    #[test]
+    fn every_star_class_name_is_in_the_table() {
+        for mass in [0.6, 0.79, 0.8, 1.04, 1.05, 1.4] {
+            let name = class_name_of_mass(mass);
+            assert!(
+                class_concept(name).is_some(),
+                "star.rs mints {name:?}, which the table does not carry"
+            );
+        }
+    }
+
+    /// The concept is derived from mass, not parsed from prose. Same boundaries as
+    /// `class_name_of_mass`, and the two must agree — the display is now derived
+    /// from the concept's side of the same physics, not the other way round.
+    #[test]
+    fn the_concept_and_the_display_are_derived_from_the_same_mass() {
+        for mass in [0.6, 0.79, 0.8, 1.04, 1.05, 1.4] {
+            let concept = class_concept_of_mass(mass);
+            let display = class_name_of_mass(mass);
+            assert_eq!(
+                display_of(concept),
+                Some(display),
+                "mass {mass} derives concept {concept:?} and display {display:?}, which disagree"
+            );
+        }
     }
 }

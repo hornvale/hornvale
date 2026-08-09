@@ -4,6 +4,7 @@ use hornvale_astronomy::{
     Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::GeneratedClimate;
+use hornvale_history::record::{Ended, OccupationRecord};
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
     GapReason, LexEntry, Manner, NameKind, Namer, Phonology, Segment, concept_domain,
@@ -16,8 +17,8 @@ use hornvale_terrain::{
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
     accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
-    commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, rock_class_name,
+    commodity_name, flagship_of, language_of_in, migration_events, observed_phenomena_as_at_from,
+    observed_phenomena_as_in_from, occupation_records, rock_class_name,
     settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
     soil_order_name, terrain_of, vestiges_field,
 };
@@ -656,6 +657,99 @@ pub enum SummaryKind {
     },
 }
 
+/// The subject a metric belongs to — the Domesday's chapter axis, and the
+/// taxonomy the Book's Science part will inherit. Deliberately a subject, not
+/// a build depth: `rung` puts 105 of 194 metrics in one bucket.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Domain {
+    /// Stars, orbits, moons, the sky.
+    Astronomy,
+    /// Plates, elevation, landforms.
+    Terrain,
+    /// Temperature, precipitation, biomes.
+    Climate,
+    /// Rivers, lakes, aquifers, coasts.
+    Hydrology,
+    /// Species, ecology, life history.
+    Biology,
+    /// Villages, their siting, and the geography of where peoples settle.
+    Settlement,
+    /// Population counts, survival, and the demographic fate of peoples.
+    Demography,
+    /// Social structure, disposition, conflict.
+    Society,
+    /// Pantheons, cults, belief.
+    Religion,
+    /// Phonology, lexicon, grammar.
+    Language,
+    /// Naming schemes and their products.
+    Naming,
+    /// Deep history, vestiges, what is forgotten.
+    History,
+}
+
+impl Domain {
+    /// The lowercase token used in `schema.json` and in page filenames.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Domain::Astronomy => "astronomy",
+            Domain::Terrain => "terrain",
+            Domain::Climate => "climate",
+            Domain::Hydrology => "hydrology",
+            Domain::Biology => "biology",
+            Domain::Settlement => "settlement",
+            Domain::Demography => "demography",
+            Domain::Society => "society",
+            Domain::Religion => "religion",
+            Domain::Language => "language",
+            Domain::Naming => "naming",
+            Domain::History => "history",
+        }
+    }
+
+    /// Every domain, in rendering order.
+    pub fn all() -> &'static [Domain] {
+        &[
+            Domain::Astronomy,
+            Domain::Terrain,
+            Domain::Climate,
+            Domain::Hydrology,
+            Domain::Biology,
+            Domain::Settlement,
+            Domain::Demography,
+            Domain::Society,
+            Domain::Religion,
+            Domain::Language,
+            Domain::Naming,
+            Domain::History,
+        ]
+    }
+}
+
+/// Whether a metric is expected to vary. Detectors D1/D2 fire only on
+/// `Descriptor`; D7 fires on an `Invariant` that does NOT hold. Without this
+/// split D1 fires on 40 of 57 categorical metrics, because 33 of them are
+/// deliberate invariants (spec §4.1a).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Role {
+    /// A measured property expected to vary across worlds.
+    Descriptor,
+    /// A property asserted to hold on every world.
+    Invariant,
+}
+
+impl Role {
+    /// The lowercase token used in `schema.json`.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Role::Descriptor => "descriptor",
+            Role::Invariant => "invariant",
+        }
+    }
+}
+
 /// An analyzable property of a world, with extraction logic.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: doc)
 pub struct Metric {
@@ -665,6 +759,10 @@ pub struct Metric {
     pub doc: &'static str,
     /// The kind of analysis this metric supports.
     pub summary: SummaryKind,
+    /// The subject this metric belongs to (the Domesday's chapter axis).
+    pub domain: Domain,
+    /// Whether this metric is expected to vary across worlds.
+    pub role: Role,
     /// Extract this metric from the narrowest view it reads, tagged by rung.
     pub extract: Extractor,
 }
@@ -735,6 +833,15 @@ pub fn registry() -> Vec<Metric> {
             name: "star-class",
             doc: "Spectral class of the host star",
             summary: SummaryKind::Categorical,
+            // Deliberately reads the in-memory system's `class_name` display
+            // (e.g. "yellow dwarf (G)"), not the ledger's committed
+            // `star-class` concept id (e.g. "yellow-dwarf") — the census is
+            // an author-frame instrument, same justification as the "In
+            // truth" register `windows/book` renders for the ground-truth
+            // line. This is why the census rows didn't move when the ledger
+            // switched from prose to a concept id.
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.star.class_name.clone())
             }),
@@ -743,6 +850,8 @@ pub fn registry() -> Vec<Metric> {
             name: "tidally-locked",
             doc: "Whether the world is tidally locked to its star",
             summary: SummaryKind::Flag,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Flag(matches!(v.system.anchor.rotation, Rotation::Locked))
             }),
@@ -753,6 +862,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
                 Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
@@ -764,6 +875,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(v.system.anchor.year.get())
             }),
@@ -774,6 +887,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(day_len) = v.calendar.day_length() {
                     MetricValue::Number(v.system.anchor.year.get() / day_len.get())
@@ -788,6 +903,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(v.system.anchor.obliquity.get())
             }),
@@ -800,6 +917,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(2.0 * v.system.forcing.obliquity_amp)
             }),
@@ -808,6 +927,8 @@ pub fn registry() -> Vec<Metric> {
             name: "moons-admitted",
             doc: "Number of moons in orbit",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.moons.len().to_string())
             }),
@@ -816,6 +937,8 @@ pub fn registry() -> Vec<Metric> {
             name: "refused-a-moon",
             doc: "Whether moon genesis recorded refusals",
             summary: SummaryKind::Flag,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Flag(!v.notes.is_empty())
             }),
@@ -826,6 +949,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let total: f64 = v.system.moons.iter().map(|m| m.tide_rel).sum();
                 MetricValue::Number(total)
@@ -837,6 +962,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 700.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(months) = v.calendar.months_per_year(0) {
                     MetricValue::Number(months)
@@ -849,6 +976,8 @@ pub fn registry() -> Vec<Metric> {
             name: "neighbor-count",
             doc: "Number of notable neighbor stars",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.neighbors.len().to_string())
             }),
@@ -857,8 +986,20 @@ pub fn registry() -> Vec<Metric> {
             name: "brightest-neighbor-class",
             doc: "Spectral class of the brightest neighbor, in kebab-case",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(neighbor) = v.system.neighbors.first() {
+                    // These are the census's OWN author-frame labels, not the
+                    // ledger's registered concept ids (`SPECTRAL_CLASSES` in
+                    // `domains/astronomy/src/star.rs`) — this is a fourth,
+                    // independent kebab-case spelling of the spectral
+                    // classes, deliberately uncoupled from that table so a
+                    // published census column never moves for a ledger
+                    // reason. Five of six are byte-identical to the concept
+                    // ids; `"sun-like"` here is NOT `"sun-like-star"` there.
+                    // Do not join census rows to ledger `Value::Text` facts
+                    // on this column.
                     let class_name = match neighbor.class {
                         NeighborClass::RedDwarf => "red-dwarf",
                         NeighborClass::SunLike => "sun-like",
@@ -877,6 +1018,8 @@ pub fn registry() -> Vec<Metric> {
             name: "figure-count",
             doc: "Number of star figures the reference observer's sky holds",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 MetricValue::Text(
@@ -890,6 +1033,8 @@ pub fn registry() -> Vec<Metric> {
             name: "largest-figure-members",
             doc: "Member count of the largest star figure (0 if none)",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let largest = hornvale_astronomy::figures(astronomy_seed, &v.system)
@@ -904,6 +1049,8 @@ pub fn registry() -> Vec<Metric> {
             name: "ecliptic-figure-count",
             doc: "Number of star figures standing on the ecliptic (the sun's road)",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let count = hornvale_astronomy::figures(astronomy_seed, &v.system)
@@ -917,6 +1064,8 @@ pub fn registry() -> Vec<Metric> {
             name: "genesis-note-count",
             doc: "Number of genesis notes recorded",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.notes.len().to_string())
             }),
@@ -927,6 +1076,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 600.0, 1000.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match v.system.moons.first() {
                 None => MetricValue::Absent,
                 Some(m) => {
@@ -947,6 +1098,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(hornvale_astronomy::brightening_per_gyr(&v.system.star))
             }),
@@ -958,6 +1111,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v| {
                 let a: &AstronomyView = v.as_ref();
                 let Some(lat) = flagship_latitude(v) else {
@@ -977,6 +1132,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 century_cadence(v, hornvale_astronomy::EclipseBody::Solar)
             }),
@@ -987,6 +1144,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 century_cadence(v, hornvale_astronomy::EclipseBody::Lunar)
             }),
@@ -997,6 +1156,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(hornvale_astronomy::coincidence_days(&scan_century(v)) as f64)
             }),
@@ -1005,6 +1166,8 @@ pub fn registry() -> Vec<Metric> {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Text(v.globe.plate_count.to_string())
             }),
@@ -1015,6 +1178,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.globe.ocean_fraction)
             }),
@@ -1025,6 +1190,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
@@ -1049,6 +1216,8 @@ pub fn registry() -> Vec<Metric> {
             name: "band-count",
             doc: "Circulation bands per hemisphere; 'locked' if tidally locked",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| match v.climate.band_count() {
                 Some(n) => MetricValue::Text(n.to_string()),
                 None => MetricValue::Text("locked".to_string()),
@@ -1060,6 +1229,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 MetricValue::Number(v.climate.habitable_fraction())
             }),
@@ -1070,6 +1241,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let total = geo.cell_count();
@@ -1091,6 +1264,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land rock class by cell count, spec §4's fine \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<RockClass, usize> =
@@ -1113,6 +1288,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut karst) = (0usize, 0usize);
@@ -1132,12 +1309,42 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "hydro-variant-coverage",
+            doc: "Which `Hydro` variants `hydro_at` reads anywhere on this world, as \
+                  `+`-joined names in `Hydro::ALL` order (The Assay). Replaces \
+                  `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability \
+                  sweep: a variant no world in the census shows is structurally dead, \
+                  and 1,000 worlds say so with a rate where 8 said so with a flag.",
+            summary: SummaryKind::Categorical,
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
+                    std::collections::BTreeSet::new();
+                for cell in geo.cells() {
+                    seen.insert(v.terrain.hydro_at(cell));
+                }
+                // `Hydro::ALL` order, not BTreeSet order, so the string is stable
+                // against a future reordering of the enum's `Ord` derivation.
+                let joined = hornvale_terrain::Hydro::ALL
+                    .iter()
+                    .filter(|h| seen.contains(h))
+                    .map(|h| h.name())
+                    .collect::<Vec<_>>()
+                    .join("+");
+                MetricValue::Text(joined)
+            }),
+        },
+        Metric {
             name: "aquifer-fraction",
             doc: "Fraction of land cells whose hydrogeology classifies as an \
                   aquifer (The Ground, spec §3)",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut aquifer) = (0usize, 0usize);
@@ -1162,6 +1369,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 300.0, 600.0, 1000.0, 2000.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
@@ -1180,6 +1389,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut gaps) = (0usize, 0usize);
@@ -1204,6 +1415,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[15.0, 18.0, 21.0, 24.0, 27.0, 30.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
@@ -1226,6 +1439,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut caves) = (0usize, 0usize);
@@ -1250,6 +1465,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut deposits) = (0usize, 0usize);
@@ -1273,6 +1490,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land ore commodity by cell count (The \
                   Lode, spec §5); Absent where no land cell has a deposit",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<Commodity, usize> =
@@ -1299,6 +1518,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut deposits, mut sum) = (0usize, 0.0f64);
@@ -1333,6 +1554,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1361,6 +1584,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1389,6 +1614,8 @@ pub fn registry() -> Vec<Metric> {
                   layer count (The Vestige, spec §9.2); Absent where no land \
                   cell bears a vestige",
             summary: SummaryKind::Categorical,
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1433,6 +1660,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1453,6 +1682,8 @@ pub fn registry() -> Vec<Metric> {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let biomes = v.climate.biome_map();
                 // Count land biomes in ascending name order for determinism.
@@ -1479,6 +1710,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
@@ -1500,6 +1733,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land soil order by cell count, spec §4's soil \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
@@ -1523,6 +1758,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
@@ -1550,6 +1787,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 10.0, 20.0, 40.0, 60.0, 80.0, 120.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(hornvale_terrain::places(v.world()).len() as f64)
             }),
@@ -1561,6 +1800,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let pops: Vec<f64> = places
@@ -1589,6 +1830,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
             },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let pops: Vec<f64> = places
@@ -1628,6 +1871,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 3.0, 5.0, 10.0, 20.0, 40.0, 60.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let geo = v.terrain().geosphere();
                 let base_inputs =
@@ -1657,7 +1902,7 @@ pub fn registry() -> Vec<Metric> {
                             continue;
                         }
                         let lat = geo.coord(cell).latitude.abs();
-                        let kv = *k.get(cell);
+                        let kv = k.at(cell);
                         if lat < 30.0 {
                             trop_sum += kv;
                             trop_n += 1;
@@ -1696,6 +1941,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 // Named construction site (decision 0092): a metric extractor
                 // deliberately recomputes the fit per read against already-derived
@@ -1739,6 +1986,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 // Named construction site (decision 0092): a metric extractor
                 // deliberately recomputes the fit per read against already-derived
@@ -1784,6 +2033,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let (mut weighted_sum, mut pop_sum) = (0.0_f64, 0.0_f64);
@@ -1826,6 +2077,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let mut pops: Vec<f64> = hornvale_terrain::places(v.world())
                     .iter()
@@ -1873,6 +2126,8 @@ pub fn registry() -> Vec<Metric> {
                    community, spec §6); Absent if there is no goblin flagship or no committed \
                    subsistence",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => match hornvale_culture::subsistence_of(v.world(), info.id) {
@@ -1888,6 +2143,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship settlement's committed biome; Absent if there is no \
                    goblin flagship",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => {
@@ -1909,6 +2166,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "Whether the goblin flagship settlement's cell borders an ocean cell, \
                    recomputed from the terrain provider; Absent if there is no goblin flagship",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -1939,6 +2198,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => MetricValue::Number(
@@ -1954,6 +2215,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut endorheic) = (0usize, 0usize);
@@ -1978,6 +2241,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -1995,6 +2260,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); \
                    Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2010,6 +2277,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "Whether the goblin flagship's pantheon is ranked (a high god presides) or \
                    flat; Absent if there is no goblin flagship pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2029,6 +2298,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The sentiment tag of the goblin flagship's head deity (the most salient \
                    belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2045,6 +2316,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if goblins placed no settlement",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => {
@@ -2064,6 +2337,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The kobold flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if kobolds placed no settlement",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "kobold") {
                     Some(info) => {
@@ -2085,6 +2360,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => MetricValue::Number(f64::from(info.population)),
@@ -2099,6 +2376,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "kobold") {
                     Some(info) => MetricValue::Number(f64::from(info.population)),
@@ -2115,6 +2394,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "goblin")),
         },
         Metric {
@@ -2126,6 +2407,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "kobold")),
         },
         Metric {
@@ -2134,6 +2417,8 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if goblins placed no settlement",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "goblin")),
         },
         Metric {
@@ -2142,6 +2427,8 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if kobolds placed no settlement",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "kobold")),
         },
         Metric {
@@ -2150,6 +2437,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(species_settlement_count(v, "goblin"))
             }),
@@ -2160,6 +2449,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(species_settlement_count(v, "kobold"))
             }),
@@ -2168,6 +2459,8 @@ pub fn registry() -> Vec<Metric> {
             name: "head-deity-domain-goblin",
             doc: "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2177,6 +2470,8 @@ pub fn registry() -> Vec<Metric> {
             name: "head-deity-domain-kobold",
             doc: "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2188,6 +2483,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2199,6 +2496,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2208,6 +2507,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-goblin",
             doc: "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2217,6 +2518,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-kobold",
             doc: "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2226,6 +2529,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-bugbear",
             doc: "Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "bugbear") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2235,6 +2540,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-goblin",
             doc: "Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "goblin") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2244,6 +2551,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-hobgoblin",
             doc: "Sentiment of the hobgoblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(
                 |v: &FullView| match species_head_sentiment(v, "hobgoblin") {
                     Some(s) => MetricValue::Text(s),
@@ -2255,6 +2564,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-kobold",
             doc: "Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "kobold") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2264,6 +2575,8 @@ pub fn registry() -> Vec<Metric> {
             name: "blind-attribution-correct",
             doc: "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
             summary: SummaryKind::Flag,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let (Some(g), Some(k)) = (pantheon_sig(v, "goblin"), pantheon_sig(v, "kobold"))
                 else {
@@ -2282,6 +2595,8 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if goblins produced no names",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "goblin")),
         },
         Metric {
@@ -2291,6 +2606,8 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if kobolds produced no names",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "kobold")),
         },
         Metric {
@@ -2301,6 +2618,8 @@ pub fn registry() -> Vec<Metric> {
                    and be strictly longer (Rank status basis → honorifics on, spec §7); Absent \
                    if goblins hold no pantheon",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "goblin")),
         },
         Metric {
@@ -2311,6 +2630,8 @@ pub fn registry() -> Vec<Metric> {
                    off, so the committed epithet equals the plain stem and this reads false; \
                    Absent if kobolds hold no pantheon",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "kobold")),
         },
         Metric {
@@ -2320,6 +2641,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin")),
         },
         Metric {
@@ -2329,6 +2652,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "kobold")),
         },
         // --- The Wearing (Task 11): the two readings the campaign's own
@@ -2344,6 +2669,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "goblin")),
         },
         Metric {
@@ -2353,6 +2680,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "kobold")),
         },
         Metric {
@@ -2368,6 +2697,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_transparency),
         },
         Metric {
@@ -2382,12 +2713,16 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_collision_rate),
         },
         Metric {
             name: "head-deity-domain-goblin-twin",
             doc: "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2399,6 +2734,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2408,6 +2745,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-goblin-twin",
             doc: "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2419,6 +2758,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin-twin")),
         },
         Metric {
@@ -2427,6 +2768,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
@@ -2438,6 +2781,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
@@ -2461,6 +2806,8 @@ pub fn registry() -> Vec<Metric> {
                    this sentence, which has now gone stale twice; Absent if no settlement \
                    in this world carries a gloss",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Invariant,
             extract: Extractor::Full(name_gloss_true),
         },
         Metric {
@@ -2469,7 +2816,113 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "goblin")),
+        },
+        Metric {
+            name: "cascade-rules-fired-goblin",
+            doc: "How many DISTINCT sound rules in the goblin cascade actually fire on \
+                   at least one lexicon Root. Zero means the etymological layer is inert \
+                   for this species (The Namesake §5.0); Absent if goblin is unrostered \
+                   or minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
+            },
+            domain: Domain::Language,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "goblin")),
+        },
+        Metric {
+            name: "cascade-rules-fired-bugbear",
+            doc: "How many DISTINCT sound rules in the bugbear cascade actually fire on \
+                   at least one lexicon Root. Zero means the etymological layer is inert \
+                   for this species (The Namesake §5.0); Absent if bugbear is unrostered \
+                   or minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
+            },
+            domain: Domain::Language,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "bugbear")),
+        },
+        Metric {
+            name: "name-pattern-signatures",
+            doc: "How many DISTINCT (ElementSource, Author) naming-pattern signatures \
+                   this world's placed peoples derive from their society vectors (The \
+                   Namesake §5.1(1); target >= 3); Absent if no placed people carries \
+                   both psychology vectors",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(name_pattern_signatures),
+        },
+        Metric {
+            name: "peoples-placed",
+            doc: "How many peoples hold a flagship settlement in this world — the n in \
+                   the 1/n chance baseline The Namesake §5.1(2) is judged against, \
+                   published so that verdict is re-derivable from rows.csv without \
+                   inferring n; Absent if no people is placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            extract: Extractor::Full(peoples_placed),
+        },
+        Metric {
+            name: "name-people-recoverability",
+            doc: "The share of this world's placed peoples whose naming-pattern \
+                   signature is unique among them — the structure-alone recoverability \
+                   of a figure's people (The Namesake §5.1(2); target >= 2x the \
+                   1/n_peoples chance baseline); Absent if fewer than two peoples are \
+                   placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(name_people_recoverability),
+        },
+        Metric {
+            name: "name-prefix-settlement-scope",
+            doc: "The share of this world's occupation founders whose name renders in \
+                   exactly one element against the other founders of their own site \
+                   (The Namesake §5.2(1); target >= 0.80); Absent if the world has no \
+                   founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(name_prefix_settlement_scope),
+        },
+        Metric {
+            name: "name-prefix-region-scope",
+            doc: "The MEDIAN number of elements this world's occupation founders render \
+                   in against every other founder in the world (The Namesake §5.2(2); \
+                   target >= 2); Absent if the world has no founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(name_prefix_region_scope),
+        },
+        Metric {
+            name: "name-prefix-region-full-stack",
+            doc: "The share of this world's occupation founders whose region-scope \
+                   render spends every element their name carries — the second, \
+                   opposite half of The Namesake §5.2(2) (target < 0.50); Absent if the \
+                   world has no founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(name_prefix_region_full_stack),
         },
         Metric {
             name: "lexicon-regular-kobold",
@@ -2477,6 +2930,8 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "kobold")),
         },
         Metric {
@@ -2486,6 +2941,8 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    goblin lexicon has no entries",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| exposure_sound(v, "goblin")),
         },
         Metric {
@@ -2495,6 +2952,8 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    kobold lexicon has no entries",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| exposure_sound(v, "kobold")),
         },
         Metric {
@@ -2505,6 +2964,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "goblin")),
         },
         Metric {
@@ -2515,6 +2976,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "kobold")),
         },
         Metric {
@@ -2525,6 +2988,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::shoreline_development(
@@ -2553,6 +3018,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.5, 0.0, 0.25, 0.5, 1.0, 1.5],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(coast_roughness_slope),
         },
         Metric {
@@ -2563,6 +3030,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::hypsometric_bimodality(
@@ -2581,6 +3050,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(hornvale_terrain::shape::shelf_fraction(
@@ -2600,6 +3071,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
@@ -2619,6 +3092,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
@@ -2640,6 +3115,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let mut counts = vec![0usize; globe.plates.len()];
@@ -2660,6 +3137,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(
@@ -2688,6 +3167,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, false)),
         },
         Metric {
@@ -2702,6 +3183,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, true)),
         },
         Metric {
@@ -2715,6 +3198,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1e5, 2e5, 4e5, 8e5, 1.6e6, 3.2e6],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(globe.sediment_thickness.iter().map(|(_, s)| *s).sum())
@@ -2729,6 +3214,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.waterfalls().len() as f64)
             }),
@@ -2743,6 +3230,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.deltas().len() as f64)
             }),
@@ -2759,6 +3248,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.globe().carve_reroute_fraction)
             }),
@@ -2776,6 +3267,8 @@ pub fn registry() -> Vec<Metric> {
                    world's roster (spec §9.1, generalized family-wide); Absent if no \
                    daughter minted a Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(lexicon_regular_family),
         },
         Metric {
@@ -2787,7 +3280,26 @@ pub fn registry() -> Vec<Metric> {
                    sibling's own recorded derivation; Absent if no goblinoid daughter \
                    minted a Root",
             summary: SummaryKind::Flag,
-            extract: Extractor::Full(monophyly_goblinoid),
+            domain: Domain::Language,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "goblinoid")),
+        },
+        Metric {
+            // THE DELVERS (C2c): the roster's second multi-member family gets
+            // the same check, not a second implementation — monophyly is a
+            // property of a family, and `monophyly-goblinoid` was named after
+            // what used to be its only possible subject.
+            name: "monophyly-dwarf",
+            doc: "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) \
+                   Root derivation.proto matches an INDEPENDENT re-draw of the shared \
+                   \"dwarf\" family proto-root for that concept (spec §3: cognates \
+                   share a proto ancestor) — never reading the family proto back from a \
+                   sibling's own recorded derivation; Absent if no dwarf daughter \
+                   minted a Root",
+            summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "dwarf")),
         },
         Metric {
             name: "clean-outgroup-kobold",
@@ -2797,6 +3309,8 @@ pub fn registry() -> Vec<Metric> {
                    \"goblinoid\" family proto-root for that same concept (spec §3's clean \
                    outgroup); Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(clean_outgroup_kobold),
         },
         Metric {
@@ -2805,6 +3319,8 @@ pub fn registry() -> Vec<Metric> {
                    goblin's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if goblin minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "goblin")),
         },
         Metric {
@@ -2813,6 +3329,8 @@ pub fn registry() -> Vec<Metric> {
                    in hobgoblin's own drawn inventory (spec §2.2's nativization \
                    contract); Absent if hobgoblin minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "hobgoblin")),
         },
         Metric {
@@ -2821,6 +3339,8 @@ pub fn registry() -> Vec<Metric> {
                    bugbear's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if bugbear minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "bugbear")),
         },
         Metric {
@@ -2829,6 +3349,8 @@ pub fn registry() -> Vec<Metric> {
                    kobold's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "kobold")),
         },
         Metric {
@@ -2842,6 +3364,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "goblin")),
         },
         Metric {
@@ -2855,6 +3379,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "hobgoblin")),
         },
         Metric {
@@ -2868,6 +3394,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "bugbear")),
         },
         Metric {
@@ -2879,6 +3407,8 @@ pub fn registry() -> Vec<Metric> {
                    daughters are silent aliases of one another must read false; Absent if \
                    no concept is rooted in all three",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(divergence_real),
         },
         Metric {
@@ -2891,6 +3421,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "goblin")),
         },
         Metric {
@@ -2902,6 +3434,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "hobgoblin")),
         },
         Metric {
@@ -2914,6 +3448,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "bugbear")),
         },
         Metric {
@@ -2925,6 +3461,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "kobold")),
         },
         // --- Lexicon homophony, functional-load restricted + attributed
@@ -2941,6 +3479,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "goblin")),
         },
         Metric {
@@ -2951,6 +3491,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "hobgoblin")),
         },
         Metric {
@@ -2961,6 +3503,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "bugbear")),
         },
         Metric {
@@ -2971,6 +3515,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "kobold")),
         },
         Metric {
@@ -2982,6 +3528,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "goblin")),
         },
         Metric {
@@ -2991,6 +3539,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "hobgoblin")),
         },
         Metric {
@@ -3000,6 +3550,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "bugbear")),
         },
         Metric {
@@ -3009,6 +3561,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "kobold")),
         },
         // --- Confusable-vs-free core homophony (spec §10 Q3): the
@@ -3026,6 +3580,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "goblin")),
         },
         Metric {
@@ -3036,6 +3592,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "hobgoblin")),
         },
         Metric {
@@ -3046,6 +3604,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "bugbear")),
         },
         Metric {
@@ -3056,6 +3616,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "kobold")),
         },
         // --- The tone tier (spec §11): the realized tone-inventory size (1 for
@@ -3069,6 +3631,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "goblin")),
         },
         Metric {
@@ -3078,6 +3642,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "kobold")),
         },
         Metric {
@@ -3088,6 +3654,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "goblin")),
         },
         Metric {
@@ -3098,6 +3666,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "bugbear")),
         },
         Metric {
@@ -3107,6 +3677,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
@@ -3123,6 +3695,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "goblin")),
         },
         Metric {
@@ -3132,6 +3706,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "kobold")),
         },
         Metric {
@@ -3141,6 +3717,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "goblin")),
         },
         Metric {
@@ -3150,6 +3728,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "kobold")),
         },
         Metric {
@@ -3159,6 +3739,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 species_basal_metabolic_rate_metric(v, "goblin")
             }),
@@ -3170,6 +3752,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 species_basal_metabolic_rate_metric(v, "kobold")
             }),
@@ -3182,6 +3766,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "goblin")),
         },
         Metric {
@@ -3192,6 +3778,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "kobold")),
         },
         Metric {
@@ -3201,6 +3789,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "goblin")),
         },
         Metric {
@@ -3210,6 +3800,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "kobold")),
         },
         Metric {
@@ -3220,6 +3812,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "goblin")),
         },
         Metric {
@@ -3230,6 +3824,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
         },
         // --- The Chorus (C4, LANG-41): the six census-visible dial metrics
@@ -3246,6 +3842,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_distortion_metric),
         },
         Metric {
@@ -3255,6 +3853,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_distinctiveness_metric),
         },
         Metric {
@@ -3264,6 +3864,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_recoverability_metric),
         },
         Metric {
@@ -3275,6 +3877,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.001, 0.01, 0.05, 0.1],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_variance_metric),
         },
         Metric {
@@ -3285,6 +3889,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.4],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_param_spread_metric),
         },
         Metric {
@@ -3298,9 +3904,560 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.5, 0.0, 0.5],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_sky_calibration_metric),
         },
+        // --- The Contour (Task 4): the measurement instrument, built ahead
+        // of the mechanism (spec 2.2/decision 0096) so Task 5's baseline is
+        // honest. M2/M3 read `occupation_records` — the same decoder
+        // `windows/almanac` and The Vestige already share — filtered to
+        // still-alive occupations at bake end.
+        //
+        // M2's `peak_population` caveat: `OccupationRecord::peak_population`
+        // is each occupation's historical HIGH-WATER MARK
+        // (`Bake::touch` only ever raises it — `history_bake.rs`), not a
+        // bake-end census. There is no end-state population accessor in the
+        // data model today: the live per-epoch figure
+        // (`Bake::Community::population`) is bake-internal state that
+        // `history_bake::bake` discards when it returns `History` (only
+        // `records` — carrying `peak_population` — survives). So M2 reads
+        // "largest peak share among communities alive at bake end," not a
+        // literal simultaneous snapshot; see task-4-report.md round 2 for
+        // the finding and the proposed accessor if a true end-state figure
+        // is ever needed.
+        //
+        // M4 (defensibility-capacity-rank-corr), round 3 / spec §2.4
+        // amendment 4: registered on PRESENT-DAY terrain, not the bake's
+        // own final era. `bake_history_from` computes and discards its own
+        // final-era `(ConnectionGraph, capacity)` on every build path, and
+        // `FullView` has no field for it (round 2's finding, still true);
+        // present-day terrain/climate is a DIFFERENT, honestly-labelled
+        // reading — spec §2.2's claim is about whether defensible ground is
+        // also poor ground, a structural fact about the geography that
+        // present-day terrain samples fully, so the substitution is
+        // legitimate as long as it says so out loud (the metric's own `doc`
+        // carries the label, not just this comment — see
+        // `spearman_defensibility_capacity`).
+        Metric {
+            name: "peoples-alive-at-bake-end",
+            doc: "M3: how many distinct peoples still hold a live community when the \
+                  bake ends — the decision-0089 compliance reading",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let mut peoples = std::collections::BTreeSet::new();
+                for occ in occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                {
+                    peoples.insert(occ.core.people);
+                }
+                MetricValue::Number(peoples.len() as f64)
+            }),
+        },
+        Metric {
+            name: "largest-holding-share",
+            doc: "M2: the largest live community's PEAK population as a share of the \
+                  summed peak population of every community alive at bake end \
+                  (peak_population is each occupation's historical high-water mark, not \
+                  a true bake-end census — no end-state population accessor exists \
+                  today; see task-4-report.md) — the entity-size reading the criticality \
+                  campaigns never took",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let pops: Vec<f64> = occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                    .map(|o| f64::from(o.core.peak_population))
+                    .collect();
+                let total: f64 = pops.iter().sum();
+                if total <= 0.0 {
+                    return MetricValue::Absent;
+                }
+                let max = pops.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                MetricValue::Number(max / total)
+            }),
+        },
+        Metric {
+            name: "defensibility-capacity-rank-corr",
+            doc: "M4: Spearman rank correlation between a habitable cell's weakest-point \
+                  defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY \
+                  terrain, climate, and connection graph — NOT the bake's own final era, \
+                  which can differ on a world with real orbital forcing (spec §2.4 \
+                  amendment 4). Checks §2.2's structural claim that defensible ground \
+                  is also poor ground, on the geography as it stands today. Ties get \
+                  average ranks; Absent if fewer than 2 habitable cells, or if either \
+                  series is constant (no variance, so no correlation is defined)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.6, -0.3, 0.0, 0.3, 0.6],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Full(spearman_defensibility_capacity),
+        },
+        Metric {
+            name: "toponymic-core-size",
+            doc: "How many concepts this world's registry reports in the `toponymic` \
+                  domain (The Assay). The denominator for `toponymic-roots-won`, kept \
+                  as its own column so a registry change is distinguishable from a \
+                  worlds change.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_core(v).len() as f64)
+            }),
+        },
+        Metric {
+            name: "toponymic-roots-won",
+            doc: "How many toponymic-domain concepts reach `ExposureClass::Steeped` for \
+                  at least one placed people (The Assay). Replaces \
+                  `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a \
+                  witness: a concept no world in the census ever steeps is a \
+                  structurally dead gate, and the census says so as a rate.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_roots_won(v) as f64)
+            }),
+        },
+        Metric {
+            name: "crisis-fires",
+            doc: "Whether any placed people holds a live prediction crisis at day \
+                  36,525 (the hundredth year, the diachronic battery's preregistered \
+                  epoch) — The Assay. Replaces \
+                  `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a \
+                  single instance. A crisis needs a Generated sky, an organized \
+                  flagship's doctrine, >= 8 witnessed events of one recurrence class \
+                  and a tail miss-run, so it cannot be synthesised — which is why it \
+                  is a rate here rather than a hand-built behaviour test.",
+            summary: SummaryKind::Flag,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
+                    Ok(days) => days,
+                    Err(_) => return MetricValue::Absent,
+                };
+                let (world, terrain, climate) = (v.world(), v.terrain(), v.climate());
+                for (species, _) in hornvale_worldgen::placed_peoples(world) {
+                    match hornvale_worldgen::crisis_from(world, species, at, terrain, climate) {
+                        Ok(Some(_)) => return MetricValue::Flag(true),
+                        Ok(None) => {}
+                        // A world whose sky cannot answer the question is Absent, not
+                        // false: `false` would claim "measured, no crisis", which is a
+                        // different fact and would understate the rate.
+                        Err(_) => return MetricValue::Absent,
+                    }
+                }
+                MetricValue::Flag(false)
+            }),
+        },
+        // --- THE CONFUSION (C2c follow-on): the raid readouts, migrated off
+        // the 30-world battery. ---
+        //
+        // `windows/worldgen/tests/tolerance_baseline.rs` reported these
+        // quantities over seeds `1..=30` for The Tolerance's preregistered
+        // H1/H2/H3. Those verdicts are adjudicated and recorded in
+        // `book/src/chronicle/the-tolerance.md`, so the battery was
+        // re-answering a settled question on every heavy-tier run — and its
+        // own guards had gone red at the nine-people roster. The three columns
+        // below ask the live question instead ("what IS the raid rate") over
+        // ~1,000 worlds, and the battery is retired.
+        //
+        // **THE POPULATION CHANGED, DELIBERATELY, AND THAT IS THE POINT.** The
+        // retired readout filtered every numerator to
+        // `PEOPLES_AS_OF_THE_GENERALIST` — the six settling peoples frozen at
+        // The Generalist — while its denominator (`census().raided`) counted
+        // the whole world; that mismatch, not any ambiguity in attribution, is
+        // what failed (measured in
+        // `windows/worldgen/tests/raid_attribution_probe.rs`: attribution is
+        // exact on all 30 seeds, and the gap is exactly the 381 out-of-
+        // population victims). These columns filter NOTHING: every occupation
+        // record counts, whatever people holds it — nine settling peoples at
+        // this commit, and whatever the roster holds next. A frozen population
+        // exists to keep a preregistered verdict readable; this is no longer a
+        // preregistered verdict, so it is stated here rather than frozen.
+        //
+        // All three key on `Ended::By(_)`, the HANDLE, rather than on
+        // `CauseOfEnd::Fled`. Today the two coincide exactly — all three
+        // `Ended::By` sites in `history_bake.rs` close with `Fled` — so this
+        // is the raid rate; keying on the handle means a future ending dealt
+        // by another hand is counted rather than silently dropped.
+        //
+        // Settlement rung, not Full: `emit_history` commits every occupation
+        // fact before `build_world_to` returns at `BuildDepth::Settlements`,
+        // and nothing deeper touches them.
+        Metric {
+            name: "raid-victim-rate",
+            doc: "Share of this world's occupation records that ended at another \
+                  community's hand (`Ended::By`) — the DEFENCE side of the raid \
+                  mechanic (The Confusion). Over EVERY people with a record, not the \
+                  six The Tolerance froze: this is the raid rate, not that campaign's \
+                  readout. Absent on a world with no occupation records. Replaces \
+                  `windows/worldgen/tests/tolerance_baseline.rs`'s 30-world \
+                  victim-side proxy.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.victims as f64 / a.records as f64)
+            }),
+        },
+        Metric {
+            name: "raid-initiator-rate",
+            doc: "Share of this world's occupation records that ended at least one \
+                  OTHER record — the OFFENCE side, the side the raid gate actually \
+                  decides (The Confusion). Its own column rather than a derivative of \
+                  `raid-victim-rate`, because the ratio of the two is the mean raids \
+                  per raider: the two rates separate 'many settlements each raiding \
+                  once' from 'a few serial raiders', which one rate alone cannot. \
+                  Same unfiltered population as `raid-victim-rate`; Absent on a world \
+                  with no occupation records. Measured on a 12-world scratch probe \
+                  (seeds 1-12, NOT the census) the ratio of the two rates sits at \
+                  1.00-1.03, i.e. a raider almost never raids twice — that near-identity \
+                  is the column's current reading, not a reason to drop it: nothing else \
+                  would detect a shift toward serial raiders.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.initiators as f64 / a.records as f64)
+            }),
+        },
+        Metric {
+            name: "raid-attribution-unresolved",
+            doc: "How many `Ended::By(raider)` references on this world fail to name \
+                  EXACTLY ONE occupation record — the self-consistency guard the \
+                  retired 30-world battery held, as a census-wide invariant (The \
+                  Confusion). Expected 0 on every world; a nonzero count means the \
+                  victim- and initiator-side rates beside it are attributing raids to \
+                  the wrong settlements. Per-REFERENCE, so compensating errors cannot \
+                  cancel the way they can in a pooled count comparison. Absent on a \
+                  world with no occupation records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.unresolved as f64)
+            }),
+        },
+        // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
+        // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
+        // seed 42 alone, and `history_sundering.rs` reported the same quantity
+        // over twelve worlds. Measured over 48 worlds the distribution is
+        // bimodal with deciles [0, 0, 3, 5, 111, 291, 578] and is **exactly
+        // zero on 6 of 48 worlds** — so a single-seed firing gate has a ~12.5%
+        // failure rate by construction, and the nine-seed sweep that asserted
+        // it per seed was passing on luck.
+        //
+        // Calls `migration_events` rather than re-folding the ledger here: the
+        // census must measure the SAME quantity the battery did, and a second
+        // implementation would silently become a different measurement.
+        Metric {
+            name: "climate-displacement-events",
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            doc: "How many occupations on this world ended in climate-driven migration \
+                  (`occ-cause` = `migrated`), excluding conquest-relocations — the \
+                  displacement mechanic's volume (The Assize). Replaces the seed-42 gate in \
+                  `cli/tests/history_battery.rs` and the twelve-seed panel in \
+                  `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit \
+                  in single digits and a minority run to the hundreds, and a real minority \
+                  measure zero — a mild deep past, not an inert bake. Absent on a world \
+                  with no occupation records.",
+            summary: SummaryKind::Numeric {
+                // Straddling the measured bimodality rather than spreading evenly:
+                // the lower edges resolve the crowded 0-10 mode, the upper ones the
+                // long tail that runs to 578.
+                bucket_edges: &[0.0, 1.0, 5.0, 25.0, 100.0, 300.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(migration_events(v.world()) as f64)
+            }),
+        },
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Assize).
+        // `windows/worldgen/tests/history_tithe.rs` asserted on
+        // `BakeCensus::tribute_collected` — a FLOW integrated inside
+        // `History::tally`, which `build_world_to` DISCARDS before any census
+        // view exists. The world is designed to remember who owes whom, not
+        // how much has been paid, so this measures the stock the world keeps
+        // rather than proxying the flow it throws away.
+        //
+        // CHOSEN BY MEASUREMENT over three alternatives, all scored against
+        // the bake's own `tribute_collected` over 36 worlds:
+        //     stock (this column)          spearman +0.9344
+        //     SUM(now - since)                      +0.8909
+        //     distinct patrons                      +0.8419
+        //     largest patron's share                -0.7692  (partly arithmetic:
+        //                                    top >= 1/stock, decaying to -0.539
+        //                                    once small worlds are excluded)
+        // A normalized share was also tried and is markedly WORSE:
+        // `stock / occupations` scores +0.623 against this column's +0.934.
+        // The flow tracks the absolute number of relations, not a rate.
+        //
+        // An invariant sibling ("does every patron reference resolve", the
+        // shape of `raid-attribution-unresolved`) was DECLINED as structurally
+        // vacuous: `history_emit.rs` already `.expect`s that a tribute patron
+        // names a minted community, so such a column could only ever fire on
+        // hand-built input.
+        Metric {
+            name: "tribute-relations-standing",
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
+                  at `now` — the subordination stock (The Assize). Replaces \
+                  `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
+                  panel, whose quantity lives on the bake's discarded tally and is \
+                  unreachable from any census metric. Agrees with that flow at spearman \
+                  0.934 over 36 worlds — a measured witness, NOT an equivalence: this is \
+                  a stock and that was a flow. Absent on a world with no occupation \
+                  records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 25.0, 60.0, 100.0, 150.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                let standing = v
+                    .world()
+                    .ledger
+                    .find(hornvale_history::PAYS_TRIBUTE_TO)
+                    .count();
+                MetricValue::Number(standing as f64)
+            }),
+        },
+        // THE CENSUS COLUMN THAT RETIRES THE COLD-DOMINATION GATE (The
+        // Range). `windows/lab/tests/hearth_population_calibration.rs`
+        // asserted, over a 15-seed sweep, that at least one seed was
+        // cold-DOMINATED (`cold * 2 > built`) — decision 0097's own worked
+        // example of "an existence claim over 15 draws is decided by
+        // whichever single world happens to sit nearest the threshold". The
+        // Contour flipped it once by five rooms; The Range's biome ranges
+        // flipped it again, leaving the best of 15 at **50/101 = 49.5%
+        // (seed 6)** against a 50% bar — a miss of half a percentage point —
+        // while every other prevalence reading in that test held.
+        //
+        // Seed 6, not seed 13: the retired clause compared `cold * 2 > built`,
+        // a RATIO. Seed 13 carries the sweep's largest cold COUNT (109 of 235
+        // = 46.4%) but seed 6's smaller 50 of 101 is the larger share. The
+        // count and the share rank the sweep differently, and only the share
+        // is what the bar was ever about.
+        //
+        // A SHARE, not a count, because that is what the retired clause
+        // actually compared: `cold * 2 > built` is `share > 0.5`. Reading a
+        // share also makes the column robust to the settlement count moving
+        // under it, which is the drift that broke the per-seed value pins
+        // this test carried before The Hearth rewrote it.
+        //
+        // Calls `built_rooms` and `Terrain::is_cold` rather than re-folding
+        // the ledger here, for the reason `climate-displacement-events` gives
+        // above: the census must measure the SAME quantity the gate did, and
+        // a second implementation would silently become a different
+        // measurement. `LocaleContext::build_from` (not `build`) threads the
+        // view's already-sculpted terrain and already-fitted climate in, so
+        // this column costs an index and a strangeness budget per world, not
+        // a second sculpt.
+        //
+        // FULL rung, not Settlements, even though `all_settlements` is
+        // committed at the Settlements stop: deep time runs only past that
+        // stop (`BuildDepth::Full` is "…plus culture, religion, species, and
+        // deep time"), and it founds, abandons and relocates settlements. The
+        // retired clause measured a `build_world` world, which is Full.
+        Metric {
+            name: "cold-built-room-share",
+            doc: "The share of this world's built settlement rooms that read `is_cold` \
+                  (below `FURNISHING_COLD_C` at the frozen furnishing-reference day) — the \
+                  fraction of the settled world where `interior_of` would compose a hearth \
+                  (The Range). Replaces the cold-DOMINATION clause of \
+                  `windows/lab/tests/hearth_population_calibration.rs`, which asked over 15 \
+                  seeds whether ANY world exceeded 0.5 here; decision 0097 converts an \
+                  existence claim sitting on a threshold into a census rate, because at \
+                  n=15 the answer is decided by one world and at n=1000 it is a fraction \
+                  with a sampling bound. A world's whole settled area can be temperate \
+                  (0.0 is a real reading, not a broken fold); Absent only when the world \
+                  has no built rooms at all.",
+            summary: SummaryKind::Numeric {
+                // Cut from the measured 15-seed distribution rather than
+                // spread evenly: six of fifteen worlds crowd into [0, 0.06),
+                // so the two low edges resolve that mode, and the rest spread
+                // over the 0.17-0.50 body. The top edge is 0.5 ON PURPOSE and
+                // is not a distributional choice — it is the retired clause's
+                // own domination threshold, so the `>= 0.5` bucket of this
+                // column's summary table IS the count of cold-dominated
+                // worlds, readable without re-deriving anything.
+                bucket_edges: &[0.0, 0.02, 0.06, 0.15, 0.3, 0.5],
+            },
+            // Settlement, not Climate, though the per-room predicate read is a
+            // temperature one. The population this folds over is BUILT
+            // SETTLEMENT ROOMS, and `Terrain::is_cold` is the per-item lookup
+            // — the same shape as `flagship-biome`, which reads a climate
+            // attribute of a settlement and is filed Settlement, and the
+            // mirror image of `alignment-drift-deg-per-kyr`, which moved
+            // Settlement -> Astronomy in 3352fd91 precisely because there the
+            // settlement was "only a latitude lookup". Here the rooms are the
+            // subject. The reading is also not interpretable as a climate
+            // statistic: it is conditioned on where a world's peoples chose to
+            // build, so it cannot answer "how cold is this world" (that is
+            // `mean-land-temperature-c`, Climate's own temperature column, and
+            // the one carrying the Earth comparator). What it answers is how
+            // much of the SETTLED world would compose a hearth.
+            domain: Domain::Settlement,
+            // Descriptor: the committed census spreads it 0.0 to 0.9926 with a
+            // median of 0.1909 — about as far from "asserted to hold on every
+            // world" as a column gets. Every Invariant in the registry is a
+            // language-closure assertion.
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let ctx =
+                    hornvale_locale::LocaleContext::build_from(v.world(), v.terrain(), v.climate());
+                let built = hornvale_vessel::liveness::built_rooms(v.world(), &ctx);
+                if built.is_empty() {
+                    return MetricValue::Absent;
+                }
+                let terrain = hornvale_vessel::liveness::LocaleTerrain::new(&ctx);
+                let cold = built
+                    .iter()
+                    .filter_map(|id| id.unpack().ok())
+                    .filter(|addr| hornvale_vessel::liveness::Terrain::is_cold(&terrain, addr))
+                    .count();
+                MetricValue::Number(cold as f64 / built.len() as f64)
+            }),
+        },
     ]
+}
+
+/// One world's raid bookkeeping, read off its reconstructed occupation
+/// records. Every field is a count over the whole world — no people filter —
+/// which is the deliberate difference from the readout this replaces (see the
+/// registry comment above `raid-victim-rate`).
+struct RaidAttribution {
+    /// Occupation records in the world, the denominator of both rates.
+    records: u64,
+    /// Records that ended at another community's hand (`Ended::By(_)`).
+    victims: u64,
+    /// Distinct records named as the hand behind at least one such ending.
+    initiators: u64,
+    /// `Ended::By(raider)` references that do not name exactly one record in
+    /// this world — zero-resolution (a dangling handle) or many.
+    unresolved: u64,
+}
+
+/// Fold [`RaidAttribution`] out of a record list.
+///
+/// A pure function over the records rather than a closure inside the three
+/// metrics, so the counts can be exercised on hand-built inputs that a live
+/// world does not produce — a census column whose value is always the same
+/// number proves nothing about the check behind it unless the check has been
+/// shown to answer differently on a different world. See
+/// `raid_attribution_*` in this module's tests.
+///
+/// A reference that resolves to no record still counts its bearer as a victim:
+/// the record did end at a hand, and only the *name* of that hand is in doubt.
+fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
+    let mut multiplicity: std::collections::BTreeMap<EntityId, u64> =
+        std::collections::BTreeMap::new();
+    for r in records {
+        *multiplicity.entry(r.id).or_insert(0) += 1;
+    }
+    let mut victims = 0u64;
+    let mut unresolved = 0u64;
+    let mut initiators: std::collections::BTreeSet<EntityId> = std::collections::BTreeSet::new();
+    for r in records {
+        if let Ended::By(raider) = r.ended_by {
+            victims += 1;
+            if multiplicity.get(&raider) == Some(&1) {
+                initiators.insert(raider);
+            } else {
+                unresolved += 1;
+            }
+        }
+    }
+    RaidAttribution {
+        records: records.len() as u64,
+        victims,
+        initiators: initiators.len() as u64,
+        unresolved,
+    }
+}
+
+/// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
+/// `windows/worldgen/tests/diachronic.rs`): day 36,525, the hundredth year.
+/// A crisis is a statement about a culture at a time, so the census must fix
+/// the time or the column means nothing.
+const DIACHRONIC_EPOCH_DAYS: f64 = 36_525.0;
+
+/// This world's toponymic-domain concepts, derived from its own registry
+/// exactly as `windows/worldgen/tests/exposure.rs` did before The Assay
+/// retired that sweep — so ADDING an unreachable toponymic concept moves this
+/// metric instead of slipping past it.
+fn toponymic_core(view: &FullView) -> Vec<String> {
+    view.world()
+        .registry
+        .concepts()
+        .filter(|c| concept_domain(&c.name) == Some("toponymic"))
+        .map(|c| c.name.clone())
+        .collect()
+}
+
+/// How many of `toponymic_core` reach `Steeped` for at least one placed people.
+/// A people whose exposure map fails to derive contributes nothing rather than
+/// aborting the metric: the census records a world's measurement, and one
+/// people's failure is not the world's.
+fn toponymic_roots_won(view: &FullView) -> usize {
+    let core = toponymic_core(view);
+    let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+    let mut won: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (species, _) in hornvale_worldgen::placed_peoples(world) {
+        let Ok(exposures) = hornvale_worldgen::exposure_from(world, species, terrain, climate)
+        else {
+            continue;
+        };
+        for concept in &core {
+            if matches!(
+                exposures.get(concept.as_str()),
+                Some(hornvale_language::ExposureClass::Steeped)
+            ) {
+                won.insert(concept.clone());
+            }
+        }
+    }
+    won.len()
 }
 
 /// Every placed culture's account, read straight off the world (C4
@@ -3465,6 +4622,107 @@ fn chorus_sky_calibration_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 
 fn chorus_sky_calibration_metric(v: &FullView) -> MetricValue {
     chorus_sky_calibration_metric_over(&chorus_voices(v))
+}
+
+// --- The Contour (Task 4, round 3): the Spearman rank-correlation helpers
+// M4 (`defensibility-capacity-rank-corr`) uses. ---
+
+/// Average-rank ranking of `values` (Spearman's standard tie handling):
+/// ascending order via `f64::total_cmp` (never `partial_cmp().unwrap()`),
+/// with a tied group of values sharing the MEAN of the 1-based integer
+/// ranks its group spans, rather than an arbitrary tie-break order. Returns
+/// one rank per input value, in `values`' original order (not sorted
+/// order), so the caller can zip it against a second series' ranks.
+fn average_ranks(values: &[f64]) -> Vec<f64> {
+    let mut order: Vec<usize> = (0..values.len()).collect();
+    order.sort_by(|&a, &b| values[a].total_cmp(&values[b]));
+    let mut ranks = vec![0.0; values.len()];
+    let mut i = 0;
+    while i < order.len() {
+        let mut j = i;
+        while j + 1 < order.len() && values[order[j + 1]] == values[order[i]] {
+            j += 1;
+        }
+        // Positions i..=j (0-based, already sorted) share the mean of the
+        // 1-based ranks (i+1)..=(j+1) their tie group spans.
+        let shared_rank = ((i + 1) + (j + 1)) as f64 / 2.0;
+        for &idx in &order[i..=j] {
+            ranks[idx] = shared_rank;
+        }
+        i = j + 1;
+    }
+    ranks
+}
+
+/// Pearson correlation of `xs` and `ys` (equal length) — Spearman IS this,
+/// applied to `average_ranks`' output rather than the raw values. `None`
+/// when fewer than 2 points, or when either series is constant (zero
+/// variance leaves the coefficient undefined, not zero).
+fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
+    debug_assert_eq!(xs.len(), ys.len(), "paired series must be the same length");
+    let n = xs.len();
+    if n < 2 {
+        return None;
+    }
+    let mean_x = xs.iter().sum::<f64>() / n as f64;
+    let mean_y = ys.iter().sum::<f64>() / n as f64;
+    let (mut cov, mut var_x, mut var_y) = (0.0, 0.0, 0.0);
+    for i in 0..n {
+        let dx = xs[i] - mean_x;
+        let dy = ys[i] - mean_y;
+        cov += dx * dy;
+        var_x += dx * dx;
+        var_y += dy * dy;
+    }
+    if var_x <= 0.0 || var_y <= 0.0 {
+        return None;
+    }
+    Some(cov / (var_x.sqrt() * var_y.sqrt()))
+}
+
+/// M4's extractor (spec §2.4 amendment 4): Spearman rank correlation
+/// between [`hornvale_worldgen::weakest_point_defensibility`] and
+/// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
+/// habitable cell (`v.climate().habitability()`) — NOT the bake's own final
+/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
+/// present-day-graph entry point (already used by the legibility surface
+/// and the DoD check), reused here wholesale rather than reconstructed by
+/// hand; `hornvale_demography::carrying_capacity` over
+/// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
+/// capacity field `bake_history_from` itself feeds into the bake (up to
+/// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
+/// correlation — Spearman is invariant under any positive linear
+/// rescaling). Cells iterate in ascending `CellId` order
+/// (`Geosphere::cells()`), so this is deterministic without an explicit
+/// sort of the cell set itself.
+fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
+    let geo = v.terrain().geosphere();
+    let habitability = v.climate().habitability();
+    let capacity = hornvale_demography::carrying_capacity(
+        geo,
+        &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
+    );
+    let graph = hornvale_worldgen::connection_graph_of(
+        v.world(),
+        &hornvale_worldgen::GraphConfig::default(),
+    );
+
+    let mut defs: Vec<f64> = Vec::new();
+    let mut caps: Vec<f64> = Vec::new();
+    for cell in geo.cells() {
+        if !*habitability.get(cell) {
+            continue;
+        }
+        defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
+        caps.push(capacity.at(cell));
+    }
+    if defs.len() < 2 {
+        return MetricValue::Absent;
+    }
+    match pearson_correlation(&average_ranks(&defs), &average_ranks(&caps)) {
+        Some(rho) => MetricValue::Number(rho),
+        None => MetricValue::Absent,
+    }
 }
 
 /// The median of `values` (sorted in place by `total_cmp`); `None` when
@@ -4242,29 +5500,46 @@ fn name_collision_rate(v: &FullView) -> MetricValue {
     MetricValue::Number(duplicated as f64 / names.len() as f64)
 }
 
-/// The concept a phenomenon kind glosses to (spec §9.3) — mirrors
-/// worldgen's own private `phenomenon_concept` and the independent copy in
-/// `cli/tests/words_identity.rs`'s `phenomenon_concept`. Deliberately
-/// duplicated rather than imported: this is a composition-root judgment
-/// call, not a save-format contract, so re-deriving it here from the same
-/// public phenomenon-kind constants is what makes `name-gloss-true` a real
-/// cross-check rather than an echo of worldgen's own private mapping.
-fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    match phenomenon.kind.as_str() {
-        hornvale_astronomy::CELESTIAL_BODY => {
-            if phenomenon.description.contains("moon") {
-                Some("moon")
-            } else if phenomenon.description.contains("star") {
-                Some("star")
-            } else {
-                Some("sun")
-            }
-        }
-        hornvale_astronomy::SEASONAL_CYCLE => Some("day"),
-        hornvale_astronomy::NIGHT_STAR => Some("star"),
-        hornvale_climate::AMBIENT => Some("wind"),
-        _ => None,
-    }
+/// The concept a phenomenon glosses to, read from the shared roster
+/// (`hornvale_worldgen::GLOSSING_KINDS`) and the phenomenon's own referent.
+///
+/// This is a READ, not a derivation — the derivation this crate owns is
+/// [`referent_is_nameable`] below, which answers the same roster from the
+/// concept registry and the lexicon rather than from worldgen's codomain.
+/// Decision 0094: share the roster, never the derivation. Before The
+/// Vernacular this function re-implemented worldgen's mapping by grepping the
+/// phenomenon's English description, which made the gloss a function of
+/// prose.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&str> {
+    hornvale_worldgen::GLOSSING_KINDS
+        .contains(&phenomenon.kind.as_str())
+        .then_some(phenomenon.referent.concept.as_str())
+}
+
+/// This crate's own derivation over the shared roster: is a rostered
+/// phenomenon's referent a concept the world can actually *say*?
+///
+/// Independent of worldgen by construction — it consults the concept
+/// registry and the culture's lexicon, which the gloss path never reads. A
+/// referent that is unregistered, outside the presiding codomain, or a
+/// lexical `Gap` for this culture is a phenomenon whose deity could never be
+/// named after it, which is exactly the defect The Vernacular exists to make
+/// visible. Reserved integration seam: exercised today only by
+/// `every_rostered_referent_is_nameable` below; a metric wiring it into the
+/// registry is a follow-up outside this task's scope. Present in all builds
+/// so that seam is real, not test-only.
+#[allow(dead_code)]
+fn referent_is_nameable(
+    phenomenon: &Phenomenon,
+    registry: &hornvale_kernel::ConceptRegistry,
+    lexicon: &hornvale_language::Lexicon,
+) -> Option<bool> {
+    let concept = phenomenon_concept(phenomenon)?;
+    Some(
+        registry.concept(concept).is_some()
+            && PRESIDING_CONCEPTS.contains(&concept)
+            && !matches!(lexicon.entry(concept), None | Some(LexEntry::Gap { .. })),
+    )
 }
 
 /// This world's `species` lexicon, reusing the view's already-built terrain
@@ -4274,7 +5549,16 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 /// Single Sculpt, applied to the lexicon path; byte-identical to
 /// `lex(v, species)`.
 fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    hornvale_worldgen::lexicon_from(v.world(), species, v.terrain(), v.climate())
+    // `lexicon_from_in` against THIS VIEW's own component set, not
+    // `lexicon_from`'s freshly-assembled canonical one (The Delvers, F1).
+    // A lexicon is a function of the roster: its family's daughter list and
+    // proto phonology both come out of `wc`. Reading it from the canonical
+    // set while the world was built from a synthetic one is wrong twice over
+    // — it silently answers a different roster's question on `goblin-solo`,
+    // and it PANICS on `goblin-twin-solo`, whose re-keyed kind the canonical
+    // registry cannot resolve at all. Identical on the default roster, where
+    // `v.components()` IS the assembled canonical set.
+    hornvale_worldgen::lexicon_from_in(v.world(), v.components(), species, v.terrain(), v.climate())
 }
 
 /// A settlement's own re-derived site concepts: calls worldgen's own
@@ -4288,7 +5572,12 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
 /// `NAME_GLOSS` facts and this SAME public site-concept function every
 /// other name-truthfulness consumer (the worldgen keystone test, this
 /// metric) also calls, so all three stay in lockstep by construction
-/// rather than by three hand-kept copies. `None` if the settlement is
+/// rather than by three hand-kept copies — true for every slot
+/// `worldgen_settlement_site_concepts` computes itself. The presiding slot
+/// is the one exception: this function cannot pass it through that
+/// call (see the comment on `presiding` below), so it is appended here
+/// instead, in a position that has to be hand-kept in sync with where
+/// worldgen appends it internally. `None` if the settlement is
 /// missing a cell-id/species fact, which `name_gloss_true` below treats as
 /// an unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(
@@ -4307,17 +5596,44 @@ fn settlement_site_concepts(
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
-    let presiding = phenomena.first().and_then(phenomenon_concept);
-    let concepts = worldgen_settlement_site_concepts(
+    // `phenomenon_concept` now borrows from the phenomenon's own referent
+    // (decision 0094 stopped this being a `&'static` codomain match), so it
+    // cannot feed `worldgen_settlement_site_concepts`'s `presiding:
+    // Option<&'static str>` parameter directly — `phenomena` doesn't outlive
+    // that call. Own the string instead and pass `None` for `presiding`,
+    // appending it here after the fact.
+    //
+    // This reproduces the exact vector `worldgen_settlement_site_concepts`
+    // would have returned, not merely an order-insensitive equivalent of it:
+    // that function appends `presiding` LAST
+    // (`windows/worldgen/src/lib.rs:4902`, `concepts.extend(presiding)` as
+    // its final line before returning), and appending it last here matches
+    // that exactly. This is now a real assumption this crate hand-keeps
+    // about worldgen's push order, not something decision 0094 lets us
+    // avoid — if that push ever moves,
+    // `settlement_site_concepts_orders_a_real_multi_concept_vector_most_
+    // specific_first` (`windows/worldgen/src/lib.rs:10471`) reds and gets
+    // updated on that side, and this `.extend(presiding)` must move with it
+    // or this crate silently drifts out of the composition it claims to
+    // reproduce.
+    let presiding = phenomena
+        .first()
+        .and_then(phenomenon_concept)
+        .map(str::to_string);
+    let mut concepts: Vec<String> = worldgen_settlement_site_concepts(
         v.world(),
         &v.world().seed,
         &species,
         cell,
         v.terrain(),
         climate,
-        presiding,
-    );
-    Some(concepts.into_iter().map(str::to_string).collect())
+        None,
+    )
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    concepts.extend(presiding);
+    Some(concepts)
 }
 
 /// Whether `gloss` reads as a truthful composition of `concepts`: it must
@@ -4413,17 +5729,23 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
     MetricValue::Flag(all_true)
 }
 
-/// The exact codomain of [`phenomenon_concept`] — every concept a presiding
-/// phenomenon can contribute to a settlement's site vector, and therefore to
-/// its gloss. Named as a set here because [`name_transparency`] has to READ a
-/// committed gloss back into the concepts it names, and the presiding slot is
-/// the one site concept that cannot be re-derived from terrain and climate
-/// alone (it needs the settlement's own culled sky — `SEQ-5`, the expensive
-/// half of `settlement_site_concepts` above). Taking the whole codomain as
-/// the candidate set instead costs the parse nothing: it is a superset of the
-/// one concept that actually fired, and the segmentation stays unique anyway
-/// (see [`gloss_parses`]). `presiding_concepts_are_phenomenon_concepts_
-/// codomain` pins the two together.
+/// A SUPERSET of [`phenomenon_concept`]'s codomain — every concept a
+/// presiding phenomenon can contribute to a settlement's site vector, and
+/// therefore to its gloss. Not exact: since decision 0094 opened
+/// `phenomenon_concept` to read a phenomenon's own `referent.concept`
+/// verbatim for any rostered kind, its codomain is open (any registered
+/// concept a producer chooses to name), so this list is an upper bound rather
+/// than a codomain pinned exactly to it. Named as a set here because
+/// [`name_transparency`] has to READ a committed gloss back into the concepts
+/// it names, and the presiding slot is the one site concept that cannot be
+/// re-derived from terrain and climate alone (it needs the settlement's own
+/// culled sky — `SEQ-5`, the expensive half of `settlement_site_concepts`
+/// above). Taking the whole list as the candidate set instead costs the parse
+/// nothing: it is a superset of the one concept that actually fired, and the
+/// segmentation stays unique anyway (see [`gloss_parses`]).
+/// `presiding_concepts_cover_seed_42s_rostered_concepts` checks this list
+/// against a real generated world's rostered concepts, rather than pinning
+/// exact codomain equality against hand-written fixtures.
 /// type-audit: bare-ok(identifier-text)
 const PRESIDING_CONCEPTS: &[&str] = &["day", "moon", "star", "sun", "wind"];
 
@@ -4640,14 +5962,22 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
-    // NOT routed through hornvale_worldgen::cascade_of (The Solitary Tongue,
-    // Task 4): every call site passes a fixed people, never a dragon-
-    // reachable roster scan — the two direct registrations below pass the
-    // literal "goblin"/"kobold", and lexicon_regular_family's only other
-    // caller iterates the fixed ALL_DAUGHTERS = ["goblin", "hobgoblin",
-    // "bugbear", "kobold"] constant. The default SETTLED regime is
-    // therefore always the correct one here.
-    let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
+    // ROUTED through the composition root's regime seam (The Delvers, C2c
+    // Task 6). This used to call `hornvale_language::draw_cascade`, which
+    // hardcodes `CascadeRegime::SETTLED`, and justified it by the population
+    // never containing a kind that draws at another regime: the two direct
+    // registrations pass the literal "goblin"/"kobold", and
+    // `lexicon_regular_family` iterated a fixed four-species constant. Making
+    // that population DERIVED (`all_daughters`) retires the justification —
+    // the roster's lexicon-carrying kinds include the three dragons, which
+    // freeze to the isolate regime, and the dwarves, which may draw at the
+    // long-lived Settled rate. Replaying a Root through the wrong regime's
+    // cascade reports a regular lexicon as irregular. `cascade_of_in` (not
+    // `cascade_of`) because a Lab study may build with a SYNTHETIC roster
+    // whose re-keyed kinds the canonical registry cannot resolve.
+    let Ok(cascade) = hornvale_worldgen::cascade_of_in(v.world(), v.components(), species) else {
+        return MetricValue::Absent;
+    };
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
@@ -4666,6 +5996,418 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     MetricValue::Flag(regular)
+}
+
+/// How many DISTINCT sound rules in `species`' drawn cascade actually fire
+/// on at least one of its lexicon's `Root` entries.
+///
+/// The Namesake, Task 1. A `Cascade` is 2-4 drawn rules
+/// (`hornvale_language::Cascade`), but `evolve` adopts a rule's proposed
+/// output only when the resulting segment is already in the phonology's
+/// inventory (the codomain constraint), so a rule can be drawn and then
+/// rejected on every word. This metric asks how many survive that filter.
+///
+/// Zero means the species' whole etymological layer is inert: every word's
+/// modern form equals its proto-form's nativization, and an inherited name
+/// and a re-derived one are byte-identical. `Absent` if `species` is not in
+/// this world's roster or its lexicon minted no `Root`.
+fn cascade_rules_fired(v: &FullView, species: &str) -> MetricValue {
+    if !v.components().biosphere.ids().any(|k| k.0 == species) {
+        return MetricValue::Absent;
+    }
+    let Ok(lex) = lex(v, species) else {
+        return MetricValue::Absent;
+    };
+    // A BTreeSet, not a HashSet: the workspace bans hashed containers, and
+    // the count must not depend on iteration order anyway. Keyed on
+    // `RuleKind` (which the fix-round review established `hornvale_language`
+    // already derives `Ord`/`Eq` for), not on step index: `draw_cascade`
+    // samples each of its 2-4 slots independently, so the same `RuleKind`
+    // can be drawn twice at different indices, and "distinct sound rules"
+    // (this fn's own doc string, and `divergence_magnitude`'s established
+    // reading of "distinct" elsewhere in this file) means dedup-by-value,
+    // not dedup-by-position.
+    let mut fired: std::collections::BTreeSet<hornvale_language::RuleKind> =
+        std::collections::BTreeSet::new();
+    let mut any_root = false;
+    // `Lexicon::entries()` yields (&str, &LexEntry) pairs — it is an
+    // iterator, not a map, so there is no `.values()`.
+    for (_concept, entry) in lex.entries() {
+        if let hornvale_language::LexEntry::Root { derivation, .. } = entry {
+            any_root = true;
+            for step in &derivation.steps {
+                if step.changed {
+                    fired.insert(step.rule.kind);
+                }
+            }
+        }
+    }
+    if !any_root {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(fired.len() as f64)
+}
+
+// --- The Namesake (Task 7): the two preregistered claims. ---
+//
+// §5.1 asks whether the `SocietyVector`-derived naming patterns actually
+// differ between peoples; §5.2 asks whether the shortest-prefix render rule
+// earns its keep. Four metrics below read the first pair, and a fifth reads
+// §5.2(2)'s second half — see `name_prefix_region_full_stack` for why that
+// one exists.
+//
+// WHAT A `Rendered` NAME CONTAINS HERE, AND WHAT IT DOES NOT. `name_pattern`
+// (Task 5) emits five kinds of element across the shipped roster:
+// `Stem`, `Relation(Parent)`, `Relation(Clan)`, `Relation(Mentor)` and
+// `Deed`, plus `Gloss(Bearing)` for a wide-in-group people. This campaign
+// shipped resolvers for exactly three of them — the person-name draw
+// (`NameKind::Person`, Task 4) and the descent graph's `forebear_of` /
+// `clan_root_of` (Task 3). There is no mentorship relation anywhere in the
+// repo, no deed-name derivation, and no per-person gloss basis, so
+// `Relation(Mentor)`, `Relation(Community)`, `Deed` and `Gloss(..)` have
+// nothing to resolve to.
+//
+// An element with no resolver is **dropped**, not filled with a placeholder.
+// A per-figure placeholder would fabricate disambiguating entropy the engine
+// does not have (and would flatter §5.2); a constant placeholder would
+// inflate the element counts §5.2 measures without adding any disambiguating
+// power. Dropping states the honest position: a name carries only the
+// elements this slice of the engine can actually speak. The consequence is
+// measured and reported rather than hidden — a kobold (pattern
+// `[Stem, Relation(Mentor)]`) speaks one element, and a gnoll (pattern
+// `[Stem, Deed, Relation(Clan), Gloss(Bearing)]`) speaks two.
+
+/// One occupation founder, resolved to the words their culture's naming
+/// pattern actually produces.
+struct FounderName {
+    /// The `occ-site` cell the occupation sits on — the settlement scope.
+    site: u32,
+    /// The name, element by element, in the culture's own order.
+    rendered: hornvale_language::anthroponym::Rendered,
+}
+
+/// Every occupation founder in the world, with their name resolved to words.
+///
+/// The Namesake §5.2. One entry per occupation carrying an `occ-people`, an
+/// `occ-site`, and a people this world's component set knows — the whole
+/// nameable population, since §2 of the spec restricts naming to the figures
+/// a role implies.
+///
+/// Empty (never `Absent` on its own account) when the world has no
+/// occupations at all; the callers turn that into `MetricValue::Absent`.
+fn rendered_founders(v: &FullView) -> Vec<FounderName> {
+    use hornvale_language::anthroponym::{Cite, ElementSource, Rendered};
+
+    let world = v.world();
+    let wc = v.components();
+
+    // Per speaking, minded people: its phonology (the single construction
+    // site is worldgen's `language_of_in`), its morphology, and its naming
+    // pattern. Keyed on the `'static` `KindId` label so the `Namer`s below
+    // can borrow the phonologies without cloning them per founder.
+    let mut phonologies: std::collections::BTreeMap<&'static str, Phonology> =
+        std::collections::BTreeMap::new();
+    let mut kits: std::collections::BTreeMap<
+        &'static str,
+        (
+            hornvale_language::MorphOptions,
+            hornvale_language::anthroponym::NamePattern,
+        ),
+    > = std::collections::BTreeMap::new();
+    for kid in wc.articulation.ids() {
+        let (Some(mind), Some(society)) = (wc.psyche.get(kid), wc.society.get(kid)) else {
+            continue;
+        };
+        phonologies.insert(kid.0, language_of_in(world, wc, kid.0));
+        kits.insert(
+            kid.0,
+            (
+                hornvale_worldgen::morph_options(mind, society),
+                hornvale_worldgen::name_pattern(mind, society),
+            ),
+        );
+    }
+    let namers: std::collections::BTreeMap<&'static str, Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, Namer::new(&world.seed, name, ph)))
+        .collect();
+
+    // A figure's given name: the `NameKind::Person` draw off the persona
+    // seed their role handle expands to. This is the ONLY material any
+    // element resolves from — a patronymic is the forebear's given name, a
+    // clan name is the chain root's.
+    let stem_of = |species: &'static str, handle: hornvale_history::flesh::RoleHandle| -> String {
+        let persona = hornvale_history::flesh::persona_of(handle, world.seed);
+        namers[species]
+            .name(NameKind::Person, persona.name_seed, &kits[species].0)
+            .roman
+    };
+
+    let mut out = Vec::new();
+    for fact in world.ledger.find(hornvale_history::IS_OCCUPATION) {
+        let occupation = fact.subject;
+        let Some(Value::Text(people)) = world
+            .ledger
+            .value_of(occupation, hornvale_history::OCC_PEOPLE)
+        else {
+            continue;
+        };
+        let Some(species) = kits.keys().find(|k| **k == people.as_str()).copied() else {
+            continue;
+        };
+        let Some(Value::Number(site)) = world
+            .ledger
+            .value_of(occupation, hornvale_history::OCC_SITE)
+        else {
+            continue;
+        };
+
+        let mut parts: Vec<String> = Vec::new();
+        for (source, _author) in &kits[species].1.elements {
+            match source {
+                ElementSource::Stem => {
+                    parts.push(stem_of(
+                        species,
+                        hornvale_worldgen::founder_of(world, occupation),
+                    ));
+                }
+                ElementSource::Relation(Cite::Parent) => {
+                    // A genesis founder has no forebear, so the patronymic
+                    // slot stays empty rather than citing the figure
+                    // themselves.
+                    if let Some((forebear, _kinship)) =
+                        hornvale_worldgen::forebear_of(world, occupation)
+                    {
+                        parts.push(stem_of(species, forebear));
+                    }
+                }
+                ElementSource::Relation(Cite::Clan) => {
+                    let root = hornvale_worldgen::clan_root_of(world, occupation);
+                    parts.push(stem_of(species, hornvale_worldgen::founder_of(world, root)));
+                }
+                // No resolver in this slice — see the module comment above.
+                ElementSource::Relation(_) | ElementSource::Index(_) | ElementSource::Deed => {}
+                ElementSource::Gloss(_) => {}
+            }
+        }
+        if parts.is_empty() {
+            continue;
+        }
+        out.push(FounderName {
+            site: *site as u32,
+            rendered: Rendered { parts },
+        });
+    }
+    out
+}
+
+/// How many elements the shipped [`hornvale_language::anthroponym::render`]
+/// spent on `name` against `competitors`.
+///
+/// Asks the real render rule and then reads its answer back, rather than
+/// re-deriving the prefix length here: a second copy of the loop would
+/// measure the copy, not the rule. The spoken form is
+/// `parts[..k].join(" ")` for exactly one smallest `k`, which is what this
+/// recovers.
+fn rendered_element_count(
+    name: &hornvale_language::anthroponym::Rendered,
+    competitors: &[hornvale_language::anthroponym::Rendered],
+) -> usize {
+    let spoken = hornvale_language::anthroponym::render(name, competitors);
+    for take in 1..=name.parts.len() {
+        if name.parts[..take].join(" ") == spoken {
+            return take;
+        }
+    }
+    name.parts.len()
+}
+
+/// Each founder's region-scope rendered element count, in ledger order.
+///
+/// The competitor scope is every OTHER founder in the world. The exclusion
+/// is by position, not by value: `render` treats a competitor identical to
+/// `name` as undistinguishable, so leaving the figure in their own
+/// competitor set would drive every name to its full stack. Swapping the
+/// figure to the end and passing the head of the vector excludes exactly one
+/// entry without cloning the other n-1.
+fn region_scope_counts(v: &FullView) -> Vec<usize> {
+    let founders = rendered_founders(v);
+    let mut names: Vec<hornvale_language::anthroponym::Rendered> =
+        founders.into_iter().map(|f| f.rendered).collect();
+    let n = names.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let mut counts = Vec::with_capacity(n);
+    for i in 0..n {
+        names.swap(i, n - 1);
+        let subject = names[n - 1].clone();
+        counts.push(rendered_element_count(&subject, &names[..n - 1]));
+        names.swap(i, n - 1);
+    }
+    counts
+}
+
+/// How many DISTINCT naming-pattern signatures this world's placed peoples
+/// produce (The Namesake, preregistered criterion §5.1(1); target >= 3).
+///
+/// A signature is the ordered list of `(ElementSource, Author)` pairs
+/// `name_pattern` derives from a people's society vector. If every people
+/// produced the same signature the naming system would be one shape with
+/// cosmetic variation, which is the failure this metric exists to catch.
+/// `Absent` if no placed people carries both psychology vectors.
+fn name_pattern_signatures(v: &FullView) -> MetricValue {
+    let sigs = placed_pattern_signatures(v);
+    if sigs.is_empty() {
+        return MetricValue::Absent;
+    }
+    let distinct: std::collections::BTreeSet<&String> = sigs.iter().collect();
+    MetricValue::Number(distinct.len() as f64)
+}
+
+/// The naming-pattern signature of every placed people, one entry per
+/// people, in registry order.
+fn placed_pattern_signatures(v: &FullView) -> Vec<String> {
+    let wc = v.components();
+    let mut sigs = Vec::new();
+    for kind in hornvale_worldgen::placed_peoples(v.world()) {
+        let (Some(mind), Some(society)) = (
+            wc.psyche.get(&hornvale_kernel::KindId(kind.0)),
+            wc.society.get(&hornvale_kernel::KindId(kind.0)),
+        ) else {
+            continue;
+        };
+        let p = hornvale_worldgen::name_pattern(mind, society);
+        sigs.push(format!("{:?}", p.elements));
+    }
+    sigs
+}
+
+/// How many peoples are PLACED in this world — the `n` in the chance
+/// baseline `1/n` that The Namesake's preregistered criterion §5.1(2) is
+/// judged against.
+///
+/// This metric exists so that verdict is **re-derivable from `rows.csv`
+/// alone**. `name-people-recoverability` reports a share, `u/n`, and the
+/// criterion is `share >= 2/n`; without `n` on the row a reader has to infer
+/// it by inverting the (signature-count, share) pair against the roster's
+/// signature classes. That inversion happens to be sound for the shipped
+/// roster, but it is arithmetic done in prose over data the artifact does not
+/// carry, and a preregistered verdict should not rest on it. `Absent` when no
+/// people is placed, matching `name-pattern-signatures`' empty case.
+fn peoples_placed(v: &FullView) -> MetricValue {
+    let n = hornvale_worldgen::placed_peoples(v.world()).len();
+    if n == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(n as f64)
+}
+
+/// The share of this world's placed peoples whose naming-pattern signature
+/// is UNIQUE among them (The Namesake, preregistered criterion §5.1(2)).
+///
+/// A directly interpretable stand-in for "a figure's people is recoverable
+/// from its name structure alone": a people whose signature no other people
+/// shares is recoverable with certainty from the structure, and one that
+/// shares its signature is not recoverable from the structure at all. The
+/// criterion compares this share against twice the chance baseline
+/// (1/n_peoples). `Absent` if fewer than two peoples are placed, where
+/// "recoverable above chance" has no content.
+fn name_people_recoverability(v: &FullView) -> MetricValue {
+    let sigs = placed_pattern_signatures(v);
+    if sigs.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let unique = sigs
+        .iter()
+        .filter(|s| sigs.iter().filter(|o| o == s).count() == 1)
+        .count();
+    MetricValue::Number(unique as f64 / sigs.len() as f64)
+}
+
+/// The share of this world's founders who resolve in EXACTLY ONE element at
+/// settlement scope (The Namesake, preregistered criterion §5.2(1); target
+/// >= 80%).
+///
+/// The scope is the other founders of occupations sharing this founder's
+/// `occ-site` cell — every community that has ever stood on that site, which
+/// is the population a name uttered there has to pick out. `Absent` if the
+/// world has no founders.
+fn name_prefix_settlement_scope(v: &FullView) -> MetricValue {
+    let founders = rendered_founders(v);
+    if founders.is_empty() {
+        return MetricValue::Absent;
+    }
+    // Group by site, preserving ledger order inside each group.
+    let mut by_site: std::collections::BTreeMap<
+        u32,
+        Vec<hornvale_language::anthroponym::Rendered>,
+    > = std::collections::BTreeMap::new();
+    for f in &founders {
+        by_site.entry(f.site).or_default().push(f.rendered.clone());
+    }
+    let mut single = 0usize;
+    let mut total = 0usize;
+    for names in by_site.values_mut() {
+        let n = names.len();
+        for i in 0..n {
+            names.swap(i, n - 1);
+            let subject = names[n - 1].clone();
+            if rendered_element_count(&subject, &names[..n - 1]) == 1 {
+                single += 1;
+            }
+            names.swap(i, n - 1);
+            total += 1;
+        }
+    }
+    MetricValue::Number(single as f64 / total as f64)
+}
+
+/// The MEDIAN number of elements this world's founders resolve in at region
+/// scope (The Namesake, preregistered criterion §5.2(2); target >= 2).
+///
+/// The scope is every other founder in the world. `Absent` if the world has
+/// no founders.
+fn name_prefix_region_scope(v: &FullView) -> MetricValue {
+    let mut counts = region_scope_counts(v);
+    if counts.is_empty() {
+        return MetricValue::Absent;
+    }
+    counts.sort_unstable();
+    let mid = counts.len() / 2;
+    let median = if counts.len() % 2 == 1 {
+        counts[mid] as f64
+    } else {
+        (counts[mid - 1] as f64 + counts[mid] as f64) / 2.0
+    };
+    MetricValue::Number(median)
+}
+
+/// The share of this world's founders whose region-scope render spends EVERY
+/// element their name carries (The Namesake, preregistered criterion
+/// §5.2(2)'s second half; target < 50%).
+///
+/// §5.2(2) is two-sided by design and the median alone reads only one side
+/// of it: a median of 2 is compatible both with a rule that usually saves an
+/// element and with one that never does. This metric reads the other side —
+/// how often the shortest-prefix rule buys nothing because the whole stack
+/// is spent anyway. Note that a figure whose name carries a single speakable
+/// element (see this section's module comment) counts here by construction,
+/// having nothing shorter to fall back to. `Absent` if the world has no
+/// founders.
+fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
+    let founders = rendered_founders(v);
+    if founders.is_empty() {
+        return MetricValue::Absent;
+    }
+    let lengths: Vec<usize> = founders.iter().map(|f| f.rendered.parts.len()).collect();
+    let counts = region_scope_counts(v);
+    let full = counts
+        .iter()
+        .zip(lengths.iter())
+        .filter(|(spent, len)| spent == len)
+        .count();
+    MetricValue::Number(full as f64 / counts.len() as f64)
 }
 
 // --- The Wearing (Task 11c): the lab's own reading of the toponymic gates.
@@ -4768,13 +6510,21 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
         && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a karst conduit carrying enough flow to surface: karst
-/// lithology at or above the river drainage floor. (`Hydro::Spring` is
-/// structurally unreachable on every seed, so the reachable half of the
-/// lithology model is what both readings gate on.)
+/// Whether `cell` reads directly as `Hydro::Spring`. Previously a Karst
+/// proxy (`hydro_at == Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because
+/// `Hydro::Spring` was analytically unreachable under the original
+/// carbonate-scale gate (The Witness, F5), and F5's own replacement gate was
+/// itself mismeasured — pinned to a level-4 sweep but applied at the
+/// model's real level-6 resolution, it made 69.64% of land Aquifer (The
+/// Witness, Task 5b). Both are fixed now: `hydrogeology` gates the clastic
+/// case on a porosity threshold measured on the correct population, and
+/// `Spring` is no longer a still-vs-flowing drainage split at all — it is a
+/// geometric descending contact (`GeneratedTerrain::hydro_at` promotes an
+/// `Aquifer` cell with a lower non-`Aquifer` neighbour) — independently
+/// restated here rather than calling `worldgen`'s `is_spring_cell` (the lab
+/// does not depend on worldgen's window-local predicates).
 fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.hydro_at(cell) == Hydro::Karst
-        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+    terrain.hydro_at(cell) == Hydro::Spring
 }
 
 /// Whether the contiguous non-ocean landmass under `cell` stays within
@@ -4802,6 +6552,26 @@ fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
     }
     true
 }
+
+/// The seven toponymic terrain gates (Task 4) and the concept each steeps
+/// when satisfied — declared once, here, so [`independently_steeped_concepts`]
+/// and [`steepable_concept_roster`] read the same table instead of each
+/// keeping its own copy of the concept names (The Witness, Task 3: a second
+/// copy of this list is exactly the drift F13 recurred on three times).
+const TOPONYMIC_GATES: [(&str, TerrainGate); 7] = [
+    ("river", lab_is_river_cell),
+    ("ford", lab_is_ford_cell),
+    ("hill", lab_is_hill_cell),
+    ("valley", lab_is_valley_cell),
+    ("marsh", lab_is_marsh_cell),
+    ("spring", lab_is_spring_cell),
+    ("island", lab_is_island_cell),
+];
+
+/// The four settlement/religion social concepts steeped unconditionally for
+/// any settled species, once the registry carries them — declared once for
+/// the same reason as [`TOPONYMIC_GATES`].
+const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
@@ -4877,17 +6647,20 @@ fn independently_steeped_concepts(
         }
     }
 
-    // The STAPLE of every settled cell (The Watershed), re-derived here the
-    // same way the biome and variant above are: independently of
-    // `exposure_of`, which is this function's whole reason for existing.
-    //
-    // Steeped only where the cell's subsistence is Farming. A people that
-    // fishes, herds or forages has met the plant and never named it as a
-    // staple -- an EXPERIENTIAL gap, not a perceptual one -- so the crop must
-    // NOT be steeped by merely growing where they live. Subsistence is read
-    // per cell, so a people farming one valley and fishing another is steeped
-    // in the valley's grain, and one Farming cell is enough: the rule never
-    // downgrades a crop another cell already steeped.
+    // Steeped: the STAPLE of every settled cell whose subsistence is
+    // Farming (The Watershed). Re-derived independently of `exposure_of`,
+    // which is the point of this function: worldgen reads
+    // `hornvale_culture::subsistence(biome_class(biome_at(cell)), coastal)`
+    // and gates on `Subsistence::Farming`; this reading calls the same
+    // public climate/culture functions (never `exposure_of` itself, and
+    // `hornvale_worldgen::biome_class` is a domain-agnostic biome→culture
+    // classifier already used elsewhere in this file, not an exposure
+    // predicate) to reach the same verdict. A crop known only through
+    // herding, fishing, or foraging is an experiential gap, not a
+    // perceptual one, and is deliberately never inserted here — the six
+    // staples (`hornvale_climate::Crop::catalog()`) are F13's third
+    // recurrence: `exposure-sound-{goblin,kobold}` read false on 767/759 of
+    // 1000 worlds because this loop did not exist.
     for &cell in &settled {
         let expr = v.climate().biome_expr_at(cell);
         let Some(crop) = hornvale_climate::crop_at(
@@ -4902,12 +6675,12 @@ fn independently_steeped_concepts(
             .geosphere()
             .neighbors(cell)
             .iter()
-            .any(|n| v.terrain().is_ocean(*n));
-        if hornvale_culture::subsistence(
+            .any(|&n| v.terrain().is_ocean(n));
+        let subsistence = hornvale_culture::subsistence(
             hornvale_worldgen::biome_class(v.climate().biome_at(cell)),
             coastal,
-        ) == hornvale_culture::Subsistence::Farming
-        {
+        );
+        if subsistence == hornvale_culture::Subsistence::Farming {
             steeped.insert(crop.concept_name().to_string());
         }
     }
@@ -4932,7 +6705,7 @@ fn independently_steeped_concepts(
                 steeped.insert(kind);
             }
         }
-        for concept in ["home", "hearth", "god", "spirit"] {
+        for concept in FIXED_STEEPED_CONCEPTS {
             if v.world().registry.concept(concept).is_some() {
                 steeped.insert(concept.to_string());
             }
@@ -4946,24 +6719,103 @@ fn independently_steeped_concepts(
     // would only invite one of them to drift out of the shape. `valley` is
     // in the table even though the census never saw it fire — a rule left
     // out because it is currently rare is a rule that goes stale silently
-    // the first time terrain moves.
+    // the first time terrain moves. The table itself lives at
+    // [`TOPONYMIC_GATES`] (module scope), shared with
+    // [`steepable_concept_roster`].
     let terrain = v.terrain();
-    let gates: [(&str, TerrainGate); 7] = [
-        ("river", lab_is_river_cell),
-        ("ford", lab_is_ford_cell),
-        ("hill", lab_is_hill_cell),
-        ("valley", lab_is_valley_cell),
-        ("marsh", lab_is_marsh_cell),
-        ("spring", lab_is_spring_cell),
-        ("island", lab_is_island_cell),
-    ];
-    for (concept, holds) in gates {
+    for (concept, holds) in TOPONYMIC_GATES {
         if settled.iter().any(|&cell| holds(terrain, cell)) {
             steeped.insert(concept.to_string());
         }
     }
 
     Some(steeped)
+}
+
+/// Every concept [`independently_steeped_concepts`] is CAPABLE of steeping,
+/// for some world and some species — the roster half of that function,
+/// exposed so `windows/lab/tests/roster_parity.rs` can check it against
+/// worldgen's own roster without importing either side's predicates.
+///
+/// **Roster parity, predicate independence** (The Witness, Task 3): this
+/// returns WHAT is considered, never HOW any of it is decided for a
+/// particular world. F13 recurred three times (The Wearing's toponymic
+/// concepts, The Toponym's variants, The Watershed's staples) because the
+/// independent reading's ROSTER silently lost entries while its PREDICATES
+/// stayed fine — this function exists so a test can catch the next one.
+///
+/// Built from exactly the same tables `independently_steeped_concepts`
+/// reads for its unconditional/static rules ([`TOPONYMIC_GATES`],
+/// [`FIXED_STEEPED_CONCEPTS`]) so there is only one copy of each list, plus
+/// the closed catalogs the *dynamic per-cell* rules draw their concept
+/// names from:
+///
+/// - `biome`/`variant`/`staple` are read per settled CELL (a species is
+///   steeped in whichever biome/variant/crop that cell's geography and
+///   climate actually produce), so no fixed cell-by-cell comparison is
+///   meaningful — a census sweep would only ever witness the biomes this
+///   run's seeds happen to generate. What IS meaningful, and what this
+///   returns, is the full closed catalog each rule draws from:
+///   [`hornvale_climate::biome::ALL`], [`hornvale_climate::Variant::catalog`],
+///   [`hornvale_climate::Crop::catalog`]. Parity here means "the lab knows
+///   every biome/variant/crop NAME that could ever appear," not "the lab
+///   saw the same biome as some particular cell."
+/// - `{species}-kind` is read per COEXISTING roster (a species is steeped in
+///   the kind-concept of every OTHER species that places a settlement in
+///   the same world, which varies seed to seed — see
+///   `windows/worldgen/tests/exposure.rs`'s `world()` doc comment for how
+///   much that placement moves). The closed universe this rule can ever
+///   draw from is not seed-dependent, though: it is the set of KINDS THAT
+///   SPEAK, fixed at composition root by
+///   [`hornvale_worldgen::WorldComponents::assemble`]'s `articulation`
+///   store (The Eremite: a family may hold a non-speaking minded kind, so
+///   articulation — not the full biosphere roster — is the right closed
+///   set). Enumerated here rather than hardcoded, so a sixth people joining
+///   the roster enrolls automatically.
+///
+/// The universal stratum and the ladder-gated color/body/kin packs are
+/// listed here UNCONDITIONALLY (every pack member, not only the ones a
+/// given species' perception ladder reaches) for the same reason: capacity
+/// to steep, not achievement for one species. Whether a given species
+/// actually reaches a given ladder rung is real per-species work done only
+/// in `independently_steeped_concepts`.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn steepable_concept_roster() -> std::collections::BTreeSet<String> {
+    let mut roster: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+
+    for entry in hornvale_language::universal_stratum()
+        .iter()
+        .chain(hornvale_language::color_pack())
+        .chain(hornvale_language::body_pack())
+        .chain(hornvale_language::kin_pack())
+    {
+        roster.insert(entry.concept.to_string());
+    }
+
+    for (concept, _) in TOPONYMIC_GATES {
+        roster.insert(concept.to_string());
+    }
+    for concept in FIXED_STEEPED_CONCEPTS {
+        roster.insert(concept.to_string());
+    }
+
+    for biome in hornvale_climate::biome::ALL {
+        roster.insert(biome.concept_name().to_string());
+    }
+    for variant in hornvale_climate::Variant::catalog() {
+        roster.insert(variant.concept_name().to_string());
+    }
+    for crop in hornvale_climate::Crop::catalog() {
+        roster.insert(crop.concept_name().to_string());
+    }
+
+    let wc = hornvale_worldgen::WorldComponents::assemble()
+        .expect("the shipped composition root always assembles");
+    for kind in wc.articulation.ids() {
+        roster.insert(format!("{}-kind", kind.0));
+    }
+
+    roster
 }
 
 /// Whether `species`' lexicon is exposure-sound (spec §9.2): no concept the
@@ -5014,6 +6866,7 @@ fn exposure_sound_against(
                 let text = match reason {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
+                    GapReason::Unnameable(s) => s,
                 };
                 if text.is_empty() {
                     sound = false;
@@ -5044,12 +6897,56 @@ fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
 
 /// The daughters whose lexicons draw from a shared goblinoid family proto
 /// phonology (spec §3): goblin, hobgoblin, bugbear.
+///
+/// A **membership claim about a family**, deliberately not derived from
+/// [`hornvale_worldgen::family_daughter_kinds`] even though it reproduces it
+/// exactly on the canonical roster (`authored_daughter_lists_match_the_default
+/// _rosters_family_membership` asserts that, so it cannot go stale in
+/// silence). The two disagree on the Lab's SYNTHETIC rosters:
+/// `census-of-the-meeting`'s `goblin-twin` carries `family_of == "goblinoid"`,
+/// so a derived list makes the twin roster a goblinoid family of one and turns
+/// `monophyly-goblinoid` from `Absent` into a trivially-true `Flag` on every
+/// row of that study's null control (`a_derived_goblinoid_daughter_list_would_
+/// not_be_equivalent_on_labs_twin_roster` pins the mechanism). Moving a null
+/// control's value is a deliberate act, not a refactor, so the constant stays.
 const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 
-/// Every daughter this world's roster carries a lexicon for, goblinoid
-/// family and the kobold outgroup alike — the population `lexicon-regular-
-/// family` and `inventory-closure-*`/`homophony-count-*` range over.
-const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+/// THE DELVERS (C2c): the dwarf family's three daughters — the roster's second
+/// multi-member family, and `monophyly-dwarf`'s subject. Same shape, same
+/// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
+const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
+
+/// The authored daughter list for a family the family-level metrics below are
+/// registered over. Panics on any other family: a `monophyly-<family>` metric
+/// must never be registered without the membership claim it measures against.
+fn family_daughters_of(family: &str) -> &'static [&'static str] {
+    match family {
+        "goblinoid" => &GOBLINOID_DAUGHTERS,
+        "dwarf" => &DWARF_DAUGHTERS,
+        other => panic!("no authored daughter list for family '{other}'"),
+    }
+}
+
+/// Every kind THIS world's roster carries a lexicon for, in ascending
+/// [`hornvale_kernel::KindId`] order — the population `lexicon-regular-family`
+/// ranges over.
+///
+/// **Derived, not authored.** It was a hardcoded four-element constant
+/// (`goblin`, `hobgoblin`, `bugbear`, `kobold`) whose doc already claimed to
+/// be "every daughter this world's roster carries a lexicon for", and that
+/// claim had been false since The Generalist added human and The Vacancy added
+/// gnoll: neither was ever added to the list, so `lexicon-regular-family`
+/// silently did not measure them. The roster's `lexicon` store *is* the
+/// population, so read it rather than restate it. `articulation` and `lexicon`
+/// share one key-set by `WorldComponents::check_integrity`, so every kind here
+/// is a speaker and `lexicon_regular`'s `language_of_in` call is safe.
+///
+/// The honest cost of a derived frame: `lexicon-regular-family`'s value now
+/// moves whenever a campaign adds a speaking kind to the roster — that is a
+/// census-metric change with no code edit behind it, and it is meant to be.
+fn all_daughters(v: &FullView) -> Vec<&'static str> {
+    v.components().lexicon.ids().map(|k| k.0).collect()
+}
 
 /// Whether `species` is a member of THIS view's own roster (not the global
 /// species registry) — every family-battery function below must check this
@@ -5064,7 +6961,7 @@ fn in_roster(v: &FullView, species: &str) -> bool {
     v.components().biosphere.ids().any(|k| k.0 == species)
 }
 
-/// Whether every daughter in [`ALL_DAUGHTERS`] is lexicon-regular
+/// Whether every daughter in [`all_daughters`] is lexicon-regular
 /// ([`lexicon_regular`]), ANDed together — the family-wide generalization
 /// of the single-species `lexicon-regular-{goblin,kobold}` metrics (spec
 /// §9.1). `Absent` if no daughter in this world's roster minted a Root
@@ -5072,7 +6969,7 @@ fn in_roster(v: &FullView, species: &str) -> bool {
 fn lexicon_regular_family(v: &FullView) -> MetricValue {
     let mut any = false;
     let mut regular = true;
-    for species in ALL_DAUGHTERS {
+    for species in all_daughters(v) {
         match lexicon_regular(v, species) {
             MetricValue::Flag(f) => {
                 any = true;
@@ -5101,42 +6998,71 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
         .collect()
 }
 
-/// Re-derive the "goblinoid" family's injective proto-root assignment (epoch
+/// Re-derive `family`'s injective proto-root assignment (epoch
 /// `root/v2`) INDEPENDENTLY of any daughter's recorded derivation — over the
 /// world's full registered concept universe (`exposure_from` classifies every
 /// registered concept, so its key set is exactly the registry), exactly as
 /// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
 /// checks: it proves shared ancestry, never mere self-consistency.
-fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String, Vec<Segment>> {
-    let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), "goblinoid");
-    let universe: Vec<&str> = v
-        .world()
-        .registry
-        .concepts()
-        .map(|c| c.name.as_str())
-        .collect();
-    // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
-    // this reconstruction matches every daughter's recorded proto exactly.
-    let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), "goblinoid");
-    hornvale_language::assign_proto_roots(
-        &v.world().seed,
-        "goblinoid",
-        &proto_ph,
-        &universe,
-        &daughters,
-    )
+///
+/// Parameterised by The Delvers: monophyly is a property of a *family*, and
+/// this was named after what used to be the roster's only possible subject.
+fn family_proto_assignment(
+    v: &FullView,
+    family: &'static str,
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), family);
+    // The universe comes from `build_lexicon`'s OWN rule, not from a second
+    // copy of it. This function used to build it from every registered
+    // concept, which silently disagreed with `proto_root_universe`'s
+    // `Unnameable` exclusion (the nine spectral classes). That cost nothing
+    // for as long as the excluded cohort sorted last — `assign_proto_roots`
+    // is epoch-first and an assignment depends only on the concepts at or
+    // before it — and then the compass added accession epoch 7 (`east`,
+    // `west`), the first concepts ever to sort AFTER them, and this metric
+    // reported a monophyly break on 14 of 1000 seeds in worlds that were
+    // monophyletic. Re-deriving the DRAW independently is the point of this
+    // check; re-deriving the universe RULE was the bug.
+    //
+    // Any daughter of the family's exposures serve: the map's keys are always
+    // exactly `world.registry.concepts()`'s names, and `Unnameable` is a
+    // property of the concept rather than of the species, so the filtered
+    // universe is species-invariant — as it must be, since a family-level
+    // assignment that differed per daughter could not produce cognates.
+    let exposures = family_daughters_of(family)
+        .iter()
+        .filter(|s| in_roster(v, s))
+        .find_map(|s| {
+            // `_in`, against this view's own roster: the universe must be the
+            // one `build_lexicon` classified against, and `lex` now threads
+            // the same component set (The Delvers, F1).
+            hornvale_worldgen::exposure_from_in(
+                v.world(),
+                v.components(),
+                s,
+                v.terrain(),
+                v.climate(),
+            )
+            .ok()
+        });
+    let Some(exposures) = exposures else {
+        return std::collections::BTreeMap::new();
+    };
+    let universe = hornvale_language::proto_root_universe(&exposures);
+    let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), family);
+    hornvale_language::assign_proto_roots(&v.world().seed, family, &proto_ph, &universe, &daughters)
 }
 
-/// Whether every goblinoid daughter's Root `derivation.proto` matches its
-/// concept's slot in an INDEPENDENT re-derivation of the "goblinoid" family
+/// Whether every daughter of `family` has a Root `derivation.proto` matching
+/// its concept's slot in an INDEPENDENT re-derivation of that family's
 /// proto-root assignment (spec §3 monophyly: every daughter's rooted
-/// vocabulary traces to the one family ancestor). `Absent` if no goblinoid
-/// daughter in this world's roster minted a Root.
-fn monophyly_goblinoid(v: &FullView) -> MetricValue {
-    let assignment = goblinoid_proto_assignment(v);
+/// vocabulary traces to the one family ancestor). `Absent` if no daughter of
+/// `family` in this world's roster minted a Root.
+fn monophyly(v: &FullView, family: &'static str) -> MetricValue {
+    let assignment = family_proto_assignment(v, family);
     let mut any = false;
     let mut monophyletic = true;
-    for species in GOBLINOID_DAUGHTERS {
+    for species in family_daughters_of(family).iter().copied() {
         if !in_roster(v, species) {
             continue;
         }
@@ -5170,7 +7096,7 @@ fn clean_outgroup_kobold(v: &FullView) -> MetricValue {
     let Ok(kobold_lex) = lex(v, "kobold") else {
         return MetricValue::Absent;
     };
-    let assignment = goblinoid_proto_assignment(v);
+    let assignment = family_proto_assignment(v, "goblinoid");
     let mut any = false;
     let mut clean = true;
     for (concept, entry) in kobold_lex.entries() {
@@ -5480,6 +7406,7 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
     Some(hornvale_species::life_history(
         bio.mass,
         bio.metabolic_class,
+        bio.schedule,
     ))
 }
 
@@ -5788,6 +7715,17 @@ mod tests {
     #![allow(clippy::disallowed_methods)]
     use super::*;
 
+    /// The four species The Branches minted PER-SPECIES family metrics for
+    /// (`inventory-closure-*`, `homophony-count-*`, `core-homophony-*`,
+    /// `homophony-merger-share-*`). Distinct from the roster's speaking
+    /// population — the tests below index metric NAMES by species, so this
+    /// list is a claim about which metrics exist, not about who speaks.
+    /// Deliberately unchanged by The Delvers: The Generalist (human) and The
+    /// Vacancy (gnoll) each added a settling people without minting per-
+    /// species instruments, and a new metric costs 34 fixture refreshes and a
+    /// permanent census-cost increase.
+    const PER_SPECIES_METRIC_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+
     #[test]
     fn narrowed_views_build_and_coerce() {
         let pins = SkyPins::default();
@@ -5910,6 +7848,137 @@ mod tests {
             goblin, bugbear,
             "the reading discriminates on the species asked for, not the world's first belief"
         );
+    }
+
+    // --- THE CONFUSION: the raid-attribution fold, exercised on hand-built
+    // record lists. ---
+    //
+    // A census column that reads the same number on all 1,000 worlds is
+    // indistinguishable from a column that cannot read anything at all, and
+    // `raid-attribution-unresolved` is expected to read 0 on every world
+    // forever. So the fold behind it is shown here to answer DIFFERENTLY on a
+    // world whose attribution is broken — three ways of breaking it, each
+    // against the same well-formed control.
+
+    /// A test entity id. `EntityId` wraps a `NonZeroU64`, so every id here is
+    /// >= 1; the fold only ever compares ids for equality.
+    fn eid(raw: u64) -> EntityId {
+        EntityId::new(raw).expect("a test entity id is nonzero")
+    }
+
+    /// A minimal occupation record with the given id and ending. Every other
+    /// field is inert: the fold reads `id` and `ended_by` and nothing else, so
+    /// stating anything more here would suggest it mattered.
+    fn attribution_record(id: u64, ended_by: Ended<EntityId>) -> OccupationRecord {
+        use hornvale_history::record::{Founding, Function, Notability, Occupation, TechHorizon};
+        OccupationRecord {
+            core: Occupation {
+                people: hornvale_kernel::KindId("goblin"),
+                site: CellId(0),
+                founded: 0.0,
+                ended: match ended_by {
+                    Ended::By(_) => Some(1.0),
+                    Ended::Nature => None,
+                },
+                peak_population: 1,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: match ended_by {
+                    Ended::By(_) => Some(hornvale_history::record::CauseOfEnd::Fled),
+                    Ended::Nature => None,
+                },
+                notability: Notability::Common,
+            },
+            id: eid(id),
+            founded_from: Founding::Genesis(CellId(0)),
+            ended_by,
+        }
+    }
+
+    /// The control: two survivors and two victims, both raids dealt by the
+    /// same live hand. Every reference resolves, so the invariant column reads
+    /// 0 — and the two rates read the values a broken world must differ from.
+    #[test]
+    fn raid_attribution_counts_a_well_formed_world() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+            attribution_record(4, Ended::By(eid(1))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.records, 4);
+        assert_eq!(a.victims, 2);
+        // ONE initiator, not two: entity 1 dealt both endings. This is the
+        // whole reason `raid-initiator-rate` is not derivable from
+        // `raid-victim-rate` — here the two rates are 0.25 and 0.50.
+        assert_eq!(a.initiators, 1);
+        assert_eq!(a.unresolved, 0);
+    }
+
+    /// A DANGLING reference — the raider names no record in this world. The
+    /// invariant column moves off 0, and the initiator count falls, which is
+    /// exactly the silent misattribution the column exists to catch.
+    #[test]
+    fn raid_attribution_reports_a_dangling_reference() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+            attribution_record(4, Ended::By(eid(99))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.unresolved, 1, "the dangling raider must be reported");
+        // The bearer is still a victim: it did end at a hand, and only the
+        // NAME of that hand is in doubt.
+        assert_eq!(a.victims, 2);
+        assert_eq!(a.initiators, 1);
+    }
+
+    /// An AMBIGUOUS reference — the raider names two records. This is the
+    /// failure the retired battery's panic message asserted (and which
+    /// `raid_attribution_probe.rs` measured to be false); a pooled count
+    /// comparison cannot see it at all, because the two records still sum to
+    /// the right total.
+    #[test]
+    fn raid_attribution_reports_an_ambiguous_reference() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(1, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.unresolved, 1, "a raider naming two records is unresolved");
+        assert_eq!(a.initiators, 0);
+    }
+
+    /// A world where nobody raids: both rates are 0 and the invariant holds.
+    /// Without this the two rate columns would be pinned only by worlds that
+    /// DO raid, and a fold that counted every record as a victim would still
+    /// satisfy the tests above.
+    #[test]
+    fn raid_attribution_reads_zero_on_a_peaceful_world() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(
+            (a.records, a.victims, a.initiators, a.unresolved),
+            (2, 0, 0, 0)
+        );
+    }
+
+    /// The three metrics read `Absent`, not `0.0`, on a world with no
+    /// occupation records — `census-of-the-meeting`'s solo rosters are built
+    /// from the whole registry, and a `0.0` there would claim "measured, no
+    /// raiding" about a world that has no settlements to raid.
+    #[test]
+    fn the_raid_columns_are_absent_without_occupation_records() {
+        let a = raid_attribution(&[]);
+        assert_eq!(a.records, 0, "the Absent branch is keyed on this count");
     }
 
     #[test]
@@ -6069,8 +8138,83 @@ mod tests {
         // forgotten-fraction, dominant-hazard, mean-warning-legibility),
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
-        // against — and the world-level name-transparency).
-        assert_eq!(registry().len(), 172);
+        // against — and the world-level name-transparency), +3 for The
+        // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share,
+        // and — round 3, spec §2.4 amendment 4 —
+        // defensibility-capacity-rank-corr, registered on present-day
+        // terrain/connection-graph rather than the bake's own final era,
+        // labelled as such in its own doc string),
+        // +2 for The Namesake (Task 1: cascade-rules-fired-{goblin,bugbear}),
+        // +5 more for The Namesake (Task 7, the preregistered claims:
+        // name-pattern-signatures and name-people-recoverability read §5.1;
+        // name-prefix-settlement-scope reads §5.2(1); name-prefix-region-scope
+        // and name-prefix-region-full-stack read the two OPPOSITE halves of
+        // §5.2(2), which the median alone cannot separate), +1 more at Task 7's
+        // fix round (peoples-placed: the n behind §5.1(2)'s 1/n chance
+        // baseline, so that verdict is re-derivable from rows.csv rather than
+        // from an inversion done in prose).
+        //
+        // The Contour and The Namesake were developed in parallel off the same
+        // base and both moved this pin: 172 -> 175 there, 172 -> 180 here. The
+        // merged value is neither — it is 172 + 3 + 8. This line is the one
+        // place the two campaigns' metric sets could have been silently
+        // reconciled to a wrong number, which is why both provenance comments
+        // are kept rather than one replacing the other.
+        //
+        // +1 for The Assay (Task 4: hydro-variant-coverage, replacing
+        // `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability
+        // sweep with a census column), +2 more for The Assay (Task 5:
+        // toponymic-core-size and toponymic-roots-won, replacing
+        // `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a
+        // witness with two census columns), +1 more for The Assay (Task 6:
+        // crisis-fires, replacing
+        // `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a
+        // single prediction crisis with a census column).
+        //
+        // +1 for THE DELVERS (C2c Task 6: monophyly-dwarf — the roster's
+        // second multi-member family measured by the SAME generalized check
+        // `monophyly-goblinoid` uses, not a second implementation). The
+        // campaign deliberately minted NO per-species dwarf instruments
+        // (inventory-closure-*, homophony-count-*): The Generalist (human) and
+        // The Vacancy (gnoll) each added a settling people without them, a new
+        // metric reddens 34 census-fixture tests, and its cost is paid on every
+        // census forever.
+        //
+        // THE DELVERS AND THE ASSAY DEVELOPED IN PARALLEL and both moved this
+        // pin — 183 -> 187 there, 183 -> 184 here. As with The Contour and The
+        // Namesake above, the merged value is neither: it is 183 + 4 + 1. Both
+        // provenance blocks are kept rather than one replacing the other,
+        // because this line is again the one place two campaigns' metric sets
+        // could have been silently reconciled to a wrong number.
+        //
+        // +3 for THE CONFUSION (C2c follow-on: raid-victim-rate,
+        // raid-initiator-rate, raid-attribution-unresolved), replacing
+        // `windows/worldgen/tests/tolerance_baseline.rs`'s two 30-world
+        // readouts. Three and not six: the retired `ReadoutRow` also carried
+        // the per-settlement DRAWN disposition and the GATE-OPEN share, which
+        // are re-derivations of a private draw belonging to a discharged
+        // preregistration (and are already committed as a table in
+        // `windows/worldgen/tests/tolerance_mutation.rs`), plus a
+        // raids-initiated COUNT whose world-level mean is arithmetically
+        // identical to `raid-victim-rate` — every raid closes exactly one
+        // victim, so the count column would have been a second copy of the
+        // first rate. Each column here is paid for on every census forever.
+        //
+        // +2 for THE TARE (climate-displacement-events, retiring
+        // `history_battery`'s seed-42 gate and `history_sundering`'s
+        // twelve-seed panel; tribute-relations-standing, retiring
+        // `history_tithe`'s twelve-world tribute-volume panel because the
+        // census can only reach the ledger's tribute STOCK, never the bake's
+        // discarded FLOW).
+        //
+        // +1 for THE RANGE (cold-built-room-share, retiring the
+        // cold-DOMINATION clause of
+        // `windows/lab/tests/hearth_population_calibration.rs` — decision
+        // 0097's own worked example). One column and not two: the same test's
+        // three surviving prevalence assertions are robust claims that stay
+        // in the gate, and 0097 prescription 3 forbids the same claim living
+        // in both instruments.
+        assert_eq!(registry().len(), 194);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -6121,6 +8265,8 @@ mod tests {
     /// The vowel set comes from the phonology's own inventory, so a language
     /// that never drew `u` does not count a `u` as a nucleus. Guards the
     /// tempting hard-coded `aeiou`.
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// Segment
     #[test]
     fn vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -6170,41 +8316,57 @@ mod tests {
         assert!(gloss_parses("hill-marsh", &vocab).is_empty());
     }
 
-    /// `PRESIDING_CONCEPTS` must be exactly `phenomenon_concept`'s codomain.
-    /// If a later campaign teaches a new phenomenon kind to gloss, this reds
-    /// rather than letting `name-transparency` silently fail to parse the
+    /// `PRESIDING_CONCEPTS` covers every concept a REAL seed-42 world's
+    /// rostered phenomena actually gloss to — checked against
+    /// `hornvale_worldgen::observed_phenomena` on a built world, not against
+    /// hand-written fixtures. A hand-typed fixture's `concept` field is
+    /// whatever the test author wrote, so it can only be changed by editing
+    /// the fixture, never by a production change — that shape was found to
+    /// make this test tautological (final fix wave, campaign close review).
+    /// Deriving the cases from a live world instead means a later campaign
+    /// that teaches a new phenomenon kind to gloss, or points an existing
+    /// kind's referent at an unlisted concept, actually reds this test rather
+    /// than leaving `name-transparency` to silently fail to parse the
     /// glosses that carry it.
     #[test]
-    fn presiding_concepts_are_phenomenon_concepts_codomain() {
-        let phenomenon = |kind: &str, description: &str| hornvale_kernel::Phenomenon {
-            kind: kind.to_string(),
-            description: description.to_string(),
-            period_days: None,
-            salience: 1.0,
-            venue: hornvale_kernel::Venue::DaySky,
-        };
-        let cases = [
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the moon rides high"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "a wandering star"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the disc at noon"),
-            phenomenon(hornvale_astronomy::SEASONAL_CYCLE, "the turning year"),
-            phenomenon(hornvale_astronomy::NIGHT_STAR, "a fixed star"),
-            phenomenon(hornvale_climate::AMBIENT, "the prevailing wind"),
-        ];
-        let mut produced: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-        for p in &cases {
-            let concept = phenomenon_concept(p).expect("each of these kinds glosses");
-            assert!(
-                PRESIDING_CONCEPTS.contains(&concept),
-                "{concept} is a presiding gloss concept but is missing from PRESIDING_CONCEPTS"
-            );
-            produced.insert(concept);
+    fn presiding_concepts_cover_seed_42s_rostered_concepts() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let phenomena =
+            hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena");
+        let mut checked = false;
+        for p in &phenomena {
+            if let Some(concept) = phenomenon_concept(p) {
+                checked = true;
+                assert!(
+                    PRESIDING_CONCEPTS.contains(&concept),
+                    "{concept} is a live presiding gloss concept (phenomenon kind {:?}) but is \
+                     missing from PRESIDING_CONCEPTS",
+                    p.kind
+                );
+            }
         }
-        let listed: std::collections::BTreeSet<&str> = PRESIDING_CONCEPTS.iter().copied().collect();
-        assert_eq!(
-            produced, listed,
-            "PRESIDING_CONCEPTS lists exactly what phenomenon_concept can return"
+        assert!(
+            checked,
+            "seed 42 should carry at least one rostered (glossing) phenomenon"
         );
+    }
+
+    /// Every rostered phenomenon in seed 42 names a concept the world can
+    /// say. The lab's own derivation over the shared roster (decision 0094)
+    /// — it asks the registry and the lexicon, never worldgen's codomain.
+    #[test]
+    fn every_rostered_referent_is_nameable() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let lexicon = lex(&view, "goblin").expect("goblin has a lexicon");
+        for p in hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena") {
+            if let Some(nameable) = referent_is_nameable(&p, &view.world().registry, &lexicon) {
+                assert!(
+                    nameable,
+                    "rostered phenomenon {:?} refers to {:?}, which this world cannot name",
+                    p.kind, p.referent.concept
+                );
+            }
+        }
     }
 
     /// Seed 42, pinned. The syllable columns exist to say the campaign's own
@@ -6219,6 +8381,16 @@ mod tests {
     /// 3.031_25 -> 2.466_666_666_666_667, kobold 2.241_379_310_344_827_6 ->
     /// 2.742_574_257_425_743.
     ///
+    /// The Witness, Task 5b re-measurement (2026-07-30): kobold moved again,
+    /// 2.742_574_257_425_743 (277/101) -> 2.752_475_247_524_752_3 (278/101)
+    /// — the same 101-settlement denominator, one more syllable across the
+    /// roster. `hydrogeology`'s clastic aquifer threshold moved from a
+    /// mismeasured `0.25` to the correctly-measured `0.46`, and `Spring`
+    /// stopped being a drainage split and became a geometric descending
+    /// contact — both reclassify which cells read `Aquifer`/`Spring`, which
+    /// moves settlement placement exactly the way the history-bake landing
+    /// did above. Goblin is untouched by this pass.
+    ///
     /// The claim above is re-checked, not assumed: both peoples still read
     /// inside the 2-3 target, which is the whole point of the row. They moved
     /// in OPPOSITE directions to get there — goblin down by 0.56, kobold up by
@@ -6226,22 +8398,185 @@ mod tests {
     /// and not a drift of the naming machinery in one direction. Goblin was
     /// outside the target on the high side before and is inside it now; kobold
     /// was inside and still is.
+    ///
+    /// Task 8b (The Witness, same campaign): the phonology-hosting gate in
+    /// `draw_rule` reseeds every cascade once more, so kobold moved a third
+    /// time, 2.752_475_247_524_752_3 (278/101) -> 2.663_366_336_633_663_5
+    /// (269/101) — the same 101-settlement denominator, one fewer syllable
+    /// across the roster this time (not monotone: F11 added a syllable, this
+    /// removes one, which is expected of a value-level cascade reseed rather
+    /// than a directional trend). Goblin is untouched (unaffected by this
+    /// change per the golden-fixture diff this same commit re-pins). Both
+    /// peoples still read inside the 2-3 target.
+    ///
+    /// The Contour absorb (2026-08-02): re-measured on the merged tree, which
+    /// carries both `defensibility`-gated raid dominance (spec section
+    /// 2.3a/2.4, decision 0096 clause 1) and the cascade/v2 reseeds above —
+    /// neither branch's prior delta alone predicts the combined result, so
+    /// this is a fresh measurement, not an arithmetic combination of the two
+    /// histories above it. Both peoples still read inside the 2-3 target.
     #[test]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements again,
+        // moving goblin from 2.724_637_681_159_420_4 to exactly 2.6.
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — goblin moves 2.6 -> 67/28
+        // (2.392_857_142_857_143).
+        //
+        // The Tolerance re-pin (2026-08-04): the raid gate became a
+        // per-settlement draw rather than a per-species constant, halving
+        // seed 42's occupation count and redeciding settlement survival once
+        // more — goblin moves 67/28 -> 105/41 (2.560_975_609_756_097_6). The
+        // denominator moved (28 -> 41 named goblin settlements), so this is
+        // the placement reshuffle this test's history documents repeatedly,
+        // not a drift in the naming machinery. Still inside the 2-3 target,
+        // which is what the row exists to assert.
+        // The Tense re-pin (2026-08-05): 2.560_975_609_756_097_6 (105/41) ->
+        // 2.333_333_333_333_333_5. Seed 42 re-placed from 209 settlements to
+        // 122, so this is the same placement reshuffle every entry above
+        // records. Pinned as a DECIMAL, not a fraction, because the
+        // total/count decomposition is not reachable from the test's
+        // `BuiltView` (the metric returns an opaque `Number`) and inventing a
+        // plausible-looking fraction would be a fabricated provenance. Still
+        // inside the 2-3 target, which is what the row exists to assert.
+        // The Delvers re-pin (C2c, 2026-08-07): 2.333_333_333_333_333_5 ->
+        // 2.346_153_846_153_846_3. Five settling peoples redecide seed 42's
+        // placement everywhere, so goblin's named-settlement DENOMINATOR
+        // moved again — the same placement reshuffle every entry above
+        // records, and not a drift in the naming machinery, which no dwarf
+        // touches. Decimal for the same reason as the entry above. Still
+        // inside the 2-3 target, which is the row's actual claim.
+        // Second pass, same day: 2.346_153_846_153_846_3 ->
+        // 2.464_285_714_285_714_4, when the dwarf diets were corrected off the
+        // MINERAL trophic axis. Same cause as every entry above -- the
+        // denominator of named goblin settlements moved once more -- and the
+        // naming machinery is again untouched. Still inside the 2-3 target.
+        // Third pass, same day: 2.464_285_714_285_714_4 ->
+        // 2.487_804_878_048_780_5, when the roster was cut from five dwarves
+        // to three (spec §11). It did NOT return to the pre-Delvers
+        // 2.333_333_333_333_333_5 — placement is decided by the whole
+        // competitive field, so removing two competitors is not the inverse of
+        // adding them. Still inside the 2-3 target, which is the row's claim.
+        // The Range re-pin (task 4, 2026-08-09): 2.487_804_878_048_780_5 ->
+        // 2.218_75. Gnoll's biome-affinity row re-places seed 42 once more
+        // (goblin 21 -> 12 settlements, measured in
+        // `windows/worldgen/tests/range_readout.rs`'s sibling sweep), so the
+        // named-goblin-settlement denominator moved again — the same
+        // placement reshuffle every entry above records, and the naming
+        // machinery is untouched. Still inside the 2-3 target, the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.466_666_666_666_667)
+            MetricValue::Number(2.218_75)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
         // is untouched at 2.467 — its drawn templates were already in
         // sonority order, which is the expected shape of this change rather
         // than a surprise: SSP reorders only the templates that violate it.
+        //
+        // Absorbing The Witness's Task 8b phonology-hosting gate alongside
+        // The Watershed's sonority merge reseeds the cascade a further time:
+        // 2.663_366_336_633_663_5 (269/101) -> 2.584_158_415_841_584_2
+        // (261/101) — same 101-settlement denominator, eight fewer syllables
+        // across the roster. Goblin is untouched.
+        //
+        // The Contour absorb (2026-08-02): 261/101 -> 344/137. Re-measured on
+        // the merged tree, which additionally carries `defensibility`-gated
+        // raid dominance (spec section 2.3a/2.4, decision 0096 clause 1) — a
+        // fresh measurement, not an arithmetic combination of the two
+        // histories above it. The denominator move (101 -> 137 settlements)
+        // is kobold's own settlement-survival shift under The Contour's
+        // re-pin; goblin's count above is untouched by it, consistent with
+        // every prior entry in this history.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 344/137 -> 56/23. The BAKE label bump reseats
+        // settlements again, moving both the syllable total and the
+        // denominator.
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — 56/23 -> 254/97, moving both the syllable
+        // total and the denominator.
+        //
+        // The Tolerance re-pin (2026-08-04): warlikeness became a
+        // per-settlement draw, redeciding settlement survival once more —
+        // 254/97 -> 111/43, moving both the syllable total and the
+        // denominator. Kobold FELL (2.619 -> 2.581) while goblin ROSE
+        // (2.393 -> 2.561) — opposite directions again, which is the signature
+        // of placement reshuffling rather than a directional drift in the
+        // naming machinery, exactly as every entry above records. Both peoples
+        // still read inside the 2-3 target.
+        //
+        // The Keeping step B re-pin (2026-08-04, on main):
+        // `CarryingInput.habitable` decomposed to `is_land`, so the arid and
+        // very-hot bands the old conflated flag excluded outright now carry
+        // (low) capacity — main measured 254/97 -> 252/97 on ITS side of the
+        // fork, denominator holding at 97 because seed 42's 70 newly-reachable
+        // cells all fall below the viability floor.
+        //
+        // MERGE (2026-08-04, main absorbed into the-tolerance): RE-MEASURED on
+        // the merged tree, and the composed value is 111/43 — i.e. The
+        // Keeping's +2 syllables do NOT survive composition, and the pin HOLDS
+        // at the branch's number. Verified as a real inertness rather than a
+        // lost merge by a matched-pair control on the merged tree: flipping
+        // `CarryingInput.is_land` back to the pre-Keeping habitability mask
+        // leaves seed 42's DEFAULT (generated-sky) world byte-identical at 8246
+        // facts, while the same flip moves the tier-0 seed-42 world 10682 ->
+        // 10850 facts. Step B is live; it simply lands on ground that carries
+        // no surviving kobold settlement once warlikeness is drawn per
+        // settlement. This metric reads the generated-sky world.
+        // The Tense re-pin (2026-08-05): 2.581_395_348_837_209_4 (111/43) ->
+        // 2.8, the same seed-42 re-placement as the goblin row above, and
+        // decimal for the same reason (the decomposition is not reachable
+        // here). Note this row's history: the comment above records kobold
+        // settlements going ABSENT once, so a live non-Absent value here is
+        // itself the reassuring half of the reading.
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): 2.8 ->
+        // 2.553_191_489_361_702_3. Kobold FELL while goblin ROSE
+        // (2.333 -> 2.346) — opposite directions again, which is this row's
+        // own stated signature of placement reshuffling rather than a
+        // directional drift in the naming machinery, and no dwarf touches the
+        // naming machinery. Both peoples still read inside the 2-3 target,
+        // and kobold is still live rather than Absent.
+        //
+        // Second pass, same day: 2.553_191_489_361_702_3 ->
+        // 2.772_727_272_727_273. Kobold ROSE while goblin also rose
+        // (2.346 -> 2.464) -- the SAME direction this time, where the
+        // first pass had them opposed. This row's history treats opposite
+        // movement as the signature of a placement reshuffle; a shared
+        // direction is weaker evidence of the same thing, and is worth not
+        // over-reading either way, because the denominators moved
+        // independently. What matters for the row's actual claim is
+        // unchanged: both peoples read inside the 2-3 target and kobold is
+        // still live rather than Absent.
+        //
+        // Third pass, same day: 2.772_727_272_727_273 ->
+        // 2.884_615_384_615_384_6, when the roster was cut from five dwarves
+        // to three (spec §11). Kobold and goblin ROSE together again, and
+        // neither returned to its pre-Delvers value (2.8 and 2.333). Both
+        // still read inside the 2-3 target and kobold is still live rather
+        // than Absent, which is the whole of the row's claim.
+        //
+        // The Range re-pin (task 4, 2026-08-09): 2.884_615_384_615_384_6 ->
+        // 2.868_852_459_016_393_3. Kobold BARELY moved (-0.016) while goblin
+        // fell hard (2.488 -> 2.219), so the two are opposed again and by very
+        // different magnitudes — this row's own stated signature of a
+        // placement reshuffle rather than a drift in the naming machinery,
+        // which gnoll's biome-affinity row does not touch. Kobold in fact
+        // GAINED settlements at seed 42 (34 -> 43) while goblin lost them
+        // (21 -> 12), which is the competitive cascade a suppressed people
+        // leaves behind. Both still inside the 2-3 target and kobold still
+        // live rather than Absent — the whole of the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.603_960_396_039_604)
+            MetricValue::Number(2.868_852_459_016_393_3)
         );
     }
 
@@ -6271,23 +8606,117 @@ mod tests {
         // then, which is the same near-doubling of the surviving roster The
         // Tithe recorded (seed 42: 203 -> 329 live settlements).
         //
+        // The Witness, Task 5b re-measurement (2026-07-30): 202/329 ->
+        // 207/329 — the denominator (329 glossed names) is unchanged, so
+        // this is NOT another placement-count shift; five more of the same
+        // 329 names now carry a transparent gloss. `hydrogeology`'s clastic
+        // aquifer threshold moved from a mismeasured `0.25` to the
+        // correctly-measured `0.46`, and `Spring` became a geometric
+        // descending contact rather than a drainage split — both
+        // reclassify which cells read `Aquifer`/`Spring`/`Aquitard`/`Runoff`,
+        // which is exactly the exposure vocabulary transparency's gloss
+        // check reads against.
+        //
+        // The Witness, Task 7 re-measurement (2026-07-30, F7): 207/329 ->
+        // 188/329 — the denominator is still unchanged (no placement moved),
+        // but the numerator dropped: gating `Tonogenesis` on a prior merger
+        // reseeds every cascade, so `evolve`'s output moves for essentially
+        // every root, and `namer.wear`'s cascade limb draws different rules
+        // too. Some names that used to contain an audible reflex of their
+        // glossed concept no longer do under the new draws (and vice versa,
+        // net down 19). This is the same wear-audibility surface
+        // `speakable_properties.rs` measures; it is expected to move on any
+        // cascade-affecting change and is not itself evidence of a defect.
+        //
+        // The Witness, Task 8b re-measurement (2026-07-30/31): 188/329 ->
+        // 149/329 — the denominator is still unchanged (no placement moved),
+        // and the numerator dropped again: the phonology-hosting gate in
+        // `draw_rule` reseeds every cascade once more (removing the dead
+        // Tonogenesis/VowelShift roster slots for every atonal/narrow-vowel
+        // species), so `evolve`'s output and `namer.wear`'s cascade limb both
+        // move again. Same story as F7: expected on any cascade-affecting
+        // change, not itself evidence of a defect.
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 216 of 329 glossed settlement names. 202 before The Watershed;
-        // 209 after Item 0's sonority merge (legal clusters let a morpheme
-        // survive repair intact, so the gloss stays audible in it); 216 after
-        // Item 5 adds the predecessor people, which contributes a concept that
-        // is itself a registered word rather than an opaque one. Both steps
-        // moved this metric FAVOURABLY on its own terms, which is why it is
-        // tracked here rather than merely re-pinned.
-        assert_eq!(share, 216.0 / 329.0, "seed 42 transparency drifted");
+        // 149 of 329 glossed settlement names.
+        //
+        // Absorbing The Watershed's sonority merge alongside The Witness's
+        // Task 8b gate re-measures once more: 149/329 -> 144/329 — same
+        // denominator, five fewer names carry a transparent gloss under the
+        // combined reseed. Same story: expected on any cascade-affecting
+        // change, not itself evidence of a defect.
+        //
+        // The Contour absorb (2026-08-02): 144/329 -> 165/324. Re-measured on
+        // the merged tree, which additionally carries `defensibility`-gated
+        // raid dominance (spec section 2.3a/2.4, decision 0096 clause 1) —
+        // a fresh measurement, not an arithmetic combination of the two
+        // histories above it (see this test's doc comment). The denominator
+        // move (329 -> 324, 5 fewer glossed settlement names) is the same
+        // settlement-survival shift The Contour's own re-pin always produces
+        // on this seed.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 165/324 -> 93/158. The BAKE label bump reseats
+        // settlements again, moving both the glossed-name total and the
+        // denominator. Still strictly between 0 and 1, so the distribution
+        // claim above holds unweakened.
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — 93/158 -> 97/232. Still strictly between 0
+        // and 1.
+        //
+        // The Tolerance re-pin (2026-08-04): warlikeness became a
+        // per-settlement draw, halving seed 42's occupation count — 97/232 ->
+        // 75/188. The denominator is exactly this world's new glossed-settlement
+        // total (232 -> 188 live settlements), so it is the same
+        // settlement-survival shift every re-pin above records. Still strictly
+        // between 0 and 1, so the distribution claim holds unweakened.
+        // The Tense re-pin (2026-08-05): 0.398_936_170_212_765_95 (75/188) ->
+        // 0.529_850_746_268_656_7. Seed 42 re-placed (209 settlements -> 122),
+        // the same settlement-survival shift every re-pin above records.
+        // Decimal rather than a fraction for the same reason as
+        // `name-syllables-goblin`: `share` arrives as an opaque `Number`, so
+        // the numerator/denominator are not re-derivable here and a fraction
+        // would be invented rather than measured. The row's actual claim --
+        // strictly between 0 and 1, so still a distribution -- is asserted
+        // separately above and holds.
+        // The Delvers re-pin (C2c, 2026-08-07): 0.529_850_746_268_656_7 ->
+        // 0.553_191_489_361_702_1. Five settling peoples re-place seed 42's
+        // settlements, the same settlement-survival shift every re-pin above
+        // records. Decimal, not a fraction, for the same reason. Still
+        // strictly between 0 and 1, so the distribution claim -- the row's
+        // actual assertion, made separately above -- holds unweakened.
+        // Second pass, same day: 0.553_191_489_361_702_1 ->
+        // 0.521_531_100_478_468_8, the dwarf-diet correction re-placing seed
+        // 42's settlements once more. Still strictly between 0 and 1.
+        // Third pass, same day: 0.521_531_100_478_468_8 -> 0.6 EXACTLY, when
+        // the roster was cut from five dwarves to three (spec §11). A round
+        // value is worth reading twice rather than accepting: it is NOT the
+        // degenerate 0 or 1 this row guards against, and the strict-bounds
+        // check above (which is the row's actual claim) is asserted
+        // separately and still bites. The denominator is not reachable here —
+        // `share` arrives as an opaque `Number` — so no fraction is invented.
+        // The Range re-pin (task 4, 2026-08-09): 0.6 -> 0.636_363_636_363_636_4
+        // (the round value did not survive one campaign, which is the best
+        // evidence it was a coincidence rather than a fixed point). Gnoll's
+        // biome-affinity row re-places seed 42, the same settlement-survival
+        // shift every re-pin above records. Still strictly between 0 and 1, so
+        // the distribution claim — asserted separately above — holds.
+        assert_eq!(
+            share, 0.636_363_636_363_636_4,
+            "seed 42 transparency drifted"
+        );
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
     /// cannot come back: a THREE-concept gloss is truthful, and the retired
     /// ordered-pair enumeration called it false. Also pins what the check
     /// still rejects — a concept outside the site vector, and a repeat.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a &&str concept name, no world seed at all
     #[test]
     fn a_three_concept_gloss_is_a_truthful_composition() {
         let site: Vec<String> = ["coast", "river", "temperate-forest", "sun"]
@@ -6722,7 +9151,7 @@ mod tests {
     /// The property under test is "no lexicon `Root` stands at a concept
     /// the INDEPENDENT exposure reading does not steep." Seed 7's goblins
     /// root five of the seven toponymic concepts Task 4 added — `river`,
-    /// `ford`, `hill`, `valley`, `spring` — so this seed exercises the
+    /// `ford`, `hill`, `marsh`, `spring` — so this seed exercises the
     /// elevation gates and the karst gate, not just the river one every
     /// seed hits.
     ///
@@ -6733,32 +9162,30 @@ mod tests {
     /// worlds. The stripped set below reconstructs that state exactly, and
     /// the flag must flip.
     ///
-    /// # Why this is ignored (F11 discharge, 2026-07-30)
+    /// # Re-enabled (The Witness, Task 3 Step 4b, 2026-07-30)
     ///
-    /// Two things moved under it, and only one of them is a number.
+    /// This test was `#[ignore]`d (F11 discharge, 2026-07-30) for two
+    /// reasons, and the doc comment at that ignore said it plainly: "It
+    /// comes back with the staple repair, and both halves must be
+    /// re-derived then." The Witness's Task 2 *is* that staple repair
+    /// (`independently_steeped_concepts` learned The Watershed's six
+    /// staples), so both halves are re-derived here:
     ///
-    /// The small one: seed 7's goblins now root `river`, `ford`, `hill`,
-    /// `marsh`, `spring` — `marsh` where `valley` used to be — because
-    /// `main`'s history bake re-decides settlement placement. Still five of
-    /// the seven toponymic concepts, still the elevation and karst gates and
-    /// not just the river one, so the seed is as good a witness as it was.
-    /// That alone would be a one-line re-derivation.
-    ///
-    /// The blocking one: this test asserts `exposure_sound(&view, "goblin") ==
-    /// Flag(true)` BEFORE it mutates anything, and that baseline is now false
-    /// — `independently_steeped_concepts` has not learned The Watershed's
-    /// staple Steeped rules, so seed 7's goblins read unsound on `millet`,
-    /// `rice` and `vine`. The full diagnosis is at
-    /// `calibration.rs::lexicon_is_exposure_sound_for_both_species`.
-    ///
-    /// That cannot be re-pinned, and the reason is the point of the test.
-    /// Pinning the baseline to `Flag(false)` would leave a mutation test whose
-    /// before and after are both false — it would pass while proving nothing,
-    /// which is precisely the failure mode ("a soundness check that cannot
-    /// report false is worse than one that reports it wrongly") this test was
-    /// written to prevent. An honest ignore is worth more than a green
-    /// mutation test that has stopped mutating. It comes back with the staple
-    /// repair, and both halves must be re-derived then.
+    /// - The small one, unrelated to the staple repair: seed 7's goblins now
+    ///   root `river`, `ford`, `hill`, `marsh`, `spring` — `marsh` where
+    ///   `valley` used to be — because `main`'s history bake re-decides
+    ///   settlement placement between F11's discharge and this task. Still
+    ///   five of the seven toponymic concepts, still the elevation and karst
+    ///   gates and not just the river one, so the seed is as good a witness
+    ///   as it was. The `rooted` assertion below is updated to match.
+    /// - The blocking one: with the staple repair in place,
+    ///   `exposure_sound(&view, "goblin")` reads `Flag(true)` again (seed 7's
+    ///   goblins no longer read unsound on `millet`, `rice`, `vine`), so the
+    ///   pre-mutation baseline this test asserts is true again, and the test
+    ///   mutates for real: `Flag(true)` before stripping the toponymic gates,
+    ///   `Flag(false)` after. Verified by re-running this test standalone
+    ///   after the re-derivation (both assertions passed in the same run,
+    ///   which is the flip firing, not merely typechecking).
     #[test]
     fn exposure_sound_reports_false_when_the_toponymic_gates_are_removed() {
         const TOPONYMIC: [&str; 7] = [
@@ -6773,6 +9200,34 @@ mod tests {
         // actually root toponymic concepts, or the mutation below would
         // pass for the wrong reason (an unbroken flag on a world with
         // nothing to break).
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements, so
+        // seed 7's goblins now root only three of the five ("hill" and
+        // "marsh" drop out). The test still bites — three rooted concepts is
+        // still a nonempty precondition — so the set is re-pinned rather
+        // than the seed swapped.
+        //
+        // The Tolerance re-pin (2026-08-04): the raid gate became a
+        // per-settlement draw rather than a per-species constant, which
+        // reseats settlements again — "spring" now drops out too, leaving
+        // "river" and "ford". Same reasoning as above: two rooted concepts is
+        // still a nonempty precondition and the mutation below still flips,
+        // so the set is re-pinned rather than the seed swapped. The
+        // PRECONDITION is what moved; the claim (stripping the toponymic
+        // gates makes exposure_sound read false) is untouched.
+        //
+        // MERGE re-pin (2026-08-04, main absorbed into the-tolerance):
+        // absorbing The Keeping's `is_land` decomposition reseats seed 7's
+        // settlements a further time and the precondition WIDENS — six of the
+        // seven, everything but `island`. That is the direction step B
+        // predicts: it opens arid and very-hot ground that the old conflated
+        // habitability flag forbade outright, so seed 7's goblins reach a wider
+        // spread of terrain and root more toponyms, not fewer. The test bites
+        // strictly harder than at either parent (2 rooted on this branch, 5 on
+        // the pre-Tolerance tree), and every gate class it was written to
+        // exercise — river, elevation, karst — is covered. Re-pinned, not
+        // re-seeded; the claim is still untouched.
         let rooted: Vec<&str> = TOPONYMIC
             .iter()
             .copied()
@@ -6780,8 +9235,44 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "hill", "marsh", "spring"],
-            "seed 7 goblins must root these five toponymic concepts for this test to bite"
+            // The Tense re-pin (2026-08-05): back to two — "river" and "ford".
+            // The MERGE note above recorded this precondition WIDENING to six
+            // because The Keeping's `is_land` decomposition opened arid and
+            // very-hot ground; era-varying capacity now narrows it again, since
+            // seed 7's goblins hold fewer and smaller settlements and so reach
+            // less terrain. Two rooted concepts is still a nonempty
+            // precondition and the mutation below still flips, so this follows
+            // The Tolerance's precedent exactly: re-pin the set, do not swap
+            // the seed. The claim — stripping the toponymic gates makes
+            // `exposure_sound` read false — is untouched.
+            //
+            // Note the coverage cost, since the MERGE note above claimed it as
+            // a gain: at six concepts this exercised the river, elevation and
+            // karst gate classes; at two it exercises the river gate only.
+            //
+            // The Delvers re-pin (C2c, 2026-08-07): back to three — "marsh"
+            // returns alongside "river" and "ford". Five settling peoples
+            // re-place seed 7's settlements, and goblin's reach WIDENS rather
+            // than narrows this time, which is the direction the precondition
+            // has now moved in both ways across four campaigns. Re-pin the
+            // set, do not swap the seed, per the precedent above; the claim is
+            // untouched. The coverage cost noted above is partly repaid: at
+            // three concepts the river gate class and the karst/wetland gate
+            // are both exercised again.
+            //
+            // The Range re-pin (task 4, 2026-08-09): back to two — "marsh"
+            // leaves again, and the precondition has now oscillated between
+            // exactly these two readings four times. Gnoll's biome-affinity
+            // row re-places seed 7 (its own count is unchanged at 4 while
+            // bugbear goes 49 -> 153 — measured in
+            // `windows/worldgen/tests/range_readout.rs`), so goblin's reach
+            // narrows once more. Re-pin the set, do not swap the seed, per the
+            // precedent above; two rooted concepts is still a nonempty
+            // precondition and the mutation below still flips, so the claim is
+            // untouched. The coverage cost returns with it: the river gate
+            // class only.
+            vec!["river", "ford"],
+            "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
             assert!(
@@ -6841,14 +9332,99 @@ mod tests {
     /// about kobolds, and the gates being witnessed are terrain gates.
     #[test]
     fn the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them() {
-        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
+        // The Tense re-witness (2026-08-05): seed 0's gnolls no longer root
+        // `island` — era-varying capacity reseats settlements and the
+        // flood-fill half of the witness is lost, exactly the way seed 1's
+        // kobolds lost it at F11. The precondition caught it rather than
+        // letting the test pass on nothing, which is what it is for.
+        //
+        // Re-swept 0..60 over every placed people by the same method, and took
+        // the EARLIEST pair rooting BOTH `island` and `hill` — the rule this
+        // witness has always been chosen by, so the choice stays reproducible
+        // and free of selection. That is **(1, gnoll)**: the seed moved by one
+        // and the species did not move at all. Eight pairs qualify in the
+        // window (1/gnoll, 2/bugbear, 7/bugbear, 11/gnoll, 23/gnoll,
+        // 24/bugbear, 28/bugbear, 34/hobgoblin), so both terrain gates remain
+        // emphatically live and this is a population that moved, not a rule
+        // that died.
+        //
+        // The Delvers re-witness (C2c, 2026-08-07): seed 1's gnolls no longer
+        // root `island` — five settling peoples reseat settlements everywhere
+        // and the flood-fill half of the witness is lost for the third time.
+        // The precondition caught it again rather than letting the test pass
+        // on nothing.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE, not by picking a passing seed:
+        // swept 0..60 over all ELEVEN placed peoples and took the earliest
+        // pair rooting BOTH concepts. That is **(2, gnoll)** — the seed moved
+        // by one again and the species did not move at all. TWENTY-ONE pairs
+        // qualify in the window now (2/gnoll, 2/hill-dwarf, 3/bugbear,
+        // 7/bugbear, 11/bugbear, 11/gnoll, 11/hobgoblin, 23/gnoll, 24/gnoll,
+        // 26/hobgoblin, 36/desert-dwarf, 38/gnoll, 38/human, 40/hobgoblin,
+        // 45/goblin, 47/human, 53/gnoll, 54/gnoll, 58/hobgoblin,
+        // 59/gully-dwarf, 59/hobgoblin), up from eight — a wider roster makes
+        // this witness strictly easier to find, so both terrain gates are
+        // more emphatically live than before, not less.
+        //
+        // SECOND PASS, same day: correcting the dwarf diets off the MINERAL
+        // trophic axis re-placed every world again and seed 2's gnolls lost
+        // `island`. Re-swept 0..60 over all eleven peoples by the identical
+        // method and took the earliest pair rooting BOTH concepts: **(1,
+        // bugbear)**. TWENTY-SIX pairs qualify now (1/bugbear, 6/duergar,
+        // 7/bugbear, 10/bugbear, 16/bugbear, 17/bugbear, 23/gnoll,
+        // 34/gully-dwarf, 34/hobgoblin, 35/desert-dwarf, 36/desert-dwarf,
+        // 36/gnoll, 37/duergar, 38/goblin, 40/hobgoblin, 46/bugbear,
+        // 51/desert-dwarf, 54/desert-dwarf, 54/duergar, 54/gnoll,
+        // 54/hobgoblin, 57/hobgoblin, 58/duergar, 59/duergar, 59/hobgoblin,
+        // 59/human), up from twenty-one — easier again. Seed 1 is where this
+        // witness lived two campaigns ago (with kobold, then gnoll); it
+        // returns there with a third species, which is a reminder that the
+        // seed is an instrument and not a claim.
+        //
+        // THIRD PASS, same day: cutting the roster from five dwarves to three
+        // (spec §11) re-placed every world once more and seed 1's bugbear lost
+        // `island`. Re-swept 0..60 over all NINE placed peoples by the
+        // identical method and took the earliest pair rooting BOTH concepts:
+        // **(1, gnoll)**. TWENTY-THREE pairs qualify now (1/gnoll, 2/bugbear,
+        // 2/gnoll, 7/bugbear, 11/hobgoblin, 11/human, 12/hobgoblin, 21/gnoll,
+        // 23/gnoll, 26/hobgoblin, 28/desert-dwarf, 34/desert-dwarf,
+        // 34/hobgoblin, 35/desert-dwarf, 36/gully-dwarf, 40/hobgoblin,
+        // 48/human, 54/hobgoblin, 58/bugbear, 58/gnoll, 59/bugbear,
+        // 59/desert-dwarf, 59/hobgoblin) — between the twenty-six of the
+        // second pass and the twenty-one of the first, so the witness is not
+        // simply a function of roster size. The SEED did not move and the
+        // species returns to gnoll, which carried this witness one campaign
+        // ago; there is no same-seed second species at seed 1, so this
+        // witness is load-bearing alone.
+        // THE RANGE re-witness (task 4, 2026-08-09): seed 1's gnolls no longer
+        // root `island` — for the fourth time the flood-fill half of the
+        // witness is lost, and for the first time to a change made ON PURPOSE
+        // to move gnoll. The precondition caught it again rather than letting
+        // the test pass on nothing, which is what it is for.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people and took the earliest pair rooting AND steeping BOTH
+        // concepts. That is **(2, bugbear)**. TWENTY-ONE pairs qualify
+        // (2/bugbear, 7/bugbear, 7/hobgoblin, 11/gully-dwarf, 15/bugbear,
+        // 15/hobgoblin, 15/human, 25/bugbear, 26/hobgoblin, 28/bugbear,
+        // 34/desert-dwarf, 35/hobgoblin, 40/hobgoblin, 44/bugbear, 46/bugbear,
+        // 46/hill-dwarf, 46/hobgoblin, 54/gnoll, 59/bugbear, 59/gully-dwarf,
+        // 59/human) — against twenty-three, twenty-six and twenty-one before
+        // it, so unlike its sibling test's staple witness this population did
+        // NOT thin: both terrain gates remain emphatically live. Note gnoll
+        // itself still qualifies at seed 54, which is the honest reading of
+        // what its affinity did — it moved the people, it did not delete it.
+        //
+        // No same-seed second species at seed 2, so this witness is
+        // load-bearing alone.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the default roster");
-        let lexicon = lex(&view, "gnoll").expect("seed 0 gnolls hold a lexicon");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
+        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 0 gnolls must root {concept} for this test to bite"
+                "seed 2 bugbears must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -6978,6 +9554,7 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42)
     #[test]
     fn composition_varies_across_settlements_at_seed_42() {
         // The Niche's headline: refutes the task-C "oatmeal" (identical
@@ -7055,6 +9632,85 @@ mod tests {
         );
         assert!(
             matches!(m("fertile-land-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+    }
+
+    /// The coverage metric reads a real Terrain-rung world and reports a non-empty
+    /// set drawn only from `Hydro::ALL`'s names. Deliberately NOT an assertion
+    /// about WHICH variants seed 0 shows — that is the census's question, asserted
+    /// over 1,000 worlds in `windows/lab/tests/calibration.rs`, not here over one.
+    #[test]
+    fn hydro_variant_coverage_reads_a_real_world() {
+        let view = TerrainView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "hydro-variant-coverage")
+            .expect("the metric is registered");
+        let MetricValue::Text(joined) = metric.extract.apply(&BuiltView::Terrain(view)) else {
+            panic!("hydro-variant-coverage must be Text");
+        };
+        assert!(!joined.is_empty(), "seed 0 shows no hydro variant at all");
+        let names: Vec<&str> = joined.split('+').collect();
+        let legal: Vec<&str> = hornvale_terrain::Hydro::ALL
+            .iter()
+            .map(|h| h.name())
+            .collect();
+        for name in &names {
+            assert!(legal.contains(name), "{name:?} is not a Hydro variant name");
+        }
+        let mut sorted = names.clone();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            names.len(),
+            "the set must not repeat a variant"
+        );
+    }
+
+    /// Both toponymic columns read a real Full-rung world, and the won count never
+    /// exceeds the core size. Not an assertion that seed 0 wins ALL of them — that
+    /// is the census's question (`calibration.rs`), over 1,000 worlds.
+    #[test]
+    fn toponymic_roots_won_reads_a_real_world_and_is_bounded_by_the_core() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let built = BuiltView::Full(view);
+        let all = registry();
+        let value = |name: &str| {
+            let m = all
+                .iter()
+                .find(|m| m.name == name)
+                .expect("metric is registered");
+            match m.extract.apply(&built) {
+                MetricValue::Number(n) => n,
+                other => panic!("{name} must be Number, got {other:?}"),
+            }
+        };
+        let core = value("toponymic-core-size");
+        let won = value("toponymic-roots-won");
+        assert!(
+            core > 0.0,
+            "no concept reports the toponymic domain — the derivation broke"
+        );
+        assert!(won >= 0.0 && won <= core, "won {won} outside [0, {core}]");
+    }
+
+    /// `crisis-fires` reads a real Full-rung world and answers Flag, whichever way.
+    /// Deliberately NOT "seed 0 has a crisis" — whether any given seed does is
+    /// exactly the question this metric exists to stop asserting one world at a
+    /// time (The Assay, spec §3.4).
+    #[test]
+    fn crisis_fires_reads_a_real_world_as_a_flag() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "crisis-fires")
+            .expect("the metric is registered");
+        assert!(
+            matches!(
+                metric.extract.apply(&BuiltView::Full(view)),
+                MetricValue::Flag(_)
+            ),
+            "crisis-fires must be a Flag"
         );
     }
 
@@ -7164,11 +9820,52 @@ mod tests {
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
+        // The Tense re-pin (2026-08-05): the flagship reseated onto
+        // temperate-forest. `flagship-subsistence` above is unchanged at
+        // "farming", so the cascade still reads a farmable seat -- only the
+        // biome under it moved.
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): temperate-forest -> taiga.
+        // Five settling peoples shift the world-wide competitive landscape
+        // settlement genesis resolves, which moves which cell goblin's
+        // flagship wins — the same class of movement every entry in this long
+        // list records, re-derived empirically rather than carried.
+        // `flagship-subsistence` above is STILL "farming", so the cascade
+        // still reads a farmable seat; only the biome under it moved, again.
+        //
+        // Second pass, same day: taiga -> temperate-forest, i.e. BACK to the
+        // value The Tense pinned. Correcting the dwarf diets off the MINERAL
+        // trophic axis moved goblin's flagship cell a second time and it
+        // landed where it had been. That this list's readings can return is
+        // itself the point it has been making since Sculpting: the biome is
+        // downstream of which cell wins, and cells are re-decided by every
+        // world-byte change. `flagship-subsistence` is STILL "farming".
+        //
+        // Third pass, same day: temperate-forest -> taiga, when the roster was
+        // cut from five dwarves to three (spec §11). Same reading as the
+        // five-dwarf first pass, reached from the other direction; the value
+        // has now oscillated between exactly these two biomes four times.
+        // `flagship-subsistence` is STILL "farming" through all four, which is
+        // the stable fact here — the seat is farmable, and which farmable
+        // biome it is, is not a claim this list makes.
+        //
+        // Fourth pass (The Range, task 4, 2026-08-09): taiga ->
+        // temperate-forest, oscillating between the same two biomes a fifth
+        // time. Cause: the campaign's first biome-affinity row (gnoll,
+        // desert-preferring) suppresses gnoll's capacity off arid ground,
+        // which frees interior cells the other peoples re-contest — the
+        // competitive cascade `windows/worldgen/tests/range_readout.rs`
+        // measures directly (seed 7: gnoll unchanged at 4 settlements while
+        // bugbear goes 49 -> 153). `flagship-subsistence` is STILL "farming"
+        // through all five, which remains the stable fact.
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("tropical-rainforest".to_string())
+            MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
+        // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
+        // Consistent with the biome move directly above -- it reseated onto
+        // temperate-forest, inland -- rather than an independent fact.
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
@@ -7465,6 +10162,127 @@ mod tests {
         );
     }
 
+    /// THE DELVERS (C2c): the same property for the roster's second
+    /// multi-member family. The check is the one generalized function, so
+    /// this is a claim about the dwarf family's draw, not about the code.
+    #[test]
+    fn monophyly_dwarf_holds_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "monophyly-dwarf"),
+            MetricValue::Flag(true),
+            "every dwarf daughter's Root proto must match the family proto-root"
+        );
+    }
+
+    /// The drift guard the authored daughter constants trade against being
+    /// derived: on the CANONICAL roster each list must be exactly the set
+    /// `family_daughter_kinds` computes from `family_of`. A future campaign
+    /// that adds a fourth dwarf and forgets the constant reddens here.
+    #[test]
+    fn authored_daughter_lists_match_the_default_rosters_family_membership() {
+        let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
+        for family in ["goblinoid", "dwarf"] {
+            let mut derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, family)
+                .iter()
+                .map(|k| k.0)
+                .collect();
+            derived.sort_unstable();
+            let mut authored: Vec<&str> = family_daughters_of(family).to_vec();
+            authored.sort_unstable();
+            assert_eq!(
+                authored, derived,
+                "{family}: the authored daughter list has drifted from family_of"
+            );
+        }
+    }
+
+    /// Why [`GOBLINOID_DAUGHTERS`] stays authored rather than being replaced
+    /// by the derivation the guard above compares it to: the two are NOT
+    /// equivalent on the Lab's synthetic rosters. `goblin-twin` carries
+    /// `family_of == "goblinoid"`, so the derived list makes
+    /// `census-of-the-meeting`'s twin roster a goblinoid family of one, while
+    /// the constant filtered to that roster is empty — the difference between
+    /// `monophyly-goblinoid` reading `Absent` and reading a trivially-true
+    /// `Flag` on every row of that study's null control.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; the
+    /// scanner's `s` signal binds a kind-name `&str` in
+    /// `.filter(|s| … k.0 == *s)` over `GOBLINOID_DAUGHTERS`, not a world
+    /// seed. No world is built: this compares two roster reads on the Lab's
+    /// synthetic `goblin-twin` components.
+    #[test]
+    fn a_derived_goblinoid_daughter_list_would_not_be_equivalent_on_labs_twin_roster() {
+        let wc = crate::goblin_twin_solo_components();
+        let derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, "goblinoid")
+            .iter()
+            .map(|k| k.0)
+            .collect();
+        assert_eq!(derived, ["goblin-twin"]);
+        let from_constant: Vec<&str> = GOBLINOID_DAUGHTERS
+            .iter()
+            .copied()
+            .filter(|s| wc.biosphere.ids().any(|k| k.0 == *s))
+            .collect();
+        assert!(
+            from_constant.is_empty(),
+            "the twin roster holds no canonical goblinoid daughter; got {from_constant:?}"
+        );
+    }
+
+    /// [`all_daughters`] is the roster's own lexicon-carrying population, not
+    /// a list someone has to remember to extend. Pinned against the two kinds
+    /// the retired constant had silently omitted since The Generalist and The
+    /// Vacancy, and against the three The Delvers adds.
+    #[test]
+    fn all_daughters_is_the_rosters_own_lexicon_population() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let daughters = all_daughters(&view);
+        for expected in [
+            "goblin",
+            "hobgoblin",
+            "bugbear",
+            "kobold",
+            "human",
+            "gnoll",
+            "desert-dwarf",
+            "gully-dwarf",
+            "hill-dwarf",
+        ] {
+            assert!(
+                daughters.contains(&expected),
+                "{expected} carries a lexicon but is not in the measured population: {daughters:?}"
+            );
+        }
+        // Ascending KindId order, so the metric is deterministic.
+        let mut sorted = daughters.clone();
+        sorted.sort_unstable();
+        assert_eq!(daughters, sorted);
+    }
+
+    /// Regression: three seeds where this metric reported a monophyly break
+    /// in a world that was monophyletic.
+    ///
+    /// Seed 42 could never have caught it. The defect needed a *collision* in
+    /// `assign_proto_roots`'s reject-and-reprobe loop on an accession-epoch-7
+    /// concept (`east`/`west`), which is what makes the extra nine
+    /// `Unnameable` concepts in the old unfiltered universe change the
+    /// answer — rare enough to hit 14 of 1000 seeds and to miss the one seed
+    /// every unit test in this file uses. These three are taken from that
+    /// failing set; the full list was `[21, 70, 130, 153, 187, 308, 371, 471,
+    /// 502, 571, 836, 847, 849, 855]`.
+    /// claim: invariant(forall-seed) — over [21,70,130]
+    #[test]
+    fn monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke() {
+        for seed in [21u64, 70, 130] {
+            let view = FullView::build(Seed(seed), &SkyPins::default()).unwrap();
+            assert_eq!(
+                extract(&view, "monophyly-goblinoid"),
+                MetricValue::Flag(true),
+                "seed {seed}: the daughters agree with each other; a reported break                  here means the metric's universe has drifted from build_lexicon's again"
+            );
+        }
+    }
+
     #[test]
     fn clean_outgroup_kobold_holds_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -7478,7 +10296,7 @@ mod tests {
     #[test]
     fn inventory_closure_holds_for_every_daughter_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             assert_eq!(
                 extract(&view, &format!("inventory-closure-{species}")),
                 MetricValue::Flag(true),
@@ -7562,6 +10380,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — over [1,7,42]
     #[test]
     fn a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor() {
         // The test-only serpent roster exercises the tonal path (spec §11): a
@@ -7593,6 +10412,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,123,500]
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {
@@ -7652,7 +10472,7 @@ mod tests {
         );
         // Functional-load restriction can only ever be a subset of the raw
         // count, for every daughter.
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             let (MetricValue::Number(c), MetricValue::Number(total)) = (
                 extract(&view, &format!("core-homophony-{species}")),
                 extract(&view, &format!("homophony-count-{species}")),
@@ -7669,7 +10489,7 @@ mod tests {
     #[test]
     fn homophony_merger_share_is_a_unit_fraction_or_absent_for_every_daughter() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             match extract(&view, &format!("homophony-merger-share-{species}")) {
                 MetricValue::Number(f) => {
                     assert!((0.0..=1.0).contains(&f), "{species}: {f} out of [0,1]")
@@ -7683,7 +10503,7 @@ mod tests {
     #[test]
     fn homophony_count_is_a_nonnegative_number_for_every_daughter_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             match extract(&view, &format!("homophony-count-{species}")) {
                 MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
                 other => panic!("{species}: homophony-count not a number: {other:?}"),
@@ -7894,5 +10714,302 @@ mod tests {
             chorus_sky_calibration_metric_over(&one_voice),
             MetricValue::Absent
         );
+    }
+
+    // --- The Contour (Task 4): the measurement instrument. ---
+
+    /// M2/M3/M4 are all registered now (round 3 landed M4 on present-day
+    /// terrain, spec §2.4 amendment 4), read the full stack, and carry a
+    /// doc string.
+    #[test]
+    fn the_contour_metrics_are_registered_and_full_rung() {
+        let reg = registry();
+        for name in [
+            "peoples-alive-at-bake-end",
+            "largest-holding-share",
+            "defensibility-capacity-rank-corr",
+        ] {
+            let m = reg
+                .iter()
+                .find(|m| m.name == name)
+                .unwrap_or_else(|| panic!("metric {name} is not registered"));
+            assert_eq!(
+                m.rung(),
+                BuildDepth::Full,
+                "{name} must read the full stack"
+            );
+            assert!(!m.doc.is_empty(), "{name} needs a doc");
+        }
+    }
+
+    /// Seed 42 places a live roster at bake end, so M2/M3/M4 all extract
+    /// real numbers, not `Absent`: at least one people alive; the largest
+    /// community's share strictly between 0 (something must hold
+    /// population) and 1 (a lone community would be the whole world, which
+    /// seed 42's four-people roster does not produce); and M4's rank
+    /// correlation in `[-1, 1]` (seed 42 places land varied enough that the
+    /// series isn't constant).
+    #[test]
+    fn the_contour_metrics_extract_sane_values_for_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "peoples-alive-at-bake-end") {
+            MetricValue::Number(n) => assert!(n >= 1.0, "expected at least one live people"),
+            other => panic!("peoples-alive-at-bake-end: {other:?}"),
+        }
+        match extract_from(&built, "largest-holding-share") {
+            MetricValue::Number(share) => {
+                assert!(
+                    share > 0.0 && share <= 1.0,
+                    "share must be in (0, 1]: {share}"
+                );
+            }
+            other => panic!("largest-holding-share: {other:?}"),
+        }
+        match extract_from(&built, "defensibility-capacity-rank-corr") {
+            MetricValue::Number(rho) => {
+                assert!((-1.0..=1.0).contains(&rho), "rho out of range: {rho}");
+            }
+            other => panic!("defensibility-capacity-rank-corr: {other:?}"),
+        }
+    }
+
+    // --- The Contour (Task 4, round 3): the Spearman helpers themselves,
+    // driven by hand-built inputs whose rank correlation is not in
+    // dispute — the counting rule, checked against ground truth stated by
+    // hand, mirroring `syllable_count_reads_maximal_vowel_runs`' idiom
+    // above. ---
+
+    #[test]
+    fn average_ranks_gives_ties_the_mean_of_the_ranks_they_span() {
+        // 10, 20, 20, 30 -> tied pair at positions 2-3 (1-based) share 2.5;
+        // the untied ends keep their plain rank.
+        assert_eq!(
+            average_ranks(&[10.0, 20.0, 20.0, 30.0]),
+            vec![1.0, 2.5, 2.5, 4.0]
+        );
+        // A three-way tie at the front: positions 1-3 share (1+2+3)/3 = 2.0.
+        assert_eq!(
+            average_ranks(&[5.0, 5.0, 5.0, 9.0]),
+            vec![2.0, 2.0, 2.0, 4.0]
+        );
+        // Ranking is by VALUE, not input position: descending input order
+        // must still rank ascending by value.
+        assert_eq!(average_ranks(&[3.0, 2.0, 1.0]), vec![3.0, 2.0, 1.0]);
+        // All tied: every rank is the mean of 1..=n.
+        assert_eq!(average_ranks(&[7.0, 7.0, 7.0]), vec![2.0, 2.0, 2.0]);
+    }
+
+    #[test]
+    fn pearson_correlation_reads_perfect_and_inverse_and_undefined() {
+        // Exact equality would be fragile here (the sqrt/division chain
+        // lands at 0.9999999999999998, not bitwise 1.0), so these check a
+        // tight tolerance instead of `assert_eq!` — the ONE place in this
+        // battery that isn't exact, because floating-point summation, not a
+        // logic choice, is why.
+        let perfect = pearson_correlation(&[1.0, 2.0, 3.0], &[10.0, 20.0, 30.0]).unwrap();
+        assert!((perfect - 1.0).abs() < 1.0e-12, "got {perfect}");
+        let inverse = pearson_correlation(&[1.0, 2.0, 3.0], &[30.0, 20.0, 10.0]).unwrap();
+        assert!((inverse - (-1.0)).abs() < 1.0e-12, "got {inverse}");
+        // A constant series has no defined correlation (zero variance), not
+        // a zero correlation.
+        assert_eq!(
+            pearson_correlation(&[1.0, 1.0, 1.0], &[1.0, 2.0, 3.0]),
+            None
+        );
+        assert_eq!(pearson_correlation(&[1.0], &[1.0]), None);
+    }
+
+    #[test]
+    fn spearman_over_ranks_is_invariant_to_a_positive_rescaling() {
+        // The whole reason a rank correlation, rather than a raw Pearson
+        // correlation, is the right read for M4: capacity's scale
+        // (SETTLERS_PER_CAPACITY, private to history_bake.rs) must not be
+        // able to move the answer. Scale one series by an arbitrary
+        // positive constant and the ranks -- hence the Spearman value --
+        // must be untouched.
+        let xs = [3.0, 1.0, 4.0, 1.0, 5.0];
+        let ys = [9.0, 2.0, 6.0, 2.0, 1.0];
+        let scaled_ys: Vec<f64> = ys.iter().map(|y| y * 100.0).collect();
+        let rho_a = pearson_correlation(&average_ranks(&xs), &average_ranks(&ys));
+        let rho_b = pearson_correlation(&average_ranks(&xs), &average_ranks(&scaled_ys));
+        assert_eq!(rho_a, rho_b);
+    }
+
+    /// The Watershed's six staples (`hornvale_climate::Crop::catalog()`,
+    /// gated `Steeped` in `exposure_of` only where a settled cell's
+    /// subsistence is `Farming`) reach `Steeped` through the crop gate that
+    /// `independently_steeped_concepts` never learned — F13, the third
+    /// recurrence of the duplicate going stale. Named individually so ADDING
+    /// a staple that the lab does not know about reds this test rather than
+    /// slipping past it.
+    ///
+    /// Seed 5's bugbear was the original witness: diagnosed by sweeping
+    /// seeds 0..20 and every placed people for which staple concepts
+    /// actually reach a `Root` in the committed lexicon (which only happens
+    /// when `exposure_of` classified them `Steeped`), seed 5's bugbear was
+    /// the only (seed, species) pair in that sweep whose settlements span
+    /// all six crop bands at once. No single seed need witness all six for
+    /// the campaign's claim to hold — this test only needs one that does, so
+    /// the assertion is not vacuous.
+    ///
+    /// **The Contour re-witness (2026-08-02):** position-aware conflict
+    /// (defensibility as a second contest axis) reseats settlements on
+    /// nearly every world, and seed 5's bugbear no longer spans all six
+    /// bands. Re-diagnosed the same way, widened: swept seeds 0..150 (a
+    /// fresh sweep, not a re-pin of the old one — the old witness's range
+    /// no longer contains a hit) against every placed people, dynamically
+    /// read off `FullView::components().perception` per seed rather than a
+    /// hardcoded roster, so a new people entering the roster would still be
+    /// swept. Seven (seed, species) pairs in that range clear all six bands:
+    /// (42, gnoll), (50, goblin), (83, bugbear), (83, kobold), (90, kobold),
+    /// (133, hobgoblin), (148, kobold). Seed 83's bugbear is the new
+    /// witness — same species as before, for continuity, and independently
+    /// corroborated by seed 83's kobold clearing the same six bands in the
+    /// same world.
+    const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
+
+    #[test]
+    fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
+        // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
+        // on lefford, 0063): the BAKE label bump reseats settlements, and
+        // seed 83's bugbear no longer clears all six staple bands at its new
+        // site — a witness-seed invalidation, not a code regression. Re-swept
+        // seeds 0..150 against every placed people, dynamically read off
+        // `FullView::components().perception` (the same method the prior
+        // witness search used, not a fresh one); (16, bugbear) clears all six
+        // and independently, (16, kobold) clears the same six bands in the
+        // same world — the same same-seed-two-species corroboration the
+        // previous witness had. Bugbear kept for continuity with the prior
+        // witness species.
+        //
+        // The Tolerance re-witness (2026-08-04): warlikeness became a
+        // per-settlement draw rather than a per-species constant, reseating
+        // settlements once more — seed 16's BUGBEAR no longer clears all six
+        // staple bands. A witness-species invalidation this time, not a
+        // witness-seed one: re-swept seeds 0..80 against every placed people
+        // by the same method (dynamically off `FullView::components().
+        // perception`), and seed 16 still clears — now with (16, goblin) and
+        // (16, kobold), plus (25, hobgoblin) and (63, human) elsewhere in the
+        // range. KOBOLD is the witness now: it is the species that
+        // independently corroborated the previous witness in this very world,
+        // so the seed is unchanged and the corroboration (goblin, same seed,
+        // same six bands) is unchanged in shape.
+        // The Tense re-witness (2026-08-05): era-varying capacity reseats
+        // settlements once more and seed 16's kobold no longer spans all six
+        // staple bands. Re-swept by the same method the prior searches used
+        // (0..150, every placed people read dynamically off
+        // `FullView::components().perception`).
+        //
+        // THE PROPERTY GOT SCARCER, and that is the part worth recording. The
+        // Contour's sweep of this range found SEVEN qualifying pairs; this one
+        // finds THREE — (59, hobgoblin), (129, hobgoblin), (133, kobold) — and
+        // the whole of 0..40 now contains none at all. Fewer, smaller
+        // settlements span fewer crop bands, which is exactly what a
+        // capacity-squeezing change should do to a "spans all six" property.
+        // The near-misses concentrate on `millet` and `tuber`: those two are
+        // the bands that drop out first.
+        //
+        // Witness is (133, kobold): the same SPECIES as the outgoing witness,
+        // and seed 133 has carried a witness before (The Contour's sweep found
+        // (133, hobgoblin)), so it is continuous on both axes. Unlike every
+        // previous witness there is NO same-seed second species corroborating
+        // it this time — 59 and 129 are different worlds. Recorded rather than
+        // papered over: this witness is load-bearing alone.
+        //
+        // The Delvers re-witness (C2c, 2026-08-07): five settling peoples
+        // reseat settlements everywhere and seed 133's kobold no longer spans
+        // all six staple bands. Re-swept by the identical method (0..150,
+        // every placed people read dynamically off
+        // `FullView::components().perception`, which is why the five new
+        // peoples were swept without touching this code).
+        //
+        // THE PROPERTY GOT SLIGHTLY COMMONER, reversing The Tense's direction:
+        // FOUR qualifying pairs — (5, bugbear), (17, hobgoblin), (71, human),
+        // (118, gnoll) — against The Tense's three, and 0..40 contains two
+        // where The Tense's sweep found none in that whole window. More
+        // peoples competing means more settlements sited across more crop
+        // bands, so a "spans all six" property gets easier to witness.
+        //
+        // Witness is (5, bugbear). NEITHER continuity axis was available —
+        // no kobold and no seed-133 pair qualifies — so the choice falls back
+        // on the earliest qualifying pair, the same selection-free rule
+        // `the_independent_reading_steeps_island_and_hill_where_the_lexicon_
+        // roots_them` uses. It is at least continuous with this test's own
+        // deeper history: bugbear was the witness species at both (83,
+        // bugbear) and (16, bugbear). As at The Tense, there is NO same-seed
+        // second species corroborating it, so this witness is load-bearing
+        // alone; recorded rather than papered over.
+        //
+        // SECOND PASS, same day: correcting the dwarf diets off the MINERAL
+        // trophic axis re-placed every world and seed 5's bugbear lost
+        // `millet`. Re-swept by the identical method (0..150, peoples read
+        // dynamically off `FullView::components().perception`).
+        //
+        // THE PROPERTY KEEPS GETTING COMMONER: SEVEN qualifying pairs now —
+        // (31, hobgoblin), (63, gnoll), (84, hobgoblin), (86, gnoll),
+        // (118, hill-dwarf), (133, human), (148, hobgoblin) — against four
+        // before it and three at The Tense, back to The Contour's count.
+        //
+        // Witness is (31, hobgoblin). Neither continuity axis was available
+        // again (no bugbear pair, no seed-5 pair), so the choice falls back on
+        // the earliest qualifying pair — the selection-free rule this file
+        // used at the previous re-witness. It is continuous with the test's
+        // deeper history in species: hobgoblin carried this witness at (133,
+        // hobgoblin) under The Contour. No seed appears twice in the list, so
+        // NO same-seed corroboration exists for any candidate; this witness is
+        // load-bearing alone, as the previous two were.
+        //
+        // THIRD PASS, same day: cutting the roster from five dwarves to three
+        // (spec §11) re-placed every world and seed 31's hobgoblin lost a
+        // band. Re-swept by the identical method (0..150, peoples read
+        // dynamically off `FullView::components().perception`).
+        //
+        // ELEVEN qualifying pairs — (5, bugbear), (5, hobgoblin),
+        // (16, hobgoblin), (17, hobgoblin), (24, hobgoblin), (63, bugbear),
+        // (71, bugbear), (75, hobgoblin), (111, desert-dwarf),
+        // (130, hobgoblin), (133, gnoll) — against seven, four and three
+        // before it. The count has now risen at three successive re-sweeps
+        // while the roster went 6 -> 11 -> 9, so "more peoples means more
+        // bands" is NOT the mechanism it looked like on the first pass.
+        //
+        // Witness is **(5, bugbear)**, the earliest qualifying pair — the
+        // SAME pair the first Delvers pass chose, returning after one
+        // intervening re-witness. And for the FIRST time in this test's
+        // history there IS same-seed corroboration: (5, hobgoblin) qualifies
+        // too, so the witness is no longer load-bearing alone.
+        //
+        // FOURTH PASS (The Range, task 4, 2026-08-09): seed 5's bugbear lost a
+        // staple band. Re-swept 0..150 by the identical method (peoples read
+        // dynamically off `FullView::components().perception`).
+        //
+        // **THE PROPERTY GOT MUCH RARER, and that is the finding.** THREE
+        // qualifying pairs — (5, desert-dwarf), (66, kobold), (90, goblin) —
+        // against ELEVEN before it, seven, four and three. The count had risen
+        // at three successive re-sweeps; this is the first time it has fallen,
+        // and it has fallen by nearly four-fifths. Cause: the campaign's first
+        // biome-affinity row suppresses gnoll off non-arid ground, and the
+        // competitive cascade that follows re-places every people
+        // (`windows/worldgen/tests/range_readout.rs` measures it directly), so
+        // fewer peoples end up spread across enough farmable biomes to steep
+        // all six staples. The witness survives with room to spare, but the
+        // margin is now thin enough to be worth watching: at three pairs, one
+        // more campaign of the same size could leave none.
+        //
+        // Witness is **(5, desert-dwarf)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used. The SEED does not
+        // move (a fourth pass in a row at seed 5) and the species moves
+        // bugbear -> desert-dwarf. There is no same-seed second species, so
+        // this witness is load-bearing alone again.
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
+            .expect("desert-dwarf is placed at seed 5");
+        for staple in STAPLE_CONCEPTS {
+            assert!(
+                steeped.contains(staple),
+                "the lab's independent reading does not steep {staple}, which \
+                 worldgen does — the duplicate is stale again"
+            );
+        }
     }
 }

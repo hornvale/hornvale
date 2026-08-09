@@ -14,9 +14,11 @@ Cross-domain communication happens only through the kernel's trace protocol:
 - **Facts** — subject/predicate/object, append-only, contradiction-checked
   against the registry. Register your predicates per-domain; one concept
   name, one owner (decision 0025).
-- **Phenomena** — the universal read: salience-ranked observations. A consumer
-  (religion, say) must never be able to tell which system produced a
-  phenomenon.
+- **Phenomena** — the universal read: salience-ranked observations. The
+  channel carries no producer, so a consumer (religion, say) gets an
+  appearance rather than a source. Decision 0003 frames this as an accepted
+  cost, not a ban — do not hand a consumer the producer, but identifying an
+  appearance with an object is an achievement a later campaign may build.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
 If two domains need to share code, it goes down into the kernel (decision

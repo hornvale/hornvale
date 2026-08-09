@@ -1,8 +1,8 @@
-# Scene Schema: surrounds v1
+# Scene Schema: surrounds v2
 
 `scene/tiles/v1` and `scene/tiles-region/v1` both answer a *cartographic*
 question: given a patch of the globe, what is there? They are exocentric —
-they describe ground, and nobody is standing on it. `scene/surrounds/v1`
+they describe ground, and nobody is standing on it. `scene/surrounds/v2`
 answers the *situated* question instead: **an observer is standing in a
 particular room; what lies around them, and how much of it do they know?**
 
@@ -169,7 +169,7 @@ catalog in its stable append-only order), `water_legend`, and
 them. `relief_legend` is `abyss, shelf, lowland, upland, highland, alpine`,
 and its band boundaries are contract:
 
-| `relief_legend` index | Name | Elevation (m) |
+| `relief_legend` index | Name | Height above sea level (m) |
 |---|---|---|
 | 0 | `abyss` | < −3000 |
 | 1 | `shelf` | −3000 .. 0 |
@@ -178,8 +178,13 @@ and its band boundaries are contract:
 | 4 | `highland` | 1000 .. 2500 |
 | 5 | `alpine` | ≥ 2500 |
 
-Each band is half-open, `[lower, upper)`, against `elevation_m`; changing a
-boundary mints `scene/surrounds/v2`.
+Each band is half-open, `[lower, upper)`, against `height_asl_m` — **not**
+against `elevation_m`, which is an absolute reading on the planet-independent
+isostatic datum whose zero is nowhere near any particular world's sea level.
+Banding the absolute reading is what v1 did, and on a world whose sea level
+sits near −2936 m it classified almost all land as `shelf`. Changing a
+boundary, or the quantity they are measured against, mints
+`scene/surrounds/v3`.
 
 `cells` is ordered by ascending packed `room` id — a total order over `u64`
 that needs no float comparison and cannot vary between runs.
@@ -201,14 +206,73 @@ Any figure in metres would be an illustration conditioned on an assumed
 planet size rather than a fact the model holds. Neither this schema nor a
 renderer's caption asserts metres per cell.
 
+## Colour, and the eye that computed it
+
+Colour is not a property of a cell. It is the three-way product of a
+material's reflectance, the light falling on it, and the sensitivity curves
+of whoever is looking — so a colour on the wire is meaningless unless the
+document also says *which eye*. Two fields carry that, and both are optional:
+
+- each cell may carry `color`, an `[r, g, b]` triple of bytes;
+- the document may carry `sight`, the declaration of the eye and the
+  projection those triples came out of.
+
+**An uncoloured document emits neither key at all.** Both are
+`skip_serializing_if = "Option::is_none"`, and `sight` was *appended* after
+`legend` rather than inserted, so a document produced without a colour layer
+is byte-for-byte what it was before this layer existed. That is why colour
+did not mint `scene/surrounds/v3`: no observable value moved, and a consumer
+that has never heard of `color` reads exactly the bytes it read before. The
+committed example, [`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
+is produced through the uncoloured path and carries neither key.
+
+`sight` is one object with six fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `observer` | string | Whose eyes: a species' `KindId` label (`"bugbear"`), or `"standard"`. **Caller-supplied.** |
+| `channels` | integer | How many channels that eye senses with. |
+| `chromatic` | integer | How many of those channels carry hue; the rest are achromatic and contribute brightness only. |
+| `projection` | string | The registered name of the mapping from signal to sRGB — `"native"`, `"native-anomalous"`, `"yellow-blue"`, or `"none"` when the eye carries no projection. |
+| `preserves` | string | What that projection keeps, in words. The caption's load-bearing half. |
+| `sun_altitude_deg` | number | The sun's elevation above the horizon, degrees, that lit these colours; quantized at the emit boundary. **Caller-supplied.** |
+
+**Four of the six are overwritten by the builder, and that is why they can
+be trusted.** `channels`, `chromatic`, `projection` and `preserves` are read
+back off the `Observer` actually used to colour the chart, discarding
+whatever the caller put in those slots. A caller can therefore name an eye
+and state a sun angle — the two things an `Observer` cannot supply, since a
+set of sensitivity curves does not know its own species or what time it is —
+but a caller **cannot** make a document claim an arity or a projection its
+colours did not actually come from. A consumer may read those four as fact
+about the pixels; it must read `observer` and `sun_altitude_deg` as the
+producer's assertion.
+
+The projection is named for the reason a map projection is named. Every
+projection of a signal onto three screen channels loses something, and the
+honest response is not to search for a lossless one but to say which
+invariant survives. A two-chromatic-channel eye rendered through
+`yellow-blue` emits triples whose red and green components are **equal by
+construction** — that is not an artifact to be smoothed away, it is what a
+colour space with no red–green axis honestly looks like on a three-channel
+screen, and `preserves` says so in the same breath: *"the short-to-long
+opposition; the red–green axis is not carried."*
+
+A renderer is expected to surface `preserves` beside the picture rather than
+in a footnote. `render_surrounds_ascii`'s `colour` lens does exactly that,
+and adds its own disclosure: the tint is **bedrock**, so it is applied only
+where the glyph is drawing that ground and withheld from water, from marks,
+and from the observer's own cell — with three counts that partition the
+chart, so a reader can check the sentence against the picture.
+
 ## The document
 
-Every `scene/surrounds/v1` document is one JSON object with these fields,
+Every `scene/surrounds/v2` document is one JSON object with these fields,
 in this order (field order **is** the JSON key order and is contract):
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schema` | string | Always the literal `"scene/surrounds/v1"`. |
+| `schema` | string | Always the literal `"scene/surrounds/v2"`. |
 | `seed` | integer | The world's seed (u64; JavaScript's plain `JSON.parse` loses precision above 2^53 — use BigInt-aware parsing when the exact seed matters). |
 | `day` | number | The day observed (`WorldTime`), quantized at the emit boundary. |
 | `observer` | object | Where the observer stands — see the table below. |
@@ -218,8 +282,10 @@ in this order (field order **is** the JSON key order and is contract):
 | `biome_legend` | array of string | The biome catalog, stable append-only order; a cell's `biome` indexes into it. |
 | `water_legend` | array of string | The water catalog, stable order; a cell's `water` indexes into it. |
 | `relief_legend` | array of string | `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`; a cell's `relief` indexes into it. |
+| `sea_level_m` | number | This world's derived sea level, metres on the isostatic datum, quantized. The bands in `relief_legend` are measured from it, so a consumer can re-derive any cell's band from `height_asl_m` alone. |
 | `cells` | array of object | The neighbourhood, ascending by packed `room` id — see the cell table below. |
 | `legend` | array of object | The chart's noun catalog, ascending by `noun` — see the `LegendEntry` table below. |
+| `sight` | object, **key omitted when absent** | The eye this chart was coloured for and what its projection preserves — see "Colour, and the eye that computed it" above. Present only on a document built through the colouring path. |
 
 `observer` is itself an object, in this field order:
 
@@ -249,6 +315,8 @@ Each element of `cells` is an object, in this field order:
 | `temperature_c` | number or null | Annual-mean temperature, °C, quantized; `null` when the cell is not `"here"`. |
 | `moisture` | number or null | Dimensionless moisture index, quantized; `null` when the cell is not `"here"`. |
 | `elevation_m` | number or null | Elevation, metres, quantized; `null` when the cell is not `"here"`. |
+| `height_asl_m` | number or null | Height above sea level, metres, quantized; signed, negative below; `null` when the cell is not `"here"`. `relief` is banded from this. |
+| `color` | array of 3 integers, **key omitted when absent** | The cell's bedrock as it appears to the document's declared eye under the document's declared light — `[r, g, b]`, each `0..=255`. Absent entirely on an uncoloured document. |
 | `marks` | array of object | Salience-ranked things standing here, ordered by `(salience, noun)` — see the `Mark` table below. |
 
 Each element of a cell's `marks` (`Mark`) is an object, in this field order:
@@ -285,7 +353,7 @@ hornvale scene surrounds [--world <path>] [--room <ID> | --depth <D>] [--radius 
                           [--render json|ascii]
 ```
 
-This prints one `scene/surrounds/v1` document to standard output. `--world`
+This prints one `scene/surrounds/v2` document to standard output. `--world`
 defaults to `world.json`. `--room` and `--depth` are mutually exclusive: a
 packed room id already carries its own depth baked into its path length, so
 combining them is a hard error rather than a silent pick of one over the
@@ -301,7 +369,11 @@ is produced this way against the seed-42 sky world.
 `--render` defaults to `json`, this schema. `--render ascii` renders the
 same document through `hornvale_scene::render_surrounds_ascii`'s `terrain`
 lens — the same renderer a possession's own `map` verb draws from, so the
-CLI can produce the picture outside a session. The footer's `ways on:`
+CLI can produce the picture outside a session. The CLI stays on the
+`terrain` lens and the uncoloured builder, which is why its committed
+artifacts carry no `color` or `sight`; a possession defaults to the
+`colour` lens through the possessed agent's own eyes, and its `eyes off`
+returns it to exactly this output. The footer's `ways on:`
 line is the observer room's own lateral exits (`ExitKind::Edge`), read from
 `hornvale_locale` the same way `map` reads them for the walked room.
 [The gallery page](../gallery/surrounds-seed-42.md) shows several observers
@@ -316,5 +388,20 @@ container appears anywhere in the producer. The committed example,
 is regenerated and drift-checked in CI, and byte pins in the producer's own
 test suite defend the field order — which, as in every scene schema, **is**
 the JSON key order and is contract. A changed meaning mints
-`scene/surrounds/v2` alongside this one; it is never renamed and never
+`scene/surrounds/v3` alongside this one; it is never renamed and never
 reordered in place.
+
+## v1 → v2: what changed and why
+
+`scene/surrounds/v1` banded `relief` against the raw `elevation_m` reading —
+an absolute isostatic elevation, not a height above sea level. On a world
+whose sea level sits far from zero on that datum (seed 42's is
+−2936.17 m), that put almost all land in `shelf`: 8162 of the world's
+11,066 land cells, leaving exactly one cell `alpine`. v2 bands against the
+new `height_asl_m` field instead, and adds `sea_level_m` to the document so
+a consumer can re-derive any cell's band without a second query. Every
+observable `relief` value moved, which is why this is a new schema version
+rather than a silent correction (decision 0055's additive-or-versioned
+rule) — no producer in this repository emits the v1 document any longer,
+and `scene/surrounds/v1` was never part of `clients/world-wasm`'s catalog,
+so no client outside this repository read the wrong values either.

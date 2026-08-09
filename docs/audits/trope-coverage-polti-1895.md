@@ -1,4 +1,4 @@
-<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes report`. -->
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes --corpus tropes/polti.trope.json report`. -->
 
 # Trope coverage
 
@@ -110,7 +110,7 @@ that is the difference.
 
 ## Supply
 
-278 registered tokens no situation in this corpus requires.
+297 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -129,6 +129,7 @@ missing half before this list can serve it.
 - `concept:black-dragon-kind` (species)
 - `concept:blood` (language)
 - `concept:blue` (language)
+- `concept:blue-giant` (astronomy)
 - `concept:bone` (language)
 - `concept:boreal-stand` (climate)
 - `concept:brown` (language)
@@ -146,9 +147,11 @@ missing half before this list can serve it.
 - `concept:dark` (language)
 - `concept:day` (language)
 - `concept:desert` (climate)
+- `concept:desert-dwarf-kind` (species)
 - `concept:dire-wolf-kind` (species)
 - `concept:drink` (language)
 - `concept:earth` (language)
+- `concept:east` (language)
 - `concept:eat` (language)
 - `concept:eclipse` (astronomy)
 - `concept:epipelagic` (climate)
@@ -177,6 +180,7 @@ missing half before this list can serve it.
 - `concept:grass-sward` (climate)
 - `concept:great` (language)
 - `concept:green` (language)
+- `concept:gully-dwarf-kind` (species)
 - `concept:hadal-trench` (climate)
 - `concept:hamada` (climate)
 - `concept:hand` (language)
@@ -184,9 +188,11 @@ missing half before this list can serve it.
 - `concept:heat` (climate)
 - `concept:high` (language)
 - `concept:hill` (terrain)
+- `concept:hill-dwarf-kind` (species)
 - `concept:hobgoblin-kind` (species)
 - `concept:holdfast-tangle` (climate)
 - `concept:home` (settlement)
+- `concept:human-kind` (species)
 - `concept:hydrothermal-vent` (climate)
 - `concept:ice` (climate)
 - `concept:ice-lead` (climate)
@@ -217,10 +223,14 @@ missing half before this list can serve it.
 - `concept:night` (astronomy)
 - `concept:nodule-field` (climate)
 - `concept:north` (language)
+- `concept:north-east` (language)
+- `concept:north-west` (language)
 - `concept:old` (language)
 - `concept:old-growth` (climate)
 - `concept:one` (language)
 - `concept:open-blue` (climate)
+- `concept:orange-dwarf` (astronomy)
+- `concept:orange-giant` (astronomy)
 - `concept:otyugh-kind` (species)
 - `concept:over` (language)
 - `concept:owlbear-kind` (species)
@@ -231,6 +241,8 @@ missing half before this list can serve it.
 - `concept:rain` (climate)
 - `concept:red` (language)
 - `concept:red-dragon-kind` (species)
+- `concept:red-dwarf` (astronomy)
+- `concept:red-giant` (astronomy)
 - `concept:reef-rubble` (climate)
 - `concept:reef-shark-kind` (species)
 - `concept:reg` (climate)
@@ -254,6 +266,8 @@ missing half before this list can serve it.
 - `concept:snow` (climate)
 - `concept:snowfield` (climate)
 - `concept:south` (language)
+- `concept:south-east` (language)
+- `concept:south-west` (language)
 - `concept:spring` (terrain)
 - `concept:spur-and-groove` (climate)
 - `concept:staghorn-stand` (climate)
@@ -261,6 +275,7 @@ missing half before this list can serve it.
 - `concept:starlit` (language)
 - `concept:stone` (terrain)
 - `concept:sun` (astronomy)
+- `concept:sun-like-star` (astronomy)
 - `concept:taiga` (climate)
 - `concept:temperate-forest` (climate)
 - `concept:temperate-grassland` (climate)
@@ -286,14 +301,18 @@ missing half before this list can serve it.
 - `concept:vent-plume` (climate)
 - `concept:vine` (climate)
 - `concept:water` (language)
+- `concept:west` (language)
 - `concept:wheat` (climate)
 - `concept:white-dragon-kind` (species)
+- `concept:white-dwarf` (astronomy)
 - `concept:wind` (language)
 - `concept:wind-scour` (climate)
 - `concept:wooded-grassland` (climate)
 - `concept:woolly-mammoth-kind` (species)
 - `concept:xorn-kind` (species)
 - `concept:yellow` (language)
+- `concept:yellow-dwarf` (astronomy)
+- `concept:yellow-white-dwarf` (astronomy)
 - `phenomenon:ambient`
 - `phenomenon:celestial-body`
 - `phenomenon:heliacal-setting`

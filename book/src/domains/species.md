@@ -30,39 +30,93 @@ Culture's rule table stays exactly what it was, one reviewed function, and
 grows a parameter; adding a third people later edits no code that goblins or
 kobolds depend on, only a row in a registry.
 
-**The closed vector, baseline goblin.** What was authored as one closed
+**The closed vector, and the manikin.** What was authored as one closed
 six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-five settling peoples and, since *The Eremite*, the three solitary dragons
+nine settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
 nomadic band would carry a society without ever settling — though today that
-set is exactly the five settling peoples, since no `Gregarious` kind is yet
+set is exactly the nine settling peoples, since no `Gregarious` kind is yet
 minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
 left open and recorded rather than filled, because a settlement-free people
-is unaudited everywhere downstream of a settlement. Goblin is the baseline for both: every
-scalar sits at exactly 0.5, every enum at its goblin variant, and every
-downstream formula that reads either vector is built so the baseline value
-reproduces today's behavior — not tuned to match, but constructed to match,
-by writing the formula as an expression like `0.5 + time_horizon` or
-`1.5 − threat_response` that evaluates to today's plain constant precisely
-when the vector reads "goblin." A consumer that needs a society reading for
-a kind that carries none resolves `SocietyVector::baseline()`, defined to
-equal goblin's authored society dims exactly, so a solitary creature's
-absent society reads as "goblin-shaped," never as an error or a zero. This
-is the mechanism, not merely a claim, behind the campaign's keystone test: a
-world generated with the species pin restricted to goblin must be
-byte-identical to a world generated before species existed at all, because
-"goblin" and "no species substrate" are, by construction, the same input to
-every formula in the cascade — and *The Cloister*'s own keystone test
+is unaudited everywhere downstream of a settlement.
+
+Both vectors are read against a **manikin**: a reference vector belonging to
+no creature. Every scalar is a bare ratio in `[0, 1]` whose `0.5` is the
+manikin's **neutral midpoint** — the reading that leans neither way, and the
+genuine middle of the interval. The three enumerations are a different case,
+and the asymmetry is real rather than papered over: an authority shape and a
+waking schedule have no middle, so `Hierarchic`, `Rank`, and `Diurnal` are
+the manikin's **designated defaults** — chosen because something had to be,
+not because they are neutral, average, or typical. The manikin carries no
+identifier and no registry row, and it has neither mass nor niche: it cannot
+be placed in a world, because there is no body to place. It is described at
+length in [The Manikin](./manikin.md).
+
+Goblin is currently authored at exactly the manikin's values — every scalar
+at 0.5, every enumeration at the designated default. That is a fact about
+goblin rather than a fact about the manikin: goblin was the first people
+written down, and its row was never characterised so much as left where it
+started. A characterization test pins the coincidence, so that giving goblin
+a temperament of its own later arrives as a visible change to that test
+rather than as a silent shift in every goblin-bearing world.
+
+Every downstream formula that reads either vector is built so that the
+manikin's values reproduce today's behavior — not tuned to match, but
+constructed to match, by writing the formula as an expression like
+`0.5 + time_horizon` or `1.5 − threat_response` that evaluates to today's
+plain constant precisely when the vector reads the manikin. A consumer that
+needs a society reading for a kind that carries none resolves the manikin's
+society vector, so a solitary creature's absent society reads as the
+reference figure's, never as an error or a zero. This is the mechanism, not
+merely a claim, behind the campaign's keystone test: a world generated with
+the species pin restricted to goblin must be byte-identical to a world
+generated before species existed at all, because goblin — sitting where it
+happens to sit — and "no species substrate" are, by construction, the same
+input to every formula in the cascade. *The Cloister*'s own keystone test
 extends the claim one level: cleaving the vector in two moves no byte of any
 generated world or reference artifact, verified by full regeneration and
 diff, not merely asserted.
+
+**The society vector is a grid/group instrument, and since *The Tolerance* the
+chapter says so.** Douglas's cultural theory arranges societies on two axes —
+*grid*, how rule-bound a life is, and *group*, how bounded "us" is — into four
+biases: hierarchy, egalitarian/sect, individualist, fatalist. Sociality mode is
+this model's grid and in-group radius is its group, and reading them that way
+is a commitment rather than an observation: it says that a people's cosmology,
+its appetite for risk and its stance toward outsiders are things to be
+**derived from where it sits on two axes**, not authored one people at a time.
+Adding a people then becomes a matter of placing it, and the placement carries
+predictions that can be wrong. The adoption is presently documentary — no
+consumer reads a quadrant yet, because both axes are per-people constants and
+wiring one into behaviour without a measurement attached would have been an
+unpreregistered change. What is recorded is the reading, so the campaign that
+wants it inherits an argument instead of inventing one.
+
+**A people is authored as a location and a spread.** Every scalar above names
+where a people sits; since *The Tolerance* a second number beside it names how
+far its members scatter around that point, one dispersion per vector rather
+than one per dimension. The frame is stated rather than left implicit — the
+authored value is the **mean**, and the dispersion is a standard deviation
+about it — because an unstated frame is the defect The Manikin removed one
+level up. The family is stated for the same reason: the draw is a **uniform on
+±√3σ**, clamped to the axis, the half-width chosen so that a uniform's variance
+`a²/3` makes the realized standard deviation exactly the authored `σ`. A uniform
+gives *spread* but not *rare extremes* — beyond its support the probability is
+zero, not small — so a consumer that needs the exceptional member rather than
+the merely varied one needs a different family, not a larger number. Zero
+reproduces the older model exactly: a people every one of whose members is the
+same member. The consequence is not decorative. A threshold
+applied to a distribution is not the same operation as a threshold applied to
+its mean, so a people authored *below* a behavioural gate no longer simply
+lacks the behaviour; some fraction of it clears the gate, and which fraction is
+a property of the spread its authors gave it.
 
 **The authoring corpus.** Kobold's six numbers are not measured, drawn, or
 fit — they are read. The project's method for authoring a new people is to
@@ -88,26 +142,33 @@ reproduced here — only parameter derivations, paraphrased to one line each.*
 **The kobold mind card** (the three individual dims, carried by every minded
 kind — including a solitary creature with no society of its own):
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation |
+| Dimension | Type | Manikin | Kobold | 5E derivation |
 |---|---|---|---|---|
 | Threat response (flee ↔ stand) | scalar `[0,1]` | 0.5 | 0.8 | cowardly in the open field, but entrenched at home behind the traps and tunnels the warren has prepared |
 | Deliberation latency | scalar `[0,1]` | 0.5 | 0.7 | communal decisions arrive by slow consensus |
 | Time horizon | scalar `[0,1]` | 0.5 | 0.8 | generational works — tunnel complexes, egg-tending — that pay off only across years |
 
+Goblin's authored mind currently coincides with the Manikin column exactly.
+
 **The kobold society card** (the three community dims, carried only by a
 `Settled` kind; a solitary creature carries none, and a consumer that needs a
-society reading for one resolves the goblin-equal baseline instead):
+society reading for one resolves the manikin's society vector instead):
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation |
+| Dimension | Type | Manikin | Kobold | 5E derivation |
 |---|---|---|---|---|
 | In-group radius | scalar `[0,1]` | 0.5 | 0.2 | insular warrens; loyalty runs tight and does not extend past the pack |
 | Sociality mode | enum | Hierarchic | Communal | pack tactics and communal egg-tending, not a chief's household |
 | Status basis | enum | Rank | Knowledge | trap-cunning and craft esteemed over raw dominance |
 
+Goblin's authored society coincides with the Manikin column here too. Note
+that the two enumeration rows are designated defaults, not midpoints: only
+the in-group radius row is a genuine middle.
+
 Kobold's values are authored judgment, not a fixed translation — the
 design's requirement is only that they land somewhere meaningfully unlike
-the goblin baseline, and that 0.5 (or the goblin enum variant) always means
-goblin. A vocabulary rides alongside the vector, one word per rung: kobold's
+the manikin, and that `0.5` always means the neutral midpoint rather than
+any particular people's reading. A vocabulary rides alongside the vector,
+one word per rung: kobold's
 worker rung is always "digger" — fixed regardless of subsistence mode,
 unlike goblin's, which still names the subsistence worker itself
 (farmer/herder/fisher/forager) — and kobold's warrior, artisan, shaman, and
@@ -151,10 +212,13 @@ formula, a species-specific characteristic hour and salience lens that
 crowns the moons and the night sky over the sun. See
 [Perception](./perception.md) for the vector, the lens derivation, and what
 it let religion do with two peoples instead of one. Campaign Y2-3 (The
-Tongues) added a third: a closed six-dimension **articulation vector** —
+Tongues) added a third: a closed **articulation vector** —
 labiality, vowel-space breadth, voicing contrast, sibilance, voice
-loudness, and an exotic manner a species' anatomy affords — again authored
-at the goblin baseline and read from the same D&D 5E corpus for kobold. Since
+loudness, a tonality the phonology epoch later added, and an exotic manner a
+species' anatomy affords — again read against a manikin of its own, and read
+from the same D&D 5E corpus for kobold. That manikin is not uniformly `0.5`:
+tonality's `0.0` and the exotic manner's `None` are designated defaults, not
+midpoints. Since
 *The Dissolution* the articulation vector is owned by `domains/language`
 itself — its true home, the domain that reads it to build every name — rather
 than by `domains/species`, keyed to the same kind. See
@@ -189,18 +253,21 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency, social organization — the row every kind carries and the packer
-and habitat model read)
+potency, social organization, life schedule — the row every kind carries and
+the packer and habitat model read), plus a **sparse** habitat-realm component
+carried only by kinds that do not live on the surface: two today, the xorn and
+the rust monster, whose capacity is scored against a chamber's conditions and
+gated on whether the cell holds a cave at all
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the five settling
+mind — so the three chromatic dragons carry it alongside the nine settling
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
-`Gregarious` or `Settled` kind) carries it, which today is exactly the four
+`Gregarious` or `Settled` kind) carries it, which today is exactly the nine
 settling peoples — a `Solitary` dragon carries none.
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
@@ -233,7 +300,7 @@ society gates on *sociality*, a different axis, not on how far up the
 mind-perception-speech chain a kind climbs; the three chromatic dragons climb
 it all the way — each carries a mind, perceives, and speaks — and are absent
 only from Society. A consumer that needs a society reading for a solitary
-kind resolves `SocietyVector::baseline()`, the goblin-equal values.
+kind resolves the manikin's society vector.
 
 What the old `Option<PeopledTraits>`
 once guaranteed by the shape of a type — the peopled traits together or none —
@@ -293,8 +360,8 @@ dial, a centuries-long hoarder) and, since *The Vigil*, a perception vector
 Draconic tongue — see [Language](./language.md)) — but no society vector at
 all. A consumer that needs a society reading for a dragon — there is none
 among the unplaced-path consumers today, since dragons are not yet placed —
-resolves `SocietyVector::baseline()`, defined to equal the goblin row above
-exactly.
+resolves the manikin's society vector, which the goblin column above
+currently happens to match.
 
 **No drawn parameter lives on a species.** Every cell in the table above is
 authored; `stream_labels()` in `domains/species` returns an empty vector
@@ -309,21 +376,46 @@ horizon into the carrying-capacity field each species reads (see
 Gathering* moved population from a per-site draw to a field readout, but
 still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
-with respect to, never a distribution of its own.
+with respect to.
+
+That sentence survives *The Tolerance*; the clause that used to close it —
+*"never a distribution of its own"* — does not.
+`stream_labels()` here is still empty and every cell in the
+table above is still authored — the dispersion beside each vector is authored
+exactly like the location it accompanies, and the draw that reads the pair
+lives at the composition root, where a settlement's founding site and year are
+in scope. But a species is no longer *"never a distribution of its own"*, which
+is what this chapter said until a people acquired a second authored number.
+The distinction worth keeping is between where a distribution is **written
+down** and where it is **sampled**: the first is here, the second is not, and
+`domains/species` remains a domain a seed never touches.
 
 **Threat response found a second, sharper consumer in *The Tumult*.** Where
 demography folds it smoothly into a capacity term, the deep-history bake's
-conflict rule reads it as a **gate**: a people whose threat response falls
+conflict rule reads it as a **gate**: a settlement whose threat response falls
 below a fixed threshold does not raid at all, however strong it is on paper.
 Two things follow that are worth recording here rather than only in
 [Settlement](./settlement.md). First, the gate produces an **asymmetric**
-aversion structure with no pairwise machinery whatever — each people gates on
-its *own* authored number, so one people can decline a fight its neighbour is
-happy to pick — and on the shipped roster it means the goblin, at 0.5, never
-raids anyone while the other four may. Second, and more pointed at the time:
-threat response was for one campaign the **only** per-species input the bake
-received, so every people-to-people asymmetry the deep past produced ran
-through a single scalar.
+aversion structure with no pairwise machinery whatever — each raider gates on
+its *own* number, so one community can decline a fight its neighbour is happy
+to pick. Second, and more pointed at the time: threat response was for one
+campaign the **only** per-species input the bake received, so every
+people-to-people asymmetry the deep past produced ran through a single scalar.
+
+**The gate sorted *kinds* until *The Tolerance*, and now sorts *places*.** For
+two campaigns the comparison read a species constant, so every settlement of a
+people answered it identically and one could say flatly that the goblin and the
+human — both authored at 0.5 — never raided while the other four might. That
+sentence was only ever sayable because a people was a point. Once a people
+became a distribution, the gate's input became a *draw*: each settlement takes
+its own threat response from its people's authored mean and dispersion, keyed
+on where and when it was founded. Every one of the six settling peoples the
+campaign measured — the roster has since grown to nine, which that
+measurement does not cover — now has
+settlements on both sides of the threshold — the assertive ones mostly above it
+and the neutral ones mostly below, but none wholly either. Warlikeness became a
+property of a place rather than of a kind, which is what makes an aversion
+between two neighbouring towns of the same people expressible at all.
 
 **That is no longer true, and the two scalars that joined it were already
 authored and simply unread.** *The Tithe* gave the bake a standing tribute
@@ -336,8 +428,14 @@ at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
 community grows logistically, maximum sustainable yield sits at half of
 capacity, so a generational patron holds its vassal near that peak while an
 immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
-bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's horizon is 0.5 but
-its threat response bars it from raiding at all, so it never becomes a patron —
+bugbear (0.3), goblin (0.5), hobgoblin (0.5), human (0.75), gully-dwarf (0.8),
+kobold (0.8), hill-dwarf (0.85), desert-dwarf (0.9) — the dwarf family, whose
+long life *The Delvers* authored, sitting at the generational end of it. Until
+*The Tolerance* that list stopped at four: the goblin's and the human's threat
+responses were both authored at 0.5, below the raid threshold, so as *kinds*
+neither could ever take the initiative and neither could ever become a patron.
+Now that threat response is drawn per settlement, a particular goblin or human
+town can clear the gate, and the full ordering above is reachable —
 and extraction rate and relation lifetime are both monotone in that order. It
 is also the mechanism by which a subjugated people can be extinguished at all,
 since extermination is optimal exactly when the discount rate exceeds intrinsic
@@ -370,10 +468,13 @@ than lost. The correction is one subtraction at the substrate boundary
 an authored number can mean something in. The optima are now stated against
 the measured distribution of settleable land — median 1561 m above sea level,
 quartiles 621 m and 2651 m, the 95th percentile at 4148 m — and the four
-peoples tile it: bugbear's lowland at the 15th percentile, hobgoblin's plains
-at the 24th, goblin's wide generalist curve centred on the median, and
-kobold's stronghold at the 79th, with the giant goat's alpine ceiling above it
-at the 91st. Measured over the same seeds, the kobold is now the best-fit
+peoples of that roster tile it: bugbear's lowland at the 15th percentile,
+hobgoblin's plains at the 24th, goblin's wide generalist curve centred on the
+median, and kobold's stronghold at the 79th, with the giant goat's alpine
+ceiling above it at the 91st. The three dwarves *The Delvers* added are
+authored against the same distribution and fill in below the median —
+gully-dwarf at 150 m, desert-dwarf at 700 m, hill-dwarf at 900 m — which is
+the crowded end of it. Measured over the same seeds, the kobold is now the best-fit
 people on every settleable cell above 3000 m and the worst below 500 m, which
 is what "highlander" was always supposed to mean. The lesson generalizes past
 this one axis: **a unit is not a frame.** Both quantities were honest metres;
@@ -425,8 +526,9 @@ for four campaigns.
 
 **The coverage table and the non-void rule.** That discovery is why the roster
 now ships with two instruments beside it. A committed table names every declared
-state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`, and
-`StatusBasis` variant, plus the trait *combinations* that matter — and records
+state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`,
+`StatusBasis`, and `LifeSchedule` variant, plus the trait *combinations* that
+matter — and records
 which kinds witness it, so a state cannot silently lose its witness or gain an
 unintended one. It deliberately does not demand that every variant be witnessed:
 an empty cell is a legitimate creature-design prediction, and a rule forbidding
@@ -461,7 +563,7 @@ religion across more than a pair, once a third people exists to make
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;
-inter-species politics, trade, and conflict; and, past five, however many
+inter-species politics, trade, and conflict; and, past six, however many
 further peoples the registry is asked to hold.
 
 One limit is now measured rather than suspected. Carrying capacity is a supply

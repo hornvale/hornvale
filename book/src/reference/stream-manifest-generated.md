@@ -59,9 +59,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `history` | root stream for history: reserved for the deep-history bake (run at the composition root); no draw is made against it directly |
 | `history/residue` | flesh::residue_of's deterministic flavor draws |
 | `history/structures` | flesh::structures_of's dwelling-count variance draws |
-| `history/bake` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root |
+| `history/bake/v2` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake by The Contour's position-aware conflict, which changes committed history without moving stream consumption order (decision 0006: an epoch suffix, never a rename) |
 | `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset; further derives a per-people sub-stream history/genesis/<people-kind> via StreamLabel::dynamic |
-| `history/flesh` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed) |
+| `history/flesh/v2` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed); keyed on the occupation's material core, bumped from history/flesh by The Salt |
 
 ### hornvale-kernel
 
@@ -85,13 +85,14 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/name/deity/v2` | (retired at The Wearing, superseded by name/deity/v3) the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
 | `language/<species>/name/epithet/v2` | (retired at The Wearing, superseded by name/epithet/v3) the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above |
 | `language/<species>/name/settlement/v3` | the glossed settlement name (The Wearing): composed from the lexicon's roots/compounds under the species' drawn headedness, each morpheme first worn to its frequency in this culture's own name corpus. The epoch bump is owed to two changes in what this stream consumes — the wear, and the RETIREMENT of v2's per-salt drawn stem (decision 0024: uniqueness is reference-time, and no future work fixes collisions by adding entropy) |
+| `language/<species>/name/person` | the given-name element of a personal name (The Namesake), salted by the bearer's role handle: a bare 2-3 syllable stem. No epoch suffix — this label is new, not a regeneration of an existing one (decision 0084: an epoch is declared only when a derivation moved) |
 | `language/<species>/name/deity/v3` | the glossed deity name (The Wearing): as v2, reseeded by the epoch bump the settlement stream owes. Deity names carry no name corpus (their space is one-per-belief, not a scatter), so nothing wears here |
 | `language/<species>/name/epithet/v3` | the glossed epithet (The Wearing): as v2, reseeded by the epoch bump. No name corpus, so nothing wears here |
 | `language/<family>/lexicon/root/v3/<concept>` | per-concept family proto-root, injectively and MERGER-AWARELY assigned (epoch root/v3): the open-addressing draw also rejects a core candidate whose evolved form would merge with an already-placed core concept in any daughter, so core homophony is zero; family == species for a singleton stock. Probe re-draws key a /probe/<n> sub-stream |
 | `language/<family>/lexicon/root/v2/<concept>` | (retired by the merger-aware assignment, superseded by root/v3) the injective-but-proto-only family assignment |
 | `language/goblin/lexicon/root/<concept>` | (retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root |
-| `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
-| `language/<species>/lexicon/cascade/wear` | the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing) |
+| `language/<species>/lexicon/cascade/v2` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Task 8b (same unreleased v2 epoch, per decision 0089: it lands together, so one suffix is the truthful count) adds a second, orthogonal gate: draw_rule now also checks the SPECIES' OWN drawn phonology (via draw_cascade_with_regime/draw_wear_cascade's new Phonology parameter) and drops Tonogenesis unless the phonology can host a toned vowel, and drops VowelShift unless it admits an adjacent-height vowel pair — a cascade may not draw a rule its phonology cannot host, one level up from Task 7's cannot-condition guard. Draw count is unchanged either way (Stream::pick is one draw at any slice length); only the drawn values move |
+| `language/<species>/lexicon/cascade/v2/wear` | the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing). Reseeded by the same v2 epoch bump as its parent leg |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
 | `language/<species>/grammar/constituent-order` | the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights) |
 | `language/<species>/grammar/copula` | whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology |
@@ -187,6 +188,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `room/chambers/v1` | which chambers a structure has |
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
+| `room/layout/v1/anchors` | where a chamber's anchors land in its cells |
 
 ### hornvale-worldgen
 
@@ -198,6 +200,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-schema` | the doctrine-voice twin of the folk schema-selection leg |
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
+| `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
+| `chamber/v1` | the underworld chamber derivation |
 
 ### hornvale-kernel (internal)
 

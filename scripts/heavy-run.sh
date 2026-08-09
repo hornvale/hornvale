@@ -64,12 +64,19 @@ require_canonical_census_host heavy || exit 1
 why="exit"
 record_outcome() {
     local code=$1
+    # `$run_root`, NOT `$repo_root`: with HV_HEAVY_REF the run happens in a
+    # dedicated worktree, and logging the CALLER's HEAD attributes the run to
+    # whatever this checkout happened to be parked on. It did exactly that on
+    # 2026-08-05 — the ledger recorded 148a77a4 (main) for a run verifiably at
+    # 27c85a18 — and every row written before this fix is wrong the same way.
+    # `run_root` is assigned below, after the traps are installed, so the
+    # fallback covers a death in between.
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         "$why" \
         "$code" \
         "$((SECONDS - run_began))" \
-        "$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || echo '-')" \
+        "$(git -C "${run_root:-$repo_root}" rev-parse --short HEAD 2>/dev/null || echo '-')" \
         "$run_log" \
         >> "$outcome_log"
 }
@@ -93,9 +100,24 @@ if [ -n "${HV_HEAVY_REF:-}" ]; then
     # Run a specific ref in a dedicated worktree, so the caller's own checkout
     # (and this canonical one) are left untouched. Path is outside the repo to
     # keep `git status` clean here.
+    # Resolve the path: `git worktree list` prints REAL paths, so an
+    # unresolved `$repo_root/../hornvale-heavy-wt` never matches the grep
+    # below. `pwd -P`, not plain `pwd`: the logical form still carries any
+    # symlink in the path, which `git worktree list` will have resolved away.
+    # The `if` keeps the unresolved form for the not-yet-created case — the
+    # `cd` fails, the assignment never happens, and `$wt` is left alone.
     wt="${HV_HEAVY_WORKTREE:-$repo_root/../hornvale-heavy-wt}"
+    if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
+        wt="$wt_resolved"
+    fi
     git -C "$repo_root" fetch --all --quiet
-    if [ -d "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
+    # `-e`, not `-d`: a linked worktree's `.git` is a FILE (a gitdir pointer),
+    # never a directory. With `-d` this test is always false, and with the
+    # unresolved path above the grep was always false too — so both guards
+    # failed together and the `else` branch ran `worktree add` over an existing
+    # worktree, which is fatal. Two exit-128 dispatches during The Tolerance
+    # were this, and the fix was to delete the worktree by hand.
+    if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
         git -C "$wt" fetch --all --quiet
         git -C "$wt" checkout --force "$HV_HEAVY_REF"
         git -C "$wt" reset --hard "$HV_HEAVY_REF" --quiet

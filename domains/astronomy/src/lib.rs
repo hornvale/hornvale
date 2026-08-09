@@ -9,6 +9,7 @@ pub mod facts;
 pub mod figures;
 pub mod forcing;
 pub mod heliacal;
+pub mod illuminant;
 pub mod moons;
 pub mod neighborhood;
 pub mod night_sky;
@@ -39,6 +40,7 @@ pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
+pub use illuminant::{at_elevation, daylight};
 pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
@@ -52,21 +54,22 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, Star, T_MAX, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
-    luminosity_at, main_sequence_lifetime, planet_age,
+    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, common_words,
+    generate_star, insolation_rel, insolation_rel_at, luminosity_at, main_sequence_lifetime,
+    planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, LightYears, LocalDays, LunarMasses,
-    Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, Kelvin, LightYears, LocalDays,
+    LunarMasses, Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
-    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, RegistryError, Venue, Visibility,
-    Void, WorldTime,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Referent, RegistryError, Venue,
+    Visibility, Void, WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -107,7 +110,8 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::STAR_CLASS,
         true,
-        "the host star's descriptive spectral class",
+        "the host star's spectral class, as a registered concept id (Morgan-Keenan \
+         prose is rendered from it at read time by windows/book, never stored)",
     )?;
     registry.register_predicate(
         facts::TIDALLY_LOCKED,
@@ -406,6 +410,57 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             }),
         })?;
     }
+    // The spectral classes (§3.1 of the campaign spec). These are the first
+    // concepts in the workspace to use `Void::Unnamed`, and the distinction it
+    // draws is the point: a star HAS a class whether or not anyone has
+    // invented spectroscopy, so the fact is objective and must be
+    // representable — but no culture here has encountered the main sequence,
+    // so no word realizes it. That is `Unnamed`, not `Gap`: `Gap` says WE have
+    // not got to it, and these are not waiting on us.
+    //
+    // The keys below are machine identifiers, never words. `Unnamed` is
+    // precisely the assertion that no word exists; a renderer meeting one must
+    // circumlocute (the way `packs.rs`'s compound recipes give `sea` as "many
+    // water"), never emit the key.
+    for (name, doc) in [
+        ("orange-dwarf", "a cooler, dimmer main-sequence star"),
+        ("yellow-dwarf", "a main-sequence star of the sun's own kind"),
+        (
+            "yellow-white-dwarf",
+            "a hotter, brighter main-sequence star",
+        ),
+        ("red-dwarf", "the commonest and faintest main-sequence star"),
+        (
+            "sun-like-star",
+            "a distant star resembling this world's own sun",
+        ),
+        ("white-dwarf", "the dense cinder a spent star leaves"),
+        (
+            "orange-giant",
+            "a cooling star swollen off the main sequence",
+        ),
+        ("red-giant", "a cool, vast star late in its life"),
+        ("blue-giant", "a hot, brilliant, short-lived star"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Unnamed(
+                "no culture here has encountered the main sequence",
+            )),
+            percept: Correspondent::Absent(Void::Imperceptible(
+                "a spectral class is inferred from a spectrum, never seen; \
+                 what is seen is the star's colour",
+            )),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
     registry.register_manifest(Manifest {
         concept: ConceptDef {
             name: "night".to_string(),
@@ -444,13 +499,18 @@ impl hornvale_kernel::Domain for Astronomy {
 pub struct ConstantSun;
 
 /// What the sky looks like at a given moment.
-/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies)
+/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies), bare-ok(identifier-text: body_phrases)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkyReport {
     /// Human-readable description of the sky.
     pub description: String,
     /// Names of the visible bodies.
     pub bodies: Vec<String>,
+    /// One `(noun, datum)` per body the description names, in description
+    /// order — the sun, then each moon. `bodies` above is the machine-side
+    /// list (`"moon 1"`); these are the words the prose actually used ("the
+    /// vast moon"), which is what a reader can name.
+    pub body_phrases: Vec<(String, String)>,
 }
 
 impl ConstantSun {
@@ -460,6 +520,10 @@ impl ConstantSun {
             description: "A golden sun hangs fixed at zenith. It has never been seen to move."
                 .to_string(),
             bodies: vec!["the sun".to_string()],
+            body_phrases: vec![(
+                "the sun".to_string(),
+                "A golden sun hangs fixed at zenith.".to_string(),
+            )],
         }
     }
 
@@ -474,7 +538,7 @@ impl PhenomenaSource for ConstantSun {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: CELESTIAL_BODY.to_string(),
-            description: "a golden sun fixed at zenith".to_string(),
+            referent: Referent::of("sun"),
             period_days: None,
             salience: 1.0,
             venue: Venue::DaySky,
@@ -530,6 +594,36 @@ mod tests {
                 .unwrap_or_else(|| panic!("missing concept {name}"));
             assert_eq!(c.domain, "astronomy");
             assert_eq!(c.kind, ConceptKind::Celestial);
+        }
+    }
+
+    /// The spectral classes are objectively real and nameless here: a star has a
+    /// class whether or not anyone has invented spectroscopy. `Void::Unnamed` is
+    /// the kernel's word for exactly that, and before this campaign no domain had
+    /// ever used it.
+    ///
+    /// Iterates `SPECTRAL_CLASSES` — the same table `star.rs` mints ids from —
+    /// rather than a second hand-written list of the nine names. Before this
+    /// fix, this test carried its own copy, so a typo in the registration loop
+    /// (`lib.rs`) and this table could each be wrong about the same class and
+    /// still agree with each other.
+    #[test]
+    fn spectral_classes_are_registered_as_unnameable() {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        register_concepts(&mut registry).expect("astronomy registers");
+
+        for (name, _display) in SPECTRAL_CLASSES {
+            let manifest = registry
+                .manifest(name)
+                .unwrap_or_else(|| panic!("{name} should be registered"));
+            assert!(
+                matches!(
+                    manifest.lexeme,
+                    hornvale_kernel::Correspondent::Absent(hornvale_kernel::Void::Unnamed(_))
+                ),
+                "{name}'s lexeme must be Absent(Unnamed) — it is real and no one here can name it, \
+                 which is not the same as Gap (a hole in OUR coverage)"
+            );
         }
     }
 }

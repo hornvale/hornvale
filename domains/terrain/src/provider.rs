@@ -41,6 +41,33 @@ const PREHUMAN_SCAR_OCTAVES: u32 = 4;
 /// type-audit: bare-ok(ratio)
 const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
 
+/// Promote a pointwise `Aquifer` reading to `Spring`: `hydrogeology`
+/// classifies one cell's rock, but a spring is not a property of a single
+/// cell, it is a property of a *contact* — "where an aquifer meets the
+/// surface with flow" (The Witness, Task 5b; decision 0085's precedent for
+/// splitting durable pointwise petrophysics from derived geometry). Any
+/// other pointwise reading passes through unchanged. Free of `Geosphere`/
+/// `TectonicGlobe` so it is unit-testable on a hand-built neighbourhood,
+/// mirroring the pattern `hydrogeology` itself already uses.
+fn promote_to_spring(
+    base: crate::lithology::Hydro,
+    cell_elevation: ReferenceElevation,
+    neighbors: impl Iterator<Item = (crate::lithology::Hydro, ReferenceElevation)>,
+) -> crate::lithology::Hydro {
+    if base != crate::lithology::Hydro::Aquifer {
+        return base;
+    }
+    let descending_contact = neighbors.into_iter().any(|(nb_hydro, nb_elevation)| {
+        nb_hydro != crate::lithology::Hydro::Aquifer
+            && nb_elevation.total_cmp(cell_elevation) == std::cmp::Ordering::Less
+    });
+    if descending_contact {
+        crate::lithology::Hydro::Spring
+    } else {
+        crate::lithology::Hydro::Aquifer
+    }
+}
+
 impl GeneratedTerrain {
     /// Wrap a genesis outcome with the Geosphere it was generated over.
     /// Panics (fail fast) if the mesh and the globe disagree on cell count —
@@ -168,6 +195,22 @@ impl GeneratedTerrain {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
 
+    /// The nearest reachable same-plate contact — how far, and what kind.
+    ///
+    /// [`boundary_at`](Self::boundary_at) answers only for a cell that *is* a
+    /// contact; this answers for any cell, by reading the kind off the boundary
+    /// cell the distance field already attributes as the source. A consumer
+    /// that cares about the stress *regime* rather than mere proximity needs
+    /// the kind — a rift and a collision sit the same distance away and do
+    /// opposite things to a fracture. The distance field seeds every boundary
+    /// cell with `(0, itself)`, so the kind is always present when the distance
+    /// is.
+    /// type-audit: bare-ok(count: return)
+    pub fn nearest_boundary_at(&self, id: CellId) -> Option<(u32, crate::BoundaryKind)> {
+        let (hops, cell) = (*self.globe.boundary_distance.get(id))?;
+        Some((hops, self.boundary_at(cell)?.kind))
+    }
+
     /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation; agrees with `material_at`'s
     /// `induration` axis everywhere.
@@ -210,13 +253,21 @@ impl GeneratedTerrain {
         *self.globe.carve_delta_m.get(id)
     }
 
-    /// The hydrogeologic class at a cell (The Ground, spec §3).
+    /// The hydrogeologic class at a cell (The Ground, spec §3). `hydrogeology`
+    /// itself is pointwise matrix petrophysics and never returns `Spring`
+    /// (The Witness, Task 5b); this is the one place that promotes an
+    /// `Aquifer` reading to `Spring` when the cell sits at a descending
+    /// contact — see [`promote_to_spring`] and decision 0085 (pointwise
+    /// petrophysics is the durable signal, geometric promotion is derived
+    /// from it, computed here where the geosphere is in hand).
     pub fn hydro_at(&self, id: CellId) -> crate::lithology::Hydro {
-        crate::lithology::hydrogeology(
-            &self.material_at(id),
-            self.drainage_at(id),
-            self.is_ocean(id),
-        )
+        let base = crate::lithology::hydrogeology(&self.material_at(id), self.is_ocean(id));
+        let cell_elevation = self.elevation_at(id);
+        let neighbors = self.geosphere.neighbors(id).iter().map(|&nb| {
+            let nb_hydro = crate::lithology::hydrogeology(&self.material_at(nb), self.is_ocean(nb));
+            (nb_hydro, self.elevation_at(nb))
+        });
+        promote_to_spring(base, cell_elevation, neighbors)
     }
 
     /// Cave/karst void-proneness at a cell, `[0,1]` (The Ground, spec §3).
@@ -226,25 +277,36 @@ impl GeneratedTerrain {
     }
 
     /// The cave at a cell, if the fluid-flow point process places one.
+    ///
+    /// Kind is selected BEFORE existence is tested (`features::cave_process`),
+    /// existence is gated on that kind's own proneness against a uniformized
+    /// noise sample, and depth reads the cell's stratigraphic column — the
+    /// three repairs of The Hollow (spec §3).
     pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
         if self.is_ocean(id) {
             return None;
         }
+        let (kind, proneness) = crate::features::cave_process(
+            &self.material_at(id),
+            self.drainage_at(id),
+            self.crust_age_at(id),
+            self.nearest_boundary_at(id),
+        )?;
         let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let prob = crate::features::presence_prob(proneness, belt);
         let pos = self.geosphere.position(id);
-        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 5.0, 4);
-        let prob = crate::features::presence_prob(self.cave_proneness_at(id), belt);
+        let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+            self.globe.features_noise_seed(),
+            pos,
+            crate::features::CAVE_GATE_FREQ,
+            crate::features::CAVE_GATE_OCTAVES,
+        ));
         if noise >= prob {
             return None;
         }
-        let buf = self.material_at(id);
-        let near_fault = self.boundary_at(id).is_some();
-        let kind = crate::features::cave_kind(&buf, near_fault);
-        // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
-        let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
         Some(crate::features::Cave {
             kind,
-            depth_reach_bands,
+            deepest_band: crate::features::cave_depth(kind, &self.column_at(id), proneness),
         })
     }
 
@@ -557,6 +619,44 @@ mod tests {
     }
 
     #[test]
+    fn cave_at_agrees_with_the_kind_first_gate() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        for cell in geo.cells() {
+            let expected = if terrain.is_ocean(cell) {
+                None
+            } else {
+                crate::features::cave_process(
+                    &terrain.material_at(cell),
+                    terrain.drainage_at(cell),
+                    terrain.crust_age_at(cell),
+                    terrain.nearest_boundary_at(cell),
+                )
+                .and_then(|(kind, proneness)| {
+                    let belt = crate::features::belt_weight(terrain.boundary_distance_at(cell));
+                    let prob = crate::features::presence_prob(proneness, belt);
+                    let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+                        terrain.globe().features_noise_seed(),
+                        geo.position(cell),
+                        crate::features::CAVE_GATE_FREQ,
+                        crate::features::CAVE_GATE_OCTAVES,
+                    ));
+                    (noise < prob).then(|| crate::features::Cave {
+                        kind,
+                        deepest_band: crate::features::cave_depth(
+                            kind,
+                            &terrain.column_at(cell),
+                            proneness,
+                        ),
+                    })
+                })
+            };
+            assert_eq!(terrain.cave_at(cell), expected, "cell {cell:?} disagrees");
+        }
+    }
+
+    #[test]
     fn prehuman_scar_at_matches_the_ancient_crust_and_noise_gate() {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
@@ -576,5 +676,50 @@ mod tests {
                 "cell {cell:?} disagrees with the direct ancient-crust + noise gate"
             );
         }
+    }
+
+    #[test]
+    fn promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor() {
+        use crate::lithology::Hydro;
+        let hi = ReferenceElevation::new(100.0).unwrap();
+        let lo = ReferenceElevation::new(50.0).unwrap();
+
+        // Not an Aquifer to begin with -> passed through unchanged,
+        // regardless of the neighborhood.
+        assert_eq!(
+            promote_to_spring(Hydro::Karst, hi, [(Hydro::Runoff, lo)].into_iter()),
+            Hydro::Karst
+        );
+
+        // Aquifer with no neighbors at all -> stays Aquifer (still water).
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, std::iter::empty()),
+            Hydro::Aquifer
+        );
+
+        // Aquifer surrounded only by higher or equal non-aquifer neighbors
+        // -> no descending contact, stays Aquifer.
+        assert_eq!(
+            promote_to_spring(
+                Hydro::Aquifer,
+                hi,
+                [(Hydro::Runoff, hi), (Hydro::Aquitard, hi)].into_iter()
+            ),
+            Hydro::Aquifer
+        );
+
+        // Aquifer with a LOWER Aquifer neighbor only -> not a contact
+        // (both sides are the same rock type), stays Aquifer.
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, [(Hydro::Aquifer, lo)].into_iter()),
+            Hydro::Aquifer
+        );
+
+        // Aquifer with a lower NON-aquifer neighbor -> the descending
+        // contact a spring geologically is.
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, [(Hydro::Runoff, lo)].into_iter()),
+            Hydro::Spring
+        );
     }
 }

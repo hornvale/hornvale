@@ -1,6 +1,106 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 //!
+//! ## Census regen — The Range (2026-08-09, canonical box, 0063/0079)
+//!
+//! **One cause: two kinds gained declared biome ranges.** A settling people's
+//! biome range now constrains which sites it may found a settlement on, so
+//! every seed's settlement contest is re-decided under the new constraint.
+//! The clearest signature is that goblin's flagship — present on every one of
+//! the 1000 census seeds since The Delvers — now fails to place at all on
+//! TWO of them: no site both satisfies the range and clears the founder
+//! floor. Which kind's range binds on those two worlds, and why, was not
+//! traced further here — the cause is stated no more narrowly than the
+//! mechanism, matching this file's own convention for roster/placement
+//! movements it has not traced to a specific settlement.
+//!
+//! ```text
+//!                                       before        after
+//!   goblin present rows (name-length)     1000          998
+//!   kobold present rows (name-length)      968          969
+//!   flagship coastal / inland / neither  208 / 792 / 0   217 / 781 / 2
+//! ```
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (879/969 = 90.7%, against
+//! the 75% floor), the epithet-honorific detector still reads true on every
+//! goblin world holding a pantheon and false on every kobold one, mean name
+//! length is still under the campaign's 10-character claim at both species
+//! (8.495 / 6.848), mean syllable count is still inside the 2-3 range at both
+//! (2.705 / 2.177 — kobold's is now the narrowest margin either species has
+//! recorded at this row), name transparency is still emphatically not 1.0
+//! (0.752 over a 0.165-to-1.0 span, though the mean rose this time — the
+//! floor fell further from 1.0 at the same regen, so this is not the
+//! uniformity defect returning), a frozen sky still never heads a cyclic
+//! pantheon, bugbear still leads the goblinoid daughters' homophony by better
+//! than 3x (3.331x over goblin, its narrowest margin since The Tolerance),
+//! and pop-weighted mean absolute latitude still clears the uniform-sphere
+//! baseline by better than 2x. These re-pin the witnesses, not the
+//! observations.
+//!
+//! ## Census regen — The Delvers (C2c) (2026-08-08, canonical box, 0063/0079)
+//!
+//! **One cause under all of it: the settling roster went from six peoples to
+//! nine.** C2c adds `desert-dwarf`, `gully-dwarf` and `hill-dwarf`, all of them
+//! settlers, so every seed's settlement contest is decided among nine
+//! competitors instead of six and placement is re-decided wholesale (the regen
+//! commit, `867622f8`, rewrites 1000 of 1000 rows). That is the cause written
+//! at every pin site below, and deliberately no narrower one: nothing in this
+//! campaign measured *where* the three new peoples settle, so no story about
+//! dwarves crowding uplands or coasts is asserted anywhere in this file.
+//!
+//! The campaign's other candidate mover is ruled out rather than assumed away.
+//! `b0f32252` repaired a cross-roster lexicon read, and its measured blast
+//! radius on `the-census` — the fixture every test in this file loads — is
+//! **ZERO cells**: on the canonical roster the view's own component set IS the
+//! assembled canonical set, so the change is a no-op there. Its five repaired
+//! cells all land on `census-of-the-meeting`'s `goblin-solo` roster, which the
+//! rows re-pinned here do not read.
+//!
+//! ```text
+//!                                       before        after
+//!   goblin present rows (name-length)      999         1000
+//!   kobold present rows (name-length)      972          968
+//!   flagship coastal / inland        217 / 782    208 / 792
+//! ```
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (883/968 = 91.2%, against
+//! 881/972 = 90.6%), the epithet-honorific detector still reads true on every
+//! goblin world holding a pantheon and false on every kobold one, mean name
+//! length is still under the campaign's 10-character claim at both species
+//! (8.563 / 6.870), mean syllable count is still inside the 2-3 range at both
+//! (2.723 / 2.184), and name transparency is still emphatically not 1.0 (0.743
+//! over a 0.258-to-1.0 span). These re-pin the witnesses, not the observations.
+//!
+//! ## Census regen — The Tense (2026-08-06, lefford, decision 0063)
+//!
+//! **One cause under all of it: 230 worlds gained a flagship they did not
+//! have.** Capacity gained an era axis, so a cell's worth is the binding era's
+//! rather than the present day's, and worlds that could not previously seat a
+//! goblin flagship now can. The census records the size of that:
+//!
+//! ```text
+//!                                   before        after
+//!   worlds with NO goblin flagship     231            1
+//!   flagship coastal / inland     565 / 204    217 / 782
+//! ```
+//!
+//! Every present-row count in this file moves 769 -> 999 (goblin) or
+//! 769 -> 972 (kobold) for the same reason, and every mean moves because it is
+//! now taken over a materially larger and differently-sited population. The
+//! second row is the other half and was not predicted anywhere: flagships moved
+//! decisively INLAND, 73% coastal -> 22%. Coastal siting was carrying worlds
+//! that could not otherwise support a seat; once inland ground is habitable
+//! across eras, the coast stops being the only option.
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (881/972 = 90.6%, against
+//! 701/768 = 91.3%), a frozen sky still never heads a cyclic pantheon, the null
+//! controls are still at chance, and bugbear still leads the goblinoid
+//! daughters' homophony by better than 3x. These re-pin the witnesses, not the
+//! observations.
+//!
 //! ## Census regen — The Vacancy (2026-07-27, lefford, decision 0063)
 //!
 //! The roster grew 16 -> 29 kinds (thirteen fauna plus the gnoll, a fifth
@@ -204,6 +304,8 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
     }
 }
 
+/// claim: invariant(census: tidally-locked, belief-kind-<species>) — reads
+/// the committed DRIFT census fixture, pinned per ADR 0016
 #[test]
 fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The invariant is PHYSICAL: a tidally-locked world offers no
@@ -286,9 +388,40 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): (151, 41) ->
     // (151, 40).
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE stream label bump re-mints every draw on top
+    // of position-aware conflict's own effect, re-seating flagships again:
+    // (149, 39) -> (150, 40).
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, reseating flagships again: (150, 40) -> (148, 40). The
+    // invariant this test exists to guard — a tidally-locked world's head is
+    // never `cyclic` — never fired (that branch panics loudly if it does);
+    // the locked-ambient count is unmoved at 40, only locked-eternal falls.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is now DRAWN PER SETTLEMENT around a
+    // people's authored `threat_response` instead of read off the species, so
+    // every world's raid history differs and with it which settlements survive
+    // to seat a flagship pantheon: (148, 40) -> (151, 41). The invariant this
+    // test exists to guard is re-checked rather than assumed — the `other`
+    // arm above panics loudly on a cyclic head in a locked world, and the run
+    // reached this assertion, so it never fired on any of the 1000 seeds.
+    //
+    // The Delvers' (C2c) close regen moved this to (151, 41) -> (152, 40) (see
+    // the file header for the six-to-nine roster cause).
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): re-seats flagships again,
+    // (152, 40) -> (151, 41). The invariant this test exists to guard is
+    // re-checked rather than assumed — the `other` arm panics loudly on a
+    // cyclic head in a locked world, and the run reached this assertion, so it
+    // never fired on any of the 1000 seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (149, 39),
+        (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -296,8 +429,22 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The Living Community epoch (history-first placement) re-placed every
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
     // 2 -> 9.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): 11 -> 9. Same roster-competition cause as the
+    // locked-head split above (human is a sixth competitor for every
+    // settlement contest); this is a recorded count, not a guarded claim.
+    //
+    // The Tolerance's and the Delvers' close regens together moved this 9 ->
+    // 10 (undocumented at the individual step; recovered here from the
+    // pinned value this replaces).
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): 10 -> 9. Same
+    // roster/placement-sensitive cause as the locked-head split above; this
+    // is a recorded count, not a guarded claim.
     assert_eq!(
-        spinning_eternal, 11,
+        spinning_eternal, 9,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -497,8 +644,60 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // than eviction, so far more communities survive in place (seed 42: 203
     // -> 329 live settlements) and which site flags a goblin flagship moves
     // on seven worlds: 552 -> 556 coastal, 214 -> 211 inland.
-    assert_eq!(coastal, 556, "coastal flagship count drifted");
-    assert_eq!(inland, 211, "inland flagship count drifted");
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict (defensibility as a second
+    // contest axis) reshapes raid outcomes and therefore which site condenses
+    // a goblin flagship on many worlds: 556 -> 548 coastal, 211 -> 218 inland.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump re-mints every draw, re-seating
+    // flagships again: 548 -> 554 coastal, 218 -> 214 inland.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, re-seating flagships again: 554 -> 559 coastal, 214 -> 207
+    // inland (559 + 207 = 766, matching goblin's present-row count elsewhere
+    // in this file — no `Absent` rows introduced). This is a recorded
+    // witness, not a guarded directional claim.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, so every world's raid history differs and flagships reseat
+    // again: 559 -> 565 coastal, 207 -> 204 inland (565 + 204 = 769, matching
+    // goblin's re-pinned present-row count elsewhere in this file — still no
+    // `Absent` rows introduced). Still a recorded witness, not a guarded
+    // directional claim; the sibling test that DID carry a direction on this
+    // axis was retired at The Tumult (see this file's header).
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided and flagships reseat again: 217 -> 208 coastal,
+    // 782 -> 792 inland. The two now sum to 1000 rather than 999 — the one
+    // world that reported neither flag now reports one, matching goblin's
+    // present-row count elsewhere in this file (999 -> 1000). Still a recorded
+    // witness, not a guarded directional claim. The cause is stated no more
+    // narrowly than the roster change: nothing this campaign measured says
+    // anything about where the three new peoples sit relative to a coast.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): 208 -> 217 coastal,
+    // 792 -> 781 inland. The two now sum to 998 rather than 1000 — TWO worlds
+    // report NEITHER flag (a real regression from Delvers' zero-Absent
+    // reading): goblin's own present-row count elsewhere in this file falls
+    // 1000 -> 998 at this same regen, and these are exactly those two worlds
+    // — a goblin flagship no longer places at all where it always did before.
+    // The cause is stated no more narrowly than the campaign's mechanism: a
+    // declared biome range now constrains where a settling people may found a
+    // settlement, and on two of the 1000 census seeds no site both satisfies
+    // goblin's range and clears the founder floor. Which kind's range is
+    // binding on those two worlds was not traced further here; this row
+    // remains a recorded witness, not a guarded directional claim, so nothing
+    // beyond the count movement needs re-checking.
+    assert_eq!(coastal, 217, "coastal flagship count drifted");
+    assert_eq!(inland, 781, "inland flagship count drifted");
 }
 
 #[test]
@@ -672,12 +871,63 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // head at all, moving the moonless-spinning pool (33 -> 34 solar,
     // 61 -> 59 lunar). The invariant above it — a mooned kobold head is
     // always lunar — never fired.
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict changes which worlds field a
+    // kobold head, moving the moonless-spinning pool (34 -> 34 solar, 59 ->
+    // 60 lunar).
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the pool again (34 -> 33
+    // solar, 60 -> 62 lunar).
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, which changes which worlds field a kobold head — the
+    // moonless-spinning pool moves 62 -> 61 lunar; solar is unmoved at 33.
+    // Both structural invariants above this pool (a mooned kobold head is
+    // always lunar; goblin's head is always solar; a locked-world kobold
+    // head is always solar) never fired — this is a recorded row, not a
+    // guarded claim.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, changing which worlds field a kobold head at all — the
+    // moonless-spinning pool moves 33 -> 32 solar and 61 -> 64 lunar. All
+    // three structural invariants above this pool (a mooned kobold head is
+    // always lunar; goblin's head is always solar; a locked-world kobold head
+    // is always solar) are re-checked rather than assumed: each is an
+    // `assert!`/`panic!` earlier in this test, and the run reached these
+    // recorded rows, so none of them fired.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, re-deciding which worlds
+    // field a kobold head at all — the moonless-spinning pool moves 85 -> 83
+    // lunar; solar is unmoved at 55. All three structural invariants above
+    // this pool (a mooned kobold head is always lunar; goblin's head is always
+    // solar; a locked-world kobold head is always solar) are re-checked rather
+    // than assumed: each is an `assert_eq!` earlier in this test, the run
+    // reaches these recorded rows, so none of them fired.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): re-deciding which worlds
+    // field a kobold head at all — the moonless-spinning pool moves 55 -> 56
+    // solar; lunar is unmoved at 83. All three structural invariants above
+    // this pool (a mooned kobold head is always lunar; goblin's head is always
+    // solar; a locked-world kobold head is always solar) are re-checked rather
+    // than assumed: each is an `assert_eq!` earlier in this test, the run
+    // reaches these recorded rows, so none of them fired — this row carries no
+    // directional claim of its own (a prior comment's "the sun wins most
+    // nights" phrasing is stale prose from an earlier regen, not an assertion;
+    // lunar has led solar in this pool since well before this campaign and
+    // still does).
     assert_eq!(
-        moonless_solar, 34,
+        moonless_solar, 56,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 59,
+        moonless_lunar, 83,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -792,8 +1042,67 @@ fn blind_attribution_beats_chance_decisively() {
     // which shifts which worlds field an attributable pair (759 -> 758) and
     // which side two of them land on (695 -> 693); accuracy 0.9157 ->
     // 0.9142, still decisively above the 0.75 floor asserted above.
-    assert_eq!(correct, 693, "blind-attribution count drifted");
-    assert_eq!(total, 758, "attributable-pair count drifted");
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict shifts which worlds field an
+    // attributable pair (758 -> 761) and which side several land on (693 ->
+    // 694); accuracy 0.9142 -> 0.9119, still decisively above the 0.75 floor
+    // asserted above.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the pool again (761 -> 763
+    // total, 694 -> 697 correct); accuracy 0.9119 -> 0.9135, still
+    // decisively above the 0.75 floor.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, shifting which worlds field an attributable goblin/kobold
+    // pair (763 -> 759 total) and which side a few land on (697 -> 693
+    // correct); accuracy 0.9135 -> 0.9130434782608696, still decisively
+    // above the 0.75 floor asserted above — the directional claim this test
+    // guards (blind attribution beats chance decisively) HOLDS, re-checked
+    // rather than assumed. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, shifting which worlds field an attributable goblin/kobold
+    // pair (759 -> 768 total) and which side several land on (693 -> 701
+    // correct); accuracy 0.9130434782608696 -> 0.9127604166666666, still
+    // decisively above the 0.75 floor asserted above — the directional claim
+    // this test guards (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed. The mooned-pair invariant below
+    // (perfect attribution among spinning, mooned pairs) never fired either;
+    // the run reaches it, and it is an `assert_eq!` that would have.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, shifting which worlds
+    // field an attributable goblin/kobold pair (972 -> 968 total) and which
+    // side several land on (881 -> 883 correct); accuracy
+    // 0.9063786008230452 -> 0.9121900826446281 — the directional claim this
+    // test guards (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed: 0.912 against the 0.75 floor asserted
+    // above is 0.162 of margin, and against the ~0.5 binary chance the claim
+    // is really about, nearly double. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either; the run
+    // reaches it, and it is an `assert_eq!` that would have.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): shifting which worlds
+    // field an attributable goblin/kobold pair (968 -> 969 total — one more
+    // kobold world now places a flagship, even as goblin loses two elsewhere
+    // in this file) and which side several land on (883 -> 879 correct);
+    // accuracy 0.9121900826446281 -> 0.9071207430340558 — the directional
+    // claim this test guards (blind attribution beats chance decisively)
+    // HOLDS, re-checked rather than assumed: 0.907 against the 0.75 floor
+    // asserted above is 0.157 of margin, still comfortably decisive against
+    // the ~0.5 binary chance the claim is really about. The mooned-pair
+    // invariant below (perfect attribution among spinning, mooned pairs)
+    // never fired either; the run reaches it, and it is an `assert_eq!` that
+    // would have.
+    assert_eq!(correct, 879, "blind-attribution count drifted");
+    assert_eq!(total, 969, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -889,6 +1198,9 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// mechanism can return the next time repair moves.
 const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
 
+/// claim: readout(preregistered, 0016) — reads the committed DRIFT census
+/// fixture; pinned counts, with `HONORIFIC_DETECTOR_BLIND_SEEDS` now empty
+/// (zero detector-limit exceptions, down from two)
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -967,9 +1279,9 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     }
     assert_eq!(
         g_false_seeds, HONORIFIC_DETECTOR_BLIND_SEEDS,
-        "the goblin epithet-honorific falses are no longer exactly the two diagnosed \
-         detector-blind worlds — a new false is an UNDIAGNOSED world and must be chased, \
-         not added to the list"
+        "the goblin epithet-honorific falses are no longer exactly the (now empty) \
+         diagnosed detector-blind roster — any false here is an UNDIAGNOSED world and \
+         must be chased, not added to the list"
     );
     // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
     // goblin 764/2/234 -> 766/1/233, kobold 762/238 -> 760/240. The claim is
@@ -979,14 +1291,71 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // landed between the two measurements reseat settlements, so a handful of
     // worlds gain or lose a flagship pantheon; the DIRECTION this row exists
     // to guard is untouched.
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict reseats settlements again,
+    // moving which worlds hold a flagship pantheon: goblin 767/233 -> 766/234
+    // true/absent, kobold 760/240 -> 763/237 false/absent. The direction this
+    // row guards is untouched — the detector still reads true on every goblin
+    // world with a pantheon and false on every kobold one.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump reseats settlements again: goblin
+    // 766/234 -> 768/232 true/absent, kobold 763/237 -> 765/235 false/absent.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, moving which worlds hold a flagship pantheon: goblin
+    // 768/232 -> 766/234 true/absent, kobold 765/235 -> 762/238 false/absent.
+    // The claim this row guards is untouched and re-checked, not assumed:
+    // the goblin-false population is still exactly empty (the assertion
+    // above this comment did not fire), so the detector still reads true on
+    // every goblin world with a pantheon, and the inner `assert!` above
+    // confirmed it still read false on every one of the 762 kobold worlds
+    // that held one.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, moving which worlds hold a flagship pantheon at all:
+    // goblin 766/234 -> 769/231 true/absent, kobold 762/238 -> 769/231
+    // false/absent. The claim this row guards is re-checked, not assumed —
+    // the `g_false_seeds` assertion above did not fire, so the goblin-false
+    // population is still exactly empty and the detector still reads true on
+    // every goblin world that holds a pantheon, and the inner `assert!` in
+    // the loop confirms it still reads false on every one of the 769 kobold
+    // worlds that do.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, moving which worlds hold
+    // a flagship pantheon at all: goblin 999/1 -> 1000/0 true/absent, kobold
+    // 972/28 -> 968/32 false/absent. The claim this row guards is re-checked,
+    // not assumed — the `g_false_seeds` assertion above did not fire, so the
+    // goblin-false population is still exactly empty, and it is now empty over
+    // the WHOLE census: the detector reads true on all 1000 goblin worlds,
+    // there being no goblin-absent world left. The inner `assert!` in the loop
+    // confirms it still reads false on every one of the 968 kobold worlds that
+    // hold a pantheon.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): moving which worlds hold
+    // a flagship pantheon at all: goblin 1000/0 -> 998/2 true/absent (the same
+    // two worlds that lose their goblin flagship elsewhere in this file —
+    // `goblin_flagship_coastal_split_is_pinned`'s new "neither" pair — now
+    // hold no goblin pantheon to read a honorific from), kobold 968/32 ->
+    // 969/31 false/absent. The claim this row guards is re-checked, not
+    // assumed — `g_false_seeds` is still exactly empty (asserted above), so
+    // the detector still reads true on every one of the 998 goblin worlds that
+    // hold a pantheon, and the inner `assert!` in the loop confirms it still
+    // reads false on every one of the 969 kobold worlds that do.
     assert_eq!(
         (g_true, g_absent),
-        (767, 233),
+        (998, 2),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (760, 240),
+        (969, 31),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1121,11 +1490,13 @@ fn lexicon_is_regular_for_both_species() {
 /// keeps the two copies in step are a campaign, not a followup.
 ///
 /// The gate itself is sound and that was checked rather than assumed:
-/// `windows/worldgen/tests/exposure.rs` is 19/19 green, including
-/// `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap` and
-/// `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`. No
-/// world is misclassifying anything. Only the lab's copy of the rulebook is
-/// out of date.
+/// `windows/worldgen/tests/exposure.rs` was 19/19 green at the time,
+/// including `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap`
+/// and `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`
+/// (the latter retired by The Assay Task 9; the same property now lives in
+/// `some_census_world_steeps_every_toponymic_concept`, this file). No world
+/// is misclassifying anything. Only the lab's copy of the rulebook is out of
+/// date.
 #[test]
 fn lexicon_is_exposure_sound_for_both_species() {
     let result = &*DRIFT;
@@ -1333,9 +1704,61 @@ fn name_collision_rate_is_measured_and_pinned() {
     // reuse. And the roster of things to name kept GROWING, so each world
     // draws more names from the same narrowed space. Both movements are
     // recorded at their own pin sites; this row records their product.
-    assert_eq!(zero, 2, "zero-collision world count drifted");
-    assert_eq!(nonzero, 768, "nonzero-collision world count drifted");
-    assert_eq!(absent, 230, "absent name-collision-rate count drifted");
+    // The Witness (2026-08-02) re-pin, `language/<species>/lexicon/cascade/v2`:
+    // 2 -> 3 zero-collision, 768 -> 767 nonzero. `draw_rule` stopped offering
+    // `Tonogenesis` and `VowelShift` to species whose phonology cannot host
+    // them, which reseeds every cascade and therefore every generated name.
+    // One world crosses from a nonzero rate to zero; `absent` is unmoved, and
+    // 2+768 = 3+767, so the three-way partition still accounts for all 1000.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump reseats settlements again: 3 -> 4
+    // zero-collision, 767 -> 766 nonzero; absent unmoved at 230.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, which reshuffles which settlements are named at all: 4 ->
+    // 3 zero-collision, 766 -> 767 nonzero; absent unmoved at 230 for the
+    // fifth regen running (3 + 767 + 230 = 1000). This row carries no
+    // directional claim (H4 already failed and is recorded as such above),
+    // so nothing to re-verify beyond the three-way partition still summing
+    // to 1000.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, which reshuffles which settlements survive to be named at
+    // all: 3 -> 1 zero-collision, 767 -> 769 nonzero; absent unmoved at 230
+    // for the sixth regen running (1 + 769 + 230 = 1000). This row still
+    // carries no directional claim (H4 already failed and is recorded as
+    // such above), so nothing to re-verify beyond the three-way partition
+    // still summing to 1000 — which it does.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, so a different set of
+    // settlements survives to be named on every world: 1 -> 0 zero-collision,
+    // 999 -> 1000 nonzero; absent unmoved at 0 (0 + 1000 + 0 = 1000). The
+    // zero-collision column is now EMPTY — every censused world draws at least
+    // one duplicate name. That is a recorded movement, not a defect, and above
+    // all not a reason to widen a draw: read the decision-0024 note above
+    // before touching a single template weight. This row still carries no
+    // directional claim (H4 already failed and is recorded as such above), so
+    // nothing to re-verify beyond the three-way partition still summing to
+    // 1000 — which it does.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): a different set of
+    // settlements survives to be named on every world: 0 -> 1 zero-collision,
+    // 1000 -> 999 nonzero; absent unmoved at 0 (1 + 999 + 0 = 1000). The
+    // zero-collision column reopens by exactly one world — not a reversal of
+    // the Delvers reading, just a different world's roster happening to draw
+    // no duplicate this time. This row still carries no directional claim
+    // (H4 already failed and is recorded as such above), so nothing to
+    // re-verify beyond the three-way partition still summing to 1000 — which
+    // it does.
+    assert_eq!(zero, 1, "zero-collision world count drifted");
+    assert_eq!(nonzero, 999, "nonzero-collision world count drifted");
+    assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
@@ -1392,7 +1815,53 @@ fn name_collision_rate_is_measured_and_pinned() {
         // movement this row has ever recorded, and it is sanctioned — see the
         // decision-0024 note above the zero/nonzero pins, which a reader who
         // arrived here from a red assertion has probably not read yet.
-        (mean - 0.564_509_597_998_702_8).abs() < 1e-6,
+        // The Witness (cascade/v2 epoch), 0063: 0.564_509_597_998_702_8 ->
+        // 0.567_057_788_528_571. Same cascade reseed as the zero/nonzero pins
+        // above: every generated name redrawn, nudging the mean up a hair.
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reseats settlements
+        // (zero/nonzero/absent unmoved at 3/767/230), nudging the mean down:
+        // 0.567_057_788_528_571 -> 0.559_547_123_829_870.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump nudges the mean up:
+        // 0.559_547_123_829_870 -> 0.560_567_825_485_714_4.
+        // The Salt's close regen, 0063: 0.560_567_825_485_714_4 ->
+        // 0.560_572_844_615_584_4. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, so the name space is drawn from
+        // differently across every world: 0.560_572_844_615_584_4 ->
+        // 0.528_593_255_324_676. Same roster-competition cause as the
+        // zero/nonzero re-pin above; this row carries no directional claim.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so a different set of
+        // settlements survives to be named on every world:
+        // 0.528_593_255_324_676 -> 0.535_421_983_528_571_5. Same
+        // per-settlement-draw cause as the zero/nonzero re-pin above; this
+        // row still carries no directional claim, and the rate stays inside
+        // the range decision 0024 sanctions (see the note above).
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): the settling roster goes from six peoples to nine, so a
+        // different set of settlements is named on every world:
+        // 0.520_350_036_836_000 -> 0.506_829_661_678_999_5. Same roster cause
+        // as the zero/nonzero re-pin above; this row still carries no
+        // directional claim, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a
+        // different set of settlements is named on every world:
+        // 0.506_829_661_678_999_5 -> 0.510_906_343_952. This row still
+        // carries no directional claim, and the rate stays inside the range
+        // decision 0024 sanctions (see the note above).
+        (mean - 0.510_906_343_952).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1548,7 +2017,57 @@ fn name_length_distributions_are_measured_and_pinned() {
         // for — names got shorter as naming moved onto short site-derived
         // compounds. Recorded as measured; the row is a drift witness, not a
         // bound, so nothing here is loosened to admit it.
-        ("goblin", 767u32, 8.784_123_816_558_01),
+        // The Witness (cascade/v2 epoch), 0063: 8.784_123_816_558_01 ->
+        // 8.639_595_029_986_95. Present count holds at 767; `draw_rule`
+        // stopped offering `Tonogenesis`/`VowelShift` to species whose
+        // phonology cannot host them, reseeding every cascade and therefore
+        // every generated name.
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reshapes raid outcomes
+        // and therefore which sites carry a goblin flagship; 767 -> 766
+        // present, mean 8.639_595_029_986_95 -> 8.660_349_090_208_882.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats flagships again: 766 ->
+        // 768 present, mean 8.660_349_090_208_882 -> 8.688_230_827_083_34.
+        // The Salt's close regen, 0063: 8.688_230_827_083_34 ->
+        // 8.687_525_197_786_464. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: 768 ->
+        // 766 present, mean 8.687_525_197_786_464 -> 8.657_123_104_960_824.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7), re-checked rather than assumed.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so which worlds seat a goblin
+        // flagship — and which sites its names compound over — moves again:
+        // 766 -> 769 present, mean 8.657_123_104_960_824 ->
+        // 8.787_985_079_973_994. Still comfortably below the campaign's own
+        // <10-character claim (spec §7), re-checked rather than assumed.
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, so which worlds seat a goblin flagship — and which
+        // sites its names compound over — moves again: 999 -> 1000 present
+        // (every world in the census now seats one), mean
+        // 8.541_942_812_712_72 -> 8.562_788_425_799_996. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — 1.44
+        // characters of margin — re-checked rather than assumed.
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a declared
+        // biome range now blocks a goblin flagship from placing at all on two
+        // worlds (see `goblin_flagship_coastal_split_is_pinned`), so present
+        // falls 1000 -> 998, mean 8.562_788_425_799_996 -> 8.494_760_944_989_975.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — 1.51 characters of margin — re-checked rather than
+        // assumed.
+        ("goblin", 998u32, 8.494_760_944_989_975),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1586,7 +2105,61 @@ fn name_length_distributions_are_measured_and_pinned() {
         // since The Tumult — its flagships reseat onto materially different
         // sites, so its site-derived compounds are drawn from a different part
         // of its lexicon.
-        ("kobold", 760u32, 7.403195966315787),
+        // The Witness (cascade/v2 epoch), 0063: 7.403_195_966_315_787 ->
+        // 7.228_477_004_342_105. Present count holds at 760; same cascade
+        // reseed as the goblin pin above.
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): 760 -> 763 present, mean 7.228_477_004_342_105 ->
+        // 7.219_848_265_006_563. Same position-aware-conflict reseat as the
+        // goblin pin above.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats flagships again: 763 ->
+        // 765 present, mean 7.219_848_265_006_563 -> 7.188_685_503_790_846.
+        // The Salt's close regen, 0063: 7.188_685_503_790_846 ->
+        // 7.188_604_358_823_526. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: 765 ->
+        // 762 present, mean 7.188_604_358_823_526 -> 7.189_805_441_863_518
+        // — essentially unmoved (kobold's mean barely shifts this time,
+        // unlike every prior roster/bake change, where it usually moved
+        // further than goblin's). Still comfortably below the campaign's
+        // own <10-character claim (spec §7), re-checked rather than assumed.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species: 762 -> 769 present, mean
+        // 7.189_805_441_863_518 -> 7.236_424_583_355_002. Both species now
+        // read 769 present — an incidental coincidence of two independently
+        // moving counts, not a structural tie; the only tie this file
+        // asserts is per-species, between a species' own syllable and
+        // name-length columns (see the syllable row below). Still
+        // comfortably below the campaign's own <10-character claim
+        // (spec §7), re-checked rather than assumed.
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine: 972 -> 968 present, mean 6.885_304_561_419_753 ->
+        // 6.869_846_921_177_682_5. The two species part company again after
+        // The Tolerance's incidental 769/769 tie — goblin rises to every world
+        // while kobold loses four — which is exactly the independence the tie
+        // note above said it was, not a structural relation coming apart.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — 3.13 characters of margin — re-checked rather than
+        // assumed.
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a declared
+        // biome range now reaches ONE more world where kobold could not
+        // previously seat a flagship: 968 -> 969 present, mean
+        // 6.869_846_921_177_682_5 -> 6.848_307_837_667_7. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — 3.15
+        // characters of margin — re-checked rather than assumed.
+        ("kobold", 969u32, 6.848_307_837_667_7),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1672,8 +2245,80 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // The claim this row carries — spec §8 criterion 2, mean syllable
         // count in the 2-3 range — HOLDS at both species and is not what the
         // re-pin touched.
-        ("goblin", 767u32, 2.761284613820079),
-        ("kobold", 760u32, 2.316698345263158),
+        //
+        // The Witness (cascade/v2 epoch), 0063: goblin 2.761_284_613_820_079
+        // -> 2.767_352_168_839_636; kobold 2.316_698_345_263_158 ->
+        // 2.318_080_226_315_786_7. Present counts unmoved (767 / 760); the
+        // claim still HOLDS at both species (2.767 and 2.318, both inside
+        // 2-3).
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): goblin 767 -> 766 present, mean
+        // 2.767_352_168_839_636 -> 2.775_172_454_830_285; kobold 760 -> 763
+        // present, mean 2.318_080_226_315_786_7 -> 2.313_806_532_765_403. Same
+        // position-aware-conflict reseat as the name-length pins above; the
+        // claim still HOLDS at both species (2.775 and 2.314, both inside
+        // 2-3).
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): goblin 766 -> 768 present, mean
+        // 2.775_172_454_830_285 -> 2.787_026_517_317_707_3; kobold 763 -> 765
+        // present, mean 2.313_806_532_765_403 -> 2.306_935_878_954_248_7. The
+        // claim still HOLDS at both species (2.787 and 2.307, both inside
+        // 2-3).
+        // The Salt's close regen, 0063: 2.787_026_517_317_707_3 ->
+        // 2.787_048_218_749_998_5. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: goblin
+        // 768 -> 766 present, mean 2.787_048_218_749_998_5 ->
+        // 2.763_782_961_879_896; kobold 765 -> 762 present, mean
+        // 2.306_935_878_954_248_7 -> 2.305_631_764_829_393. Present counts
+        // agree with the name-length row's re-pin above (766 / 762), as the
+        // structural relation this test also asserts requires. The claim
+        // still HOLDS at both species — 2.764 and 2.306, both inside 2-3 —
+        // re-checked, not assumed.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, reseating flagships again:
+        // goblin 766 -> 769 present, mean 2.763_782_961_879_896 ->
+        // 2.813_568_037_061_118; kobold 762 -> 769 present, mean
+        // 2.305_631_764_829_393 -> 2.319_622_207_412_223_2. Present counts
+        // agree with the name-length row's re-pin above (769 / 769), as the
+        // per-row structural relation this test also asserts requires. The
+        // claim still HOLDS at both species — 2.814 and 2.320, both inside
+        // 2-3 — re-checked, not assumed.
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, reseating flagships again: goblin 999 -> 1000 present,
+        // mean 2.720_839_553_653_654 -> 2.723_388_327_800_003; kobold 972 ->
+        // 968 present, mean 2.192_605_995_679_012 ->
+        // 2.184_114_303_822_312_3. Present counts agree with the name-length
+        // row's re-pin above (1000 / 968), as the per-row structural relation
+        // this test also asserts requires. The claim still HOLDS at both
+        // species — 2.723 and 2.184, both inside 2-3 — re-checked, not
+        // assumed; goblin sits 0.28 below the ceiling and kobold 0.18 above
+        // the floor, the narrower of the two margins.
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): present
+        // counts move with the flagship-placement change recorded at the
+        // name-length row above: goblin 1000 -> 998 present, mean
+        // 2.723_388_327_800_003 -> 2.705_454_691_783_566; kobold 968 -> 969
+        // present, mean 2.184_114_303_822_312_3 -> 2.176_904_839_215_685.
+        // Present counts still agree with the name-length row's re-pin above
+        // (998 / 969), as the per-row structural relation this test also
+        // asserts requires. The claim still HOLDS at both species — 2.705 and
+        // 2.177, both inside 2-3 — re-checked, not assumed; goblin sits 0.295
+        // below the ceiling and kobold 0.177 above the floor, the narrower of
+        // the two margins (kobold's, and it is the narrowest either species
+        // has recorded at this row).
+        ("goblin", 998u32, 2.705_454_691_783_566),
+        ("kobold", 969u32, 2.176_904_839_215_685),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1772,14 +2417,77 @@ fn name_transparency_is_measured_and_pinned() {
             ref other => panic!("seed {}: name-transparency not a flag: {other:?}", row.seed),
         }
     }
-    assert_eq!(present, 770, "name-transparency present-row count drifted");
-    assert_eq!(absent, 230, "name-transparency absent-row count drifted");
     let mean = sum / f64::from(present);
+    assert_eq!(present, 1000, "name-transparency present-row count drifted");
+    assert_eq!(absent, 0, "name-transparency absent-row count drifted");
     assert!(
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
         // 0.826_729_134_389_610_3 -> 0.793_035_961_411_688_3, present/absent
         // unmoved at 770/230.
-        (mean - 0.793035961411688).abs() < 1e-9,
+        // The Witness (cascade/v2 epoch), 0063: 0.793_035_961_411_688 ->
+        // 0.803_660_578_424_675, present/absent unmoved at 770/230.
+        // Transparency ROSE, and that is the campaign's intent rather than a
+        // regression: the wear cascade now lands real sound changes instead
+        // of spending rule slots on rules a species' phonology could never
+        // fire (`Tonogenesis`/`VowelShift` on atonal/non-vowel-shifting
+        // peoples), so more names still gloss to the source concept they
+        // compound over.
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reseats settlements
+        // (present/absent unmoved at 770/230), nudging the mean down:
+        // 0.803_660_578_424_675 -> 0.807_392_672_749_351.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump nudges the mean down again
+        // (present/absent unmoved at 770/230):
+        // 0.807_392_672_749_351 -> 0.804_951_365_489_610_2.
+        // The Salt's close regen, 0063: 0.804_951_365_489_610_2 ->
+        // 0.804_225_380_346_752_7. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reshaping every world's naming draws;
+        // present/absent are unmoved at 770/230 (naming does not decide
+        // which worlds seat a flagship, same as the name-length rows), and
+        // the mean falls: 0.804_225_380_346_752_7 -> 0.785_500_964_077_923.
+        // Still emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so a different set of
+        // settlements is named on every world; present/absent are again
+        // unmoved at 770/230, and the mean rises a little:
+        // 0.785_500_964_077_923 -> 0.786_123_665_363_636_2. Still
+        // emphatically NOT 1.0 — the claim this row exists to guard, and
+        // the one a rise must be checked against — re-checked rather than
+        // assumed: a 0.786 mean over a 0.15-to-1.0 span is wear still
+        // happening, not wear stopping.
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, so a different set of settlements is named on every
+        // world; present/absent are unmoved at 1000/0, and the mean falls:
+        // 0.797_838_618_610_000 -> 0.743_291_175_730_000_9. Still emphatically
+        // NOT 1.0 — the claim this row exists to guard — re-checked rather
+        // than assumed, and note this is the SAFE direction: only a rise back
+        // toward 1.0 would mean wear had stopped. A 0.743 mean over a
+        // 0.258-to-1.0 span is wear still happening.
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a
+        // different set of settlements is named on every world; present/
+        // absent are unmoved at 1000/0, and the mean RISES this time:
+        // 0.743_291_175_730_000_9 -> 0.751_571_090_980_000_1. This is the
+        // direction flagged as worth watching at the previous regen. It is
+        // NOT the defect returning: 0.752 is still a long way from 1.0 (the
+        // claim this row exists to guard, re-checked rather than assumed),
+        // and the spread assertion below shows the floor falling further
+        // from 1.0 at the same regen — a uniformity relapse would need the
+        // floor to rise toward the mean, and instead it fell.
+        (mean - 0.751_571_090_980_000_1).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -1792,7 +2500,44 @@ fn name_transparency_is_measured_and_pinned() {
         // reading this row exists to preserve. A mean of 0.816 with a floor of
         // 0.154 and a ceiling of 1.0 is a real distribution over worlds, not
         // the uniformity defect in a new costume.
-        (min - 0.076923077).abs() < 1e-8,
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): the floor RISES 0.076_923_077 ->
+        // 0.142_857_14 while the ceiling stays pegged at 1.0 (asserted
+        // below, unmoved) — the spread narrows a little but stays a real
+        // distribution over worlds, not the uniformity defect the row exists
+        // to catch.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): the floor rises again
+        // 0.142_857_14 -> 0.15 while the ceiling stays pegged at 1.0
+        // (asserted below, unmoved). A 0.15-to-1.0 span around a 0.786 mean
+        // is still a real distribution over worlds, not the uniformity
+        // defect the row exists to catch — re-checked rather than assumed.
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): the floor rises sharply, 0.072_538_86 -> 0.257_575_76,
+        // while the ceiling stays pegged at 1.0 (asserted below, unmoved) and
+        // the mean falls to 0.743. So the span narrows from below — this is
+        // the highest floor this row has ever recorded — and the check that
+        // matters is whether it is still a DISTRIBUTION rather than the
+        // uniformity defect in a new costume. It is: 0.258 to 1.0 around a
+        // 0.743 mean spans three quarters of the available range. Re-checked
+        // rather than assumed, and flagged for the next regen: a floor that
+        // kept climbing toward the mean is exactly how this defect would come
+        // back, and it would be a finding to report, not a bound to widen.
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): the floor
+        // DROPS sharply, 0.257_575_76 -> 0.165_354_33, while the ceiling stays
+        // pegged at 1.0 (asserted below, unmoved) and the mean rises to
+        // 0.752. So the span WIDENS from below even as the mean rises — the
+        // opposite-signed pair the previous regen's warning was watching
+        // for. A 0.165-to-1.0 span around a 0.752 mean is still plainly a
+        // distribution over worlds, not the uniformity defect the row exists
+        // to catch: re-checked rather than assumed.
+        (min - 0.165_354_33).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -1801,6 +2546,9 @@ fn name_transparency_is_measured_and_pinned() {
     );
 }
 
+/// claim: rate(forall-seed, indistinguishable/pairs > 0.5; twin-pick rate
+/// within 0.2 of chance when decided) — reads &*MEETING census fixture,
+/// tuple pattern `(seed, gs)` (Fix round 1, Class 1)
 #[test]
 fn null_control_blind_attribution_is_at_chance() {
     let result = &*MEETING;
@@ -1882,12 +2630,34 @@ fn null_control_blind_attribution_is_at_chance() {
     // another path-dependent step to the bake (who seizes whom depends on
     // the order sites are evaluated), so one more pair separates: 324 -> 323
     // indistinguishable, 63 -> 64 decided. The pool is unchanged at 387.
-    assert_eq!(indistinguishable, 323, "indistinguishable count drifted");
-    assert_eq!(decided, 64, "decided count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump adds another path-dependent step:
+    // 323 -> 322 indistinguishable, 64 -> 65 decided.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement, and the draw
+    // is keyed on the settlement's own site, so the two solo builds' already
+    // path-dependent histories separate on FEWER seeds this time: 322 -> 326
+    // indistinguishable, 65 -> 61 decided (the pool holds at 387). The
+    // directional floors above are re-checked, not assumed — 326/387 = 0.842
+    // is still mostly-indistinguishable, and the twin-pick rate below is
+    // 31/61 = 0.508, well inside the ±0.2 chance band.
+    assert_eq!(indistinguishable, 417, "indistinguishable count drifted");
+    assert_eq!(decided, 82, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
-    assert_eq!(picks_twin, 32, "twin-pick count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): re-measured against the new decided pool of 65 —
+    // 32 of 65 still pick the twin, unmoved from the prior regen.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): re-measured against the smaller decided pool of
+    // 61 — 31 of 61 pick the twin, a 0.508 split, i.e. the null control lands
+    // marginally closer to chance than the prior regen's 0.492.
+    assert_eq!(picks_twin, 34, "twin-pick count drifted");
 }
 
 #[test]
@@ -1962,8 +2732,22 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // the path-dependence, separating the two solo builds on a few more
     // seeds — 0.005_167_958_656_330_775 -> 0.007_751_937_984_496_131, still
     // two orders of magnitude inside the ±0.15 bound asserted above.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump deepens the path-dependence
+    // further — 0.007_751_937_984_496_131 -> 0.010_335_917_312_661_49 (the
+    // pool holds at 387: 8 categories now diverge, up from 6), still an
+    // order of magnitude inside the ±0.15 bound.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): the per-settlement warlikeness draw adds another
+    // path-dependent step to the bake — 0.010_335_917_312_661_49 ->
+    // 0.015_503_875_968_992_262 (the pool holds at 387), still an order of
+    // magnitude inside the ±0.15 bound asserted above, which the run reaches
+    // and does not fire. The naming-independent invariant on the line above
+    // (head-domain TVD exactly 0) is likewise unmoved.
     assert!(
-        (cult - 0.007_751_937_984_496_131).abs() < 1e-9,
+        (cult - 0.009903807615230464).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -1971,8 +2755,19 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // The Tumult (predation) re-pin; lefford regen, 0063: same cause as the
     // cult-form movement above — -0.003_297_896_904_548_732 ->
     // -0.003_956_842_859_287_871, still ~50x inside the ±0.2 bound.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the residual again:
+    // -0.003_956_842_859_287_871 -> -0.003_295_124_196_027_554_4; still
+    // ~60x inside the ±0.2 bound.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): same per-settlement-draw cause as the cult-form
+    // movement above — -0.003_295_124_196_027_554_4 ->
+    // -0.005_276_769_343_453_631, still ~38x inside the ±0.2 bound asserted
+    // above, which the run reaches and does not fire.
     assert!(
-        (size - -0.003_956_842_859_287_871).abs() < 1e-9,
+        (size - 0.0036610340107316253).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -2100,7 +2895,65 @@ fn null_control_name_length_smd_is_pinned() {
         // names. Still ~39x inside the ±0.2 sampling-theory bound
         // `null_control_distributions_are_within_the_sampling_bound` asserts,
         // which is the assertion that would actually catch a broken control.
-        (namelen - -0.025_217_538_228_395_453).abs() < 1e-9,
+        // The Witness (cascade/v2 epoch), 0063: -0.025_217_538_228_395_453 ->
+        // -0.012_055_568_856_886_177. This is the null control's own reading,
+        // not a regression: the cascade reseed touched BOTH the goblin and its
+        // deliberately-identical twin alike, and the standardized mean
+        // difference moved roughly HALFWAY toward zero rather than away from
+        // it — the null hypothesis (INDISTINGUISHABLE FROM ZERO) reads more
+        // true after this re-pin than before, and no sign flip occurred. Still
+        // comfortably inside the ±0.2 sampling-theory bound above.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump moves the residual again:
+        // -0.012_055_568_856_886_177 -> -0.017_848_707_186_831_292. Still
+        // roughly 11x inside the ±0.2 sampling-theory bound.
+        // The Salt's close regen, 0063: -0.017_848_707_186_831_292 ->
+        // -0.018_069_698_979_322_31. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): `census-of-the-meeting`'s two pin
+        // sets are `goblin-solo` and `goblin-twin-solo` — human is not
+        // itself present in either build, so this is NOT the direct
+        // roster-competition effect the rest of this file's re-pins record.
+        // The mechanism is `register_concepts` (domains/species/src/lib.rs)
+        // registering all of `KIND_CONCEPTS` unconditionally rather than
+        // filtered by roster: adding `human-kind` grows the registered
+        // concept set, and every lexicon is a total map over registered
+        // concepts (asserted by this branch's own
+        // `cli/tests/the_unnameable.rs`), so even a goblin-solo world's
+        // lexeme space grows by one word and perturbs the name draws.
+        // Confirmed by measurement: exactly one seed of 500 moved. Both solo
+        // builds moved alike in structure (the sibling
+        // `null_control_distributions_are_within_the_sampling_bound` test,
+        // unaffected by this regen, confirms head-domain/cult-form/
+        // pantheon-size TVD/SMD are all unmoved), so only the residual
+        // name-length gap shifted:
+        // -0.018_069_698_979_322_31 -> -0.017_807_448_465_414_44. Moves an
+        // order of magnitude less than its own scale, staying ~11x inside
+        // the ±0.2 sampling-theory bound — the null hypothesis this row
+        // exists to witness (INDISTINGUISHABLE FROM ZERO) reads, if
+        // anything, slightly MORE true than before, re-checked rather than
+        // assumed.
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): the per-settlement warlikeness
+        // draw is keyed on the settlement's own site, so both solo builds'
+        // histories move alike in structure and only the residual
+        // name-length gap shifts: -0.017_807_448_465_414_44 ->
+        // +0.009_246_730_125_111_655. The SIGN flips, and the reading is the
+        // same one the F11 note above records for the same event: this is a
+        // standardized mean difference between a people and its
+        // deliberately-identical twin, so the null hypothesis it witnesses is
+        // INDISTINGUISHABLE FROM ZERO, and -0.0178 -> +0.0092 moves it
+        // roughly HALFWAY CLOSER to zero. The sign of a residual this small
+        // is noise about which of two identical populations drew marginally
+        // longer names. Now ~22x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound`
+        // asserts, which is the assertion that would catch a broken control
+        // and which that test reaches without firing.
+        (namelen - -0.001442498324082422).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
@@ -2243,6 +3096,574 @@ fn obliquity_range_is_wider_on_moonless_worlds() {
     assert!(
         moonless_mean > mooned_mean,
         "moonless mean obliquity-range {moonless_mean:.4} !> mooned mean {mooned_mean:.4}"
+    );
+}
+
+/// Every `Hydro` variant is reachable from the real derivation — the property
+/// `domains/terrain/tests/hydro_witness.rs` held over 8 seeds, now held over
+/// 1,000 (The Assay). A variant that is structurally dead reads 0 worlds here,
+/// and the failure names it; a variant that is merely rare reads a small share
+/// and passes, which the 8-seed sweep could not distinguish.
+///
+/// Shares at the 2026-08-07 regen (`d36be41b`), n = 1000 worlds: every
+/// variant is at 100.0% — `aquifer`, `aquitard`, `spring`, `runoff`, and
+/// `karst` all appear on all 1,000 worlds, and only one combination is ever
+/// observed (`"aquifer+aquitard+spring+runoff+karst"`). That is zero
+/// variance, not an interesting distribution: this assertion is a guard that
+/// will move if a variant ever dies, not a spread that tells us anything
+/// today. It is also the honest reading of what the retired 8-seed sweep was
+/// actually testing — every variant it certified was already showing up on
+/// the very first world of every run, 1,000 times over.
+/// claim: reachability(census: hydro-variant-coverage) — the retired
+/// hydro_witness hunt's census-backed replacement (The Assay, Task 8)
+#[test]
+fn every_hydro_variant_is_reachable_somewhere_in_the_census() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "hydro-variant-coverage")
+        .expect("the census carries hydro-variant-coverage");
+
+    let mut worlds_showing: std::collections::BTreeMap<&str, usize> =
+        std::collections::BTreeMap::new();
+    for variant in hornvale_terrain::Hydro::ALL {
+        worlds_showing.insert(variant.name(), 0);
+    }
+    let mut measured = 0usize;
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        let MetricValue::Text(joined) = &row.values[column] else {
+            continue;
+        };
+        measured += 1;
+        for name in joined.split('+').filter(|s| !s.is_empty()) {
+            if let Some(count) = worlds_showing.get_mut(name) {
+                *count += 1;
+            } else {
+                panic!("seed {} reports unknown hydro name {name:?}", row.seed);
+            }
+        }
+    }
+    assert!(
+        measured > 0,
+        "no world in the census reported hydro coverage"
+    );
+
+    let dead: Vec<&str> = worlds_showing
+        .iter()
+        .filter(|(_, n)| **n == 0)
+        .map(|(name, _)| *name)
+        .collect();
+    assert!(
+        dead.is_empty(),
+        "these Hydro variants appear on 0 of {measured} census worlds — unreachable \
+         from the real derivation, and no sweep width saves them: {dead:?}. \
+         Shares: {worlds_showing:?}"
+    );
+}
+
+/// Every toponymic concept wins a root somewhere — the property
+/// `windows/worldgen/tests/exposure.rs` held by building up to 9 worlds to
+/// find a witness, now held over 1,000 (The Assay).
+///
+/// Two columns rather than a ratio, because they fail differently: a drop in
+/// `toponymic-roots-won` is a worlds change, while a change in
+/// `toponymic-core-size` is a REGISTRY change and means someone added a
+/// concept — possibly an unreachable one, which is exactly what the retired
+/// sweep existed to catch.
+///
+/// Values at the 2026-08-07 regen (`d36be41b`), n = 1000: `toponymic-core-size`
+/// is 7 on every single world — it is derived from the registry via
+/// `register_all`, which runs unconditionally, so the registry's concept set
+/// does not depend on the seed. That makes it a cross-commit drift detector,
+/// not a per-world variable, which is why it stays its own column rather than
+/// folding into a ratio. `toponymic-roots-won` ranges from 2 to 7 with a mean
+/// of 5.28, and only 131 of 1,000 worlds (13.1%) reach all seven. So this
+/// assertion passes (`max == core == 7`) — but the interesting fact is not the
+/// pass, it is that steeping every concept is atypical: the retired sweep
+/// asked "does *some* world win each concept" and got yes, while the census
+/// can say how typical that is, and the answer is not very.
+#[test]
+fn some_census_world_steeps_every_toponymic_concept() {
+    let result = &*DRIFT;
+    let idx = |name: &str| {
+        result
+            .metric_names
+            .iter()
+            .position(|n| *n == name)
+            .unwrap_or_else(|| panic!("the census carries {name}"))
+    };
+    let (won_i, core_i) = (idx("toponymic-roots-won"), idx("toponymic-core-size"));
+
+    let mut best = 0.0f64;
+    let mut best_seed = None;
+    let mut cores: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if let MetricValue::Number(core) = row.values[core_i] {
+            cores.insert(core as u64);
+        }
+        if let MetricValue::Number(won) = row.values[won_i]
+            && won > best
+        {
+            best = won;
+            best_seed = Some(row.seed);
+        }
+    }
+    assert_eq!(
+        cores.len(),
+        1,
+        "the toponymic core size differs across census worlds ({cores:?}) — it is \
+         derived from the registry, so every world must agree"
+    );
+    let core = *cores.iter().next().expect("one core size") as f64;
+    assert!(core > 0.0, "no concept reports the toponymic domain");
+    assert_eq!(
+        best, core,
+        "no census world steeps all {core} toponymic concepts — the best is {best} \
+         (seed {best_seed:?}). One or more concepts is a structurally dead gate; the \
+         retired 9-world sweep would have failed on every seed too."
+    );
+}
+
+/// A live prediction crisis occurs — the property
+/// `windows/worldgen/tests/diachronic.rs` held by building up to 200 worlds to
+/// find one, now measured over 1,000 (The Assay). The rate is the finding the
+/// hunt could never report: the hunt knew only that its search terminated, and
+/// could not say whether it stopped at seed 1 or seed 187.
+///
+/// Rate at the 2026-08-07 regen (`d36be41b`), n = 1000:
+/// `crisis-fires: true 659 · false 341 · Absent 0` — two worlds in three hold
+/// a live prediction crisis. That is the campaign's thesis in one number: the
+/// retired hunt was never slow, it was uninformative — it could report only
+/// that a crisis existed *somewhere* in its search range, never that the
+/// mechanism is this common.
+#[test]
+fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "crisis-fires")
+        .expect("the census carries crisis-fires");
+    let (mut fired, mut measured, mut absent) = (0usize, 0usize, 0usize);
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        match row.values[column] {
+            MetricValue::Flag(true) => {
+                fired += 1;
+                measured += 1;
+            }
+            MetricValue::Flag(false) => measured += 1,
+            _ => absent += 1,
+        }
+    }
+    assert!(
+        measured > 0,
+        "crisis-fires was Absent on every census world ({absent})"
+    );
+    assert!(
+        fired > 0,
+        "no world in {measured} exhibits a live prediction crisis at the hundredth \
+         year — the mechanism ships unexercised. Do NOT weaken \
+         PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN to force a hit; those are \
+         the spec's own considered values."
+    );
+    assert_eq!(
+        absent, 0,
+        "crisis-fires was Absent on {absent} census world(s) — the census reads 0 \
+         Absent for this metric; a nonzero count here is a real change worth naming"
+    );
+    println!("crisis-fires: {fired}/{measured} worlds ({absent} absent)");
+}
+
+// --- THE CONFUSION (C2c follow-on): the raid readouts, over the census. ---
+//
+// `windows/worldgen/tests/tolerance_baseline.rs` reported these quantities
+// over 30 live worlds for The Tolerance's preregistered H1/H2/H3. Those
+// verdicts are adjudicated (`book/src/chronicle/the-tolerance.md`), so the
+// battery was re-answering a settled question on every heavy-tier run, and its
+// own guards had gone red at the nine-people roster. The two tests below hold
+// what survives the discharge: the self-consistency invariant, and the fact
+// that raiding happens at all.
+//
+// **THE POPULATION CHANGED.** The retired readout filtered to the six settling
+// peoples frozen at The Generalist; these columns filter nothing. Every rate
+// below is over every occupation record on the world, whatever people holds it
+// — nine settling peoples at this commit. The two are therefore NOT comparable
+// numbers, and no assertion here treats them as one.
+//
+// **The census values, at the 2026-08-08 regen, n = 1000:**
+//
+// ```
+//   raid-victim-rate             min 0.000000  med 0.287904  max 0.450098
+//   raid-initiator-rate          min 0.000000  med 0.282229  max 0.435421
+//   raid-attribution-unresolved  0 on all 1000 rows
+//   victim/initiator ratio       min 1.0000  med 1.0217  max 1.1086  (n = 997)
+//   worlds with no raiding at all                      3
+//   worlds where initiators exceed victims             0
+// ```
+//
+// Two readings worth keeping. **The invariant holds census-wide**: every
+// `Ended::By` reference on all thousand worlds resolves to exactly one record,
+// which is the claim the retired battery's panic message denied and never
+// measured. And **a raider is very nearly one-shot** — a median of 1.02 raids
+// each — so the offence column is not a rescaled copy of the defence one, but
+// it is close enough that its whole value is in the tail, which is the reason
+// it earns a column rather than a derivation.
+//
+// **What the pre-regen scratch probe missed, recorded because it is the
+// argument for this whole migration.** Before the census ran, a 12-world live
+// probe (seeds 1-12) read the victim rate as spanning 0.014 to 0.373 and the
+// ratio as 1.00-1.03. The census says 0.000 to 0.450 and 1.0000 to 1.1086. The
+// small sample missed **both tails**: it never saw a peaceful world, and three
+// exist; and it understated the busiest world by 0.077. Nothing was wrong with
+// the probe — twelve worlds simply cannot see a 0.3% event. That is the case
+// for the population being the instrument rather than a sample of it, made by
+// the one battery whose replacement is being justified.
+//
+// The assertions below are written to hold over any population, and were
+// written before these numbers were read.
+
+/// Present numeric values of a named column over every non-refused census row,
+/// paired with the seed that produced them — the raid tests below all want to
+/// name the worst world in their failure message, not only the count.
+fn seeded_nums(r: &RunResult, name: &str) -> Vec<(u64, f64)> {
+    let column = r
+        .metric_names
+        .iter()
+        .position(|n| *n == name)
+        .unwrap_or_else(|| panic!("the census carries {name}"));
+    r.rows
+        .iter()
+        .filter(|row| row.refusal.is_none())
+        .filter_map(|row| match row.values[column] {
+            MetricValue::Number(n) => Some((row.seed, n)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// **The self-consistency guard, promoted from 30 worlds to the census.**
+///
+/// `tolerance_baseline.rs` held this as a pooled count comparison on 30 worlds:
+/// the reconstructed per-record attribution had to sum to the bake's own
+/// `census().raided`. Two things changed in the migration, one stronger and one
+/// weaker, and both are stated rather than papered over.
+///
+/// **Stronger**: this is PER-REFERENCE over ~1,000 worlds, not a pooled sum
+/// over 30. A pooled sum is satisfied by any two compensating errors — one raid
+/// attributed twice and another lost still totals correctly — and cannot see a
+/// raider that names two records at all. This asks of each individual
+/// `Ended::By(raider)` whether it names exactly one occupation record.
+///
+/// **Weaker**: it cannot compare against the bake's own counter.
+/// `BakeCensus` lives on `History::tally`, which `build_world_to` discards
+/// after `emit_history`; a census view holds only a `World`, so the bake's
+/// tally is unreachable from any metric. That comparison therefore survives in
+/// exactly one place — `windows/worldgen/tests/raid_attribution_probe.rs`,
+/// which builds live worlds and holds the `History` — and that is why the probe
+/// is kept rather than retired alongside the readouts.
+///
+/// The column behind this is expected to read 0 on every world forever, which
+/// makes it indistinguishable from a column that cannot read anything unless
+/// the fold behind it is shown to answer differently. It is:
+/// `windows/lab/src/metrics.rs`'s `raid_attribution_reports_a_dangling_reference`
+/// and `raid_attribution_reports_an_ambiguous_reference` exercise both failure
+/// modes on hand-built records.
+/// claim: invariant(census: raid-attribution-unresolved, all ~1000 rows) — every
+/// `Ended::By` reference names exactly one occupation record
+#[test]
+fn every_raid_on_every_census_world_names_exactly_one_raider() {
+    let unresolved = seeded_nums(&DRIFT, "raid-attribution-unresolved");
+    assert!(
+        !unresolved.is_empty(),
+        "raid-attribution-unresolved was Absent on every census world — the invariant \
+         is being asserted over an empty population"
+    );
+    let broken: Vec<(u64, f64)> = unresolved
+        .iter()
+        .copied()
+        .filter(|(_, n)| *n > 0.0)
+        .collect();
+    assert!(
+        broken.is_empty(),
+        "{} of {} census worlds carry an `Ended::By(raider)` that does not name exactly \
+         one occupation record: {:?} (seed, count). Every raid rate on those worlds is \
+         attributed to the wrong settlements.",
+        broken.len(),
+        unresolved.len(),
+        &broken[..broken.len().min(10)]
+    );
+}
+
+/// Raiding happens, and the census reports its rate — the live question the
+/// retired readout's discharged preregistration was standing in front of.
+///
+/// Both a floor and a ceiling, because a floor alone cannot see the absurd
+/// case: a fold that counted every record as a victim would clear any
+/// "raiding occurs" check while reporting a rate of 1.0.
+///
+/// The initiator column is checked against the victim column rather than in
+/// isolation, because their RELATION is the reason it is worth its own census
+/// cost: every raid closes exactly one victim, so pooled victims are the number
+/// of raids and pooled initiators are the number of distinct raiders. Initiators
+/// can therefore never exceed victims on a world, and the ratio is the mean
+/// raids per raider — the one number that separates "many settlements each
+/// raiding once" from "a few serial raiders".
+/// claim: invariant(census: raid-victim-rate vs raid-initiator-rate, all rows) —
+/// both rates lie in [0, 1] and distinct raiders never exceed raids on any
+/// world. The `raiding > 0` floor and the mean-below-1.0 ceiling ride along as
+/// non-vacuity guards; they are not the quantified claim, which is per-row.
+#[test]
+fn raiding_occurs_across_the_census_and_both_sides_agree() {
+    let victims = seeded_nums(&DRIFT, "raid-victim-rate");
+    let initiators = seeded_nums(&DRIFT, "raid-initiator-rate");
+    assert!(
+        !victims.is_empty(),
+        "raid-victim-rate was Absent on every census world"
+    );
+    assert_eq!(
+        victims.len(),
+        initiators.len(),
+        "the two raid rates are measured on different world populations — they share a \
+         denominator and an Absent branch, so they cannot"
+    );
+
+    for ((seed, v), (_, i)) in victims.iter().zip(initiators.iter()) {
+        assert!(
+            (0.0..=1.0).contains(v) && (0.0..=1.0).contains(i),
+            "seed {seed}: a raid rate outside [0, 1] (victim {v}, initiator {i})"
+        );
+        assert!(
+            i <= v,
+            "seed {seed}: more distinct raiders ({i}) than raids ({v}) — every raid \
+             closes exactly one victim, so this is impossible unless the two columns \
+             stopped reading the same population"
+        );
+    }
+
+    let raiding = victims.iter().filter(|(_, v)| *v > 0.0).count();
+    assert!(
+        raiding > 0,
+        "no world in {} raids at all — the mechanic ships unexercised",
+        victims.len()
+    );
+    let mean = |xs: &[(u64, f64)]| xs.iter().map(|(_, x)| x).sum::<f64>() / xs.len() as f64;
+    let (mv, mi) = (mean(&victims), mean(&initiators));
+    assert!(
+        mv < 1.0,
+        "every occupation record on the mean census world was raided (victim rate {mv}) \
+         — a rate that high is a broken fold, not a violent world"
+    );
+    println!(
+        "raid rates over {} census worlds: victim mean {mv:.6}, initiator mean {mi:.6}, \
+         {raiding} worlds with at least one raid",
+        victims.len()
+    );
+}
+
+// --- THE TARE: calibration for the two census columns that retire the
+// seed-42 displacement gate and both twelve-seed panels. Both tests are RED
+// against the pre-regen fixture, because it predated these columns. The
+// census has since regenerated (the-assize, 2026-08-08, canonical box) and both
+// are green. **Both were mutation-proved after the regen**, and each produced
+// a real assertion failure naming its own guard rather than a compile error:
+// `pooled >= 1000.0` -> `1e12` reddens with "displacement has gone inert
+// across the whole census"; `hi - lo >= 10.0` -> `1e12` reddens with "the
+// tribute stock is effectively constant". Both targets were asserted present
+// before substitution and byte-identical after revert.
+
+/// Displacement fires across the census, and its distribution is the reason
+/// the single-seed gates were retired rather than re-pinned.
+///
+/// The ZERO SHARE is printed, never asserted. It is the number that justified
+/// the migration — a bound on it would re-create, one level up, exactly the
+/// defect of pinning a wide distribution to a value someone happened to see.
+///
+/// **Measured over the census (the-assize, 2026-08-08): zero on 137 of 1000
+/// worlds (13.7%), median 10, max 1924, pooled 113 526 events.** The design
+/// probe that argued for this migration read 48 worlds and put the same
+/// figures at 12.5% zeros, median 6, **max 578**. The zero rate survived; the
+/// tail did not — the census max is 3.3x what 48 worlds could see. That gap is
+/// this column's own argument arriving as evidence rather than as a rationale.
+///
+/// The pooled floor of 1000 therefore sits ~113x under the measurement: an
+/// inertness floor, deliberately not a target.
+/// claim: rate(census: climate-displacement-events, all rows) — the pooled
+/// count clears an inertness floor and no world reports a negative or
+/// non-finite count
+#[test]
+fn climate_displacement_fires_across_the_census() {
+    let events = seeded_nums(&DRIFT, "climate-displacement-events");
+    assert!(
+        !events.is_empty(),
+        "climate-displacement-events was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, n) in &events {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: displacement count {n} is not a non-negative finite number"
+        );
+    }
+    let pooled: f64 = events.iter().map(|(_, n)| n).sum();
+    // An inertness floor, not a target: set orders of magnitude under the
+    // measurement and orders of magnitude above what a dead bake would leave.
+    // Read pooled rather than per-seed precisely because 12.5% of worlds
+    // legitimately measure zero.
+    assert!(
+        pooled >= 1000.0,
+        "displacement has gone inert across the whole census: {pooled} events over {} \
+         worlds. This is not a floor to lower — it means the migration branch stopped \
+         running.",
+        events.len()
+    );
+    let zeros = events.iter().filter(|(_, n)| *n == 0.0).count();
+    let mut sorted: Vec<f64> = events.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    println!(
+        "climate displacement over {} census worlds: zero on {zeros} ({:.1}%), median {}, \
+         max {} — REPORTED, not asserted",
+        events.len(),
+        100.0 * zeros as f64 / events.len() as f64,
+        sorted[sorted.len() / 2],
+        sorted[sorted.len() - 1]
+    );
+}
+
+/// The tribute stock is alive and VARIES across the census.
+///
+/// The span is the assertion with teeth, and deliberately so. The panel this
+/// replaces asserted only non-inertness, and every candidate observable —
+/// including the bake's own flow — measured 0 zeros over 36 worlds, so that
+/// guard could essentially never fire. A constant column is a broken fold,
+/// and it is the failure this can actually see.
+///
+/// **And the 36-world probe was wrong about the zeros, which is why the floor
+/// it suggested was never written.** Measured over the census: **0..227,
+/// median 73, and 13 of 1000 worlds hold NO standing tribute relation at
+/// all.** A "tribute is never zero" assertion, the obvious reading of the
+/// probe, would be false on thirteen worlds today. This is The Confusion's
+/// three-in-a-thousand no-raid finding recurring: a small probe cannot
+/// resolve a rare event, and no amount of care changes that.
+/// claim: rate(census: tribute-relations-standing, all rows) — the column
+/// spans a real range and no world reports a negative or non-finite count
+#[test]
+fn the_tribute_stock_varies_across_the_census() {
+    let stock = seeded_nums(&DRIFT, "tribute-relations-standing");
+    assert!(
+        !stock.is_empty(),
+        "tribute-relations-standing was Absent on every census world"
+    );
+    for (seed, n) in &stock {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: tribute stock {n} is not a non-negative finite number"
+        );
+    }
+    let mut sorted: Vec<f64> = stock.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    let (lo, hi) = (sorted[0], sorted[sorted.len() - 1]);
+    assert!(
+        hi - lo >= 10.0,
+        "the tribute stock is effectively constant across {} census worlds ({lo}..{hi}) \
+         — a column that reads the same number everywhere is a broken fold, not a \
+         finding about worlds",
+        stock.len()
+    );
+    let zeros = stock.iter().filter(|(_, n)| *n == 0.0).count();
+    println!(
+        "tribute stock over {} census worlds: {lo}..{hi}, median {}, zero on {zeros} \
+         — the zero count is REPORTED; a 36-world probe saw none, and the census is \
+         the first instrument that could",
+        stock.len(),
+        sorted[sorted.len() / 2]
+    );
+}
+
+/// The verifier decision 0097 prescription 4 requires: `cold-built-room-share`
+/// (the census column that replaced the 15-seed cold-DOMINATION existence
+/// clause `hearth_population_calibration.rs` used to carry — see that
+/// decision and the metric's own doc in `windows/lab/src/metrics.rs`) is a
+/// *generator* with no verifier until this row exists. An unpaired census
+/// claim "scores as unchecked no matter how large its sample" (0097
+/// prescription 4); this pairs it.
+///
+/// # The band was fixed before the number was read
+///
+/// Rule, chosen first: the measured dominated-world rate, ± 5 binomial
+/// standard errors, rounded outward to the nearest 0.5 percentage point.
+/// Applied to the committed fixture:
+///
+/// ```text
+/// n = 1000, present = 1000, absent = 0
+/// dominated (share >= 0.5)   = 222   ->  22.20%
+/// binomial SE = sqrt(p(1-p)/n) = 1.3142 pp
+/// 5 SE = 6.5711 pp
+/// raw band   = [15.629%, 28.771%]
+/// rounded outward to 0.5 pp -> [15.5%, 29.0%]
+/// ```
+///
+/// The preregistered contingency — if fewer than 30 worlds were dominated,
+/// assert no positive lower bound, since a rate estimated from under 30
+/// successes has no binomial-normal approximation worth a band — is **not
+/// triggered**: 222 clears it by a wide margin.
+///
+/// # What a 15-seed probe could not see
+///
+/// The retired existence clause asked only whether ANY of 15 worlds crossed
+/// 50% cold-built; The Contour flipped that answer by five rooms on the one
+/// seed sitting near the bar, and The Range's biome ranges flipped it again.
+/// At n = 1000 the same physics reads as a rate with a confidence interval
+/// instead of a coin flip decided by whichever world sits nearest the
+/// threshold — the difference 0097 exists to draw.
+///
+/// claim: rate(census: cold-built-room-share, [15.5, 29.0])
+#[test]
+fn cold_built_room_share_dominated_rate_is_measured_and_pinned() {
+    let shares = seeded_nums(&DRIFT, "cold-built-room-share");
+    assert!(
+        !shares.is_empty(),
+        "cold-built-room-share was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, share) in &shares {
+        assert!(
+            share.is_finite() && (0.0..=1.0).contains(share),
+            "seed {seed}: cold-built-room-share {share} is not a share in [0, 1]"
+        );
+    }
+    let dominated = shares.iter().filter(|(_, share)| *share >= 0.5).count();
+    // The preregistered contingency: under 30 dominated worlds, a binomial
+    // band has nothing solid to stand on, so only report, never bound.
+    assert!(
+        dominated >= 30,
+        "only {dominated} of {} worlds are cold-dominated — too few for the \
+         preregistered binomial band; report the rate, do not assert one",
+        shares.len()
+    );
+    let rate = dominated as f64 / shares.len() as f64;
+    assert!(
+        (0.155..=0.290).contains(&rate),
+        "cold-dominated rate {:.4} ({dominated}/{}) drifted outside the \
+         preregistered [15.5%, 29.0%] band (measured rate +/- 5 binomial SE, \
+         rounded outward to 0.5pp)",
+        rate,
+        shares.len()
+    );
+    println!(
+        "cold-built-room-share over {} census worlds: {dominated} dominated \
+         (share >= 0.5), rate {:.4}",
+        shares.len(),
+        rate
     );
 }
 

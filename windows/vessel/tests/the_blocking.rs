@@ -9,8 +9,10 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_vessel::{PossessOpts, Session, Turn};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+mod common;
 
 fn world() -> World {
     build_world(
@@ -91,7 +93,7 @@ fn map_indoors_draws_a_floor_plan() {
     );
     assert!(
         drawn(&plan, '+') > 0,
-        "the seed-42 structure has two chambers, so its plan must show a doorway: {plan}"
+        "the seed-42 structure has several chambers, so its plan must show a doorway: {plan}"
     );
     // Rectangular, and that is a claim about the render rather than a tidiness
     // preference: a row short of its neighbours means a cell went undrawn, and an
@@ -110,10 +112,15 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     // Task 4b's reification, checked where a PLAYER meets it. Two claims, and
     // neither could be made before a wall was a cell:
     //
-    // - the picture is 1:1 with the lattice, so a 19x10 extent draws 19x10 rather
-    //   than Task 4's doubled 39x21. Pinned as numbers here on purpose: the
+    // - the picture is 1:1 with the lattice, so a 19x19 extent draws 19x19 rather
+    //   than Task 4's doubled 39x39. Pinned as numbers here on purpose: the
     //   `(2w+1)` machinery coming back would still satisfy every proportional
     //   assertion in this file, and would only fail against a stated size.
+    //   Re-measured under The Tense (2026-08-05): the seed-42 structure the
+    //   walk enters now has FOUR chambers rather than two and the first is
+    //   19x19 rather than 19x10. Only the size moved — the 1:1 claim is exactly
+    //   as testable at 19x19, since the doubling this guards against would
+    //   render 39x39.
     // - the plan is ENCLOSED. A drawn border of unbroken `#` is what makes the
     //   picture read as a BUILDING rather than as a floating partition diagram,
     //   and it is what roughly a fifth to two fifths of the extent is spent on.
@@ -124,9 +131,9 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     let lines = picture_rows(&plan);
     assert_eq!(
         (lines.len(), lines[0].chars().count()),
-        (10, 19),
-        "the seed-42 structure has two chambers, whose extent is 19x10, and the \
-         render is 1:1: {plan}"
+        (19, 19),
+        "the seed-42 structure's first chamber has extent 19x19, and the \
+         render is 1:1 (a doubling regression would draw 39x39): {plan}"
     );
     let last = lines.len() - 1;
     for (y, row) in lines.iter().enumerate() {
@@ -154,7 +161,8 @@ fn map_outdoors_still_draws_the_chart() {
         "outdoors, `map` must still draw the locale chart: {chart}"
     );
     assert!(
-        chart.contains("[lens: terrain"),
+        // Default eyes are `Own` (The Beholding, Task 5): colour, not terrain.
+        chart.contains("[lens: colour"),
         "outdoors, `map` must still draw the locale chart: {chart}"
     );
 }
@@ -176,7 +184,13 @@ fn map_out_indoors_refuses_and_names_the_verb_that_fixes_it() {
             "{line:?} indoors must not silently draw the bare plan"
         );
         assert!(
-            !refused.contains("[lens: terrain"),
+            // Default eyes are `Own` (The Beholding, Task 5), so a fallthrough
+            // to the locale chart would now leak "[lens: colour", not
+            // "[lens: terrain" — checking only the old string would have gone
+            // vacuous the moment the default lens changed, proving nothing
+            // about a REAL fallthrough. `"[lens: "` is the invariant marker of
+            // any drawn chart, whichever lens rendered it.
+            !refused.contains("[lens: "),
             "{line:?} indoors must not draw the locale chart: {refused}"
         );
         assert!(
@@ -187,13 +201,109 @@ fn map_out_indoors_refuses_and_names_the_verb_that_fixes_it() {
 }
 
 #[test]
+fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
+    // The Sighting, fix round 1. The regression this pins was MEASURED, not
+    // hypothesised: outdoors `examine <label>` answered from the chart's legend,
+    // and stepping through a doorway made the same noun answer "You see no
+    // <label> here." — in the band whose plan was drawing a mark bearing exactly
+    // that noun. The Lintel's water jar, one band lower.
+    //
+    // The assertion is byte equality rather than "both answer", because a band
+    // boundary is exactly where two renderers of one fact drift apart. One noun,
+    // one datum (`the_purview.rs::a_noun_at_both_grains_resolves_to_one_datum`),
+    // now across a band as well as across two grains.
+    //
+    // THE WORLD IS SEARCHED FOR, NOT PINNED, and the search predicate is the
+    // test's own precondition spelled out: a creature the walk band reports,
+    // still drawn on the plan once the doorway is crossed. Written against seed
+    // 42 alone, this test read as a parity bug the day The Tense reseeded that
+    // world — `examine` answered "You see no <label> here." indoors and was
+    // RIGHT to, because the creature genuinely was not in the chamber. The old
+    // message presumed a mark was drawn without ever checking; the search makes
+    // that presumption a filter instead.
+    let (seed, w) = common::world_where(
+        "a creature the walk band reports is still drawn on the plan indoors",
+        |s| {
+            s.handle("wait");
+            let Some(label) = s
+                .snapshot()
+                .expect("a live session snapshots")
+                .sensed
+                .present
+                .first()
+                .map(|p| p.label.clone())
+            else {
+                return false;
+            };
+            s.handle("enter");
+            common::is_inside(s) && common::marks_of(s).iter().any(|m| m.noun == label)
+        },
+    );
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.handle("wait");
+    let label = session
+        .snapshot()
+        .expect("a live session snapshots")
+        .sensed
+        .present
+        .first()
+        .expect("the seed was chosen because one tick puts a creature here")
+        .label
+        .clone();
+
+    let outdoors = out(session.handle(&format!("examine {label}")));
+    assert!(
+        !outdoors.starts_with("You see no"),
+        "precondition: the noun answers OUT of doors: {outdoors}"
+    );
+
+    inside(&mut session);
+    // The precondition the old version left implicit, and the reason its failure
+    // message was misleading: `examine` is only obliged to answer a noun the
+    // plan DEPICTS, so a red assertion below means something only once the mark
+    // is known to be there.
+    assert!(
+        common::marks_of(&session).iter().any(|m| m.noun == label),
+        "precondition: seed {seed} was chosen because '{label}' is drawn on the \
+         plan indoors — without a mark, examine refusing it is correct, not a bug"
+    );
+    let indoors = out(session.handle(&format!("examine {label}")));
+    assert_eq!(
+        indoors, outdoors,
+        "'{label}' is drawn on the plan inside; examine must answer it, and answer \
+         it with the SAME line the walk band gives"
+    );
+}
+
+#[test]
 fn every_noun_the_plan_depicts_is_examinable() {
     // The parity contract's tested half (spec §6), generalizing
     // `the_purview.rs::examine_accepts_exactly_the_union_of_both_grains`.
-    let w = world();
+    //
+    // **THE WALK IS TWO LISTS, NOT ONE (The Sighting, fix round 1).** This test
+    // used to walk `plan_legend_nouns()` alone — the ASCII render's LEGEND — and
+    // that was sufficient only while the legend was everything the plan depicted.
+    // `vessel/plan/v1` now carries `marks`, and a mark is depicted by every
+    // definition that matters: it has a cell, a noun, and a pane that draws it.
+    // A legend-only walk cannot see one, so a campaign adding a depicted field
+    // would repeat The Lintel — a noun `look` names and `examine` denies —
+    // with the parity test green. Any future depicted list belongs in `depicted`
+    // below, in the commit that adds it.
+    //
+    // `wait` before `enter` is load-bearing and is asserted rather than assumed:
+    // `liveness::Occupancy` is only populated by a tick, so a bare `enter` draws
+    // no marks at all and the widened half of this walk would cover nothing while
+    // reading as coverage.
+    //
+    // And the WORLD is searched for rather than pinned, for the same reason one
+    // rung up: whether a creature stands in the chamber you enter is an accident
+    // of a particular seed, and The Tense removed that accident from seed 42
+    // without touching the parity contract this test is about.
+    let (seed, w) = common::world_that_draws_a_creature();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.handle("wait");
     inside(&mut session);
-    let nouns = session.plan_legend_nouns();
+    let mut nouns = session.plan_legend_nouns();
     assert!(
         !nouns.is_empty(),
         "a plan whose legend names nothing cannot be checked, and a player cannot \
@@ -209,6 +319,24 @@ fn every_noun_the_plan_depicts_is_examinable() {
             "the legend names {glyph:?} but the picture never draws it: {plan}"
         );
     }
+
+    // The plan's OTHER depicted list: the creatures standing on its cells.
+    let marks = match session
+        .snapshot()
+        .expect("a live session snapshots")
+        .spatial
+    {
+        SpatialChannel::Chamber { plan } => plan.marks,
+        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+    };
+    assert!(
+        !marks.is_empty(),
+        "seed {seed} was chosen BECAUSE it draws a mark, so an empty list here \
+         means the search and this walk disagree — and a parity test that \
+         silently covers nothing is the failure it exists to prevent"
+    );
+    nouns.extend(marks.iter().map(|m| m.noun.clone()));
+
     for noun in &nouns {
         let reply = out(session.handle(&format!("examine {noun}")));
         assert!(

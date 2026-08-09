@@ -155,7 +155,12 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
 
     let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
         .iter()
-        .map(|(tag, inputs)| (*tag, hornvale_demography::carrying_capacity(&geo, inputs)))
+        .map(|(tag, inputs)| {
+            (
+                *tag,
+                hornvale_demography::carrying_capacity(&geo, inputs).into_cell_map(),
+            )
+        })
         .collect();
     let projected_niche: Vec<(u32, ResourceVector)> = species
         .iter()

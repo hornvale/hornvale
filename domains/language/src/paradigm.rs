@@ -326,6 +326,8 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    /// claim: reachability(seed: 0..200) — forall MorphDepth variant, exists
+    /// seed (Fix round 1, Class 2, same shape as numeracy.rs's sibling)
     #[test]
     fn paradigm_depths_covers_all_three_buckets_across_many_seeds() {
         // Not a single fixed outcome — confirm the weighted draw actually

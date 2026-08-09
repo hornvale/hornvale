@@ -49,7 +49,14 @@ surface. Two consequences when editing it:
   was to make its polarity a pure function with a test that fails on
   re-inversion. Keep new decisions in that shape.
 
-## Censuses regenerate locally now, ~7 min (decision 0063, supersedes 0046)
+## Censuses regenerate on the canonical box, not on AWS (0063, supersedes 0046; host enforced by 0079)
+
+> **"Locally" here means *not AWS*, not "on your machine".** 0063 retired the
+> spot box; 0079 then enforced *which* box, because the machines disagree by
+> one unit on ~0.1% of discrete-count metrics. `census-run.sh` fails closed on
+> the hostname, so from anywhere but the canonical box the run is refused —
+> dispatch it there instead (root `CLAUDE.md` carries the recipe). Measured
+> 2026-08-09: 776–921 s, not the ~7 min below.
 
 - The everyday gate still stays fast by skipping censuses: `regenerate-
   artifacts.sh` runs them only under `HV_CENSUS=1` (a plain `make rebaseline`

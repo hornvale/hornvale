@@ -2,10 +2,10 @@
 # scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus three
 # guards (see below).
 #
-# Runs `make quick` (fmt --check + clippy + type-audit) before every commit that
-# could change its outcome. These are the cheapest checks and the most common
-# review finding per CLAUDE.md, so catching them here reserves the expensive
-# `--workspace` test gate for pre-push/CI.
+# Runs `make quick` (fmt --check + clippy + type-audit + type-audit-report)
+# before every commit that could change its outcome. These are the cheapest
+# checks and the most common review finding per CLAUDE.md, so catching them
+# here reserves the expensive `--workspace` test gate for pre-push/CI.
 #
 # Opt-in: enable with `make install-hooks` (sets core.hooksPath). Bypass a
 # single commit with `git commit --no-verify` only when you have a reason —
@@ -112,12 +112,24 @@ fi
 # Missing any of those would let a real regression through on a commit that
 # staged no `.rs` file at all.
 #
+# `docs/audits/type-audit-report.md` is in the list for the same reason: it
+# is the ONE non-`.rs` file `make quick` itself directly verifies (the
+# `type-audit-report` target, added in The Mire task 1b, diffs a fresh
+# regen against this committed copy). A commit staging only a hand-edit or a
+# bad merge resolution of that file — no `.rs`, no `Cargo.*` — used to match
+# none of the alternatives above and skip `make quick` entirely, so the very
+# check that exists to catch a stale report never ran on the commit most
+# likely to make it stale. Verified empirically before this fix: staging
+# only a dirtied copy of the file made this predicate fall through and
+# `make quick` never ran, even though `make type-audit-report` alone failed
+# on the same tree.
+#
 # NOTE — this fast path gates ONLY `make quick`. The three guards above run
 # unconditionally, and that is load-bearing: `.superpowers/` scratch is markdown
 # and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust staged"
 # (as the root hook's early `exit 0` did) would have disabled both guards on
 # precisely the commits that trip them.
-rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/'
+rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/|(^|/)docs/audits/type-audit-report\.md$'
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
     echo "pre-commit: no Rust-relevant paths staged — skipping 'make quick'." >&2
     exit 0

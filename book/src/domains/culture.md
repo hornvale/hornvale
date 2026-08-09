@@ -56,7 +56,8 @@ by two more psychology inputs: `threat_response` shifts the warrior
 threshold, `time_horizon` shifts the artisan threshold, and a
 knowledge-based status basis (rather than rank) suppresses the slave rung
 outright regardless of surplus or scale. Every modulation is the identity
-function at the goblin baseline, so this section's formulas and examples
+function at the manikin, and goblin's authored values currently sit there, so
+this section's formulas and examples
 are unchanged for goblin; kobold's knowledge-based status basis makes a slave
 rung structurally unreachable, and every kobold ladder tops out at `elders` —
 the word kobold's vocabulary uses for the very top rung goblin names `chief`,

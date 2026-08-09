@@ -117,6 +117,8 @@ const ATTEMPT_BUDGET: usize = 30_000;
 /// measured land-route attempt count stay under their budgets. Prints both
 /// numbers (`--nocapture`) so a future re-measurement doesn't need to
 /// re-derive the harness.
+/// claim: structural(seed: 42) — off-gate (heavy:); a cost-bound benchmark,
+/// not byte-identity, but still a single-seed claim in the rubric's sense
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn connection_graph_cost_is_bounded_on_seed_42() {

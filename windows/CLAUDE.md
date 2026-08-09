@@ -68,6 +68,6 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   path.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff `book/src/gallery/ book/src/reference/
-  book/src/laboratory/ docs/audits/`. Scene schemas additionally cross the
-  repo boundary to external clients (decision 0055) — additive-or-versioned
-  only.
+  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/`. Scene schemas
+  additionally cross the repo boundary to external clients (decision 0055)
+  — additive-or-versioned only.

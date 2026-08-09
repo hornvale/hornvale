@@ -718,7 +718,22 @@ pub fn variant_pool(
                     prose: "the trench floor",
                 },
             ],
+            // The rock bands never pair with `OpenWater` — see the matching
+            // note in `facets.rs::BiomeExpr::biome`. Named explicitly.
+            Stratum::Regolith
+            | Stratum::Cover
+            | Stratum::Basement
+            | Stratum::Roots
+            | Stratum::Underneath => unreachable!(
+                "OpenWater never pairs with a rock stratum; caves carry \
+                 their own Formation"
+            ),
         },
+        // No named sub-types yet: the cave formations get a variant pool of
+        // their own once something distinguishes karst/lava-tube/fracture
+        // interiors by prose. An empty pool is the documented "not yet"
+        // (`variant_at_cell` already treats an empty pool as `None`).
+        (Formation::KarstCave | Formation::LavaTube | Formation::FractureCave, _) => &[],
     }
 }
 

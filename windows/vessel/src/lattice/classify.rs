@@ -323,6 +323,17 @@ mod tests {
         out
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag.
     #[test]
     fn rule_1_the_realized_graph_is_exactly_the_specified_one() {
         // BOTH directions, and the second is the half that makes this an embedder
@@ -496,6 +507,18 @@ mod tests {
         );
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, _) in corpus()` this test's body
+    /// runs (Fix round 3 correction — this one binds the method as `_`,
+    /// not `m` like its 7 siblings) binds `s` to one of those
+    /// ALREADY-SEEDED structures, not to something seedless. This is a
+    /// forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn rule_4_two_chambers_cannot_disagree_about_a_doorway() {
         // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
@@ -535,6 +558,19 @@ mod tests {
         assert_eq!(g1, grow(&st, e, Seed(1)));
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag. (Also reports the per-method/chamber-count DOF
+    /// spent via `eprintln!`, but the enforced claim is the exact-budget
+    /// `assert_eq!` on every corpus entry — invariant, not readout.)
     #[test]
     fn rule_7_the_embedder_spends_only_the_freedom_the_graph_leaves() {
         // Reported per method and chamber count, because Task 4b reworked BOTH
@@ -576,6 +612,17 @@ mod tests {
         eprintln!("rule 7, (method, chambers, dof spent): {spent:?}");
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag.
     #[test]
     fn rule_8_every_floor_cell_is_reachable_from_the_threshold() {
         // **The rule Task 4b's model earns.** Under the boundary model this was
@@ -643,6 +690,17 @@ mod tests {
         );
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag.
     #[test]
     fn a_chambers_bounds_are_its_floor_and_nothing_else() {
         // `bounds_of` replaces the deleted `regions` field, so its contract is
@@ -665,6 +723,17 @@ mod tests {
         }
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag.
     #[test]
     fn the_standing_cell_is_always_the_chambers_own_floor() {
         // Where the possession is put when it walks in. Two claims: it exists for
@@ -685,6 +754,19 @@ mod tests {
         }
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag. Carries an embedded non-vacuity guard
+    /// (`middles_that_miss > 0`) over the same corpus sweep, riding on
+    /// builds the invariant already pays for.
     #[test]
     fn the_middle_of_a_grown_chamber_is_not_always_its_floor() {
         // The negative control on `standing_cell`'s fallback, and the reason the
@@ -715,6 +797,17 @@ mod tests {
         );
     }
 
+    /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
+    /// the round-1 tag on this test claimed `seed: none` and called the
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
+    /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
+    /// builds 384 seed-derived structures/lattices (both embedder methods)
+    /// per call; the outer `for (s, l, m) in corpus()` this test's body
+    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
+    /// something seedless. This is a forall-corpus-entry invariant, not a
+    /// false-positive flag.
     #[test]
     fn a_step_through_a_doorway_lands_beside_it_in_the_chamber_entered() {
         // The cell a threshold crossing ends on, for BOTH chambers it joins: the

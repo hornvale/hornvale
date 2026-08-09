@@ -46,8 +46,8 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     // `species` is free text read from the ledger (a committed `Value::Text`),
     // not a `KindId` — resolve it against the perception component registry by
     // its `KindId` label, failing loudly if unknown. Today's perception
-    // roster is exactly the four peoples and, since The Vigil, the three
-    // dragons (`check_integrity` enforces speech ⊆ perception, not the
+    // roster is exactly the six settling peoples and, since The Vigil, the
+    // three dragons (`check_integrity` enforces speech ⊆ perception, not the
     // converse — a future non-speaking perceiver stays expressible), so an
     // unknown or plain-fauna label fails here. A dragon label cannot reach
     // this path anyway: `species` is read from a SETTLEMENT.

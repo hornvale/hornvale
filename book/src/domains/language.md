@@ -60,12 +60,22 @@ about a phenomenon rather than a second phenomenon standing in for the
 first.
 
 **The articulation vector, and why it stays closed.** A species' phonology
-is built from an **articulation vector** — the species crate's fourth closed
-vector, after the three-dimension mind and society vectors (*The Cloister*
+is built from an **articulation vector** — the fourth closed vector in this
+lineage, after the three-dimension mind and society vectors (*The Cloister*
 split the old six-dimension psychology vector) and the three-dimension
-perception vector, authored per species with goblin sitting at every
-scalar's 0.5 and every enumeration's goblin variant, the identity-at-baseline
-discipline both earlier vectors already keep. Seven dimensions: each one a
+perception vector, but the first to live outside `hornvale-species`: since
+*The Dissolution* it is owned by `hornvale-language` itself, and it carries
+its own manikin — `ArticulationVector::MANIKIN` — redeclared rather than
+imported, because a domain depends on the kernel and never on a sibling
+domain. It is authored per species and read against that manikin — a
+reference vector belonging to no creature, the same discipline all three
+earlier vectors already keep (see [Species](./species.md) and
+[The Manikin](./manikin.md)). This vector's manikin is the one that wears its
+asymmetry on its face: five of its six scalars sit at the **neutral
+midpoint** `0.5`, but **tonality** sits at a **designated default** of `0.0`
+— atonal, chosen because the shipped body plans afford no pitch contrast, not
+because zero is a middle — and the exotic manner is an enumeration with no
+middle at all, whose designated default is `None`. Seven dimensions: each one a
 named capacity the phonology engine intersects with whatever it draws, so that
 any difference between two peoples' sounds recounts to a dimension by name
 rather than to an author's ear. The seventh, **tonality**, was the phonology
@@ -84,7 +94,7 @@ species and perception model cards keep. Kobold's column continues the
 project's authoring method: a translation, by hand, of a reptilian,
 draconic-kin people's anatomy into seven numbers a formula can read.
 
-| Dimension | Type | Goblin (baseline) | Kobold | Rationale (kobold) |
+| Dimension | Type | Manikin | Kobold | Rationale (kobold) |
 |---|---|---|---|---|
 | Labiality | scalar `[0,1]` | 0.5 | 0.1 | reptilian/draconic mouth — few bilabials/labiodentals |
 | Vowel-space breadth | scalar `[0,1]` | 0.5 | 0.3 | a tighter vowel set |
@@ -93,6 +103,12 @@ draconic-kin people's anatomy into seven numbers a formula can read.
 | Voice loudness | scalar `[0,1]` | 0.5 | 0.2 | small, frail, and stealthy — a dampable phonology |
 | Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — the shipped humanoids carry no pitch contrast; tone is for the future bestiary |
 | Exotic manner (none, trill, click, or ejective) | enum | None | Trill | a signature resonant manner the anatomy affords |
+
+Goblin's authored articulation values currently coincide with the Manikin
+column on every row. Read the column with its two kinds of entry kept apart:
+the first five rows are neutral midpoints, while the tonality row's `0.0` and
+the exotic-manner row's `None` are designated defaults — a reference vector
+must read *something* on a dimension that has no middle.
 
 Voice loudness carries a second life beyond its row. The species crate does
 not yet hold a body — no frailty, no size, no build — so 0.2 is authored
@@ -145,10 +161,15 @@ conditioned change, applied wherever its environment occurs rather than hunted
 word by word, so two roots a merger would have collapsed stay distinct precisely
 when they differed in the sound the merger destroyed — the segmental contrast
 transposed into pitch rather than erased. Cognate descent is untouched, because
-the rule reads the derivation's own history and never the shared proto. The
-shipped peoples are atonal, so tonogenesis is inert for them and their words
-change only through the epoch's reseed; the mechanism waits, complete, for the
-first tone-capable people the world admits.
+the rule reads the derivation's own history and never the shared proto. A
+cascade may draw `Tonogenesis` only at a position where a merger has already
+fired — drawn earlier it would have nothing to condition on and would be the
+identity by construction — and only for a phonology that can actually host a
+toned vowel. The shipped peoples are atonal, so that second gate excludes
+tonogenesis from their draw entirely, rather than drawing it and finding it
+inert after the fact; their words still change only through the epoch's
+reseed, and the mechanism waits for the first tone-capable people the world
+admits.
 
 **Naming grammars, and the status-basis keying.** Three kinds of name this
 substrate generates — settlement names, deity names, deity epithets, place
@@ -169,8 +190,8 @@ ladder tops out at a chief or at elders. A `Rank`-basis society — goblin —
 affixes dominance honorifics onto its gods' titles; a `Knowledge`- or
 `Generosity`-basis society — kobold — builds descriptive compounds instead,
 with no dominance marking anywhere in the title. A god's epithet-shape
-recounts to how its people organize authority, identity at the goblin
-baseline exactly as culture's caste ladder already is. Every generated name,
+recounts to how its people organize authority, identity at the manikin
+exactly as culture's caste ladder already is. Every generated name,
 whatever its kind, carries a romanization, an IPA transcription, and an
 espeak formulation, the same "spellings are views" split the phoneme model
 itself keeps.
@@ -196,7 +217,7 @@ this way, at display time, from facts rather than from a frozen sentence.
 Turning finished English back into finished English by post-processing was
 considered and refused — a string has nowhere to grow, but an interface
 does. v1 fills `render_line` with a template assembler working under three
-voice knobs derived from psychology, identity at the goblin baseline:
+voice knobs derived from psychology, identity at the manikin:
 **formality**, choosing an archaic or a plain connective; **repetition**,
 echoing a refrain; and **epithet density**, how many honorifics stack in a
 line. A `Rank`-basis people renders formal and honorific-dense — goblin,
@@ -362,8 +383,8 @@ domain builds *from* that envelope sorts into the same four kinds
   either vector is ever converted, language never importing species to do
   it; the voice knobs, `voice_params`, deriving formality, repetition, and
   epithet density from the society vector's status basis and sociality and
-  the mind vector's deliberation latency (identity 0.5 at the goblin
-  baseline); naming
+  the mind vector's deliberation latency (identity at the manikin's 0.5
+  neutral midpoint); naming
   morphology, `morph_options`, gating honorifics to a `Rank`-basis status;
   and, since Campaign 17, the **espeak formulation** (`espeak`,
   `espeak_word`) — a derived view computed over the same drawn segment
@@ -495,17 +516,29 @@ Kay ladder — the anthropological finding that a language's color
 vocabulary grows in a fixed implicational order, dark/light before red,
 red before green-or-yellow, green-or-yellow before blue, and so on — and a
 species descends that ladder only as far as its own eyes carved the
-distinctions. Kobold's night vision sits far above goblin's baseline, so
-its hue ladder halts one rung short of blue: it holds words for dark,
-light, red, and green-or-yellow, and stops. What a species does not spend
+distinctions. Kobold's night vision sits far above goblin's 0.5, so
+its hue ladder halts at the second rung: it holds words for dark, light,
+and red, and stops there — no green, no yellow, no blue. Goblin, at the
+manikin's neutral midpoint, reaches blue and stops one rung short of brown. What a species does not spend
 descending the hue ladder it spends instead on a second, orthogonal
 **luminance ladder** — more words for kinds of dark rather than more words
 for kinds of color — and a night-tuned people extends exactly that ladder
 further than a day-tuned one does. The two ladders trade off by
-construction, not by author's whim: a kobold's gap at blue and its
-abundance of words for gloom, shadow, and starlit dark are the same fact,
-read twice. Recountable, the way every gap in this system must be: kobolds
-have no word for blue, because kobold eyes are tuned for the dark. A
+construction, not by author's whim: a kobold's gaps at green, yellow and
+blue and its abundance of words for gloom, shadow, and starlit dark are the
+same fact, read twice. Recountable, the way every gap in this system must
+be: kobolds have no word for blue, because kobold eyes are tuned for the
+dark.
+
+Since The Pigment the ladder is not only a vocabulary but a *decision
+procedure*. Colour is a spectral quantity, and naming runs a surface's
+reflectance and each candidate term's exemplar reflectance through the same
+light and the same eye before comparing — so the word a speaker reaches for
+is the nearest term its own ladder actually owns. An iron-rich outcrop under
+this world's sun is nearest to *brown*, which neither people holds: the
+goblins call it **yellow** and the kobolds call it **red**, each falling back
+to the nearest word it has. The gap is no longer only sayable. It is
+audible in what the two peoples call the same stone. A
 **body pack** ought to key to a body plan the way the color pack keys to a
 perception vector, but no body vector yet exists for it to read — so the
 pack ships now as a shared humanoid core (eye, mouth, hand, foot, blood,
@@ -655,7 +688,7 @@ or more descendants actually share, and nothing before this campaign built
 one. Proto-goblinoid is that ancestor, and it is not a new kind of object: a
 **proto-language**, here, is simply a language with no speakers — an
 authored ancestral articulation vector, its own point in the same
-six-dimension space every people's envelope already occupies; a phonology
+seven-dimension space every people's envelope already occupies; a phonology
 drawn under that vector by the same machinery that draws a daughter's; and
 one proto-root per concept, drawn once from that phonology under
 family-level labels and shared, unmodified, by every daughter. Proto-goblinoid's
@@ -739,9 +772,9 @@ this closing nativization pass, because its inventory has less room to
 receive what the cascade proposes. Hobgoblin sits loud, authored at
 roughly 0.8, a martial, disciplined, commanding people built as a diurnal
 legion society, and draws a comparatively rich inventory that admits more
-of whatever cascade it happens to draw. Goblin holds the family's
-baseline, its vector unchanged from every earlier chapter's 0.5 identity
-point — the family's middle case, but no less a genuine descendant for it,
+of whatever cascade it happens to draw. Goblin sits at the manikin's
+neutral midpoint, its loudness unchanged from every earlier chapter's 0.5
+— the family's middle case, but no less a genuine descendant for it,
 because its vocabulary now descends the same shared proto-root every other
 daughter does rather than being drawn fresh from its own phonology (see
 "The re-baseline," below). Bugbear sits quiet, authored at roughly 0.3, a
@@ -957,15 +990,25 @@ frequent morpheme reduces even under stress — which is why *Hampton* keeps its
 a word its name does not contain is a ledger falsehood. So a worn morpheme must
 leave a contiguous reflex in the repaired surface, or the wear is surrendered,
 least-frequent morpheme first. Opacification is a reduced survival, never an
-erasure. Measured across four worlds and 650 names: 940 morphemes, of which
-611 clear the frequency floor, of which the drawn cascade alters **53**, of
-which the guard rejects 40 — all forty genuine deletions, none an interrupted
-reflex — leaving **14 names** carrying surviving wear. The guard is innocent
-and the bottleneck is the cascade's match rate. Part of it has a name:
-`Tonogenesis` reads its conditioning from a merger earlier in the same cascade,
-so a leading `Tonogenesis` is provably the identity, and in a one-to-two-rule
-wear regime it is the *entire* cascade for three of twenty production cultures.
-The name cycle's opacification phase is therefore in progress, not shipped.
+erasure. The guard was always innocent; the bottleneck above it was which
+rules a cascade was even *permitted* to draw. `Tonogenesis` reads its
+conditioning from a merger earlier in the same cascade, so a `Tonogenesis`
+drawn *before* any merger is provably the identity, and a one-to-two-rule wear
+regime could spend its entire budget on exactly that draw. A second, quieter
+version of the same mistake let a cascade draw `Tonogenesis` or `VowelShift`
+for a phonology that could never host either. Both are now gated at the draw
+itself, not discovered inert after the fact: a cascade may not pick a rule it
+cannot condition, or that the drawing phonology cannot host. Measured on a
+fixed, committed seed sweep, removing both gates alone — same seeds, same
+tree, only the offered roster changes — lifts the cascade's match rate from
+117 to 250 of 421 eligible morphemes (27.8% → 59.4%) and surviving wear from
+86 to 154. An earlier published survival figure (14 of 650 names) traced to
+an unrecorded four-world sample and could not be reproduced afterward; the
+reproducible instrument above is what any future change to the cascade should
+be measured against. The name cycle's opacification phase is markedly
+stronger for it, though still a minority outcome — most eligible morphemes
+still do not wear — and conventionalization, reanalysis and renewal remain
+unbuilt.
 
 *What was given up.* Frequency requires the whole scatter, so a glossed
 settlement name now depends on which *other* settlements its species placed.

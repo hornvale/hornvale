@@ -32,9 +32,36 @@ fn world() -> hornvale_kernel::World {
 /// A stale label here fails LOUDLY BUT MISLEADINGLY: `provoke` finds no such
 /// NPC, so nothing fires and every downstream count reads 0, which looks like
 /// a behavioural regression rather than a renamed target. It has now done so
-/// twice. If these tests fail with `marks 0 vs 3` or `hostility 0 vs 1`,
-/// check this constant against `npcs` BEFORE suspecting the grievance fold.
-const GRIEVANCE_NPC: &str = "bugbear of Gootoogotoodaoka";
+/// three times — most recently at F7 (The Witness, 2026-07-30), which gates
+/// `Tonogenesis` on a prior merger and so reseeds every cascade:
+/// `Gootoogotoodaoka` -> `Goodogododaga`. If these tests fail with `marks 0
+/// vs 3` or `hostility 0 vs 1`, check this constant against `npcs` BEFORE
+/// suspecting the grievance fold.
+///
+/// It happened a fourth time at The Contour's epoch v2 (2026-08-02,
+/// `history/bake/v2`): the BAKE label bump re-mints the cascade again,
+/// `Goodogododaga` -> `Godogododaga` (one fewer `o`). Same seven NPCs at the
+/// same entity ids, re-verified from `book/src/gallery/possession-seed-42.md`.
+///
+/// It happened a fifth time with The Generalist (2026-08-03): human joins
+/// the coexistence stack as a sixth competitor, redeciding seed 42's
+/// settlement placement once more, which re-mints the flagship's name
+/// again: `Godogododaga` -> `Goodogododaga` (one more `o`, back to the
+/// pre-Contour spelling by coincidence of the draw, not a reversion of the
+/// epoch).
+///
+/// It happened a SIXTH time with The Tense (2026-08-05): capacity gained an
+/// era axis, seed 42 re-placed from 209 settlements to 122, and the flagship's
+/// name went `Goodogododaga` -> **`Googo`**. Re-verified from
+/// `book/src/gallery/possession-seed-42.md`, which is the source this constant
+/// must always be read from: it renders `bugbear of Googo` in the room line,
+/// the `map` legend and `whoami` alike.
+///
+/// NOTE the near-miss: seed 42's CHIEF bugbear settlement in the almanac is
+/// `Dadogogodaga`, a different place entirely. Reading the rename off the
+/// almanac instead of the possession artifact gives a plausible wrong answer,
+/// because this NPC does not live in the chief settlement.
+const GRIEVANCE_NPC: &str = "bugbear of Googo";
 
 fn out_text(t: Turn) -> String {
     match t {

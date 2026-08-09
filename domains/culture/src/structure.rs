@@ -1,7 +1,8 @@
 //! Emergent social structure: which caste/role strata a settlement grows,
 //! from its subsistence, surplus (fertility × water), population scale, and
 //! threat. A lean forager camp is nearly egalitarian; a rich, populous farm
-//! town differentiates into a full ladder. The role vocabulary stays goblin;
+//! town differentiates into a full ladder. The role vocabulary defaults to
+//! goblin's authored role nouns unless the caller supplies another kind's;
 //! what varies is which rungs exist (replacing the tier-0 fixed ladder).
 
 use crate::subsistence::Subsistence;
@@ -51,14 +52,19 @@ impl Default for RoleVocabulary {
 
 /// The psychology a settlement's people bring to structure formation,
 /// assembled at the composition root from the species domain (culture never
-/// imports species). `Default` is the goblin baseline: every modulation
-/// below is the identity function at it.
+/// imports species). `Default` is the manikin's reference reading — the two
+/// scalars at their neutral midpoint, the two flags at designated defaults
+/// mirroring the species crate's `Sociality::Hierarchic` and
+/// `StatusBasis::Rank` (an authority shape and a standing basis have no
+/// middle) — and every modulation below is the identity function at it.
+/// `vocabulary` is the one field with no reference value: words are not a
+/// quantity, so it falls back to goblin's authored role nouns.
 /// type-audit: bare-ok(ratio: threat_response), bare-ok(ratio: time_horizon), bare-ok(flag: communal), bare-ok(flag: rank_status)
 #[derive(Clone, Debug, PartialEq)]
 pub struct PsychSummary {
-    /// Flee 0 ↔ stand 1; 0.5 baseline.
+    /// Flee 0 ↔ stand 1; 0.5 is the manikin's neutral midpoint.
     pub threat_response: f64,
-    /// Planning depth; 0.5 baseline.
+    /// Planning depth; 0.5 is the manikin's neutral midpoint.
     pub time_horizon: f64,
     /// Communal (true) suppresses singular chieftainship.
     pub communal: bool,
@@ -82,10 +88,10 @@ impl Default for PsychSummary {
 
 /// The ordered role list (lowest → highest) a settlement grows, from its
 /// environment modulated by its people's psychology (spec §5). Every
-/// modulation is identity at the goblin baseline.
+/// modulation is the identity function at the manikin's reference reading.
 /// type-audit: bare-ok(identifier-text)
 pub fn structure(env: &EnvSummary, psych: &PsychSummary) -> Vec<String> {
-    let invest = 1.5 - psych.time_horizon; // 1.0 at baseline
+    let invest = 1.5 - psych.time_horizon; // 1.0 at the manikin's midpoint
     let mut roles: Vec<String> = Vec::new();
     if psych.rank_status && env.surplus > 0.6 && env.population > 300 {
         roles.push("slave".to_string());
@@ -175,9 +181,9 @@ mod tests {
     }
 
     #[test]
-    fn baseline_psych_reproduces_the_pre_species_table_exactly() {
-        // The identity property (spec §2.2): at the goblin baseline the
-        // modulated table equals the original on a dense grid.
+    fn manikin_psych_reproduces_the_pre_species_table_exactly() {
+        // The identity property (spec §2.2): at the manikin's reference
+        // reading the modulated table equals the original on a dense grid.
         let base = PsychSummary::default();
         for sub in [
             Subsistence::Farming,

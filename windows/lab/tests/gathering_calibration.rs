@@ -121,9 +121,57 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // the-rains moisture epoch reshapes habitable capacity by latitude — that
     // the AWS-golden lag never re-pinned; the preregistered floor of 3 still
     // clears decisively.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, reshaping every world's settlement contest and with it
+    // this capacity-by-latitude reading: 20.8640 -> 20.9646. The
+    // preregistered floor of 3 still clears decisively (nearly 7x), the
+    // claim this row exists to guard, re-checked rather than assumed.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford
+    // at 347945b4, 0063/0079): warlikeness is drawn per settlement rather
+    // than per species, so every world's raid history — and with it which
+    // sites carry surviving settlements — differs: 20.9646 -> 21.9651. The
+    // preregistered floor of 3 still clears decisively (better than 7x),
+    // the claim this row exists to guard, re-checked rather than assumed.
+    // The Tense's close regen (2026-08-06, canonical census on lefford at the
+    // merged SHA, 0063/0079): 21.9651 -> 18.7988, a 14.4% FALL, and the
+    // direction is the point. This campaign replaced the species-blind
+    // productivity model — a symmetric tent reaching exactly zero a little
+    // above freezing — with the Lieth & Box Miami model it had always cited,
+    // which is monotone and never zero. Cold ground now carries capacity, so
+    // the tropical/polar RATIO must narrow, and it did. A rise here would have
+    // been the surprise.
+    //
+    // The preregistered floor of 3 still clears decisively (better than 6x),
+    // the claim this row exists to guard, re-checked rather than assumed.
+    // Note what this row is NOT: `demesne.rs`'s live seed-42 sibling was
+    // re-labelled this campaign after measuring that its polar term sits below
+    // its floor, making it 100 x the tropical mean rather than a gradient.
+    // This census reading is the 1000-world one and is not degenerate that
+    // way, but decision 0106's circularity rule still applies to both — an
+    // internally-measured value is a drift tripwire, never evidence for the
+    // Earth-contingent gradient claim.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided and this capacity-by-latitude reading with it:
+    // 18.7988 -> 18.9423, a 0.8% rise. The cause is stated no more narrowly
+    // than the roster change on purpose: nothing this campaign measured says
+    // where the three new peoples sit by latitude, and an authored elevation
+    // curve has already been mistaken for an emergent finding once in this
+    // campaign. Decision 0106's circularity rule still applies on top of that
+    // — this is a drift tripwire, never evidence for the Earth-contingent
+    // gradient claim.
+    //
+    // The preregistered floor of 3 still clears decisively (6.3x), the claim
+    // this row exists to guard, re-checked rather than assumed.
     assert!(
-        (mean - 20.8640).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.8640)"
+        (mean - 18.9423).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.9423)"
     );
 }
 
@@ -199,9 +247,59 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // 15.1591); the preregistered directional claim asserted above — below
     // the uniform-sphere baseline of 32.7 — is untouched and still clears by
     // better than 2x.
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict moves settlement placement
+    // again, pulling population slightly poleward (15.1591 -> 15.2716); the
+    // directional claim is untouched and still clears the baseline by
+    // better than 2x.
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves settlement placement again
+    // (15.2716 -> 15.3350); the directional claim is untouched and still
+    // clears the baseline by better than 2x.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, moving settlement placement again (15.3350 -> 15.1298);
+    // the directional claim — below the uniform-sphere baseline of 32.7 —
+    // is untouched and still clears the baseline by better than 2x,
+    // re-checked rather than assumed.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford
+    // at 347945b4, 0063/0079): warlikeness is drawn per settlement rather
+    // than per species, moving settlement placement again and pulling
+    // population slightly equatorward (15.1298 -> 14.8729); the
+    // preregistered directional claim asserted above — below the
+    // uniform-sphere baseline of 32.7 — is untouched and still clears the
+    // baseline by better than 2x, re-checked rather than assumed.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided (14.9484 -> 15.0340). The cause is stated no
+    // more narrowly than the roster change: this campaign measured nothing
+    // about where the three new peoples settle by latitude, so a story like
+    // "dwarves crowd the uplands and pull population poleward" is a guess an
+    // authored elevation curve could equally have produced, and it is not
+    // asserted here. The preregistered directional claim asserted above —
+    // below the uniform-sphere baseline of 32.7 — is untouched and still
+    // clears the baseline by better than 2x (17.67 degrees of margin),
+    // re-checked rather than assumed.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): settlement placement
+    // moves again, pulling population slightly poleward (15.0340 ->
+    // 15.5271). The cause is stated no more narrowly than the campaign's own
+    // mechanism (a declared biome range now constrains where a settling
+    // people may found a settlement); nothing here measured where by
+    // latitude either range-bearing kind sits, so no story about which
+    // biomes moved the mean is asserted. The preregistered directional claim
+    // asserted above — below the uniform-sphere baseline of 32.7 — is
+    // untouched and still clears the baseline by better than 2x (17.17
+    // degrees of margin), re-checked rather than assumed.
     assert!(
-        (mean - 15.1591).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.1591)"
+        (mean - 15.5271).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.5271)"
     );
 }
 
@@ -269,13 +367,13 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// packs against the flat, psychology-only `carrying_inputs_of` /
 /// `species_carrying_input` / `carrying_capacity` path this guard used to
 /// recompute — Task A15a cut genesis over onto the niche-differentiated K
-/// (`niche_per_species_k`, The Niche) the coexistence stack actually
+/// (`per_species_suitability`, The Niche) the coexistence stack actually
 /// competes against (windows/worldgen `build_to`'s `climate+settlements`
 /// stage). Comparing committed population against the OLD flat Σ K would
 /// measure the invariant against a capacity the population was never
 /// realized from. Σ K is now recomputed via
 /// `hornvale_worldgen::demography_report_from` — the pure, deterministic
-/// accessor that mirrors genesis's own `niche_per_species_k` → `coexist::
+/// accessor that mirrors genesis's own `per_species_suitability` → `coexist::
 /// pack` → `stack_condense::condense_stack` pipeline byte-for-byte at the
 /// frozen `BETA`/`FLOOR` constants — summing `per_species_k` over every
 /// peopled species and every cell, exactly as the brief's re-basing
@@ -430,7 +528,12 @@ fn world_level_population_conserves_against_total_capacity() {
     let climate = hornvale_worldgen::climate_from(&world, &terrain)
         .expect("reconstruct climate from committed facts");
     let geo = terrain.geosphere();
-    let suitability = hornvale_demography::carrying_capacity(
+    // NOTE (decision 0103): this is a CAPACITY, not a suitability. The doc
+    // comment above and the assertion messages below predate 0103 and say
+    // "suitability" throughout where they mean capacity — the recorded
+    // reasoning is left as it was written, but the binding is named honestly so
+    // the transposition stops here rather than being copied onward.
+    let productivity = hornvale_demography::carrying_capacity(
         geo,
         &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
     );
@@ -465,7 +568,7 @@ fn world_level_population_conserves_against_total_capacity() {
     // capacity of the ground they actually set them on.
     let occupied_suitability: f64 = occupied_cells
         .iter()
-        .map(|&cell| *suitability.get(cell))
+        .map(|&cell| productivity.at(cell))
         .sum();
     let total_pop: f64 = settlements
         .iter()

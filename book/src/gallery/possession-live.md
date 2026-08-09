@@ -15,6 +15,43 @@ DOM. Seven exports, memory in, prose out — and beside the prose, since [The
 Snapshot](../chronicle/the-snapshot.md), the same turn's structured emit, which
 is what the transcript you read below is now rendered from.
 
+Since [The Panes](../chronicle/the-panes.md) there are **two** panes, and the
+second is the reason the first one's emit was worth building. A map stands
+beside the prose and redraws itself every turn — the chart of the country when
+you are out of doors, the floor plan of the building when you are inside it,
+switching on its own as you `enter` and step `out`. Both panes are pure
+functions of one snapshot: the sim sends *cells*, never a picture, so nothing
+in the browser can show you something the sim did not say, and nothing in the
+sim knows how anything is drawn. There is no second source for the two panes
+to disagree about. The map is also not a capability the prose lacks — every
+pane can do only what a verb can do, so what you see beside the transcript is
+what `map` would have printed had you typed it.
+
+Since [The Beholding](../chronicle/the-beholding.md) the chart is **coloured,
+through the eyes of whoever you are possessing**. Colour is not a property of
+a cell: it is the product of the rock's reflectance, the light actually
+falling on it at your latitude and hour, and the sensitivity curves the
+possessed species' perception vector implies — so the pane carries a caption
+naming the eye, its channel count, and what its projection to a
+three-channel screen *preserves*. A dichromat's map is captioned as one,
+because a two-chromatic-channel signal on an RGB screen is a false-colour
+mapping and the honest place for that admission is the caption rather than
+the picture. Type `eyes kobold`, `eyes human`, `eyes own` or `eyes off` to
+change the eye without changing anything else. The tint is bedrock, so it is
+withheld wherever the glyph is drawing water, a mark, or you.
+
+Since [The Lantern](../chronicle/the-lantern.md) the **floor plan** is
+coloured too, and by a different light. Indoors there is no sun: a cell's
+colour is the fabric its walls are built from — stone, timber, cob or thatch,
+derived from the bedrock, the biome and the depth of soil under the
+building — lit by whatever sources actually reach it. Those are a hearth at
+its wall, an open doorway onto the daylight outside, and the 1900 K flame the
+possession is taken to be carrying, which is why a room reads amber rather
+than white. Light travels by the same symmetric field-of-view calculation that
+decides what you can see, so a wall blocks light exactly as it blocks sight,
+and a cell nothing reaches carries no colour at all rather than a black one.
+A threshold is uncoloured on purpose: an opening is not a material.
+
 ## The Demo
 
 <div id="casement"></div>
@@ -28,6 +65,10 @@ of the locales around you, with ground you have walked but cannot currently see
 drawn from memory; indoors the same verb draws the floor plan of the building
 you are standing in, since a plan has no coarser rung — The Blocking),
 <code>go n|ne|e|se|s|sw|w|nw</code>,
+<code>dive</code> and <code>surface</code> (descend and rise a layer of the
+water column, afloat — The Column),
+<code>delve</code> and <code>climb</code> (descend into the cave beneath the
+cell you stand on, if the rock admits one, and come back up — The Deep Realm),
 <code>enter</code> (step inside what is built where you stand, then
 <code>enter further in</code> to go deeper — a chamber is the same address
 space nine refinements down, ~3.3 m rather than the walk band's ~1.7 km — The
@@ -37,7 +78,11 @@ anything the chamber's prose or the floor plan's legend named),
 <code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily
 route, departing and returning), <code>npcs</code>, <code>why</code>,
-<code>whoami</code>, <code>knows</code>, <code>release</code>. This terminal
+<code>whoami</code>, <code>knows</code>,
+<code>eyes</code> (bare, it reports whose eyes you are seeing colour through
+and what their projection drops; <code>eyes own|human|off</code> or any
+species name switches them — The Beholding),
+<code>release</code>. This terminal
 is
 <a href="https://github.com/hornvale/hornvale/tree/main/clients/vessel">clients/vessel</a>;
 the world it derives is the same
@@ -93,6 +138,13 @@ the CLI runs.</p>
   .casement-possess:disabled, .casement-input:disabled { opacity: 0.5; }
   .casement-promptmark { font-family: var(--mono-font, monospace); opacity: 0.75; }
   .casement-status { min-height: 1.5em; }
+  .casement-panes { display: flex; gap: 1rem; align-items: flex-start; }
+  .casement-transcript { flex: 1 1 60%; min-width: 0; }
+  .casement-mapview {
+    flex: 0 0 auto; margin: 0; font-family: monospace;
+    line-height: 1.05; white-space: pre; overflow-x: auto;
+  }
+  @media (max-width: 640px) { .casement-panes { flex-direction: column; } }
 </style>
 <script type="module" src="./vessel.js"></script>
 

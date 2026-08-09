@@ -13,11 +13,13 @@ hornvale-locale = { path = "../locale" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
 hornvale-climate = { path = "../../domains/climate" }
+hornvale-topology = { path = "../../domains/topology" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-demography = { path = "../../domains/demography" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-species = { path = "../../domains/species" }
+hornvale-history = { path = "../../domains/history" }
 hornvale-language = { path = "../../domains/language" }
 serde = { workspace = true }
 serde_json = { workspace = true }

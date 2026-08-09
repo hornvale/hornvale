@@ -1,21 +1,29 @@
 //! Species, tier 1: the authored body/mind/taxonomy component registries —
 //! the universal biosphere component (mass, metabolic class, resource + climate
-//! niche, potency), a closed six-dimension psychology vector, a closed
+//! niche, potency), the closed three-dimension mind and society vectors (*The
+//! Cloister* split the former six-dimension psychology vector), a closed
 //! three-dimension perception vector, and each kind's family label. Kinds are
 //! keyed by `KindId`; each component authors its own rows directly (the former
 //! authored god-struct was dissolved in ECS c3). Species are data; the
-//! social grammar stays code (spec §2). Goblin is the baseline: scalars 0.5,
-//! default enum variants; every downstream modulation is the identity function
-//! at this vector. The peopled speech data (articulation vector, lexicon,
+//! social grammar stays code (spec §2). The MANIKIN is the reference vector:
+//! scalars at the 0.5 midpoint, designated default enum variants; every
+//! downstream modulation is the identity function at this vector. It is
+//! nobody's — no `KindId`, no registry row — and a kind sitting on it does so
+//! by authorship. The peopled speech data (articulation vector, lexicon,
 //! family proto) is language-owned and lives in `hornvale-language`.
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
-    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError,
-    MARINE_FORAGE, MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError,
-    ResourceVector, Value, Void, World,
+    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, Ledger, LedgerError, MARINE_FORAGE,
+    MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
+    Void, World,
 };
+// `perception_registry()` is keyed by `KindId`, so a caller resolving a
+// species by name (worldgen's `observer_named`, campaign "The Beholding")
+// needs the type nameable as `hornvale_species::KindId`, not just usable
+// internally.
+pub use hornvale_kernel::KindId;
 
 mod allometry;
 pub use allometry::{
@@ -111,7 +119,7 @@ pub enum StatusBasis {
 /// When a species is awake and watching.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActivityCycle {
-    /// Awake by day (the goblin baseline).
+    /// Awake by day (the manikin's designated default schedule).
     Diurnal,
     /// Awake by night.
     Nocturnal,
@@ -152,8 +160,8 @@ impl SocialForm {
 
 /// The individual-mind vector (spec: The Cloister): the psychology every
 /// minded kind carries, whether or not it belongs to a society. Scalars are
-/// bare ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening requires
-/// its own campaign.
+/// bare ratios in `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint;
+/// widening requires its own campaign.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MindVector {
@@ -165,10 +173,43 @@ pub struct MindVector {
     pub time_horizon: f64,
 }
 
+impl MindVector {
+    /// The manikin's mind: the neutral midpoint on every dimension.
+    ///
+    /// This is the model's reference vector, not any creature's psychology —
+    /// no kind is obliged to sit here, and a kind that does, does so by
+    /// authorship. See `SocietyVector::MANIKIN` for the full account.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        threat_response: 0.5,
+        deliberation_latency: 0.5,
+        time_horizon: 0.5,
+    };
+}
+
 /// The community-mind vector (spec: The Cloister): the psychology only a
 /// society has, carried solely by `Settled` kinds. A `Solitary` creature
 /// carries none; consumers needing a society reading for one resolve
-/// [`SocietyVector::baseline`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+/// [`SocietyVector::MANIKIN`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+///
+/// **This is a grid/group instrument** (Douglas), adopted deliberately at the
+/// owner's direction (The Tolerance, spec D6): `sociality` is *grid* (how
+/// rule-bound a life is) and `in_group_radius` is *group* (how bounded "us"
+/// is). The four biases — hierarchy, egalitarian/sect, individualist,
+/// fatalist — each carry published predictions about cosmology, risk, and
+/// stance toward outsiders, so those are DERIVED from the quadrant rather
+/// than authored per people. Adding a people means placing it on two axes,
+/// not inventing its culture.
+///
+/// **The adoption is documentary; no consumer reads a quadrant yet.** The
+/// Tolerance names the frame and stops there. Wiring the quadrant into
+/// behaviour — the obvious candidate being the raid gate, spec D5's third
+/// term — was deliberately deferred: both axes are per-*people* constants, so
+/// a quadrant term adds nothing to the between-settlement variance that
+/// campaign was measuring, and shipping it would have been an unpreregistered
+/// behavioural change with no measurement attached. The frame is recorded here
+/// so the next campaign that wants it inherits the reading rather than
+/// reinventing one.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SocietyVector {
@@ -181,21 +222,31 @@ pub struct SocietyVector {
 }
 
 impl SocietyVector {
-    /// The goblin-baseline society reading — the value a mixed consumer
-    /// resolves for a `Solitary` kind that carries no society vector. Equal to
-    /// the goblin's authored society dims (`Hierarchic`, `Rank`, 0.5).
-    pub const fn baseline() -> Self {
-        Self {
-            sociality: Sociality::Hierarchic,
-            status_basis: StatusBasis::Rank,
-            in_group_radius: 0.5,
-        }
-    }
+    /// The manikin's society: the reference reading a mixed consumer resolves
+    /// for a `Solitary` kind that carries no society vector of its own.
+    ///
+    /// The manikin is a body that is nobody — the model's reference figure, in
+    /// the lineage of the CIE standard observer and ICRP's "standard man". It
+    /// is deliberately *not* a species: it has no `KindId`, no entry in any
+    /// registry, no mass and no niche, so it can never be placed in a world
+    /// and can never be a ghost.
+    ///
+    /// Note the asymmetry, which is real and not papered over: `0.5` is a
+    /// principled **neutral midpoint** on a scalar, but `Sociality` and
+    /// `StatusBasis` have no middle, so `Hierarchic` and `Rank` are a
+    /// designated **default** rather than a neutral value.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        sociality: Sociality::Hierarchic,
+        status_basis: StatusBasis::Rank,
+        in_group_radius: 0.5,
+    };
 }
 
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign. Every dimension is authored — nothing drawn.
+/// ratios in `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint; widening the
+/// vector requires its own campaign. Every dimension is authored — nothing
+/// drawn.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PerceptionVector {
@@ -205,6 +256,44 @@ pub struct PerceptionVector {
     pub night_vision: f64,
     /// Celestial vs. terrestrial attention: earthbound 0 ↔ sky-rapt 1.
     pub sky_attention: f64,
+}
+
+impl PerceptionVector {
+    /// The manikin's perception: the neutral midpoint on both scalars, and
+    /// `Diurnal` as the designated default schedule.
+    ///
+    /// As with `SocietyVector::MANIKIN`, `activity` is a default rather than a
+    /// neutral value — a schedule has no midpoint.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        activity: ActivityCycle::Diurnal,
+        night_vision: 0.5,
+        sky_attention: 0.5,
+    };
+}
+
+/// How widely a species spreads around its authored vectors.
+///
+/// **The authored vector is the MEAN, and this is the standard deviation of a
+/// population around it.** That choice is a fiat, not a discovery, and it is
+/// stated because leaving it unstated is precisely the frame bug The Manikin
+/// removed one level up: a datum whose frame is implicit drifts in meaning as
+/// the model grows.
+///
+/// One dispersion per vector, not per dimension. A per-dimension spread is a
+/// refinement that should be argued from a measured need (spec §8).
+///
+/// `0.0` means every member is identical — the model's behaviour before this
+/// campaign, and the value that must collapse H2's variance to zero.
+/// type-audit: bare-ok(ratio)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Dispersion {
+    /// Spread around [`MindVector`].
+    pub mind: f64,
+    /// Spread around [`SocietyVector`].
+    pub society: f64,
+    /// Spread around [`PerceptionVector`].
+    pub perception: f64,
 }
 
 /// The draconic clade's night-sky acuity. Authored once for the whole clade
@@ -409,6 +498,14 @@ fn hobgoblin_condition_niche() -> ConditionNiche {
 /// only the corrected frame to mean it. Measured: bugbear's mean fit on land
 /// below 500 m is 0.264, against 0.0038 above 3000 m — the sharpest
 /// lowland/highland split of the four, as a rainforest species should have.
+///
+/// **Contradicted by a later measurement, undiagnosed (The Generalist, Task
+/// 6):** a re-run read bugbear's mean fit below 500 m as 0.017563, ~15x below
+/// the figure above, with the whole kobold-highland comparison also an order
+/// of magnitude down and goblin/hobgoblin rank-swapped. Whether the
+/// populations, mesh, or frame differ between the two runs has not been
+/// investigated; neither number has been corrected. See
+/// `BIO-generalist-remeasure` in the idea registry.
 fn bugbear_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -626,8 +723,21 @@ fn otyugh_condition_niche() -> ConditionNiche {
 /// Xorn condition niche: subterranean/mineral — an elemental that burrows
 /// through solid earth, so it reads as nearly climate-indifferent on the
 /// surface axes (low devotion everywhere); mighty (potency > 0) already
-/// buys most of its sovereignty floor. Authored within the measured seed-42
-/// land ranges.
+/// buys most of its sovereignty floor. Temperature/moisture/elevation are
+/// authored within the measured seed-42 land ranges, unchanged.
+///
+/// **Insolation re-authored (The Deep Realm, Task 6).** The old curve
+/// (`optimum: 0.05, width: 0.20`) approximated cave-dark by biasing toward
+/// the darkest *surface* cells — a proxy authored back when no subterranean
+/// substrate existed to score against directly. Now that one does
+/// (`hornvale_worldgen::subterranean_substrate` reads insolation as `0.0`
+/// exactly, always), the proxy is no longer needed to make a xorn read as
+/// dwelling in the dark, so this widens past the entire plausible surface
+/// insolation range (`~[0, 0.35]`) instead of narrowing further: at
+/// `width: 1.0` the response barely varies across that whole range, which
+/// is the genuinely-indifferent claim this niche has always made, now
+/// implemented on every axis rather than only some of them. Devotion stays
+/// at its old low value — this is a widening, not a strengthening.
 fn xorn_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -640,10 +750,12 @@ fn xorn_condition_niche() -> ConditionNiche {
             width: 0.60,
             devotion: 0.10,
         },
+        // Widened past the plausible surface range so the response is flat
+        // rather than dark-biased — see the frame note above.
         insolation: ConditionResponse {
-            optimum: 0.05,
-            width: 0.20,
-            devotion: 0.20,
+            optimum: 0.15,
+            width: 1.0,
+            devotion: 0.10,
         },
         elevation: ConditionResponse {
             optimum: 0.0,
@@ -654,9 +766,35 @@ fn xorn_condition_niche() -> ConditionNiche {
 }
 
 /// Rust monster condition niche: subterranean/cave mineral-eater — no
-/// potency, so unlike the xorn it is genuinely environment-placed, with a
-/// strong low-insolation (cave-dark) preference and a low-elevation lean.
-/// Authored within the measured seed-42 land ranges.
+/// potency, so unlike the xorn it is genuinely environment-placed. Cool
+/// stable rock temperature is an unchanged, real preference (mass alone
+/// still buys some sovereignty floor, so this is a soft lean, not a hard
+/// fence) authored within the measured seed-42 land ranges.
+///
+/// **Moisture, insolation and elevation re-authored (The Deep Realm, Task
+/// 6).** All three were originally proxies scored against the surface,
+/// authored back when no subterranean substrate existed to place a cave
+/// creature against directly:
+///
+/// - **moisture** moves from a mild `0.45` "somewhat wet" lean to `0.90` —
+///   exactly [`hornvale_worldgen::subterranean_substrate`]'s fixed
+///   `SUBTERRANEAN_MOISTURE`, so a real chamber is now a genuine match
+///   rather than an approximation of one — with devotion raised to `0.60`:
+///   this is meant as a real preference now that a real reading exists to
+///   have one about.
+/// - **insolation** moves from `0.03` (the darkest available *surface*
+///   cells, a proxy for "inside a cave") to `0.0` exactly — the true
+///   subterranean reading — with devotion raised to `0.70`, the strongest
+///   axis in this niche: darkness is this creature's defining trait.
+/// - **elevation** widens from `-500` (sub-sea-level, a second proxy for
+///   "underground" authored the same way) toward indifference. A chamber's
+///   elevation is simply the land above it, unchanged by depth
+///   (`subterranean_substrate` does not invent a metres-below-surface
+///   coordinate — see its own docs for why), so a fixed sub-sea-level
+///   optimum would now systematically under-score genuine caves sitting on
+///   ordinary high land. Once darkness and dampness are measured directly,
+///   altitude is not what actually distinguishes this creature's habitat,
+///   so the axis widens rather than relocating to a new fixed point.
 fn rust_monster_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -664,21 +802,23 @@ fn rust_monster_condition_niche() -> ConditionNiche {
             width: 20.0,
             devotion: 0.50,
         },
+        // Mirrors SUBTERRANEAN_MOISTURE exactly — see the frame note above.
         moisture: ConditionResponse {
-            optimum: 0.45,
-            width: 0.40,
-            devotion: 0.30,
+            optimum: 0.90,
+            width: 0.22,
+            devotion: 0.60,
         },
-        // avoids surface light — cave-dark preference.
+        // TRUE darkness, not a proxy — see the frame note above.
         insolation: ConditionResponse {
-            optimum: 0.03,
+            optimum: 0.0,
             width: 0.06,
-            devotion: 0.60,
+            devotion: 0.70,
         },
+        // Widened toward indifference — see the frame note above.
         elevation: ConditionResponse {
-            optimum: -500.0,
-            width: 1500.0,
-            devotion: 0.60,
+            optimum: 800.0,
+            width: 3200.0,
+            devotion: 0.25,
         },
     }
 }
@@ -804,7 +944,7 @@ fn owlbear_condition_niche() -> ConditionNiche {
 // The Vacancy (T7): seven terrestrial fauna, each authored against
 // `windows/worldgen/tests/fixtures/occupancy.csv` (the committed occupancy
 // readout) as it stood before this task's regen. Two structural facts read
-// off `niche_per_species_k` (worldgen) shaped every niche below: (1) the
+// off `per_species_suitability` (worldgen) shaped every niche below: (1) the
 // `ANIMAL_PREY`/`PLANT_FORAGE` supply terms both derive from
 // `forage_supply_field`, itself a fraction of the NPP-based `base_carrying`
 // field, which collapses toward 0 wherever `carrying_capacity`'s aridity term
@@ -1429,6 +1569,366 @@ fn gnoll_condition_niche() -> ConditionNiche {
     }
 }
 
+/// Human condition niche: the roster's first true GENERALIST — a settler
+/// that leans on none of its four axes and is authored to be
+/// simultaneously the LEAST-DEVOTED and the WIDEST curve on every axis
+/// among the peoples, so "no refuge" is true in both senses that could
+/// otherwise pull apart.
+///
+/// **Task 5b re-authoring (2026-08-04): a re-derivation, not the original
+/// authoring.** The niche shipped by Task 2 stated its contrast with goblin
+/// as devotion alone ("Width is a mixed comparison... Devotion does [carry
+/// the contrast]") while its widths were, in fact, unargued: narrower than
+/// goblin's on temperature (22.0 vs. 28.0) and elevation (2000.0 vs.
+/// 3000.0). A shape-attribution reading in
+/// `windows/worldgen/tests/generalist_distinctness.rs` then measured that
+/// the vacuity gate's real-case dispersion gap was WIDTH-dominated, not
+/// devotion-dominated, and pointed the opposite direction from what the
+/// doc claimed. The owner directed a re-authoring so the claim and the
+/// numbers agree: human's widths are now derived from a stated,
+/// measurement-grounded rule rather than chosen by eye, and every axis is
+/// verified wider than every other people's.
+///
+/// **The rule.** On each axis, human's response must vary by no more than
+/// 20% of its peak across the measured p5–p95 span of settleable land
+/// (`windows/worldgen/tests/generalist_baseline.rs`'s Task 5b extension,
+/// seeds 1..=30, 142593 settleable cells — the same population, same
+/// [`hornvale_worldgen::Substrate`] frame,
+/// [`crate::ConditionResponse::eval`] scores). Since
+/// `bump = exp(-0.5 z²)`, `bump >= 0.80` requires `|z| <= 0.6680`, so a
+/// FLOOR on width follows directly from the optimum's distance to the
+/// farther of p5/p95:
+///
+/// ```text
+/// width_floor = max(|optimum - p5|, |optimum - p95|) / 0.6680
+/// ```
+///
+/// This is a lower bound, not a target — a wider curve is still
+/// "indifferent," only more so. Where an axis's already-authored width
+/// already cleared both this floor and every other people's width on that
+/// axis, it is left unchanged (moisture); where it did not, it is raised —
+/// to the floor where the floor itself is the binding constraint
+/// (temperature, elevation), or modestly above the floor where the
+/// binding constraint is instead being strictly wider than the roster
+/// (insolation, whose floor is tiny because the settleable insolation band
+/// is narrow, but which tied goblin's width before this pass).
+///
+/// **Measured p5/p50/p95 (settleable land, same population as
+/// `human_condition_niche`'s elevation frame below) and the resulting
+/// floors:**
+///
+/// | axis | optimum | p5 | p50 | p95 | width floor | authored width | why |
+/// |---|---|---|---|---|---|---|---|
+/// | temperature (°C) | 14.0 (kept, 4% off p50) | 3.27 | 14.59 | 31.59 | 26.33 | **29.0** | floor-bound, rounded above goblin's 28.0 |
+/// | moisture | 0.50 (kept, 3% off p50) | 0.24 | 0.49 | 0.70 | 0.39 | **0.70 (unchanged)** | already clears the floor and every people's width |
+/// | insolation | **0.25 (recentred; was 0.14, 43% off p50)** | 0.19 | 0.25 | 0.31 | 0.09 | **0.45** | floor is tiny (narrow settleable band); raised past bugbear's 0.40 to stay widest |
+/// | elevation (m) | 1500.0 (fixed — see below) | 0.0 | 1561.2 | 4148.1 | 3964.1 | **4000.0** | floor-bound, comfortably above goblin's 3000.0 |
+///
+/// Optima: kept where within 10% of the measured p50 (temperature,
+/// moisture); recentred on p50 where not (insolation, 0.14 → 0.25 — the
+/// original value was authored before this measurement existed and landed
+/// well off the land the axis is actually scored against). Elevation's
+/// optimum is a deliberate exception, held at 1500.0 rather than the
+/// measured p50 (1561.2) — see the paragraph below.
+///
+/// **Sanity check, verified rather than assumed: human is now the widest
+/// curve of the SIX peoples on all four axes** (temperature 29.0 > goblin's
+/// 28.0; moisture 0.70 > goblin/kobold's 0.60; insolation 0.45 > bugbear's
+/// 0.40; elevation 4000.0 > goblin's 3000.0) — the property this
+/// re-authoring exists to restore. Devotion is UNCHANGED (0.20/0.20/0.25/
+/// 0.30 — see below) and remains the lowest of the six peoples on every
+/// axis, so "widest and least devoted" is now true in both senses on every
+/// axis, not mixed axis by axis as the original authoring left it.
+///
+/// Goblin's own elevation optimum was already re-centred by The Tumult's
+/// re-datum to 1500.0 m, the settleable-land median at the time. Human's
+/// elevation optimum sits at that SAME 1500.0 m — deliberately, not by
+/// coincidence, and held there through this re-authoring even though the
+/// freshly measured p50 (1561.2 m) has drifted slightly since — the terrain
+/// mesh's land distribution is not perfectly stable seed-family to
+/// seed-family, and re-chasing a ~40 m drift would decouple human's
+/// optimum from goblin's shared-optimum argument for no ecological gain. A
+/// wide, low-devotion curve only reads as genuine *indifference* if it is
+/// centred on the land it scores (goblin's own re-datum argument); a
+/// displaced optimum would instead hand human its own lowland or highland
+/// refuge, which contradicts the no-refuge premise the whole campaign's
+/// Gause probe rests on — this kind exists to test a competitor that
+/// out-competes nobody and holds no stronghold of its own. So the two kinds
+/// share an optimum on purpose: what makes human lose the specialists'
+/// strongholds (kobold's mountain, bugbear's rainforest) is its LOWER
+/// devotion against their high devotion, reinforced (not contradicted) by
+/// this pass's wider curves.
+///
+/// Devotion is unchanged by this re-authoring — it is the lowest of the six
+/// PEOPLES on every axis (temperature 0.20 vs. goblin's 0.45, moisture 0.20
+/// vs. 0.35, insolation 0.25 vs. 0.35, elevation 0.30 vs. 0.35), the argued
+/// contrast from Task 2 that measurement never called into question. Scoped
+/// to the peoples, not the whole roster: xorn is lower on all four
+/// (0.10/0.10/0.20/0.10), being the indifferent elemental this niche is
+/// deliberately a peoples-appropriate echo of.
+///
+/// **History: the vacuity/distinctness check and its width-attribution
+/// finding.** `windows/worldgen/tests/generalist_distinctness.rs`'s
+/// coefficient-of-variation statistic is scale-invariant under a positive
+/// constant multiplier, so elevation's devotion is algebraically invisible
+/// to it (elevation's hard `floor(0.0)` makes `eval` a pure multiplier
+/// there); the other three axes' devotions are visible because their
+/// nonzero sovereignty floor is additive, not multiplicative. Before this
+/// re-authoring, the real-case gap (`cv_ratio = 1.0462`) was measured
+/// WIDTH-dominated and pointed opposite to a devotion-only attribution
+/// reading (`cv_ratio = 0.9766`) — full numbers and reasoning in that
+/// file's module doc comment, which predates this pass and is retained as
+/// the record of the finding that motivated it. That file's own doc comment
+/// and the design spec's §4 amendment carry the post-re-authoring numbers;
+/// see them for the current reading rather than re-deriving it here.
+///
+/// Frame: elevation is metres above the world's sea level (see
+/// [`ConditionNiche`]).
+fn human_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 14.0,
+            width: 29.0,
+            devotion: 0.20,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.50,
+            width: 0.70,
+            devotion: 0.20,
+        },
+        // recentred on the measured settleable-land p50 (0.2468, rounded to
+        // 0.25) - the original 0.14 sat 43% off it, outside the 10% keep
+        // band (see the doc comment above).
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.45,
+            devotion: 0.25,
+        },
+        // wide/indifferent, held at 1500.0 m rather than re-chased to the
+        // freshly measured p50 (1561.2 m) - the same value as goblin's
+        // optimum, deliberately (see the doc comment above).
+        elevation: ConditionResponse {
+            optimum: 1500.0,
+            width: 4000.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+// ---------------------------------------------------------------------------
+// THE DELVERS (C2c): the dwarf family — three kinds on one measured rule.
+//
+// **Roster cut to three (spec §11).** Mountain and Duergar were authored and
+// then withdrawn: both are defined by DEPTH, and the model's elevation axis
+// is metres above sea level, so authoring "deep" as "low ASL" was the same
+// class of fake The Warren spent itself removing. They return in a successor
+// campaign that gives the underworld biomes (`BIO-kinds-declare-biomes`).
+//
+// The three niches below are authored against a MEASURED theorem rather than
+// against taste, and the theorem decides which axis each kind's identity may
+// live on. `tolerance_liebig` (`windows/worldgen/src/lib.rs`) floors
+// temperature/moisture/insolation by `sovereignty_floor(mass, potency)` and
+// passes elevation a literal `0.0`, while
+// `hornvale_kernel::ConditionResponse::eval` is
+// `floor + (1 - floor) * devotion * exp(-z²/2)`. So elevation's value never
+// exceeds its own `devotion`, and the other three never fall below the floor:
+//
+//     elevation is the Liebig minimum on EVERY cell
+//         iff  devotion_elev < sovereignty_floor(mass, potency)
+//
+// `windows/worldgen/tests/delver_bind_audit.rs` measured that closed form on
+// the shipped roster over seeds 42 / 7 / 1234 and confirmed it EXACTLY — every
+// kind below its floor is elevation-bound on 100.00% of land, and the three
+// authored above their floor are not (kobold 43-51%, hobgoblin 69-77%,
+// bugbear 71-78%). Mass sets the floor; the AUTHORED devotion decides the
+// bind. This roster uses both modes deliberately:
+//
+//   kind             mass   sov. floor   dev_el   mode     identity carried by
+//   desert-dwarf     66.0     0.443252     0.70   ABOVE    climate (arid)
+//   gully-dwarf      62.0     0.438477     0.30   below    elevation (low)
+//   hill-dwarf       70.0     0.447705     0.30   below    elevation (mid)
+//
+// (Floors computed live from `hornvale_kernel::sovereignty_floor(Mass, 0.0)`,
+// not copied from a plan — the plan's own table was wrong in the fourth
+// decimal for two of them.)
+//
+// Two of the three are BELOW their floor, so their temperature, moisture and
+// insolation curves are *prepared* in the organ-builder's sense — engraved,
+// installed, connected to no rank. Each of those two says so in its own doc
+// comment rather than implying a climate preference the model will never
+// read. Desert-dwarf is the exception and the campaign's deliberate one: at
+// devotion 0.70 against a floor of 0.443252 (a margin of 0.256748) its arid
+// curves genuinely bind, making it the first people in the roster whose
+// CLIMATE niche selects. Spec §10.2.
+//
+// Elevation optima are cited against the same settleable-land percentile
+// table every other people uses ([`ConditionNiche`]'s doc: p15=142, p25=621,
+// p35=1004, p50=1561, p65=2166, p75=2651, p85=3251, p95=4148 m above sea
+// level).
+// ---------------------------------------------------------------------------
+
+/// Desert dwarf condition niche: the roster's first CLIMATE-selected people.
+///
+/// **Authored ABOVE its sovereignty floor, deliberately.** At 66.0 kg and
+/// potency 0.0 the floor is `0.443252`; this niche's `devotion_elev` is
+/// `0.70`, a margin of `0.256748` ABOVE it. By the measured theorem in the
+/// block comment above, that means elevation is NOT the automatic Liebig
+/// minimum — the temperature and moisture curves below actually bind, and
+/// they are authored to be genuinely arid rather than decorative. Elevation
+/// only takes the minimum where `0.70 * exp(-z²/2)` falls under the floor,
+/// i.e. more than ~2880 m from the 700 m optimum — on land above ~3.6 km,
+/// which is above p85 (3251 m). Everywhere below that, climate decides.
+///
+/// This is a shipped style, not a new one: kobold (0.95) and hobgoblin and
+/// bugbear (0.70) already sit above their floors and are measurably not
+/// elevation-bound. The cost is the mirror of the benefit — a kind authored
+/// far above its floor is sharply excluded away from its optimum, which is
+/// why `windows/worldgen/tests/non_void_roster.rs` is this authoring's gate.
+///
+/// The desert climate tile is `domains/climate`'s `Desert`
+/// (`temp_c >= 20` and `moisture < 0.2`), the same tile gnoll and
+/// giant-scorpion stake. Gnoll is NOT re-authored here even though the bind
+/// audit diagnosed its defect — its `devotion_elev` of 0.40 sits BELOW its
+/// floor of 0.4954, so its authored moisture curve has never once bound.
+/// Moving an existing people's capacity inside a roster epoch would destroy
+/// this campaign's attribution (spec §10.2).
+fn desert_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // hot, clear of the Desert tile's >= 20 C floor with margin. Narrow
+        // (8.0) because this is the axis that must actually select: at
+        // devotion 0.70 the response spans [floor, 0.833], so a cell 12 C off
+        // the optimum reads at the floor and a cell on it reads nearly twice
+        // that.
+        temperature: ConditionResponse {
+            optimum: 28.0,
+            width: 8.0,
+            devotion: 0.70,
+        },
+        // deep inside the Desert tile's < 0.20 moisture band, and the second
+        // axis authored to bind. Settleable-land moisture runs p5 0.24 /
+        // p50 0.49 / p95 0.70, so an optimum of 0.12 puts the great majority
+        // of land well off this curve — which is the aridity claim, stated as
+        // a number.
+        moisture: ConditionResponse {
+            optimum: 0.12,
+            width: 0.15,
+            devotion: 0.65,
+        },
+        // Insolation is a pure function of latitude (BIO-insolation-is-latitude), and the
+        // settleable band is narrow (p5 0.19 / p50 0.25 / p95 0.31). The
+        // subtropical desert belt sits at its upper end, so the optimum leans
+        // high, but the curve is wide and only moderately devoted: this is a
+        // latitude-honest reading, not a second aridity claim. Inside the
+        // kind's own arid stronghold — where temperature and moisture are
+        // both satisfied — this becomes the binding axis, which is the
+        // correct reading of "nothing in the climate constrains a desert
+        // dwarf in the desert".
+        insolation: ConditionResponse {
+            optimum: 0.28,
+            width: 0.35,
+            devotion: 0.45,
+        },
+        // Wide and shallow-centred near p25 (621 m): desert basins and their
+        // margins. The width (3000.0) is what keeps elevation OUT of the
+        // minimum across ordinary land, so the climate axes can be the ones
+        // that speak.
+        elevation: ConditionResponse {
+            optimum: 700.0,
+            width: 3000.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// Gully dwarf condition niche: the lowland scavenger, and the roster's
+/// lowest-sitting dwarf.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.438477` at 62.0 kg — the
+/// lowest floor of the three, and still comfortably above 0.30 — so this kind
+/// is elevation-bound on 100% of land. The three climate curves below are
+/// honest but PREPARED: floored at `0.438477`, they can never fall under
+/// `0.30 * bump`, so nothing consumes them. Stated rather than implied.
+fn gully_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate-to-warm, wide and unfussy — a scavenger eats what the
+        // weather leaves. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 17.0,
+            width: 26.0,
+            devotion: 0.25,
+        },
+        // damp lowland margins: floodplain, marsh edge, the wet ground where
+        // detritus accumulates. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.62,
+            width: 0.40,
+            devotion: 0.25,
+        },
+        // centred on the settleable-land insolation median (0.25), wide —
+        // this kind makes no claim about light. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.40,
+            devotion: 0.20,
+        },
+        // THE axis that binds: 150 m, at p15 (142 m) — coastal plain, river
+        // bottom and the bottom of every gully. The narrowest width of the
+        // five (900.0), because "low" is this kind's whole ecological
+        // statement and a wide curve would erase it.
+        elevation: ConditionResponse {
+            optimum: 150.0,
+            width: 900.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Hill dwarf condition niche: the surface farmer-herder, the family's
+/// middle kind, and the one every other dwarf is read against.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.447705` at 70.0 kg — the same
+/// mass and the same devotion as human, which the bind audit measured
+/// elevation-bound on 100.00% of land on every seed. The three climate curves
+/// below are PREPARED: floored at `0.447705`, they never reach under
+/// `0.30 * bump` and so are never the Liebig minimum. They are authored
+/// honestly and they do not work; that is the model, not an oversight.
+fn hill_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate uplands: cooler than human's 14.0, on the cold side of
+        // the settleable band (p5 3.27 / p50 14.59 / p95 31.59 C).
+        // PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 11.0,
+            width: 20.0,
+            devotion: 0.35,
+        },
+        // moist enough to farm, just above the settleable median (0.49) —
+        // terraced grain and pasture, not irrigation. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.35,
+            devotion: 0.35,
+        },
+        // at the settleable-land insolation median. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.32,
+            devotion: 0.30,
+        },
+        // THE axis that binds: 900 m, between p25 (621 m) and p35 (1004 m) —
+        // genuine hill country, well above gully-dwarf's 150 m. The three
+        // dwarves' optima are spaced so that no two overlap inside one
+        // width.
+        elevation: ConditionResponse {
+            optimum: 900.0,
+            width: 1400.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1462,6 +1962,294 @@ pub enum MetabolicClass {
     /// No metabolism (construct/undead analogue). Has no life-history: the
     /// biological traits are `None`. Unused seam.
     Ametabolic,
+}
+
+/// How a kind's time-law quantities are scheduled against its mass (The Long
+/// Age, spec §3). Mass and [`MetabolicClass`] are the other two inputs to the
+/// same law; this is the third, and it is the only one that is a free
+/// authoring choice rather than a physical measurement.
+///
+/// An enum rather than a bare `f64` so that a *staged* schedule — a
+/// metamorphic kind whose larval phase runs on its own curve before merging
+/// into the adult one — arrives later as a new variant rather than a new
+/// axis, changing no consumer's signature.
+/// type-audit: bare-ok(ratio: Paced.factor)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LifeSchedule {
+    /// Pure allometry: every time-law quantity is a function of mass and
+    /// metabolic class alone. Every kind in the roster today.
+    Allometric,
+    /// Allometry with an authored dimensionless pace factor: lifespan,
+    /// maturity and reproductive tempo all stretch by `factor` at unchanged
+    /// mass, and the basal metabolic rate does not move. Construct through
+    /// [`LifeSchedule::paced`].
+    Paced {
+        /// The dimensionless stretch. `1.0` is [`LifeSchedule::Allometric`];
+        /// above 1.0 is longer-lived and later-maturing, below 1.0 shorter.
+        factor: f64,
+    },
+}
+
+impl LifeSchedule {
+    /// The default every kind carries unless authored otherwise.
+    pub const ALLOMETRIC: LifeSchedule = LifeSchedule::Allometric;
+
+    /// A paced schedule, or `None` if `factor` is not finite and strictly
+    /// positive. A zero or negative factor is not a fast-living creature; it
+    /// is a creature with no lifespan, which the time laws cannot express.
+    /// type-audit: bare-ok(ratio: factor)
+    pub fn paced(factor: f64) -> Option<LifeSchedule> {
+        if factor.is_finite() && factor > 0.0 {
+            Some(LifeSchedule::Paced { factor })
+        } else {
+            None
+        }
+    }
+
+    /// The multiplier this schedule contributes to the time laws — `1.0` for
+    /// [`LifeSchedule::Allometric`], so the default path is an IEEE-754
+    /// no-op and every pre-campaign value is preserved bit-for-bit.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn factor(self) -> f64 {
+        match self {
+            LifeSchedule::Allometric => 1.0,
+            LifeSchedule::Paced { factor } => factor,
+        }
+    }
+}
+
+/// Which environmental frame a kind's carrying capacity is scored in (The
+/// Warren). `domains/climate` owns the richer `Realm { medium, access }`;
+/// this is deliberately NOT that type — a domain crate may not depend on a
+/// sibling domain, and what the placement layer needs is a two-valued
+/// question, not a realm vocabulary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HabitatRealm {
+    /// Scored against the surface substrate — every kind not in the store.
+    Surface,
+    /// Scored against the subterranean substrate, and gated by whether the
+    /// cell holds a cave at all. A void that does not exist is not habitat.
+    Subterranean,
+}
+
+impl HabitatRealm {
+    /// The realm a kind absent from [`habitat_realm_registry`] carries.
+    pub const SURFACE: HabitatRealm = HabitatRealm::Surface;
+}
+
+impl Component for HabitatRealm {}
+
+/// The sparse habitat-realm component: **only** kinds that are not
+/// `Surface` appear. Two rows today, both re-homed by The Deep Realm, whose
+/// niches have been authored for darkness and near-saturation since that
+/// campaign and scored against sunlit surface cells until this one.
+///
+/// Sparse rather than a `BiosphereTraits` field because this has a single
+/// consumer (`per_species_suitability`) which holds a slice, not a row —
+/// the consumer-count rule The Long Age established, which gave the
+/// opposite answer there because the life schedule had six consumers each
+/// already holding the row.
+pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
+    [
+        // A cave-dark, damp mineral-eater: C2a measured its subterranean fit
+        // at ~2.5x its surface fit once the low-insolation proxy came out.
+        (KindId("rust-monster"), HabitatRealm::Subterranean),
+        // Climate-indifferent by potency rather than by curve — C2a measured
+        // its ratio at 1.02, flat within noise. Listed because it LIVES
+        // underground, not because scoring it there will move it.
+        (KindId("xorn"), HabitatRealm::Subterranean),
+        // The Delvers (C2c) briefly added two subterranean PEOPLES here and
+        // withdrew them: a kind whose identity is DEPTH cannot be expressed
+        // by an axis measured in metres above sea level (spec §11). They
+        // return when the underworld has biomes.
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// A kind's declared affinity across biomes (The Range). `domains/climate`
+/// owns the richer `Biome` enum; this is deliberately NOT keyed by it — a
+/// domain crate may not depend on a sibling domain. The store is keyed by
+/// the biome's stable name string (`Biome::name()`, already used for concept
+/// registration), and resolution against the live `Biome` value happens at
+/// the composition root, which sits above both domains.
+/// type-audit: bare-ok(ratio: default), bare-ok(ratio: by_biome)
+#[derive(Clone, Debug, PartialEq)]
+pub struct BiomeAffinity {
+    /// The factor an unlisted biome takes. `1.0` is unrestricted; the value
+    /// every kind absent from [`biome_affinity_registry`] carries for every
+    /// biome.
+    pub default: f64,
+    /// Per-biome overrides, keyed by the biome's stable name string. A biome
+    /// not listed here takes `default`.
+    pub by_biome: Vec<(&'static str, f64)>,
+}
+
+impl BiomeAffinity {
+    /// The affinity factor for `biome_name`: the listed override if present,
+    /// else `default`.
+    /// type-audit: bare-ok(identifier-text: biome_name), bare-ok(ratio: return)
+    pub fn factor(&self, biome_name: &str) -> f64 {
+        self.by_biome
+            .iter()
+            .find(|(name, _)| *name == biome_name)
+            .map(|(_, factor)| *factor)
+            .unwrap_or(self.default)
+    }
+}
+
+impl Component for BiomeAffinity {}
+
+/// The sparse biome-affinity component: **only** kinds with an authored,
+/// non-uniform affinity across biomes appear. Two occupants as of The Range
+/// task 4 — every other kind is unrestricted across every biome.
+///
+/// Sparse rather than a `BiosphereTraits` field because this has two
+/// consumers (genesis placement and `best_home`), each of which holds a
+/// slice, not a row — the consumer-count rule The Long Age established
+/// (a `BiosphereTraits` field is for a component every consumer already
+/// holds the row for; a sparse store is for a component only a few
+/// slice-holding consumers read).
+///
+/// # The admission test: a row may only add a preference that is ABSENT
+///
+/// A biome affinity that merely restates a climate preference the model
+/// already applies would double-count it, and the resulting movement would be
+/// unattributable — it could be read as evidence for the mechanism when it was
+/// only the old curve counted twice. So a kind is admitted here only when its
+/// authored climate curves are **currently discarded**, and the discipline is
+/// mechanical rather than a judgement call.
+///
+/// `tolerance_liebig` (`windows/worldgen/src/lib.rs`) evaluates temperature,
+/// moisture and insolation floored by `sovereignty_floor(mass, potency)` and
+/// evaluates **elevation floored by `0.0`**, then takes the minimum. A floored
+/// axis can never read below its floor; an unfloored one peaks at its own
+/// `devotion`. So whenever
+///
+/// ```text
+///   elevation.devotion  <  sovereignty_floor(mass, potency)
+/// ```
+///
+/// the elevation term is below the other three at **every** cell of every
+/// world, the minimum is elevation everywhere, and the temperature, moisture
+/// and insolation curves contribute exactly nothing. Both occupants below clear
+/// that bar, so each affinity restores a preference the model was throwing
+/// away rather than duplicating one it already honours:
+///
+/// ```text
+///   kind              mass kg   potency   floor      elev devotion   below?
+///   gnoll               136.1      0.00   0.495384        0.40        YES
+///   woolly-mammoth     6000.0      0.00   0.692367        0.50        YES
+/// ```
+///
+/// `windows/worldgen/tests/range_readout.rs` asserts this inequality for every
+/// row in this registry, so a later edit to a mass or an elevation devotion
+/// cannot quietly turn one of these rows into a double count.
+///
+/// # The ladder both rows are authored on
+///
+/// Four steps, so the two rows are read against one another rather than each
+/// tuned by eye. Level is gauge for placement (genesis and `best_home` rank
+/// cells in the kind's *own* units, so a constant factor reorders nothing) —
+/// only the shape matters, and the shape is:
+///
+/// ```text
+///   1.00  stronghold  the biome `classify_land` returns for the kind's OWN
+///                     authored (temperature, moisture) reading
+///   0.70  near        one band out, still recognisably the kind's country
+///   0.45  marginal    two bands out, or the right climate in the wrong form
+///   0.25  default     everything else, including all ten marine biomes
+/// ```
+///
+/// The ceiling is `1.00` deliberately: an affinity here is a **penalty
+/// relative to the unrestricted 1.0 every other kind carries**, never a boost,
+/// so declaring one can only lower a kind's capacity. Permitting a factor above
+/// `1.0` is the spec's pre-committed repair path if binding proves too weak; it
+/// is not the shipped design, and taking it is a decision to record rather than
+/// a knob to turn.
+///
+/// The floor is `0.25` and never `0.0`. Zero is a **hard exclusion**, not a
+/// strong preference — genesis filters its founding pool on
+/// `caps_now()[pidx].at(c) > 0.0` ("a proto-site a people cannot feed is not a
+/// founding, it is a death two epochs later"). Neither kind here means *never*:
+/// a gnoll war-band in a temperate forest is a rarity, not an impossibility.
+pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
+    [
+        // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
+        // DESERT authoring and — until this row — a people that selected no
+        // arid cell at all. Its niche states temperature optimum 29.0 °C at
+        // devotion 0.80 and moisture optimum 0.12 at devotion 0.75, the most
+        // committed hot-arid pair in `biosphere_registry`, and the admission
+        // table above shows every bit of it discarded on every land cell of
+        // every world. Measured on seed 42 before this row existed: 20 gnoll
+        // settlements, **zero** of them on an arid biome.
+        //
+        // `desert` is the stronghold by derivation, not by theme:
+        // `classify_land` at gnoll's own authored reading (29.0 °C, moisture
+        // 0.12) returns `Desert` exactly (hot band, moisture < 0.20).
+        (
+            KindId("gnoll"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — gnoll's own authored climate, classified.
+                    ("desert", 1.00),
+                    // Near: the two temperate dry bands (moisture < 0.25 and
+                    // 0.25-0.40). Right dryness, wrong thermal band — a gnoll
+                    // steppe is a real place, a gnoll rainforest is not.
+                    ("temperate-grassland", 0.70),
+                    ("shrubland", 0.70),
+                    // Marginal: the hot band's next step out (moisture
+                    // 0.20-0.45) — the ground the savanna-authored giant-hyena
+                    // is documented onto, which a desert pack raids and does
+                    // not hold.
+                    ("savanna", 0.45),
+                ],
+            },
+        ),
+        // THE RANGE (task 4), occupant two: the woolly mammoth — gnoll's defect
+        // in the opposite climate. Temperature optimum **-25.0 °C at devotion
+        // 0.85** is the roster's strongest COLD authoring, and the admission
+        // table shows it discarded exactly as gnoll's desert authoring is: at
+        // 6000 kg its sovereignty floor is 0.692367 and its elevation devotion
+        // is 0.50, so elevation is the minimum on every cell and the deep-cold
+        // curve never binds.
+        //
+        // FAUNA, and that is the point of choosing it. `SocialForm::Gregarious`
+        // never enters the bake's `SocialForm::Settled` roster, so this row
+        // moves capacity and occupancy but places no settlement. Exactly ONE
+        // peopled kind's placement moves in this campaign, which is what makes
+        // the P1" readout attributable to gnoll's row alone.
+        //
+        // Two strongholds rather than one, because the kind's authored
+        // temperature curve straddles a classification boundary rather than
+        // sitting inside a band: `classify_land` returns `Ice` below -20 °C and
+        // `Tundra` from there to freezing at moisture < 0.35, and the mammoth's
+        // optimum (-25.0) and its one-sigma shoulder (-5.0) at its authored
+        // moisture (0.30) land one in each. Splitting them would be an artifact
+        // of where the lookup cuts, not a claim about the animal.
+        (
+            KindId("woolly-mammoth"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — the two cold-dry classes its own authored
+                    // curve covers.
+                    ("ice", 1.00),
+                    ("tundra", 1.00),
+                    // Near: the same cold band, wetter than its 0.30 optimum
+                    // (moisture >= 0.35) — forest rather than open plain.
+                    ("taiga", 0.70),
+                    // Marginal: cold, but reached by ALTITUDE rather than by
+                    // latitude, and this is a 200 m lowland grazer. The right
+                    // climate in the wrong form — the giant goat's country.
+                    ("alpine", 0.45),
+                ],
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
 }
 
 /// The biosphere component: every entity has one. The packer and the
@@ -1498,6 +2286,11 @@ pub struct BiosphereTraits {
     /// to the old "has a psyche entry" proxy for peoplehood. (An enum, not a
     /// bare primitive — no type-audit verdict needed.)
     pub social_form: SocialForm,
+    /// How this kind's time-law quantities are scheduled against its mass.
+    /// [`LifeSchedule::Allometric`] for every kind authored so far — longevity
+    /// is an authoring choice this roster has not yet made. (An enum, not a
+    /// bare primitive — no type-audit verdict needed.)
+    pub schedule: LifeSchedule,
 }
 
 // The biosphere / psyche / perception / family authoring lives in the four
@@ -1511,6 +2304,7 @@ impl Component for BiosphereTraits {}
 impl Component for MindVector {}
 impl Component for SocietyVector {}
 impl Component for PerceptionVector {}
+impl Component for Dispersion {}
 
 /// The universal biosphere component, authored directly (one row per kind).
 /// Every kind that competes for space has a biosphere row; this is the
@@ -1518,9 +2312,9 @@ impl Component for PerceptionVector {}
 /// utilization profile over the resource-axis basis; each kind's climate-tile
 /// rationale lives in its `*_condition_niche` helper above. Potency is the
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
-/// supernatural set (dragons, treant, xorn); mundane beasts and the four
+/// supernatural set (dragons, treant, xorn); mundane beasts and the six
 /// peoples carry 0. `social_form` is the universal social-organization axis
-/// (spec §3.1, The Eremite): `Settled` for the four peoples, `Sessile` for
+/// (spec §3.1, The Eremite): `Settled` for the nine peoples, `Sessile` for
 /// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
@@ -1535,6 +2329,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1546,6 +2341,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1557,6 +2353,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1568,6 +2365,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1579,6 +2377,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: treant_condition_niche(),
                 potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1590,6 +2389,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1601,6 +2401,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1612,6 +2413,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1623,6 +2425,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1634,6 +2437,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1645,6 +2449,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
                 // Ametabolic, burrows through stone: lives IN the substrate,
                 // not on it. rust-monster shares the pure-MINERAL niche but
                 // stays Terrestrial — it walks the surface eating metal.
@@ -1659,6 +2464,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1670,6 +2476,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: white_dragon_condition_niche(),
                 potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1681,6 +2488,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: red_dragon_condition_niche(),
                 potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1692,6 +2500,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: black_dragon_condition_niche(),
                 potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1703,6 +2512,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T7): seven terrestrial fauna. See the block comment
@@ -1717,6 +2527,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_scorpion_condition_niche(),
                 potency: 0.0, // giant scorpion — CR 3 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1728,6 +2539,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_hyena_condition_niche(),
                 potency: 0.0, // giant hyena — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1739,6 +2551,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: dire_wolf_condition_niche(),
                 potency: 0.0, // dire wolf — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1750,6 +2563,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: rhinoceros_condition_niche(),
                 potency: 0.0, // rhinoceros — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1761,6 +2575,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_constrictor_snake_condition_niche(),
                 potency: 0.0, // giant constrictor snake — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1772,6 +2587,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: carrion_crawler_condition_niche(),
                 potency: 0.0, // carrion crawler — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1783,6 +2599,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: shrieker_condition_niche(),
                 potency: 0.0, // shrieker — CR 0 (5E MM); CR/30 = 0 regardless of set
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T8): four marine kinds plus the amphibious proof case.
@@ -1798,6 +2615,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: reef_shark_condition_niche(),
                 potency: 0.0, // reef shark — CR 1/2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1809,6 +2627,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_octopus_condition_niche(),
                 potency: 0.0, // giant octopus — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1820,6 +2639,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: killer_whale_condition_niche(),
                 potency: 0.0, // killer whale — CR 3 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1831,6 +2651,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_squid_condition_niche(),
                 potency: 0.0, // giant squid — CR 7 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1845,6 +2666,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_crocodile_condition_niche(),
                 potency: 0.0, // giant crocodile — CR 5 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T9): the fifth people. `family_of` follows kobold's
@@ -1872,8 +2694,144 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // bugbear's 0.85 ANIMAL_PREY lean).
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 0.65), (PLANT_FORAGE, 0.35)]).unwrap(),
                 condition_niche: gnoll_condition_niche(),
-                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other four peoples
+                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other five peoples
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        // The Generalist (C2-0): the sixth people, and the roster's first
+        // competitor with no refuge. Mass is 5E canon for a Medium humanoid.
+        // The trophic split is deliberately close to goblin's 0.50/0.50 —
+        // humans are not trophically novel, and the generalism this kind
+        // exists to test lives on the CONDITION axes, not the resource axes.
+        (
+            KindId("human"),
+            BiosphereTraits {
+                mass: Mass::new(70.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+                condition_niche: human_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
+            },
+        ),
+        // THE DELVERS (C2c): the dwarf family, three kinds at once — the
+        // roster's seventh through ninth peoples and its first
+        // multi-member family since goblinoid. (Mountain and Duergar were
+        // authored alongside them and withdrawn before merge: both are
+        // DEPTH kinds and the model has no depth axis to seat them on —
+        // spec §11.)
+        //
+        // **`ResourceVector` is where the differentiation actually lands.**
+        // BIO-supply-drowns-niche records that supply magnitude spans orders
+        // of magnitude while tolerance is bounded in `[0, 1]`; read as a
+        // defect that is the row's complaint, read as a lever it is this
+        // family's loudest channel. A miner, a farmer and a scavenger differ
+        // by orders of magnitude where a hot dwarf and a cold dwarf differ by
+        // nothing (spec §3.1).
+        //
+        // **All three are `LifeSchedule::paced(4.0)`, and the schedule is a
+        // FAMILY trait.** Long life is a dwarf trait, not a cave trait —
+        // the withdrawn cave kinds were authored on the same factor for
+        // exactly that reason, so their departure moves nothing here. This is
+        // `LifeSchedule::Paced`'s first occupant — The Long Age shipped the
+        // variant with an empty witness list and named C2c as the campaign
+        // that must fill it. Measured through `hornvale_species::life_history`
+        // at `MetabolicClass::Endotherm`:
+        //
+        //   kind             mass   allometric   paced(4.0)   maturity   generation
+        //   gully-dwarf      62.0      66.95 y     267.79 y     53.56 y     117.83 y
+        //   desert-dwarf     66.0      68.00 y     272.01 y     54.40 y     119.68 y
+        //   hill-dwarf       70.0      69.01 y     276.04 y     55.21 y     121.46 y
+        //
+        // The factor has to CLEAR something to be read: `cascade_regime_of`
+        // (`windows/worldgen/src/lib.rs`) switches a Settled people onto the
+        // slow language-drift regime at `LIFESPAN_THRESHOLD_YEARS = 120.0`, and
+        // a 70 kg endotherm reads 69.01 y under pure allometry. 4.0 clears the
+        // threshold on all three with a wide margin, so the schedule is
+        // observable rather than decorative.
+        //
+        // **`pace_of_life` and `reproductive_tempo` SATURATE at exactly 1.0**
+        // at this factor, because `factor × raw × pace_multiplier` passes
+        // `MAX_PACE_MULTIPLIER = 1.5` (`allometry.rs`). Measured, not
+        // predicted: all three read 1.0000 on both. That is deliberate and
+        // stated (The Long Age §3.5) — saturating there is preferred to
+        // rescaling every kind in the roster — and it means those two channels
+        // are uninformative for a dwarf. `lifespan`, `age_at_maturity` and
+        // `generation_length` stay linear and unbounded, which is where the
+        // longevity is actually legible.
+        (
+            KindId("desert-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(66.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // Sums to 1.00, like every other kind in the roster. A
+                // forager leaning on plants over game, in the same
+                // proportion a sparse-ground people would.
+                //
+                // An earlier draft made this sum to 0.60 to express "takes
+                // less from a cell than a farmer does". Reverted, for two
+                // reasons. **Ecologically it puts the scarcity in the wrong
+                // object**: a desert is poor because the *cell* supplies
+                // little, which the supply field already says, not because
+                // the people are worse at extraction — that is a claim about
+                // the creature, and a different one. **And it would confound
+                // this kind's whole purpose.** Desert-dwarf is the campaign's
+                // demonstrator that an authored climate niche can bind
+                // (spec §10.2); supply is the dominant channel, spanning
+                // orders of magnitude against tolerance's bounded [0,1]
+                // (`BIO-supply-drowns-niche`), so a 40% uniform supply cut
+                // would leave its difference from hill-dwarf partly
+                // attributable to supply rather than to climate. Correlation
+                // is scale-invariant so the readout's number would have
+                // survived; the *interpretation* would not.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.58), (ANIMAL_PREY, 0.42)]).unwrap(),
+                condition_niche: desert_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(62.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // A SURFACE scavenger, on the axis otyugh, carrion-crawler
+                // and shrieker hold. It shares `DETRITUS` with the two cave
+                // dwarves but arrives at it from the opposite direction —
+                // they farm fungus in the dark, this one works refuse in the
+                // light — so it keeps the largest `PLANT_FORAGE` share of
+                // the three and the smallest `DETRITUS` one. What actually
+                // separates it from them is the realm gate and an elevation
+                // optimum eight hundred metres below hill-dwarf's; the diet
+                // axis is not doing that work.
+                niche: ResourceVector::new(&[
+                    (DETRITUS, 0.50),
+                    (PLANT_FORAGE, 0.35),
+                    (ANIMAL_PREY, 0.15),
+                ])
+                .unwrap(),
+                condition_niche: gully_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(70.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // PLANT_FORAGE-dominant: a farmer and herder, leaning harder
+                // on plants than human's 0.55/0.45 and much harder than
+                // bugbear's predatory 0.15/0.85.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.70), (ANIMAL_PREY, 0.30)]).unwrap(),
+                condition_niche: hill_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
             },
         ),
     ]
@@ -1882,8 +2840,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the four settling peoples and the three solitary dragons;
-/// goblin is the baseline: scalars 0.5).
+/// minded kind (the nine settling peoples and the three solitary dragons).
+/// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
+/// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
 pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
     [
@@ -1926,7 +2885,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
             KindId("white-dragon"),
             MindVector {
                 threat_response: 0.95,     // an apex — stands, never flees
-                deliberation_latency: 0.5, // banked dial, baseline
+                deliberation_latency: 0.5, // banked dial, at the midpoint
                 time_horizon: 0.90,        // a centuries-long hoarder
             },
         ),
@@ -1962,14 +2921,215 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.2,
             },
         ),
+        // The Generalist (C2-0). `threat_response` sits AT the manikin by
+        // authorship, not by default: humans genuinely both flee and stand,
+        // and The Manikin moved the model to the rung where a kind may
+        // coincide with the reference vector. Stated explicitly because a
+        // people welded to the identity element is the bug that campaign
+        // removed.
+        (
+            KindId("human"),
+            MindVector {
+                threat_response: 0.5,
+                deliberation_latency: 0.6,
+                time_horizon: 0.75,
+            },
+        ),
+        // THE DELVERS (C2c): the three dwarves. The family's shared reading is
+        // a LONG `time_horizon` — every one of them sits above human's 0.75 —
+        // and that is not decoration: `paced(4.0)` gives them 268-276 years
+        // and a 118-121 year generation length, so a dwarf genuinely plans
+        // past the span a human can. The differences among the three are the
+        // ecology each lives in, not the family they belong to.
+        (
+            KindId("desert-dwarf"),
+            MindVector {
+                // patient rather than pugnacious: a sparse-forage people
+                // cannot afford to lose members to a fight it could walk
+                // away from.
+                threat_response: 0.45,
+                // slow and considered — the family reading, and the correct
+                // one for a people whose next water is a day's march away.
+                deliberation_latency: 0.7,
+                // the longest of the three: route, well and season knowledge
+                // is the capital a desert people actually holds.
+                time_horizon: 0.9,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            MindVector {
+                // flees: a scavenger that stands its ground against anything
+                // larger stops being a scavenger.
+                threat_response: 0.2,
+                // the fastest of the three, and the only one below the
+                // manikin's midpoint — opportunism is a decision made before
+                // the opportunity leaves.
+                deliberation_latency: 0.4,
+                // long by family, short by dwarf: enough to keep a midden and
+                // a lineage, not enough to keep a chronicle.
+                time_horizon: 0.8,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            MindVector {
+                // stands, moderately: a settled farmer defends its steading
+                // but is not looking for the fight.
+                threat_response: 0.6,
+                // slow and considered, the family's characteristic reading.
+                deliberation_latency: 0.75,
+                // a farmer plans in seasons and a long-lived farmer plans in
+                // generations of orchard and terrace.
+                time_horizon: 0.85,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// Per-kind dispersion. **Variability is itself a species trait** (spec §2's
+/// keystone): a species is a distribution, and how wide that distribution is
+/// says as much about the kind as where it is centred. Every minded kind
+/// carries a row — a kind with no society (a solitary dragon) is not exempt
+/// from a `society` field, it is authored near-zero because there is almost
+/// no society to vary.
+/// type-audit: bare-ok(identifier-text)
+pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
+    [
+        // GENERALIST-LITE: the cosmopolitan weed's widest goblinoid spread,
+        // still a notch below human's true psychological breadth.
+        (
+            KindId("goblin"),
+            Dispersion {
+                mind: 0.25,
+                society: 0.20,
+                perception: 0.15,
+            },
+        ),
+        // a disciplined knowledge-caste narrows temperament the way training
+        // narrows any specialist.
+        (
+            KindId("kobold"),
+            Dispersion {
+                mind: 0.12,
+                society: 0.08,
+                perception: 0.08,
+            },
+        ),
+        // a drilled military hierarchy is precisely a machine for
+        // suppressing individual variance.
+        (
+            KindId("hobgoblin"),
+            Dispersion {
+                mind: 0.10,
+                society: 0.06,
+                perception: 0.08,
+            },
+        ),
+        // solitary ambush hunters folded into a loose communal band: the
+        // variance a rigid hierarchy would drill out survives here.
+        (
+            KindId("bugbear"),
+            Dispersion {
+                mind: 0.20,
+                society: 0.15,
+                perception: 0.12,
+            },
+        ),
+        // The three chromatic dragons, one shared reading (mirrors
+        // psyche_registry's shared chromatic profile): solitary apex
+        // predators carry near-uniform temperament, and almost no society
+        // exists to vary — the model's narrowest kind on every axis.
+        (
+            KindId("white-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        // a frenzied, opportunistic forager's temperament swings by
+        // disposition, not doctrine — wider than the disciplined goblinoids.
+        (
+            KindId("gnoll"),
+            Dispersion {
+                mind: 0.22,
+                society: 0.15,
+                perception: 0.12,
+            },
+        ),
+        // GENERALIST: widest on every axis — this campaign's own argument
+        // that psychological breadth, not ecological breadth, is what
+        // "generalist" means.
+        (
+            KindId("human"),
+            Dispersion {
+                mind: 0.35,
+                society: 0.30,
+                perception: 0.20,
+            },
+        ),
+        // THE DELVERS (C2c): the three dwarves, spread across much of the
+        // range the roster uses. The ordering principle is the one the
+        // goblinoid rows already established — an institution that drills is
+        // an institution that narrows — so the settled farmer with its halls
+        // and terraces is the narrowest of the three and the institution-free
+        // scavenger band the widest. Human stays the widest overall on
+        // every axis, which is its own campaign's claim and is not disturbed.
+        (
+            KindId("desert-dwarf"),
+            Dispersion {
+                mind: 0.20,
+                society: 0.16,
+                perception: 0.14,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            Dispersion {
+                // second only to human: no caste, no guild, no hall, nothing
+                // that would make two gully dwarves resemble each other.
+                mind: 0.30,
+                society: 0.25,
+                perception: 0.18,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            Dispersion {
+                mind: 0.15,
+                society: 0.12,
+                perception: 0.10,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The community-mind component — authored directly, present only for the
-/// four settling peoples (goblin is the baseline). A Solitary minded kind
-/// (a dragon) carries a MindVector but no SocietyVector.
+/// nine settling peoples. A Solitary minded kind (a dragon) carries a
+/// MindVector but no SocietyVector; a mixed consumer resolves
+/// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
+/// same values — again authorship, not definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
     [
@@ -2024,7 +3184,7 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
         // it, is the one whose members survive the droughts between finds —
         // so what earns standing is provisioning the group, not winning it
         // by force or hoarding lore. `in_group_radius` is authored wide
-        // (0.7, above the goblin baseline) for the same reason: an
+        // (0.7, above the manikin's midpoint) for the same reason: an
         // expansive "us" is the risk-pooling network's natural shape.
         (
             KindId("gnoll"),
@@ -2040,17 +3200,76 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 in_group_radius: 0.7,
             },
         ),
+        // The Generalist (C2-0). `in_group_radius` 0.8 is the widest in the
+        // roster, above gnoll's 0.7: an expansive "us" is the social twin of
+        // a broad niche, and is what a no-refuge generalist looks like from
+        // the inside.
+        (
+            KindId("human"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.8,
+            },
+        ),
+        // THE DELVERS (C2c): the three dwarves. Each row is argued from the
+        // kind's ECOLOGY, per decision 0021 — 5E supplies mass and CR and
+        // nothing else, so no moral canon rides along with the names. The
+        // three deliberately do not share a social reading: a family is a
+        // shared descent and a shared tongue, not a shared constitution.
+        (
+            KindId("desert-dwarf"),
+            SocietyVector {
+                // consensus, not command. A dispersed people whose members
+                // are separated for long stretches by the distances between
+                // water cannot enforce a standing authority, and does not
+                // need one.
+                sociality: Sociality::Communal,
+                // what earns standing is knowing where the water, the route
+                // and the season are — the same reasoning that puts
+                // `starreader` at the top of its lexicon.
+                status_basis: StatusBasis::Knowledge,
+                // wide: scattered kin who meet rarely must count distant
+                // relations as "us" or lose them entirely.
+                in_group_radius: 0.65,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            SocietyVector {
+                // no authority worth the name: a scavenger band has nothing
+                // to command and nothing to command it with.
+                sociality: Sociality::Communal,
+                // what is found is shared — the same risk-pooling logic that
+                // earned gnoll `Generosity`, arrived at from the opposite
+                // direction: not a windfall too large to keep, but a find too
+                // small to be worth fighting over.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                // a settled surplus people: standing comes from what the hall
+                // sets out, which is what a good harvest is FOR.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.6,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the four peoples (goblin is the baseline: diurnal, 0.5/0.5)
-/// and the three chromatic dragons (The Vigil). Since The Vigil the enforced
-/// lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added without a
-/// row here fails `check_integrity` at load rather than silently perceiving
-/// like a goblin.
+/// SPEAKING kind: the nine peoples and the three chromatic dragons (The
+/// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
+/// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
+/// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
+/// without a row here fails `check_integrity` at load rather than silently
+/// falling back on goblin's row, as the pre-Vigil stopgap did.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
     [
@@ -2136,11 +3355,82 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
             KindId("gnoll"),
             PerceptionVector {
                 activity: ActivityCycle::Crepuscular,
-                // hunts at dusk/dawn/night: above the goblin baseline.
+                // hunts at dusk/dawn/night: above the manikin's midpoint.
                 night_vision: 0.75,
                 // ground-focused pack predator tracking prey and scent, not
                 // sky-rapt.
                 sky_attention: 0.3,
+            },
+        ),
+        // The Generalist (C2-0). Night vision sits BELOW the manikin, and
+        // below every other people (goblin 0.5 .. kobold 0.9) — the call The
+        // Manikin identified and deferred to this campaign: human scotopic
+        // vision is genuinely poor, so authoring it at 0.5 would have made
+        // "typical" mean "weak" and silently rescaled kobold's 0.9.
+        //
+        // 0.15 rather than 0.25 is deliberate and visible. `pack_depths` is a
+        // step function, `hue = 2 + ((1 - night_vision) * 3).round()`: 0.25
+        // yields depth 4, TIED with goblin, while <= 0.166 yields depth 5 and
+        // makes human the only kind at the ladder's deepest rung. The hue
+        // ladder is Berlin & Kay's, derived from human languages; a model
+        // whose colour hierarchy is human-derived and then denies humans its
+        // deepest rung is incoherent. Luminance is 1 either way — the shallow
+        // dark-vocabulary is the cost side of the same trade.
+        (
+            KindId("human"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.15,
+                sky_attention: 0.65,
+            },
+        ),
+        // THE DELVERS (C2c): the three dwarves. `sky_attention` is CELESTIAL
+        // vs terrestrial attention, not aerialness (`perception_lens.ambient
+        // = 1.5 - sky_attention`), so the scavenger who reads the ground is
+        // authored low on it (0.2) and the desert navigator who reads the
+        // stars high (0.75), while all three carry a raised `night_vision`.
+        // That authoring is
+        // HONEST rather than mechanical: it reaches the perception consumers —
+        // the hue ladder in `pack_depths`, the exposure lens — even though it
+        // reaches nothing in the capacity model, which reads only mass,
+        // potency, the resource vector and the condition niche.
+        (
+            KindId("desert-dwarf"),
+            PerceptionVector {
+                // the same strategy gnoll's row argues for on the same
+                // climate tile: shelter through the peak heat, move at the
+                // cooler margins.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.65,
+                // THE HIGHEST IN THE ROSTER (above human's 0.65). An open-
+                // country people that crosses trackless ground at night
+                // navigates by the sky, and that is a claim about where its
+                // attention goes, not about where its body is.
+                sky_attention: 0.75,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            PerceptionVector {
+                // works the margins of the day, where what it scavenges is
+                // least contested.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.7,
+                // eyes on the ground — that is where the food is.
+                sky_attention: 0.2,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            PerceptionVector {
+                // a surface farmer keeps the sun's hours.
+                activity: ActivityCycle::Diurnal,
+                // better than a human's by a wide margin, worse than any
+                // dwarf that lives in the dark.
+                night_vision: 0.6,
+                // reads the sky for weather and season, which is a farmer's
+                // reason to look up and a moderate one.
+                sky_attention: 0.5,
             },
         ),
     ]
@@ -2196,6 +3486,22 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         // a label held by >= 2 kinds (goblinoid/draconic/plant, the roster's
         // only multi-member families).
         (KindId("gnoll"), "gnoll"),
+        // The Generalist (C2-0): a singleton family, following kobold's and
+        // gnoll's shape — `family_proto` in `hornvale_language` carries no
+        // "human" entry, because `check_integrity` requires a proto only for
+        // a label held by >= 2 kinds. The dwarf and elf families of C2c/C2d
+        // will be the roster's first new multi-member families.
+        (KindId("human"), "human"),
+        // THE DELVERS (C2c): three kinds, ONE label — the roster's first new
+        // multi-member family since goblinoid, and the first ever added as a
+        // family rather than grown into one. The moment the second of these
+        // rows exists, `check_integrity`
+        // (`windows/worldgen/src/components.rs`) requires a matching
+        // `family_proto` entry keyed `KindId("dwarf")` in `hornvale_language`;
+        // that row lands in the same commit, because it must.
+        (KindId("desert-dwarf"), "dwarf"),
+        (KindId("gully-dwarf"), "dwarf"),
+        (KindId("hill-dwarf"), "dwarf"),
     ]
     .into_iter()
     .collect()
@@ -2260,6 +3566,16 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("killer-whale-kind", "a killer whale"),
     ("giant-squid-kind", "a giant squid"),
     ("giant-crocodile-kind", "a giant crocodile"),
+    // The Generalist (C2-0): the sixth people.
+    ("human-kind", "a human"),
+    // The Delvers (C2c): the dwarf family's three. These three ids are what
+    // `domains/language/src/accession.rs`'s epoch-9 cohort lists;
+    // `cli/tests/accession.rs` checks the two agree in BOTH directions, and
+    // commit `ee4e6a00` records that omitting the cohort also changes which
+    // proto-root each concept draws.
+    ("desert-dwarf-kind", "a desert dwarf"),
+    ("gully-dwarf-kind", "a gully dwarf"),
+    ("hill-dwarf-kind", "a hill dwarf"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -2454,8 +3770,8 @@ mod tests {
         // With the god-struct gone, the four registries author independently.
         // The cross-registry invariants the world relies on: biosphere and
         // family cover the SAME full kind set, and psyche/perception share
-        // exactly one key-set — the four peoples — every one of which also
-        // carries a biosphere row.
+        // exactly one key-set — the nine peoples plus the three minded
+        // dragons — every one of which also carries a biosphere row.
         let bio = biosphere_registry();
         let fam = family_of();
         let psy = psyche_registry();
@@ -2463,8 +3779,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            29,
-            "twenty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll)"
+            33,
+            "thirty-three kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -2472,19 +3788,19 @@ mod tests {
 
         // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
         // psyche, and since The Vigil every minded SPEAKER also perceives, so
-        // the two stores again share one key-set — seven kinds, not the four
-        // peoples.
+        // the two stores again share one key-set — twelve kinds, not the
+        // nine peoples alone.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 8, "five peoples + three minded dragons");
+        assert_eq!(psy.len(), 12, "nine peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            8,
-            "perception is the five peoples + the three dragons (The Vigil)"
+            12,
+            "perception is the nine peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -2510,21 +3826,63 @@ mod tests {
         }
     }
 
+    /// CHARACTERIZATION, NOT CONTRACT.
+    ///
+    /// Goblin is currently authored at exactly the manikin's values. That is
+    /// authorship, not definition: goblin was the first people written down,
+    /// and nobody ever decided that goblins are unremarkable. Nothing in the
+    /// model requires a kind to sit on the manikin, and this test does not
+    /// make it a requirement.
+    ///
+    /// It exists so that characterising goblin — giving it the impulsive,
+    /// short-horizon profile it has never actually been given — arrives as a
+    /// visible diff on this test rather than as a silent shift in every
+    /// goblin-bearing world's language envelope, culture rungs and demography
+    /// weights. When that campaign comes, DELETE this test; do not "fix" it.
+    ///
+    /// The pattern is The Vacancy's, applied in this same registry to the
+    /// `Autotroph`/Kleiber divergence.
     #[test]
-    fn goblin_is_the_baseline_vector() {
-        let psy = psyche_registry();
-        let g = psy.get(&KindId("goblin")).unwrap();
-        for v in [g.threat_response, g.deliberation_latency, g.time_horizon] {
-            assert_eq!(v, 0.5, "goblin scalars must sit exactly at baseline");
-        }
-        let soc = society_registry();
-        let g_soc = soc.get(&KindId("goblin")).unwrap();
+    fn goblin_is_currently_authored_at_the_manikin() {
+        let mind = *psyche_registry().get(&KindId("goblin")).unwrap();
         assert_eq!(
-            g_soc.in_group_radius, 0.5,
-            "goblin society sits at baseline"
+            mind,
+            MindVector::MANIKIN,
+            "goblin's mind is authored at the manikin (characterization)"
         );
-        assert_eq!(g_soc.sociality, Sociality::Hierarchic);
-        assert_eq!(g_soc.status_basis, StatusBasis::Rank);
+
+        let society = *society_registry().get(&KindId("goblin")).unwrap();
+        assert_eq!(
+            society,
+            SocietyVector::MANIKIN,
+            "goblin's society is authored at the manikin (characterization)"
+        );
+    }
+
+    /// The manikin is the model's reference vector: neutral on every scalar,
+    /// and a designated default on the enums (which have no midpoint to be
+    /// neutral at — see the spec's flagged item 5). It belongs to no creature.
+    #[test]
+    fn the_manikin_is_neutral_on_scalars_and_default_on_enums() {
+        let mind = MindVector::MANIKIN;
+        for v in [
+            mind.threat_response,
+            mind.deliberation_latency,
+            mind.time_horizon,
+        ] {
+            assert_eq!(v, 0.5, "every manikin mind scalar is the neutral midpoint");
+        }
+
+        let society = SocietyVector::MANIKIN;
+        assert_eq!(society.in_group_radius, 0.5);
+        assert_eq!(society.sociality, Sociality::Hierarchic);
+        assert_eq!(society.status_basis, StatusBasis::Rank);
+
+        let perception = PerceptionVector::MANIKIN;
+        for v in [perception.night_vision, perception.sky_attention] {
+            assert_eq!(v, 0.5, "every manikin perception scalar is the midpoint");
+        }
+        assert_eq!(perception.activity, ActivityCycle::Diurnal);
     }
 
     #[test]
@@ -2534,14 +3892,18 @@ mod tests {
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
         // biosphere-only fauna), T8 (five more, four marine plus the
-        // amphibious giant crocodile), and T9 (the gnoll, the fifth people);
-        // ComponentStore key order is lexicographic.
+        // amphibious giant crocodile), T9 (the gnoll, the fifth people), The
+        // Generalist (the human, the sixth people), and The Delvers (the
+        // three dwarves, peoples seven through nine); ComponentStore key
+        // order is lexicographic, so the family scatters rather than
+        // clustering.
         assert_eq!(
             names,
             vec![
                 "black-dragon",
                 "bugbear",
                 "carrion-crawler",
+                "desert-dwarf",
                 "dire-wolf",
                 "giant-constrictor-snake",
                 "giant-crocodile",
@@ -2553,7 +3915,10 @@ mod tests {
                 "giant-squid",
                 "gnoll",
                 "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
                 "hobgoblin",
+                "human",
                 "killer-whale",
                 "kobold",
                 "otyugh",
@@ -2612,8 +3977,21 @@ mod tests {
         assert_eq!(species_entity(&w, "kobold"), Some(kobold));
     }
 
+    /// CHARACTERIZATION, NOT CONTRACT — the perception half of
+    /// `goblin_is_currently_authored_at_the_manikin`. Goblin's authored
+    /// perception coincides with [`PerceptionVector::MANIKIN`]; nothing in the
+    /// model requires that, and kobold is here to show the vector genuinely
+    /// varies across the roster.
+    ///
+    /// Unlike its sibling, this test cannot simply be deleted the day goblin
+    /// is characterised on its own merits: it welds one characterization
+    /// assertion (goblin's row) to one real contract (the kobold contrast,
+    /// which pins that the vector genuinely varies across the roster and
+    /// must survive). When that day comes, split this test — delete the
+    /// goblin assertions, keep the kobold ones — rather than deleting the
+    /// whole function or leaving the stale goblin assertions in place.
     #[test]
-    fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
+    fn goblin_perception_is_authored_at_the_manikin_and_kobold_contrasts() {
         let per = perception_registry();
         let g = per.get(&KindId("goblin")).unwrap();
         assert_eq!(g.activity, ActivityCycle::Diurnal);
@@ -2760,7 +4138,7 @@ mod tests {
         let goblin = bio.get(&KindId("goblin")).unwrap();
         assert_eq!(goblin.mass, Mass::new(18.1).unwrap());
         assert_eq!(goblin.potency, 0.0);
-        // the four peoples all speak/settle (carry a psyche row)
+        // these four (of today's six) peoples all speak/settle (carry a psyche row)
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
             assert!(psy.contains(&KindId(name)), "{name} must carry a psyche");
         }
@@ -2891,10 +4269,21 @@ mod tests {
             .collect()
     }
 
+    /// The fallback a mixed consumer resolves is the manikin — stated without
+    /// reference to any people. Before The Manikin this test asserted the
+    /// fallback equalled *goblin's* authored society, which welded the model's
+    /// identity element to one inhabitant of the world.
     #[test]
-    fn society_baseline_equals_the_goblin_authored_society() {
-        let goblin = society_registry().get(&KindId("goblin")).copied().unwrap();
-        assert_eq!(goblin, SocietyVector::baseline());
+    fn the_society_fallback_is_the_manikin() {
+        assert_eq!(
+            SocietyVector::MANIKIN,
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.5,
+            },
+            "the fallback is the manikin, and the manikin is nobody's"
+        );
     }
 
     #[test]
@@ -2902,7 +4291,17 @@ mod tests {
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
         assert_eq!(
             society,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+            vec![
+                "bugbear",
+                "desert-dwarf",
+                "gnoll",
+                "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
+                "hobgoblin",
+                "human",
+                "kobold"
+            ]
         );
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());

@@ -225,6 +225,7 @@ fn out_of_range_pins_fail_loudly_with_the_reason() {
     assert!(reason.contains("2-64"));
 }
 
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn every_default_globe_satisfies_every_invariant() {
     let geo = Geosphere::new(4);
@@ -275,6 +276,7 @@ fn every_default_globe_satisfies_every_invariant() {
     }
 }
 
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn boundary_classification_agrees_from_both_sides_across_seeds() {
     use hornvale_terrain::boundaries::classify_contact;
@@ -327,6 +329,9 @@ fn boundary_classification_agrees_from_both_sides_across_seeds() {
     }
 }
 
+/// claim: structural(seed: [0,17,42,63]) — byte-identity, build twice, compare
+/// (audit note: rubric's canonical shape is one fixed seed; this sweeps four,
+/// which is more coverage, not a hunt — flagged, not narrowed, per the audit)
 #[test]
 fn genesis_is_deterministic_across_the_sweep() {
     let geo = Geosphere::new(4);
@@ -337,6 +342,7 @@ fn genesis_is_deterministic_across_the_sweep() {
     }
 }
 
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn convergent_boundaries_stand_above_continental_interiors_on_average() {
     use hornvale_terrain::BoundaryKind;
@@ -383,6 +389,8 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
     );
 }
 
+/// claim: sanctioned-sweep(pinned regime, continents: Some(1) — no census home;
+/// the-census.study.json carries exactly one pin_set)
 #[test]
 fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
     use hornvale_terrain::shape::{hypsometric_bimodality, shelf_fraction, shelf_land_ratio};
@@ -417,6 +425,7 @@ fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
     }
 }
 
+/// claim: sanctioned-sweep(pinned regime, continents: Some(1) — no census home)
 #[test]
 fn single_craton_genesis_survives_maximal_terrane_stacking() {
     // Terrane saturation guard (Sculpting Task 1 review): under
@@ -440,6 +449,10 @@ fn single_craton_genesis_survives_maximal_terrane_stacking() {
     }
 }
 
+/// claim: invariant(census: none yet) — craton-level-only, grid-free (no
+/// Geosphere/generate); proves the supply fallback never fires across the
+/// frozen 1000-seed census population, protecting byte-identity of every
+/// committed default-world artifact (seedless sweep, audit §5)
 #[test]
 fn default_worlds_never_trip_the_supply_fallback() {
     use hornvale_terrain::crust::{continental_supply, draw_cratons};

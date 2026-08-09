@@ -12,14 +12,28 @@
 /// Pure and surface-free — the caller supplies the observability table.
 pub mod accession;
 pub mod account;
+/// The anthroponymic schema (The Namesake, spec §3.2): what a personal name
+/// is made of — an ordered list of `(source, author)` elements, plus the new
+/// [`naming::NameKind::Person`] seed path a given name draws off. Plain data,
+/// kernel-only; it never learns which people a name belongs to.
+pub mod anthroponym;
 /// The clause layer: a language-neutral `ClauseSpec` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
 pub mod clause;
+/// Common's declared vocabulary (The Vernacular, Task 3): a TOTAL id→word map
+/// for the author's out-of-world register, which — unlike a people's tongue —
+/// has no speakers and so no `Lexicon`. Holds no domain's concept ids; each
+/// domain exposes its own pairs and the composition root assembles them.
+pub mod common_vocab;
 /// The etymology engine: proto-roots drawn from a phonology, and a drawn
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
 pub mod etymology;
+/// Canonical exemplar reflectances for the colour lexicon's hue ladder —
+/// what a colour term is compared *against*, stored as a reflectance so it
+/// passes through the same illuminant and the same eye as the sample.
+pub mod exemplars;
 /// A tongue's drawn surface grammar (C3, The Tongues): constituent order,
 /// copula presence and drawn form, and article presence — the floor slice
 /// of LANG-40's grammaticalization-depth vector.
@@ -75,6 +89,7 @@ pub use account::{
 pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
+pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
     AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
     assign_proto_roots, draw_cascade, draw_cascade_with_regime, draw_wear_cascade, evolve,
@@ -100,24 +115,25 @@ pub fn assign_proto_roots_with_epoch_for_test(
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
     etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
 }
+pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
     tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
-    draw_headedness,
+    draw_headedness, proto_root_universe,
 };
 pub use morphology::{
-    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
-    morph_depths, morph_forms,
+    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, SKY_OVERRIDE, TongueMorphology,
+    affix, morph_depths, morph_forms, noun_class_with_sky,
 };
 pub use naming::{
     GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
 };
 pub use packs::{
-    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
-    is_core_concept, kin_pack, register_concepts, universal_stratum,
+    BEARINGS, PackDepths, PackEntry, bearing_compounds, body_pack, color_pack, compound_recipe,
+    concept_domain, in_ladder, is_core_concept, kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,
@@ -153,7 +169,8 @@ pub mod speech {
     /// An exotic manner of articulation found in a kind's phonology.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum ExoticManner {
-        /// No exotic manner (the goblin baseline).
+        /// No exotic manner — the manikin's designated default (an exotic
+        /// manner is a kind, not a quantity, so it has no neutral middle).
         None,
         /// Trill: rapid vibration of an articulator.
         Trill,
@@ -165,9 +182,10 @@ pub mod speech {
 
     /// The closed seven-dimension articulation vector (spec §5, extended by
     /// the phonology epoch with `tonality`). Scalars are bare ratios in
-    /// `[0, 1]` with 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the
-    /// humanoid default); widening the vector requires its own campaign.
-    /// Every dimension is authored — nothing drawn. Moved here from
+    /// `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint (see
+    /// [`ArticulationVector::MANIKIN`], whose `tonality` is instead the
+    /// designated default 0.0 ≡ atonal); widening the vector requires its own
+    /// campaign. Every dimension is authored — nothing drawn. Moved here from
     /// `species` (ECS c3): the phonology component's owner is language.
     /// type-audit: bare-ok(ratio)
     #[derive(Clone, Copy, Debug, PartialEq)]
@@ -190,6 +208,40 @@ pub mod speech {
         pub tonality: f64,
         /// Exotic manner of articulation.
         pub exotic: ExoticManner,
+    }
+
+    impl ArticulationVector {
+        /// The manikin's voice: the reference articulation the phonology
+        /// pipeline is framed against.
+        ///
+        /// The manikin is a body that is nobody — the model's reference
+        /// figure, in the lineage of the CIE standard observer and ICRP's
+        /// "standard man". It has no `KindId` and no registry row, so it can
+        /// never be placed in a world and can never be heard speaking. The
+        /// species crate's `MindVector::MANIKIN`, `SocietyVector::MANIKIN`
+        /// and `PerceptionVector::MANIKIN` are the same construction on the
+        /// other three vector families; this const is the language-owned
+        /// fourth. (It is redeclared here rather than imported: a domain
+        /// crate depends on the kernel and never on a sibling domain.)
+        ///
+        /// Note the asymmetry, which is real and not papered over. Five
+        /// dimensions are scalars sitting at `0.5`, a principled **neutral
+        /// midpoint**. `tonality` is also a scalar, and so does have a
+        /// middle, but the reference vector deliberately does not sit at it:
+        /// `0.0` (atonal) is a designated **default**, the value every
+        /// shipped kind carries, not a neutral reading. `ExoticManner` has no
+        /// middle at all, so `None` is a designated default in the stronger
+        /// sense.
+        /// type-audit: bare-ok(ratio)
+        pub const MANIKIN: Self = Self {
+            labiality: 0.5,
+            vowel_space: 0.5,
+            voicing: 0.5,
+            sibilance: 0.5,
+            voice_loudness: 0.5,
+            tonality: 0.0,
+            exotic: ExoticManner::None,
+        };
     }
 
     /// The peopled social lexicon (stopgap vocabulary The Tongues will
@@ -216,7 +268,9 @@ pub mod speech {
 
     /// Peopled phonology, one per speaking kind. Values are the
     /// byte-identical articulation vectors formerly on the species peopled
-    /// component.
+    /// component. Goblin's row happens to sit at
+    /// [`ArticulationVector::MANIKIN`] — a fact about goblin's authorship,
+    /// not about what the manikin is.
     /// type-audit: bare-ok(identifier-text)
     pub fn articulation_registry() -> ComponentStore<KindId, ArticulationVector> {
         [
@@ -335,13 +389,92 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
+            // The Generalist (C2-0). Humans are authored at the envelope's
+            // neutral settings, and this is the ONE vector family where that
+            // is an argument rather than a default: the phonology envelope is
+            // built on IPA, a human-calibrated inventory, so a human anchor
+            // here is better founded than any other kind's (The Manikin §2).
+            //
+            // These values coincide with goblin's, which are legacy — goblin
+            // sits at 0.5 because it was the baseline, not because anyone
+            // decided goblins sound unremarkable. The collision is a known
+            // artifact of a deferred campaign (goblin characterization) and
+            // resolves when goblin moves, not when human does.
+            (
+                KindId("human"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.5,
+                    sibilance: 0.5,
+                    voice_loudness: 0.5,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            // THE DELVERS (C2c): three daughters of one proto, and the first
+            // family since goblinoid where that word means anything. Each row
+            // below DIVERGES from `family_proto`'s `KindId("dwarf")` vector
+            // (labiality 0.40, vowel_space 0.35, voicing 0.60, sibilance
+            // 0.35, voice_loudness 0.60) — the divergence is precisely what
+            // the sound-change cascade consumes, so three identical daughters
+            // would be three names for one tongue.
+            //
+            // The proto reading is a low, back, consonant-heavy tongue:
+            // narrow vowel space, moderate labiality, voiced, unsibilant,
+            // carrying. Each daughter moves it in the direction its own
+            // ecology pushes.
+            (
+                KindId("desert-dwarf"),
+                ArticulationVector {
+                    // long calls across open ground: the loudest daughter,
+                    // with the sibilance a dry-air whistling register buys.
+                    labiality: 0.35,
+                    vowel_space: 0.50,
+                    voicing: 0.55,
+                    sibilance: 0.65,
+                    voice_loudness: 0.80,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("gully-dwarf"),
+                ArticulationVector {
+                    // the most open and least conserved: no caste of speakers
+                    // holds this tongue to anything, so it has drifted toward
+                    // wide vowels, full voicing and volume.
+                    labiality: 0.55,
+                    vowel_space: 0.55,
+                    voicing: 0.70,
+                    sibilance: 0.50,
+                    voice_loudness: 0.70,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("hill-dwarf"),
+                ArticulationVector {
+                    // the conservative daughter, closest to the proto on
+                    // every dimension — the surface homeland's tongue, which
+                    // is usually the one that moves least.
+                    labiality: 0.45,
+                    vowel_space: 0.45,
+                    voicing: 0.65,
+                    sibilance: 0.30,
+                    voice_loudness: 0.55,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
         ]
         .into_iter()
         .collect()
     }
 
     /// Peopled lexicon, one per speaking kind. Byte-identical to the former
-    /// species peopled component's noun + rung words for the four peoples;
+    /// species peopled component's noun + rung words for the six peoples;
     /// The Solitary Tongue adds a shared stopgap row for the three
     /// dragons (a solitary hoarder has no settlement or castes — these
     /// words are placeholders satisfying the `articulation.ids ==
@@ -443,13 +576,73 @@ pub mod speech {
                     top: "packlord",
                 },
             ),
+            // The Generalist (C2-0): a settled agricultural people's rungs.
+            (
+                KindId("human"),
+                Lexicon {
+                    noun: "town",
+                    worker_override: Some("farmer"),
+                    warrior: "guard",
+                    artisan: "wright",
+                    shaman: "priest",
+                    top: "steward",
+                },
+            ),
+            // THE DELVERS (C2c): the dwarf family's three vocabularies. Each
+            // kind's `top` rung names what its `SocietyVector.status_basis`
+            // says earns standing — `loremaster` for Knowledge, `overseer`
+            // for Rank, `eldest` for a Communal band — so the words and the
+            // society model agree rather than merely coexisting.
+            (
+                KindId("desert-dwarf"),
+                Lexicon {
+                    noun: "waterhold",
+                    worker_override: Some("well-tender"),
+                    warrior: "outrider",
+                    artisan: "glassmith",
+                    // navigation by the sky is this people's real lore, and
+                    // its 0.75 `sky_attention` is the same claim.
+                    shaman: "starreader",
+                    top: "waterwarden",
+                },
+            ),
+            (
+                KindId("gully-dwarf"),
+                Lexicon {
+                    noun: "midden",
+                    worker_override: Some("scrounger"),
+                    warrior: "cudgeler",
+                    artisan: "patcher",
+                    shaman: "mutterer",
+                    // a Communal band's only authority is age.
+                    top: "eldest",
+                },
+            ),
+            (
+                KindId("hill-dwarf"),
+                Lexicon {
+                    noun: "steading",
+                    worker_override: Some("crofter"),
+                    warrior: "hearthguard",
+                    artisan: "smith",
+                    shaman: "stonespeaker",
+                    top: "thane",
+                },
+            ),
         ]
         .into_iter()
         .collect()
     }
 
     /// Proto ancestral articulation vectors keyed by family (goblinoid/
-    /// draconic/plant) — moved here from species (ECS c3).
+    /// draconic/plant/dwarf) — moved here from species (ECS c3).
+    ///
+    /// Keyed by the FAMILY LABEL `hornvale_species::family_of` carries, not
+    /// by a kind. `check_integrity` (`windows/worldgen/src/components.rs`)
+    /// requires an entry here for every label held by two or more kinds, so a
+    /// campaign that adds a second member to a family MUST add its proto in
+    /// the same commit — The Delvers added three dwarves and this row
+    /// together for exactly that reason.
     /// type-audit: bare-ok(identifier-text)
     pub fn family_proto() -> ComponentStore<KindId, ArticulationVector> {
         [
@@ -485,6 +678,25 @@ pub mod speech {
                     voicing: 0.4,
                     sibilance: 0.3,
                     voice_loudness: 0.3,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            // THE DELVERS (C2c): proto-Dwarf, ancestor of all three daughters
+            // in `articulation_registry`. A low, back, consonant-heavy tongue:
+            // narrow vowel space, moderate lip rounding, well voiced, little
+            // sibilance, and carrying — the reading a people that speaks over
+            // stone and wind arrives at. `exotic: None` — the daughters
+            // innovate away from the proto rather than losing an inherited
+            // manner.
+            (
+                KindId("dwarf"),
+                ArticulationVector {
+                    labiality: 0.40,
+                    vowel_space: 0.35,
+                    voicing: 0.60,
+                    sibilance: 0.35,
+                    voice_loudness: 0.60,
                     tonality: 0.0,
                     exotic: ExoticManner::None,
                 },
@@ -559,6 +771,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "the glossed settlement name (The Wearing): composed from the lexicon's roots/compounds under the species' drawn headedness, each morpheme first worn to its frequency in this culture's own name corpus. The epoch bump is owed to two changes in what this stream consumes — the wear, and the RETIREMENT of v2's per-salt drawn stem (decision 0024: uniqueness is reference-time, and no future work fixes collisions by adding entropy)",
         ),
         (
+            "language/<species>/name/person",
+            "the given-name element of a personal name (The Namesake), salted by the bearer's role handle: a bare 2-3 syllable stem. No epoch suffix — this label is new, not a regeneration of an existing one (decision 0084: an epoch is declared only when a derivation moved)",
+        ),
+        (
             "language/<species>/name/deity/v3",
             "the glossed deity name (The Wearing): as v2, reseeded by the epoch bump the settlement stream owes. Deity names carry no name corpus (their space is one-per-belief, not a scatter), so nothing wears here",
         ),
@@ -579,12 +795,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "(retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root",
         ),
         (
-            "language/<species>/lexicon/cascade",
-            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root",
+            "language/<species>/lexicon/cascade/v2",
+            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Task 8b (same unreleased v2 epoch, per decision 0089: it lands together, so one suffix is the truthful count) adds a second, orthogonal gate: draw_rule now also checks the SPECIES' OWN drawn phonology (via draw_cascade_with_regime/draw_wear_cascade's new Phonology parameter) and drops Tonogenesis unless the phonology can host a toned vowel, and drops VowelShift unless it admits an adjacent-height vowel pair — a cascade may not draw a rule its phonology cannot host, one level up from Task 7's cannot-condition guard. Draw count is unchanged either way (Stream::pick is one draw at any slice length); only the drawn values move",
         ),
         (
-            "language/<species>/lexicon/cascade/wear",
-            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing)",
+            "language/<species>/lexicon/cascade/v2/wear",
+            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing). Reseeded by the same v2 epoch bump as its parent leg",
         ),
         (
             "language/<species>/lexicon/headedness",
@@ -689,5 +905,44 @@ impl hornvale_kernel::Domain for Language {
     }
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         crate::stream_labels()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::KindId;
+
+    /// CHARACTERIZATION, NOT CONTRACT.
+    ///
+    /// Goblin is currently authored at exactly
+    /// [`ArticulationVector::MANIKIN`]. That is authorship, not definition:
+    /// goblin was the first people written down, and nobody ever decided
+    /// that goblins speak with the reference voice. Nothing in the model
+    /// requires a kind to sit on the manikin, and this test does not make it
+    /// a requirement.
+    ///
+    /// It exists so that characterising goblin's phonology — giving it a
+    /// voice that is its own rather than the reference figure's — arrives as
+    /// a visible diff on this test rather than as a silent shift baked into
+    /// the doc comment's unpinned claim. When that campaign comes, DELETE
+    /// this test; do not "fix" it.
+    ///
+    /// The sibling in `hornvale-species`,
+    /// `goblin_is_currently_authored_at_the_manikin`, does the same for
+    /// mind/society/perception; this is the fourth vector family's half,
+    /// redeclared here rather than shared because a domain crate depends on
+    /// the kernel and never on a sibling domain.
+    #[test]
+    fn goblin_is_currently_authored_at_the_manikin() {
+        let row = articulation_registry()
+            .get(&KindId("goblin"))
+            .copied()
+            .unwrap();
+        assert_eq!(
+            row,
+            ArticulationVector::MANIKIN,
+            "goblin's articulation is authored at the manikin (characterization)"
+        );
     }
 }

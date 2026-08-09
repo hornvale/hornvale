@@ -11,7 +11,10 @@
 
 pub mod connections;
 pub mod history;
+pub mod phenomenon_line;
 pub mod qualify;
+
+pub use phenomenon_line::phenomenon_line;
 
 /// Re-exported so that test code assembling the `OccupationRecord` fixtures
 /// [`history::render_site`] reads can reach the history domain's types
@@ -120,11 +123,67 @@ pub struct NightSkyLines {
     pub alignment: Option<String>,
 }
 
+/// The people an almanac is rendered for. One world has as many almanacs as it
+/// has peoples; a committed artifact is a projection that picks one, and §3 of
+/// the campaign spec requires the document to name which.
+///
+/// The composition root fills this — a window may not reach back to the root,
+/// which is why [`AlmanacContext::place_labels`] is filled rather than derived.
+///
+/// **No `grammar` field.** Task 1 widened this struct to carry
+/// `hornvale_language::TongueGrammar` on the assumption (recorded in its own
+/// report) that the renderer would run `hornvale_language::realize_tongue_deep`,
+/// which needs one. Task 5 found a phenomenon has no subject for that
+/// clause-level realizer to take, and rendered a bare noun phrase instead —
+/// at which point `grammar`'s clause-order/copula fields (and the
+/// not-yet-surfaced article flag) had nothing left to answer. Task 6 (this
+/// campaign, correcting its own dispatch error) wired `morph` and
+/// `sky_animate` into noun-class marking on that noun phrase, which *is*
+/// meaningful without a clause — a class marker binds to a noun, not to a
+/// predication. `grammar` stayed dead through that fix too (confirmed:
+/// nothing in this crate reads it), so it is removed rather than shipped
+/// unread. A struct carrying a field nothing uses is the defect class this
+/// campaign exists to remove, dead-field or not.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(flag: sky_animate)
+#[derive(Clone, Debug)]
+pub struct Speaker {
+    /// The species whose tongue voices this document.
+    pub species: String,
+    /// That species' vocabulary.
+    pub lexicon: hornvale_language::Lexicon,
+    /// Its morphology — how deeply noun class grammaticalizes, and the
+    /// marker forms themselves. Read by [`phenomenon_line`]'s tongue path to
+    /// mark a referent's head noun for animacy.
+    pub morph: hornvale_language::TongueMorphology,
+    /// Whether this people's day-schema is agentive, which overrides the
+    /// animacy of sky concepts. Stored as the bool rather than a closure so
+    /// the struct stays plain data; a renderer rebuilds the classifier with
+    /// `hornvale_language::noun_class_with_sky(sky_animate, concept)`.
+    pub sky_animate: bool,
+}
+
 /// Everything the almanac needs, gathered by the composition root.
 /// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines), bare-ok(prose: deep_lines), bare-ok(prose: lode_lines), bare-ok(prose: vestige_lines), bare-ok(prose: place_labels)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
+    /// The people this document is voiced by, or `None` for a world with no
+    /// peoples. Filled by the composition root.
+    pub speaker: Option<Speaker>,
+    /// Common's vocabulary for this world — the neutral register every
+    /// referent falls back to: the whole document's words when there is no
+    /// [`Self::speaker`], and one concept's words when a speaker's tongue has
+    /// no word for it (see [`phenomenon_line`]).
+    ///
+    /// Filled by the composition root (`hornvale_worldgen::common_vocabulary`),
+    /// like [`Self::speaker`] and [`Self::place_labels`]: assembling it needs
+    /// the composed `ConceptRegistry` plus every domain's declared exceptions,
+    /// and a window may not reach back to the root. `hornvale-worldgen`
+    /// depends on *this* crate (it builds the context), so the edge cannot run
+    /// the other way — an almanac→worldgen dependency would be a cycle.
+    /// `CommonVocabulary::default` is a legal (empty-exception) value: the
+    /// naming convention alone still resolves every id.
+    pub common_vocab: hornvale_language::CommonVocabulary,
     /// The sky at genesis.
     pub sky: SkyReport,
     /// The climate at the world's first place.
@@ -231,7 +290,11 @@ pub fn render_life_history_line(
     name: &str,
     biosphere: &hornvale_species::BiosphereTraits,
 ) -> String {
-    let history = hornvale_species::life_history(biosphere.mass, biosphere.metabolic_class);
+    let history = hornvale_species::life_history(
+        biosphere.mass,
+        biosphere.metabolic_class,
+        biosphere.schedule,
+    );
     let mut line = format!(
         "The {} run a basal metabolism of {:.0} W",
         name, history.basal_metabolic_rate_w
@@ -286,12 +349,45 @@ pub fn render_weather_line(site: &str, sky: &str) -> String {
     format!("{site}: the sky is {sky}.")
 }
 
+/// Pluralize a people label naively (`goblin` → `goblins`), matching
+/// `history::pluralize` and `qualify::plural`: the biosphere roster has no
+/// irregular plurals. A third private copy rather than a shared export —
+/// the header line is the only caller here, in a different module from
+/// either sibling.
+///
+/// Takes an already-resolved word, never the raw `KindId`: the caller routes
+/// `speaker.species` through `ctx.common_vocab.word_for` first, so a
+/// hyphenated species (none of today's five peopled kinds are, but
+/// `domains/species` carries hyphenated `KindId`s for non-peopled species,
+/// e.g. `twig-blight`) reads as `twig blights`, not `twig-blights` — the same
+/// seam `phenomenon_line` uses for referents, not a second raw splice of a
+/// registry key into reader-facing prose.
+fn pluralize_people(people: &str) -> String {
+    if people.ends_with('s') {
+        people.to_string()
+    } else {
+        format!("{people}s")
+    }
+}
+
 /// Render the one-page world document as markdown. Deterministic: same
 /// context, same bytes.
 /// type-audit: bare-ok(artifact: return)
 pub fn render(ctx: &AlmanacContext) -> String {
     let mut doc = String::new();
     doc.push_str(&format!("# The Almanac of Seed {}\n\n", ctx.seed));
+
+    // Spec §3: a document voiced by one people's tongue is a projection, and
+    // a projection whose choice is invisible reads as neutral fact. Name the
+    // speaker right under the title so a reader is never left inferring it
+    // from `Doa` a paragraph later. `speaker: None` says nothing here — the
+    // absence of a people is not itself a claim about who is speaking.
+    if let Some(speaker) = &ctx.speaker {
+        doc.push_str(&format!(
+            "*As reckoned among the {}.*\n\n",
+            pluralize_people(&ctx.common_vocab.word_for(&speaker.species))
+        ));
+    }
 
     doc.push_str("## The Sky\n\n");
     doc.push_str(&format!("{}\n\n", ctx.sky.description));
@@ -309,9 +405,15 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if !ctx.phenomena.is_empty() {
         doc.push_str("Salient phenomena, most attention-demanding first:\n\n");
         for p in &ctx.phenomena {
+            // Salience, then the referent in the reader's register. The kind
+            // is deliberately absent: it is a registry key, and a key in
+            // reader-facing prose was half of the leak this campaign closes
+            // (`*celestial-body*` beside a stored `a golden sun fixed at
+            // zenith`). See [`phenomenon_line`] for the other half.
             doc.push_str(&format!(
-                "- [{:.2}] *{}* — {}\n",
-                p.salience, p.kind, p.description
+                "- [{:.2}] {}\n",
+                p.salience,
+                phenomenon_line(p, ctx.speaker.as_ref(), &ctx.common_vocab)
             ));
         }
         doc.push('\n');
@@ -551,15 +653,24 @@ pub fn render(ctx: &AlmanacContext) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{EntityId, Venue};
+    use hornvale_kernel::{EntityId, Referent, Venue};
     use hornvale_religion::Sentiment;
 
     fn sample_context() -> AlmanacContext {
         AlmanacContext {
             seed: 42,
+            speaker: None,
+            // No declared exceptions: the naming convention alone resolves
+            // every id this fixture names, which is the point — a hand-built
+            // context is not obliged to reach the composition root.
+            common_vocab: hornvale_language::CommonVocabulary::default(),
             sky: SkyReport {
                 description: "A golden sun hangs fixed at zenith.".to_string(),
                 bodies: vec!["the sun".to_string()],
+                body_phrases: vec![(
+                    "the sun".to_string(),
+                    "A golden sun hangs fixed at zenith.".to_string(),
+                )],
             },
             climate: ClimateReport {
                 temperature_c: 18.0,
@@ -567,7 +678,7 @@ mod tests {
             },
             phenomena: vec![Phenomenon {
                 kind: "celestial-body".to_string(),
-                description: "a golden sun fixed at zenith".to_string(),
+                referent: Referent::of("sun"),
                 period_days: None,
                 salience: 1.0,
                 venue: Venue::Ambient,
@@ -633,6 +744,18 @@ mod tests {
             genesis_notes: vec![],
             settlement_lines: vec![],
         }
+    }
+
+    /// The almanac is rendered for a particular people, so its context carries
+    /// one. The composition root fills it — a window may not reach back to the
+    /// root, the same reason `place_labels` is filled rather than derived.
+    #[test]
+    fn a_context_can_carry_a_speaker() {
+        let ctx = sample_context();
+        assert!(
+            ctx.speaker.is_none(),
+            "the hand-built sample context has no people; that must stay legal"
+        );
     }
 
     // A dry-interior site (a real diurnal amplitude, per `diurnal_amp_at`)
@@ -714,12 +837,71 @@ mod tests {
             "60",
             "## The Gods",
             "Ever-Flame",
-            "celestial-body",
-            "a golden sun fixed at zenith",
-            "[1.00]",
+            // The phenomena bullet: salience, then the referent realized in
+            // the reader's register. It was `*celestial-body* — a golden sun
+            // fixed at zenith`, which carried both signs of the leak at once
+            // (a stored English description, and a registry key shown to a
+            // reader). The kind is gone and the prose is derived.
+            "- [1.00] the sun",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
+        // The kind no longer reaches the phenomena block. It still appears in
+        // The Gods ("derived from the phenomenon *celestial-body*"), which is
+        // a separate surface and not this change's scope — so this asserts on
+        // the bullet specifically rather than on the whole document.
+        assert!(
+            !doc.contains("- [1.00] *celestial-body*"),
+            "a registry key must never reach a phenomenon bullet:\n{doc}"
+        );
+        assert!(
+            !doc.contains("a golden sun fixed at zenith"),
+            "the stored description must no longer be rendered:\n{doc}"
+        );
+    }
+
+    /// The same phenomenon reads differently to a people that has its own
+    /// word for the referent — the point of the whole rendering change, at
+    /// the document level rather than the line level.
+    #[test]
+    fn a_speaker_changes_the_phenomena_block() {
+        let neutral = render(&sample_context());
+        let mut ctx = sample_context();
+        ctx.speaker = Some(crate::phenomenon_line::test_speaker(&["sun"]));
+        let voiced = render(&ctx);
+        assert!(
+            neutral.contains("- [1.00] the sun"),
+            "the neutral register names the sun in Common:\n{neutral}"
+        );
+        assert!(
+            !voiced.contains("- [1.00] the sun"),
+            "a speaker's almanac must not fall back to Common here:\n{voiced}"
+        );
+    }
+
+    /// Spec §3: the document must name whose account it is when it has a
+    /// speaker, and must invent no neutral claim when it does not.
+    #[test]
+    fn the_header_names_the_speaker_when_one_exists_and_says_nothing_otherwise() {
+        let neutral = render(&sample_context());
+        assert!(
+            !neutral.contains("As reckoned among"),
+            "no speaker means no claim about who is speaking:\n{neutral}"
+        );
+
+        let mut ctx = sample_context();
+        ctx.speaker = Some(crate::phenomenon_line::test_speaker(&["sun"]));
+        let voiced = render(&ctx);
+        assert!(
+            voiced.contains("*As reckoned among the tests.*"),
+            "the header must name the speaker's people:\n{voiced}"
+        );
+        let header_pos = voiced.find("As reckoned among").unwrap();
+        let sky_pos = voiced.find("## The Sky").unwrap();
+        assert!(
+            header_pos < sky_pos,
+            "the speaker attribution belongs right under the title"
+        );
     }
 
     #[test]
@@ -1306,6 +1488,36 @@ mod tests {
         assert!(
             !line.contains("lifespan"),
             "ametabolic species must suppress the life-history clause: {line}"
+        );
+    }
+
+    #[test]
+    fn render_life_history_line_reflects_a_paced_schedule() {
+        // THE LONG AGE (spec 6, mutation M2), the second of Task 4's three
+        // consumers: unlike `generation_length_of` (which resolves its row
+        // only from the canonical, always-Allometric registry, and so cannot
+        // observe a paced schedule today), `render_life_history_line` takes
+        // the `BiosphereTraits` row directly, so a cloned-and-paced row is
+        // enough to prove it forwards `biosphere.schedule` rather than a
+        // hardcoded default.
+        let biosphere = hornvale_species::biosphere_registry();
+        let goblin = biosphere
+            .get(&hornvale_kernel::KindId("goblin"))
+            .expect("goblin is in the registry");
+        let base_line = render_life_history_line("goblin", goblin);
+
+        let mut slow = goblin.clone();
+        slow.schedule =
+            hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
+        let slow_line = render_life_history_line("goblin", &slow);
+
+        assert_ne!(
+            base_line, slow_line,
+            "a paced schedule must change the rendered life-history line"
+        );
+        assert!(
+            slow_line.contains("slow, long-lived, and sparse"),
+            "an 11x-paced goblin must read as slow, long-lived, and sparse: {slow_line}"
         );
     }
 

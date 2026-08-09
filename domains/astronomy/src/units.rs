@@ -161,6 +161,17 @@ quantity!(
      values."
 );
 
+quantity!(
+    Kelvin,
+    "kelvin",
+    positive,
+    "An absolute temperature in kelvin. Distinct from climate's Celsius \
+     `Temperature`: this is a stellar surface reading, never a surface-air \
+     one, and the two must not be interchangeable. Absolute zero is a \
+     degenerate star, not a valid one, so zero is rejected along with \
+     negative and non-finite values."
+);
+
 /// An angle in degrees, valid in [0, 360).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Degrees(pub(crate) f64);

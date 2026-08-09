@@ -119,7 +119,7 @@
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
 | `spreading-rate` | yes | the globe's one drawn global spreading rate |
 | `star-age-gyr` | yes | the host star's age in gigayears (drawn; does not feed luminosity or the habitable zone — a deliberate containment) |
-| `star-class` | yes | the host star's descriptive spectral class |
+| `star-class` | yes | the host star's spectral class, as a registered concept id (Morgan-Keenan prose is rendered from it at read time by windows/book, never stored) |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
 | `star-mass-solar` | yes | host star mass in solar masses |
 | `subsistence` | yes | a settlement's subsistence mode |
@@ -164,6 +164,7 @@
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
 | `blue` | language | quality | the color term for blue |
+| `blue-giant` | astronomy | celestial | a hot, brilliant, short-lived star |
 | `bone` | language | body | the rigid frame of a body |
 | `boreal-stand` | climate | substance | A stand of northern conifers. |
 | `brown` | language | quality | the color term for brown |
@@ -182,10 +183,12 @@
 | `dark` | language | quality | the color term for black/dark hues |
 | `day` | language | celestial | the light half of the day-night cycle |
 | `desert` | climate | terrain | a biome class |
+| `desert-dwarf-kind` | species | living | a desert dwarf |
 | `die` | language | act | to cease living |
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
 | `earth` | language | terrain | the ground underfoot |
+| `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
 | `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
 | `epipelagic` | climate | terrain | a biome class |
@@ -215,6 +218,7 @@
 | `grass-sward` | climate | substance | Open grassland, unbroken by trees. |
 | `great` | language | quality | large in size or extent |
 | `green` | language | quality | the color term for green |
+| `gully-dwarf-kind` | species | living | a gully dwarf |
 | `hadal-trench` | climate | terrain | a biome class |
 | `hamada` | climate | substance | A stony desert pavement of bare rock. |
 | `hand` | language | body | the manipulating limb-end |
@@ -222,9 +226,11 @@
 | `heat` | climate | quality | felt, oppressive warmth |
 | `high` | language | quality | far above the ground |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
+| `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
 | `home` | settlement | social | one's dwelling |
+| `human-kind` | species | living | a human |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `ice-lead` | climate | substance | A channel of open water through sea ice. |
@@ -255,11 +261,15 @@
 | `new` | language | quality | recently come to be |
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
 | `nodule-field` | climate | substance | Seafloor strewn with mineral nodules. |
-| `north` | language | quality | the compass point opposite south |
+| `north` | language | quality | toward the pole of increasing latitude |
+| `north-east` | language | quality | between north and east |
+| `north-west` | language | quality | between north and west |
 | `old` | language | quality | long in existence |
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
 | `open-blue` | climate | substance | Open sunlit water, far from any shore. |
+| `orange-dwarf` | astronomy | celestial | a cooler, dimmer main-sequence star |
+| `orange-giant` | astronomy | celestial | a cooling star swollen off the main sequence |
 | `otyugh-kind` | species | living | an otyugh |
 | `over` | language | quality | above; atop |
 | `owlbear-kind` | species | living | an owlbear |
@@ -272,6 +282,8 @@
 | `rain` | climate | substance | liquid precipitation |
 | `red` | language | quality | the color term for red |
 | `red-dragon-kind` | species | living | a red dragon |
+| `red-dwarf` | astronomy | celestial | the commonest and faintest main-sequence star |
+| `red-giant` | astronomy | celestial | a cool, vast star late in its life |
 | `reef-rubble` | climate | substance | Broken coral debris behind a reef. |
 | `reef-shark-kind` | species | living | a reef shark |
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
@@ -295,7 +307,9 @@
 | `smoker-field` | climate | substance | A field of hydrothermal chimneys. |
 | `snow` | climate | substance | frozen precipitation |
 | `snowfield` | climate | substance | An unbroken field of snow. |
-| `south` | language | quality | the compass point opposite north |
+| `south` | language | quality | toward the pole of decreasing latitude |
+| `south-east` | language | quality | between south and east |
+| `south-west` | language | quality | between south and west |
 | `spirit` | religion | social | a lesser or unseen supernatural presence |
 | `spring` | terrain | terrain | where water rises from the ground |
 | `spur-and-groove` | climate | substance | The ribbed seaward face of a reef. |
@@ -304,6 +318,7 @@
 | `starlit` | language | quality | dark faintly lit by stars |
 | `stone` | terrain | substance | rock |
 | `sun` | astronomy | celestial | the sun |
+| `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
@@ -329,11 +344,15 @@
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
 | `vine` | climate | substance | a staple crop |
 | `water` | language | substance | the drinkable liquid |
+| `west` | language | quality | the direction of decreasing longitude |
 | `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
+| `white-dwarf` | astronomy | celestial | the dense cinder a spent star leaves |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |
 | `wooded-grassland` | climate | substance | Grassland with scattered trees. |
 | `woolly-mammoth-kind` | species | living | a woolly mammoth |
 | `xorn-kind` | species | living | a xorn |
 | `yellow` | language | quality | the color term for yellow |
+| `yellow-dwarf` | astronomy | celestial | a main-sequence star of the sun's own kind |
+| `yellow-white-dwarf` | astronomy | celestial | a hotter, brighter main-sequence star |

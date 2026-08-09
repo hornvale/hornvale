@@ -246,8 +246,43 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // Re-found this merge: The Wearing's lexicon re-draw left seed 56 (the
     // prior constant) with an all-organized roster; a bounded 50..=60 scan
     // found seed 57's bugbear flagship still folk.
+    //
+    // Re-found again under The Tense (2026-08-05): era-varying capacity
+    // re-placed every world, and seed 57's BUGBEAR flagship went folk ->
+    // organized. The prescribed bounded 50..=60 scan (never the deleted
+    // 1..=60 sweep — decision 0093) found seven surviving folk flagships in
+    // the window: (54, hobgoblin), (55, kobold), (57, goblin), (57, human),
+    // (59, kobold), (60, hobgoblin), (60, kobold). Seed 57 still carries one,
+    // so only the KIND constant moves — bugbear -> goblin. Seven candidates in
+    // an eleven-seed window is also the reassuring half of the reading: folk
+    // cult-forms are common, and this smoke test is nowhere near degenerate.
+    //
+    // Re-found again under The Delvers (C2c, 2026-08-07), and by the
+    // prescribed method: the bounded 50..=60 scan, never the deleted 1..=60
+    // sweep (decision 0093). Correcting the dwarf diets off the `MINERAL`
+    // trophic axis re-placed every world and seed 57's GOBLIN flagship went
+    // folk -> organized. The scan found TWENTY surviving folk flagships in the
+    // window, up from seven: (50, desert-dwarf), (51, desert-dwarf),
+    // (51, gully-dwarf), (51, mountain-dwarf), (52, desert-dwarf),
+    // (52, hobgoblin), (53, desert-dwarf), (54, desert-dwarf),
+    // (55, desert-dwarf), (55, kobold), (56, mountain-dwarf),
+    // (57, desert-dwarf), (58, desert-dwarf), (58, mountain-dwarf),
+    // (59, bugbear), (59, desert-dwarf), (59, duergar), (60, desert-dwarf),
+    // (60, gully-dwarf), (60, kobold).
+    //
+    // Seed 57 still carries exactly one, so as at The Tense only the KIND
+    // constant moves, and it is FORCED rather than chosen: goblin ->
+    // desert-dwarf, the sole folk flagship at that seed.
+    //
+    // Read the list, though: **desert-dwarf is folk on ten of the eleven
+    // seeds**, missing only 56. It is by a wide margin the roster's least
+    // organizable people, which is the same fact `diachronic::the_ladder_law`
+    // reports from the other side (desert-dwarf is the one dwarf that loses
+    // its prediction when the diets are corrected, while duergar gains one on
+    // four seeds). A dispersed arid forager does not build settlements big
+    // enough to throw off a shaman caste.
     const FOLK_SMOKE_SEED: u64 = 57;
-    const FOLK_SMOKE_KIND: &str = "bugbear";
+    const FOLK_SMOKE_KIND: &str = "desert-dwarf";
     let w = generated(FOLK_SMOKE_SEED);
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
@@ -362,7 +397,27 @@ fn doctrine_keeps_what_folk_lose() {
             // exactly what it was written for — `Wt-` is a falling-sonority
             // onset no language uses, and SSP reorders it to the rising
             // `Tw-`. Everything but `agent` is byte-identical again.
-            agent: Some("Twoevave".to_string()),
+            //
+            // The Vernacular part 3b (deleting `Phenomenon.description`):
+            // Twoevave -> Tleavese, and this time the NAME did not re-derive
+            // at all — a DIFFERENT belief is now the slowest cyclic one.
+            // `kernel::observe`'s last tie-break was the description; with no
+            // description it is the referent. Seed 1's two lunar eclipses tie
+            // at salience 0.8 on kind `eclipse`, so the tie-break decides
+            // their order, and it flipped (`great moon` now sorts before the
+            // middling moon's bare `moon`, where "the full full-sized moon…"
+            // used to sort before "the full vast moon…"). `cyclic_beliefs_from`
+            // joins committed beliefs to a RE-COMPUTED phenomena list BY LIST
+            // POSITION, so the two eclipse beliefs swapped periods and the
+            // period-sorted `Slow` rank landed on the other deity.
+            //
+            // Nothing was written: the seed-1, seed-7 and seed-42 world JSONs
+            // are byte-identical across this change (`lens_purity` pins 42).
+            // What moved is a read-time derivation — and the fact that it
+            // could move at all is the campaign's own thesis arriving late.
+            // The description was load-bearing on `observe`'s ORDER, which no
+            // reword-invariance test ever looked at.
+            agent: Some("Tleavese".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Slow,
         }
@@ -388,7 +443,7 @@ fn the_high_god_takes_the_day_where_compatible() {
     // high-god belief at all (society.strata never clears RANKED_STRATA)
     // — delta d's preference is inert for this culture, and the doctrine's
     // day binding falls straight through to folk's OWN period-match rule.
-    // That rule finds the SAME belief (Voovo, period 1.55 std days,
+    // That rule finds the SAME belief (Vooboo, period 1.55 std days,
     // matching the world's committed day-length-std, 1.5507196, within the
     // 1% tolerance) folk's own cyclic_beliefs_from would also find — even
     // though folk's OWN measured schema draw for this fact (PathJourney)
@@ -422,15 +477,14 @@ fn the_high_god_takes_the_day_where_compatible() {
             schema: SchemaId::Agentive,
             // The Wearing (this merge): Wowako -> Kaavoa, the same
             // lexicon re-draw. The rebase onto The Toponym's cohort
-            // ordering re-draws it once more: Kaavoa -> Voovoo. At both
-            // steps the belief, its period and the day-match are
-            // unchanged, and `underlying`, `schema`, `lexeme` and
-            // `manner` compare byte-identical — only `agent` moved.
-            //
-            // The Watershed (Item 0): sonority takes it to Voovo, a
-            // one-segment shortening from collapsing equal-sonority
-            // neighbours. Same invariants hold a third time.
-            agent: Some("Voovo".to_string()),
+            // ordering re-draws it once more: Kaavoa -> Voovoo. The
+            // Witness, Task 8b (this commit): the phonology-hosting gate
+            // in `draw_rule` reseeds every cascade again, re-drawing this
+            // name once more: Voovoo -> Vooboo. At every step the belief,
+            // its period and the day-match are unchanged, and
+            // `underlying`, `schema`, `lexeme` and `manner` compare
+            // byte-identical — only `agent` moved.
+            agent: Some("Vooboo".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Brisk,
         }
@@ -446,7 +500,7 @@ fn the_high_god_takes_the_day_where_compatible() {
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
         .expect("a day-matched cyclic belief must exist at seed 1 goblin");
     assert_eq!(
-        folk_bound.0.deity, "Voovo",
+        folk_bound.0.deity, "Vooboo",
         "doctrine's binding must be the SAME belief folk's own period-match rule finds"
     );
 }

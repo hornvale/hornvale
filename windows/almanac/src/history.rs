@@ -13,16 +13,19 @@
 //! is *derived* on demand — never committed — so this window can invent as
 //! much texture as it likes without touching a save-format contract.
 //!
-//! Determinism: the layers are ordered by founding day (`f64::total_cmp`, a
-//! total order with a stable entity-id tie-break); the flesh seed is derived
-//! purely from the world seed and the occupation entity id. Same world ⇒ same
-//! prose, byte for byte.
+//! Determinism: the layers are ordered by [`hornvale_history::record::layer_key`]
+//! — material facts only (founded, then ended, then peak population, then
+//! `founded_from`), never by the occupation entity's mint order; the flesh
+//! seed is derived from the world seed and the occupation's **material core**
+//! (`history/flesh/v2`), never from its entity id — The Salt, so that prose
+//! stops moving when an id moves. Same world ⇒ same prose, byte for byte.
 
 use hornvale_history::flesh::{
     Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
 };
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
+    OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
@@ -111,19 +114,19 @@ impl SharedLineage {
         }
         let first = &layers[0].record;
         let descriptor_uniform = layers.iter().all(|l| {
-            l.record.tech == first.tech
-                && l.record.function == first.function
-                && l.record.notability == first.notability
+            l.record.core.tech == first.core.tech
+                && l.record.core.function == first.core.function
+                && l.record.core.notability == first.core.notability
                 && l.people == layers[0].people
         });
         let descriptor = descriptor_uniform.then(|| {
-            let tech = tech_word(first.tech);
+            let tech = tech_word(first.core.tech);
             format!(
                 "Every layer here is {article} {tech} {people} {noun}, {notability}.",
                 article = article(tech),
                 people = layers[0].people,
-                noun = function_noun(first.function),
-                notability = notability_phrase(first.notability),
+                noun = function_noun(first.core.function),
+                notability = notability_phrase(first.core.notability),
             )
         });
 
@@ -146,22 +149,27 @@ impl SharedLineage {
     }
 }
 
-/// One occupation layer at a site: the ledger entity that carries it, plus the
-/// reconstructed [`OccupationRecord`] the flesh derivations read.
+/// One occupation layer at a site: the reconstructed [`OccupationRecord`] the
+/// prose and the flesh derivations read.
+///
+/// It carried the layer's `EntityId` until The Salt, which re-keyed the flesh
+/// seed onto the material core and left nothing in this render reading an id's
+/// value. The record still knows its own `id`; the layer no longer needs to.
 struct Layer {
-    /// The occupation entity minted for this record at emit time.
-    entity: EntityId,
-    /// The record rebuilt from that entity's committed facts.
+    /// The record rebuilt from the layer entity's committed facts.
     record: OccupationRecord,
     /// The people's canonical label (kept alongside the resolved `KindId` for
-    /// prose; equals `record.people.0`).
+    /// prose; equals `record.core.people.0`).
     people: String,
 }
 
 /// Every occupation layer sitting on `site`, oldest founding first. Reads the
 /// ledger's `is-occupation` index and keeps only those whose `occ-site`
-/// matches. Ordered by `(founded, entity-id)` via `f64::total_cmp` — total and
-/// deterministic.
+/// matches. Ordered by [`layer_key`]: material facts only (founded, then
+/// ended — a still-living occupation sorts last, then peak population, then
+/// `founded_from`) — never by mint order, so a site's stratigraphy is a
+/// property of the world, not of the order a bake loop happened to mint its
+/// entities in.
 ///
 /// The Vestige (Task 1) lifted this exact decode into
 /// `windows/worldgen::history_emit::{occupation_records, occupations_at}` so
@@ -190,28 +198,42 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
                 _ => return None,
             }
             let record = record_of(world, entity)?;
-            let people = record.people.0.to_string();
-            Some(Layer {
-                entity,
-                record,
-                people,
-            })
+            let people = record.core.people.0.to_string();
+            Some(Layer { record, people })
         })
         .collect();
-    layers.sort_by(|a, b| {
-        a.record
-            .founded
-            .total_cmp(&b.record.founded)
-            .then(a.entity.0.cmp(&b.entity.0))
-    });
+    layers.sort_by_key(|l| layer_key(&l.record, parent_of(world, &l.record)));
     layers
 }
 
+/// The founding coordinates of `r`'s predecessor, read straight off the
+/// ledger. `layers_at` filters to one site, so a predecessor founded
+/// elsewhere is not in its own result set and has to be looked up directly
+/// rather than found in an already-held vec (contrast
+/// `windows/worldgen::history_emit`'s two decoders, which hold every
+/// occupation and can build the lookup once from what they already have).
+fn parent_of(world: &World, r: &OccupationRecord) -> Option<FoundingCoords<'static>> {
+    match r.founded_from {
+        Founding::From(e) => founding_coords_of(world, e),
+        Founding::Genesis(_) => None,
+    }
+}
+
+/// The founding coordinates of an occupation, read straight off the ledger.
+/// `layers_at` filters to one site, so a predecessor on another site is not
+/// in its own result set and has to be looked up.
+fn founding_coords_of(world: &World, e: EntityId) -> Option<FoundingCoords<'static>> {
+    let r = record_of(world, e)?;
+    Some(founding_coords(&r.core))
+}
+
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
-/// describe — enough of it to render prose and derive flesh. The fields flesh
-/// never reads (`community`/`lineage`/`deity`/`tongue`) are filled with inert
-/// placeholders (the entity's own id), since a *derived* readout has no need of
-/// them. `None` if the entity is missing a load-bearing fact or names a people
+/// describe — enough of it to render prose and derive flesh. `deity`/`tongue`
+/// are never committed as facts, so they are filled with inert placeholders
+/// (`None`); the record's own identity is the entity itself (`id: entity`),
+/// which is not a placeholder at all — a reconstructed record never had a
+/// `community`/`lineage` to begin with (see [`OccupationRecord`]'s doc).
+/// `None` if the entity is missing a load-bearing fact or names a people
 /// outside the biosphere roster.
 fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
@@ -252,21 +274,22 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     };
 
     Some(OccupationRecord {
-        people,
-        community: entity,
-        lineage: entity,
-        site,
-        founded,
-        ended,
-        peak_population,
-        tech,
-        function,
-        deity: None,
-        tongue: None,
-        cause,
-        ended_by,
+        core: Occupation {
+            people,
+            site,
+            founded,
+            ended,
+            peak_population,
+            tech,
+            function,
+            deity: None,
+            tongue: None,
+            cause,
+            notability,
+        },
+        id: entity,
         founded_from,
-        notability,
+        ended_by,
     })
 }
 
@@ -388,7 +411,7 @@ fn render_layer(
 ) -> String {
     let r = &layer.record;
     let depth = depth_phrase(index, total);
-    let tech = tech_word(r.tech);
+    let tech = tech_word(r.core.tech);
     // People as an adjectival modifier reads singular ("a bugbear steading"),
     // never "a bugbears steading".
     let mut para = if shared.descriptor.is_some() {
@@ -396,16 +419,16 @@ fn render_layer(
         // its place in the stack and its own headcount.
         format!(
             "{depth} — at its height {}.\n",
-            souls_phrase(r.peak_population)
+            souls_phrase(r.core.peak_population)
         )
     } else {
         format!(
             "{depth} — {article} {tech} {people} {noun}, {notability}, at its height {souls}.\n",
             article = article(tech),
             people = layer.people,
-            noun = function_noun(r.function),
-            notability = notability_phrase(r.notability),
-            souls = souls_phrase(r.peak_population),
+            noun = function_noun(r.core.function),
+            notability = notability_phrase(r.core.notability),
+            souls = souls_phrase(r.core.peak_population),
         )
     };
     if shared.founding.is_none() {
@@ -480,20 +503,20 @@ fn forebears(world: &World, e: EntityId) -> (String, String, bool) {
 /// The span sentence: founded → ended, with the tenure in years, or "stands
 /// yet" for a living community.
 fn span_sentence(r: &OccupationRecord, now: f64) -> String {
-    match r.ended {
+    match r.core.ended {
         None => {
-            let tenure = (now - r.founded).max(0.0);
+            let tenure = (now - r.core.founded).max(0.0);
             format!(
                 "Founded in the year {}, it stands yet — {} years and counting.",
-                year(r.founded),
+                year(r.core.founded),
                 year(tenure)
             )
         }
         Some(end) => {
-            let tenure = (end - r.founded).max(0.0);
+            let tenure = (end - r.core.founded).max(0.0);
             format!(
                 "Founded in the year {}, it held for {} years, until the year {}.",
-                year(r.founded),
+                year(r.core.founded),
                 year(tenure),
                 year(end)
             )
@@ -506,7 +529,7 @@ fn span_sentence(r: &OccupationRecord, now: f64) -> String {
 /// long re-occupation stack the migration line is varied by `index` so the
 /// stratigraphy reads as a chronicle, not a stuck record.
 fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String {
-    let Some(cause) = r.cause else {
+    let Some(cause) = r.core.cause else {
         return "It has never ended; the people are there still.".to_string();
     };
     let by = match r.ended_by {
@@ -572,19 +595,23 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// ending falls in a later year.
 ///
 /// Determinism: the O-shape index yields commit order, and a conqueror can
-/// have at most one such victim, but the lowest entity id is taken regardless
-/// so the result never depends on iteration order. Days compare with
-/// `f64::total_cmp` — both are the same `year` scalar through the same
-/// quantizing boundary, so they compare exactly, and bare float equality is
-/// banned.
+/// have at most one such victim, but the candidate lowest in `(site, founded)`
+/// is taken regardless so the result never depends on iteration order. That
+/// tie-break was the victim's *entity id* until The Salt; it is material now,
+/// because an id's value must not reach a render (spec D5). The claim above
+/// is measured, not assumed: 1718 candidate calls across seeds 42/7/1000,
+/// maximum candidate-set size 1 — so the tie-break has never actually fired.
+/// Days compare with `f64::total_cmp` — both are the same `year` scalar
+/// through the same quantizing boundary, so they compare exactly, and bare
+/// float equality is banned.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
-    if r.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
+    if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;
     }
-    let left = r.ended?;
+    let left = r.core.ended?;
     world
         .ledger
-        .query_by_object(&Value::Entity(r.community))
+        .query_by_object(&Value::Entity(r.id))
         .filter(|f| f.predicate == hornvale_history::OCC_ENDED_BY)
         .map(|f| f.subject)
         .filter(|&victim| {
@@ -593,7 +620,24 @@ fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
                 Some(fell) if left.total_cmp(&fell).is_eq()
             )
         })
-        .min_by_key(|e| e.0.get())
+        .min_by_key(|&victim| {
+            // Materially, not by entity id. The candidate set is never larger
+            // than one -- a conqueror drives off at most one occupation in a
+            // given year -- measured at 1718 candidate calls across seeds
+            // 42/7/1000 with a maximum set size of 1, so this only ever
+            // returns the sole candidate. Kept rather than replaced by
+            // `.next()` so that if a second candidate ever does appear the
+            // choice is a stated property of the world, not whichever fact
+            // happened to be committed first (The Salt, spec D5).
+            (
+                number(world, victim, hornvale_history::OCC_SITE)
+                    .map(|s| s as u32)
+                    .unwrap_or(u32::MAX),
+                number(world, victim, hornvale_history::OCC_FOUNDED)
+                    .map(hornvale_history::record::day_key)
+                    .unwrap_or(u64::MAX),
+            )
+        })
 }
 
 /// One of three climate-abandonment endings, cycled by layer index so a deep
@@ -618,7 +662,7 @@ fn migration_line(index: usize) -> String {
 /// Render the derived flesh of the last community to hold the site: the shape
 /// of the place it built, and what remains of it in the present-day grass.
 fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
-    let seed = flesh_seed(world, layer.entity);
+    let seed = flesh_seed_for(world, &layer.record.core);
     let structures = structures_of(&layer.record, seed);
     // A conqueror's abandoned seat is not a climate abandonment, and must not
     // leave the climate abandonment's assemblage (see `conquest_victim`).
@@ -636,7 +680,7 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
     let people = pluralize(&layer.people);
     out.push_str(&format!(
         "At its height {}, the last {people} here raised {}.\n",
-        souls_phrase(layer.record.peak_population),
+        souls_phrase(layer.record.core.peak_population),
         structure_phrase(&structures),
     ));
 
@@ -652,15 +696,46 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
     out
 }
 
-/// The occupation-scoped seed the flesh derivations expand from. Derived purely
-/// from the world seed and the occupation entity id — a *derived* readout, so
-/// this is a rendering convention, not a save-format contract (it commits
-/// nothing). Mirrors the `history/flesh` label the domain's module doc names.
-fn flesh_seed(world: &World, entity: EntityId) -> Seed {
+/// The occupation-scoped seed the flesh derivations expand from.
+///
+/// Derived from the world seed and the occupation's **material core** —
+/// never from its entity id, which is used here only as a lookup key (The
+/// Salt). A *derived* readout: this commits nothing, but `history/flesh/v2`
+/// is a declared derivation contract all the same.
+///
+/// Returns the world-seed-only stream for an entity that is not a
+/// reconstructable occupation; no caller does that today, and failing soft
+/// keeps a render from panicking on a malformed ledger.
+///
+/// `pub` because `windows/almanac/tests/flesh_id_invariance.rs` consumes it
+/// directly to assert the id-invariance property The Salt establishes — not
+/// widened for a throwaway probe.
+pub fn flesh_seed(world: &World, entity: EntityId) -> Seed {
+    let key = record_of(world, entity)
+        .map(|r| hornvale_history::record::material_key(&r.core))
+        .unwrap_or(0);
+    flesh_seed_of_key(world, key)
+}
+
+/// [`flesh_seed`] for a caller that already holds the occupation's core.
+///
+/// `render_flesh` is one: `layers_at` reconstructed the record a moment
+/// earlier, so routing it back through [`flesh_seed`]'s `record_of` would
+/// re-derive from the ledger something already in hand — the re-derivation
+/// decision 0092 exists to stop. The two agree by construction: `flesh_seed`
+/// is this function applied to `material_key` of the core it reconstructs.
+pub fn flesh_seed_for(world: &World, core: &hornvale_history::record::Occupation) -> Seed {
+    flesh_seed_of_key(world, hornvale_history::record::material_key(core))
+}
+
+/// The shared tail of [`flesh_seed`] and [`flesh_seed_for`] — the one place
+/// the `history/flesh/v2` derivation is spelled out, so the two entry points
+/// cannot drift apart.
+fn flesh_seed_of_key(world: &World, key: u64) -> Seed {
     world
         .seed
         .derive(hornvale_history::streams::FLESH)
-        .derive(StreamLabel::dynamic(&entity.0.get().to_string()))
+        .derive(StreamLabel::dynamic(&key.to_string()))
 }
 
 /// A prose list of the structures a community raised, folded by kind ("four

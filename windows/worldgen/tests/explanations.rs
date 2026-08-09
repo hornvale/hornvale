@@ -104,6 +104,8 @@ fn the_day_binds_by_period_match_never_identity() {
     assert_eq!(matched.0.deity, deity_name_fact);
 }
 
+/// claim: invariant(census: none yet — migration candidate) — over seeds
+/// 1..=3
 #[test]
 fn schema_competition_is_real_across_the_roster() {
     // Across seeds 1..=3, every placed culture's day-schema: MEASURED
@@ -149,6 +151,8 @@ fn explanations_are_deterministic() {
     );
 }
 
+/// claim: invariant(census: none yet — migration candidate) — over seeds
+/// 1..=10
 #[test]
 fn no_deity_bearing_schema_ever_fires_agentless() {
     // Review carry-over (C5 T4): explain_day/explain_moons used to bind
@@ -233,10 +237,23 @@ fn moons_explained_only_where_kept() {
     // `underlying` (Kept), `schema` (Agentive), `lexeme` ("strides") and
     // `manner` (Slow) compare byte-identical; only `agent` moved.
     //
-    // And once more at The Watershed's sonority merge (Item 0): "Nggoo" ->
-    // "Kngoo". `Ngg-` is the nasal-nasal onset the SSP work names in its own
-    // commit message as the defect it exists to remove; `Kng-` rises toward
-    // the nucleus. Only `agent` moved.
+    // Re-pinned again at F7 (The Witness, 2026-07-30): gating `Tonogenesis`
+    // on a prior merger reseeds every cascade, so every lexicon-derived name
+    // re-draws again: "Nggoo" -> "Goo". Same story once more — `underlying`,
+    // `schema`, `lexeme` and `manner` compare byte-identical; only `agent`
+    // moved.
+    //
+    // Re-pinned again at Task 8b (The Witness, same campaign): the
+    // phonology-hosting gate in `draw_rule` reseeds every cascade once more:
+    // "Goo" -> "Nggoo" — coincidentally the same string F7 moved away from,
+    // an artifact of a shorter roster length re-landing on the same draw
+    // index, not a reversion of F7's own effect. `underlying`, `schema`,
+    // `lexeme` and `manner` again compare byte-identical; only `agent`
+    // moved.
+    //
+    // Re-pinned a further time absorbing The Watershed's sonority merge
+    // (independently reseeding the same lexicon roster): "Nggoo" -> "Gngoo".
+    // Same story again — only `agent` moved.
     let w = generated(2);
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -261,7 +278,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Kngoo".to_string()),
+            agent: Some("Gngoo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

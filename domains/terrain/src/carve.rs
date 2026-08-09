@@ -1605,6 +1605,9 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 7) — false-positive seed-loop flag (Fix round 1
+    /// unmasked this via the tuple-pattern fix); `s` binds a sediment-
+    /// thickness f64 in `for (c, s) in delta.sediment_thickness_m.iter()`
     #[test]
     fn carve_delta_assembles_from_incision_and_repose_only() {
         let geo = Geosphere::new(3);
@@ -2500,6 +2503,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union across seeds 1..=8 at GLOBE_LEVEL) —
+    /// off-gate (heavy:); an existence probe, not a per-world assertion
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn waterfalls_exist_across_a_seed_sweep() {

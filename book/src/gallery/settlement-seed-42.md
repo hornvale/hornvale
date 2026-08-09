@@ -1,11 +1,15 @@
 # The Peoples of Seed 42
 
-The land holds 329 settlement(s).
-The chief bugbear settlement, Gootoogotoodaoka, holds 118 souls amid tropical-seasonal-forest.
-The chief gnoll settlement, Pzofdzhaxgzavshmo, holds 119 souls amid tropical-rainforest.
-The chief goblin settlement, Nakano, holds 118 souls amid tropical-rainforest.
-The chief hobgoblin settlement, Geoboegetoanaoga, holds 127 souls amid tropical-rainforest.
-The chief kobold settlement, Roara, holds 110 souls amid temperate-forest.
+The land holds 143 settlement(s).
+The chief bugbear settlement, Googo, holds 68 souls amid tropical-rainforest.
+The chief desert-dwarf settlement, Daddadpadgad, holds 51 souls amid shrubland.
+The chief gnoll settlement, Psapqsaaxpsoaxsmaap, holds 20 souls amid savanna.
+The chief goblin settlement, Teona, holds 39 souls amid temperate-forest.
+The chief gully-dwarf settlement, Nagbatga, holds 37 souls amid tropical-seasonal-forest.
+The chief hill-dwarf settlement, Batgat, holds 36 souls amid temperate-forest.
+The chief hobgoblin settlement, Toa, holds 77 souls amid temperate-forest.
+The chief human settlement, Mongato, holds 35 souls amid temperate-forest.
+The chief kobold settlement, Raaxora, holds 43 souls amid temperate-forest.
 
 ```text
                                                                         
@@ -15,15 +19,15 @@ The chief kobold settlement, Roara, holds 110 souls amid temperate-forest.
                                                                         
                                                                         
                                                                         
-                                                                        
-              o                        oo                               
-              oo                 oooooooo                            o  
-             oooo                   ooo                                 
-               oo                                 o ooo                 
-        ooo oooo                                   oo@o                 
-        ooo ooo                                                         
-                          o                                             
-                                                                        
+                                                        o               
+     o                                 o               oo               
+                                   o  oo       oo     ooo          ooo  
+              o                                 o o   oo           o    
+                                                 o                      
+          ooo  @o                                    o                  
+            o o                                                         
+                         o                                              
+                    o     o                                             
                                                                         
                                                                         
                                                                         

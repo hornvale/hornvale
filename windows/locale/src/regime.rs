@@ -104,7 +104,7 @@ pub struct MicroField {
 }
 
 /// The strangeness overlay for a room. The base biome stays on `Locale.biome`.
-/// type-audit: bare-ok(prose: descriptor), bare-ok(ratio: strangeness)
+/// type-audit: bare-ok(prose: descriptor), bare-ok(prose: descriptor_noun), bare-ok(ratio: strangeness)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Regime {
     /// The negation vector.
@@ -113,6 +113,10 @@ pub struct Regime {
     pub micro: MicroField,
     /// The rendered descriptor prose.
     pub descriptor: String,
+    /// The noun phrase within `descriptor` — the part a player would name.
+    /// `descriptor` is the whole clause including qualifiers ("a stream gully,
+    /// shaded, in a hollow"); this is "stream gully".
+    pub descriptor_noun: String,
     /// The derived strangeness magnitude (0..=30, quantized).
     pub strangeness: f64,
 }

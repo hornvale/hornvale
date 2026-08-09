@@ -7,7 +7,7 @@ use hornvale_history::flesh::{
     residue_of, structures_of,
 };
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
 };
 use hornvale_kernel::{CellId, EntityId, KindId, Seed};
 
@@ -19,21 +19,22 @@ fn eid(n: u64) -> EntityId {
 /// burned.
 fn burned_goblin_village() -> OccupationRecord {
     OccupationRecord {
-        people: KindId("goblin"),
-        community: eid(10),
-        lineage: eid(10),
-        site: CellId(3),
-        founded: 340.0,
-        ended: Some(1980.0),
-        peak_population: 40,
-        tech: TechHorizon::Bronze,
-        function: Function::Agrarian,
-        deity: None,
-        tongue: None,
-        cause: Some(CauseOfEnd::Burned),
+        core: Occupation {
+            people: KindId("goblin"),
+            site: CellId(3),
+            founded: 340.0,
+            ended: Some(1980.0),
+            peak_population: 40,
+            tech: TechHorizon::Bronze,
+            function: Function::Agrarian,
+            deity: None,
+            tongue: None,
+            cause: Some(CauseOfEnd::Burned),
+            notability: Notability::Backwater,
+        },
+        id: eid(10),
         ended_by: Ended::By(eid(42)),
         founded_from: Founding::Genesis(CellId(3)),
-        notability: Notability::Backwater,
     }
 }
 
@@ -60,7 +61,7 @@ fn a_recently_burned_goblin_hamlet_leaves_a_doll() {
 #[test]
 fn a_regional_seat_leaves_a_reliquary_even_when_old() {
     let mut occ = burned_goblin_village();
-    occ.notability = Notability::Seat;
+    occ.core.notability = Notability::Seat;
     // Very old ruin: personal effects have long since weathered away, but
     // the durable sacred item persists.
     let r = residue_of(&occ, 50_000.0, Seed(7), Departure::Climate);
@@ -76,7 +77,7 @@ fn a_young_migrated_goblin_hamlet_leaves_a_doll() {
     // from a failing cell leave modest personal residue behind — the
     // abandoned clearing with a lost doll is precisely the vision.
     let mut occ = burned_goblin_village();
-    occ.cause = Some(CauseOfEnd::Migrated);
+    occ.core.cause = Some(CauseOfEnd::Migrated);
     occ.ended_by = Ended::Nature; // an orderly climate departure, no antagonist
     let r = residue_of(&occ, 2000.0, Seed(7), Departure::Climate); // died 1980, now 2000 -> 20y old
     assert!(r.items.contains(&ResidueItem::Doll));
@@ -97,7 +98,7 @@ fn a_conquerors_abandoned_seat_is_not_a_climate_abandonment() {
     // the caller passes it in. What must not happen is the conqueror's site
     // silently inheriting the climate-abandonment assemblage.
     let mut occ = burned_goblin_village();
-    occ.cause = Some(CauseOfEnd::Migrated);
+    occ.core.cause = Some(CauseOfEnd::Migrated);
     occ.ended_by = Ended::Nature; // as `maybe_raid` closes the raider's record
     let climate = residue_of(&occ, 2000.0, Seed(7), Departure::Climate);
     let conquest = residue_of(&occ, 2000.0, Seed(7), Departure::Conquest);
@@ -145,8 +146,8 @@ fn an_ancient_migrated_hamlet_leaves_durable_traces_but_no_doll() {
     // millennia. This is what makes an ancient ruin legible rather than bare
     // ground.
     let mut occ = burned_goblin_village();
-    occ.cause = Some(CauseOfEnd::Migrated);
-    occ.ended = Some(1500.0);
+    occ.core.cause = Some(CauseOfEnd::Migrated);
+    occ.core.ended = Some(1500.0);
     let r = residue_of(&occ, 2000.0, Seed(7), Departure::Climate); // age 500 — an ancient ruin
 
     // The durable archaeological record is present…
@@ -189,33 +190,32 @@ fn structures_are_deterministic_and_gated_by_function() {
 
 #[test]
 fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
-    let e = EntityId::new(1).expect("nonzero");
     let mut a = OccupationRecord {
-        people: KindId("goblin"),
-        community: e,
-        lineage: e,
-        site: CellId(4),
-        founded: 25.0,
-        ended: None,
-        peak_population: 40,
-        tech: TechHorizon::Neolithic,
-        function: Function::Agrarian,
-        deity: None,
-        tongue: None,
-        cause: None,
+        core: Occupation {
+            people: KindId("goblin"),
+            site: CellId(4),
+            founded: 25.0,
+            ended: None,
+            peak_population: 40,
+            tech: TechHorizon::Neolithic,
+            function: Function::Agrarian,
+            deity: None,
+            tongue: None,
+            cause: None,
+            notability: Notability::Common,
+        },
+        id: eid(1),
         ended_by: Ended::Nature,
         founded_from: Founding::Genesis(CellId(4)),
-        notability: Notability::Common,
     };
     let mut b = a.clone();
-    b.community = EntityId::new(9_999).expect("nonzero");
-    b.lineage = b.community;
+    b.id = eid(9_999);
     assert_eq!(
         founder_handle(&a).0,
         founder_handle(&b).0,
         "mint order must not change a founder's identity (decision 0051)"
     );
-    a.peak_population = 41;
+    a.core.peak_population = 41;
     assert_ne!(
         founder_handle(&a).0,
         founder_handle(&b).0,

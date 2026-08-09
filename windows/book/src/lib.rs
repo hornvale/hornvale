@@ -13,6 +13,7 @@
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
+use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
@@ -184,16 +185,6 @@ fn indefinite_article(word: &str) -> &'static str {
     }
 }
 
-/// An `instance-of` collective's species complement, pluralized: a naive
-/// regular English plural (append `"s"`) — every peopled kind in today's
-/// roster (goblin, hobgoblin, kobold, bugbear) pluralizes regularly, so no
-/// irregular table exists yet. `kind` is the species `KindId` label
-/// committed as the `instance-of` fact's object (e.g. `"goblin"`).
-/// type-audit: bare-ok(identifier-text: kind)
-fn species_label(kind: &str) -> String {
-    format!("{kind}s")
-}
-
 /// Join a realized clause with its trailing independent clause(s) — the
 /// aggregation seam's shared assembly tail, used by both [`render_volume`]
 /// (forward) and [`rerender`] (the corpus law's re-realization check).
@@ -222,8 +213,9 @@ const CONSTRUCTION_ORDER: &[&str] = &[MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
 
 /// The construction table: maps a (predicate, object) pair to the fragment
 /// it contributes, or `None` if this predicate has no construction yet
-/// (leaving it on [`uncovered_predicates`]'s list).
-fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
+/// (leaving it on [`uncovered_predicates`]'s list). `vocab` resolves any
+/// concept id the fragment names.
+fn fragment_for(predicate: &str, object: &Value, vocab: &CommonVocabulary) -> Option<Fragment> {
     match (predicate, object) {
         (MOON_COUNT, Value::Number(n)) => {
             let count = *n as u64;
@@ -233,10 +225,19 @@ fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
                 if count == 1 { "" } else { "s" }
             )))
         }
-        (STAR_CLASS, Value::Text(class)) => Some(Fragment::Modifier(format!(
-            "orbiting {} {class}",
-            indefinite_article(class)
-        ))),
+        (STAR_CLASS, Value::Text(concept)) => {
+            // The ledger holds a concept id; the author's ground-truth register
+            // renders it as Morgan-Keenan taxonomy, which is the author's frame
+            // and not anything a creature says. Resolution goes through the
+            // vocabulary (Task 4 retired `class_display`) and is total, so an
+            // id with no declared word still renders as a word rather than
+            // leaking a raw registry key into prose.
+            let display = vocab.word_for(concept);
+            Some(Fragment::Modifier(format!(
+                "orbiting {} {display}",
+                indefinite_article(&display)
+            )))
+        }
         (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
             "its day lasts {} standard days",
             quantity(*days)
@@ -305,6 +306,9 @@ pub fn render_volume_from(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> BookVolume {
+    // The one vocabulary this volume renders through — assembled once per
+    // world at the composition root, never per clause.
+    let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
@@ -327,7 +331,7 @@ pub fn render_volume_from(
             let Some(object) = world.ledger.value_of(subject_entity, predicate) else {
                 continue;
             };
-            match fragment_for(predicate, object) {
+            match fragment_for(predicate, object, &vocab) {
                 Some(Fragment::Modifier(m)) => modifiers.push(m),
                 Some(Fragment::Trailing(t)) => trailing.push(t),
                 None => {}
@@ -335,14 +339,17 @@ pub fn render_volume_from(
         }
 
         let subject = subject_for(subject_entity, name, &mut named);
-        let line = realize_common(&ClauseSpec {
-            frame: Frame::Classify,
-            subject,
-            complement: kind.clone(),
-            number: Number::Sg,
-            definiteness: Definiteness::Indef,
-            modifiers,
-        });
+        let line = realize_common(
+            &ClauseSpec {
+                frame: Frame::Classify,
+                subject,
+                complement_concept: kind.clone(),
+                number: Number::Sg,
+                definiteness: Definiteness::Indef,
+                modifiers,
+            },
+            &vocab,
+        );
         let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
@@ -372,14 +379,19 @@ pub fn render_volume_from(
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
         let subject = subject_for(subject_entity, format!("The {name}"), &mut named);
-        let line = realize_common(&ClauseSpec {
-            frame: Frame::Classify,
-            subject,
-            complement: species_label(kind),
-            number: Number::Pl,
-            definiteness: Definiteness::Indef,
-            modifiers: Vec::new(),
-        });
+        // The kind is the complement CONCEPT; `Number::Pl` is what pluralizes
+        // it (the realizer's job since Task 4, not the caller's).
+        let line = realize_common(
+            &ClauseSpec {
+                frame: Frame::Classify,
+                subject,
+                complement_concept: kind.clone(),
+                number: Number::Pl,
+                definiteness: Definiteness::Indef,
+                modifiers: Vec::new(),
+            },
+            &vocab,
+        );
         people_by_kind.insert(kind.clone(), (name, line.clone()));
         lines.push(line);
     }
@@ -492,7 +504,7 @@ pub fn render_volume_from(
         lines,
         tongue_lines,
         tongue_gaps,
-        chorus: chorus_sections_from(world, terrain, climate),
+        chorus: chorus_sections_from(world, terrain, climate, &vocab),
         reckoning: reckoning_epochs_from(world, terrain, climate),
     }
 }
@@ -535,6 +547,7 @@ fn chorus_sections_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
+    vocab: &CommonVocabulary,
 ) -> Vec<ChorusSection> {
     let autonyms = autonym_by_kind(world);
     let planet_name = planet_name_of(world);
@@ -542,7 +555,7 @@ fn chorus_sections_from(
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
-            let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
+            let mut section = voice_section(&voice.kind, autonym, &voice.account, world, vocab);
             section.doctrine =
                 hornvale_worldgen::doctrine_from(world, &voice.kind, terrain, climate).map(|dv| {
                     let kind = voice.kind.as_str();
@@ -593,6 +606,7 @@ fn chorus_sections_from(
                         &voice.params,
                         &voice.account,
                         tongue_taught_line,
+                        vocab,
                     )
                 });
             Some(section)
@@ -1022,8 +1036,9 @@ fn render_world_clause(
     group: &[&AccountEntry],
     is_a_entry: &AccountEntry,
     seen: &mut BTreeSet<String>,
+    vocab: &CommonVocabulary,
 ) -> Option<String> {
-    let (complement, definiteness) = match effective(&is_a_entry.disposition) {
+    let (complement_concept, definiteness) = match effective(&is_a_entry.disposition) {
         Disposition::Kept => {
             let Value::Text(kind) = &is_a_entry.fact.object else {
                 return None;
@@ -1044,7 +1059,7 @@ fn render_world_clause(
         if !matches!(effective(&entry.disposition), Disposition::Kept) {
             continue;
         }
-        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             None => {}
@@ -1053,14 +1068,17 @@ fn render_world_clause(
 
     let name = is_a_entry.fact.subject.clone();
     let subject = subject_for_text(&name, name.clone(), seen);
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement,
-        number: Number::Sg,
-        definiteness,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept,
+            number: Number::Sg,
+            definiteness,
+            modifiers,
+        },
+        vocab,
+    );
     Some(assemble_trailing(line, &trailing))
 }
 
@@ -1082,7 +1100,11 @@ fn render_world_clause(
 /// carrier clause is this, the world subject's own classification. A
 /// future culture that could lose an `instance-of` fact would need a
 /// people-margin arm added here.
-fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Option<String> {
+fn render_world_margin(
+    group: &[&AccountEntry],
+    is_a_entry: &AccountEntry,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
     let world_lost = matches!(
         effective(&is_a_entry.disposition),
         Disposition::Substituted { .. } | Disposition::Lost(_)
@@ -1104,20 +1126,23 @@ fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Op
     let mut modifiers = Vec::new();
     let mut trailing = Vec::new();
     for entry in lost_fragments {
-        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             None => {}
         }
     }
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject: Subject::Name(is_a_entry.fact.subject.clone()),
-        complement: truth_kind.clone(),
-        number: Number::Sg,
-        definiteness: Definiteness::Indef,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject: Subject::Name(is_a_entry.fact.subject.clone()),
+            complement_concept: truth_kind.clone(),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            modifiers,
+        },
+        vocab,
+    );
     Some(format!("In truth, {}", assemble_trailing(line, &trailing)))
 }
 
@@ -1256,13 +1281,17 @@ fn render_explanations(group: &[&AccountEntry]) -> Vec<String> {
 }
 
 /// A people subject's emic clause: the god's-eye collective construction
-/// (`species_label`, plural, indefinite), plus the stance appositive at
+/// (the kind concept, plural, indefinite), plus the stance appositive at
 /// the book layer (`" — {stance}."`, replacing the terminal `.`) — absent
 /// for `Neutral` (the identity case, byte-matching the god's-eye line).
 /// Returns `None` if this subject's `instance-of` entry is not `Kept` (see
 /// [`render_world_margin`]'s carrier-clause note: never exercised at the
 /// floor).
-fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) -> Option<String> {
+fn render_people_clause(
+    io_entry: &AccountEntry,
+    seen: &mut BTreeSet<String>,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
     if !matches!(effective(&io_entry.disposition), Disposition::Kept) {
         return None;
     }
@@ -1272,14 +1301,17 @@ fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) ->
     let raw_name = io_entry.fact.subject.clone();
     let display = format!("The {raw_name}");
     let subject = subject_for_text(&raw_name, display, seen);
-    let mut line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement: species_label(kind_text),
-        number: Number::Pl,
-        definiteness: Definiteness::Indef,
-        modifiers: Vec::new(),
-    });
+    let mut line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept: kind_text.clone(),
+            number: Number::Pl,
+            definiteness: Definiteness::Indef,
+            modifiers: Vec::new(),
+        },
+        vocab,
+    );
     if !matches!(io_entry.stance, Stance::Neutral) {
         line.pop();
         line.push_str(&format!(" — {}.", stance_text(io_entry.stance)));
@@ -1298,7 +1330,13 @@ fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) ->
 /// module doc's fresh-scope rule); the margin register always names its
 /// (single, world) subject fresh, independent of the emic paragraph's
 /// scope — it is a separate typographic register, not a continuation.
-fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -> ChorusSection {
+fn voice_section(
+    kind: &str,
+    autonym: &str,
+    account: &Account,
+    _world: &World,
+    vocab: &CommonVocabulary,
+) -> ChorusSection {
     let mut order: Vec<String> = Vec::new();
     let mut groups: BTreeMap<String, Vec<&AccountEntry>> = BTreeMap::new();
     for entry in &account.entries {
@@ -1318,20 +1356,20 @@ fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::world::IS_A)
         {
-            if let Some(line) = render_world_clause(group, is_a_entry, &mut seen) {
+            if let Some(line) = render_world_clause(group, is_a_entry, &mut seen, vocab) {
                 emic.push(line);
             }
             // Task 4 (C5): the because-clause explanations for this
             // subject's day/moons entries, as additional emic lines —
             // appended right after the world clause, before the margin.
             emic.extend(render_explanations(group));
-            if let Some(line) = render_world_margin(group, is_a_entry) {
+            if let Some(line) = render_world_margin(group, is_a_entry, vocab) {
                 margin.push(line);
             }
         } else if let Some(io_entry) = group
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
-            && let Some(line) = render_people_clause(io_entry, &mut seen)
+            && let Some(line) = render_people_clause(io_entry, &mut seen, vocab)
         {
             emic.push(line);
         }
@@ -1495,6 +1533,7 @@ fn doctrine_section(
     folk_params: &AccountParams,
     folk_account: &Account,
     tongue_taught_line: String,
+    vocab: &CommonVocabulary,
 ) -> DoctrineSection {
     let mut folk_by_key: BTreeMap<(String, String), &AccountEntry> = BTreeMap::new();
     for entry in &folk_account.entries {
@@ -1569,7 +1608,7 @@ fn doctrine_section(
                 .filter(|e| !revealed.contains(&e.fact.predicate))
                 .copied()
                 .collect();
-            if let Some(line) = render_world_clause(&filtered, is_a_entry, &mut seen) {
+            if let Some(line) = render_world_clause(&filtered, is_a_entry, &mut seen, vocab) {
                 emic.push(line);
             }
             for entry in group.iter() {
@@ -1599,13 +1638,13 @@ fn doctrine_section(
                 }
             }
             emic.extend(render_explanations(group));
-            if let Some(line) = render_world_margin(group, is_a_entry) {
+            if let Some(line) = render_world_margin(group, is_a_entry, vocab) {
                 margin.push(line);
             }
         } else if let Some(io_entry) = group
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
-            && let Some(line) = render_people_clause(io_entry, &mut seen)
+            && let Some(line) = render_people_clause(io_entry, &mut seen, vocab)
         {
             emic.push(line);
         }
@@ -2000,10 +2039,11 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
         ));
     }
     if let Some(rest) = fragment.strip_prefix("orbiting ") {
-        let class = rest
+        let display = rest
             .strip_prefix("an ")
             .or_else(|| rest.strip_prefix("a "))?;
-        return Some((STAR_CLASS.to_string(), Value::Text(class.to_string())));
+        let concept = hornvale_astronomy::class_concept(display)?;
+        return Some((STAR_CLASS.to_string(), Value::Text(concept.to_string())));
     }
     if let Some(rest) = fragment.strip_prefix("its day lasts about ") {
         let days = rest.strip_suffix(" standard days")?;
@@ -2013,6 +2053,35 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
         ));
     }
     None
+}
+
+/// The public face of the private [`fact_for`], exported so
+/// `cli/tests/star_class_is_a_concept.rs` can assert render and parse are
+/// inverse. Do not make `fact_for` itself public — its privacy is what keeps
+/// the construction table a Book concern.
+/// type-audit: bare-ok(prose: fragment), bare-ok(identifier-text: return)
+pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
+    fact_for(fragment)
+}
+
+/// The public face of the private [`fragment_for`], exported so
+/// `cli/tests/star_class_is_a_concept.rs` can drive its round-trip
+/// assertion from the actual renderer rather than a hand-rolled fragment —
+/// a hand-rolled `"orbiting a {display}"` never exercises which article
+/// [`fragment_for`] actually chooses, so a wrong-article regression there
+/// would go undetected. Returns the fragment's plain text; the
+/// `Modifier`/`Trailing` tag is a Book-internal aggregation detail the
+/// caller has no need of. Do not make `fragment_for` itself public — its
+/// privacy is what keeps the construction table a Book concern.
+/// type-audit: bare-ok(identifier-text: predicate), bare-ok(prose: return)
+pub fn fragment_for_public(
+    predicate: &str,
+    object: &Value,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
+    match fragment_for(predicate, object, vocab)? {
+        Fragment::Modifier(text) | Fragment::Trailing(text) => Some(text),
+    }
 }
 
 /// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
@@ -2040,11 +2109,11 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 }
 
 /// The closed complement set a `parse_line` call recognizes for `world`:
-/// every committed `is-a` object label, plus `species_label(kind)` for
-/// every committed `instance-of` object (the only source of a plural
-/// complement in this campaign's grammar — see [`parse_line`]'s doc for
-/// why that lets `Number::Pl` alone signal a collective on the way back),
-/// plus (C4 T4) every chorus account's `Substituted` target (e.g.
+/// every committed `is-a` object label, plus every committed `instance-of`
+/// object (the only source of a plural complement in this campaign's
+/// grammar — see [`parse_line`]'s doc for why that lets `Number::Pl` alone
+/// signal a collective on the way back), plus (C4 T4) every chorus account's
+/// `Substituted` target (e.g.
 /// `"earth"`) — a book-layer carving that never appears as a committed
 /// `is-a` object, so a chorus emic line naming it would otherwise parse as
 /// `UnknownComplement`. The closed set stays derived from the world:
@@ -2109,7 +2178,9 @@ fn parse_context_with_voices(
     }
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         if let Value::Text(kind) = &fact.object {
-            complements.insert(species_label(kind));
+            // The CONCEPT, not the plural word — `parse_common` pluralizes it
+            // itself when the clause it is matching is plural.
+            complements.insert(kind.clone());
         }
     }
     for voice in voices {
@@ -2119,7 +2190,10 @@ fn parse_context_with_voices(
             }
         }
     }
-    ParseContext { complements }
+    ParseContext {
+        complements,
+        vocabulary: hornvale_worldgen::common_vocabulary(&world.registry),
+    }
 }
 
 /// Invert one rendered [`render_volume`] line: split on the trailing-clause
@@ -2134,13 +2208,10 @@ fn parse_context_with_voices(
 /// the fragment, so it is stripped before fragment inversion. Middle
 /// segments (more than one trailing clause) carry no punctuation at all.
 ///
-/// `ParsedLine.kind` recovers the singular: this campaign's grammar (see
-/// [`render_volume`]) renders `Number::Pl` for exactly one construction —
-/// the `instance-of` collective, whose complement `species_label` built by
-/// appending `'s'` — so a plural clause's complement minus its trailing
-/// `'s'` is always the singular kind. An `is-a` line is always `Sg`, so its
-/// complement is used as-is. A future `Pl` `is-a` construction would need
-/// to revisit this closed-world assumption.
+/// `ParsedLine.kind` is the recovered complement CONCEPT — always singular,
+/// for a `Pl` clause as much as an `Sg` one, because `parse_common` matches
+/// against each candidate concept's realized surface rather than stripping a
+/// letter off the text. A future `Pl` `is-a` construction needs nothing here.
 /// type-audit: bare-ok(prose: line)
 pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineError> {
     let segments: Vec<&str> = line.split("; ").collect();
@@ -2176,15 +2247,11 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         Subject::Name(name) => name.clone(),
         Subject::Pronoun(p) => (*p).to_string(),
     };
-    let kind = if clause.number == Number::Pl {
-        clause
-            .complement
-            .strip_suffix('s')
-            .map(str::to_string)
-            .unwrap_or_else(|| clause.complement.clone())
-    } else {
-        clause.complement.clone()
-    };
+    // The clause layer already recovered the singular concept id: it matched
+    // the text against each candidate id's realized surface, so the plural
+    // `'s'` was undone by the same rule that added it. No suffix-stripping
+    // closed-world assumption survives here.
+    let kind = clause.complement_concept.clone();
 
     Ok(ParsedLine {
         subject,
@@ -2197,17 +2264,18 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
 
 /// Re-realize a [`ParsedLine`] back to its exact surface text: the corpus
 /// law's other half. Regroups `parsed.facts` into modifiers/trailing via
-/// [`fragment_for`] (the same construction table, forward again),
-/// re-pluralizes `kind` through `species_label` for a `Pl` clause, and
-/// rebuilds the clause plus any trailing clause(s) through the same
+/// [`fragment_for`] (the same construction table, forward again) and rebuilds
+/// the clause plus any trailing clause(s) through the same
 /// [`assemble_trailing`] helper `render_volume` uses — so the two never
-/// drift apart into separate join logic.
+/// drift apart into separate join logic. Re-pluralization is no longer done
+/// here: `parsed.kind` is the complement CONCEPT and `parsed.number` is what
+/// pluralizes it, inside the realizer.
 /// type-audit: bare-ok(prose: return)
-pub fn rerender(parsed: &ParsedLine) -> String {
+pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
     let mut modifiers = Vec::new();
     let mut trailing = Vec::new();
     for (predicate, value) in &parsed.facts {
-        match fragment_for(predicate, value) {
+        match fragment_for(predicate, value, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             // fact_for only ever recovers (predicate, value) pairs that
@@ -2216,23 +2284,22 @@ pub fn rerender(parsed: &ParsedLine) -> String {
             None => {}
         }
     }
-    let complement = match parsed.number {
-        Number::Pl => species_label(&parsed.kind),
-        Number::Sg => parsed.kind.clone(),
-    };
     let subject = match parsed.subject.as_str() {
         "it" => Subject::Pronoun("it"),
         "its" => Subject::Pronoun("its"),
         other => Subject::Name(other.to_string()),
     };
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement,
-        number: parsed.number,
-        definiteness: parsed.definiteness,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept: parsed.kind.clone(),
+            number: parsed.number,
+            definiteness: parsed.definiteness,
+            modifiers,
+        },
+        vocab,
+    );
     assemble_trailing(line, &trailing)
 }
 
@@ -2738,10 +2805,10 @@ pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, L
 /// [`ChorusLine::Counter`], this SAME function recursively on the wrapped
 /// line, then [`counter_annotation_line`] re-wraps it.
 /// type-audit: bare-ok(prose: return)
-pub fn rerender_chorus_line(line: &ChorusLine) -> String {
+pub fn rerender_chorus_line(line: &ChorusLine, vocab: &CommonVocabulary) -> String {
     match line {
         ChorusLine::Clause(parsed, dress) => {
-            let mut line = rerender(parsed);
+            let mut line = rerender(parsed, vocab);
             if let Some(stance) = dress.stance {
                 line.pop();
                 line.push_str(&format!(" — {stance}."));
@@ -2753,7 +2820,7 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
         }
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
         ChorusLine::RevealedClaim { surface } => rerender_revealed_claim(*surface),
-        ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
+        ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner, vocab)),
         ChorusLine::Reckoning(reckoning) => rerender_reckoning_line(reckoning),
     }
 }
@@ -2835,11 +2902,58 @@ mod tests {
     //! esoteric law stopped working" rather than "the planet was renamed".
     //! Fix the key, never the behaviour.
     //!
+    //! ## The Contour epoch v2 (`history/bake/v2`) — the third rename, one entry
+    //!
+    //! Bumping the `BAKE` stream label (position-aware conflict changes
+    //! committed history, decision 0006's epoch-suffix discipline) re-mints
+    //! every draw the deep-history bake takes, including seed 1's planet
+    //! name: `Xoaboa` → `Pao`. Unlike the two maps above, no OTHER proper
+    //! noun in this module moved — the five peoples' own names (`Booxo`,
+    //! `Kabja`, `Woove`, `Boove`, `Ngosho`) and every ordinary word form are
+    //! byte-identical, verified test by test rather than assumed. Every
+    //! occurrence of `Xoaboa` as a planet name in this module's test bodies
+    //! was mechanically replaced with `Pao`; this doc comment and the two
+    //! rename tables above it are left as the historical record they are.
+    //!
+    //! ## The Tense — the fourth rename, and it is the third one going back
+    //!
+    //! Giving capacity an era axis re-placed every settlement, and seed 1's
+    //! planet name moved with the flagship culture's lexicon: `Pao` →
+    //! **`Xoaboa`** — which is to say the name The Contour renamed *away* from
+    //! has come back around. The bijection was verified the same way, test by
+    //! test rather than assumed: the six peoples' names (`Booxo`, `Kabja`,
+    //! `Woove`, `Boove`, `Ngeevnao`, `Ngosho`) are byte-identical, and so is
+    //! every drawn word form in the per-tongue sentences — `Paab`, `Paokaa`,
+    //! `Weveawea`, `Veabea`, `Saseo`, `Ngod`, `Ngotngo` all unmoved. Every
+    //! pinned NUMBER held again: seed-2's 81/49, the taught/true day 36337,
+    //! the two-moon count, `yellow-white dwarf (F)`, 1.5 standard days.
+    //!
+    //! **Two occurrences here contain the old name as a SUBSTRING and must not
+    //! be touched** — `Paab` and `Paokaa` are gnoll word forms, not the planet.
+    //! The replacement is word-boundary-anchored for that reason; a plain
+    //! substring pass corrupts them silently, and they are pinned nowhere else.
+    //!
+    //! What did NOT move with the rename, and is a separate matter entirely:
+    //! seed 2's hobgoblin and seed 4's kobold changed ORGANIZATION state under
+    //! this campaign. Those are content, not naming, and are adjudicated with
+    //! `the_ladder_and_prophecy_laws` (`windows/worldgen/tests/diachronic.rs`)
+    //! rather than folded in here.
+    //!
     //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
     //! points directly to build its own world state, once per test — the
     //! sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
+
+    /// The world's Common vocabulary, exactly as `render_volume` assembles
+    /// it. Built from the composed registry rather than any particular
+    /// world's — the two are the same map, and `register_all` on a bare
+    /// registry is sub-millisecond.
+    fn vocab() -> CommonVocabulary {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
+        hornvale_worldgen::common_vocabulary(&registry)
+    }
 
     fn constant(seed: u64) -> World {
         use hornvale_astronomy::SkyPins;
@@ -2950,11 +3064,13 @@ mod tests {
 
     /// Vowel-initial star classes (e.g. seed 3's "orange dwarf (K)") need
     /// "an", not "a" — a real seed exposed this via `regenerate-artifacts.sh`
-    /// ("Zhqea is a planet orbiting a orange dwarf (K)…").
+    /// ("Zhqea is a planet orbiting a orange dwarf (K)…"). The ledger holds
+    /// the concept id (`"orange-dwarf"`); the article is chosen from the
+    /// rendered *display*'s first letter, never the id's.
     #[test]
     fn star_class_modifier_chooses_an_before_a_vowel() {
-        let value = Value::Text("orange dwarf (K)".to_string());
-        let modifier = match fragment_for(STAR_CLASS, &value) {
+        let value = Value::Text("orange-dwarf".to_string());
+        let modifier = match fragment_for(STAR_CLASS, &value, &vocab()) {
             Some(Fragment::Modifier(m)) => m,
             _ => panic!("expected a Modifier fragment"),
         };
@@ -3021,6 +3137,7 @@ mod tests {
     /// emic world-statement — `every_people_states_the_world_in_its_tongue`
     /// pins that law directly), so `tongue_lines` now carries TWO lines per
     /// placed people, not one.
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn every_placed_people_self_states_in_its_own_tongue() {
         for seed in [1u64, 2, 3] {
@@ -3044,6 +3161,7 @@ mod tests {
     /// Steeped (`packs.rs`, `ladder_rank: 0`), so this never gaps, joining
     /// the self-statement law above. One world-statement tongue line per
     /// placed people, seeds 1..=3, glossed `"⟨planet⟩ is the earth."`.
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn every_people_states_the_world_in_its_tongue() {
         for seed in [1u64, 2, 3] {
@@ -3112,14 +3230,23 @@ mod tests {
     /// unchanged at the derivation layer; only which of them currently carries
     /// a doctrine moved. So seed 1's hobgoblin row is dropped (folk-only, no
     /// doctrine to contrast) and seed 3's hobgoblin row is added as `false`
-    /// (organized, depth `None`). Both arms remain exercised (`true`: seed 2
-    /// hobgoblin, seed 3 goblin; `false`: seeds 1/2 goblin, seed 3 hobgoblin).
+    /// (organized, depth `None`).
+    ///
+    /// The Tense (2026-08-05) dropped the two HOBGOBLIN rows. Seed 2's and
+    /// seed 3's hobgoblins are no longer organized at all — they carry no
+    /// doctrine section for this test to read — because era-varying capacity
+    /// shrank settlements below the emergent-caste threshold that mints a
+    /// shaman (the same three peoples `diachronic.rs`'s ladder table records
+    /// falling Predictive -> Counted; see its comment for the mechanism).
+    /// Both arms are still exercised, which is the property this table exists
+    /// for: `true` via seed 3 goblin, `false` via seeds 1 and 2 goblin. The
+    /// rows are REMOVED rather than re-pinned to `false`, because "not
+    /// organized" is a different state from "organized with depth None" and
+    /// conflating them would let the test pass on a culture it cannot read.
     const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
-        (1, "goblin", false),    // None
-        (2, "goblin", false),    // None
-        (2, "hobgoblin", true),  // Particle
-        (3, "goblin", true),     // Particle
-        (3, "hobgoblin", false), // None
+        (1, "goblin", false), // None
+        (2, "goblin", false), // None
+        (3, "goblin", true),  // Particle
     ];
 
     /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for
@@ -3130,6 +3257,8 @@ mod tests {
     /// the two surfaces are byte-identical (no marking to contrast).
     /// Per-species arms pinned against T2's frozen landscape (both arms are
     /// exercised within seeds 1..=3, per the measured table).
+    /// claim: structural(seed: EVIDENTIAL_DEPTH_LANDSCAPE) — prose rendering,
+    /// tuple pattern `&(seed, kind, evidential_marks)` (Fix round 1, Class 1)
     #[test]
     fn the_taught_contrast_is_visible_where_deep() {
         for &(seed, kind, evidential_marks) in EVIDENTIAL_DEPTH_LANDSCAPE {
@@ -3284,20 +3413,38 @@ mod tests {
     /// unchanged. The pre-C7 bytes remain unreachable by construction —
     /// that is a consequence of the naming work, not a weakening of this
     /// test, which still asserts the clause SHAPE exactly.
+    ///
+    /// Re-pinned again at F7 (The Witness, 2026-07-30): gating `Tonogenesis`
+    /// on a prior merger reseeds every cascade, so `evolve`'s output moves
+    /// for every root — seed 2's goblin `Mepmee Gmaamea` -> `Mepmee Maa` and
+    /// kobold `Ngkooqngto Ngkaa` -> `Kooqngto Kaa`. Same story again: only
+    /// the drawn word forms moved.
+    ///
+    /// Re-pinned again at Task 8b (The Witness, same campaign): the
+    /// phonology-hosting gate in `draw_rule` reseeds every cascade once
+    /// more, so kobold's self-statement moves again: `Kooqngto Kaa` ->
+    /// `Nggooqngdo Nggaa`. Goblin's line is unaffected (goblin's roster was
+    /// already narrowed the same way by Task 7 alone, per the golden-fixture
+    /// diff this same commit re-pins). Same story once more: only the drawn
+    /// word forms moved.
+    ///
+    /// Re-pinned a further time absorbing The Watershed's sonority merge
+    /// (independently reseeding the same cascade roster): only the drawn
+    /// word forms moved again, re-derived from a live run.
     #[test]
     fn shallow_species_lines_are_byte_identical_to_c3() {
         let world = generated(2);
         let vol = render_volume(&world);
         assert!(
             vol.tongue_lines.contains(
-                &"Mepmee Gmaamea. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
+                &"Mepmee Maa. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
             ),
             "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Dngooqtngo Tngaa. (in the kobold tongue: \"The Dngooqtngo are kobolds.\")"
+                &"Dngooqdngo Dngaa. (in the kobold tongue: \"The Dngooqdngo are kobolds.\")"
                     .to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
@@ -3370,8 +3517,11 @@ mod tests {
     /// construction table but never surfaced by any of these three seeds
     /// reddens this assertion, forcing a corpus extension rather than
     /// letting an unexercised construction hide behind a green gate.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (predicates_exercised)
     #[test]
     fn every_book_line_round_trips() {
+        let vocab = vocab();
         let mut predicates_exercised: BTreeSet<String> = BTreeSet::new();
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -3380,7 +3530,7 @@ mod tests {
             for line in &volume.lines {
                 let parsed = parse_line(line, &ctx)
                     .unwrap_or_else(|e| panic!("seed {seed} line failed: {line} ({e:?})"));
-                let again = rerender(&parsed);
+                let again = rerender(&parsed, &vocab);
                 assert_eq!(&again, line, "seed {seed}: re-realization drifted");
                 for (predicate, _) in &parsed.facts {
                     predicates_exercised.insert(predicate.clone());
@@ -3403,11 +3553,14 @@ mod tests {
     /// actually committed across seeds 1..=3 (the real closed space, not a
     /// hand-picked sample — see the Concordance campaign's generator-
     /// coverage lesson).
+    /// claim: structural(seed: [1,2,3]) — prose round-trip inversion, plus a
+    /// closed-space sweep over moon-count 0..=13 (not a seed)
     #[test]
     fn fact_for_inverts_fragment_for_over_the_closed_space() {
+        let vocab = vocab();
         for count in 0..=13u64 {
             let value = Value::Number(count as f64);
-            let text = match fragment_for(MOON_COUNT, &value) {
+            let text = match fragment_for(MOON_COUNT, &value, &vocab) {
                 Some(Fragment::Modifier(m)) => m,
                 _ => panic!("expected a Modifier fragment for moon-count {count}"),
             };
@@ -3422,7 +3575,7 @@ mod tests {
             let world = generated(seed);
             for fact in world.ledger.find(STAR_CLASS) {
                 let value = fact.object.clone();
-                let text = match fragment_for(STAR_CLASS, &value) {
+                let text = match fragment_for(STAR_CLASS, &value, &vocab) {
                     Some(Fragment::Modifier(m)) => m,
                     _ => panic!("expected a Modifier fragment for {value:?}"),
                 };
@@ -3437,7 +3590,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let text = match fragment_for(DAY_LENGTH_STD, &value) {
+                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3458,8 +3611,11 @@ mod tests {
     /// the collapsed `min(Decimals, listener_rung) == listener_rung`
     /// claim is what the code actually does, not merely what the spec
     /// claims.
+    /// claim: structural(seed: [1,2,3]) — prose/rendering agreement across
+    /// numeracy rungs
     #[test]
     fn comprehend_quantity_agrees_with_the_direct_render_at_every_rung() {
+        let vocab = vocab();
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             for fact in world.ledger.find(DAY_LENGTH_STD) {
@@ -3467,7 +3623,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3492,13 +3648,14 @@ mod tests {
     /// surface value exactly as it did before this campaign.
     #[test]
     fn fact_for_itself_is_unchanged() {
+        let vocab = vocab();
         let world = generated(1);
         for fact in world.ledger.find(DAY_LENGTH_STD) {
             let Value::Number(days) = fact.object else {
                 continue;
             };
             let value = Value::Number(days);
-            let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                 Some(Fragment::Trailing(t)) => t,
                 _ => panic!("expected a Trailing fragment for {days}"),
             };
@@ -3601,7 +3758,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
         assert_eq!(
             section.emic, vol.lines,
             "identity filters == the god's-eye volume"
@@ -3728,6 +3885,7 @@ mod tests {
     /// earth"), so the truth text itself (not the substitution target) is
     /// what this test requires to surface, via the margin's "In truth, ⟨
     /// name⟩ is a planet" when the emic line alone lost it.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip against ground truth
     #[test]
     fn emic_union_margin_covers_ground_truth() {
         for seed in [1u64, 2, 3] {
@@ -3852,8 +4010,11 @@ mod tests {
     /// assertion. `explanation_seen` additionally asserts the walk actually
     /// encountered at least one — a future regression that stopped firing
     /// explanations could otherwise hide behind a vacuously-true round-trip.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (explanation_seen)
     #[test]
     fn every_chorus_line_round_trips() {
+        let vocab = vocab();
         let mut explanation_seen = 0usize;
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -3870,7 +4031,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::Explanation(_)) {
                         explanation_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -3892,6 +4053,8 @@ mod tests {
     /// then the seed-1 goblin line is ALSO pinned as a literal string
     /// (measured against the real committed world), the C2 exact-string
     /// discipline.
+    /// claim: structural(seed: [1,2,3]) — prose rendering; own name states the
+    /// shape
     #[test]
     fn explanation_lines_render_for_the_measured_seeds() {
         for seed in [1u64, 2, 3] {
@@ -3978,7 +4141,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
         for line in section.emic.iter().chain(section.margin.iter()) {
             assert!(
                 !line.contains("because"),
@@ -4045,14 +4208,18 @@ mod tests {
     /// kobold/Ngongngo) at seed 1, all above the organized rung — matching
     /// the regenerated `book/src/gallery/the-book.md`. The Vacancy T9 adds a
     /// fifth people (gnoll/Jakdaod), which also organizes at that same
-    /// seed. Goblin's exact measured surface is verified against the
-    /// merged world: heading names the priesthood; the emic carries the
-    /// `RevealedClaim` exoteric formula for the moons (folk capability loses
-    /// `moon-count`, doctrine's boosted capability clears the threshold and
-    /// keeps it) and a day explanation whose bound agent is the doctrine's
-    /// own measured deity, Kaavoa (folk's own day explanation is agentless
-    /// `PathJourney`, so this is genuinely a doctrine-only causal story, not
-    /// an echo of folk's).
+    /// seed. The Generalist adds a sixth people (human), which also
+    /// organizes at that same seed. Goblin's exact measured surface is
+    /// verified against the merged world: heading names the priesthood; the
+    /// emic carries the `RevealedClaim` exoteric formula for the moons (folk
+    /// capability loses `moon-count`, doctrine's boosted capability clears
+    /// the threshold and keeps it) and a day explanation whose bound agent
+    /// is the doctrine's own measured deity, Vooboo (re-pinned at Task 8b,
+    /// The Witness; folk's own day explanation is agentless `PathJourney`,
+    /// so this is genuinely a doctrine-only causal story, not an echo of
+    /// folk's).
+    /// claim: structural(seed: 1) — false-positive extra flag; `s` binds a
+    /// &ChorusSection, single fixed seed
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -4064,15 +4231,49 @@ mod tests {
             .filter(|s| s.doctrine.is_some())
             .map(|s| s.kind.as_str())
             .collect();
+        // The Delvers re-pin (C2c, 2026-08-07): nine peoples are placed at
+        // seed 1 and EIGHT are organized. `desert-dwarf` is placed but
+        // folk-only — the first time this assertion's "all placed peoples are
+        // organized" reading has been false, so the two lines are now
+        // deliberately different lengths rather than restating one fact
+        // twice. It is corroborated independently by
+        // `worldgen::diachronic::the_ladder_law`, which measures seed 1's
+        // desert-dwarf at `Counted` with no prediction — a culture with no
+        // organized cult cannot exceed Counted, which is the ladder's own
+        // structural rule, and doctrine is exactly what it lacks.
+        //
+        // (It read 11 placed / 9 organized while the campaign carried five
+        // dwarves; spec §11 withdrew Mountain and Duergar. No non-dwarf row
+        // moved with them at this seed — the eight names below are exactly
+        // the previous nine minus mountain-dwarf.)
+        //
+        // The Range re-pin (task 4, 2026-08-09): SEVEN organized, not eight —
+        // `gnoll` joins `desert-dwarf` as placed-but-folk-only. Gnoll is the
+        // campaign's first biome-affinity occupant, and its declared desert
+        // preference takes its seed-1 settlement count from 61 to 13; the
+        // culture is still placed (the chorus still renders "Among the Kabja"
+        // in `the_reckoning_renders_the_epoch_pair`) but no longer reaches the
+        // organized rung. That is the intended mechanism reaching the world,
+        // not drift to be papered over — this is the deliberate re-pin, in the
+        // commit that moved it.
         assert_eq!(
             organized,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
-            "seed-1: all five placed peoples are organized after the merge re-placement"
+            vec![
+                "bugbear",
+                "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
+                "hobgoblin",
+                "human",
+                "kobold",
+            ],
+            "seed-1: seven of the nine placed peoples are organized; desert-dwarf \
+             and gnoll are folk-only"
         );
         assert_eq!(
             peoples.len(),
-            5,
-            "seed-1: five peoples are placed, all organized"
+            9,
+            "seed-1: nine peoples are placed, seven of them organized"
         );
 
         let goblin = vol
@@ -4095,8 +4296,8 @@ mod tests {
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Voovo strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Voovo: {:?}",
+                .contains(&"The day returns because Vooboo strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Vooboo: {:?}",
             doctrine.emic
         );
     }
@@ -4118,6 +4319,9 @@ mod tests {
     /// which cultures are organized and capable; it is now falsified by the
     /// live sweep, which is the stronger evidence (the law firing on real
     /// worlds, not just the synthetic pair driven directly below).
+    /// claim: reachability(seed: 1..=5) — own comment: "the sweep finds BOTH a
+    /// real Contested and a real Mystery", with an embedded per-section
+    /// invariant riding on the same builds
     #[test]
     fn the_disclosure_law_both_directions() {
         // The live half: every organized section renders exactly one
@@ -4189,24 +4393,34 @@ mod tests {
             "the sweep should find at least one real Mystery entry (day-length-std)"
         );
 
-        // Pin the LANG-48 × C6 case on real data: seed 4's kobold priesthood
-        // keeps the moon-period-ratio (bare) while its folk explain it
-        // (CycleReturn) — a Contested whose counter-annotation quotes the
-        // folk's own ratio because-clause ("The moons keep their measure …").
-        let vol4 = render_volume(&generated(4));
-        let kobold4 = vol4
+        // Pin the LANG-48 × C6 case on real data: a priesthood keeps a claim
+        // bare while its folk explain it, so the Contested renders a
+        // counter-annotation quoting the folk's own because-clause.
+        //
+        // Re-pointed by The Tense (2026-08-05) from seed 4's kobold, which is
+        // no longer organized. Two things were checked before re-pointing
+        // rather than assumed. The general case is HEALTHY: eleven such
+        // counter-annotations exist across seeds 1..=5, so `contested_seen`
+        // above is not carrying this alone. But the specific FLAVOUR moved —
+        // every survivor is a moon-CROSSING explanation, and the
+        // moon-period-ratio variant this pin used to illustrate ("The moons
+        // keep their measure …") does not occur anywhere in seeds 1..=5 now.
+        // Recorded as a coverage note: the schema is unexercised in this
+        // window, not known-broken.
+        let vol1 = render_volume(&generated(1));
+        let bugbear1 = vol1
             .chorus
             .iter()
-            .find(|s| s.kind == "kobold")
+            .find(|s| s.kind == "bugbear")
             .and_then(|s| s.doctrine.as_ref())
-            .expect("seed 4 kobold is organized");
+            .expect("seed 1 bugbear is organized");
         assert!(
-            kobold4.annotations.contains(
-                &"— though the folk say The moons keep their measure, as all things return."
-                    .to_string()
+            bugbear1.annotations.contains(
+                &"— though the folk say The moons cross because they are Boko's kin.".to_string()
             ),
-            "the moon-period-ratio Contested renders its counter-annotation: {:?}",
-            kobold4.annotations
+            "the Contested renders its counter-annotation quoting the folk's own \
+             because-clause: {:?}",
+            bugbear1.annotations
         );
 
         // The Contested half: a synthetic folk/doctrine pair over one
@@ -4305,6 +4519,7 @@ mod tests {
             &params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
         assert_eq!(
             section.annotations,
@@ -4404,6 +4619,7 @@ mod tests {
             &params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
     }
 
@@ -4434,6 +4650,25 @@ mod tests {
     /// stances (`neighbors`/`ourselves`), same sentence frames, and the
     /// closing "The day returns because the sky must be crossed." is
     /// byte-identical.
+    ///
+    /// The Generalist re-pin (2026-08-03): human joins the coexistence stack
+    /// as a sixth people, organized alongside the other five at seed 1
+    /// (matching `seed_1_doctrine_sections_render` above) — the folk emic
+    /// gains one more peoples-line, "The Ngeevnao are humans — neighbors."
+    /// The C6 null-effect property this test exists to guard is unchanged;
+    /// only the ground truth grew by one more peoples-line, same as every
+    /// prior re-pin in this test's history.
+    ///
+    /// The Delvers re-pin (C2c, 2026-08-07): the three dwarves join as peoples
+    /// seven through nine and all three are placed at seed 1, so the folk
+    /// emic gains three more peoples-lines — desert dwarf (Tngobpngap),
+    /// gully dwarf (Tngobknga), hill dwarf (Dngovgngav). Note that
+    /// `desert-dwarf` appears HERE even
+    /// though `seed_1_doctrine_sections_render` shows it is not organized:
+    /// the emic peoples-lines are about who the goblins have a NAME for, not
+    /// who has a priesthood. The six pre-existing lines are BYTE-IDENTICAL,
+    /// which is the C6 null-effect property this test exists to guard; only
+    /// the ground truth grew, same as every prior re-pin in this history.
     #[test]
     fn folk_sections_are_byte_unchanged() {
         let vol = render_volume(&generated(1));
@@ -4446,9 +4681,13 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
+                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
+                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -4472,9 +4711,13 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
+                "The Tngobknga are gully dwarfs — rivals.".to_string(),
+                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
@@ -4501,8 +4744,11 @@ mod tests {
     /// `the_disclosure_law_both_directions`). `revealed_claim_seen` guards
     /// against a vacuously-true walk that stopped firing `RevealedClaim`
     /// lines entirely.
+    /// claim: structural(seed: 1..=5) — prose round-trip, with a non-vacuity
+    /// guard (revealed_claim_seen)
     #[test]
     fn every_doctrine_line_round_trips() {
+        let vocab = vocab();
         let mut revealed_claim_seen = 0usize;
         for seed in 1u64..=5 {
             let world = generated(seed);
@@ -4527,7 +4773,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::RevealedClaim { .. }) {
                         revealed_claim_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {} (doctrine): re-realization drifted",
@@ -4557,7 +4803,7 @@ mod tests {
             }
             _ => panic!("expected a ChorusLine::Counter"),
         }
-        assert_eq!(rerender_chorus_line(&parsed), annotation);
+        assert_eq!(rerender_chorus_line(&parsed, &vocab), annotation);
     }
 
     /// T3 review, mandated carry-over #2: pin doctrine-margin sparseness
@@ -4684,6 +4930,7 @@ mod tests {
             &folk_params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
     }
 
@@ -4852,9 +5099,14 @@ mod tests {
     /// arms (folk line, cardinal, prediction, taught-wrongly) plus a per-
     /// culture crisis margin and the world shortfall line. The Vacancy T9
     /// adds a fifth people (gnoll/Jakdaod), also organized at every seed
-    /// 1..=3, rendering a fifth priesthood arm. The values below are the
-    /// merged live measurement (they match `book/src/gallery/the-book.md`
-    /// and `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`'s day-numbers).
+    /// 1..=3, rendering a fifth priesthood arm. The Generalist adds a sixth
+    /// people (human), also organized at every seed 1..=3, rendering a
+    /// sixth priesthood arm — it joins the solar-only pair (goblin,
+    /// hobgoblin), matching `windows/worldgen/tests/diachronic.rs::
+    /// LADDER_TABLE`'s per-seed witnessed counts for human. The values below
+    /// are the merged live measurement (they match
+    /// `book/src/gallery/the-book.md` and `LADDER_TABLE`'s day-numbers).
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn the_reckoning_renders_the_epoch_pair() {
         for seed in [1u64, 2, 3] {
@@ -4880,6 +5132,26 @@ mod tests {
         // Merge re-placement: seed 1 seats four organized peoples (Xoobo,
         // Veewe, Veebe, Ngongngo), each rendering the full priesthood
         // run. Day-numbers match LADDER_TABLE's seed-1 rows.
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): nine peoples are placed at
+        // seed 1 and EIGHT are organized — desert-dwarf (Tngobpngap) renders
+        // only the "the sky has darkened" line, with no priesthood run, which
+        // is `LADDER_TABLE`'s seed-1 `Counted`-with-no-prediction row showing
+        // up in the prose. Re-measured wholesale from the live volume, and
+        // the day-numbers still match `LADDER_TABLE`'s seed-1 rows exactly.
+        // Withdrawing Mountain and Duergar (spec §11) removed their runs and
+        // left every other people's autonym, count and day BYTE-IDENTICAL at
+        // this seed.
+        //
+        // The Range re-pin (task 4, 2026-08-09): SEVEN organized. Gnoll (Kabja)
+        // joins desert-dwarf (Tngobpngap) as placed-but-folk-only — its "Among
+        // the Kabja" line stays and its three priesthood lines go, which is
+        // precisely the shape of a culture that lost its organized cult rather
+        // than its existence. The cause is this campaign's own first
+        // biome-affinity row, which takes gnoll from 61 seed-1 settlements to
+        // 13. Every other people's autonym, count and day is BYTE-IDENTICAL,
+        // so the movement is gnoll's alone — the same shape the dwarf
+        // withdrawal produced.
         let seed1 = render_volume(&generated(1));
         assert_eq!(
             seed1.reckoning[1].lines,
@@ -4887,65 +5159,74 @@ mod tests {
                 "Among the Booxo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Booxo numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Booxo's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Kabjab, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kabjab numbers the darkenings: 6472.".to_string(),
-                "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Kabjab's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Tngobpngap, the sky has darkened, now and again.".to_string(),
+                "Among the Kabja, the sky has darkened, now and again.".to_string(),
                 "Among the Woove, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Woove numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Woove's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Woove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Tngobknga, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Tngobknga numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Tngobknga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Dngovgngav, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dngovgngav numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Dngovgngav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Boove, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Boove numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Boove's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Boove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Ngeevnao, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngeevnao numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Ngeevnao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Ngosho, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Ngosho numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Ngosho's own priesthood taught wrongly, and could be shown wrong by \
-                 any who kept their own count."
-                    .to_string(),
+                "The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
-            "seed 1: five organized priesthoods; the lunar-witnessing group (bugbear, gnoll, \
-             kobold) numbers 6472, the solar-only pair (goblin, hobgoblin) 4010"
+            "seed 1: seven organized priesthoods of nine placed peoples (desert-dwarf and \
+             gnoll are folk-only); the lunar-witnessing group numbers 6472, the solar-only \
+             group 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
-                "In truth, the Booxo's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Woove's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Boove's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Ngosho's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
+                "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
             ],
             "seed 1: each organized priesthood carries a live prediction crisis, and the true \
              count (6472) exceeds the solar-only cultures' held count"
         );
 
-        // Seed 2: five organized peoples (Booqboo, Klalsha, Meepmoe, Weeqwoe,
-        // Ngka); the lunar-witnessing group (bugbear/Booqboo,
-        // gnoll/Klalsha, kobold/Ngka) numbers 81, the solar-only pair
-        // (goblin/Meepmoe, hobgoblin/Weeqwoe) 49.
+        // Seed 2: six organized peoples (Booqboo, Klalsha, Meepmoe, Weeqwoe,
+        // Foetjee, Ngka); the lunar-witnessing group (bugbear/Booqboo,
+        // gnoll/Klalsha, kobold/Ngka) numbers 81, the solar-only trio
+        // (goblin/Meepmoe, hobgoblin/Weeqwoe, human/Foetjee) 49.
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): nine placed, EIGHT organized —
+        // only desert-dwarf is folk-only here, matching `LADDER_TABLE`'s
+        // seed-2 `Counted` row. Re-measured wholesale from the live volume
+        // after the roster was cut to three (spec §11). The SURVIVING
+        // dwarves' autonyms moved with the cut (gully-dwarf and hill-dwarf
+        // are `Njanjo`/`Wanwo` here, not `Jajamjajo`/`Wawabwawo`) because
+        // removing two names from accession cohort 9 re-sorts the cohort and
+        // moves the remaining dwarf concepts' proto-roots; every NON-dwarf
+        // autonym and count is byte-identical.
+        //
+        // The Range re-pin (task 4, 2026-08-09): SEVEN organized. Gnoll
+        // (`Loshjo` here) loses its priesthood run and keeps its "Among the"
+        // line, exactly as it does at seed 1 — the biome-affinity row is the
+        // cause at both seeds, and no other people's autonym, count or day
+        // moved.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -4953,61 +5234,98 @@ mod tests {
                 "Among the Bobboo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Bobboo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Kloshjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kloshjo numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kloshjo's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Wazwo, the sky has darkened, now and again.".to_string(),
+                "Among the Loshjo, the sky has darkened, now and again.".to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Mepmee's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Mepmee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Njanjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Njanjo numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Njanjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Wanwo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Wanwo numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Wanwo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Webwee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Webwee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Dngooqtngo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Dngooqtngo numbers the darkenings: 81.".to_string(),
+                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Foetjee, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Foetjee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Dngooqtngo's own priesthood taught wrongly, and could be shown wrong by \
-                 any who kept their own count."
-                    .to_string(),
+                "The Foetjee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Dngooqdngo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dngooqdngo numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
             vec![
-                "In truth, the Bobboo's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
-                "In truth, the Kloshjo's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
-                "In truth, the Mepmee's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
-                "In truth, the Webwee's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
-                "In truth, the Dngooqtngo's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
+                "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
             ]
         );
 
-        // Seed 3: five organized peoples (Tashoo, Jpajjpa, Ztasoe,
-        // Ztashoeg, Sqaojxo); the lunar-witnessing group (bugbear/Tashoo,
-        // gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the solar-only pair
-        // (goblin/Ztasoe, hobgoblin/Ztashoeg) 32.
+        // The Delvers re-pin (C2c, 2026-08-07): nine placed, SEVEN organized —
+        // desert-dwarf and kobold are folk-only at this seed, matching
+        // `LADDER_TABLE`'s seed-3 `Counted` rows. Hobgoblin, folk-only under
+        // both the pre-campaign and the five-dwarf rosters, GAINED a
+        // priesthood when the roster was cut to three (spec §11); the caste
+        // threshold is not monotone in roster size, which the ladder table's
+        // own comment records. Re-measured wholesale from the live volume.
+        //
+        // Seed 3: six organized peoples (Tashoo, Jpajjpa, Ztasoe,
+        // Ztashoeg, Shoammoem, Sqaojxo); the lunar-witnessing group
+        // (bugbear/Tashoo, gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the
+        // solar-only trio (goblin/Ztasoe, hobgoblin/Ztashoeg,
+        // human/Shoammoem) 32.
+        //
+        // Re-pinned at F7 (The Witness, 2026-07-30): gating `Tonogenesis` on
+        // a prior merger reseeds every cascade — bugbear `Doozka` ->
+        // `Shdoozga`, gnoll `Jpojjpo` -> `Pojjpoj`, kobold `Jjojjjo` ->
+        // `Jojjjo`; goblin `Sdoozka` and hobgoblin `Shtoozka` happened to
+        // land unchanged. Same story: only drawn word forms moved, the day
+        // numbers and counts (53/32) are untouched.
+        //
+        // Re-pinned again at Task 8b (The Witness, same campaign): the
+        // phonology-hosting gate in `draw_rule` reseeds every cascade once
+        // more — bugbear `Shdoozga` -> `Doozka`, gnoll `Pojjpoj` ->
+        // `Jpojjpoj`, goblin `Sdoozka` -> `Xofozho`, hobgoblin `Shtoozka` ->
+        // `Toozka`, kobold `Jojjjo` -> `Jjojjjo`. Same story once more: only
+        // drawn word forms moved, the day numbers and counts (53/32) are
+        // untouched.
+        //
+        // Re-pinned a further time absorbing The Watershed's sonority merge
+        // (independently reseeding the same cascade roster) — gnoll
+        // `Jpojjpoj` -> `Pjojpjoj`, goblin `Xofozho` -> `Zhooqsa`, hobgoblin
+        // `Toozka` -> `Zhooqsha`; bugbear and kobold happened to land
+        // unchanged. Same story once more: only drawn word forms moved, the
+        // day numbers and counts (53/32) are untouched.
+        //
+        // The Range re-pin (task 4, 2026-08-09): FIVE organized of nine placed,
+        // and this is the one seed where the re-pin is NOT confined to gnoll.
+        // Two priesthood runs go: gnoll's (`Pjojpjoj`) and **hobgoblin's**
+        // (`Zhooqsha`) — the same hobgoblin the paragraph above records as
+        // having GAINED a priesthood when the dwarf roster was cut. Only
+        // gnoll carries a biome affinity, so hobgoblin's loss is the
+        // competitive cascade: the bake contests ground across eras, and
+        // suppressing one people frees cells the rest re-contest, which can
+        // push a third people back across the caste threshold in either
+        // direction (`windows/worldgen/tests/range_readout.rs` measures the
+        // same cascade on seed 7, where gnoll's own count does not move at all
+        // and bugbear triples). Every autonym, day number and count here is
+        // otherwise unchanged.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
@@ -5015,55 +5333,40 @@ mod tests {
                 "Among the Zooqsha, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Zooqsha numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Pjojpjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Pjojpjo numbers the darkenings: 53.".to_string(),
+                "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Baovoo, the sky has darkened, now and again.".to_string(),
+                "Among the Pjojpjoj, the sky has darkened, now and again.".to_string(),
+                "Among the Zhooqsa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zhooqsa numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Pjojpjo's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Qzhooqsa, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Qzhooqsa numbers the darkenings: 32.".to_string(),
+                "The Zhooqsa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Daoboo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Daoboo numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Qzhooqsa's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
-                "Among the Qzhooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Qzhooqsha numbers the darkenings: 32.".to_string(),
+                "The Daoboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Zozha, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zozha numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Qzhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
+                "The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
+                "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jaojjao numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
             ],
-            "seed 3: five organized priesthoods; the lunar-witnessing group numbers 53, the \
-             solar-only pair 32"
+            "seed 3: five organized priesthoods of nine placed peoples (desert-dwarf, \
+             gnoll, hobgoblin and kobold are folk-only); the lunar-witnessing group \
+             numbers 53, the solar-only group 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                "In truth, the Zooqsha's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
-                "In truth, the Pjojpjo's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
-                "In truth, the Qzhooqsa's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
-                "In truth, the Qzhooqsha's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
-                "In truth, the Jaojjao's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
+                "In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
             ]
         );
@@ -5115,27 +5418,13 @@ mod tests {
         assert_eq!(
             day100.margin,
             vec![
-                // The Corrigendum T3: the crisis lines' own text has no
-                // epoch phrase at all (unlike the shortfall line below), so
-                // they are byte-identical to the fixed pair's own margin
-                // lines pinned in `the_reckoning_renders_the_epoch_pair`.
-                // Merge re-placement, then The Vacancy T9: five organized
-                // priesthoods now, each with its own live crisis.
-                "In truth, the Booxo's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Woove's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Boove's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
-                "In truth, the Ngosho's priesthood taught the darkening would come on day \
-                 36528; it came on day 36522 instead."
-                    .to_string(),
+                "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),
             ],
             "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
@@ -5160,6 +5449,26 @@ mod tests {
     /// `folk_sections_are_byte_unchanged`), widened here to cover every
     /// pre-C8 `BookVolume` field at seed 1, not just the chorus folk
     /// registers.
+    ///
+    /// The Generalist re-pin (2026-08-03): human joins the coexistence
+    /// stack as a sixth people, organized at seed 1 alongside the other
+    /// five — `vol.lines`, `vol.tongue_lines`, `vol.tongue_gaps` and
+    /// `goblin.emic` each gain one more human-authored entry ("The Ngeevnao
+    /// are humans."/its human-tongue rendering/"human: gap — planet"/"The
+    /// Ngeevnao are humans — neighbors."). The additivity property this
+    /// test guards is unchanged; only the ground truth grew by one more
+    /// peoples-line, same as every prior re-pin in this file's history.
+    ///
+    /// The Delvers re-pin (C2c, 2026-08-07): the three dwarves join as peoples
+    /// seven through nine, so `vol.lines`, `vol.tongue_lines`,
+    /// `vol.tongue_gaps` and `goblin.emic` each gain three entries. **Every
+    /// pre-existing line is BYTE-IDENTICAL** — all twelve prior
+    /// `tongue_lines` included, which is the stronger reading: three new
+    /// tongues entered the cascade roster and perturbed no existing tongue's
+    /// drawn word forms at all, unlike The Wearing / The Witness / The
+    /// Watershed re-pins recorded below, which each moved some. The
+    /// additivity property this test guards is untouched; only the ground
+    /// truth grew.
     #[test]
     fn the_additivity_law() {
         let vol = render_volume(&generated(1));
@@ -5171,9 +5480,13 @@ mod tests {
                  lasts about 1.5 standard days."
                     .to_string(),
                 "The Booxo are bugbears.".to_string(),
-                "The Kabjab are gnolls.".to_string(),
+                "The Tngobpngap are desert dwarfs.".to_string(),
+                "The Kabja are gnolls.".to_string(),
                 "The Woove are goblins.".to_string(),
+                "The Tngobknga are gully dwarfs.".to_string(),
+                "The Dngovgngav are hill dwarfs.".to_string(),
                 "The Boove are hobgoblins.".to_string(),
+                "The Ngeevnao are humans.".to_string(),
                 "The Ngosho are kobolds.".to_string(),
             ]
         );
@@ -5197,30 +5510,52 @@ mod tests {
                 // tongue-pairing. The additivity law this test exists for —
                 // C8 adds only `reckoning`, perturbing no pre-C8 register's
                 // SHAPE — is therefore intact.
-                "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
-                    .to_string(),
-                "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
-                    .to_string(),
-                "Kabjab Paab Jaadjaakjood. (in the gnoll tongue: \"The Kabjab are gnolls.\")"
-                    .to_string(),
-                "Xoaboa Paab Paobkaad. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
+                //
+                // Re-pinned again at F7 (The Witness, 2026-07-30): gating
+                // `Tonogenesis` on a prior merger reseeds every cascade.
+                // Only the gnoll lines moved this time — the exonym `Kabjab`
+                // -> `Kabja` and the gnoll-tongue self-statement `Kabjab Paab
+                // Jaadjaakjood` -> `Kabja Paab Jaadjaajoo` (and its earth
+                // clause `Paobkaad` -> `Baogaa`); every other tongue's
+                // rendering happened to land unchanged. Same story: only
+                // drawn word forms moved, shape and gloss untouched.
+                //
+                // Re-pinned a further time absorbing The Watershed's
+                // sonority merge (independently reseeding the same cascade
+                // roster): the bugbear self-statement and the kobold earth
+                // clause both moved once more; every other tongue's
+                // rendering again happened to land unchanged.
+                "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")".to_string(),
+                "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Tngobpngap Bngaap. (in the desert-dwarf tongue: \"The Tngobpngap are desert dwarfs.\")".to_string(),
+                "Xoaboa Qngoaz. (in the desert-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Kabja Paab Jaadjaajoo. (in the gnoll tongue: \"The Kabja are gnolls.\")".to_string(),
+                "Xoaboa Paab Paokaa. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
                 "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
-                    .to_string(),
-                "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")"
-                    .to_string(),
+                "Tngobknga Gngaappaa Xan. (in the gully-dwarf tongue: \"The Tngobknga are gully dwarfs.\")".to_string(),
+                "Xoaboa Pngoa Xan. (in the gully-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Dngovgngav Gavgoash Koav. (in the hill-dwarf tongue: \"The Dngovgngav are hill dwarfs.\")".to_string(),
+                "Xoaboa Qngoash Koav. (in the hill-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")".to_string(),
+                "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Ngeevnao Vavneozhoa Voosaa. (in the human tongue: \"The Ngeevnao are humans.\")".to_string(),
+                "Xoaboa Saseo Voosaa. (in the human tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
-                "Xoaboa Ngod Ngodngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Xoaboa Ngod Ngotngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
             vol.tongue_gaps,
             vec![
                 "bugbear: gap — planet (no entry in this lexicon)".to_string(),
+                "desert-dwarf: gap — planet (no entry in this lexicon)".to_string(),
                 "gnoll: gap — planet (no entry in this lexicon)".to_string(),
                 "goblin: gap — planet (no entry in this lexicon)".to_string(),
+                "gully-dwarf: gap — planet (no entry in this lexicon)".to_string(),
+                "hill-dwarf: gap — planet (no entry in this lexicon)".to_string(),
                 "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
+                "human: gap — planet (no entry in this lexicon)".to_string(),
                 "kobold: gap — planet (no entry in this lexicon)".to_string(),
             ]
         );
@@ -5234,9 +5569,13 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
+                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
+                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -5265,14 +5604,31 @@ mod tests {
             goblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
+                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
+                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Twoevave strides the sky, slowly.".to_string(),
-                "The day returns because Voovo strides the sky, briskly.".to_string(),
+                // Absorbing The Watershed's sonority merge alongside The
+                // Witness's Tonogenesis gating re-derived this agent name to
+                // `Twoevave` (`Wt-` falls; `Tw-` rises). The Vernacular part
+                // 3b then moved it again, to `Tleavese` — and NOT by
+                // re-minting the name. Deleting `Phenomenon.description`
+                // removed `kernel::observe`'s last tie-break, which the
+                // referent now supplies; seed 42's two lunar eclipses tie at
+                // salience 0.8 on kind `eclipse` and swapped places, and
+                // `cyclic_beliefs_from` joins committed beliefs to a
+                // RE-COMPUTED phenomena list by list POSITION. So a different
+                // deity now holds the longest period and takes the `Slow`
+                // rank. No fact moved (`lens_purity` pins seed 42's whole
+                // ledger byte-identical); this is a read-time derivation.
+                "The moons cross because Tleavese strides the sky, slowly.".to_string(),
+                "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());
@@ -5294,9 +5650,13 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
+                "The Tngobknga are gully dwarfs — rivals.".to_string(),
+                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
@@ -5324,21 +5684,40 @@ mod tests {
             hobgoblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
+                "The Tngobknga are gully dwarfs — rivals.".to_string(),
+                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Daemdam strides the sky, slowly.".to_string(),
-                // NOT the goblin's `Voovo` above. Before this rebase BOTH
-                // peoples' day-deities rendered `Kaavoa` — two distinct
-                // beliefs that happened to draw the same form — and the
-                // reseed separates them: goblin -> `Voovo`, hobgoblin ->
-                // `Vooboo`. A rename map built by token therefore CANNOT be
-                // inverted to prove this pair name-only; the collapse is
-                // invisible to the inversion and only this assertion caught
-                // it. Measured per-people off the rendered doctrine.
+                // Absorbing The Watershed's sonority merge alongside The
+                // Witness's Tonogenesis gating re-derived this agent name to
+                // `Daemdam` (equal-sonority neighbours collapse). The
+                // Vernacular part 3b moved it to `Koonkem` for the same
+                // reason the goblin's moved above: the two tied lunar
+                // eclipses swapped under `observe`'s new referent tie-break,
+                // and the positional belief-to-phenomenon join followed them.
+                "The moons cross because Koonkem strides the sky, slowly.".to_string(),
+                // Before The Toponym's rebase, BOTH peoples' day-deities
+                // rendered `Kaavoa` — two distinct beliefs that happened to
+                // draw the same form — and that reseed separated them:
+                // goblin -> `Voovoo`, hobgoblin -> `Vooboo`. Task 8b's
+                // phonology-hosting gate (The Witness, same campaign)
+                // reseeds every cascade once more and happens to RE-COLLAPSE
+                // them: goblin's day-deity now ALSO renders `Vooboo` (see
+                // this test's goblin_doctrine.emic block above), the exact
+                // same coincidental-collision shape the original comment
+                // warned about, just with a different string. They remain
+                // two distinct beliefs (different underlying entities,
+                // confirmed by re-running with each renamed independently);
+                // a rename map built by token therefore still CANNOT be
+                // inverted to prove this pair name-only. Measured per-people
+                // off the rendered doctrine. Absorbing The Watershed left
+                // this particular pin unchanged (`Vooboo` for both).
                 "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
@@ -5354,8 +5733,11 @@ mod tests {
     /// always zero at day 0), so it is exercised synthetically here
     /// through the SAME public round-trip pair, rather than left as
     /// vacuous coverage.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (reckoning_seen)
     #[test]
     fn every_reckoning_line_round_trips() {
+        let vocab = vocab();
         let mut reckoning_seen = 0usize;
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -5375,7 +5757,7 @@ mod tests {
                         epoch.heading
                     );
                     reckoning_seen += 1;
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -5396,6 +5778,7 @@ mod tests {
         // here cannot hide behind vacuous coverage.
         let ctx = ParseContext {
             complements: BTreeSet::new(),
+            vocabulary: vocab.clone(),
         };
         let synthetic = "In truth, the darkenings of the first days number three.";
         let chorus_line = parse_chorus_line(synthetic, &ctx)
@@ -5410,7 +5793,7 @@ mod tests {
                 count: 3,
             }
         );
-        assert_eq!(rerender_chorus_line(&chorus_line), synthetic);
+        assert_eq!(rerender_chorus_line(&chorus_line, &vocab), synthetic);
 
         // Synthetic: The Corrigendum T4's doctrine line has a
         // `crisis_live: false` arm ("None among the ⟨autonym⟩ have shown
@@ -5432,7 +5815,10 @@ mod tests {
                 crisis_live: false,
             }
         );
-        assert_eq!(rerender_chorus_line(&chorus_line), synthetic_doctrine);
+        assert_eq!(
+            rerender_chorus_line(&chorus_line, &vocab),
+            synthetic_doctrine
+        );
     }
 
     /// C8 T2: the honest omit-the-prediction arm (`Predictive` with

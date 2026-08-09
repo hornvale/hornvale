@@ -24,7 +24,8 @@ editing:
 - `windows/` — what a window may and may not do; how to add one.
   `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
   `windows/lab/` — studies are data, metrics are code; nextest is process-per-
-  test; censuses regen locally in ~7 min since The Local Census.
+  test; censuses regen **on lefford, never locally** (the guard refuses
+  elsewhere, decision 0063 — see the census block below).
 - `cli/` — the thin command surface, but also the home of the **workspace-wide
   enforcement tests** (layering, dep allowlist, doc drift, the heavy tier).
 - `clients/` — the browser clients and the wasm ABIs. Outside the cargo
@@ -72,9 +73,12 @@ is what worktrees are for — but **stagger the gates**, and treat two to three
 active campaigns as the Mac's working ceiling. This is a human-staggering
 rule, not a lock: 0081 declined to claim the gate because waiting twelve
 minutes to start a four-minute gate is worse than the contention. That
-arithmetic assumed a four-minute gate. At ~15 min it may now argue the other
-way, which is new information rather than relitigation — reopen it with the
-`cpu_ratio` rows in hand, do not merely re-express the preference.
+arithmetic assumed a four-minute gate; the drift to ~15 min looked like it
+argued the other way. **The Whetstone (decision 0113) took it back to ~8 min**
+(`make gate` 460.8 s, `make ci` 412.3 s, both green on `ambrose`), so 0081's
+original arithmetic broadly holds again and the case for claiming the gate is
+weaker, not stronger. Reopen it only with fresh `cpu_ratio` rows in hand, do
+not merely re-express the preference.
 
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
@@ -85,16 +89,18 @@ make doctor        # the repo self-map — run this first in a fresh session
 # product, byte-identity rebuilds) are #[ignore]d out of it and run in
 # `make gate-full`. The #[ignore] tier AND nextest's parallelism together
 # got the commit gate to ~4 min at decision 0040 (234 s, 2026-07-13);
-# neither lever alone got there. It has since drifted to ~15 min
-# (934.5 s measured on a quiet Mac, 2026-07-29 — The Timekeeper), which is
-# what `make ci` now watches. The batteries this tiering deferred carry a
+# neither lever alone got there. It then drifted to ~15 min (934.5 s,
+# 2026-07-29 — The Timekeeper), and The Whetstone (0113: the dev profile is
+# optimized workspace-wide) took it back to ~8 min — `make gate` 460.8 s and
+# `make ci` 412.3 s on ambrose, 2026-08-09. `make ci` is what watches this.
+# The batteries this tiering deferred carry a
 # `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
 #   make quick       # cheap half only: fmt-check + clippy + type-audit
-#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~15 min; 0040 budgeted 4)
+#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~8 min since 0113; 0040 budgeted 4)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
 #   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
-#                     # profile (~15 min), writes target/nextest/ci/run.json +
+#                     # profile (~7 min since 0113), writes target/nextest/ci/run.json +
 #                     # run.log, alarms on a per-test or whole-suite duration
 #                     # shift against docs/timings/test-baseline-<host>.tsv,
 #                     # THEN (only if the alarm passed) rewrites that baseline
@@ -126,14 +132,21 @@ make doctor        # the repo self-map — run this first in a fresh session
 #                     #     Timekeeper's own runs. Run `make ci` on a QUIET box
 #                     #     and distrust a red alarm from a busy one. Candidate
 #                     #     fix: also suppress when loadavg exceeds core count.
-#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, today
-#                     #     `MacBookPro` (NOT the machine's familiar name).
-#                     #     Rename the box and the baseline FORKS: the first
-#                     #     run under the new name finds no file, records
-#                     #     silently, and cannot alarm. Same free pass the
-#                     #     first time lefford runs `make ci`. First-run-never-
-#                     #     fails is deliberate; knowing when you are spending
-#                     #     it is not automatic.
+#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, and there
+#                     #     is now more than one Mac in the ledger. A new or
+#                     #     renamed host FORKS the baseline: the first run
+#                     #     under that name finds no file, records silently,
+#                     #     and cannot alarm. First-run-never-fails is
+#                     #     deliberate; knowing when you are spending it is
+#                     #     not automatic. THIS HAS NOW FIRED FOR REAL — The
+#                     #     Whetstone ran on `ambrose` (M3 Pro, 12 cores)
+#                     #     against a baseline keyed `MacBookPro` at 10, took
+#                     #     the free pass, and wrote
+#                     #     test-baseline-ambrose.tsv. Two consequences:
+#                     #     `hostname -s` FIRST when you read a baseline, and
+#                     #     do NOT rank the suite off another host's file (it
+#                     #     named the wrong hot crate; see the Whetstone
+#                     #     retrospective §1 — measure your own before-arm).
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
@@ -157,11 +170,38 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
 # reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them. Since The Local Census the full ~2000-world census is a ~7-min
-# LOCAL run, so the sanctioned refresh is local — once per campaign at the
-# pre-merge close, keeping book/src/laboratory/generated/*/rows.csv current
-# with main rather than lagging it:
-bash scripts/census-run.sh              # THE sanctioned refresh (decision 0081)
+# for them. Refreshed once per campaign at the pre-merge close, keeping
+# book/src/laboratory/generated/*/rows.csv current with main rather than
+# lagging it.
+#
+# THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
+# whatever box you are sitting at". That ambiguity is the whole trap, and it
+# is worth two sentences because it has now cost two sessions. 0063 retired
+# the AWS spot box and put the census back on the project's own canonical
+# hardware ("~7 minutes on the 40-core Linux box"); 0079 then *enforced which*
+# box, because the machines are not byte-identical — they disagree by one unit
+# on ~0.1% of discrete-count metrics, decided in the COMPUTE path upstream of
+# quantize-at-emit, so an off-host run commits values that silently disagree
+# with canonical and then DRIFT-CHECK GREEN FOREVER.
+#
+# So from lefford the run is local and 0063's word is exact. From this Mac it
+# is not, and `census-run.sh` fails closed on the hostname. This paragraph
+# previously read "the sanctioned refresh is local" with no host named; The
+# Range read it from the Mac, recommended a local run, and was refused by the
+# guard. The sentence was not false — it was written from the canonical box's
+# point of view and silently changes meaning depending on where you read it.
+#
+# COST HAS ROUGHLY DOUBLED since 0063 measured it: 776 s / 887 s / 921 s
+# (13-15 min) on lefford, 2026-08-09, cpu_ratio ~25 on 40 cores, against
+# 0063's "~7 minutes". Not a contradiction — a drift datum. Budget 15.
+#
+# Push the branch first, then dispatch with a FULL SHA (never a branch name —
+# HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch
+# of that name over there):
+ssh lefford 'cd ~/Projects/hornvale && HV_CENSUS_WORKTREE=canonical \
+  HV_CENSUS_REF=<full-sha> scripts/census-run.sh'   # decisions 0063/0079/0081
+# Commit the regenerated goldens ON lefford — the canonical box authors them —
+# then push and fast-forward locally.
 bash scripts/census-run.sh status       # is a heavy run already holding the box?
 make lab-diff STUDY=the-census          # which metrics moved vs HEAD (review surface)
 make census-check                       # analysis-harness gate (needs duckdb + python3)
@@ -199,15 +239,35 @@ cargo run -p hornvale -- lab list-metrics
 # which is a separate thing — an artifact, drift-checked like every other:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
+# The digest — the project's own fact ledger, also OUTSIDE the workspace (The
+# Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
+# the project asserts about itself (project time is git's); everything else is
+# scanned from source on read. `make gate` does NOT build this crate:
+cargo test --manifest-path tools/digest/Cargo.toml
+cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # make doctor's self-map
+cargo run --manifest-path tools/digest/Cargo.toml -- render decisions  # docs/digest/decisions-in-force.md
+cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/digest/intent-vs-reality.md
+
 # Generated-artifact freshness. The single source of truth is
 # scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
-# registry/manifest dumps, lab studies, the type-audit report); `make
-# rebaseline` and CI both call it, so they cannot silently diverge:
+# registry/manifest dumps, lab studies, the type-audit report, the digest's
+# decision index and delta report, the Domesday survey); `make rebaseline`
+# and CI both call it, so they cannot silently diverge:
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/
 # docs/audits/ is in that list — the type-audit report drifts on any
-# pub-boundary change, and omitting it is a common miss.
+# pub-boundary change, and omitting it is a common miss. So is docs/digest/
+# (The Digest): the in-force decision index drifts whenever a decision record
+# is added or superseded, and the delta report whenever the registry moves.
+# book/src/domesday/ (The Domesday) is in the list too: it is a pure read over
+# the committed census (never re-runs one), so it drifts whenever that census
+# CSV changes — including a census refresh that lands with no other code
+# change at all.
+# THE HAZARD THAT ADDING IT EXPOSED: `git diff --exit-code <path>` is silently
+# VACUOUS against a path with no index entry, so the FIRST commit that
+# introduces a new generated directory must `git add` it before the check can
+# ever fail. Nothing in regenerate-artifacts.sh guards that.
 # **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
 # workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
 # invisible until someone runs it.
@@ -257,8 +317,13 @@ Cross-domain communication uses only the kernel's trace protocol:
 - **Facts** — subject/predicate/object envelope, append-only, contradiction-
   checked against the concept registry (predicates registered per domain;
   naming conventions are in the book's concept-registry chapter).
-- **Phenomena** — the universal read: salience-ranked observations. Consumers
-  (e.g. religion) must never learn which system produced a phenomenon.
+- **Phenomena** — the universal read: salience-ranked observations. The
+  channel does not carry a producer, so a consumer (religion, say)
+  receives *appearances*, never sources — decision 0003 states this as a
+  cost it accepts ("a consumer **may** never learn which system produced a
+  given observation"), not as a prohibition. The distinction matters: a
+  consumer must not be *handed* a source, but a future campaign is free to
+  let an observer **achieve** an identification and be wrong about it.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
 **Provider tiers coexist:** the tier-0 `ConstantSun` and the generated star

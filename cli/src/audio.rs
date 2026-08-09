@@ -25,8 +25,8 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     // Speaker-only: `sample_names_for` needs language, so cover exactly the
     // minded kinds that speak. The psyche registry can hold a minded
     // non-speaker, so skip any kind absent from the articulation registry; the
-    // four peoples and the three dragons (speakers since The Solitary Tongue)
-    // are all covered.
+    // six settling peoples and the three dragons (speakers since The Solitary
+    // Tongue) are all covered.
     let speakers = hornvale_language::articulation_registry();
     for (kind, mind) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
@@ -34,11 +34,11 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
         }
         let species = kind;
         // The Cloister: a Solitary speaker (a dragon) carries no society
-        // vector — resolve the goblin baseline, same as the phonology page.
+        // vector — resolve the manikin, same as the phonology page.
         let society = hornvale_species::society_registry()
             .get(kind)
             .copied()
-            .unwrap_or(hornvale_species::SocietyVector::baseline());
+            .unwrap_or(hornvale_species::SocietyVector::MANIKIN);
         for (_, name) in crate::phonology::sample_names_for(&world, species.0, mind, &society) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {

@@ -160,8 +160,10 @@ fn rivers(
 /// [`LANDMASS_MIN_CELLS`]; 115 rivers at catchment >= 24). If these disagree,
 /// every downstream number here is suspect — so this prints them rather than
 /// leaving the flow-forest walk unchecked.
+/// claim: structural(seed: 42) — off-gate measurement: builds one world to
+/// `BuildDepth::Terrain`
 #[test]
-#[ignore = "measurement: builds one full world; run explicitly with --ignored"]
+#[ignore = "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored"]
 fn watershed_individuation_matches_the_spec_counts() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let built = build_world_to_with_artifacts(
@@ -300,6 +302,7 @@ fn collision_pct(sites: &[Site]) -> f64 {
 /// settlements). This re-takes it there, like-for-like, so the difference
 /// between the spec's table and the battery's can be attributed: either main
 /// moved again, or a one-world arity table is small-n noise.
+/// claim: structural(seed: 42) — off-gate measurement: builds one full world
 #[test]
 #[ignore = "measurement: builds one full world; run explicitly with --ignored"]
 fn watershed_seed_42_arity_like_for_like() {
@@ -357,6 +360,8 @@ fn watershed_seed_42_arity_like_for_like() {
     println!("(spec §5 predicts the campaign as a whole reaches below 15%)");
 }
 
+/// claim: readout(off-gate, measurement:) — per-seed watershed-site table
+/// over BATTERY
 #[test]
 #[ignore = "measurement: builds eight full worlds; run explicitly with --ignored"]
 fn watershed_baseline_and_multipliers() {

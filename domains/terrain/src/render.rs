@@ -631,6 +631,8 @@ mod tests {
         assert_eq!(elevation_ascii(&geo, &globe), map);
     }
 
+    /// claim: invariant(forall-seed) — bounded displacement, exact-at-coast-
+    /// distance property
     #[test]
     fn refinement_respects_the_prior() {
         for seed in [7u64, 42, 99] {

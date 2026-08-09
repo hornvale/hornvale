@@ -1,35 +1,39 @@
 # The Peoples of Seed 42
 
-The land holds 250 settlement(s).
-The chief bugbear settlement, Gootoo, holds 110 souls amid tropical-rainforest.
-The chief gnoll settlement, Pzofdzhaxzngavsma, holds 112 souls amid tropical-seasonal-forest.
-The chief goblin settlement, Beobee, holds 88 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Geoge, holds 82 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Raxarora, holds 117 souls amid tropical-rainforest.
+The land holds 124 settlement(s).
+The chief bugbear settlement, Godogodo, holds 63 souls amid tropical-rainforest.
+The chief desert-dwarf settlement, Padgad, holds 64 souls amid savanna.
+The chief gnoll settlement, Gshoovznga, holds 21 souls amid desert.
+The chief goblin settlement, Bootoe, holds 34 souls amid temperate-forest.
+The chief gully-dwarf settlement, Qatgoqnga, holds 36 souls amid tropical-seasonal-forest.
+The chief hill-dwarf settlement, Qagba, holds 33 souls amid temperate-forest.
+The chief hobgoblin settlement, Toa, holds 72 souls amid tropical-seasonal-forest.
+The chief human settlement, Ngezmongato, holds 31 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Roarora, holds 65 souls amid temperate-forest.
 
 ```text
                                                                         
-                   oooooooooo                  oooo                     
-                         ooooo             ooooo@o                      
+                         o o                                            
+                          oo                o  o                        
                                                                         
                                                                         
-                                                   oo                   
+                                                                        
+                                                    o                   
+                                  o                 o                   
+                                                                        
+                                               o                        
                                                   ooo                   
-                                                  ooo                   
+                                                  oooo                  
+                                                   ooo                  
+                                                                        
+                    o                                                   
+                    o                                                   
                                                                         
                                                                         
+                    o                                                   
+                    @oo    o           o                                
                                                                         
-                                                                        
-                                                                        
-                                                                        
-                   oo                                                   
-                   oo                                                   
-                                                 o                      
-                                                 oo                     
-                                                                        
-                   ooooo                                                
-                   ooo     o                                            
-                                                                        
+                       o                                                
                                                                         
                                                                         
 ```

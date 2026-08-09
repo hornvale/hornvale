@@ -97,7 +97,8 @@ run -p hornvale -- concepts --manifest > book/src/reference/concept-manifest-gen
 run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
 run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
-run -p hornvale -- proto > book/src/reference/proto-goblinoid-generated.md
+run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-generated.md
+run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
 run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
 # The live-pane preamble is hand-authored framing (The Casement, decision
 # 0052): the possess dump replaces the whole file, so re-emit the preamble
@@ -153,10 +154,69 @@ rm -f "$possess_ot_tmp"
 # emptied the previously-pinned cell 36918 while its hand-authored paragraph
 # went on describing a lineage that no longer existed there; the drift check
 # passed throughout, since the *generated* half was current.
-history_site=28414
+#
+# The Contour (position-aware conflict, decision 0096): the same class of
+# drift recurred a second time. The paragraph below IS the hand-authored
+# half, embedded here rather than typed directly into the committed .md —
+# editing the committed file alone (as a merge-reconciliation pass once did)
+# does not survive the next `make rebaseline`, which re-emits this exact
+# text. Fix drift HERE, not in the .md file, or the fix is silently undone by
+# the next regen.
+#
+# The Contour epoch v2 (history/bake/v2, the BAKE label bump): a THIRD
+# occurrence of the same drift class, from the label bump alone rather than
+# from the mechanism itself — cell 28414 emptied again. Repointed at cell
+# 1400, chosen because it is the richest single-people stratigraphy in the
+# new world and because its shape is a small showcase of the mechanism this
+# whole campaign adds: several of its completed layers ended not in cold but
+# in eviction by a RIVAL gnoll band wanting the same defensible ground — a
+# people fighting only itself over position, which a single strength scalar
+# could not do.
+#
+# The Generalist (human joins the roster): a FOURTH occurrence of the same
+# drift class, from a new competing people entering the settlement packer's
+# roster rather than from any label or mechanism change — cell 1400 is still
+# the richest single-people (all-gnoll) stratigraphy, but the packer's
+# resolution against a sixth competitor shifted its stratigraphy from 20
+# layers (year 500-1950) to 16 (year 550, still standing at the time of this
+# regen). The counts below are read off the live block each time this
+# comment is touched, not carried forward from memory of the last count.
+#
+# The Tolerance (warlikeness became a per-settlement draw instead of a
+# per-species constant): a FIFTH occurrence, and the first that had to move
+# the SITE rather than only re-count it. Cell 1400 collapsed to two layers,
+# one of them zero-tenure — no longer a showcase for stratigraphy at all.
+# Re-found by enumerating occ-site over the live seed-42 ledger: cell 21953
+# is now the richest single-people (all-gnoll) column at 8 layers, and it is
+# the better fit for this page's own thesis besides — it is genuinely
+# CONTESTED, three of its seven completed layers ending in flight from
+# another gnoll band and three more ending because the occupants won
+# somewhere else and carried the settlement onto the ground they took.
+# (Cell 3518 has 9 layers but every one of them ends in ice or famine, which
+# would leave the page titled "The Contested Clearing" describing a quiet
+# one.) All counts below re-read off the live block, per the rule above.
+# Repointed from cell 21953 by The Tense: under era-varying capacity that cell
+# holds no column at all, while 3293 carries sixteen layers. Repointing is
+# legitimate HERE and was not when this page last went empty -- the earlier
+# emptiness meant the world had no deep history to show, and moving the camera
+# would have hidden a null result.
+# Repointed AGAIN from 3293 by The Delvers (C2c): three new settling peoples
+# re-decide settlement placement on every seed, and 3293 went empty. Same test
+# as before -- is the WORLD empty, or only this cell? -- and the world is not:
+# scanning occ-site over the seed-42 sky world, cell 5508 carries ELEVEN
+# layers. So the camera moved and the null result is intact.
+# Two honest notes, since a repointing is exactly where a quiet claim can slip
+# in. (1) The deepest column on this seed is now 11 where it was 16; that is a
+# reported number and this script asserts NO mechanism for the drop, because a
+# roster change moves several things at once. (2) 5508 is all-kobold and stays
+# a genuine fit for the page's title -- six of its layers end in flight from
+# other kobolds and four more end because the occupants won ground elsewhere
+# and carried the settlement onto it. All counts below are re-read off the live
+# block, per the rule above.
+history_site=5508
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
-    printf '# The Abandoned Clearing of Seed 42\n\n'
+    printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
     printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
@@ -165,18 +225,22 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'peoples have failed on it. Every one of them arrived the same way: fleeing\n'
-    printf 'the ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
-    printf 'finding the same ground. Bugbears held it seven times, then hobgoblins\n'
-    printf 'twice, then bugbears three times more, from the year 1175 to the year 1725 —\n'
-    printf 'and what the layers show is not progress but repetition: every steading\n'
-    printf 'arrives classical and ends classical, and every one of the twelve held the\n'
-    printf 'ground for exactly twenty-five years. Nor does the count improve: seven\n'
-    printf 'souls in the deepest layer, then six, five, seven, six, five, six, eight,\n'
-    printf 'six, four, three, and three in the last. Not one of the twelve was taken by\n'
-    printf 'force — every single one was ended by the cold, or by ground that stopped\n'
-    printf 'feeding them. What is left in the grass is potsherds, the low turf-lines of\n'
-    printf 'the dwellings, and a scatter of worked flint.\n\n'
+    printf 'kobold steadings have risen on it, one settling atop the ruins of the\n'
+    printf 'last, from the year 625 down to the present. Every one of the eleven\n'
+    printf 'completed layers ended at the hands of other kobolds: seven fell to a\n'
+    printf 'rival band, and four were not evictions at all — the occupants had\n'
+    printf 'just taken better ground from a neighbour and carried the settlement\n'
+    printf 'there, so the layer closes on a departure rather than a defeat. This\n'
+    printf 'is a people with only itself to fight, contesting one rise in a\n'
+    printf 'neighbourhood it had already filled.\n\n'
+    printf 'The cold is in this column, but never as an ending. Not one layer\n'
+    printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
+    printf 'driven off one of four neighbouring clearings. Four of the twelve\n'
+    printf 'layers did not last a single year — founded and put to flight in the\n'
+    printf 'same year they began, which is what the record looks like when refuge\n'
+    printf 'and contest are the same ground. The twelfth was founded in 1950 and\n'
+    printf 'stands yet, fifty years on: some thirteen souls, two huts and a\n'
+    printf 'granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -348,10 +412,59 @@ else
     echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 on the canonical box to refresh; ~7 min, decision 0063)" >&2
 fi
 
+# RE-DERIVE every census schema from the CURRENT metric registry.
+#
+# WHY THIS EXISTS. `schema.json` is written by whichever branch last ran the
+# census (publish.rs), so it carries the schema FIELDS that branch knew about —
+# not the ones the registry has now. A campaign that adds a per-metric field
+# (The Domesday added `domain` and `role`) silently invalidates every committed
+# schema until someone re-derives it by hand. That happened TWICE in one
+# campaign: once from The Delvers' census, once from The Assize's, each time
+# caught only by a test that went red naming the offending metric.
+#
+# `backfill-schema` re-renders the manifest from the committed rows.csv against
+# the live registry. It builds NO world, so this is safe to run unconditionally
+# and costs nothing. It must run AFTER the census block above (so a fresh run's
+# rows are re-schema'd) and BEFORE the domesday survey below (which reads it).
+#
+# The `"backfilled": true` marker the re-render adds is accurate: a committed
+# schema IS derived after the fact relative to the census run that wrote its
+# rows.
+echo "regenerate-artifacts: re-deriving census schemas from the current registry" >&2
+for study in the-census census-of-the-meeting; do
+    rows="book/src/laboratory/generated/$study/rows.csv"
+    schema="book/src/laboratory/generated/$study/schema.json"
+    if [ -f "$rows" ]; then
+        # Write via a temp so a failure cannot leave a truncated manifest.
+        run -p hornvale -- lab backfill-schema "studies/$study.study.json" "$rows" > "$schema.tmp"
+        mv "$schema.tmp" "$schema"
+    fi
+done
+
+# The Domesday survey (2026-08-08 campaign): reads the COMMITTED census at
+# book/src/laboratory/generated/the-census/ (whatever the last HV_CENSUS=1
+# refresh left there, not a fresh run) and renders book/src/domesday/ — the
+# index plus one page per domain. It never triggers a census itself (spec
+# §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
+# above.
+echo "regenerate-artifacts: the domesday survey" >&2
+run -p hornvale -- lab domesday
+
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
 echo "regenerate-artifacts: trope coverage report" >&2
-run -p hornvale -- tropes report > docs/audits/trope-coverage.md
+run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
+run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
+  > docs/audits/trope-coverage-tvtropes-2012.md
+run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
+
+echo "regenerate-artifacts: the digest's in-force decision index" >&2
+run --manifest-path tools/digest/Cargo.toml -- render decisions \
+  > docs/digest/decisions-in-force.md
+
+echo "regenerate-artifacts: the digest's intent-vs-reality delta report" >&2
+run --manifest-path tools/digest/Cargo.toml -- render delta \
+  > docs/digest/intent-vs-reality.md
 
 echo "regenerate-artifacts: done." >&2

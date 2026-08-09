@@ -286,14 +286,18 @@ impl Ledger {
     /// type-audit: bare-ok(identifier-text)
     pub fn value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
         match &self.index {
-            Some(idx) => {
-                // first fact (commit order) for (subject, predicate)
-                let first = idx
-                    .positions_for_subject(subject)
-                    .into_iter()
-                    .find(|&p| self.facts[p].predicate == predicate);
-                first.map(|p| &self.facts[p].object)
-            }
+            // First fact in COMMIT order for (subject, predicate) — the
+            // smallest position, which is what the old
+            // `positions_for_subject().sort().find(predicate matches)` shape
+            // computed the expensive way: it materialized and sorted every
+            // position for the SUBJECT, then scanned for the predicate. The
+            // SPO index is keyed on the predicate already, so `min` over the
+            // pair's own postings is the same answer without the `Vec` or the
+            // sort. Profiled at ~10% of a `hornvale-book` render test.
+            Some(idx) => idx
+                .positions_for_subject_predicate(subject, predicate)
+                .min()
+                .map(|p| &self.facts[p].object),
             None => self.naive_value_of(subject, predicate),
         }
     }
@@ -417,10 +421,20 @@ impl Ledger {
     /// order. Contrast `value_of` (first object; the functional read).
     /// type-audit: bare-ok(identifier-text: predicate)
     pub fn latest_value_of(&self, e: EntityId, predicate: &str) -> Option<&Value> {
-        self.facts_about(e)
-            .filter(|f| f.predicate == predicate)
-            .last()
-            .map(|f| &f.object)
+        match &self.index {
+            // The `max` mirror of `value_of`'s `min` — same reasoning, same
+            // saving. `facts_about(e).filter(...).last()` walked (and sorted)
+            // every fact about the entity to keep the one at the end.
+            Some(idx) => idx
+                .positions_for_subject_predicate(e, predicate)
+                .max()
+                .map(|p| &self.facts[p].object),
+            None => self
+                .naive_facts_about(e)
+                .into_iter()
+                .rfind(|&p| self.facts[p].predicate == predicate)
+                .map(|p| &self.facts[p].object),
+        }
     }
 
     /// The entity's current kind label: the latest `instance-of` fact.
@@ -818,6 +832,8 @@ mod tests {
         (l, r, subjects)
     }
 
+    /// claim: invariant(forall-seed) — indexed facts_about/value_of agree with
+    /// a naive scan
     #[test]
     fn index_equals_scan_subject_and_predicate() {
         for seed in 0..64u64 {
@@ -849,6 +865,38 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — indexed `latest_value_of` agrees with a
+    /// naive scan.
+    ///
+    /// Its own test rather than a line inside
+    /// `index_equals_scan_subject_and_predicate`, because it guards the
+    /// opposite END of the posting list: `value_of` takes the first position
+    /// and this takes the last, and only a non-functional predicate can tell
+    /// the two apart. `random_ledger` commits bulk facts under `located-in`
+    /// (non-functional) for exactly that reason, so a subject here really does
+    /// carry many values and first != last.
+    #[test]
+    fn latest_value_of_equals_the_last_matching_fact_in_a_scan() {
+        for seed in 0..64u64 {
+            let (l, _r, subjects) = random_ledger(seed, 200);
+            for &s in &subjects {
+                let scan = l
+                    .naive_facts_about(s)
+                    .into_iter()
+                    .map(|p| l.fact_at(p))
+                    .rfind(|f| f.predicate == "located-in")
+                    .map(|f| &f.object);
+                assert_eq!(
+                    l.latest_value_of(s, "located-in"),
+                    scan,
+                    "latest_value_of seed {seed} subj {s:?}"
+                );
+            }
+        }
+    }
+
+    /// claim: invariant(forall-seed) — indexed query_by_object agrees with a
+    /// naive scan
     #[test]
     fn index_equals_scan_object() {
         for seed in 0..64u64 {

@@ -2,7 +2,7 @@
 //! living-community engine. It seeds an ancient world with a handful of
 //! proto-communities, steps epochs across paleoclimate era-variance, and
 //! resolves grow / found / migrate / raid / flee / collapse / resettle into
-//! an occupation skeleton (a `Vec<OccupationRecord>` — alive and dead).
+//! an occupation skeleton (a `Vec<BakeOccupation>` — alive and dead).
 //!
 //! It lives at the composition root because it reads multiple domains
 //! together (history's data model, paleoclimate's era masks, a demography
@@ -25,15 +25,17 @@
 //! Determinism: every arithmetic op stays in full `f64` precision (quantize
 //! only at the emit boundary, which is Task 4 — not here); the genesis draws
 //! derive per-people streams under `history/genesis/<people>`; the epoch
-//! dynamics draw sequentially from one `history/bake` stream in commit order;
+//! dynamics draw sequentially from one `history/bake/v2` stream in commit
+//! order (bumped from `history/bake` by The Contour — decision 0006, an
+//! epoch suffix, never a rename);
 //! neighbour candidates sort by `f64::total_cmp`. Same seed ⇒ byte-identical
 //! `records`.
 
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, CellMap, EntityId, Geosphere, KindId, Seed, Stream};
+use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
@@ -53,6 +55,147 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
     ns.sort();
     ns.dedup();
     ns
+}
+
+/// The aggregate ease of reaching `cell`: the summed `conductance` of every
+/// traversable edge into it (`conductance > 0.0` — ocean-touching adjacency
+/// edges are stored at exactly 0.0 and are not routes). Higher means more,
+/// and easier, ways in.
+///
+/// A pure function of the graph, with no time, seed, or bake state in it,
+/// which is what makes [`defensibility`] recomputable and testable. The
+/// graph is per-era, so this is too: a glacial low-stand that exposes a land
+/// bridge raises the ease of every cell it reaches.
+///
+/// The `conductance > 0.0` filter is intent-documenting, not behaviourally
+/// load-bearing for this sum: `conductance` is never negative by domain
+/// convention (every producer in `graph_derive.rs` emits either `0.0` or a
+/// positive reciprocal), so a filtered-out `0.0` term would contribute
+/// nothing to the total even if the filter were removed. It stays because it
+/// says explicitly, at the call site, "only traversable edges count" —
+/// matching `traversable_neighbors`' idiom directly above — not because a
+/// test can observe it changing this function's output.
+///
+/// Reserved integration seam: this campaign's Task 3 wires this into
+/// `defensibility`, not yet present. Present in all builds (not
+/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
+/// module's tests until it lands.
+#[allow(dead_code)]
+fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .sum()
+}
+
+/// AUTHORED prior: the defensibility a wholly unobstructed approach tends to.
+/// Approached, never attained — `tanh` is asymptotic in both directions.
+/// Symmetric with `DEF_MAX` about 1.0, which is what lets the centred form
+/// put the median approach at exactly 1.0 (spec §2.3).
+/// type-audit: bare-ok(ratio: DEF_MIN)
+const DEF_MIN: f64 = 0.75;
+/// AUTHORED prior: the defensibility an infinitely dear approach tends to.
+/// type-audit: bare-ok(ratio: DEF_MAX)
+const DEF_MAX: f64 = 1.25;
+/// CALIBRATED (Task 2d): the pooled median `cost_exponent` over 756,510
+/// ordered pairs across seeds 1..=30, measured before any behavioural readout
+/// existed and frozen thereafter (spec §4.4). Centring here is what makes the
+/// MEDIAN approach in the world map to exactly 1.0. A save-format constant.
+/// type-audit: bare-ok(ratio: DEF_CENTER)
+const DEF_CENTER: f64 = 6.256709;
+/// AUTHORED: how many log-cost units the transition spans. A SHAPE parameter,
+/// not a scale of the quantity — the quantity's scale is `DEF_CENTER` — so
+/// this is authored at 1.0 rather than fitted. At this value the land
+/// population grades across 0.376, five times spec §4.4's trigger threshold.
+/// type-audit: bare-ok(ratio: DEF_SCALE)
+const DEF_SCALE: f64 = 1.0;
+
+/// How well `to` is defended against an approach from `from`: a strictly
+/// monotone, saturating function of the log traversal cost of the cheapest
+/// route between them. A multiplier on the HOLDER's side of the dominance
+/// test — the second contest axis (decision 0096 clause 1).
+///
+/// Reads the approach rather than the cell because the calibration found
+/// approach ease is two disjoint regimes — water-connected and land-only —
+/// which no single transform over an aggregate can grade (spec §2.3a). A raid
+/// arrives along one route, and what shelters the defender is the resistance
+/// of that route.
+///
+/// Parallel edges resolve by MAXIMUM conductance: an attacker takes the
+/// easiest road, which is also why this cannot double-count the 6.7% of cells
+/// carrying duplicate `to` values.
+///
+/// Pure in `(graph, from, to)` — no seed, no time, no bake state — so it
+/// consumes no draw and cannot move stream consumption order. Returns
+/// `DEF_MAX` for a nonexistent or wholly impassable link, which no caller
+/// reaches: both call sites walk edges that exist.
+fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    let best = graph
+        .edges(from)
+        .iter()
+        .filter(|e| e.to == to && e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .fold(0.0_f64, f64::max);
+    if best <= 0.0 {
+        return DEF_MAX;
+    }
+    let cost_exponent = -hornvale_kernel::math::ln(best);
+    let shaped = hornvale_kernel::math::tanh((cost_exponent - DEF_CENTER) / DEF_SCALE);
+    DEF_MIN + (DEF_MAX - DEF_MIN) * (shaped + 1.0) / 2.0
+}
+
+/// Test-only re-export of [`defensibility`] so the property battery in
+/// `tests/defensibility_field.rs` can reach it without making the field part
+/// of this crate's real public surface.
+/// type-audit: bare-ok(ratio: return)
+#[doc(hidden)]
+pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    defensibility(graph, from, to)
+}
+
+/// The per-cell VIEW over [`defensibility`] (spec §2.4): the MINIMUM of
+/// `defensibility(graph, from, cell)` over every `from` with a traversable
+/// approach into `cell` — its weakest point, the quantity Ammann's envelope
+/// model cares about. A place is only as defensible as its worst way in,
+/// which is the same principle the mechanism itself applies from the other
+/// end: `defensibility` resolves PARALLEL edges between the same pair of
+/// cells by MAXIMUM conductance (an attacker always takes the easiest of
+/// several roads to the SAME neighbour); this view takes the MINIMUM across
+/// DISTINCT neighbours (a defender cannot choose which of several different
+/// approaches an attacker picks). Two ends of one principle.
+///
+/// This is a view over the mechanism, not the mechanism: nothing in the bake
+/// reads it (raiding still resolves per-edge, per spec §2.3a's finding that
+/// no single aggregate grades both the water-connected and land-only
+/// regimes), and it draws no seed and consumes no stream — pure in
+/// `(graph, cell)`. Built for the almanac and for M4
+/// (`defensibility-capacity-rank-corr`), per spec §2.4.
+///
+/// `DEF_MAX` — the same ceiling `defensibility` itself returns for a
+/// nonexistent or wholly impassable link — for a cell with NO traversable
+/// approach at all: an unreachable cell cannot be attacked, so it reads as
+/// maximally (vacuously) defended rather than undefined.
+///
+/// Reads `cell`'s own edge list rather than scanning every node in the graph
+/// for one pointing in: `ConnectionGraph::add_edge` mirrors every edge onto
+/// both endpoints with the SAME conductance (its own doc comment), so this
+/// graph is genuinely undirected, and `defensibility(graph, from, cell)` —
+/// which internally reads `graph.edges(from)` — always agrees with the
+/// matching entry already sitting in `graph.edges(cell)`. No reverse-
+/// adjacency index is needed to enumerate "every `from` with an edge into
+/// `cell`"; `traversable_neighbors(graph, cell)` already is that set.
+/// type-audit: bare-ok(ratio: return)
+pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    let approaches = traversable_neighbors(graph, cell);
+    if approaches.is_empty() {
+        return DEF_MAX;
+    }
+    approaches
+        .into_iter()
+        .map(|from| defensibility(graph, from, cell))
+        .fold(f64::INFINITY, f64::min)
 }
 
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
@@ -97,20 +240,50 @@ const SETTLED_PREMIUM: f64 = 0.25;
 /// the people on it. Well below `COLLAPSE_PRESSURE`: a community can be
 /// worthless to a raider long before it starves out altogether.
 const NO_SPOILS_PRESSURE: f64 = 1.0;
-/// `threat_response` (flee 0 ↔ stand 1) at or above which a people takes the
-/// initiative at all — spec §4.2a's durable inhibition. Authored species data,
-/// never drawn.
+/// Drawn `threat_response` (flee 0 ↔ stand 1) at or above which a **community**
+/// takes the initiative at all — spec §4.2a's durable inhibition.
 ///
-/// **Disclosure on the value.** This gate's stated purpose is to make raiding
-/// heterogeneous *across peoples*; a threshold that admits the whole roster, or
-/// vetoes the whole roster, is inert by construction and buys nothing. 0.6 is
-/// chosen to sit between the registry's declared baseline temperament (goblin,
-/// 0.5) and the assertive peoples (hobgoblin 0.7, kobold and bugbear 0.8), so
-/// exactly one of the four settling peoples declines to raid. That is a choice
-/// about what the gate *means*, made against the authored roster — not one
-/// fitted to a measured outcome; the cascade metric was not consulted in
-/// picking it. A save-format constant: changing it re-fights every world's
-/// history.
+/// **Since The Tolerance this gate sorts settlements, not peoples.** What it
+/// compares is [`Community::disposition`]: a value drawn per settlement from
+/// its people's authored `threat_response` (the mean) and `Dispersion::mind`
+/// (the standard deviation), keyed on that settlement's own `(site, founded
+/// year)`. Every earlier reading of this constant as a per-species flag — "this
+/// people raids, that one does not" — is retired. No people is on one side of
+/// it any more; each is a *distribution* straddling it, and every one of the
+/// six settling peoples has settlements on both sides:
+///
+/// ```text
+///   people      authored  σ(mind)  half-width  drawn range     ≈ share ABOVE 0.6
+///   ----------  --------  -------  ----------  --------------  -----------------
+///   gnoll           0.85     0.22       0.381  [0.47, 1.00]                  83 %
+///   kobold          0.80     0.12       0.208  [0.59, 1.00]                  98 %
+///   bugbear         0.80     0.20       0.346  [0.45, 1.00]                  79 %
+///   hobgoblin       0.70     0.10       0.173  [0.53, 0.87]                  79 %
+///   human           0.50     0.35       0.606  [0.00, 1.00]                  42 %
+///   goblin          0.50     0.25       0.433  [0.07, 0.93]                  38 %
+/// ```
+///
+/// (Half-width is √3·σ, the uniform draw's support; see
+/// [`crate::disposition::people_disposition`]. Shares are of the *clamped*
+/// support, and the clamp cannot move them: clamping to `[0, 1]` fixes every
+/// value already inside it, so no draw crosses a threshold strictly inside
+/// `(0, 1)` because of it.)
+///
+/// **Disclosure on the value, kept because it is still the reason 0.6 is 0.6.**
+/// The gate's purpose was to make raiding heterogeneous; a threshold admitting
+/// or vetoing the whole roster is inert by construction. 0.6 was chosen to sit
+/// between the manikin's neutral midpoint — where goblin's authored temperament
+/// sits (0.5) — and the assertive peoples (hobgoblin 0.7, kobold and bugbear
+/// 0.8, gnoll 0.85), so exactly one of the five settling peoples declined to
+/// raid on the pre-human roster, and (The Generalist) two of six once human was
+/// authored at the same 0.5. That was a choice about what the gate *means*,
+/// made against the authored roster and never fitted to a measured outcome; the
+/// cascade metric was not consulted in picking it. Neither `threat_response`
+/// nor this constant has moved since, including in The Tolerance — what moved
+/// is that the roster's temperaments became distributions and the comparison
+/// now happens per settlement.
+///
+/// A save-format constant: changing it re-fights every world's history.
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Pressure at or above which a community starves out (Famine). `pub` so the
 /// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can
@@ -225,18 +398,36 @@ const NEUTRAL_HORIZON: f64 = 0.5;
 /// authoring it as a personality.
 ///
 /// **Why this matters beyond flavour.** The per-people axis
-/// ([`Bake::horizon_of`]) reaches only three values patron-side, and the short
-/// extreme (bugbear, 0.3) is also the only `Communal` short-horizon people, so
-/// a strategy read off `time_horizon` alone is partly confounded with
-/// `sociality` in any world-level reading. The holdings count is a property of
-/// the relation table, so it varies independently of that confound.
+/// ([`Bake::horizon_of`]) is coarse and is partly confounded with `sociality`,
+/// so a strategy read off `time_horizon` alone cannot be cleanly attributed in
+/// any world-level reading. The holdings count is a property of the relation
+/// table, so it varies independently of that confound.
+///
+/// The Tolerance (2026-08-04) re-derived that, because the numbers behind it
+/// moved: this used to say the axis reaches only THREE values patron-side and
+/// that the short extreme (bugbear, 0.3) is the only `Communal` short-horizon
+/// people. Both halves are false, and the second one had ALREADY been false
+/// before this campaign — The Vacancy's gnoll is authored at horizon 0.2 with
+/// `threat_response` 0.85, so it has cleared the raid gate and outflanked
+/// bugbear on the short end ever since, and it is `Hierarchic`, not `Communal`.
+/// The Tolerance then falsified the first half too: `threat_response` is drawn
+/// per settlement, so no people is vetoed out of patronhood and the whole
+/// roster is reachable at **five distinct thresholds** ([`Bake::min_vassal`]).
+/// The conclusion survives both: five cuts of one band is still coarse, and the
+/// two `Communal` peoples remain bugbear (0.3) and kobold (0.8), so the horizon
+/// axis still does not vary independently of social form across the roster.
 ///
 /// Three is chosen against the measured range rather than fitted: live worlds
 /// reach `max_subordinates` 6, so a patron at the observed maximum applies
 /// `1/(1 + 5/3) = 0.375` of its authored horizon — a kobold at the top of the
-/// distribution behaves about as an authored bugbear does, which is the
-/// intended reading (the biggest holder is as short-sighted as the shortest-
-/// sighted people) and not further. A save-format constant: changing it
+/// distribution behaves about as an authored bugbear does (0.8 × 0.375 = 0.3,
+/// bugbear's authored value exactly), which is the intended reading and not
+/// further. Since The Tolerance made gnoll's 0.2 reachable patron-side, that is
+/// the SECOND-shortest authored horizon rather than the shortest, so the
+/// portfolio effect no longer quite reaches the short end of the axis — which
+/// is the conservative direction, and is the same reading it always was: the
+/// biggest holder becomes about as short-sighted as a genuinely short-sighted
+/// people, never more so than any of them. A save-format constant: changing it
 /// re-fights every world's history.
 const PORTFOLIO_HALVING: f64 = 3.0;
 /// The share of itself a vassal hands over in ONE epoch above which it stops
@@ -352,12 +543,50 @@ pub const CASCADE_DEPTH_CAP: u32 = 256;
 /// 5-8, … up to 2^11+.
 const CASCADE_BINS: usize = 12;
 
+/// A handle to a community *inside the bake*, and nowhere else.
+///
+/// Deliberately not an `EntityId`: these live for the duration of one
+/// simulation and are translated to real entities at emit. Deliberately not
+/// `Serialize`/`Deserialize` either — a handle that never reaches the ledger
+/// has no business being saveable, and `EntityId` deriving serde is exactly
+/// what made the two easy to confuse.
+/// type-audit: bare-ok(constructor-edge)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BakeId(pub u64);
+
+/// One span of a people occupying a site, as the **bake** holds it. The
+/// bake-side half of the pair.
+///
+/// Unlike [`OccupationRecord`] it knows its community and its lineage, because
+/// the simulation tracks both; neither survives emit, because neither is
+/// committed as a fact.
+///
+/// It deliberately does **not** delegate `is_alive`/`tenure` the way
+/// [`OccupationRecord`] does. Bake-side callers write `.core.is_alive()`, and
+/// the extra word is the point: inside the bake an occupation is one of
+/// thousands being stepped, and the reminder that the liveness question is
+/// asked of the shared core — not of the handle-bearing wrapper — is worth
+/// more than the brevity.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BakeOccupation {
+    /// The facts both sides agree on.
+    pub core: Occupation,
+    /// The community this occupation belongs to.
+    pub community: BakeId,
+    /// The lineage this occupation continues.
+    pub lineage: BakeId,
+    /// How the occupation began.
+    pub founded_from: Founding<BakeId>,
+    /// How the occupation ended.
+    pub ended_by: Ended<BakeId>,
+}
+
 /// Configuration for a deep-history bake: the span of years to simulate, the
 /// epoch step, and the authored per-people psychology the raid and tribute
 /// rules read (the raid rule's durable inhibition, and the subordinate's
 /// concealment). Years are bare `f64` (absolute, no wall-clock). Not `Copy`:
 /// the authored maps are owned, and the config is always passed by reference.
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: disposition_spread), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
@@ -366,13 +595,33 @@ pub struct BakeConfig {
     pub end_year: f64,
     /// The step between epochs, in years.
     pub epoch_years: f64,
-    /// Each people's `threat_response` (flee 0 ↔ stand 1) — authored species
-    /// data, never drawn, looked up by the composition root and handed in here
-    /// because the bake reads only kernel types. A people below
-    /// `RAID_DISPOSITION_MIN` never takes the initiative (spec §4.2a's durable
-    /// inhibition); a people ABSENT from the map is not vetoed, so a bake given
-    /// no disposition data behaves exactly as it did before the gate existed.
+    /// Each people's authored `threat_response` (flee 0 ↔ stand 1) — species
+    /// data, looked up by the composition root and handed in here because the
+    /// bake reads only kernel types.
+    ///
+    /// **Since The Tolerance this is the MEAN of a distribution, not the value
+    /// the gate reads.** Each community draws its own `threat_response` out of
+    /// `(this location, the matching `disposition_spread` entry)` at
+    /// [`Bake::open`], keyed on its own `(site, founded year)`
+    /// ([`crate::disposition::drawn_threat_response`]); the drawn value is what
+    /// [`Bake::takes_the_initiative`] compares against `RAID_DISPOSITION_MIN`.
+    /// A people ABSENT from this map is not vetoed at all — it draws nothing
+    /// and passes the gate unconditionally, so a bake given no disposition data
+    /// behaves exactly as it did before the gate existed.
     pub disposition: BTreeMap<KindId, f64>,
+    /// Each people's `Dispersion::mind` — the standard deviation of the
+    /// distribution whose mean is the matching `disposition` entry (spec D2),
+    /// resolved by the composition root off `hornvale_species::
+    /// dispersion_registry()` and handed in as a bare ratio for the same
+    /// kernel-types-only reason.
+    ///
+    /// **A people absent here draws with spread 0**, i.e. exactly its authored
+    /// location — the model's behaviour before The Tolerance. That is the
+    /// fail-closed direction on purpose: a roster this registry does not cover
+    /// (Lab's synthetic solo kinds re-key goblin's components under a fresh
+    /// `KindId`) keeps a uniform people rather than acquiring a silent,
+    /// unauthored spread.
+    pub disposition_spread: BTreeMap<KindId, f64>,
     /// Each people's `SocietyVector.in_group_radius` (insular 0 ↔ expansive 1)
     /// — authored species data, never drawn, looked up by the composition root
     /// and handed in here because the bake reads only kernel types. It sets
@@ -391,13 +640,40 @@ pub struct BakeConfig {
     /// axis, NOT zero, which would mean "strip to the floor" and is the
     /// harshest patron in the family rather than an unaffected one.
     ///
-    /// **Only three values are reachable patron-side on the shipped roster.**
-    /// The four settling peoples are authored bugbear 0.3 / goblin 0.5 /
-    /// hobgoblin 0.5 / kobold 0.8, and goblin's `threat_response` (0.5) sits
-    /// under `RAID_DISPOSITION_MIN`, so a goblin community never takes the
-    /// initiative and therefore never becomes a patron. The variety this rule
-    /// can produce is bounded by that: three horizons, two of them distinct
+    /// **All six peoples are reachable patron-side, and that changed in The
+    /// Tolerance.** The six settling peoples are authored gnoll 0.2 / bugbear
+    /// 0.3 / goblin 0.5 / hobgoblin 0.5 / human 0.75 / kobold 0.8. Until this
+    /// campaign, goblin's and human's `threat_response` (both authored 0.5)
+    /// sat under `RAID_DISPOSITION_MIN` *as constants*, so no goblin or human
+    /// community ever took the initiative, never became a patron, and their
+    /// horizons were unreachable — leaving four peoples, three of them away
     /// from the neutral middle.
+    ///
+    /// That arithmetic is gone. `threat_response` is now drawn per settlement
+    /// (`disposition`/`disposition_spread` above), so a *particular* goblin or
+    /// human community can land above 0.6 and clear the gate. goblin's authored
+    /// σ(mind) is 0.25 (half-width √3·σ = 0.433, so its draw spans ≈[0.07, 0.93]
+    /// and about 38% of it clears 0.6) and human's is 0.35 (half-width 0.606,
+    /// spanning the whole clamped axis, about 42% of it above the gate): both
+    /// peoples reach patronhood on some settlements and not others.
+    ///
+    /// **Counted three ways, because two of them are easy to conflate**
+    /// (`NEUTRAL_HORIZON` is 0.5):
+    ///
+    /// - **six PEOPLES** can now hold a vassal, up from four;
+    /// - they take **five DISTINCT VALUES** — `{0.2, 0.3, 0.5, 0.75, 0.8}` —
+    ///   because goblin and hobgoblin are both authored at 0.5;
+    /// - **four of those peoples sit AWAY FROM the neutral middle** (gnoll,
+    ///   bugbear, human, kobold), on the four values `{0.2, 0.3, 0.75, 0.8}`;
+    ///   goblin and hobgoblin sit exactly *at* it and add no variety at all.
+    ///
+    /// So the variety this rule can produce is bounded by four horizons that
+    /// differ from the middle, not six — and, since the gate is now a draw, by
+    /// which *settlements* rather than which *peoples* happened to draw boldly.
+    /// ([`Bake::min_vassal`] counts the same roster in a fourth way — five
+    /// distinct *thresholds* — because it maps these values through a scale
+    /// factor; both counts are stated there in full so neither has to be
+    /// re-derived from this one.)
     pub time_horizon: BTreeMap<KindId, f64>,
 }
 
@@ -411,6 +687,7 @@ impl BakeConfig {
             end_year: 2000.0,
             epoch_years: 25.0,
             disposition: BTreeMap::new(),
+            disposition_spread: BTreeMap::new(),
             in_group_radius: BTreeMap::new(),
             time_horizon: BTreeMap::new(),
         }
@@ -424,7 +701,7 @@ impl BakeConfig {
 #[derive(Clone, Debug)]
 pub struct History {
     /// Every occupation record, in commit (creation) order.
-    pub records: Vec<OccupationRecord>,
+    pub records: Vec<BakeOccupation>,
     /// The standard-day/year the bake closed at.
     pub now: f64,
     /// The tribute relations still standing at `now`, in subordinate order.
@@ -439,16 +716,16 @@ pub struct History {
 
 /// A standing tribute relation as it stood at `now`, carried out of the bake
 /// for emission. Both parties are named by their **community handle** (the
-/// `community` field of an [`OccupationRecord`]), not by a bake-internal index,
+/// `community` field of a [`BakeOccupation`]), not by a bake-internal index,
 /// so this survives the bake it came from — the same translation `Ended::By`
 /// and `Founding::From` already rely on.
 /// type-audit: bare-ok(count: since)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TributeRelation {
     /// The community that pays.
-    pub subordinate: EntityId,
+    pub subordinate: BakeId,
     /// The community that collects.
-    pub patron: EntityId,
+    pub patron: BakeId,
     /// The standard day this relation was established: when the *current*
     /// patron took it over, not when the subordinate first began paying
     /// somebody. A patronage transfer re-establishes it, and so does a
@@ -618,7 +895,7 @@ impl History {
     /// `tribute` likewise starts empty — a hand-built history has no relation
     /// table behind it; a test that wants one assigns the field directly.
     /// type-audit: bare-ok(count: now)
-    pub fn new(records: Vec<OccupationRecord>, now: f64) -> History {
+    pub fn new(records: Vec<BakeOccupation>, now: f64) -> History {
         History {
             records,
             now,
@@ -629,17 +906,27 @@ impl History {
 }
 
 /// One alive (or lately-dead) community's live state during the bake. The
-/// `record` index ties it to its `OccupationRecord`; population is carried in
+/// `record` index ties it to its `BakeOccupation`; population is carried in
 /// full `f64` precision.
 struct Community {
     /// Index into `Bake::records` of this community's occupation record.
     record: usize,
+    /// This community's people, as a **dense index into `Bake::caps`** — the
+    /// people's position in `Bake::peoples`, resolved once in [`Bake::open`].
+    ///
+    /// Denormalised from `records[record].core.people` deliberately. Every
+    /// capacity read needs it, including inside [`Bake::best_home`]'s ring scan,
+    /// and `kernel/CLAUDE.md`'s rule is that a dense index is a `Vec` position,
+    /// not a map key: a `BTreeMap<KindId, _>` lookup per cell per ring would be
+    /// a hot-path regression. The `KindId` remains the durable identity and the
+    /// only thing ever serialized (decision 0015); this is a per-build handle.
+    people_idx: usize,
     /// The cell this community currently occupies.
     site: CellId,
     /// The community's own entity handle.
-    id: EntityId,
+    id: BakeId,
     /// The lineage this community continues (inherited by daughters/refounds).
-    lineage: EntityId,
+    lineage: BakeId,
     /// Current population (full precision).
     population: f64,
     /// Whether the community is still alive.
@@ -648,6 +935,18 @@ struct Community {
     tech: TechHorizon,
     /// Per-people tech-advance offset (years), drawn at genesis.
     tech_offset: f64,
+    /// **This community's own drawn `threat_response`** — the raid gate's
+    /// input (The Tolerance). Drawn once at [`Bake::open`] from its people's
+    /// authored location and spread, keyed on this record's own `(site,
+    /// founded year)`, and never recomputed: a record's site and founding year
+    /// are immutable once opened, so caching the draw here is the same value
+    /// [`crate::disposition::settlement_disposition`] will report off the
+    /// committed ledger.
+    ///
+    /// `None` means the people carries no authored disposition at all and is
+    /// not vetoed — the fail-open the gate has always had, preserved through
+    /// the draw rather than around it.
+    disposition: Option<f64>,
     /// Accumulated wealth — tribute, stores, the granary. Feeds raiding
     /// strength but is NEVER eaten: it does not enter the pressure term, so a
     /// successful extractor does not starve itself on its own tribute (spec
@@ -679,7 +978,7 @@ struct Tribute {
     /// patron took it. **Two things re-establish it**: a patronage transfer
     /// (some rival out-muscled the incumbent) and a relocation that re-seats
     /// the patron ([`Bake::carry_portfolio_to`]), because the reseated lord is
-    /// a new community with a new [`EntityId`] and a fact naming it may not
+    /// a new community with a new [`BakeId`] and a fact naming it may not
     /// predate it. Carried only so the emitted fact can be dated by when it
     /// became true, exactly as an occupation's end-of-life facts are; no rule
     /// reads it.
@@ -783,18 +1082,49 @@ struct Bake<'a> {
     graphs: &'a [ConnectionGraph],
     /// Index into `graphs` of the era currently being stepped.
     cur_graph: usize,
-    /// Per-cell base carrying capacity.
-    capacity: &'a CellMap<f64>,
+    /// **Per-people** headcount capacity, one field per entry of `peoples` and
+    /// indexed by the same position (`Community::people_idx`). This replaced a
+    /// single species-blind `CellMap<f64>` (The Tilth): a cell's worth is a
+    /// property of the *pairing* of ground and people, not of the ground alone,
+    /// so gnoll's arid optimum and kobold's high band are no longer read
+    /// through one field that calls both marginal.
+    ///
+    /// **Build-local dense index, never identity** — the same contract
+    /// `per_species_capacity` (which produces these) and `HistoryPlacement.tag`
+    /// document. The composition root builds this slice and `peoples` from ONE
+    /// ordering; nothing here survives a save/load boundary.
+    /// **Indexed `[era][people]`** (The Tense §3.1). Capacity is no longer a
+    /// single present-day field multiplied by an era mask — it is rebuilt per
+    /// era, so an ice age makes ground *poor* rather than switching it off.
+    ///
+    /// The era index is [`Bake::cur_graph`], which already tracks exactly this:
+    /// the epoch loop sets it from `era_index_for` before stepping, and genesis
+    /// runs at 0, which `bake_eras` guarantees is the oldest era. One index for
+    /// the graph and the capacity means they cannot drift apart.
+    caps_by_era: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
+    /// The roster, in the order that indexes each era's capacity slice. Held so
+    /// [`Bake::open`] can resolve a `KindId` to its dense index once, at the only
+    /// place a community is created, rather than in the ring-scan hot paths.
+    peoples: &'a [KindId],
     /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
     river_prox: &'a CellMap<f64>,
     /// Cells habitable through the glacial maximum (migration preference).
     refugia: &'a CellMap<bool>,
+    /// The world's seed, kept so [`Bake::open`] can derive each community's
+    /// own disposition draw. It is NOT another dynamics stream: the draw hangs
+    /// off `settlement/disposition/v1`, keyed on the community's own `(site,
+    /// founded year)`, and never touches `Bake::stream`.
+    seed: Seed,
     /// Each people's authored `threat_response`, borrowed off the
-    /// [`BakeConfig`] — the durable inhibition [`Bake::takes_the_initiative`]
-    /// reads.
+    /// [`BakeConfig`] — the MEAN [`Bake::open`] draws each community's own
+    /// disposition around, not the value the gate reads.
     disposition: &'a BTreeMap<KindId, f64>,
+    /// Each people's `Dispersion::mind`, borrowed off the [`BakeConfig`] — the
+    /// standard deviation of the draw above. Absent ⇒ spread 0 ⇒ the authored
+    /// location exactly (the pre-Tolerance behaviour).
+    disposition_spread: &'a BTreeMap<KindId, f64>,
     /// Each people's authored `in_group_radius`, borrowed off the
     /// [`BakeConfig`] — the concealment [`Bake::concealment_of`] reads.
     in_group_radius: &'a BTreeMap<KindId, f64>,
@@ -802,7 +1132,7 @@ struct Bake<'a> {
     /// — the patron's discount rate [`Bake::target_stock`] reads.
     time_horizon: &'a BTreeMap<KindId, f64>,
     /// Every occupation record, in commit order.
-    records: Vec<OccupationRecord>,
+    records: Vec<BakeOccupation>,
     /// Every community's live state, in commit order (dead ones retained).
     communities: Vec<Community>,
     /// The single alive community per occupied cell (the scan≡index invariant).
@@ -946,9 +1276,9 @@ fn tech_weight(t: TechHorizon) -> f64 {
 }
 
 impl<'a> Bake<'a> {
-    /// Mint a fresh, never-reused entity id.
-    fn mint(&mut self) -> EntityId {
-        let id = EntityId::new(self.next_id).expect("entity ids start at 1");
+    /// Mint a fresh, never-reused bake-local handle.
+    fn mint(&mut self) -> BakeId {
+        let id = BakeId(self.next_id);
         self.next_id += 1;
         id
     }
@@ -956,6 +1286,31 @@ impl<'a> Bake<'a> {
     /// The graph for the era currently being stepped.
     fn cur(&self) -> &ConnectionGraph {
         &self.graphs[self.cur_graph]
+    }
+
+    /// This era's per-people capacity slice — the counterpart of [`Bake::cur`],
+    /// keyed on the same index so the graph and the capacity always describe the
+    /// same era.
+    fn caps_now(&self) -> &[hornvale_kernel::ecology::CapacityMap] {
+        &self.caps_by_era[self.cur_graph]
+    }
+
+    /// Resolve a `KindId` to its dense index into `caps` — the one place the
+    /// translation happens. Called at community creation ([`Bake::open`]) and
+    /// once per relocation, never inside a ring scan: the hot paths carry the
+    /// resolved [`Community::people_idx`] instead.
+    ///
+    /// **Panics rather than defaulting**, deliberately. A people with no capacity
+    /// field is a composition-root wiring bug — `caps` and `peoples` must be built
+    /// from ONE ordering — and silently substituting index 0 would hand that
+    /// people another's niche and corrupt every world it touched while failing no
+    /// test. A linear scan over a six-entry roster is cheaper than a map lookup
+    /// and needs no ordering assumption beyond the one it asserts.
+    fn people_idx_of(&self, people: KindId) -> usize {
+        self.peoples
+            .iter()
+            .position(|&k| k == people)
+            .expect("every people the bake places has a capacity field at the same index")
     }
 
     /// The index of the era in force for `year`: the last era whose `day` is at
@@ -970,25 +1325,56 @@ impl<'a> Bake<'a> {
         chosen
     }
 
-    /// A cell's habitability factor this era: 1.0 if habitable and unglaciated,
-    /// else 0.0. (Binary here; the swing, not a gradient, drives the dynamics.)
+    /// The one exclusion that is **not** a relation between a species and a
+    /// cell: ice. A glacier is not a niche disagreement — nothing negotiates
+    /// with a kilometre of it — so it stays species-blind, and it is the only
+    /// thing left here that is.
+    ///
+    /// **The thermal habitability test is gone** (The Tense, step 4). It asked
+    /// "is this cell habitable" with no *for whom*, against a global
+    /// `FREEZE_C = -10 °C`, which is a glaciation snowline borrowed for a
+    /// question it cannot answer. Habitability is a relation between a species
+    /// and a cell; decision 0103 established that for capacity, and this was the
+    /// last place the species-blind form survived. Cold ground is now *poor* —
+    /// each species' own temperature response scores it — rather than *forbidden*
+    /// to everyone alike.
+    ///
+    /// Measured before the cutover (`tense_shadow.rs`): the mask and per-species
+    /// capacity disagreed about **29.4% of seed 42's land**, almost entirely in
+    /// the direction of the mask being stricter. That land is now settleable by
+    /// whichever people can actually feed itself on it, and by nobody else.
+    ///
+    /// **Currently inert**: `bake_eras` fills `era.ice` all-false on every
+    /// production path, folding the snowline into `habitable` instead — which is
+    /// exactly the conflation just removed. The term is kept because ice is the
+    /// right *kind* of exclusion to be species-blind, so a future campaign that
+    /// models real glaciation has the seam it needs.
     fn factor(era: &EraClimate, cell: CellId) -> f64 {
-        if *era.ice.get(cell) || !*era.habitable.get(cell) {
-            0.0
-        } else {
-            1.0
-        }
+        if *era.ice.get(cell) { 0.0 } else { 1.0 }
     }
 
-    /// A cell's effective capacity this era.
-    fn eff_capacity(&self, era: &EraClimate, cell: CellId) -> f64 {
-        *self.capacity.get(cell) * Self::factor(era, cell)
+    /// What a cell is worth **to one people** this era: that people's headcount
+    /// capacity there, gated by the era masks.
+    ///
+    /// `pidx` is a dense index into `caps` (a [`Community::people_idx`]), never a
+    /// `KindId` — see that field for why the lookup is resolved at `open` time.
+    fn eff_capacity(&self, era: &EraClimate, cell: CellId, pidx: usize) -> f64 {
+        self.caps_now()[pidx].at(cell) * Self::factor(era, cell)
     }
 
-    /// Whether a cell can receive a settler this era: habitable, unglaciated,
-    /// and not already occupied by an alive community.
-    fn vacant_habitable(&self, era: &EraClimate, cell: CellId) -> bool {
-        Self::factor(era, cell) > 0.0 && !self.node_index.contains_key(&cell)
+    /// Whether a cell can receive a settler **of this people** this era: admitted
+    /// by the era masks, worth something to *them*, and not already held.
+    ///
+    /// The middle condition is new with The Tilth and is the point of the rewire.
+    /// The old species-blind predicate answered "is this ground habitable", so a
+    /// people could be routed onto a cell that cannot feed it — and, worse, the
+    /// value it was then judged on came from a field that knew nothing about who
+    /// was standing there. A cell where this people has no capacity is not a
+    /// refuge for them, whatever it is for someone else.
+    fn vacant_for(&self, era: &EraClimate, cell: CellId, pidx: usize) -> bool {
+        Self::factor(era, cell) > 0.0
+            && self.caps_now()[pidx].at(cell) > 0.0
+            && !self.node_index.contains_key(&cell)
     }
 
     /// Walk the era graph outward from `from` in breadth-first **rings** and
@@ -1036,16 +1422,24 @@ impl<'a> Bake<'a> {
         None
     }
 
-    /// The nearest vacant habitable cell to `from` (excluding `from` itself),
-    /// by breadth-first hop distance. Within the nearest layer, refugial cells
-    /// win over non-refugial, then lowest `CellId` — a total, deterministic
-    /// order. `None` if the whole reachable graph is full or hostile.
-    fn nearest_dest(&self, era: &EraClimate, from: CellId) -> Option<CellId> {
+    /// The nearest cell to `from` (excluding `from` itself) that can receive a
+    /// settler **of this people**, by breadth-first hop distance. Within the
+    /// nearest layer, refugial cells win over non-refugial, then river-adjacent,
+    /// then lowest `CellId` — a total, deterministic order. `None` if the whole
+    /// reachable graph is full or worthless to them.
+    ///
+    /// The ordering deliberately still does **not** rank by capacity: a migrant
+    /// flees to the nearest *survivable* refuge, and survivability is now the
+    /// `vacant_for` filter's job (it excludes cells where this people has no
+    /// capacity at all). Making the tie-break prefer richer ground would turn a
+    /// flight into an optimisation, which is [`Bake::best_home`]'s rule, not
+    /// this one's.
+    fn nearest_dest(&self, era: &EraClimate, from: CellId, pidx: usize) -> Option<CellId> {
         self.nearest_ring(from, |ring| {
             let mut candidates: Vec<CellId> = ring
                 .iter()
                 .copied()
-                .filter(|&n| self.vacant_habitable(era, n))
+                .filter(|&n| self.vacant_for(era, n, pidx))
                 .collect();
             if candidates.is_empty() {
                 return None;
@@ -1072,8 +1466,15 @@ impl<'a> Bake<'a> {
     /// first ring that contains an admissible option**, taking the best value
     /// within that ring. Within a ring:
     ///
-    /// - a **vacant** habitable cell scores its effective capacity;
-    /// - a **held** habitable cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
+    /// Every score below is `eff_capacity` **for the rolling people** (The
+    /// Tilth): the comparison is what this people could make of each cell, not
+    /// what the cell is worth in the abstract. The species-blind field this
+    /// replaced could not decide *who* wins a cell at all — it entered every
+    /// candidate's score identically and cancelled out of the `argmax` — so a
+    /// per-people term is the only thing that can express a niche disagreement.
+    ///
+    /// - a **vacant** admissible cell scores that people's effective capacity;
+    /// - a **held** admissible cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
     ///   — proven ground is worth more — and is admissible only when the roller
     ///   clears `RAID_MARGIN` over its holder, only when the roller could still
     ///   seat itself after the war it would have to fight (`can_fight`), and
@@ -1101,30 +1502,45 @@ impl<'a> Bake<'a> {
     /// held ground never enters its option set.
     fn best_home(
         &self,
-        people: KindId,
+        pidx: usize,
         era: &EraClimate,
         from: CellId,
         strength: f64,
         can_fight: bool,
+        disposition: Option<f64>,
     ) -> Option<HomeOption> {
-        // Whether held ground is in this people's option set AT ALL — a
+        // Whether held ground is in this band's option set AT ALL — a
         // strictly narrower thing than the caller's `can_fight` ("would
         // survive winning"), so it gets its own name rather than shadowing the
-        // parameter. The durable inhibition is a property of the people, not
-        // of any one candidate: a timid people simply never sees held ground.
-        let may_take_held_land = can_fight && self.takes_the_initiative(people);
+        // parameter. The durable inhibition is a property of the band's own
+        // drawn mind, not of any one candidate: a timid remnant simply never
+        // sees held ground. (Before The Tolerance this took the `KindId` and
+        // read a species constant, which is exactly what made warlikeness a
+        // property of a kind.)
+        let may_take_held_land = can_fight && self.takes_the_initiative(disposition);
         self.nearest_ring(from, |ring| {
             let mut best: Option<HomeOption> = None;
             for &n in ring {
                 if Self::factor(era, n) <= 0.0 {
-                    continue; // the ice has made it worthless to everyone
+                    continue; // the era's masks exclude it for everyone
                 }
-                let value = self.eff_capacity(era, n);
+                // Valued FROM THE ROLLER'S OWN NICHE, which is the whole point
+                // of the rewire: a displaced people compares candidate homes by
+                // what *it* could make of them. Ground a rival thrives on is not
+                // thereby attractive, and ground worth nothing to this people is
+                // not a home at all — so a zero here is skipped rather than
+                // entered at score 0, keeping it out of the tie-break entirely.
+                let value = self.eff_capacity(era, n, pidx);
+                if value <= 0.0 {
+                    continue;
+                }
                 let (score, defender, holder) = match self.node_index.get(&n) {
                     None => (value, 0.0, None),
                     Some(&h) => {
                         let hs = self.strength(h);
-                        if !may_take_held_land || strength <= hs * RAID_MARGIN {
+                        if !may_take_held_land
+                            || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
+                        {
                             continue; // not a fight this people can win, or survive winning
                         }
                         if !self.has_spoils(era, h) {
@@ -1196,14 +1612,15 @@ impl<'a> Bake<'a> {
         &mut self,
         people: KindId,
         pop: f64,
-        lineage: EntityId,
-        predecessor: EntityId,
+        lineage: BakeId,
+        predecessor: BakeId,
         offset: f64,
         from: CellId,
         era: &EraClimate,
         year: f64,
         depth: u32,
         carried: CarriedPortfolio,
+        disposition: Option<f64>,
     ) -> Relocation {
         if depth >= CASCADE_DEPTH_CAP {
             return Relocation::Lost; // truncated — the last remnant is lost (bounded-size guard)
@@ -1232,11 +1649,12 @@ impl<'a> Bake<'a> {
         // `a_people_that_cannot_survive_winning_does_not_fight` binds it.
         let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
         let Some(home) = self.best_home(
-            people,
+            self.people_idx_of(people),
             era,
             from,
             roller_strength(pop, offset, year),
             can_fight,
+            disposition,
         ) else {
             return Relocation::Lost; // nothing vacant, nothing beatable — lost
         };
@@ -1269,14 +1687,19 @@ impl<'a> Bake<'a> {
         // COMBINED population, and it is that dissipation (compounding down the
         // chain) that terminates an avalanche.
         self.communities[victim].population *= 1.0 - WAR_LOSS;
-        let (v_people, v_pop, v_lineage, v_offset, v_id) = {
+        // Read BEFORE the victim closes, `disposition` included: the remnant
+        // carries the mind of the settlement it is about to lose down the
+        // cascade, because a band on the road has no seat of its own to draw
+        // one from.
+        let (v_people, v_pop, v_lineage, v_offset, v_id, v_disposition) = {
             let c = &self.communities[victim];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.population,
                 c.lineage,
                 c.tech_offset,
                 c.id,
+                c.disposition,
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
@@ -1322,6 +1745,7 @@ impl<'a> Bake<'a> {
             year,
             depth + 1,
             victim_carried,
+            v_disposition,
         ) {
             Relocation::Settled { cascade } => cascade,
             Relocation::Lost => {
@@ -1349,13 +1773,14 @@ impl<'a> Bake<'a> {
         &mut self,
         people: KindId,
         pop: f64,
-        lineage: EntityId,
-        predecessor: EntityId,
+        lineage: BakeId,
+        predecessor: BakeId,
         offset: f64,
         from: CellId,
         era: &EraClimate,
         year: f64,
         depth: u32,
+        disposition: Option<f64>,
     ) -> Relocation {
         self.relocate(
             people,
@@ -1368,26 +1793,81 @@ impl<'a> Bake<'a> {
             year,
             depth,
             CarriedPortfolio::none(),
+            disposition,
         )
     }
 
-    /// Whether a people takes the initiative at all — spec §4.2a's
-    /// **disposition** inhibition, the durable one. A people whose authored
-    /// `threat_response` (flee 0 ↔ stand 1) falls below `RAID_DISPOSITION_MIN`
-    /// never raids, however strong it is on paper; a people with no authored
-    /// disposition is not vetoed, so a bake handed no data behaves exactly as
-    /// it did before the gate existed.
+    /// A community's own drawn disposition, resolved at [`Bake::open`] — spec
+    /// D5's middle term, and the whole of The Tolerance's behavioural change.
     ///
-    /// This is the gate that makes raiding heterogeneous ACROSS peoples, and it
-    /// buys an asymmetric aversion structure for free: A declines B while B
-    /// raids A, because each people gates on its own trait and never on the
+    /// `None` when the people carries no authored `threat_response` at all: the
+    /// fail-open is on the *people*, decided before any draw, so a bake handed
+    /// no disposition data draws nothing and behaves exactly as it did before
+    /// the gate existed. A people that IS authored always draws — with spread 0
+    /// if `disposition_spread` has no row for it, which returns its authored
+    /// location unchanged.
+    fn drawn_disposition(&self, people: KindId, site: CellId, founded: f64) -> Option<f64> {
+        let location = *self.disposition.get(&people)?;
+        let spread = self.disposition_spread.get(&people).copied().unwrap_or(0.0);
+        Some(crate::disposition::drawn_threat_response(
+            self.seed,
+            site,
+            crate::disposition::occupation_draw_key(founded),
+            location,
+            spread,
+        ))
+    }
+
+    /// Whether a **community** takes the initiative at all — spec §4.2a's
+    /// **disposition** inhibition, the durable one. A community whose drawn
+    /// `threat_response` (flee 0 ↔ stand 1) falls below `RAID_DISPOSITION_MIN`
+    /// never raids, however strong it is on paper; `None` (a people with no
+    /// authored disposition) is not vetoed, so a bake handed no data behaves
+    /// exactly as it did before the gate existed.
+    ///
+    /// **It reads a community, not a people, and that is the campaign's point.**
+    /// Until The Tolerance the argument was a `KindId` and the comparison was
+    /// against `BakeConfig.disposition[people]` — a species constant, so every
+    /// settlement of a people answered identically and warlikeness was a
+    /// property of a *kind*. It now compares [`Community::disposition`], drawn
+    /// per settlement from that people's authored mean and spread and keyed on
+    /// the settlement's own `(site, founded year)`. Two settlements of one
+    /// people can answer differently; a people is a distribution over stances,
+    /// not a stance.
+    ///
+    /// Taking the value rather than an index is deliberate: the roll-downhill
+    /// path fires on a community that has already *closed* (a remnant on the
+    /// road has no live index), so its disposition travels down
+    /// [`Bake::relocate`] as the value it was opened with. A band carries the
+    /// mind of the settlement it lost, which is the only reading of "this
+    /// people, here" available once the seat is gone.
+    ///
+    /// **What this gate is still NOT.** Spec D5 writes warlikeness as
+    /// `f(structural pressure, drawn disposition, grid/group quadrant)`; only
+    /// the middle term is built. The pressure term is deliberately excluded —
+    /// [`Bake::pressure_of`] already varies per settlement, so folding it in
+    /// would leave between-settlement variance standing when dispersion is
+    /// zeroed and would break the campaign's own mutation proof, besides
+    /// confounding preregistered H2 (which attributes that variance to the
+    /// authored dispersion). Spec D5's "already-designed structural term" —
+    /// the strife field — is in any case **not reachable from the bake**: it
+    /// exists only as `report.byproducts.strife` off `demography_report_from`,
+    /// on the Lab readout path, downstream of the history it would have to
+    /// inform. The grid/group quadrant is deferred on weaker grounds: its
+    /// inputs (`sociality`, `in_group_radius`) are per-*people* constants, so
+    /// it would add no between-settlement variance and threatens nothing — it
+    /// is simply an unpreregistered behavioural change with no measurement
+    /// attached, and D6 is adopted as documentation on `SocietyVector` instead.
+    ///
+    /// It buys an asymmetric aversion structure for free: A declines B while B
+    /// raids A, because each community gates on its own draw and never on the
     /// pair. Like [`Bake::has_spoils`] it is a conjunct in both candidate
-    /// loops — a timid people driven off its land pioneers rather than rolling
-    /// over a holder it could have beaten.
-    fn takes_the_initiative(&self, people: KindId) -> bool {
-        match self.disposition.get(&people) {
+    /// loops — a timid community driven off its land pioneers rather than
+    /// rolling over a holder it could have beaten.
+    fn takes_the_initiative(&self, disposition: Option<f64>) -> bool {
+        match disposition {
             None => true,
-            Some(&d) => d >= RAID_DISPOSITION_MIN,
+            Some(d) => d >= RAID_DISPOSITION_MIN,
         }
     }
 
@@ -1583,13 +2063,40 @@ impl<'a> Bake<'a> {
     /// no-spoils vetoes are again the only conditions, so this cannot quietly
     /// become a floor on vassal size in general.
     ///
-    /// **At most three thresholds are reachable.** Only bugbear (0.3),
-    /// hobgoblin (0.5) and kobold (0.8) ever become patrons on the shipped
-    /// roster (goblin is raid-vetoed by `RAID_DISPOSITION_MIN`), so this gate
-    /// admits vassals above `0.044 × eff`, `0.073 × eff` and `0.117 × eff`
-    /// respectively — three cuts of the same band, never the continuum the
-    /// formula could express. That bounds the effect, and is said here so it is
-    /// not rediscovered as a surprise.
+    /// **The whole roster is reachable, and this bound has now gone stale
+    /// twice.** It was authored as *three* — bugbear (horizon 0.3), hobgoblin
+    /// (0.5), kobold (0.8) — which was correct on the four-people roster of the
+    /// time, goblin being the one vetoed out of raiding by
+    /// `RAID_DISPOSITION_MIN`. Two things have invalidated it since:
+    ///
+    /// 1. **The Vacancy added the gnoll**, whose `threat_response` of 0.85
+    ///    clears the gate easily, so its horizon of **0.2 has been reachable
+    ///    patron-side ever since** — and is *shorter* than bugbear's. The bound
+    ///    became four values and the comment was never updated. (The Generalist
+    ///    then added human at `threat_response` 0.5, which the gate vetoed, so
+    ///    that campaign left the count at four.)
+    /// 2. **The Tolerance** made `threat_response` a per-settlement draw, so no
+    ///    people is vetoed *as such*: a particular goblin or human community
+    ///    can clear the gate and take a vassal.
+    ///
+    /// All **six peoples** therefore reach patronhood now — gnoll 0.2, bugbear
+    /// 0.3, goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8 — admitting
+    /// vassals above `0.029 × eff`, `0.044 × eff`, `0.073 × eff`,
+    /// `0.073 × eff`, `0.110 × eff` and `0.117 × eff` respectively. That is
+    /// **five distinct THRESHOLDS**, not six: this gate is linear in the
+    /// horizon (`effective_horizon × crash_basin_fraction() × eff`), so goblin
+    /// and hobgoblin — authored at the same 0.5 — map to the same cut. Five
+    /// distinct cuts of one band, where it was four before this campaign and
+    /// three when the comment was written, and still not the continuum the
+    /// formula could express.
+    ///
+    /// **Do not read "five" here as [`BakeConfig::time_horizon`]'s count.**
+    /// That doc counts how many peoples sit *away from* `NEUTRAL_HORIZON`
+    /// (four: gnoll, bugbear, human, kobold), which is a different question
+    /// from how many distinct thresholds the roster produces (five, the count
+    /// above). Both are stated in full in both places so neither has to be
+    /// re-derived from the other. Said here so it is not rediscovered as a
+    /// surprise.
     ///
     /// **The horizon read here is the EFFECTIVE one** ([`Bake::
     /// effective_horizon`]), and the composition with spec §4.3c is a real
@@ -1626,7 +2133,8 @@ impl<'a> Bake<'a> {
     /// remnants preying on remnants all the way down.
     fn has_spoils(&self, era: &EraClimate, idx: usize) -> bool {
         let c = &self.communities[idx];
-        self.eff_capacity(era, c.site) > 0.0 && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
+        self.eff_capacity(era, c.site, c.people_idx) > 0.0
+            && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
     }
 
     /// A community's crowding pressure on its cell this era: population
@@ -1634,9 +2142,13 @@ impl<'a> Bake<'a> {
     /// `population` only — `stores` must never enter this term, or a
     /// successful extractor would starve itself on its own tribute (spec
     /// §4.2a).
+    /// Pressure is read against the capacity of the people actually standing
+    /// there (The Tilth): the same cell crowds a people whose niche it suits
+    /// less than one it does not, which is what makes the same ground
+    /// sustainable for one and ruinous for another.
     fn pressure_of(&self, idx: usize, era: &EraClimate) -> f64 {
         let c = &self.communities[idx];
-        let eff = self.eff_capacity(era, c.site);
+        let eff = self.eff_capacity(era, c.site, c.people_idx);
         c.population * NEED / eff
     }
 
@@ -1659,35 +2171,39 @@ impl<'a> Bake<'a> {
         site: CellId,
         year: f64,
         population: f64,
-        founded_from: Founding,
-        lineage: Option<EntityId>,
+        founded_from: Founding<BakeId>,
+        lineage: Option<BakeId>,
         tech_offset: f64,
     ) -> usize {
         let id = self.mint();
         let lineage = lineage.unwrap_or(id);
         let tech = tech_for(year + tech_offset);
-        let record = OccupationRecord {
-            people,
+        let record = BakeOccupation {
+            core: Occupation {
+                people,
+                site,
+                founded: year,
+                ended: None,
+                peak_population: population.round() as u32,
+                tech,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+            },
             community: id,
             lineage,
-            site,
-            founded: year,
-            ended: None,
-            peak_population: population.round() as u32,
-            tech,
-            function: Function::Agrarian,
-            deity: None,
-            tongue: None,
-            cause: None,
-            ended_by: Ended::Nature,
             founded_from,
-            notability: Notability::Common,
+            ended_by: Ended::Nature,
         };
         let record_idx = self.records.len();
         self.records.push(record);
         let community_idx = self.communities.len();
+        let people_idx = self.people_idx_of(people);
         self.communities.push(Community {
             record: record_idx,
+            people_idx,
             site,
             id,
             lineage,
@@ -1695,6 +2211,7 @@ impl<'a> Bake<'a> {
             alive: true,
             tech,
             tech_offset,
+            disposition: self.drawn_disposition(people, site, year),
             stores: 0.0,
         });
         // Keep the growth buffer exactly parallel to `communities`: a community
@@ -1732,13 +2249,13 @@ impl<'a> Bake<'a> {
     /// forfeits it all, exactly as before. So this stays the single
     /// unconditional dissolution point: preserving is something a caller does
     /// deliberately, never something this method decides.
-    fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended) {
+    fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended<BakeId>) {
         let c = &mut self.communities[idx];
         c.alive = false;
         let site = c.site;
         let rec = c.record;
-        self.records[rec].ended = Some(year);
-        self.records[rec].cause = Some(cause);
+        self.records[rec].core.ended = Some(year);
+        self.records[rec].core.cause = Some(cause);
         self.records[rec].ended_by = ended_by;
         // Only free the cell if THIS community is the one indexed there.
         if self.node_index.get(&site) == Some(&idx) {
@@ -1795,7 +2312,7 @@ impl<'a> Bake<'a> {
     ///
     /// **`since` does NOT travel: this lord's tenure begins at `year`.** The
     /// obligation continues, but the patron on the far side of a relocation is
-    /// a *new community with a new [`EntityId`]* — `open` minted it moments
+    /// a *new community with a new [`BakeId`]* — `open` minted it moments
     /// ago — and [`TributeRelation::since`] is documented as when the CURRENT
     /// patron took the relation over, not when the subordinate first began
     /// paying somebody (a patronage transfer already re-stamps it for exactly
@@ -2048,8 +2565,19 @@ impl<'a> Bake<'a> {
             // see; `target_stock` carries the derivation. Both are immutable
             // across a collection pass, so the order-independence this method
             // documents below survives the new term.
-            let sub_eff = self.eff_capacity(era, self.communities[sub].site);
-            let patron_people = self.records[self.communities[rel.patron].record].people;
+            // The SUBORDINATE'S capacity on its own cell, not the patron's
+            // reading of that ground (The Tilth). A land tax is bounded by what
+            // the land yields to the people working it; valuing the vassal's
+            // fields through the lord's niche would let a patron whose own niche
+            // suits that ground better demand more than ever grew there.
+            let sub_eff = self.eff_capacity(
+                era,
+                self.communities[sub].site,
+                self.communities[sub].people_idx,
+            );
+            let patron_people = self.records[self.communities[rel.patron].record]
+                .core
+                .people;
             // …and by how many OTHER vassals this patron holds (spec §4.3c):
             // the alternatives to this relation are what make it expendable, so
             // the relation in hand is excluded. A patron holding only this one
@@ -2072,7 +2600,8 @@ impl<'a> Bake<'a> {
             // (spec §4.2) — and, since it can only ever LOWER a remittance, the
             // setpoint (and with it the floor beneath it) holds at any
             // concealment.
-            let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
+            let conceal =
+                self.concealment_of(self.records[self.communities[sub].record].core.people);
             let remittance = rel.assessment.min((harvest + bleed) * (1.0 - conceal));
             // The burden: what was handed over as a share of the community
             // that handed it over, measured against the population the demand
@@ -2245,7 +2774,7 @@ impl<'a> Bake<'a> {
         if !self.communities[idx].alive {
             return false;
         }
-        let (record, pop, lineage, offset, id, site) = {
+        let (record, pop, lineage, offset, id, site, disposition) = {
             let c = &self.communities[idx];
             (
                 c.record,
@@ -2254,13 +2783,16 @@ impl<'a> Bake<'a> {
                 c.tech_offset,
                 c.id,
                 c.site,
+                // Read before the close below: the fleeing vassal takes the
+                // mind of the seat it is walking off, having no other.
+                c.disposition,
             )
         };
         let arriving = pop * MIGRATE_SURVIVAL;
         if arriving < VIABLE_MIN {
             return false; // too small to survive leaving: it endures instead
         }
-        let people = self.records[record].people;
+        let people = self.records[record].core.people;
         // Close BEFORE relocating so the cell it is abandoning is free — a
         // people must not be able to flee onto its own site, and `close` frees
         // the cell only when this community is the one indexed there. Lift the
@@ -2271,7 +2803,17 @@ impl<'a> Bake<'a> {
         let carried = self.lift_portfolio(idx);
         self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
         match self.relocate(
-            people, arriving, lineage, id, offset, site, era, year, 0, carried,
+            people,
+            arriving,
+            lineage,
+            id,
+            offset,
+            site,
+            era,
+            year,
+            0,
+            carried,
+            disposition,
         ) {
             // `resettled` is tallied inside `relocate`, at the branch that
             // reaches vacant ground; only the migration itself is added here.
@@ -2311,15 +2853,15 @@ impl<'a> Bake<'a> {
         let c = &mut self.communities[idx];
         let peak = c.population.round() as u32;
         let rec = c.record;
-        if peak > self.records[rec].peak_population {
-            self.records[rec].peak_population = peak;
+        if peak > self.records[rec].core.peak_population {
+            self.records[rec].core.peak_population = peak;
         }
         let tech = tech_for(year + c.tech_offset);
         if tech > c.tech {
             c.tech = tech;
         }
-        if c.tech > self.records[rec].tech {
-            self.records[rec].tech = c.tech;
+        if c.tech > self.records[rec].core.tech {
+            self.records[rec].core.tech = c.tech;
         }
     }
 
@@ -2335,21 +2877,39 @@ impl<'a> Bake<'a> {
             return;
         }
         let site = self.communities[idx].site;
-        let eff = self.eff_capacity(era, site);
+        let pidx = self.communities[idx].people_idx;
 
-        // Climate eviction: migrate to a vacant refuge, or starve. No conflict.
-        if eff == 0.0 {
+        // **A people that cannot feed itself tries to leave before it dies.**
+        //
+        // This used to test `eff == 0.0` — an exact zero, which only the binary
+        // era mask could produce. With the mask gone (The Tense, step 4) capacity
+        // is continuous, that test almost never fired, and a community facing
+        // starvation simply starved *in place*: `migration_fires_at_volume` went
+        // from 34 events to 3 on seed 42 and turned red, which is exactly the
+        // inertness it was written to catch.
+        //
+        // The trigger is now unsustainable **pressure**, and it subsumes the old
+        // one: `pressure_of` divides by `eff`, so a zero-capacity cell yields
+        // `+inf` and still routes here. Below this line the behaviour is
+        // unchanged — walk to the nearest refuge this people can actually live
+        // on, and starve where there is none.
+        //
+        // The result is that "the cold drove them on" survives the mask's
+        // deletion, but as a consequence of the land going poor rather than of a
+        // constant declaring the cell uninhabitable to everyone alike.
+        let pressure = self.pressure_of(idx, era);
+        if pressure >= COLLAPSE_PRESSURE {
             let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
                 (c.record, c.population, c.lineage, c.tech_offset, c.id)
             };
-            let people = self.records[record].people;
+            let people = self.records[record].core.people;
             // A refuge is only a refuge for a band big enough to hold it: a
             // migrant whose arriving population would fall below `VIABLE_MIN`
             // starves on the road instead of refounding, exactly as `relocate`
             // rules for a displaced remnant. Without this the refound would
             // `open` at `peak_population == 0` — a peopleless settlement.
-            match self.nearest_dest(era, site) {
+            match self.nearest_dest(era, site, pidx) {
                 Some(dest) if pop * MIGRATE_SURVIVAL >= VIABLE_MIN => {
                     // A climate eviction is the third close-and-reopen in this
                     // file, and it is a MOVE: the people walks to a refuge and
@@ -2381,13 +2941,9 @@ impl<'a> Bake<'a> {
             return;
         }
 
-        let pressure = self.pressure_of(idx, era);
-
-        if pressure >= COLLAPSE_PRESSURE {
-            self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
-            self.tally.collapsed += 1;
-            return;
-        }
+        // (The standalone collapse branch that used to sit here is gone: the
+        // pressure test above now owns that outcome, and reaches it only after
+        // the community has failed to find anywhere to go.)
 
         self.grow(idx, era, year, pressure);
 
@@ -2502,12 +3058,14 @@ impl<'a> Bake<'a> {
     /// break in byte-identity for a fixed physics.
     fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
         let raider_site = self.communities[raider].site;
-        // Read once: it does not vary over the candidate walk, and both the
-        // durable inhibition and the size gate (spec §4.3b) are keyed on it.
-        let raider_people = self.records[self.communities[raider].record].people;
-        // The durable inhibition: a timid people never takes the initiative,
-        // so it never enters the candidate loop at all.
-        if !self.takes_the_initiative(raider_people) {
+        // Read once: it does not vary over the candidate walk, and the size
+        // gate (spec §4.3b) is keyed on it.
+        let raider_people = self.records[self.communities[raider].record].core.people;
+        // The durable inhibition: a timid COMMUNITY never takes the initiative,
+        // so it never enters the candidate loop at all. Its own drawn
+        // disposition, not its people's authored constant (The Tolerance) —
+        // this seat's neighbour of the same kind may well answer otherwise.
+        if !self.takes_the_initiative(self.communities[raider].disposition) {
             return;
         }
         // Too small to seat itself after the war it is contemplating: decline,
@@ -2516,7 +3074,8 @@ impl<'a> Bake<'a> {
             return;
         }
         let raider_str = self.strength(raider);
-        let raider_val = self.eff_capacity(era, raider_site);
+        let raider_pidx = self.communities[raider].people_idx;
+        let raider_val = self.eff_capacity(era, raider_site, raider_pidx);
         // Spec §4.4, guard (1): a community that is itself paying someone takes
         // no vassal of its own. Hoisted because it does not vary over the
         // candidate walk — but applied per-candidate, inside the else-chain,
@@ -2539,9 +3098,16 @@ impl<'a> Bake<'a> {
             let Some(&t) = self.node_index.get(&n) else {
                 continue;
             };
-            let t_val = self.eff_capacity(era, n);
+            // Valued through the RAIDER'S niche, both sides of the comparison
+            // (The Tilth). `t_val > raider_val` below asks "is that ground better
+            // *for me* than what I hold" — the raider is deciding whether to move
+            // onto it — so both readings must be in the same people's units. The
+            // target's own capacity is a different question and is asked
+            // separately, by `has_spoils`, which is about whether the victim has
+            // a surplus worth taking.
+            let t_val = self.eff_capacity(era, n, raider_pidx);
             let t_str = self.strength(t);
-            if raider_str <= t_str * RAID_MARGIN {
+            if raider_str <= t_str * defensibility(self.cur(), raider_site, n) * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
             }
             if !self.has_spoils(era, t) {
@@ -2626,7 +3192,13 @@ impl<'a> Bake<'a> {
                 // granary cannot be seen (spec §4.2). A second bid overwrites,
                 // which IS the patronage transfer — `tribute` is keyed by the
                 // subordinate, so one patron per community is structural.
-                let cap = self.eff_capacity(era, prize);
+                // Assessed on what the ground yields TO ITS OCCUPANT, matching
+                // `collect_tribute`'s `sub_eff` (The Tilth). The subordinate keeps
+                // its cell in this branch, so the tax base is its own capacity
+                // there; reading it through the new patron's niche would set a
+                // demand the vassal's fields were never able to meet.
+                let target_pidx = self.communities[target].people_idx;
+                let cap = self.eff_capacity(era, prize, target_pidx);
                 let assessment = (cap * ASSESS_RATE).clamp(0.0, cap * ASSESS_MAX);
                 let previous = self.tribute.insert(
                     target,
@@ -2680,19 +3252,22 @@ impl<'a> Bake<'a> {
         let (raider_people, raider_id, raider_lineage, raider_offset) = {
             let c = &self.communities[raider];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.id,
                 c.lineage,
                 c.tech_offset,
             )
         };
-        let (loser_people, loser_id, loser_lineage, loser_offset) = {
+        let (loser_people, loser_id, loser_lineage, loser_offset, loser_disposition) = {
             let c = &self.communities[target];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.id,
                 c.lineage,
                 c.tech_offset,
+                // The beaten lord rolls downhill carrying the mind of the seat
+                // he just lost — read before the close below.
+                c.disposition,
             )
         };
 
@@ -2753,6 +3328,7 @@ impl<'a> Bake<'a> {
             year,
             0,
             loser_carried,
+            loser_disposition,
         ) {
             // `resettled` is tallied inside `relocate`, at the vacant-land
             // branch itself, so every hop that reaches vacant ground counts —
@@ -2797,6 +3373,11 @@ impl<'a> Bake<'a> {
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
             let site = self.communities[idx].site;
+            // A daughter inherits its mother's niche, so the ranking below is in
+            // the MOTHER'S capacity (The Tilth) — read before the scan, never per
+            // candidate. Hoisting it above the ranking touches no draw: the
+            // `DAUGHTER_PROB` draw above has already been consumed.
+            let dpidx = self.communities[idx].people_idx;
             // A daughter settles the vacant habitable direct neighbour of
             // highest river-weighted capacity (Task 5b) — the dominant source
             // of new settlements, so this is the main lever that pulls the
@@ -2805,10 +3386,10 @@ impl<'a> Bake<'a> {
             // lowest CellId — total & deterministic (`f64::total_cmp`).
             let dest = traversable_neighbors(self.cur(), site)
                 .into_iter()
-                .filter(|&n| self.vacant_habitable(era, n))
+                .filter(|&n| self.vacant_for(era, n, dpidx))
                 .max_by(|a, b| {
-                    let sa = *self.capacity.get(*a) * river_factor(*self.river_prox.get(*a));
-                    let sb = *self.capacity.get(*b) * river_factor(*self.river_prox.get(*b));
+                    let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
+                    let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
                     // Higher score wins; among equal score, lower CellId wins
                     // (treated as "greater" for `max_by`).
                     sa.total_cmp(&sb).then(b.cmp(a))
@@ -2816,7 +3397,7 @@ impl<'a> Bake<'a> {
             if let Some(dest) = dest {
                 let (people, lineage, offset) = {
                     let c = &self.communities[idx];
-                    (self.records[c.record].people, c.lineage, c.tech_offset)
+                    (self.records[c.record].core.people, c.lineage, c.tech_offset)
                 };
                 let new_idx = self.open(
                     people,
@@ -2839,7 +3420,11 @@ impl<'a> Bake<'a> {
 ///
 /// See the module docs for the determinism contract and the
 /// displacement-fires invariant.
-/// type-audit: bare-ok(count: capacity), bare-ok(ratio: river_prox), bare-ok(flag: refugia)
+/// `caps` carries one headcount-capacity field per entry of `peoples`, **in the
+/// same order** — the alignment is the caller's contract and is asserted below.
+/// There is no longer a species-blind capacity field: every site that once read
+/// one now asks the question per-people, including genesis siting.
+/// type-audit: bare-ok(ratio: river_prox), bare-ok(flag: refugia)
 // The bake reads several independent composition-root fields (geo, capacity,
 // river proximity, era series, refugia, roster, span); each is a distinct
 // world input with no coherent grouping into a single struct, so they stay
@@ -2848,7 +3433,7 @@ impl<'a> Bake<'a> {
 pub fn bake(
     seed: Seed,
     geo: &Geosphere,
-    capacity: &CellMap<f64>,
+    caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
     river_prox: &CellMap<f64>,
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
@@ -2857,13 +3442,32 @@ pub fn bake(
     graphs: &[ConnectionGraph],
 ) -> History {
     assert_eq!(graphs.len(), eras.len(), "one graph per era");
+    // The index alignment the whole rewire rests on. A length mismatch means the
+    // composition root built `caps` and `peoples` from two different orderings,
+    // which would silently give some people another's niche — checked here, at
+    // the boundary, because nothing downstream can detect it.
+    assert_eq!(
+        caps_by_era.len(),
+        eras.len(),
+        "one capacity slice per era, in era order"
+    );
+    for (i, caps) in caps_by_era.iter().enumerate() {
+        assert_eq!(
+            caps.len(),
+            peoples.len(),
+            "era {i}: one capacity field per people, in the same order"
+        );
+    }
     let mut bake = Bake {
         graphs,
         cur_graph: 0,
-        capacity,
+        caps_by_era,
+        peoples,
         river_prox,
         refugia,
+        seed,
         disposition: &cfg.disposition,
+        disposition_spread: &cfg.disposition_spread,
         in_group_radius: &cfg.in_group_radius,
         time_horizon: &cfg.time_horizon,
         records: Vec::new(),
@@ -2876,33 +3480,21 @@ pub fn bake(
         tally: BakeCensus::default(),
     };
 
-    // 1. Seed the ancient world at the earliest era's habitable, highest-
-    //    capacity cells — one alive community per site. The candidate pool
-    //    (`GENESIS_TOP_CELLS`) is kept well above the total genesis community
-    //    count so EVERY people finds its own vacant proto-sites: a small
-    //    shared pool would let the peoples processed first take every cell and
-    //    starve the rest (a world missing a whole people). Each people draws
-    //    from the cells still vacant when its turn comes, retrying past a
-    //    collision rather than wasting the draw, so its `count` sites really
-    //    do open (as long as vacant top cells remain).
+    // 1. Seed the ancient world at each people's OWN best ground — one alive
+    //    community per site. Each people's pool is its top `GENESIS_TOP_CELLS`
+    //    cells by ITS river-weighted capacity, which is kept well above the
+    //    per-people genesis count so every people finds vacant proto-sites even
+    //    after the peoples before it have taken theirs. Each people draws from
+    //    the cells still vacant when its turn comes, retrying past a collision
+    //    rather than wasting the draw, so its `count` sites really do open.
     let earliest = eras
         .iter()
         .min_by(|a, b| a.day.total_cmp(&b.day))
         .expect("at least one era");
-    let mut candidates: Vec<CellId> = geo
+    let admissible: Vec<CellId> = geo
         .cells()
         .filter(|&c| Bake::factor(earliest, c) > 0.0)
         .collect();
-    // Rank candidate proto-sites by river-weighted capacity (Task 5b): a
-    // river-adjacent cell outranks an equally-fertile cell far from water, so
-    // the genesis pool — and thus the peoples seeded from it — cluster near
-    // fresh water. Tie-broken by lowest CellId (total, deterministic).
-    candidates.sort_by(|a, b| {
-        let sa = *capacity.get(*a) * river_factor(*river_prox.get(*a));
-        let sb = *capacity.get(*b) * river_factor(*river_prox.get(*b));
-        sb.total_cmp(&sa).then(a.cmp(b))
-    });
-    let top: Vec<CellId> = candidates.iter().copied().take(GENESIS_TOP_CELLS).collect();
 
     for &people in peoples {
         let mut pstream = seed
@@ -2910,13 +3502,36 @@ pub fn bake(
             .derive(StreamLabel::dynamic(people.0))
             .stream();
         let count = pstream.range_u32(GENESIS_SITES_MIN, GENESIS_SITES_MAX);
-        // Only cells still vacant this people's turn are candidates — prior
-        // peoples' proto-sites are excluded up front, so no draw is wasted.
-        let mut pool: Vec<CellId> = top
+        let pidx = bake.people_idx_of(people);
+        // **PER-PEOPLE, and it has to be — measured, not reasoned.** The first
+        // cut of this rewire kept one species-blind ranking here, on the argument
+        // that "where is the good land" is a fair question to ask of the ground
+        // alone. It is not, once a people can only live in its niche: the top 64
+        // cells by bare productivity are lowland river cells, so **kobold — whose
+        // only discriminating axis is elevation, with a hard 0.0 floor, and whose
+        // ground is the >3000 m band — was seeded entirely onto cells worth zero
+        // to it, evicted in the first epoch, and vanished from the world.**
+        // `species_worlds::default_world_carries_all_four_peoples_with_their_own_flagships`
+        // caught it ("kobold must hold at least one settlement"); nothing about
+        // the shared-pool argument predicted it.
+        //
+        // So the pool is each people's own best ground, and the zero-capacity
+        // filter is load-bearing rather than tidy: a proto-site a people cannot
+        // feed is not a founding, it is a death two epochs later.
+        let mut pool: Vec<CellId> = admissible
             .iter()
             .copied()
-            .filter(|c| !bake.node_index.contains_key(c))
+            .filter(|c| bake.caps_now()[pidx].at(*c) > 0.0 && !bake.node_index.contains_key(c))
             .collect();
+        // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
+        // bias, preserved): a river-adjacent cell outranks an equally-fertile one
+        // far from water. Tie-broken by lowest CellId — total and deterministic.
+        pool.sort_by(|a, b| {
+            let sa = bake.caps_now()[pidx].at(*a) * river_factor(*river_prox.get(*a));
+            let sb = bake.caps_now()[pidx].at(*b) * river_factor(*river_prox.get(*b));
+            sb.total_cmp(&sa).then(a.cmp(b))
+        });
+        pool.truncate(GENESIS_TOP_CELLS);
         let mut opened = 0;
         while opened < count && !pool.is_empty() {
             let pick = pstream.range_u32(0, pool.len() as u32 - 1) as usize;
@@ -2966,7 +3581,7 @@ pub fn bake(
 
     // 3. Close at `now`: alive records keep `ended = None`.
     let now = cfg.end_year;
-    bake.tally.alive_at_now = bake.records.iter().filter(|r| r.is_alive()).count() as u64;
+    bake.tally.alive_at_now = bake.records.iter().filter(|r| r.core.is_alive()).count() as u64;
     // The stock at `now`: how many relations survived the span, and the widest
     // star among them (spec §8.2's runaway-hub reading). `close` dissolves both
     // directions of a relation, so every entry left here must name two live
@@ -3080,6 +3695,49 @@ mod tests {
         assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
     }
 
+    #[test]
+    fn approach_ease_sums_traversable_conductance_only() {
+        use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
+        let mut g = ConnectionGraph::new(4);
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.25,
+            },
+        );
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(2),
+                kind: EdgeKind::LandRoute,
+                conductance: 0.75,
+            },
+        );
+        // Ocean-touching adjacency is stored at exactly 0.0. Note this is not
+        // a test of the `conductance > 0.0` filter: a zero-valued term
+        // contributes nothing to the sum whether or not it is filtered out
+        // first, so this edge's presence is here only to document the
+        // ocean-touching case, not to exercise exclusion behaviour.
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(3),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        assert_eq!(approach_ease(&g, CellId(0)), 1.0);
+    }
+
+    #[test]
+    fn approach_ease_is_zero_for_an_isolated_cell() {
+        use hornvale_topology::ConnectionGraph;
+        let g = ConnectionGraph::new(2);
+        assert_eq!(approach_ease(&g, CellId(0)), 0.0);
+    }
+
     /// A pure-land connection graph over `geo` (unit-conductance adjacency,
     /// no water routes) — mirrors the integration test file's `full_land_graph`
     /// helper, duplicated here because `Bake` (and this free function) are
@@ -3116,7 +3774,6 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -3127,14 +3784,18 @@ mod tests {
             ice_fraction: 0.0,
         };
         let people = KindId("goblin");
+        let caps = caps_from_fn(&geo, |_| 100.0);
 
         let mut bake = Bake {
             graphs: &graphs,
             cur_graph: 0,
-            capacity: &capacity,
+            caps_by_era: &caps,
+            peoples: all_settlers(),
             river_prox: &river_prox,
             refugia: &refugia,
+            seed: Seed(1),
             disposition: no_disposition(),
+            disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
             records: Vec::new(),
@@ -3160,6 +3821,7 @@ mod tests {
         );
         let r1_id = bake.communities[r1_idx].id;
         let lineage = bake.communities[r1_idx].lineage;
+        let r1_disposition = bake.communities[r1_idx].disposition;
         assert_eq!(r1_id, lineage, "genesis community is its own lineage root");
 
         // First migration: R1 closes and relocates to vacant land, founded
@@ -3176,6 +3838,7 @@ mod tests {
             &era,
             100.0,
             0,
+            r1_disposition,
         );
         let r2_idx = match outcome1 {
             Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
@@ -3183,6 +3846,7 @@ mod tests {
         };
         let r2_id = bake.communities[r2_idx].id;
         let r2_site = bake.communities[r2_idx].site;
+        let r2_disposition = bake.communities[r2_idx].disposition;
         assert_eq!(
             bake.records[bake.communities[r2_idx].record].founded_from,
             Founding::From(r1_id)
@@ -3193,8 +3857,18 @@ mod tests {
         // the case that catches the bug: the buggy code named `lineage`
         // (R1), the fix names R2.
         bake.close(r2_idx, 200.0, CauseOfEnd::Migrated, Ended::Nature);
-        let outcome2 = bake
-            .relocate_holding_nothing(people, 8.0, lineage, r2_id, 0.0, r2_site, &era, 200.0, 0);
+        let outcome2 = bake.relocate_holding_nothing(
+            people,
+            8.0,
+            lineage,
+            r2_id,
+            0.0,
+            r2_site,
+            &era,
+            200.0,
+            0,
+            r2_disposition,
+        );
         let r3_idx = match outcome2 {
             Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
             other => panic!("expected a direct settle onto vacant land: {other:?}"),
@@ -3215,20 +3889,22 @@ mod tests {
     /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
     /// with a full-land graph and every cell habitable in the single era.
     /// `capacity_of` paints the value gradient the conflict tests need.
-    fn cascade_world(
-        capacity_of: impl Fn(CellId) -> f64,
-    ) -> (
+    /// [`cascade_world`]'s owned inputs. Named because the capacity term became
+    /// `[era][people]` with The Tense and the bare tuple stopped being readable.
+    type CascadeWorld = (
         Geosphere,
         Vec<ConnectionGraph>,
-        CellMap<f64>,
+        Vec<Vec<hornvale_kernel::ecology::CapacityMap>>,
         CellMap<f64>,
         CellMap<bool>,
         EraClimate,
-    ) {
+    );
+
+    fn cascade_world(capacity_of: impl Fn(CellId) -> f64) -> CascadeWorld {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, capacity_of);
+        let capacity = caps_from_fn(&geo, capacity_of);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -3247,10 +3923,64 @@ mod tests {
     /// Prime land in [`cascade_world`] — ten times a poor cell's worth.
     const RICH: f64 = 100.0;
 
+    /// The roster a hand-built [`Bake`] is given: every settling people, so any
+    /// `KindId` a test opens resolves to a capacity field. Order is the dense
+    /// index — the same contract the composition root honours.
+    fn all_settlers() -> &'static [KindId] {
+        &[
+            KindId("kobold"),
+            KindId("goblin"),
+            KindId("hobgoblin"),
+            KindId("bugbear"),
+            KindId("gnoll"),
+            KindId("human"),
+        ]
+    }
+
+    /// Per-people capacity fields for a hand-built [`Bake`]: the SAME field,
+    /// painted by `capacity_of`, given to every people in [`all_settlers`].
+    ///
+    /// Species-uniform on purpose. These tests are about the bake's *rules* —
+    /// lineage, cascades, tribute setpoints, the value gradient conflict keys on
+    /// — not about niche differentiation, and a field that varied per people
+    /// would quietly make each of them a test of who prefers what as well. Giving
+    /// every people the identical field reproduces exactly the pre-Tilth
+    /// species-blind `CellMap` these tests were written against, so a failure
+    /// still means the rule moved and not that the fixture did.
+    fn caps_from_fn(
+        geo: &Geosphere,
+        capacity_of: impl Fn(CellId) -> f64,
+    ) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
+        let field = CellMap::from_fn(geo, capacity_of);
+        let per_people: Vec<_> = all_settlers()
+            .iter()
+            .map(|_| {
+                hornvale_kernel::ecology::CapacityMap::new(field.clone())
+                    .expect("a non-negative test capacity field is valid")
+            })
+            .collect();
+        // ONE era: every hand-built fixture here steps a single era, and giving
+        // them an era-invariant field keeps them testing their own rule rather
+        // than also testing The Tense's variation.
+        vec![per_people]
+    }
+
     /// The disposition map a hand-built [`Bake`] uses when the test is not
     /// about disposition: empty, so nobody is vetoed (the same fail-open the
     /// composition root sees when a people carries no psyche).
     fn no_disposition() -> &'static BTreeMap<KindId, f64> {
+        static NONE: BTreeMap<KindId, f64> = BTreeMap::new();
+        &NONE
+    }
+
+    /// The `disposition_spread` map a hand-built [`Bake`] uses when the test is
+    /// not about The Tolerance's draw: empty, so every people draws with spread
+    /// 0 and every community's disposition is its people's authored location
+    /// exactly. That is the pre-Tolerance behaviour, which is what the existing
+    /// per-people conflict fixtures in this module were written against and
+    /// still assert; the draw itself is exercised by the tests that override
+    /// this map.
+    fn no_spread() -> &'static BTreeMap<KindId, f64> {
         static NONE: BTreeMap<KindId, f64> = BTreeMap::new();
         &NONE
     }
@@ -3294,18 +4024,36 @@ mod tests {
     /// record set and a fixed stream.
     fn hand_bake<'a>(
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
+        hand_bake_spread(graphs, caps, river_prox, refugia, disposition, no_spread())
+    }
+
+    /// [`hand_bake`] with an explicit `disposition_spread` — the fixture for a
+    /// test that IS about The Tolerance's per-settlement draw. Every other
+    /// fixture goes through [`hand_bake`], which pins the spread at empty so
+    /// the pre-campaign per-people behaviour is what those tests still see.
+    fn hand_bake_spread<'a>(
+        graphs: &'a [ConnectionGraph],
+        caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+        disposition: &'a BTreeMap<KindId, f64>,
+        disposition_spread: &'a BTreeMap<KindId, f64>,
+    ) -> Bake<'a> {
         Bake {
             graphs,
             cur_graph: 0,
-            capacity,
+            caps_by_era: caps,
+            peoples: all_settlers(),
             river_prox,
             refugia,
+            seed: Seed(1),
             disposition,
+            disposition_spread,
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
             records: Vec::new(),
@@ -3343,7 +4091,7 @@ mod tests {
         //   (b) the pressure the bake computes is unchanged
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -3376,6 +4124,127 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_cheaply_reached_holder_is_raided_and_a_dearly_reached_one_is_not() {
+        // Two holders identical in every respect except the CONDUCTANCE of the
+        // route reaching them from the raider. Only the cheaply-reached one may
+        // be taken. Two defects this catches: the term wired to the ATTACKER's
+        // side, and `from`/`to` transposed (the graph is mirrored, so a
+        // transposition compiles and mostly works — it fails exactly when the
+        // two cells' parallel-edge sets differ).
+        use hornvale_kernel::ReferenceElevation;
+
+        let geo = Geosphere::new(1);
+        let raider_site = CellId(0);
+        let neighbors = geo.neighbors(raider_site);
+        assert!(
+            neighbors.len() >= 2,
+            "fixture precondition: the raider's cell needs at least two neighbours"
+        );
+        let easy = neighbors[0];
+        let hard = neighbors[1];
+
+        // A hand-built graph carrying ONLY the two approach edges the test
+        // cares about — `traversable_neighbors` reads solely off
+        // `raider_site`'s edge list, so nothing else needs to exist. Same
+        // edge kind, wildly different conductance: the only difference
+        // between the two approaches is how easy the road is.
+        let mut graph = ConnectionGraph::new(geo.cell_count());
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: easy,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e3,
+            },
+        );
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: hard,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e-6,
+            },
+        );
+        let graphs = vec![graph];
+
+        // Uniform capacity everywhere: raider and both holders read the same
+        // land value, so nothing but the approach conductance can decide
+        // which holder falls.
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        // Population and tech are pinned identical between the two holders
+        // (both KindId("kobold"), both opened at year 0 with no tech
+        // offset) — the fixture's whole point is that conductance is the
+        // only axis left to decide the outcome.
+        let raider = bake.open(
+            KindId("goblin"),
+            raider_site,
+            0.0,
+            15.0,
+            Founding::Genesis(raider_site),
+            None,
+            0.0,
+        );
+        let easy_idx = bake.open(
+            KindId("kobold"),
+            easy,
+            0.0,
+            10.0,
+            Founding::Genesis(easy),
+            None,
+            0.0,
+        );
+        let hard_idx = bake.open(
+            KindId("kobold"),
+            hard,
+            0.0,
+            10.0,
+            Founding::Genesis(hard),
+            None,
+            0.0,
+        );
+
+        // Precondition, so a failure here points at the fixture rather than
+        // the mechanism: the raider must clear the easy holder's threshold
+        // but not the dear one's, computed from the SAME `defensibility` the
+        // mechanism itself reads (not a hand-rolled approximation of it).
+        let raider_str = bake.strength(raider);
+        let easy_str = bake.strength(easy_idx);
+        let hard_str = bake.strength(hard_idx);
+        let easy_threshold = easy_str * defensibility(bake.cur(), raider_site, easy) * RAID_MARGIN;
+        let hard_threshold = hard_str * defensibility(bake.cur(), raider_site, hard) * RAID_MARGIN;
+        assert!(
+            raider_str > easy_threshold && raider_str <= hard_threshold,
+            "precondition: raider strength ({raider_str}) must clear the easy \
+             threshold ({easy_threshold}) but not the dear one ({hard_threshold}), \
+             or the split below proves nothing"
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        assert_eq!(
+            bake.tribute.get(&easy_idx).map(|tr| tr.patron),
+            Some(raider),
+            "the cheaply-reached holder must be taken, by the raider"
+        );
+        assert!(
+            !bake.tribute.contains_key(&hard_idx),
+            "the dearly-reached holder must be left alone"
+        );
+    }
+
     /// A patron on prime land beside a subordinate on prime land, with the
     /// relation already standing and its assessment set far above anything the
     /// subordinate's land could produce. The oversized assessment is what makes
@@ -3387,7 +4256,7 @@ mod tests {
     fn tribute_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
     ) -> (Bake<'a>, usize, usize) {
@@ -3669,7 +4538,7 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -4113,11 +4982,24 @@ mod tests {
         // ever came to hold is held on identical terms in both. Nothing but
         // the patron's discount rate can explain a difference.
         //
-        // The two values are the authored ones the shipped roster actually
-        // reaches patron-side (bugbear 0.3, kobold 0.8; goblin's 0.5 is
-        // raid-vetoed and hobgoblin sits at the neutral middle), applied to
-        // this fixture's patron people so that the people itself — and
-        // therefore its concealment, disposition and tech — is held fixed.
+        // The two values are authored ones the shipped roster actually reaches
+        // patron-side (bugbear 0.3, kobold 0.8), applied to this fixture's
+        // patron people so that the people itself — and therefore its
+        // concealment, disposition and tech — is held fixed.
+        //
+        // The Tolerance (2026-08-04) corrects why these two: the original
+        // reason given was that they were the ONLY two reachable, goblin's 0.5
+        // being raid-vetoed and hobgoblin sitting at the neutral middle. That
+        // premise is gone — `threat_response` is drawn per settlement now, so
+        // every people reaches patronhood on some settlements
+        // ([`BakeConfig::time_horizon`]) and the reachable set is the whole
+        // roster: gnoll 0.2, bugbear 0.3, goblin 0.5, hobgoblin 0.5, human
+        // 0.75, kobold 0.8. 0.3 and 0.8 are KEPT unchanged, and are still a
+        // good pair: they are far apart, both away from `NEUTRAL_HORIZON`, and
+        // both authored rather than invented. They are no longer the extremes
+        // — gnoll's 0.2 is now the shortest reachable horizon — but this test
+        // asserts a DIRECTION (a generational patron leaves a larger vassal),
+        // not a maximal spread, so a wider pair would not make it bind harder.
         //
         // Non-vacuity is asserted, not assumed: BOTH arms must actually have
         // extracted something from this vassal, or "the generational patron
@@ -4125,11 +5007,15 @@ mod tests {
         // all — which is precisely what a rule with no patron-side term looks
         // like when the demand happens never to bind.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster can produce.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see the block comment above,
+        /// and [`BakeConfig::time_horizon`]).
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// Epochs driven: long enough for the relation to form, for the
         /// adaptive demand to climb into contact with the vassal's increment,
@@ -4200,7 +5086,7 @@ mod tests {
             let held_by = bake
                 .tribute
                 .get(&sub)
-                .map(|t| bake.records[bake.communities[t.patron].record].people)
+                .map(|t| bake.records[bake.communities[t.patron].record].core.people)
                 .expect("the vassal must still be paying somebody: nothing closes in this world");
             assert_eq!(
                 held_by,
@@ -4267,11 +5153,18 @@ mod tests {
         // populations, same cells, same stream; the ONLY difference between the
         // arms is the patron people's authored `time_horizon`.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster produces.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see
+        /// [`BakeConfig::time_horizon`]). The arms are unchanged by that —
+        /// this test asserts that a generational patron DECLINES a vassal an
+        /// immediate one takes, which is a claim about the two arms differing,
+        /// not about either being extremal.
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// The patron's population: comfortably over `DAUGHTER_POP ×
         /// RAID_MARGIN`, so dominance is never what decides either arm.
@@ -4403,13 +5296,36 @@ mod tests {
     #[test]
     fn a_busy_patron_extracts_harder_from_the_same_vassal_than_a_quiet_one() {
         // Spec §4.3c, the portfolio effect — and the reason it is worth having
-        // on top of §4.3a: the per-people axis reaches only THREE values
-        // patron-side (bugbear 0.3 / hobgoblin 0.5 / kobold 0.8, goblin being
-        // raid-vetoed), and bugbear is both the short extreme AND the only
-        // `Communal` short-horizon people, so any world-level reading off
-        // `time_horizon` alone is partly confounded with `sociality`. The
-        // subordinate count is a property of the RELATION TABLE, not of a
-        // people, so it varies independently of that confound.
+        // on top of §4.3a: the per-people axis is COARSE and partly confounded
+        // with `sociality`, so a second, independent source of variation earns
+        // its place. The subordinate count is a property of the RELATION
+        // TABLE, not of a people, so it varies independently of any per-people
+        // confound whatever.
+        //
+        // The Tolerance (2026-08-04) re-derives that coarseness rather than
+        // deleting the claim, because the arithmetic behind it moved. It used
+        // to read: only THREE values are reachable patron-side (bugbear 0.3 /
+        // hobgoblin 0.5 / kobold 0.8, goblin being raid-vetoed), and bugbear is
+        // both the short extreme AND the only `Communal` short-horizon people.
+        // Both halves are false, and they went false at DIFFERENT times, which
+        // is worth separating. The Vacancy's gnoll (horizon 0.2,
+        // `threat_response` 0.85) has cleared the raid gate since it was
+        // authored, so bugbear stopped being the short extreme one campaign
+        // ago, and gnoll is `Hierarchic`, not `Communal`. The Tolerance then
+        // falsified the count as well: `threat_response` is drawn per
+        // settlement, so every people reaches patronhood on some settlements
+        // and the reachable set is the whole roster — gnoll 0.2, bugbear 0.3,
+        // goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8, i.e. FIVE distinct
+        // thresholds (goblin and hobgoblin share 0.5), up from four.
+        //
+        // The conclusion survives both corrections, for a reason worth stating
+        // rather than asserting. Five cuts of one band is still coarse against
+        // the continuum the formula could express, so the portfolio effect
+        // still earns its place. The `sociality` confound is genuinely WEAKER
+        // than the old comment claimed — the short end of the axis is no longer
+        // uniquely `Communal` — but it is not gone: the two `Communal` peoples
+        // are bugbear (0.3) and kobold (0.8), which is to say the horizon axis
+        // still does not vary independently of social form across the roster.
         //
         // **The two arms hold the patron people and its authored horizon
         // FIXED** and differ in exactly one thing: how many OTHER vassals the
@@ -4602,7 +5518,7 @@ mod tests {
         // not a clamp bolted on after it — has to be what makes it impossible.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -4788,7 +5704,7 @@ mod tests {
         );
         let rec = &bake.records[bake.communities[sub].record];
         assert_eq!(
-            (rec.cause, rec.ended_by),
+            (rec.core.cause, rec.ended_by),
             (Some(CauseOfEnd::Migrated), Ended::Nature),
             "it left of its own accord: an orderly migration, ended by nobody"
         );
@@ -4859,19 +5775,32 @@ mod tests {
         // `vassal_flights` 1 vs 0.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let far = geo.neighbors(CellId(0))[0];
         // The whole world is dead ground except the two cells this fixture
-        // occupies. `best_home` skips a cell whose habitability factor is zero,
-        // so nothing outside these two is ever a candidate.
+        // occupies. Since The Tilth that is said in CAPACITY, not in a mask:
+        // `vacant_for` admits a cell only where this people's capacity is
+        // positive, so a zero-capacity cell is never a candidate. This fixture
+        // used to build the same dead ground out of `EraClimate.habitable`,
+        // which `Bake::factor` no longer reads — the mask went inert and the
+        // road silently led somewhere, so the test was measuring a successful
+        // flight. Habitability is a relation between a people and a cell now,
+        // and a fixture that wants unusable ground has to say so in that
+        // language.
+        let capacity = caps_from_fn(&geo, |c| {
+            if c == CellId(0) || c == far {
+                RICH
+            } else {
+                0.0
+            }
+        });
         let era = {
             use hornvale_kernel::ReferenceElevation;
             EraClimate {
                 day: 0.0,
                 ice: CellMap::from_fn(&geo, |_| false),
-                habitable: CellMap::from_fn(&geo, |c| c == CellId(0) || c == far),
+                habitable: CellMap::from_fn(&geo, |_| true),
                 sea_level: ReferenceElevation::new(0.0).unwrap(),
                 ice_fraction: 0.0,
             }
@@ -5300,7 +6229,7 @@ mod tests {
         );
         let rec = &bake.records[bake.communities[patron].record];
         assert_eq!(
-            (rec.cause, rec.ended_by),
+            (rec.core.cause, rec.ended_by),
             (Some(CauseOfEnd::Fled), Ended::By(attacker_id)),
             "precondition: driven off by the attacker, not a self-directed move"
         );
@@ -5363,6 +6292,7 @@ mod tests {
         );
         assert_eq!(
             bake.records[bake.communities[reseated].record]
+                .core
                 .founded
                 .to_bits(),
             standing.since.to_bits(),
@@ -5808,7 +6738,7 @@ mod tests {
         // must behave like a median patron instead.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -5858,7 +6788,7 @@ mod tests {
         // community is least able to survive it.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -6269,7 +7199,7 @@ mod tests {
     fn adaptive_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         era: &EraClimate,
@@ -6890,6 +7820,9 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a `usize` community index (into `bake.communities`/`bake.tribute`),
+    /// single hand-built cascade_world() scenario
     #[test]
     fn a_tribute_relation_dies_with_either_party() {
         // Spec §4.4's coherence floor. `tribute` holds community INDICES, so
@@ -7006,9 +7939,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7022,6 +7956,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7036,7 +7971,7 @@ mod tests {
             .get(&CellId(20))
             .expect("the rich cell must be occupied");
         assert_eq!(
-            bake.records[bake.communities[seated].record].people,
+            bake.records[bake.communities[seated].record].core.people,
             KindId("kobold"),
             "the roller must be the one seated on the rich cell"
         );
@@ -7050,7 +7985,7 @@ mod tests {
             "the holder must be evicted"
         );
         assert_eq!(
-            bake.records[bake.communities[holder].record].cause,
+            bake.records[bake.communities[holder].record].core.cause,
             Some(CauseOfEnd::Fled)
         );
         // The evicted holder rolled onward and found marginal vacant land.
@@ -7164,9 +8099,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             let outcome = bake.relocate_holding_nothing(
@@ -7179,12 +8115,13 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             );
             let seated = *bake
                 .node_index
                 .get(&CellId(20))
                 .expect("the rich cell is occupied either way");
-            let holder_people = bake.records[bake.communities[seated].record].people;
+            let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
         };
 
@@ -7265,9 +8202,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7281,6 +8219,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7292,7 +8231,7 @@ mod tests {
             .get(&CellId(20))
             .expect("the held rich cell must have changed hands");
         assert_eq!(
-            bake.records[bake.communities[seated].record].people,
+            bake.records[bake.communities[seated].record].core.people,
             KindId("kobold")
         );
     }
@@ -7319,9 +8258,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7335,6 +8275,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7363,18 +8304,23 @@ mod tests {
         // rings turned uninhabitable there is nothing admissible near at all,
         // so the roller keeps walking outward and settles in the third ring —
         // a people whose whole neighbourhood is unusable still migrates as far
-        // as it must. (Capacity is uniform, so nothing but distance orders the
-        // options; an unrestricted scan takes the globally lowest `CellId`,
-        // which sits a ring further out again.)
-        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| POOR);
+        // as it must. (Capacity is uniform across everything admissible, so
+        // nothing but distance orders the options; an unrestricted scan takes
+        // the globally lowest `CellId`, which sits a ring further out again.)
+        //
+        // "Unusable" is said in CAPACITY, not in a mask. `vacant_for` admits a
+        // cell only where this people's capacity is positive; the two inner
+        // rings are worth nothing to the roller, so it walks past them. This
+        // fixture used to block them with `EraClimate.habitable`, which
+        // `Bake::factor` no longer reads — the mask went inert and the roller
+        // stopped in ring 1, which is what `left: Some(1) right: Some(3)` was
+        // reporting.
+        let (geo, graphs, _uniform, river_prox, refugia, era) = cascade_world(|_| POOR);
         let blocked: BTreeSet<CellId> = geo
             .cells()
             .filter(|&c| matches!(geo.hops_between(CellId(0), c, 16), Some(1 | 2)))
             .collect();
-        let era = EraClimate {
-            habitable: CellMap::from_fn(&geo, |c| !blocked.contains(&c)),
-            ..era
-        };
+        let capacity = caps_from_fn(&geo, |c| if blocked.contains(&c) { 0.0 } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let roller = bake.open(
@@ -7386,9 +8332,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7402,6 +8349,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(outcome, Relocation::Settled { cascade: 0 });
         let seat = bake
@@ -7446,9 +8394,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7464,6 +8413,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7551,9 +8501,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             let outcome = bake.relocate_holding_nothing(
@@ -7566,6 +8517,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             );
             // Read everything the assertions need out of the borrowed `Bake`
             // before it dies with this closure's frame: the outcome, the
@@ -7574,12 +8526,12 @@ mod tests {
             let seated = LADDER.map(|cell| {
                 bake.node_index
                     .get(&cell)
-                    .map(|&i| bake.records[bake.communities[i].record].people)
+                    .map(|&i| bake.records[bake.communities[i].record].core.people)
             });
             let terminal_survived = bake
                 .communities
                 .iter()
-                .any(|c| c.alive && bake.records[c.record].people == TERMINAL);
+                .any(|c| c.alive && bake.records[c.record].core.people == TERMINAL);
             (
                 outcome,
                 (bake.tally.raided, bake.tally.fled, bake.tally.collapsed),
@@ -7681,9 +8633,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
         let records_before = bake.records.len();
@@ -7699,6 +8652,7 @@ mod tests {
             &era,
             0.0,
             CASCADE_DEPTH_CAP,
+            r_disposition,
         );
         assert_eq!(
             capped,
@@ -7723,6 +8677,7 @@ mod tests {
             &era,
             0.0,
             CASCADE_DEPTH_CAP - 1,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7822,9 +8777,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             bake.relocate_holding_nothing(
@@ -7837,6 +8793,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             )
         };
 
@@ -7857,12 +8814,19 @@ mod tests {
 
     #[test]
     fn a_timid_people_does_not_raid_however_strong_it_is() {
-        // Inhibition 2 of spec §4.2a (durable): a people whose authored
+        // Inhibition 2 of spec §4.2a (durable): a community whose
         // `threat_response` falls below `RAID_DISPOSITION_MIN` never takes the
         // initiative, however strong it is on paper. Both arms are the same
         // world with the same populations — only the raider's disposition
         // differs — and the third arm pins the fail-open contract for a people
         // with no authored psyche at all.
+        //
+        // `hand_bake` fixes the spread at zero, so each community draws its
+        // people's authored location exactly and this stays the per-people
+        // reading it was written as. What The Tolerance changed — that two
+        // settlements of ONE people can answer differently — is the separate
+        // claim of `two_settlements_of_one_people_can_differ_in_raiding`; this
+        // test's job is still the veto itself.
         let probe = Geosphere::new(1);
         let target_cell = probe.neighbors(CellId(0))[0];
         let raid_with_disposition = |disposition: BTreeMap<KindId, f64>| {
@@ -7910,6 +8874,87 @@ mod tests {
         );
     }
 
+    /// **The Tolerance's headline: the sorting phenomenon.** With a dispersion
+    /// above zero, one people's settlements must not all answer the raid gate
+    /// the same way — warlikeness is a property of a *place*, not of a *kind*.
+    ///
+    /// Both arms are the same people, the same authored temperament, the same
+    /// world, the same populations and the same site; only the founding year
+    /// differs between samples, so only the draw key does. The second arm is
+    /// the control that makes the first arm's variation attributable: at
+    /// dispersion 0 every sample draws its people's authored location exactly,
+    /// so a uniform answer there proves the year is not doing the work by some
+    /// other route (tech horizon, say) and the spread is.
+    ///
+    /// Written against the pre-change gate it fails on arm 1 with every sample
+    /// answering 1 — which is precisely the premise this campaign exists to
+    /// overturn.
+    #[test]
+    fn two_settlements_of_one_people_can_differ_in_raiding() {
+        let probe = Geosphere::new(1);
+        let target_cell = probe.neighbors(CellId(0))[0];
+        // Authored exactly AT the gate, so a symmetric spread puts roughly half
+        // the draws on each side of it and the test is not fishing for a rare
+        // tail.
+        let authored: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.6)].into_iter().collect();
+        let spread: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.3)].into_iter().collect();
+        let raided_when_founded_in = |spread: &BTreeMap<KindId, f64>, founded: f64| -> u64 {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+            let mut bake =
+                hand_bake_spread(&graphs, &capacity, &river_prox, &refugia, &authored, spread);
+            let raider = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                founded,
+                200.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            bake.open(
+                KindId("goblin"),
+                target_cell,
+                founded,
+                50.0,
+                Founding::Genesis(target_cell),
+                None,
+                0.0,
+            );
+            bake.maybe_raid(raider, &era, founded);
+            bake.tally.raided
+        };
+
+        // The default bake grid's first twenty epochs (0, 25, … 475).
+        let years: Vec<f64> = (0..20).map(|i| f64::from(i) * 25.0).collect();
+
+        let dispersed: Vec<u64> = years
+            .iter()
+            .map(|&y| raided_when_founded_in(&spread, y))
+            .collect();
+        assert!(
+            dispersed.contains(&1),
+            "no settlement of this people took the initiative anywhere: {dispersed:?}"
+        );
+        assert!(
+            dispersed.contains(&0),
+            "every settlement of this people answered the gate identically \
+             ({dispersed:?}) — warlikeness is still a property of the KIND"
+        );
+
+        // The control: same people, same authored 0.6, same years, no spread.
+        let uniform: Vec<u64> = years
+            .iter()
+            .map(|&y| raided_when_founded_in(no_spread(), y))
+            .collect();
+        assert!(
+            uniform.iter().all(|&r| r == 1),
+            "at dispersion 0 every settlement must answer its people's authored \
+             temperament identically, or the founding year is moving something \
+             other than the draw: {uniform:?}"
+        );
+    }
+
     #[test]
     fn a_timid_people_driven_off_its_land_flees_rather_than_rolling_over_a_holder() {
         // The same durable veto on the roll-downhill's side of the one rule: a
@@ -7938,9 +8983,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             bake.relocate_holding_nothing(
@@ -7953,6 +8999,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             )
         };
 

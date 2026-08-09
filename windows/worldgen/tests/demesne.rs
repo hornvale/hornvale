@@ -3,7 +3,7 @@
 //!
 //! T1 built `mineral_supply_field`/`forage_supply_field`/`DETRITUS_AMBIENT`
 //! as pure builders nothing yet consumed. T2 wires them into
-//! `niche_per_species_k` via [`hornvale_worldgen::axis_supply`], the axis
+//! `per_species_suitability` via [`hornvale_worldgen::axis_supply`], the axis
 //! dot product that replaces the old `base_carrying(cell) × Σuptake` scalar
 //! — a niche direction now SELECTS a spatial combination instead of merely
 //! rescaling one shared field, so two species with different uptake
@@ -38,7 +38,7 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     )
     .unwrap();
 
-    // Reach the terrain handle the way `niche_per_species_k`'s callers do
+    // Reach the terrain handle the way `per_species_suitability`'s callers do
     // (`terrain_of`), then its geosphere — the single construction site for
     // the terrain provider on a built world.
     let terrain = hornvale_worldgen::terrain_of(&world).unwrap();
@@ -159,8 +159,33 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
-    let ks = hornvale_worldgen::niche_per_species_k(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster scored here. So this is a deliberate CONTROL, not a
+    // copy of the registry.
+    //
+    // Deliberate because this readout is about the SUBMERGED/land partition and
+    // the marine roster, a question upstream of any per-biome preference: an
+    // affinity re-weights a kind across biomes it can already reach, it does not
+    // change which cells the field reaches. All-`None` is bit-identical to the
+    // pre-affinity physics this file's numbers were taken under (task 3's
+    // `an_absent_affinity_is_bit_identical`).
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
+    let ks = hornvale_worldgen::per_species_suitability(
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
     let submerged: Vec<hornvale_kernel::CellId> =
@@ -261,7 +286,7 @@ fn different_uptake_vectors_peak_in_different_cells() {
 
 /// Every `stack_settlement`'s `.dominant` tag, mapped back to its `KindId`
 /// label via `wc.biosphere`'s ascending-`KindId` order — the SAME
-/// build-local dense-index contract `niche_per_species_k`'s doc comment
+/// build-local dense-index contract `per_species_suitability`'s doc comment
 /// spells out (never identity, valid only within this one report call).
 /// Counts settlements per dominant kind over the WHOLE roster (fauna
 /// included) — [`hornvale_worldgen::demography_report_from`]'s stack, not the
@@ -326,8 +351,12 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// re-pinned 2 -> 4 (measured on the epoch; this is a placement-provider
 /// change, orthogonal to T2's per-axis supply thesis). The Vacancy T9 adds a
 /// fifth people (the gnoll), measured at seed 42 to also place a settlement —
-/// re-pinned 4 -> 5.
-const BASELINE_PEOPLED_KINDS_42: usize = 5;
+/// re-pinned 4 -> 5. The Generalist adds a sixth people (human), measured at
+/// seed 42 to also place a settlement — re-pinned 5 -> 6. The Delvers (C2c)
+/// adds three dwarves, measured at seed 42 to place settlements for all three
+/// — re-pinned 6 -> 9. (It briefly read 11 while the campaign carried five
+/// dwarves; spec §11 withdrew Mountain and Duergar.)
+const BASELINE_PEOPLED_KINDS_42: usize = 9;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -379,6 +408,21 @@ fn world_42() -> World {
 /// weighted onto `MINERAL`) — out of T2's scope per the 0021 constraint
 /// (never author a placement to force a specific test to pass). The fauna
 /// half of the brief's ask (`xorn`) IS measured below.
+///
+/// **THE STRUCTURAL PREMISE ABOVE EXPIRED IN THE DELVERS (C2c, 2026-08-07).**
+/// The paragraph's whole argument rests on "every peopled species' authored
+/// niche is a pure `PLANT_FORAGE`/`ANIMAL_PREY` blend with ZERO weight on
+/// `PHOTOSYNTHATE`/`MINERAL`/`DETRITUS`". That is now false, and deliberately
+/// so: `gully-dwarf` weights `DETRITUS` at 0.50 and `desert-dwarf` carries a
+/// three-way vector. The `MINERAL` half of the expiry was withdrawn with the
+/// two subterranean kinds (spec §11) — no people weights `MINERAL` today —
+/// but the premise stays broken, because a `DETRITUS`-weighted people is
+/// exactly as much a counterexample as a `MINERAL`-weighted one. So the
+/// peopled-by count is re-pinned 6 -> 9 as a measurement, and the assertion
+/// message no longer claims the structural reason, because the structure
+/// changed.
+///
+/// claim: structural(seed: 42)
 #[test]
 fn settlements_and_dominants_diversify_on_seed_42() {
     let world = world_42();
@@ -395,8 +439,7 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     assert_eq!(
         peopled.len(),
         BASELINE_PEOPLED_KINDS_42,
-        "peopled-by kinds at seed 42 should be unchanged by T2 (structural: no peopled \
-         species weights MINERAL/PHOTOSYNTHATE/DETRITUS) — got {peopled:?}"
+        "the peopled-by roster at seed 42 moved — got {peopled:?}"
     );
     assert!(
         material_dominants.len() > BASELINE_DOMINANT_KINDS_42,
@@ -417,14 +460,55 @@ fn settlements_and_dominants_diversify_on_seed_42() {
         union.len()
     );
 
-    // The fauna half of the brief's ask: xorn (pure MINERAL niche) must now
-    // be a MATERIAL full-roster dominant — it was baseline noise (a single
+    // The fauna half of the brief's ask: the pure-MINERAL niche (xorn or
+    // rust-monster — see the UPDATE note below) must now be a MATERIAL
+    // full-roster dominant — it was baseline noise (a single
     // denominator-artifact settlement) under the old shared-NPP scalar.
+    //
+    // UPDATE (The Deep Realm, Task 6): xorn and rust-monster share this one
+    // MINERAL resource niche, so which specific kind clears the dominance
+    // ruler has always depended on their `condition_niche` curves, not the
+    // resource axis this assertion is really about. Task 6 honestly
+    // re-authored both curves against real subterranean conditions
+    // (`domains/species/src/lib.rs`): rust-monster's preferences sharpened
+    // into genuine peaks, while xorn's stayed flat/indifferent (unfaked,
+    // not weakened). Scored against the surface substrate that still governs
+    // placement (chambers are not wired in yet, spec §6), the sharper
+    // competitor now sweeps every MINERAL stronghold at seed 42 and xorn
+    // holds none — a measured consequence of the re-authoring, not a
+    // regression in the per-axis supply field this test otherwise pins.
+    // ---- AND FALSIFIED AGAIN AT THE MERGE (The Tense, 2026-08-06). ----
+    //
+    // The Deep Realm's repair above does not survive this campaign's
+    // productivity model, and the margin is exactly one settlement.
+    //
+    // Measured on the merged tree: rust-monster holds **1** dominant cell and
+    // xorn holds none. `MIN_SETTLEMENTS_FOR_DOMINANCE` is 2 — a kind topping
+    // exactly one attractor is the Confluence campaign's denominator artifact,
+    // measurement noise rather than placement — so neither specialist clears
+    // the ruler. On main, where rust-monster's sharpened curves face the old
+    // symmetric-tent productivity field, it clears; here the Lieth Miami model
+    // lifts every BIOMASS-fed kind (giant-squid 1160, twig-blight 577) and the
+    // mineral niche loses the margin it had.
+    //
+    // Neither campaign could have seen this alone. The Deep Realm re-authored
+    // the curves against main's physics; The Tense replaced the physics without
+    // touching the curves. This is precisely the semantic collision under a
+    // clean merge that the preflight says it cannot score, and it is recorded
+    // rather than tuned away — moving either the threshold or a niche constant
+    // to recover one settlement would be a post-unblinding rescue.
+    //
+    // The STRUCTURAL claims are unaffected and still asserted above: the
+    // peopled roster is unchanged, T2's dot product still differentiates more
+    // dominants than the baseline, and the union clears the preregistered
+    // floor. What is withdrawn is the per-kind prediction, for the second time.
     assert!(
-        material_dominants.contains("xorn"),
-        "xorn (pure-MINERAL niche) should newly clear the dominance ruler once mineral \
-         supply is its own spatial field, not a rescale of base_carrying; dominant counts: \
-         {dominant_counts:?}"
+        !material_dominants.contains("xorn") && !material_dominants.contains("rust-monster"),
+        "a pure-MINERAL specialist cleared the dominance ruler again ({dominant_counts:?}) — \
+         both The Demesne's prediction and The Deep Realm's repair of it were falsified \
+         under The Tense's productivity model, and this records that. rust-monster was ONE \
+         settlement short; if it is back, re-read the comment above and establish which \
+         productivity model is in play before flipping this."
     );
 }
 
@@ -436,18 +520,18 @@ fn settlements_and_dominants_diversify_on_seed_42() {
 /// `species_carrying_input` + `hornvale_demography::carrying_capacity` — a
 /// psychology-scaled, PEOPLED-ONLY carrying-capacity path that predates The
 /// Niche's per-species differentiation and has never been re-pointed onto
-/// it (settlement genesis moved onto `niche_per_species_k` at Task A15a,
+/// it (settlement genesis moved onto `per_species_suitability` at Task A15a,
 /// but this grounding metric stayed on the older, simpler path — the two
 /// coexist, per the `species_carrying_input` doc comment). The per-axis
 /// vector supply this campaign built (`mineral_supply_field`/
 /// `forage_supply_field`/`DETRITUS_AMBIENT`) is consumed ONLY by
-/// `niche_per_species_k` (via `axis_supply`), so it cannot touch this
+/// `per_species_suitability` (via `axis_supply`), so it cannot touch this
 /// gradient's inputs at all — confirmed here, live, rather than assumed:
 /// the measured ratio matches `confluence.rs`'s pinned 31.2563 exactly (T3
 /// changed nothing upstream of it), so no `MINERAL_SUPPLY_SCALE`/
 /// `FORAGE_FRACTION`/`CONDENSATION_THRESHOLD` re-fit is needed for THIS
 /// metric. (T3's actual settlement-COUNT investigation — a different K,
-/// `niche_per_species_k`, the one settlement genesis and the menagerie
+/// `per_species_suitability`, the one settlement genesis and the menagerie
 /// strongholds test use — lives in `confluence.rs`'s settlement-count test
 /// and this file's `settlements_and_dominants_diversify_on_seed_42`.)
 #[test]
@@ -478,7 +562,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
                 continue;
             }
             let lat = geo.coord(cell).latitude.abs();
-            let kv = *k.get(cell);
+            let kv = k.at(cell);
             if lat < 30.0 {
                 trop_sum += kv;
                 trop_n += 1;
@@ -494,7 +578,16 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     let trop_mean = trop_sum / f64::from(trop_n);
     let pole_mean = (pole_sum / f64::from(pole_n)).max(POLE_FLOOR);
     let ratio = trop_mean / pole_mean;
-    println!("seed 42 capacity-by-abs-latitude (live, post-the-demesne T1/T2): {ratio:.4}");
+    // The decomposition is PRINTED, not just the ratio. The Keeping found this
+    // metric's degeneracy by reading a doc comment; making it visible in the
+    // run output is cheaper than making the next reader do that again.
+    let raw_pole_mean = pole_sum / f64::from(pole_n);
+    let pole_is_floored = raw_pole_mean < POLE_FLOOR;
+    println!(
+        "seed 42 capacity-by-abs-latitude: ratio={ratio:.4} \
+         (trop_mean={trop_mean:.6} over {trop_n} cells, raw_pole_mean={raw_pole_mean:.6} \
+         over {pole_n} cells, pole floored at {POLE_FLOOR}: {pole_is_floored})"
+    );
     assert!(
         ratio >= 3.0,
         "capacity-by-abs-latitude on seed 42 fell to {ratio:.4} (below the preregistered floor \
@@ -502,7 +595,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     );
     // Pinned to the merged-tree live reading: proof of ZERO drift from the
     // vector supply, not merely "still above the floor" — the vector supply's
-    // code path (`niche_per_species_k`/`axis_supply`) is disjoint from this
+    // code path (`per_species_suitability`/`axis_supply`) is disjoint from this
     // one (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`),
     // so this ratio is BY CONSTRUCTION the pure scalar-path reading and the
     // vector supply cannot move it. The absolute value tracks the climate
@@ -516,11 +609,88 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // desert people, contributing more to the tropical sum than the polar
     // one), moving the ratio to 30.8158 — still far above the preregistered
     // floor of 3.
+    //
+    // The Generalist re-pin (2026-08-03): human is a sixth Settled kind
+    // (a temperate/subtropical generalist, per its own condition niche),
+    // and by this test's own construction is a new term in `trop_sum`/
+    // `pole_sum` — moving the ratio to 31.0099.
+    // The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable`
+    // decomposed to `is_land`, so the arid and very-hot bands the old conflated
+    // flag excluded outright now carry (low) scalar K — 31.0099 -> 31.0649.
+    // The DIRECTION is the check that this is the intended mechanism and not
+    // contamination: hot-and-arid ground is tropical/subtropical, never polar
+    // (the poles stay closed by `temp_response`, zero below 2 C), so opening it
+    // must add more to `trop_sum` than to `pole_sum` and the ratio must RISE.
+    // It rose, by 0.18%. The preregistered floor of 3 still clears tenfold.
+    //
+    // ---- The Tense re-pin (2026-08-05): 31.0649 -> 35.4171, and the RATIO IS
+    // ---- NOT A GRADIENT. Read this before touching the number again.
+    //
+    // MECHANISM, named as this comment's convention requires: this branch
+    // replaced the productivity model. `temp_response` — a symmetric tent
+    // peaking at 22 C and reaching exactly zero a little above freezing — is
+    // gone, and `carrying_capacity` now implements the Lieth & Box (1972)
+    // Miami model it had always CITED but never had: a monotone, saturating
+    // temperature term, min'd with a precipitation term on real mm/yr instead
+    // of a normalised moisture in [0,1]. That is The Keeping's headline defect
+    // being repaired, motivated by decision 0106.
+    //
+    // THE DIRECTION CHECK CANNOT BE RUN, and that is the finding. Measured
+    // here: raw_pole_mean = 0.004508, still BELOW `POLE_FLOOR`. The polar term
+    // is therefore pinned at the floor, and
+    //
+    //     ratio == trop_mean / POLE_FLOOR == 100 * trop_mean, exactly
+    //     (0.354171 * 100 = 35.4171, which is the whole of the drift)
+    //
+    // so this quantity carries no polar information at all. It is the tropical
+    // mean in different units. There is no gradient in it whose direction could
+    // confirm or refute a mechanism — which is precisely the degeneracy The
+    // Keeping recorded ("a ratio computed against a floored zero is largely a
+    // statement about the floor") and which the Confidence Gradient already
+    // demotes.
+    //
+    // WHAT THIS ASSERTION IS, THEREFORE. It is a drift TRIPWIRE on scalar-path
+    // productivity — an internal-consistency check on a Hornvale-internal
+    // number, which decision 0106 rules a VALID use of internal measurement.
+    // It is NOT evidence for the biomass-by-latitude gradient; treating it as
+    // evidence would be 0106's CIRCULAR cell, which names
+    // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
+    // above is the real surviving claim, and it clears tenfold.
+    //
+    // WHY THE POLES ARE STILL ~ZERO, given the tent that zeroed them is gone.
+    // Not the productivity field any more: `npp_temperature` is positive
+    // everywhere. It is `species_carrying_input` — the per-species TOLERANCE in
+    // `ConditionNiche` — and no authored people tolerates polar cold. So the
+    // polar zero has moved from being a property of the ground to being a
+    // property of the ROSTER, which is where the retired tent's own doc comment
+    // says tolerance belongs. Same number, different and better-located cause;
+    // a cold-adapted or subterranean people would now lift it off the floor,
+    // where before nothing could.
+    // THE DELVERS RE-PIN (C2c, 2026-08-07): 35.4171 -> 35.8831. The MECHANISM
+    // is the roster, exactly as the paragraph above says it must be — this
+    // number is a mean over the SETTLED peoples' per-species carrying
+    // capacity, and the settling roster went from six to nine, so three new
+    // tolerance curves entered the average. Nothing latitudinal moved.
+    //
+    // It read 36.0986 while the campaign carried five dwarves; withdrawing
+    // Mountain and Duergar (spec §11) moved it to 35.8831 rather than back to
+    // 35.4171, which is what a mean over a CHANGED population does — the two
+    // kinds' contribution was never separable from the other three's.
+    //
+    // The paragraph above ends with a prediction: "a cold-adapted or
+    // subterranean people would now lift [the poles] off the floor, where
+    // before nothing could." That prediction is once again UNTESTED: the two
+    // subterranean peoples that would have tested it are withdrawn, and while
+    // they were present it did NOT come true (raw_pole_mean 0.004508 ->
+    // 0.004574, still an order of magnitude under POLE_FLOOR = 0.01).
+    // Recorded, not rescued: living underground is not the same axis as
+    // tolerating polar cold. The degeneracy this assertion documents is
+    // unchanged, and the ratio is still exactly 100 * trop_mean.
     assert!(
-        (ratio - 30.8158).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~30.8158, the post-T9 \
-         merged-tree scalar-path reading) — something outside the-demesne's per-axis \
-         supply fields moved this K"
+        (ratio - 35.8831).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~35.8831). NOTE this is \
+         100 * trop_mean while the polar term sits on its floor — check the printed \
+         decomposition above before assuming anything latitudinal moved."
     );
 }
 
@@ -530,7 +700,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
 // test doc, which established this same fact for The Confluence's
 // freshwater re-point), and neither does anything T1/T2/T3 added here
 // (`mineral_supply_field`/`forage_supply_field`/`axis_supply`/
-// `niche_per_species_k` are pure functions of terrain/climate/biosphere —
+// `per_species_suitability` are pure functions of terrain/climate/biosphere —
 // no `Seed`, no `Stream`, no RNG). The per-axis vector supply changes WHICH
 // cells a species' K peaks in (a derived-FORMULA change), never adds or
 // reorders a seed draw, so the settlement seed-derivation's

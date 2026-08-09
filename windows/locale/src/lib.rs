@@ -18,7 +18,9 @@ pub use budget::StrangeSite;
 use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
-use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
+use hornvale_kernel::{
+    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
+};
 use hornvale_terrain::GeneratedTerrain;
 pub use hornvale_terrain::WaterKind;
 use hornvale_worldgen::{climate_from, terrain_of};
@@ -106,6 +108,13 @@ pub struct LocaleFields {
     pub moisture: f64,
     /// Elevation, meters.
     pub elevation_m: f64,
+    /// Height above this world's sea level, metres — signed, negative below.
+    /// `elevation_m` is the absolute isostatic reading and stays beside it,
+    /// because every correct consumer already reads that one; this is the
+    /// quantity a *reader* wants, and the one the relief bands are computed
+    /// from (The Benchmark).
+    #[serde(serialize_with = "serialize_height_asl")]
+    pub height_asl_m: SeaLevelHeight,
     /// Salt/fresh water at the room (max-weight cell — categorical, inherited,
     /// never blended). `water.is_fresh()` is the drinkable query. `WaterKind`
     /// lives in the terrain domain crate, which (decision 0002) depends on
@@ -113,6 +122,14 @@ pub struct LocaleFields {
     /// field serializes by its stable name instead (see `serialize_water_kind`).
     #[serde(serialize_with = "serialize_water_kind")]
     pub water: WaterKind,
+}
+
+/// Serialize a [`SeaLevelHeight`] as its quantized metres — the emit-boundary
+/// quantization every float in this schema goes through (decision 0033). The
+/// type cannot travel through JSON, so the *field name* carries the datum
+/// instead; that pairing is the whole discipline.
+fn serialize_height_asl<S: serde::Serializer>(h: &SeaLevelHeight, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_f64(quantize(h.get()))
 }
 
 /// Serialize a `WaterKind` by its stable lowercase-hyphenated name (the
@@ -177,6 +194,24 @@ pub struct LocaleContext {
     index: NearestCellIndex,
     globe_level: u32,
     budget: StrangenessBudget,
+}
+
+/// The corner cell a room's *categorical* readings come from: the greatest
+/// blend weight, tie-broken to the lowest `CellId`.
+///
+/// One rule, one caller-visible consequence: every categorical field a room
+/// reports — biome, water kind, substrate, and (since The Pigment) the rock
+/// whose reflectance the colour layer reads — names the same cell. Splitting
+/// this would let a room be described as granite lowland and drawn in
+/// basalt grey.
+fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
+    let mut best = weights[0];
+    for &cand in &weights[1..] {
+        if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+            best = cand;
+        }
+    }
+    best
 }
 
 impl LocaleContext {
@@ -297,6 +332,34 @@ impl LocaleContext {
     /// (threaded for the P8 temporal-phase layer).
     pub fn describe(&self, addr: &RoomAddr, at: WorldTime) -> Result<Locale, LocaleError> {
         self.describe_at(addr, at, None)
+    }
+
+    /// The reflectance of the rock underfoot at `addr`.
+    ///
+    /// A pure re-projection of the material buffer the terrain provider
+    /// already holds — `material_at` and `rock_at` have been public all
+    /// along, so this is an accessor, not a new derivation, and it stores
+    /// nothing.
+    ///
+    /// The cell is the same *categorical* corner [`LocaleContext::describe`]
+    /// takes its biome and water kind from (max blend weight, tie-break
+    /// lowest `CellId` — the shared `dominant_corner`), never a blend of the
+    /// three: rock class is categorical, and averaging granite with basalt
+    /// would name a rock that is not there. Sharing that one rule is what
+    /// makes the colour and the prose agree about which ground a room
+    /// stands on.
+    pub fn reflectance_at(
+        &self,
+        addr: &RoomAddr,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        let cell = dominant_corner(&weights).0;
+        let buffer = self.terrain.material_at(cell);
+        let rock = self.terrain.rock_at(cell);
+        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock).integrate())
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water
@@ -449,12 +512,7 @@ impl LocaleContext {
 
         // Categorical biome: max weight, tie-break lowest CellId. Inherited,
         // never re-quantized (decision 0038).
-        let mut best = weights[0];
-        for &cand in &weights[1..] {
-            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
-                best = cand;
-            }
-        }
+        let best = dominant_corner(&weights);
         let biome = match stratum {
             Some(st) => self.expr_at_stratum(best.0, st).biome(),
             None => self.climate.biome_at(best.0),
@@ -466,10 +524,19 @@ impl LocaleContext {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
             quantize(sum / denom as f64)
         };
+        let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
+        // `from_metres`, not a subtraction: the left operand is a three-corner
+        // BLEND, not any single cell's reading, so there is no pair of
+        // `ReferenceElevation`s here to subtract. Derived from the already-
+        // quantized `elevation_m` and a quantized sea level so that the value
+        // emitted and the band computed from it agree exactly with what a
+        // consumer re-derives from the document.
+        let sea_level_m = quantize(self.terrain.globe().sea_level.get());
         let fields = LocaleFields {
             temperature_c: blend(&|c| self.climate.mean_temperature_at(c).get()),
             moisture: blend(&|c| self.climate.moisture_at(c)),
-            elevation_m: blend(&|c| self.terrain.globe().elevation.get(c).get()),
+            elevation_m,
+            height_asl_m: SeaLevelHeight::from_metres(quantize(elevation_m - sea_level_m)),
             water: *self.terrain.globe().water_kind.get(best.0),
         };
 
@@ -487,11 +554,13 @@ impl LocaleContext {
                 kingdom: placed.kingdom,
                 endemic: placed.endemic,
             };
-            let descriptor = crate::grammar::render(negations, micro, expr, self.seed, addr);
+            let (descriptor, descriptor_noun) =
+                crate::grammar::render(negations, micro, expr, self.seed, addr);
             regime = Regime {
                 negations,
                 micro,
                 descriptor,
+                descriptor_noun,
                 strangeness: negations.strangeness(),
             };
         }
@@ -839,6 +908,65 @@ pub enum Compass {
     Nw,
 }
 
+impl Compass {
+    /// Every bearing the exit graph can name, one per variant — the roster the
+    /// correspondence audit reconciles against the concept registry, the same
+    /// discipline The Actants applied to the GOAP action roster.
+    ///
+    /// Kept exhaustive by [`compass_variants_must_all_be_rostered`]: a new
+    /// variant fails to compile until it is listed here, so a bearing can never
+    /// enter the world without the audit noticing it has no word.
+    pub fn all() -> [Compass; 8] {
+        [
+            Compass::N,
+            Compass::Ne,
+            Compass::E,
+            Compass::Se,
+            Compass::S,
+            Compass::Sw,
+            Compass::W,
+            Compass::Nw,
+        ]
+    }
+
+    /// The concept name that would name this bearing, whether or not it is
+    /// registered. The audit reports the ones that are not. The four cardinals
+    /// are roots in language's universal stratum; the four intercardinals are
+    /// compound-only concepts, named here by the same ids the recipe table
+    /// keys on.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn concept_name(self) -> &'static str {
+        match self {
+            Compass::N => "north",
+            Compass::Ne => "north-east",
+            Compass::E => "east",
+            Compass::Se => "south-east",
+            Compass::S => "south",
+            Compass::Sw => "south-west",
+            Compass::W => "west",
+            Compass::Nw => "north-west",
+        }
+    }
+}
+
+/// Compile-time tripwire: a new [`Compass`] variant breaks this match — every
+/// variant is named and there is no `_` arm — forcing [`Compass::all`] and
+/// [`Compass::concept_name`] to be revisited. The `manifest.rs` destructure
+/// tripwire applied to an enum. Never remove, never add a wildcard arm.
+#[allow(dead_code)]
+fn compass_variants_must_all_be_rostered(c: Compass) -> &'static str {
+    match c {
+        Compass::N => "north",
+        Compass::Ne => "north-east",
+        Compass::E => "east",
+        Compass::Se => "south-east",
+        Compass::S => "south",
+        Compass::Sw => "south-west",
+        Compass::W => "west",
+        Compass::Nw => "north-west",
+    }
+}
+
 /// The traversal class of an exit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum ExitKind {
@@ -978,6 +1106,26 @@ mod tests {
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
         assert_eq!(loc.schema, ROOM_SCHEMA);
+    }
+
+    #[test]
+    fn a_locale_reports_height_above_sea_level_not_the_raw_reading() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        // The same address `fields_are_within_the_corner_range` uses, for the same
+        // reason: it resolves on seed 42's mesh without needing a settlement.
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let sea = hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get());
+        let expected = hornvale_kernel::quantize(loc.fields.elevation_m - sea);
+        assert_eq!(
+            loc.fields.height_asl_m.get(),
+            expected,
+            "height_asl_m must be elevation_m re-datumed onto sea level, exactly"
+        );
     }
 
     #[test]

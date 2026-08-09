@@ -280,8 +280,8 @@ mod tests {
     use crate::star::Star;
     use crate::system::StarSystem;
     use crate::units::{
-        Au, Degrees, EarthMasses, Gyr, HabitableZone, LunarMasses, Megameters, SolarLuminosities,
-        SolarMasses, StdDays,
+        Au, Degrees, EarthMasses, Gyr, HabitableZone, Kelvin, LunarMasses, Megameters,
+        SolarLuminosities, SolarMasses, StdDays,
     };
 
     fn star(dec: f64, ra: f64, brightness: f64) -> Neighbor {
@@ -358,6 +358,7 @@ mod tests {
                 habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
                     .unwrap(),
                 age: Gyr::new(4.5).unwrap(),
+                t_eff: Kelvin::new(5772.0).unwrap(),
             },
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),

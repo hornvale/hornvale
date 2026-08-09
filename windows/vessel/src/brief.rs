@@ -91,7 +91,17 @@ impl Brief {
 /// Integer weights only (`corner_weights` returns `u64` numerators), so the
 /// choice is cross-platform exact — no float comparison enters world identity.
 /// Returns `None` for a place coarser than the canonical grid.
-fn containing_cell(place: &RoomAddr, geo: &Geosphere, index: &NearestCellIndex) -> Option<CellId> {
+///
+/// `pub(crate)` since The Lantern, which needs the same cell to read the ground
+/// a building's fabric is derived from. Shared rather than re-derived on
+/// purpose: a second copy of this rule is exactly how a room's *prose* ("granite
+/// lowland") and its *picture* would come to disagree about which ground it
+/// stands on.
+pub(crate) fn containing_cell(
+    place: &RoomAddr,
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+) -> Option<CellId> {
     let weights = place.corner_weights(geo, index)?;
     weights
         .iter()
@@ -124,14 +134,14 @@ pub fn brief_of(
             // derivation path is how derived state stops being derived.
             hornvale_worldgen::occupations_by_cell(world).remove(&cell)
         })
-        .and_then(|occs| occs.into_iter().find(|o| o.ended.is_none()));
+        .and_then(|occs| occs.into_iter().find(|o| o.core.ended.is_none()));
     match alive {
         Some(o) => Brief::from_parts(
-            Some(o.function),
-            Some(o.tech),
-            Some(o.notability),
-            Some(o.people),
-            o.peak_population,
+            Some(o.core.function),
+            Some(o.core.tech),
+            Some(o.core.notability),
+            Some(o.core.people),
+            o.core.peak_population,
             built,
             cold,
         ),

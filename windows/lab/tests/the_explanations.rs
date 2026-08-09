@@ -70,6 +70,7 @@ fn sub_frame_from_name(name: &str) -> Option<SubFrame> {
 }
 
 /// L1: the lexeme-level anti-vacuity law (uncanny-literalism guard).
+/// claim: invariant(census: none yet) — subframe/verb biconditional (audit §3.3)
 #[test]
 fn differing_subframes_do_not_share_one_verb() {
     // (subsistence-derived SubFrame, drawn Agentive verb lexeme) pairs,
@@ -184,6 +185,7 @@ fn differing_subframes_do_not_share_one_verb() {
 }
 
 /// L2: the schema-level anti-vacuity law.
+/// claim: invariant(census: none yet) — schema-competition floor (audit §3.3)
 #[test]
 fn day_schema_competition_clears_the_floor() {
     let mut schemas: Vec<SchemaId> = Vec::new();

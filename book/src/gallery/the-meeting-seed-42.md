@@ -19,15 +19,19 @@ the three authored vectors Year 2 spent its spine building: **psychology**
 and **articulation** (what a people's mouth affords).
 
 The whole demonstration turns on a single discipline shared by all three
-vectors: goblin is the identity point. Every scalar sits at 0.5 and every
-enumeration at its goblin variant, and every downstream formula is *constructed*
-— not tuned — so that the goblin values reduce it to the plain constant the
-world used before any species substrate existed (see
-[Species](../domains/species.md)). Goblin is therefore the world as it always
+vectors: the identity point is the **manikin**, a reference vector belonging to
+no creature (see [The Manikin](../domains/manikin.md)), and every downstream
+formula is *constructed* — not tuned — so that the manikin's values reduce it
+to the plain constant the world used before any species substrate existed (see
+[Species](../domains/species.md)). Goblin's authored vectors currently sit at
+exactly those values — every scalar with a genuine middle at the neutral
+midpoint 0.5, and every dimension without one at its designated default: the
+enumerations, and articulation's atonal `0.0` — so goblin reads here as the
+world as it always
 was; kobold is the world's first genuine second reading. So when the two
 diverge below, the goblin column is never the thing that moved. The kobold
 column is, and it moved by exactly the authored distance its vector sits from
-the baseline — no more, no less.
+the manikin — no more, no less.
 
 ## Psychology — where they land, and who stands where
 
@@ -62,7 +66,8 @@ weights are read off that species' vector rather than fixed once for the world
 (see [Settlement](../domains/settlement.md)): `freshwater = 0.45 × (0.5 +
 time_horizon)`, `coast = 0.20 × (2 × in_group_radius)`, and a hostility penalty
 `0.50 × (1.5 − threat_response)`, with temperance unweighted at 0.35. At the
-goblin baseline those expressions collapse to the plain constants 0.45, 0.20,
+manikin — where goblin's vector sits — those expressions collapse to the plain
+constants 0.45, 0.20,
 and 0.50 — the pre-species weighting exactly — so Xnebsvob lands where a
 goblin's world always placed its flagship. Kobold's authored numbers bend the
 same three terms in three directions at once: a time horizon of 0.8 raises the
@@ -149,7 +154,7 @@ is only which pair of eyes did the ranking, and that recounts to the perception
 vector (see [Perception](../domains/perception.md)). A species' lens is three
 multiplicative weights built from three authored dimensions — activity cycle,
 night vision, sky attention — and written, again, to reduce to identity at the
-goblin baseline. Goblin's vector `(Diurnal, 0.5, 0.5)` yields the lens
+manikin. Goblin's vector `(Diurnal, 0.5, 0.5)` sits there, and yields the lens
 `(1.0, 1.0, 1.0)`: no reweighting at all, so a goblin ranks the sky's raw
 salience unchanged and crowns the sun, whose raw salience the almanac's sky
 report lists at `[1.00]` against the vast moon's `[0.64]`. Kobold's vector
@@ -161,7 +166,7 @@ scales to `0.52`, the vast moon's raw 0.64 to `1.16`, and the moon clears the
 weighted bar the sun no longer can. The kobold does not see a different sky —
 it is handed the identical phenomena — it *weighs* the one it sees differently,
 by exactly the distance `activity-cycle`, `night-vision`, and `sky-attention`
-sit from the goblin baseline. Both pantheons carry the same provenance line,
+sit from the manikin. Both pantheons carry the same provenance line,
 *derived from the phenomenon celestial-body*, on every deity: religion never
 learns that a lens exists, only that its ranked list came out in a certain
 order.
@@ -218,8 +223,8 @@ formal honorific voice against a repeating descriptive one because the same
 psychology that built the ladder also tunes the telling. Every one of those
 divergences is *recountable*: ask the world `why`, and `recount` replays the
 committed facts and provenance behind each result, and the trail leads to a
-named dimension of a named vector sitting a named distance from the goblin
-baseline — never to an author's instinct, and never to a coincidence of the
+named dimension of a named vector sitting a named distance from the
+manikin — never to an author's instinct, and never to a coincidence of the
 dice.
 
 That last clause is the one a skeptic presses on. Both peoples draw from the
@@ -228,7 +233,7 @@ whether the divergence is real structure or merely two different draws off the
 same seed — stream noise wearing the costume of culture. The control that rules
 it out is a distributional twin: a third people carrying the goblin's *exact*
 vectors, placed beside the goblin, which must score at chance on every axis
-above, because a vector identical to the baseline cannot move a formula
+above, because a vector identical to the manikin cannot move a formula
 built to reduce to identity there. If the twin diverged anyway, the divergence
 would be noise; that it does not is the proof that these formulas read the
 vector and nothing else. [Study 009](../laboratory/study-009.md) runs that null

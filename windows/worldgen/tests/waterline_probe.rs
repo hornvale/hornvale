@@ -17,7 +17,7 @@
 //! ## Task 1 result: does support restriction move settlement placement? (P4)
 //!
 //! Measured 2026-07-26 on seed 42, this branch's base (includes The Vigil).
-//! A throwaway gate was added as the first statement of `niche_per_species_k`'s
+//! A throwaway gate was added as the first statement of `per_species_suitability`'s
 //! `CellMap::from_fn` closure in `windows/worldgen/src/lib.rs` (reverted
 //! immediately after measuring, not shipped here):
 //! ```text
@@ -68,12 +68,14 @@ use hornvale_demography::home_range;
 use hornvale_kernel::{ANIMAL_PREY, CellMap, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, niche_per_species_k, sky_of, terrain_of,
+    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// Lindeman trophic transfer efficiency — the Earth-anchored ~10%.
 const TRANSFER_EFFICIENCY: f64 = 0.10;
 
+/// claim: structural(seed: 42) — off-gate probe: measurement only, run
+/// explicitly
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn waterline_probe() {
@@ -110,8 +112,33 @@ fn waterline_probe() {
     let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
     let bio: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bio`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster this probe scores. So this is a deliberate CONTROL,
+    // not a copy of the registry.
+    //
+    // Deliberate because the waterline probe asks a question about the LAND
+    // MASK — which cells the capacity field reaches at all — and an affinity
+    // multiplies a field the mask has already admitted or excluded. Holding it
+    // at the pre-affinity physics (bit-identical, per task 3's
+    // `an_absent_affinity_is_bit_identical`) keeps the probe's answer about the
+    // waterline rather than about which kinds were declared since.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo,
         &terrain,
         &climate,
@@ -119,6 +146,8 @@ fn waterline_probe() {
         insolation_scalar,
         &regime,
         &bio,
+        &realm,
+        &affinity,
     );
     let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };
@@ -169,7 +198,7 @@ fn waterline_probe() {
     let mut prod_vec: Vec<f64> = vec![0.0; cells.len()];
     for &prey_tag in &dragon_prey {
         let b = bio[prey_tag as usize];
-        let lh = hornvale_species::life_history(b.mass, b.metabolic_class);
+        let lh = hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule);
         let Some(r) = lh.reproductive_tempo else {
             continue;
         };

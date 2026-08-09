@@ -65,6 +65,39 @@
 -- collision). No guarded claim moved: blind attribution still clears its 0.75
 -- floor at 0.9142, and the mooned+spinning perfect-attribution invariant
 -- never fired.)
+-- (Resync 2026-08-02, The Contour (position-aware conflict, decision 0096):
+-- census regen on lefford at the canonical commit 4c46b45e. Defensibility as
+-- a second contest axis reshapes raid/settle outcomes on nearly every world,
+-- reseating flagships and shifting which worlds hold a pantheon at all; 19
+-- literals below were re-synced to calibration.rs's own re-pin in this same
+-- commit. This file had also drifted from calibration.rs independently of
+-- the census move (`make census-check` was not run at the prior re-pin), so
+-- this resync also restores the tripwire's own invariant: the two paths must
+-- move together.)
+-- (Resync 2026-08-02, The Contour epoch v2: the `history/bake` stream label
+-- was bumped to `history/bake/v2` (decision 0006 — an epoch suffix, never a
+-- rename), which re-mints every draw the deep-history bake takes on top of
+-- whatever position-aware conflict itself changed, so every world moves a
+-- second time. Census regen on lefford at commit c55005ed/488de111, 0063.
+-- Every literal below that changed with this regen is re-synced to
+-- calibration.rs's own re-pin in the same commit. The two null-control TVD/
+-- SMD structural rows (cult-form, pantheon-size, name-length) that stopped
+-- being exact zeroes under The Living Community remain tiny nonzero
+-- measurements, still comfortably inside the sampling bound.)
+-- (Resync 2026-08-04, The Generalist: human joins the roster as a sixth
+-- settlement competitor (census regen on lefford at 02172e96, 0063/0079), so
+-- every world's settlement contest is decided among six competitors rather
+-- than five. All drifted literals below were re-synced to calibration.rs's
+-- own re-pin in the same commit — see
+-- .superpowers/sdd/2026-08-03-the-generalist/task-7b-report.md for the full
+-- table and the claim-by-claim verification. No guarded claim moved.)
+-- (Resync 2026-08-09, The Range: two kinds gained declared biome ranges
+-- (census regen on the canonical box, 0063/0079), so a settling people's
+-- range now constrains which sites it may found a settlement on. The
+-- clearest signature: goblin's flagship, present on every one of the 1000
+-- census seeds since The Delvers, now fails to place at all on TWO of them.
+-- All drifted literals below were re-synced to calibration.rs's own re-pin in
+-- the same commit. No guarded claim moved.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -348,47 +381,99 @@ namelen_stats AS (
        WHERE pin_set = 'goblin-twin-solo') AS var_b
 ),
 checks AS (
+  -- The Generalist resync, 0063/0079: 150 -> 148.
+  -- The Tolerance resync, 0063/0079: 148 -> 151.
+  -- The Delvers resync (C2c), 0063/0079: 151 -> 152.
+  -- The Range resync, 0063/0079: 152 -> 151.
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 149.0 AS pinned, locked_eternal = 149 AS ok FROM agg
+         CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 151 AS ok FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 41 -> 40.
+  -- The Contour epoch v2 resync, 0063: 39 -> 40.
+  -- The Tolerance resync, 0063/0079: 40 -> 41.
+  -- The Delvers resync (C2c), 0063/0079: 41 -> 40.
+  -- The Range resync, 0063/0079: 40 -> 41.
   SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(locked_ambient AS DOUBLE), 39.0, locked_ambient = 39 FROM agg
+         CAST(locked_ambient AS DOUBLE), 41.0, locked_ambient = 41 FROM agg
   UNION ALL
+  -- The Generalist resync, 0063/0079: 11 -> 9.
+  -- The Tolerance's and the Delvers' resyncs together, 0063/0079: 9 -> 10.
+  -- The Range resync, 0063/0079: 10 -> 9.
   SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(spinning_eternal_exceptions AS DOUBLE), 11.0, spinning_eternal_exceptions = 11 FROM agg
+         CAST(spinning_eternal_exceptions AS DOUBLE), 9.0, spinning_eternal_exceptions = 9 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 536 -> 535.
   -- The Tumult (predation) re-pin, 0063: 535 -> 531.
   -- The Tithe (tribute) re-pin, 0063: 552 -> 556.
+  -- The Contour epoch v2 resync, 0063: 548 -> 554.
+  -- The Generalist resync, 0063/0079: 554 -> 559.
+  -- The Tolerance resync, 0063/0079: 559 -> 565 (565 + 204 = 769, goblin's
+  -- re-pinned present-row count).
+  -- The Delvers resync (C2c), 0063/0079: 217 -> 208 (208 + 792 = 1000; the
+  -- one world that reported neither flag now reports one).
+  -- The Range resync, 0063/0079: 208 -> 217 (217 + 781 + 2 absent = 1000; a
+  -- declared biome range now blocks a goblin flagship from placing on two
+  -- worlds — see calibration.rs's own re-pin comment for the derivation).
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 556.0, flagship_coastal = 556 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 217.0, flagship_coastal = 217 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
   -- The Tithe (tribute) re-pin, 0063: 214 -> 211.
+  -- The Contour epoch v2 resync, 0063: 218 -> 214.
+  -- The Generalist resync, 0063/0079: 214 -> 207.
+  -- The Tolerance resync, 0063/0079: 207 -> 204.
+  -- The Delvers resync (C2c), 0063/0079: 782 -> 792.
+  -- The Range resync, 0063/0079: 792 -> 781.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 211.0, flagship_inland = 211 FROM agg
+         CAST(flagship_inland AS DOUBLE), 781.0, flagship_inland = 781 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 33 -> 34.
+  -- The Contour epoch v2 resync, 0063: 34 -> 33.
+  -- The Generalist resync, 0063/0079: unchanged at 33.
+  -- The Tolerance resync, 0063/0079: 33 -> 32.
+  -- An undocumented movement between the Tolerance resync (32) and the
+  -- Delvers resync (recovered here as 55, matching the pin this replaces)
+  -- is not re-derived; the Delvers resync itself left solar unmoved (see
+  -- the moonless-lunar row below).
+  -- The Range resync, 0063/0079: 55 -> 56.
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_solar AS DOUBLE), 34.0, moonless_solar = 34 FROM agg
+         CAST(moonless_solar AS DOUBLE), 56.0, moonless_solar = 56 FROM agg
   UNION ALL
   -- The Tithe (tribute) re-pin, 0063: 61 -> 59.
+  -- The Contour epoch v2 resync, 0063: 60 -> 62.
+  -- The Generalist resync, 0063/0079: 62 -> 61.
+  -- The Tolerance resync, 0063/0079: 61 -> 64.
+  -- The Delvers resync (C2c), 0063/0079: 85 -> 83; solar unmoved at 55.
+  -- The Range resync, 0063/0079: unmoved at 83; solar moves 55 -> 56.
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_lunar AS DOUBLE), 59.0, moonless_lunar = 59 FROM agg
+         CAST(moonless_lunar AS DOUBLE), 83.0, moonless_lunar = 83 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 703 -> 700.
   -- The Tumult (predation) re-pin, 0063: 700 -> 702 (the 768-row pool is
   -- unchanged, so accuracy rises 0.911 -> 0.914).
   -- The Tithe (tribute) re-pin, 0063: 695 -> 693 (accuracy 0.9157 -> 0.9142).
+  -- The Contour epoch v2 resync, 0063: 694 -> 697.
+  -- The Generalist resync, 0063/0079: 697 -> 693 (accuracy 0.9135 ->
+  -- 0.9130434782608696, still decisively above the 0.75 floor).
+  -- The Tolerance resync, 0063/0079: 693 -> 701 (accuracy 0.9130434782608696
+  -- -> 0.9127604166666666, still decisively above the 0.75 floor).
+  -- The Delvers resync (C2c), 0063/0079: 881 -> 883 (accuracy 0.9063786008230452
+  -- -> 0.9121900826446281, still decisively above the 0.75 floor).
+  -- The Range resync, 0063/0079: 883 -> 879 (accuracy 0.9121900826446281 ->
+  -- 0.9071207430340558, still decisively above the 0.75 floor).
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 693.0, blind_correct = 693 FROM agg
+         CAST(blind_correct AS DOUBLE), 879.0, blind_correct = 879 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
   -- The Tithe (tribute) re-pin, 0063: 759 -> 758.
+  -- The Contour epoch v2 resync, 0063: 761 -> 763.
+  -- The Generalist resync, 0063/0079: 763 -> 759.
+  -- The Tolerance resync, 0063/0079: 759 -> 768.
+  -- The Delvers resync (C2c), 0063/0079: 972 -> 968.
+  -- The Range resync, 0063/0079: 968 -> 969.
   SELECT 'blind-attribution total count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_total AS DOUBLE), 758.0, blind_total = 758 FROM agg
+         CAST(blind_total AS DOUBLE), 969.0, blind_total = 969 FROM agg
   UNION ALL
   SELECT 'mooned+spinning blind-attribution mismatches (calibration.rs::blind_attribution_beats_chance_decisively, correct_mooned == total_mooned)',
          CAST(mooned_spinning_mismatches AS DOUBLE), 0.0, mooned_spinning_mismatches = 0 FROM agg
@@ -400,20 +485,43 @@ checks AS (
   -- F11 discharge re-pin, 2026-07-30 (rows.csv at 4cd19ff9): 43 -> 1. See the
   -- decision-0024 note at calibration.rs::name_collision_rate_is_measured_and_
   -- pinned: this rise is SANCTIONED and is not to be bought back with entropy.
+  -- The Witness (cascade/v2 epoch), 0063: 2 -> 3. Every cascade in every
+  -- world reseeded when `draw_rule` stopped offering rules the phonology
+  -- cannot host, so every generated name moved; one more world lands on a
+  -- zero collision rate and one fewer on a nonzero one. The absent count is
+  -- unmoved, and 2+768 = 3+767, so the partition is intact.
+  -- The Contour epoch v2 resync, 0063: 3 -> 4.
+  -- The Generalist resync, 0063/0079: 4 -> 3.
+  -- The Tolerance resync, 0063/0079: 3 -> 1.
+  -- The Delvers resync (C2c), 0063/0079: 1 -> 0. The column is now EMPTY --
+  -- every censused world draws at least one duplicate name. Sanctioned, not a
+  -- defect: see the decision-0024 note above before touching a template weight.
+  -- The Range resync, 0063/0079: 0 -> 1. Reopens by exactly one world, not a
+  -- reversal of the Delvers reading.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 2.0, collision_zero = 2 FROM agg
+         CAST(collision_zero AS DOUBLE), 1.0, collision_zero = 1 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
   -- The Tithe (tribute) re-pin, 0063: 731 -> 737.
   -- The Toponym (name-gloss epoch), 0063: 737 -> 727.
   -- F11 discharge re-pin, 2026-07-30: 727 -> 769; the absent set is unmoved.
+  -- The Witness (cascade/v2 epoch), 0063: 768 -> 767. The paired half of the
+  -- zero-collision row above; the absent set is unmoved.
+  -- The Contour epoch v2 resync, 0063: 767 -> 766.
+  -- The Generalist resync, 0063/0079: 766 -> 767.
+  -- The Tolerance resync, 0063/0079: 767 -> 769; the absent set is unmoved at
+  -- 230 (1 + 769 + 230 = 1000).
+  -- The Delvers resync (C2c), 0063/0079: 999 -> 1000; absent unmoved at 0
+  -- (0 + 1000 + 0 = 1000).
+  -- The Range resync, 0063/0079: 1000 -> 999; absent unmoved at 0
+  -- (1 + 999 + 0 = 1000).
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 768.0, collision_nonzero = 768 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 999.0, collision_nonzero = 999 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_absent AS DOUBLE), 230.0, collision_absent = 230 FROM agg
+         CAST(collision_absent AS DOUBLE), 0.0, collision_absent = 0 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 0.178_726_790_236_740_12 ->
   -- 0.183_235_100_516_883.
@@ -428,13 +536,36 @@ checks AS (
   -- narrowed (mean name length fell sharply, below) while the roster of things
   -- to name kept growing. Sanctioned by decision 0024 — read it before
   -- treating this as something to fix.
+  -- The Witness (cascade/v2 epoch), 0063: 0.564_509_597_998_702 ->
+  -- 0.567_057_788_528_571. Same cascade reseed as the zero/nonzero pins
+  -- above.
+  -- The Contour epoch v2 resync, 0063: 0.559_547_123_829_870 ->
+  -- 0.560_567_825_485_714_4.
+  -- The Tolerance resync, 0063/0079: 0.528_593_255_324_676 ->
+  -- 0.535_421_983_528_571_5.
+  -- The Delvers resync (C2c), 0063/0079: 0.520_350_036_836_000_2 ->
+  -- 0.506_829_661_678_999_5.
+  -- The Range resync, 0063/0079: 0.506_829_661_678_999_5 ->
+  -- 0.510_906_343_952.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.564_509_597_998_702, abs(collision_mean - 0.564_509_597_998_702) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 0.560_567_825_485_714_4 ->
+  -- 0.560_572_844_615_584_4.
+  -- The Generalist resync, 0063/0079: 0.560_572_844_615_584_4 ->
+  -- 0.528_593_255_324_676.
+         collision_mean, 0.510906343952, abs(collision_mean - 0.510906343952) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
+  -- The Contour epoch v2 resync, 0063: 766 -> 768.
+  -- The Generalist resync, 0063/0079: 768 -> 766.
+  -- The Tolerance resync, 0063/0079: 766 -> 769.
+  -- The Delvers resync (C2c), 0063/0079: 999 -> 1000; every world in the
+  -- census now seats a goblin flagship.
+  -- The Range resync, 0063/0079: 1000 -> 998; a declared biome range now
+  -- blocks a goblin flagship from placing at all on two worlds.
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(goblin_len_present AS DOUBLE), 767.0, goblin_len_present = 767 FROM agg
+         CAST(goblin_len_present AS DOUBLE), 998.0, goblin_len_present = 998 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 13.461_308_710_376_134 ->
   -- 13.382_874_198_569_583.
@@ -444,13 +575,38 @@ checks AS (
   -- 13.665_297_457_235_99.
   -- F11 discharge re-pin, 2026-07-30: 13.665_297_457_235_99 ->
   -- 8.784_123_816_558_01. The present count holds at 767.
+  -- The Witness (cascade/v2 epoch), 0063: 8.784_123_816_558_01 ->
+  -- 8.639_595_029_986_95. Present count holds at 767.
+  -- The Contour epoch v2 resync, 0063: 8.660_349_090_208_882 ->
+  -- 8.688_230_827_083_34. Present count moves 766 -> 768.
+  -- The Tolerance resync, 0063/0079: 8.657_123_104_960_824 ->
+  -- 8.787_985_079_973_994. Still below the campaign's own <10-character claim
+  -- (spec 7).
+  -- The Delvers resync (C2c), 0063/0079: 8.541_942_812_712_72 ->
+  -- 8.562_788_425_799_996. Still below the campaign's own <10-character claim
+  -- (spec 7), by 1.44 characters.
+  -- The Range resync, 0063/0079: 8.562_788_425_799_996 ->
+  -- 8.494_760_944_989_975. Still below the campaign's own <10-character claim
+  -- (spec 7), by 1.51 characters.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 8.784_123_816_558_01, abs(goblin_len_mean - 8.784_123_816_558_01) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 8.688_230_827_083_34 ->
+  -- 8.687_525_197_786_464.
+  -- The Generalist resync, 0063/0079: 8.687_525_197_786_464 ->
+  -- 8.657_123_104_960_824. Present count 768 -> 766.
+         goblin_len_mean, 8.494760944989975, abs(goblin_len_mean - 8.494760944989975) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
+  -- The Contour epoch v2 resync, 0063: 763 -> 765.
+  -- The Generalist resync, 0063/0079: 765 -> 762.
+  -- The Tolerance resync, 0063/0079: 762 -> 769.
+  -- The Delvers resync (C2c), 0063/0079: 972 -> 968.
+  -- The Range resync, 0063/0079: 968 -> 969; a declared biome range now
+  -- reaches one more world where kobold could not previously seat a
+  -- flagship.
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(kobold_len_present AS DOUBLE), 760.0, kobold_len_present = 760 FROM agg
+         CAST(kobold_len_present AS DOUBLE), 969.0, kobold_len_present = 969 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 12.748_786_009_455_962 ->
   -- 12.690_321_674_122_243.
@@ -461,8 +617,26 @@ checks AS (
   -- 15.548_879_020_789_471 (kobold again moves far more than goblin).
   -- F11 discharge re-pin, 2026-07-30: 15.548_879_020_789_471 ->
   -- 7.403_195_966_315_787. Kobold moves nearly twice as far as goblin again.
+  -- The Witness (cascade/v2 epoch), 0063: 7.403_195_966_315_787 ->
+  -- 7.228_477_004_342_105. Present count holds at 760.
+  -- The Contour epoch v2 resync, 0063: 7.219_848_265_006_563 ->
+  -- 7.188_685_503_790_846. Present count moves 763 -> 765.
+  -- The Tolerance resync, 0063/0079: 7.189_805_441_863_518 ->
+  -- 7.236_424_583_355_002. Still below the campaign's own <10-character claim
+  -- (spec 7).
+  -- The Delvers resync (C2c), 0063/0079: 6.885_304_561_419_753 ->
+  -- 6.869_846_921_177_682_5. Still below the campaign's own <10-character
+  -- claim (spec 7), by 3.13 characters.
+  -- The Range resync, 0063/0079: 6.869_846_921_177_682_5 ->
+  -- 6.848_307_837_667_7. Still below the campaign's own <10-character claim
+  -- (spec 7), by 3.15 characters.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 7.403_195_966_315_787, abs(kobold_len_mean - 7.403_195_966_315_787) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 7.188_685_503_790_846 ->
+  -- 7.188_604_358_823_526.
+  -- The Generalist resync, 0063/0079: 7.188_604_358_823_526 ->
+  -- 7.189_805_441_863_518 (essentially unmoved). Present count 765 -> 762.
+         kobold_len_mean, 6.8483078376677, abs(kobold_len_mean - 6.8483078376677) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -498,14 +672,28 @@ checks AS (
   -- are pinned anyway: the pair identifies the set exactly, so a different
   -- world cannot pass by arithmetic, and if the count ever rises the two pins
   -- diverge and say so.
+  -- The Contour epoch v2 resync, 0063: 766 -> 768.
+  -- The Generalist resync, 0063/0079: 768 -> 766.
+  -- The Tolerance resync, 0063/0079: 766 -> 769.
+  -- The Delvers resync (C2c), 0063/0079: 999 -> 1000; the false count stays
+  -- 0, so the detector now reads true on every world in the census.
+  -- The Range resync, 0063/0079: 1000 -> 998; the false count stays 0 (the
+  -- two now-absent worlds hold no goblin pantheon to read a honorific from
+  -- at all — see the epithet-honorific absent count row below).
   SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_goblin_true AS DOUBLE), 767.0, epithet_goblin_true = 767 FROM agg
+         CAST(epithet_goblin_true AS DOUBLE), 998.0, epithet_goblin_true = 998 FROM agg
   UNION ALL
   SELECT 'goblin epithet-honorific false count — the diagnosed detector-blind world (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
          CAST(epithet_goblin_false AS DOUBLE), 0.0, epithet_goblin_false = 0 FROM agg
   UNION ALL
+  -- The Contour epoch v2 resync, 0063: 234 -> 232.
+  -- The Generalist resync, 0063/0079: 232 -> 234.
+  -- The Tolerance resync, 0063/0079: 234 -> 231.
+  -- The Delvers resync (C2c), 0063/0079: 1 -> 0.
+  -- The Range resync, 0063/0079: 0 -> 2 (the two worlds where a declared
+  -- biome range now blocks a goblin flagship from placing at all).
   SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_goblin_absent AS DOUBLE), 233.0, epithet_goblin_absent = 233 FROM agg
+         CAST(epithet_goblin_absent AS DOUBLE), 2.0, epithet_goblin_absent = 2 FROM agg
   UNION ALL
   -- The two seed-identity pins that stood here (lowest/highest goblin
   -- epithet-honorific false seed, both 400) are DELETED, not re-pinned. The
@@ -520,45 +708,135 @@ checks AS (
   -- Unmoved in KIND by anything since Task 11d, as it must be: the detector
   -- reads a PRESENT affix, and kobold (Knowledge status basis) has none. Only
   -- the counts move, with the worlds that hold a flagship pantheon at all.
+  -- The Contour epoch v2 resync, 0063: 763 -> 765.
+  -- The Generalist resync, 0063/0079: 765 -> 762.
+  -- The Tolerance resync, 0063/0079: 762 -> 769.
+  -- The Delvers resync (C2c), 0063/0079: 972 -> 968.
+  -- The Range resync, 0063/0079: 968 -> 969.
   SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_kobold_false AS DOUBLE), 760.0, epithet_kobold_false = 760 FROM agg
+         CAST(epithet_kobold_false AS DOUBLE), 969.0, epithet_kobold_false = 969 FROM agg
   UNION ALL
   SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
          CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
   UNION ALL
+  -- The Contour epoch v2 resync, 0063: 237 -> 235.
+  -- The Generalist resync, 0063/0079: 235 -> 238.
+  -- The Tolerance resync, 0063/0079: 238 -> 231.
+  -- The Delvers resync (C2c), 0063/0079: 28 -> 32.
+  -- The Range resync, 0063/0079: 32 -> 31.
   SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_kobold_absent AS DOUBLE), 240.0, epithet_kobold_absent = 240 FROM agg
+         CAST(epithet_kobold_absent AS DOUBLE), 31.0, epithet_kobold_absent = 31 FROM agg
   UNION ALL
   -- The eight naming aggregates restored at the top of `agg` need their
   -- assertions here, or they compute values nothing reads. Re-derived through
   -- DuckDB against the committed rows.csv, matching
   -- calibration.rs::name_syllable_distributions_are_measured_and_pinned and
   -- ::name_transparency_is_measured_and_pinned exactly.
+  -- The Contour epoch v2 resync, 0063: 766 -> 768.
+  -- The Generalist resync, 0063/0079: 768 -> 766.
+  -- The Tolerance resync, 0063/0079: 766 -> 769, agreeing with the
+  -- name-length row above.
+  -- The Delvers resync (C2c), 0063/0079: 999 -> 1000, agreeing with the
+  -- name-length row above.
+  -- The Range resync, 0063/0079: 1000 -> 998, agreeing with the name-length
+  -- row above.
   SELECT 'goblin name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         CAST(goblin_syl_present AS DOUBLE), 767.0, goblin_syl_present = 767 FROM agg
+         CAST(goblin_syl_present AS DOUBLE), 998.0, goblin_syl_present = 998 FROM agg
   UNION ALL
   -- Spec §8 criterion 2 asks for a mean syllable count in the 2-3 range; both
   -- species read inside it, which is the claim the Rust row carries.
+  -- The Witness (cascade/v2 epoch), 0063: 2.761_284_613_820_079 ->
+  -- 2.767_352_168_839_636. Still inside 2-3.
+  -- The Contour epoch v2 resync, 0063: 2.775_172_454_830_285 ->
+  -- 2.787_026_517_317_707_3. Present count moves 766 -> 768.
+  -- The Tolerance resync, 0063/0079: 2.763_782_961_879_896 ->
+  -- 2.813_568_037_061_118, still inside the preregistered 2-3 range.
+  -- The Delvers resync (C2c), 0063/0079: 2.720_839_553_653_654 ->
+  -- 2.723_388_327_800_003, still inside the preregistered 2-3 range.
+  -- The Range resync, 0063/0079: 2.723_388_327_800_003 ->
+  -- 2.705_454_691_783_566, still inside the preregistered 2-3 range (0.295
+  -- below the ceiling).
   SELECT 'mean goblin name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         goblin_syl_mean, 2.761_284_613_820_079, abs(goblin_syl_mean - 2.761_284_613_820_079) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 2.787_026_517_317_707_3 ->
+  -- 2.787_048_218_749_998_5.
+  -- The Generalist resync, 0063/0079: 2.787_048_218_749_998_5 ->
+  -- 2.763_782_961_879_896. Still inside 2-3. Present count 768 -> 766.
+         goblin_syl_mean, 2.705454691783566, abs(goblin_syl_mean - 2.705454691783566) < 1e-6 FROM agg
   UNION ALL
+  -- The Contour epoch v2 resync, 0063: 763 -> 765.
+  -- The Generalist resync, 0063/0079: 765 -> 762.
+  -- The Tolerance resync, 0063/0079: 762 -> 769, agreeing with the
+  -- name-length row above.
+  -- The Delvers resync (C2c), 0063/0079: 972 -> 968, agreeing with the
+  -- name-length row above.
+  -- The Range resync, 0063/0079: 968 -> 969, agreeing with the name-length
+  -- row above.
   SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         CAST(kobold_syl_present AS DOUBLE), 760.0, kobold_syl_present = 760 FROM agg
+         CAST(kobold_syl_present AS DOUBLE), 969.0, kobold_syl_present = 969 FROM agg
   UNION ALL
+  -- The Witness (cascade/v2 epoch), 0063: 2.316_698_345_263_158 ->
+  -- 2.318_080_226_315_786_7. Still inside 2-3.
+  -- The Contour epoch v2 resync, 0063: 2.313_806_532_765_403 ->
+  -- 2.306_935_878_954_248_7. Present count moves 763 -> 765.
+  -- The Generalist resync, 0063/0079: 2.306_935_878_954_248_7 ->
+  -- 2.305_631_764_829_393. Still inside 2-3. Present count 765 -> 762.
+  -- The Tolerance resync, 0063/0079: 2.305_631_764_829_393 ->
+  -- 2.319_622_207_412_223_2, still inside the preregistered 2-3 range.
+  -- The Delvers resync (C2c), 0063/0079: 2.192_605_995_679_012 ->
+  -- 2.184_114_303_822_312_3, still inside the preregistered 2-3 range.
+  -- The Range resync, 0063/0079: 2.184_114_303_822_312_3 ->
+  -- 2.176_904_839_215_685, still inside the preregistered 2-3 range (0.177
+  -- above the floor — the narrowest margin either species has recorded at
+  -- this row).
   SELECT 'mean kobold name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         kobold_syl_mean, 2.316_698_345_263_158, abs(kobold_syl_mean - 2.316_698_345_263_158) < 1e-6 FROM agg
+         kobold_syl_mean, 2.176904839215685, abs(kobold_syl_mean - 2.176904839215685) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
-         CAST(transparency_present AS DOUBLE), 770.0, transparency_present = 770 FROM agg
+         CAST(transparency_present AS DOUBLE), 1000.0, transparency_present = 1000 FROM agg
   UNION ALL
+  -- The Witness (cascade/v2 epoch), 0063: 0.793_035_961_411_688_4 ->
+  -- 0.803_660_578_424_675. Transparency ROSE — the wear cascade now lands
+  -- real sound changes instead of spending rule slots on rules a species'
+  -- phonology could never fire, so more names still gloss to their source
+  -- concept. See the Rust row's own note for the fuller reading.
+  -- The Contour epoch v2 resync, 0063: 0.807_392_672_749_351 ->
+  -- 0.804_951_365_489_610_2.
+  -- The Tolerance resync, 0063/0079: 0.785_500_964_077_923 ->
+  -- 0.786_123_665_363_636_2. Still emphatically not 1.0.
+  -- The Delvers resync (C2c), 0063/0079: 0.797_838_618_610_000_5 ->
+  -- 0.743_291_175_730_000_9. Still emphatically not 1.0, and a FALL is the
+  -- safe direction: only a rise back toward 1.0 would mean wear had stopped.
+  -- The Range resync, 0063/0079: 0.743_291_175_730_000_9 ->
+  -- 0.751_571_090_980_000_1. The mean RISES this time; still emphatically not
+  -- 1.0, and not a uniformity relapse — the floor falls further from 1.0 at
+  -- the same regen (see the min row below).
   SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_mean, 0.793_035_961_411_688_4, abs(transparency_mean - 0.793_035_961_411_688_4) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 0.804_951_365_489_610_2 ->
+  -- 0.804_225_380_346_752_7.
+  -- The Generalist resync, 0063/0079: 0.804_225_380_346_752_7 ->
+  -- 0.785_500_964_077_923. Still emphatically not 1.0.
+         transparency_mean, 0.7515710909800001, abs(transparency_mean - 0.7515710909800001) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
   -- a distribution over worlds rather than a constant every world reads.
+  -- The Generalist resync, 0063/0079: 0.076_923_077 -> 0.142_857_14. The
+  -- spread narrows a little but is still a real distribution, not the
+  -- uniformity defect (ceiling unmoved at 1.0, asserted below).
+  -- The Tolerance resync, 0063/0079: 0.142_857_14 -> 0.15; the ceiling is
+  -- unmoved at 1.0, so this is still a real distribution over worlds.
+  -- The Delvers resync (C2c), 0063/0079: 0.072_538_86 -> 0.257_575_76, the
+  -- highest floor this row has recorded; the ceiling is unmoved at 1.0
+  -- (asserted below), so a 0.258-to-1.0 span around a 0.743 mean is still a
+  -- real distribution over worlds. Flagged for the next regen: a floor that
+  -- kept climbing toward the mean is how the uniformity defect would return.
+  -- The Range resync, 0063/0079: 0.257_575_76 -> 0.165_354_33. The floor
+  -- DROPS sharply even as the mean rises — the span widens from below, the
+  -- opposite-signed pair the previous regen's warning was watching for.
   SELECT 'min name-transparency — the spread floor (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_min, 0.076_923_077, abs(transparency_min - 0.076_923_077) < 1e-6 FROM agg
+         transparency_min, 0.16535433, abs(transparency_min - 0.16535433) < 1e-6 FROM agg
   UNION ALL
   SELECT 'max name-transparency — the spread ceiling (calibration.rs::name_transparency_is_measured_and_pinned)',
          transparency_max, 1.0, abs(transparency_max - 1.0) < 1e-6 FROM agg
@@ -607,33 +885,54 @@ checks AS (
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 325 -> 324.
   -- The Tumult (predation) re-pin, 0063: 324 -> 323.
+  -- The Contour epoch v2 resync, 0063: 323 -> 322.
+  -- The Tolerance resync, 0063/0079: 322 -> 326 (326/387 = 0.842, still
+  -- mostly indistinguishable).
   SELECT 'indistinguishable solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(indistinguishable AS DOUBLE), 323.0, indistinguishable = 323 FROM meeting_agg
+         CAST(indistinguishable AS DOUBLE), 417.0, indistinguishable = 417 FROM meeting_agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 64 -> 63.
   -- The Tumult (predation) re-pin, 0063: 63 -> 64.
+  -- The Contour epoch v2 resync, 0063: 64 -> 65.
+  -- The Tolerance resync, 0063/0079: 65 -> 61 (31 of 61 pick the twin, a
+  -- 0.508 split).
   SELECT 'decided solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(total_pairs - indistinguishable AS DOUBLE), 64.0, total_pairs - indistinguishable = 64 FROM meeting_agg
+         CAST(total_pairs - indistinguishable AS DOUBLE), 82.0, total_pairs - indistinguishable = 82 FROM meeting_agg
   UNION ALL
-  SELECT 'head-domain distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, head TVD == 0)',
-         CAST(diff AS DOUBLE), 0.0, diff = 0 FROM head_domain_diff
+  SELECT 'head-domain distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, head TVD == 1)',
+         CAST(diff AS DOUBLE), 1.0, diff = 1 FROM head_domain_diff
   UNION ALL
   -- cult-form TVD is no longer exactly zero under history-first placement
   -- (path-dependent condensation order breaks the perfect solo/twin-solo
   -- clone on a couple of seeds); pinned to the measured count-diff.
   -- The Sundering (moving-sea epoch, 0063): 2 -> 4.
   -- The Tumult (predation) re-pin, 0063: 4 -> 6.
+  -- The Contour epoch v2 resync, 0063: 6 -> 8 (TVD 0.007_751_937_984_496_131
+  -- -> 0.010_335_917_312_661_49 in calibration.rs; pool still 387).
+  -- The Tolerance resync, 0063/0079: 8 -> 12 diverging categories;
+  -- calibration.rs's paired TVD moves 0.010_335_917_312_661_49 ->
+  -- 0.015_503_875_968_992_262, still an order of magnitude inside the +/-0.15
+  -- bound.
   SELECT 'cult-form distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, cult-form TVD re-pinned nonzero)',
-         CAST(diff AS DOUBLE), 6.0, diff = 6 FROM cult_form_diff
+         CAST(diff AS DOUBLE), 9.0, diff = 9 FROM cult_form_diff
   UNION ALL
   -- Same movement as cult-form above: pantheon-size mean-diff, formerly an
-  -- exact-zero structural pin, is now a tiny measured nonzero value.
+  -- exact-zero structural pin, is now a tiny measured nonzero value. NOTE:
+  -- this row pins the RAW mean difference as a zero/nonzero proxy, not the
+  -- standardized SMD calibration.rs pins (-0.003_295_124_196_027_554_4) — the
+  -- two are different quantities that move together, not the same number.
   -- The Sundering (moving-sea epoch, 0063): -0.010_282_776_349_614_053 ->
   -- -0.012_919_896_640_825_712.
   -- The Tumult (predation) re-pin, 0063: -0.012_919_896_640_825_712 ->
   -- -0.015_503_875_968_992_276.
+  -- The Contour epoch v2 resync, 0063: -0.015_503_875_968_992_276 ->
+  -- -0.012_919_896_640_825_712.
+  -- The Tolerance resync, 0063/0079: -0.012_919_896_640_825_712 ->
+  -- -0.020_671_834_625_321_85 (the RAW mean difference; calibration.rs's
+  -- standardized SMD moves -0.003_295_124_196_027_554_4 ->
+  -- -0.005_276_769_343_453_631).
   SELECT 'pantheon-size mean diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, SMD re-pinned nonzero)',
-         mean_a - mean_b, -0.015_503_875_968_992_276, abs(mean_a - mean_b - -0.015_503_875_968_992_276) < 1e-6 FROM pantheon_size_stats
+         mean_a - mean_b, 0.014581162324649455, abs(mean_a - mean_b - 0.014_581_162_324_649_455) < 1e-6 FROM pantheon_size_stats
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): -0.057_530_513_798_514_59 ->
   -- -0.065_161_843_432_313_42.
@@ -651,9 +950,27 @@ checks AS (
   -- -0.066 was. (DuckDB's summation lands one ULP from the Rust row's
   -- -0.025_217_538_228_395_456; the 1e-6 tolerance is what makes the two
   -- independent computations comparable at all, and is unchanged.)
+  -- The Witness (cascade/v2 epoch), 0063: -0.025_217_538_228_395_456 ->
+  -- -0.012_055_568_856_886_177. The cascade reseed touches both the goblin
+  -- and its deliberately-identical twin alike; the residual moved roughly
+  -- HALFWAY toward zero, not away from it, so the null control reads more
+  -- true after this re-pin than before. No sign flip.
+  -- The Contour epoch v2 resync, 0063: -0.012_055_568_856_886_177 ->
+  -- -0.017_848_707_186_831_292.
+  -- The Tolerance resync, 0063/0079: -0.017_807_448_465_414_44 ->
+  -- +0.009_246_730_125_111_655. The sign flips while the magnitude roughly
+  -- HALVES toward zero, so the null hypothesis this row witnesses
+  -- (indistinguishable from zero) reads more true, not less.
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025_217_538_228_395_456,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_217_538_228_395_456) < 1e-6
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): -0.017_848_707_186_831_292 ->
+  -- -0.018_069_698_979_322_31.
+  -- The Generalist resync, 0063/0079: -0.018_069_698_979_322_31 ->
+  -- -0.017_807_448_465_414_44 (human is not present in either solo build;
+  -- recorded as measured, not explained). Moves toward zero, still ~11x
+  -- inside the ±0.2 sampling-theory bound.
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.0014424983240824225,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.0014424983240824225) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

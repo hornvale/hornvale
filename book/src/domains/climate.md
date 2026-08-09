@@ -86,7 +86,14 @@ spreading ridges, trenches at subduction zones, upwelling zones from
 wind × coastline). A **habitability** mask — land, with liquid water, in a
 tolerable temperature band — is the non-opinionated answer to "where could
 a vale-like place stand," and it is where the Lab's genuinely unknown
-number lives (the next chapter). None of this is committed to the ledger:
+number lives (the next chapter). It is worth being precise about what that
+mask is *not*, since it was briefly asked to be both: it describes ground a
+generic vale-dweller would tolerate, and it no longer gates who may live
+anywhere. Habitability in the fuller sense is a relation between a species
+and a place, so it belongs to each species' own tolerance curves; only
+*dryness* is a property of the ground, and only dryness still gates
+productivity ([The Keeping](../chronicle/the-keeping.md)). None of this is
+committed to the ledger:
 biome and habitability are *fields*, recomputed from the same seed every
 time, so the tier-0 `biome` *fact* that the Vale holds has no registry
 conflict with the globe's biome *field*.
@@ -128,7 +135,11 @@ by nothing but the sky above it.
   the sea against orographic, convective, and distance-decay sinks) on
   spinning worlds; the biome field from temperature,
   moisture, elevation, and seafloor feature; the habitability mask from
-  biome-adjacent thresholds on temperature and moisture.
+  biome-adjacent thresholds on temperature and moisture; the daily
+  precipitation rate as the annual climatology redistributed by each day's
+  weather intensity; and each substrate's converged annual trajectory
+  (surface wetness, snowpack) from a state-dependent recurrence over daily
+  precipitation and temperature, spun up to a fixed point.
 - **Approximated (declared):** analytic circulation bands standing in for
   fluid dynamics — no Navier–Stokes, no Coriolis solve; **rotation
   direction is fixed prograde** (astronomy draws no spin-direction bit;
@@ -139,7 +150,10 @@ by nothing but the sky above it.
   in obliquity and year phase, not a solved radiative balance; the moisture
   budget is a single bounded upwind trace per cell, acyclic — not a
   relaxation to a steady state (a locked world keeps the older substellar
-  moisture model, having no band winds to trace against).
+  moisture model, having no band winds to trace against); substrate spin-up
+  is capped at a fixed number of simulated years — a cell whose accumulation
+  never converges is reported as a glacier rather than iterated to a literal
+  infinity.
 
 Chronicle: [3c, Climate & Biomes](../chronicle/campaign-3c.md). Laboratory:
 [Study 002, the Census of Lands](../laboratory/study-002.md).
@@ -153,6 +167,85 @@ baseline, so mild country is felt but sub-floor while only a brutal clime
 crosses religion's threshold — weather-gods are earned by hardship, not
 sprinkled across every valley. It reaches the stream through the
 phenomena-source roster, the same `Domain`-trait seam concept registration uses.
+
+**Weather gains memory ([The Mire](../chronicle/the-mire.md)).** Every read of
+weather so far has been instantaneous: a place could not remember being
+rained on the day before. A **substrate** now can — a material that
+integrates weather over time and decays, expressed as a **forward
+recurrence** (today's state equals yesterday's, plus what accumulated, minus
+what was lost) rather than a decaying convolution over past weather, because
+the loss term is not linear: it reads the substrate's own current state, so
+snowpack does not ablate at all below freezing and ablates fast above it —
+the "same" amount of snow decays at a different rate on different days, and a
+rate that depends on its own output cannot be folded into a fixed weighting
+over the past. Two substrates ship at time constants three orders of
+magnitude apart: **surface wetness** (τ ≈ days), which wets from the day's
+rain and dries by evaporation, saturating at a field capacity so a monsoon
+does not report absurd sogginess; and **snowpack** (τ ≈ months), which
+accumulates from the day's snow and loses it to a degree-day ablation that is
+exactly zero at or below freezing. **Freeze state** itself carries no
+integral and is not a third substrate — it is a threshold read straight off
+the temperature field that makes every substrate's loss term nonlinear,
+gating snowpack's ablation and suppressing surface drying alike. The forcing
+behind both is a new **daily precipitation** quantity, distributed across
+the year in proportion to each day's weather intensity but constrained to
+sum, over a year, back to the existing annual climatology exactly — a
+refinement of a shipped quantity, never a second source of truth for it.
+
+Each cell's annual trajectory is found by **spinning the recurrence up**:
+iterating from nothing, year over year, until the shape repeats. Surface
+wetness converges within a year; snowpack takes a few; a cell that never
+converges — snow that piles up without bound, year after year — *is a
+glacier*, and the model records that rather than treating non-convergence as
+an error. None of this touches the ledger: the substrate field is derived on
+demand from the same seed, exactly like the biome map, so no world's save
+format or byte-identity is affected by a domain that was never asked to
+compute it.
+
+The one reader that makes any of this observable is a weather-gated modifier
+on the connection graph's edge conductance (the graph itself belongs to
+[Settlement](./settlement.md)): mud and snowpack lower it, and — the
+asymmetry that keeps the modifier from being a monotone penalty wearing a
+physics costume — a **frozen** mire raises it back, because hard ground
+travels better than the same ground half-thawed. A preregistered study
+measuring what that gating does to two hundred generated worlds found a
+double falsification: weather barely moves passability at all (a median
+swing under 1%, against a preregistered 5% floor), and where it does move,
+it moves *least* at the poles rather than most — equatorial cells swing
+furthest, temperate cells less, and permanently frozen polar cells swing
+**exactly zero**, having nothing left to alternate between. Seasonal
+variation, the campaign's finding generalizes, lives where conditions
+*alternate*, not where they are *extreme*. See [The
+Mire](../chronicle/the-mire.md) for the full measurement, including the two
+checks that confirmed the null was real rather than the instrument being
+blind, and for the sea-ice case that campaign deliberately left ungated.
+
+The cost question that null left open has since been answered, and it
+answers back in three parts. Re-measured on what a route *costs* rather
+than whether it is open — routing over a weathered traversal-cost field
+instead of reading a threshold on the graph — the **median** journey's
+seasonal swing is under half a percent, smaller still than the passability
+null. But the median is the wrong statistic for the phenomenon: the
+ninety-ninth percentile of journeys swings enough to clear the same 5%
+floor the median misses, and the worst journeys in two hundred worlds
+nearly *double* in cost between their best day and their worst. Weather's
+effect on travel is a tail risk, not an average one.
+
+Second, it cannot be avoided by going around. Committing to a route chosen
+in fair weather and walking it in foul costs roughly half a percent more
+than re-planning optimally every day, because an alternative route
+typically costs 11–18% more than the best one — detouring costs about what
+enduring costs. Travellers in these worlds do change their roads with the
+season, about one journey in seven, but they are trading the cost rather
+than escaping it.
+
+Third, and most usefully for anything that trusts the polar result above:
+the exact zero reproduces. A wholly different instrument — path cost rather
+than reachable-component membership, geographic sampling rather than land
+cells — returns the same **0.000000** in the polar band, with the same
+ordering beneath it. The Mire's most surprising finding is a property of
+these worlds, not of the way it was first measured. See [The
+Fare](../chronicle/the-fare.md).
 
 **The tier ladder ahead:** *stochastic* weather — day-to-day variation the
 world's pure `world(place, time)` cannot yet express (standing felt weather has

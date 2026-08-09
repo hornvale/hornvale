@@ -78,7 +78,7 @@ pre-merge close (`scripts/census-run.sh`, [decision
 0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046; serialized against other heavy runs by [decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md), which [decision 0086](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0086-the-heavy-tier-runs-on-the-canonical-box.md) extends to the heavy tier), then drift-checked and CI-probed on every build.
 A full run measured **828s wall** on the canonical box (2026-07-29,
 `cpu_ratio` 15.49) — roughly half of it a single-core preamble before the
-census phase begins, since `regenerate-artifacts.sh` invokes the binary 37
+census phase begins, since `regenerate-artifacts.sh` invokes the binary 55
 times in sequence and only the census phase parallelises.
 
 Everything else the census family has produced is frozen, not deleted.
@@ -121,6 +121,11 @@ with `main`. How tractable is now measured rather than assumed — [The
 Timekeeper](../chronicle/the-timekeeper.md) found the gate running at
 934.5 s against decision 0040's budget of 234 s, and gave the suite a
 per-test baseline and an alarm so the next such drift announces itself.
+[The Whetstone](../chronicle/the-whetstone.md) then took most of that back —
+460.8 s, by optimizing the *test* build rather than by cutting any test —
+and found, in passing, that the per-test baseline is keyed on the machine's
+hostname and so cannot be read as a ranking of what is slow unless it was
+recorded on the box you are reading it from.
 
 That last sentence is a *convention*, and it has failed. [The
 Siding](../chronicle/the-siding.md) found the census stale for **139

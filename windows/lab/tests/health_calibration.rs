@@ -115,6 +115,8 @@ fn the_null_control_reads_no_chronic_distress() {
     );
 }
 
+/// claim: invariant(forall-seed) — off-gate (heavy:); the breadth-check
+/// twin of the always-run flagship control, over seeds 0/1/2/7
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_null_control_holds_across_a_seed_sweep() {

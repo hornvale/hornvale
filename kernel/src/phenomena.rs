@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Where a phenomenon lives, as its producer honestly knows: the day sky,
 /// the night sky, or the ambient world. Character, not cause — declaring a
 /// venue reveals nothing about which system produced the phenomenon.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Venue {
     /// Seen in the daytime sky (the sun).
     DaySky,
@@ -20,16 +20,76 @@ pub enum Venue {
     Ambient,
 }
 
+/// What a phenomenon is *about*, in the world's own vocabulary: the
+/// registered concept it refers to, plus the registered concepts that
+/// qualify it.
+///
+/// This is **all** a phenomenon says about what it is about, and the only
+/// field a consumer may branch on. A reader's text is derived from it at the
+/// moment of reading, where the speaker is known; nothing may parse that text
+/// back (decision 0022, and `hornvale_language::register`'s content→render
+/// seam). Before this type existed, `windows/worldgen` decided which concept a
+/// phenomenon glossed to — and therefore what a people's deity was named — by
+/// grepping a stored English description for `"moon"`; rewording one
+/// description moved 73 committed facts on seed 42. That description no longer
+/// exists.
+///
+/// Every id here is a **concept-registry key**, never prose: `moon`, not
+/// `"a vast moon"`. Qualifiers are registry keys too, which is load-bearing
+/// rather than tidy — every concept a producer can name here already has a
+/// registered key (`blue` included); what varies per culture is whether a
+/// *word* realizes that key at all. An unlexicalized concept never goes
+/// silent: it surfaces as a reasoned gap (`hornvale_language::GapReason`,
+/// e.g. `gap (perceptual): hue rank 4 exceeds depth 2 …` for a Berlin & Kay
+/// rung a species hasn't acquired), not as a missing key.
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Referent {
+    /// The registered concept id this phenomenon is about.
+    pub concept: String,
+    /// Registered concept ids qualifying the head, in producer-declared
+    /// order. Empty is the common case.
+    pub qualifiers: Vec<String>,
+}
+
+impl Referent {
+    /// A referent naming `concept` with no qualifiers.
+    /// type-audit: bare-ok(identifier-text: concept)
+    pub fn of(concept: &str) -> Referent {
+        Referent {
+            concept: concept.to_string(),
+            qualifiers: Vec::new(),
+        }
+    }
+
+    /// A referent naming `concept`, qualified by `qualifiers` in order.
+    /// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
+    pub fn qualified(concept: &str, qualifiers: &[&str]) -> Referent {
+        Referent {
+            concept: concept.to_string(),
+            qualifiers: qualifiers.iter().map(|q| (*q).to_string()).collect(),
+        }
+    }
+}
+
 /// Something an observer would notice. `kind` must be registered in the
 /// concept registry by the producing domain. Consumers must not branch on
-/// the producing system — only on kind, period, character, salience.
-/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: description), pending(wave-1: period_days), bare-ok(ratio: salience)
+/// the producing system — only on kind, referent, period, character, salience.
+///
+/// **A phenomenon carries no text.** A producer cannot know who is looking —
+/// [`ObserverContext`] is `{place, time, lens, position}` by constitutional
+/// design (decision 0003, no species field) — so a stored string could only
+/// ever be culture-neutral or wrong. Reader-facing words are realized where
+/// the speaker is known (`hornvale_almanac::phenomenon_line`), from the
+/// [`Referent`]'s registered concept ids.
+/// type-audit: bare-ok(identifier-text: kind), pending(wave-1: period_days), bare-ok(ratio: salience)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Phenomenon {
     /// Registered phenomenon kind (concept-registry key).
     pub kind: String,
-    /// Human-readable character of the phenomenon.
-    pub description: String,
+    /// What this phenomenon is about, in registry keys. The only field a
+    /// consumer may branch on.
+    pub referent: Referent,
     /// None = constant or aperiodic; Some(d) = recurs every d days.
     pub period_days: Option<f64>,
     /// How much this demands attention, in [0, 1].
@@ -176,9 +236,27 @@ pub trait PhenomenaSource {
 }
 
 /// Aggregate all sources, sorted by salience descending. Ties break by
-/// kind then description so output order never depends on source order
-/// alone being stable — determinism is constitutional, and every sort
-/// carries a deterministic tie-break (decision 0005).
+/// kind, then referent, then period (`None` last), then venue — every sort
+/// carries a deterministic tie-break (decision 0005). The referent is the
+/// discriminator a phenomenon has now that it carries no text (it orders by
+/// what the phenomenon is *about* rather than by an English sentence about
+/// it), and period/venue extend that after the-vernacular-3 made it
+/// insufficient on its own.
+///
+/// **This ordering is deterministic but not total.** Several producers
+/// (`domains/astronomy`'s wandering stars, heliacal risings/settings, and
+/// night stars) now emit multiple phenomena that tie on kind, referent,
+/// period, and venue all at once — a hardcoded salience or a shared year-long
+/// period leaves nothing left to compare. When every leg ties, `sort_by`
+/// (guaranteed stable) falls through to **source emission order**, so the
+/// output is still bit-for-bit reproducible for a given seed — just not a
+/// function of the phenomena's declared fields alone anymore. Anything that
+/// relies on the relative order of two such phenomena is relying on emission
+/// order, not on this tie-break: see
+/// `windows/worldgen::chorus::cyclic_beliefs_from`, which joins by list
+/// position and would silently mispair if `sort_by` here were ever swapped
+/// for `sort_unstable_by` (not stability-guaranteed) or a producer's
+/// emission order changed.
 pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<Phenomenon> {
     let mut all: Vec<Phenomenon> = sources.iter().flat_map(|s| s.phenomena(ctx)).collect();
     if !ctx.lens.is_identity() {
@@ -192,7 +270,14 @@ pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<P
         b.salience
             .total_cmp(&a.salience)
             .then_with(|| a.kind.cmp(&b.kind))
-            .then_with(|| a.description.cmp(&b.description))
+            .then_with(|| a.referent.cmp(&b.referent))
+            .then_with(|| match (a.period_days, b.period_days) {
+                (Some(x), Some(y)) => x.total_cmp(&y),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
+            })
+            .then_with(|| a.venue.cmp(&b.venue))
     });
     all
 }
@@ -216,7 +301,7 @@ mod tests {
     fn ph(kind: &str, salience: f64) -> Phenomenon {
         Phenomenon {
             kind: kind.to_string(),
-            description: format!("the {kind}"),
+            referent: Referent::of(kind),
             period_days: None,
             salience,
             venue: Venue::Ambient,
@@ -251,7 +336,7 @@ mod tests {
 
     #[test]
     fn observe_breaks_salience_ties_deterministically() {
-        // Equal salience: sorted by kind, then description.
+        // Equal salience: sorted by kind, then referent.
         let a = FixedSource(vec![ph("zephyr", 0.5), ph("aurora", 0.5)]);
         let out = observe(&[&a], &ctx());
         assert_eq!(out[0].kind, "aurora");
@@ -303,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn lens_ties_break_by_kind_then_description() {
+    fn lens_ties_break_by_kind_then_referent() {
         // Two night phenomena both clamp to 1.0 under a strong lens.
         let a = FixedSource(vec![
             ph_venue("night-star", 0.6, Venue::NightSky),
@@ -421,5 +506,43 @@ mod tests {
         assert!(Visibility::new(f64::NAN).is_none());
         assert_eq!(Visibility::new(0.5).map(|v| v.get()), Some(0.5));
         assert_eq!(Visibility::CLEAR.get(), 1.0);
+    }
+
+    /// A phenomenon carries no text. A producer cannot know who is looking —
+    /// `ObserverContext` is {place, time, lens, position} by constitutional
+    /// design (decision 0003) — so a stored string could only ever be neutral
+    /// or wrong. Rendering happens where the speaker is known.
+    ///
+    /// This test is a structural assertion: it fails to COMPILE if the field
+    /// returns, which is the point.
+    #[test]
+    fn a_phenomenon_carries_no_text() {
+        let p = Phenomenon {
+            kind: "celestial-body".to_string(),
+            referent: Referent::of("moon"),
+            period_days: None,
+            salience: 1.0,
+            venue: Venue::NightSky,
+        };
+        assert_eq!(p.referent.concept, "moon");
+    }
+
+    #[test]
+    fn a_referent_names_a_concept_and_its_qualifiers() {
+        let plain = Referent::of("moon");
+        assert_eq!(plain.concept, "moon");
+        assert!(plain.qualifiers.is_empty());
+
+        let qualified = Referent::qualified("star", &["red", "new"]);
+        assert_eq!(qualified.concept, "star");
+        assert_eq!(qualified.qualifiers, vec!["red", "new"]);
+    }
+
+    #[test]
+    fn a_referent_round_trips_through_json() {
+        let r = Referent::qualified("eclipse", &["sun"]);
+        let json = serde_json::to_string(&r).expect("a referent serializes");
+        let back: Referent = serde_json::from_str(&json).expect("a referent deserializes");
+        assert_eq!(r, back);
     }
 }

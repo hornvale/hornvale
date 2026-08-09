@@ -91,6 +91,25 @@ impl ConnectionGraph {
         (0..self.adjacency.len() as u32).map(CellId)
     }
 
+    /// Scale every stored directed edge's conductance in place: `factor` is
+    /// called once per entry in every cell's adjacency list (so a symmetric
+    /// pair -- the two mirrored halves `add_edge` inserted -- is visited
+    /// once from each side, each time with `from` set to whichever endpoint
+    /// owns that entry). A caller that wants the same multiplier regardless
+    /// of which endpoint a query originates from computes one from both
+    /// endpoints (e.g. their mean) before calling this -- kept generic
+    /// here so this crate never has to know what "weather" or "season"
+    /// means; the caller (the composition root) owns that meaning.
+    pub fn scale_conductance(&mut self, mut factor: impl FnMut(CellId, &Edge) -> f64) {
+        for (idx, edges) in self.adjacency.iter_mut().enumerate() {
+            let from = CellId(idx as u32);
+            for edge in edges.iter_mut() {
+                let f = factor(from, edge);
+                edge.conductance *= f;
+            }
+        }
+    }
+
     /// Connected components over edges whose `conductance >= min_conductance`.
     /// Each component is a `BTreeSet<CellId>`; the returned `Vec` is ordered
     /// by each component's minimum `CellId`, so the result is deterministic

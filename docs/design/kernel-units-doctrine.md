@@ -24,6 +24,40 @@ astronomy's scaled views over kernel Distance/Mass). The `elevation-convention`
 waiver is reclassified as *temporary* — the kernel type retires it;
 `crust-km-convention` follows in its own wave.
 
+**Audited by The Benchmark (2026-08-06) — the forecast above was wrong as a
+blanket claim.** The kernel type shipped (`SeaLevelHeight`,
+`ReferenceElevation::above`), but `grep -rn "elevation-convention"
+--include=*.rs .` still finds all **five** of the waiver's live sites, and
+this campaign retired **zero** of them:
+
+- `windows/locale/src/lib.rs::LocaleFields.elevation_m`
+- `windows/vessel/src/liveness.rs::Terrain::elevation` (trait method)
+- `windows/scene/src/surrounds.rs::SurroundsCell.elevation_m`
+- `windows/scene/src/region.rs::RegionScene.elevation_m`
+- `windows/scene/src/lib.rs::TilesScene.elevation_m`
+
+Each stays a bare `f64` carrying the *absolute* isostatic reading on purpose,
+not by oversight: `LocaleFields.elevation_m` and `SurroundsCell.elevation_m`
+sit **beside** a new, correctly-typed `height_asl_m: SeaLevelHeight` sibling
+this campaign added, because the two readings answer different questions
+(`LocaleTerrain::elevation`'s downhill-drainage prior in `liveness.rs` reads
+`elevation_m` deliberately — it only needs a *relative* ordering, and every
+correct sea-level-relative consumer already reads `height_asl_m` instead);
+and `RegionScene.elevation_m`/`TilesScene.elevation_m` are client-facing
+schemas that already publish `sea_level_m` alongside the raw `elevation_m`
+precisely so a client can re-derive height above sea level itself — neither
+schema does server-side relief banding, so neither had The Benchmark's bug.
+Empirically checked, not merely reasoned: deleting the tag at
+`LocaleFields.elevation_m` and re-running `type-audit check` fails with
+`locale:110: untagged primitive at elevation_m` — the audit does not agree it
+is retirable, because the field is still a bare primitive at a `pub`
+boundary. Task 2's finding ("subtracting two elevations is polymorphic in
+meaning") generalizes here: "elevation" was never one convention to retire,
+so the doctrine's singular "the kernel type retires it" should read *retires
+the sea-level-relative reading's ambiguity, not the absolute reading's bare
+representation* — the latter is a deliberate, still-open waiver, not a
+residual TODO.
+
 ## Proactive, not reactive
 
 The planned domains share a common physical vocabulary, so the kernel unit

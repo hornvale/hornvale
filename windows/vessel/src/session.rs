@@ -8,7 +8,7 @@ use crate::liveness::{
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry,
+    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -30,6 +30,36 @@ const WILD_COUNT: usize = 4;
 /// The closed fallback line `consult` renders when no initiated line
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
 const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
+
+/// How far the possession sees inside a chamber, as a **Chebyshev** radius in
+/// cells — the metric [`crate::lattice::shadowcast`] itself bounds, so the
+/// constant and the algorithm cannot disagree about what "four" means.
+///
+/// **It is a stand-in, and which kind of stand-in matters.** Hornvale has no
+/// indoor lighting model, so no physical quantity fixes this number. What fixes
+/// it is the requirement that it BIND. A chamber [`crate::lattice::allocate`]
+/// draws is a rectangle; a rectangle is convex; so occlusion alone never hides
+/// one floor cell of a chamber from another. And every structure a possession
+/// can enter takes that method — `embed_with` selects on `brief.built`, and
+/// `structure_at` returns `None` without it — so occlusion is not a live
+/// narrowing today at all. A chamber spans [`crate::lattice::CHAMBER_SIDE`] = 8
+/// cells, whose Chebyshev diameter is 7, so **at radius 7 or more the narrowing
+/// is decoration**: it would remove nothing any built world can produce. Half a
+/// chamber is the largest round number that is not decoration.
+///
+/// One named constant rather than a literal at the call site, so that the day a
+/// light model arrives there is exactly one place to replace, and so no second
+/// caller can quietly disagree with the first.
+/// type-audit: bare-ok(count)
+const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
+
+// A creature's `kind`, `datum` and `salience` on the plan are NOT this module's
+// to invent: they are `crate::purview`'s `AGENT_MARK_KIND`, `creature_datum` and
+// `AGENT_SALIENCE`, the same three the walk-band chart marks the same creature
+// with. Fix round 1's finding is why they are shared rather than restated — this
+// module's first draft wrote its own `"creature"` kind and a felt-state datum,
+// so one creature answered `examine` with two different sentences depending on
+// which side of a doorway the player was standing. See `Session::sighting`.
 
 /// The ways-on name for the aperture leading DEEPER into a structure — a
 /// direction, not a thing, because a chamber address carries no bearing and the
@@ -96,6 +126,14 @@ const INDOOR_DIAGONAL_REFUSAL: &str =
 /// that text died with the constant, so only the water's own reason remains.)
 const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first, then swim.";
 
+/// What lateral movement says while underground (The Deep Realm). The cave
+/// lattice this campaign ships has no walkable interior — only the entrance
+/// chamber is reachable — so a compass step from it is refused for the same
+/// reason a step from a water stratum is: there is nowhere down here for a
+/// bearing to mean. Diegetic, not a parse error, matching
+/// [`SUBMERGED_LATERAL_REFUSAL`]'s own reasoning one realm over.
+const UNDERGROUND_LATERAL_REFUSAL: &str = "Not down here. Climb out first, then walk.";
+
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
 /// type-audit: bare-ok(identifier-text)
@@ -153,10 +191,15 @@ verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser);
                    indoors, the floor plan of the building you are in
+  eyes [who]       whose eyes you see colour through (a species, 'own',
+                   'standard', or 'off'); bare, it says what yours drop
   go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw);
                    the bare direction works on its own too
   dive             descend a layer of the water column; 'surface' comes back
   surface          rise a layer, and at the top return to the open air
+  delve            descend into the cave at this cell, if the rock admits
+                   one; 'climb' comes back
+  climb            return to the surface from underground
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
@@ -195,6 +238,17 @@ pub struct Session<'w> {
     /// A clone of the world's registry, extended with `AGENT_AT` (registered
     /// per-session, never at genesis — spec §3).
     registry: ConceptRegistry,
+    /// Whose eyes the possession's chart is coloured through (The Beholding,
+    /// Task 4), carried from `PossessOpts::eyes`.
+    eyes: crate::eyes::Eyes,
+    /// The presentation lens the DRAWN chamber plan is filtered through (The
+    /// Lantern, Task 8, spec §7), carried from `PossessOpts::lens`.
+    ///
+    /// Read in exactly one place — [`Session::plan_here`], the terminal draw.
+    /// It must never reach [`crate::plan::plan_of`] or [`Session::snapshot`]:
+    /// those produce committed artifacts, and lensed colour in one would make
+    /// these constants a save-format-class contract for the sake of a look.
+    lens: crate::lens::Lens,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
     /// The world's terrain, sculpted once at `start` (The Shuttle), so every
@@ -263,6 +317,17 @@ pub struct Session<'w> {
     /// The depth band, mirroring `inside`: a second way of being somewhere
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
+    /// The chamber the possession has descended into within the cave lattice
+    /// beneath this cell, if any (The Deep Realm, Task 5). `None` is the
+    /// surface. Mirrors `submerged`: the whole resolved value is carried
+    /// rather than just an address, so `climb` and a later `look` never need
+    /// to re-derive it (`chamber_at` is pure and would return the same
+    /// content either way, but there is nothing to gain by re-deriving what
+    /// is already in hand). This campaign's lattice has only the entrance
+    /// address reachable from the vessel seam — no deeper descent verb
+    /// exists yet — so this is always the entrance chamber (`band = 0,
+    /// slot = 0`) when `Some`.
+    underground: Option<hornvale_worldgen::chamber::Chamber>,
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
     /// is world-independent; `corner_weights` is fixed once `ctx`'s
@@ -319,6 +384,42 @@ struct Inside {
     /// and is passable; a `Floor` cell, never a `Threshold`, so the drawn mark
     /// cannot hide a doorway (`lattice::cell_beyond`).
     cell: crate::lattice::Cell,
+    /// The seed this frame's geometry is drawn from — the locale's own seed
+    /// ([`Session::frame_seed`]), the one `lattice` above was embedded with and
+    /// the one [`crate::lattice::anchor_cells`] places anchors with.
+    ///
+    /// Carried rather than re-derived for the reason `lattice` is: it is a
+    /// property of the STRUCTURE, fixed for as long as the possession stands in
+    /// it, and re-deriving it per snapshot would invite the two to disagree.
+    /// It is also the one lever The Sighting's negative control needs — perturb
+    /// this and the embedding moves while nothing else does, which is exactly
+    /// the experiment spec §2.1 asks for.
+    seed: Seed,
+}
+
+/// What the fine layer says about the chamber the possession is standing in:
+/// where each co-located creature has been drawn, and which cells the
+/// possession can see from where it stands.
+///
+/// `FRAME`-tier in its entirety, like everything else in this band (decision
+/// 0069): derived inside one [`Session::snapshot`] call and dropped when it
+/// returns. Nothing here is committed, and that is the campaign's central
+/// constraint rather than an implementation detail — the embedding may decide
+/// what a client is SHOWN, never what an agent comes to BELIEVE (spec §2.1).
+/// `Session::knowledge` is not read or written on this path.
+struct Sighting {
+    /// Every cell the possession can see, [`SIGHT_RADIUS`] Chebyshev cells out
+    /// and stopping at the fabric.
+    lit: std::collections::BTreeSet<crate::lattice::Cell>,
+    /// Where each co-located creature the embedding could place stands. A
+    /// creature is ABSENT here for four distinct reasons, all legitimate:
+    /// nothing has recorded its within-room anchor yet (no tick has run), the
+    /// recorded anchor no longer names a place this room composes, this chamber
+    /// composes no anchor of that anchor's kind, or the cell it would take is
+    /// already held (§7 rule 5). Absence therefore never means "hidden" — which
+    /// is why [`Session::snapshot`] narrows `sensed.present` only on a creature
+    /// this map DOES place.
+    placed: std::collections::BTreeMap<EntityId, crate::lattice::Cell>,
 }
 
 impl<'w> Session<'w> {
@@ -475,6 +576,8 @@ impl<'w> Session<'w> {
             projection: IdentityProjection,
             ledger,
             registry,
+            eyes: opts.eyes.clone(),
+            lens: opts.lens,
             npcs,
             terrain,
             climate,
@@ -487,6 +590,7 @@ impl<'w> Session<'w> {
             last_text: String::new(),
             inside: None,
             submerged: None,
+            underground: None,
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
         };
@@ -514,7 +618,20 @@ impl<'w> Session<'w> {
     /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
-    /// CLI never does, so its measured per-turn cost is unchanged.
+    /// CLI never does, so its measured per-turn cost is unchanged. For a
+    /// caller that *does* ask — the Casement, over wasm — the cost is not
+    /// nothing: `snapshot() + json` measured 0.173 → 1.249 ms (7.22×), and
+    /// the bytes grew per band — walk 4235 → 11582 (2.73×), chamber 4064 →
+    /// 4759 (1.17×) (`windows/vessel/examples/turn_cost.rs`).
+    ///
+    /// This method's failure surface is wider than a per-channel read: the
+    /// only error path below is `observable`'s single `VesselError::Build`
+    /// (a purview failure), and a whole snapshot fails on it rather than
+    /// just the spatial channel. At the ABI, `set_snapshot()` calls
+    /// `.and_then(|p| p.session.snapshot().ok())`, so that failure empties
+    /// the snapshot buffer and the client falls back to prose — losing
+    /// every channel that turn (self, sensed, known, social, structured
+    /// narration), not just the map.
     pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
         let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
         // The noun catalog comes from the focalizer; the PROSE comes from
@@ -547,8 +664,26 @@ impl<'w> Session<'w> {
         // entry regardless of scope; it is exactly as cheap as the
         // pre-Task-4 unconditional search, never cheaper, for this call.
         let mut home_nav_cache = HomeNavCache::new();
-        let present = self
-            .colocated_npcs()
+        // The fine layer, derived ONCE per snapshot: `anchor_cells` costs 42 us
+        // at the median and 410 us at p99 against this call's own measured
+        // 1.249 ms, so a second derivation — or one per creature — would be a
+        // budget item rather than noise. `None` out of doors.
+        let sighting = self.sighting();
+        // SIGHT NARROWS WHAT IS SENT (spec §2.1, `CLIENT-redaction-panes`),
+        // and it narrows it HERE — at the roster, before any affect is read —
+        // so that this channel and the two verbs that answer about creatures
+        // (`needs`, `examine`) share one predicate rather than three
+        // reimplementations of it. See `sensed_npcs` for the rule and for the
+        // unplaced row, which is the one that is easy to get wrong. Nothing on
+        // this path touches `self.knowledge`: that deferral is the whole of
+        // §2.1, held by
+        // `perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`.
+        //
+        // The species rides along beside the `PresentEntry` because a creature's
+        // MARK datum is an identity line (`purview::creature_datum`), not the
+        // felt state `present` carries — and `PresentEntry` has no species field.
+        let here: Vec<(EntityId, String, PresentEntry)> = self
+            .sensed_npcs(sighting.as_ref())
             .iter()
             .map(|npc| {
                 let affect = affect_of_memo_occupied(
@@ -562,13 +697,49 @@ impl<'w> Session<'w> {
                     &mut mesh_memo,
                     &mut home_nav_cache,
                 );
-                PresentEntry {
-                    entity: npc.entity.0.get(),
-                    label: npc.label.clone(),
-                    felt: felt_phrase(&affect),
-                }
+                (
+                    npc.entity,
+                    npc.species.clone(),
+                    PresentEntry {
+                        entity: npc.entity.0.get(),
+                        label: npc.label.clone(),
+                        felt: felt_phrase(&affect),
+                    },
+                )
             })
             .collect();
+
+        let present: Vec<PresentEntry> = here.iter().map(|(_, _, entry)| entry.clone()).collect();
+
+        // The same shadowcast decides the marks, so the pane and the sensed
+        // channel cannot disagree about who is here. `marks` is a strict SUBSET
+        // of `present`: a creature is drawn only when it was placed AND lit,
+        // which is one of the three rows `sensed_npcs` keeps.
+        //
+        // `kind`, `datum` and `salience` are the walk-band chart's own
+        // (`crate::purview`), not this module's. Fix round 1's finding: the
+        // first draft minted a `"creature"` kind and a felt-state datum here, so
+        // one creature answered `examine` with two different sentences depending
+        // on which side of a doorway the player stood — the exact drift §6
+        // forbids, one band lower than The Lintel's jar.
+        let marks: Vec<crate::plan::PlanMark> = sighting
+            .as_ref()
+            .map(|s| {
+                here.iter()
+                    .filter_map(|(who, species, entry)| {
+                        let cell = *s.placed.get(who)?;
+                        s.lit.contains(&cell).then(|| crate::plan::PlanMark {
+                            x: cell.0,
+                            y: cell.1,
+                            noun: entry.label.clone(),
+                            kind: crate::purview::AGENT_MARK_KIND.to_string(),
+                            datum: crate::purview::creature_datum(&entry.label, species),
+                            salience: crate::purview::AGENT_SALIENCE,
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
 
         let social = self
             .npcs
@@ -593,6 +764,28 @@ impl<'w> Session<'w> {
                 value: value.clone(),
             })
             .collect();
+
+        // The band the possession is in decides the channel. `inside` is the
+        // same discriminator `handle`'s `map` arm uses, so pane and verb can
+        // never disagree about which band is current — and that is the whole
+        // reason this matches on `inside` alone rather than on the three
+        // "not out of doors" states the session now carries (`inside`,
+        // `submerged`, `underground`). `map`'s arms guard on `inside` too, so
+        // the other two fall through to the surface chart in the verb and
+        // must fall through here identically or the pane would start showing
+        // something the verb refuses to. Adding a band to the session without
+        // deciding what the pane shows there is the failure this comment
+        // exists to catch: see `SpatialChannel`'s doc.
+        let spatial = match self.inside.as_ref() {
+            Some(inside) => SpatialChannel::Chamber {
+                plan: self.chamber_plan(inside, marks)?,
+            },
+            // `purview(0)` is the same call `map` makes out of doors, at the
+            // same zoom, so the pane shows what the verb would have shown.
+            None => SpatialChannel::Walk {
+                chart: self.purview(0)?,
+            },
+        };
 
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
@@ -626,9 +819,13 @@ impl<'w> Session<'w> {
                 nouns: focalized
                     .nouns
                     .into_iter()
-                    .map(|(noun, datum)| NounEntry { noun, datum })
+                    .map(|n| NounEntry {
+                        noun: n.display,
+                        datum: n.datum,
+                    })
                     .collect(),
             },
+            spatial,
         })
     }
 
@@ -702,6 +899,27 @@ impl<'w> Session<'w> {
     /// unresolved (not-here) `who` reads as not-hostile rather than
     /// erroring. This mechanic's whole consequence is Task 3's; this task
     /// stops at the gate.
+    ///
+    /// "Resolves exactly as `provoke`/`soothe` do" is load-bearing rather than
+    /// descriptive, and The Sighting is why: `colocated_npc` is now narrowed by
+    /// sight, so a creature the possession cannot see reads as not-hostile here
+    /// — the same answer an absent one gives.
+    ///
+    /// **What that achieves, stated precisely** (fix round 4 corrects fix round
+    /// 3's claim). It does NOT make a withheld creature's hostility
+    /// undiscoverable: `SessionSnapshot::social` folds `self.npcs` *unfiltered*
+    /// and ships `label` + `grievance` + this very `hostile` bool for every
+    /// derived NPC, co-located or not. That is pre-existing and deliberately
+    /// disclosed — [`crate::snapshot::SocialEntry`]'s own doc says membership is
+    /// world truth, that a consumer must filter it, and that rendering it
+    /// unfiltered ships a cheat pane — and The Sighting does not touch it.
+    ///
+    /// What the narrowing achieves is that this method cannot *drift* from the
+    /// verbs it documents itself against. A caller reading `would_turn_hostile`
+    /// as "is the creature I am about to provoke hostile" would otherwise get
+    /// `true` for a creature `provoke` refuses to act on — an answer about a
+    /// creature the same session has just declined to reach. One resolution,
+    /// one answer.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
         self.colocated_npc(who)
@@ -794,8 +1012,39 @@ impl<'w> Session<'w> {
 
     /// This session's chart, `zoom_out` rungs coarser than the walk depth.
     /// Reads only — the chart never mutates the session.
+    ///
+    /// # A WALK-BAND read, and the assertion is what makes that true
+    ///
+    /// The chart marks **every derived NPC** with a noun and a datum, ungated
+    /// ([`crate::purview_scene`]) — so calling it while the possession is inside
+    /// a chamber would disclose exactly the creature the chamber band has
+    /// withheld, straight past four gated verbs (The Sighting, fix round 5).
+    ///
+    /// Nothing does today, and that was verified rather than assumed: `map`
+    /// indoors draws the plan and `map out` refuses; `snapshot`'s `Walk` arm
+    /// runs only when `inside` is `None`; `examine` indoors routes to
+    /// `examine_chamber`, and the one path that slips past that guard — a BARE
+    /// `examine` while inside — returns "Examine what?" before reaching any
+    /// chart. But every one of those is a fact about **dispatch**, and this
+    /// method is `pub`: a caller that has not read `handle` can reach it from
+    /// inside a chamber with nothing to stop them.
+    ///
+    /// So the precondition is asserted where a future caller would trip it,
+    /// rather than stated in a doc a future caller will not read.
+    /// `debug_assert!` rather than a hard refusal deliberately: it fires in
+    /// every test and debug run — which is where this campaign's coverage lives
+    /// — while costing nothing in release and, crucially, not changing a public
+    /// `Result` contract that today has no error case for this. A caller who
+    /// genuinely wants the walk-band chart from indoors is asking a real
+    /// question (what does the land outside look like?) and should get a
+    /// deliberate method with a redacted mark list, not a silent pass here.
     /// type-audit: bare-ok(count: zoom_out)
     pub fn purview(&self, zoom_out: u32) -> Result<hornvale_scene::SurroundsScene, VesselError> {
+        debug_assert!(
+            self.inside.is_none(),
+            "the walk-band chart marks every derived NPC ungated, so drawing it \
+             from inside a chamber would disclose a creature sight withheld"
+        );
         crate::purview_scene(
             self.world,
             &self.ctx,
@@ -805,6 +1054,9 @@ impl<'w> Session<'w> {
             &self.ledger,
             self.day,
             zoom_out,
+            &self.agent,
+            &self.eyes,
+            self.calendar.as_ref(),
         )
     }
 
@@ -827,6 +1079,14 @@ impl<'w> Session<'w> {
             // leaves the walk band, so nothing else changes.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" if self.submerged.is_some() => self.out(self.describe_here()),
+            // Underground (The Deep Realm, Task 5): the chamber lattice's
+            // content is read straight from `self.underground`, never
+            // through `describe_here`'s locale pipeline — that pipeline's
+            // stratum handling (`expr_at_stratum`) is water-specific (a
+            // vantage stratum that disagrees with the cell's own substitutes
+            // `Formation::OpenWater`), so feeding it a rock `Stratum` would
+            // render nonsense rather than a chamber.
+            "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
             "look" => self.out(self.describe_here()),
             // `map` is band-aware for exactly the reason `look` is, and it is the
             // SAME verb rather than a new one: §6's contract is that any pane
@@ -839,6 +1099,11 @@ impl<'w> Session<'w> {
             "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
             "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
             "map" => self.map(rest),
+            // Bare `eyes` reports whose eyes the chart is coloured through and
+            // what their projection drops; `eyes <name>` switches them (The
+            // Beholding, Task 5).
+            "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
+            "eyes" => self.set_eyes(rest),
             // `go` is band-aware for the same reason `look` and `map` are, and
             // this arm is the reversal The Blocking owes The Lintel: indoors a
             // compass bearing means one CELL, not one locale. §1b.6's law is
@@ -851,6 +1116,12 @@ impl<'w> Session<'w> {
             // to step across, so a bearing under water still has nowhere to go
             // (The Column). Two bands, two answers, one verb.
             "go" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
+            // The chamber lattice, likewise: this campaign ships only the
+            // entrance address, no walkable interior, so a bearing from it
+            // has nowhere to mean either (The Deep Realm, Task 5).
+            "go" if self.underground.is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             "go" => self.go(rest),
             // Band-aware, for the same reason `look` is: the outdoor path resolves
             // against the LOCALE's two grains, which know nothing of what stands
@@ -865,12 +1136,25 @@ impl<'w> Session<'w> {
             "examine" if self.inside.is_some() && !rest.is_empty() => {
                 Turn::Out(self.examine_chamber(rest))
             }
+            // The underworld's own band, mirroring the two arms above: a cave
+            // chamber's rock is not the surface locale's canopy and forest, so
+            // resolving an underground `examine` against `examine`'s own prose
+            // catalog is the defect The Handle's Task 4 fixes — it fell through
+            // to the bare arm below, which reads the LOCALE overhead, and
+            // answered "You see no rock here." about the very rock the descent
+            // had just named.
+            "examine" if self.underground.is_some() && !rest.is_empty() => {
+                Turn::Out(self.examine_underground(rest))
+            }
             "examine" => self.examine(rest),
             // `back` retraces the WALK-band trail, so it stays refused where `go`
             // no longer is: the capability this campaign built is intra-chamber
             // GEOMETRY, and a walk-band trail is not geometry.
             "back" if self.inside.is_some() => Turn::Out(INDOOR_BACK_REFUSAL.to_string()),
             "back" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
+            "back" if self.underground.is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             "back" => self.back(),
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
@@ -884,6 +1168,8 @@ impl<'w> Session<'w> {
             "consult" => Turn::Out(self.consult()),
             "dive" => self.dive(),
             "surface" => self.surface(),
+            "delve" => self.delve(),
+            "climb" => self.climb(),
             "enter" => self.enter(rest),
             "out" => self.leave(),
             // Coarse-ward is still refused: possessing a settlement, a culture
@@ -911,6 +1197,9 @@ impl<'w> Session<'w> {
             other if self.submerged.is_some() && parse_compass(other).is_some() => {
                 Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
             }
+            other if self.underground.is_some() && parse_compass(other).is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             other if parse_compass(other).is_some() => self.go(other),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
@@ -934,6 +1223,25 @@ impl<'w> Session<'w> {
             return Vec::new();
         };
         self.ctx.water_column_at(hornvale_kernel::CellId(cw.cell))
+    }
+
+    /// The cave at the cell the possession stands on, if the terrain places
+    /// one there — mirrors `column_here`: both resolve the same fuzzy
+    /// corner-weighted cell under the possession and ask "is there a medium
+    /// here to descend into," one for water, one for rock. `None` on a cell
+    /// with no cave, or before terrain built at all.
+    ///
+    /// Returns the resolved [`hornvale_kernel::CellId`] alongside the cave
+    /// rather than the bare `Cave` `column_here` analogy would suggest:
+    /// addressing a chamber (`ChamberAddr`) needs the cell, where a water
+    /// stratum needs no address at all, so the caller needs both.
+    fn chamber_column_here(&self) -> Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)> {
+        let terrain = self.terrain.as_ref()?;
+        let v = crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, None)
+            .ok()?;
+        let cw = v.locale.corners.iter().max_by_key(|c| c.weight)?;
+        let cell = hornvale_kernel::CellId(cw.cell);
+        terrain.cave_at(cell).map(|cave| (cell, cave))
     }
 
     /// Descend one layer of the water column.
@@ -986,6 +1294,135 @@ impl<'w> Session<'w> {
         match self.describe_here() {
             Ok(d) if breaking => Turn::Out(format!("You break the surface.\n{d}")),
             other => self.out(other),
+        }
+    }
+
+    /// Descend into the cave at this cell's entrance chamber (The Deep
+    /// Realm, Task 5).
+    ///
+    /// Mirrors `dive`, but the chamber lattice has a THIRD outcome `dive`
+    /// never needed. Task 3 measured that even where a cave exists, its own
+    /// entrance address (`band = 0, slot = 0`) resolves to an actual chamber
+    /// only 51.5% of the time — spec §3.4 rung 0, `Sealed`: "the void exists
+    /// and is unreachable," a real chamber a later dig could find, not a
+    /// defect. `dive`'s own doc warns what happens when a refusal doesn't
+    /// name what stopped you: it reads as a parse failure rather than a fact
+    /// about the world. So each of the three outcomes below is named:
+    ///   1. no cave at this cell at all — say so;
+    ///   2. a cave, but its entrance resolves to nothing — say it is
+    ///      SEALED, not that there is simply nothing here;
+    ///   3. a chamber — descend, and say what the rock here is.
+    fn delve(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return Turn::Out("There is no rock to delve into in here.".to_string());
+        }
+        if self.underground.is_some() {
+            return Turn::Out(
+                "You are already below; 'climb' brings you back up first.".to_string(),
+            );
+        }
+        let Some((cell, cave)) = self.chamber_column_here() else {
+            return Turn::Out("There is no cave here to delve into.".to_string());
+        };
+        self.delve_at(cell, cave)
+    }
+
+    /// The outcome of delving at a KNOWN cell and cave — split out of
+    /// [`Self::delve`] so the sealed-vs-open decision can be exercised
+    /// directly against a hand-picked cell (this campaign's own unit
+    /// coverage) without steering the possession there first. Steering is
+    /// impractical to do from a test: `chamber_column_here` resolves the
+    /// possession's terrain cell through the same fuzzy corner-weighted walk-
+    /// band lookup `column_here` uses, and a terrain cell spans many, many
+    /// walk-band rooms, so hitting one particular cell (let alone one with a
+    /// SEALED cave specifically, ~48.5% of caves per Task 3's measurement)
+    /// by walking is not something a test should depend on landing.
+    fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
+        let addr = hornvale_worldgen::chamber::ChamberAddr {
+            cell,
+            entrance: 0,
+            band: 0,
+            slot: 0,
+        };
+        let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
+        match hornvale_worldgen::chamber::chamber_at(self.world.seed, &cave, addr, &overrides) {
+            None => Turn::Out(
+                "The cave mouth is here, but the rock beyond is sealed; there is no way down."
+                    .to_string(),
+            ),
+            Some(chamber) => {
+                self.underground = Some(chamber);
+                Turn::Out(format!(
+                    "You worm down into the dark. The rock here is {}.",
+                    stratum_word(chamber.stratum)
+                ))
+            }
+        }
+    }
+
+    /// Return to the surface from the chamber lattice — `delve`'s inverse,
+    /// mirroring `surface`. This campaign's lattice reaches only the
+    /// entrance address, so unlike `surface` there is no intermediate layer
+    /// to rise through: any descent climbs out in one step.
+    fn climb(&mut self) -> Turn {
+        if self.underground.take().is_none() {
+            return Turn::Out(
+                "You are not underground; there is nothing to climb out of.".to_string(),
+            );
+        }
+        match self.describe_here() {
+            Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
+            other => self.out(other),
+        }
+    }
+
+    /// The chamber rendering while underground (The Deep Realm, Task 5) —
+    /// deliberately minimal, in `describe_chamber_here`'s spirit one realm
+    /// over: this campaign ships no interior lattice for a cave the way a
+    /// structure has one, only the entrance address, so there is no floor
+    /// plan or anchor catalogue to draw from. Read straight off
+    /// `self.underground` rather than re-deriving through `chamber_at` —
+    /// re-deriving would be pure and would agree, but there is nothing to
+    /// gain by paying for it a second time.
+    fn describe_underground_here(&self) -> String {
+        let chamber = self
+            .underground
+            .expect("guarded by self.underground.is_some() at the call site");
+        format!(
+            "[underground]\nThe rock here is {}. Ways on: out.",
+            stratum_word(chamber.stratum)
+        )
+    }
+
+    /// The underworld's examinable catalog. The band has its own because you
+    /// cannot see the forest from inside the rock — resolving an underground
+    /// `examine` against the surface locale's nouns is the defect this fixes
+    /// (The Handle, Task 4).
+    fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
+        let chamber = self
+            .underground
+            .expect("guarded by self.underground.is_some() at the call site");
+        let stratum = stratum_word(chamber.stratum);
+        vec![
+            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {stratum}.")),
+            crate::focalize::Noun::new(
+                stratum,
+                stratum,
+                &format!("{stratum} — the rock of this chamber."),
+            ),
+        ]
+    }
+
+    /// `examine <noun>` UNDERGROUND: the band's own catalog only — never the
+    /// surface locale's, which is the defect The Handle's Task 4 fixes. The
+    /// refusal is BYTE-IDENTICAL to the outdoor and chamber paths' (§6):
+    /// two wordings for one question is exactly the drift this campaign
+    /// exists to remove.
+    fn examine_underground(&self, noun: &str) -> String {
+        let wanted = noun.trim().to_lowercase();
+        match self.underground_nouns().iter().find(|n| n.matches(&wanted)) {
+            Some(n) => n.datum.clone(),
+            None => format!("You see no {noun} here."),
         }
     }
 
@@ -1147,11 +1584,13 @@ impl<'w> Session<'w> {
                 // it is; say so rather than panicking in a player's hands.
                 return Turn::Out("error: that chamber has no floor to stand in".to_string());
             };
+            let seed = self.frame_seed(&structure);
             self.inside = Some(Inside {
                 structure,
                 at: next,
                 lattice,
                 cell,
+                seed,
             });
             return self.out(self.describe_chamber_here());
         }
@@ -1189,11 +1628,13 @@ impl<'w> Session<'w> {
     fn descend(&mut self, structure: crate::structure::Structure, at: usize) -> Option<()> {
         let lattice = self.lattice_of(&structure);
         let cell = crate::lattice::standing_cell(&lattice, at)?;
+        let seed = self.frame_seed(&structure);
         self.inside = Some(Inside {
             structure,
             at,
             lattice,
             cell,
+            seed,
         });
         Some(())
     }
@@ -1537,14 +1978,175 @@ impl<'w> Session<'w> {
     /// plan is a property of the STRUCTURE, and so does not change as the
     /// possession walks deeper into it.
     fn lattice_of(&self, structure: &crate::structure::Structure) -> crate::lattice::Lattice {
-        let locale = crate::band::truncate_to_walk(&structure.threshold, self.walk_depth());
         let brief = self.brief_here();
         crate::lattice::embed_with(
             structure,
             &brief,
             crate::lattice::extent_for(structure),
-            locale.seed(self.world.seed),
+            self.frame_seed(structure),
         )
+    }
+
+    /// The seed every FRAME-tier derivation of `structure` is drawn from: the
+    /// locale's own seed, read off the THRESHOLD for the reason [`Self::lattice_of`]
+    /// gives (a plan is a property of the structure, not of how deep into it you
+    /// have walked).
+    ///
+    /// A named derivation with two callers rather than an expression inlined
+    /// twice: [`Self::lattice_of`] embeds the cells with it and
+    /// [`crate::lattice::anchor_cells`] places anchors into those same cells with
+    /// it, and a placement keyed differently from the plan it is placed into would
+    /// be a silent second world.
+    fn frame_seed(&self, structure: &crate::structure::Structure) -> Seed {
+        crate::band::truncate_to_walk(&structure.threshold, self.walk_depth()).seed(self.world.seed)
+    }
+
+    /// The ground the building the possession stands in is built from (The
+    /// Lantern, spec §3), or `None` above the canonical grid.
+    ///
+    /// **One context for the whole structure**: a building sits on one cell of
+    /// the geosphere, so its stone comes from one bedrock however many chambers
+    /// it has.
+    ///
+    /// The cell is `brief::containing_cell`'s — greatest blend weight, tie-broken
+    /// to the lowest `CellId` — which is the SAME rule `brief_of` selects the
+    /// building's own brief with and the same one `hornvale_locale`'s
+    /// `dominant_corner` takes a room's biome, water and substrate from. Shared,
+    /// never re-derived: a caption that says granite over a picture drawn in
+    /// basalt grey is the failure `fabric.rs`'s module doc exists to prevent.
+    ///
+    /// Read through `self.ctx` rather than `self.terrain`/`self.climate` for the
+    /// same reason — the locale context is what described this room, so the
+    /// fabric and the prose read one world.
+    fn fabric_here(&self) -> Option<crate::fabric::FabricContext> {
+        // The possession's own position is already walk-band (`Inside` records
+        // descent, `Agent::position` does not move), so this truncation is a
+        // no-op today. Stated anyway, because `brief_of` truncates identically
+        // before its own `containing_cell` call and two readings of one cell
+        // that agree only by accident are what this method exists not to be.
+        let locale = crate::band::truncate_to_walk(&self.agent.position, self.walk_depth());
+        let cell = crate::brief::containing_cell(
+            &locale,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
+        )?;
+        Some(crate::fabric::FabricContext::at(
+            self.ctx.terrain(),
+            self.ctx.climate(),
+            cell,
+        ))
+    }
+
+    /// Every light burning where the possession stands (spec §4.2).
+    ///
+    /// Three kinds, and **one radius for all of them**: [`SIGHT_RADIUS`], whose
+    /// own doc was written anticipating this campaign — *"so that the day a
+    /// light model arrives there is exactly one place to replace, and so no
+    /// second caller can quietly disagree with the first."* A torch reaching
+    /// less far than sight would produce cells you can see with nothing
+    /// illuminating them, which is not dim but incoherent.
+    ///
+    /// - **The implicit torch**, at the possession's own cell. Nathan's call at
+    ///   G3: a possession is assumed to be carrying a light, which makes an
+    ///   explicit carried torch a refinement rather than a new mechanism and
+    ///   means nobody is ever stranded in the dark with no inventory to fix it.
+    /// - **The hearth**, only where this chamber actually composes an
+    ///   `AnchorKind::Hearth` — the interior graph decides whether there is a
+    ///   fire, and [`crate::light::hearth_cell`] decides only where it sits.
+    /// - **The doorways.** A declared approximation, and worth stating plainly:
+    ///   the lattice records **no exterior door**, because a structure's way out
+    ///   is a band transition (`out`), not a cell. The only aperture it models is
+    ///   a `Threshold` between chambers, so that is where the day is admitted.
+    ///   The light is `eyes::daylight_at`'s — the world's own star at the real
+    ///   solar altitude for this day and latitude, which is the same call the
+    ///   walk-band chart colours by — so a chamber genuinely darkens at night
+    ///   rather than holding a permanent noon.
+    fn chamber_sources(&self, inside: &Inside) -> Vec<crate::light::Source> {
+        let mut sources = vec![crate::light::Source {
+            at: inside.cell,
+            illuminant: hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+            radius: SIGHT_RADIUS,
+        }];
+
+        let has_hearth = self.chamber_interior_here().is_some_and(|interior| {
+            interior
+                .ids()
+                .iter()
+                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth)
+        });
+        // Both halves are needed and neither implies the other: the interior
+        // graph decides whether there IS a fire, and `hearth_cell` decides only
+        // where it would sit — a chamber that owns no wall of its own has
+        // nowhere to put one.
+        if let (true, Some(at)) = (
+            has_hearth,
+            crate::light::hearth_cell(&inside.lattice, inside.at),
+        ) {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: hornvale_kernel::color::blackbody(crate::light::HEARTH_KELVIN),
+                radius: SIGHT_RADIUS,
+            });
+        }
+
+        let (day, _altitude) = crate::eyes::daylight_at(
+            self.world,
+            self.calendar.as_ref(),
+            self.day,
+            self.agent.position.coord().latitude,
+        );
+        for &(_, _, at) in &inside.lattice.doorways {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: day,
+                radius: SIGHT_RADIUS,
+            });
+        }
+        sources
+    }
+
+    /// The chamber plan for the room stood in — **the one derivation of the
+    /// colour seam**, shared by the wire snapshot and the terminal draw.
+    ///
+    /// The Lantern's seam, in the order it runs: what the building is made of,
+    /// what light reaches each cell, and whose eyes are looking. Any one of the
+    /// three missing is a WITHHOLDING (see [`crate::plan::Shading`]) — the plan
+    /// comes back exactly as it did before this campaign rather than carrying an
+    /// invented colour.
+    ///
+    /// **It is one method rather than two on purpose.** `snapshot` and
+    /// `plan_here` are the same room seen through two grains, and a second copy
+    /// of this derivation is exactly how a pane and a picture end up disagreeing
+    /// about what colour a wall is — the failure `chart_centre` and
+    /// `eyes::daylight_at` each already carry a comment about. Note what is
+    /// *not* here: the lens. This function produces the model's own bytes, and
+    /// only [`Session::plan_here`] filters them.
+    fn chamber_plan(
+        &self,
+        inside: &Inside,
+        marks: Vec<crate::plan::PlanMark>,
+    ) -> Result<crate::plan::SessionPlan, VesselError> {
+        let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
+        let fabric = self.fabric_here();
+        let light = crate::light::light_field(&inside.lattice, &self.chamber_sources(inside));
+        let observer = crate::eyes::resolve(&self.eyes, &self.agent).map(|(o, _)| o);
+        let shading = match (observer.as_ref(), fabric.as_ref()) {
+            (Some(observer), Some(fabric)) => Some(crate::plan::Shading {
+                observer,
+                fabric,
+                light: &light,
+            }),
+            _ => None,
+        };
+        Ok(crate::plan::plan_of(
+            &inside.lattice,
+            inside.at,
+            inside.structure.chambers.len(),
+            chamber,
+            inside.cell,
+            marks,
+            shading.as_ref(),
+        ))
     }
 
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
@@ -1556,6 +2158,22 @@ impl<'w> Session<'w> {
     /// because a "you are here" mark is a CELL position and the possession had
     /// none — marking a whole region would have claimed a precision the session
     /// did not have. Task 5 gives it the position, so the mark arrives with it.
+    ///
+    /// # Where the lens lands, and why here
+    ///
+    /// This is the **only** place `Session` filters colour (The Lantern, Task 8,
+    /// spec §7). It is the one seam in this repository where an emitted triple
+    /// becomes something a person looks at directly and the result is *not*
+    /// committed: the wire snapshot is a client fixture, the gallery transcript
+    /// is a book page, and both must carry the model's own bytes. A drawn plan
+    /// in somebody's terminal is neither.
+    ///
+    /// Under [`crate::lens::Lens::Off`] — which is what `PossessOpts::default`
+    /// and the CLI's `--script` path both select — this function returns exactly
+    /// what it returned before the lens existed, byte for byte: no tint, no
+    /// escape sequence, no caption. That is not a convenience, it is how the
+    /// committed transcripts stay unlensed by construction rather than by
+    /// remembering a flag.
     fn plan_here(&self) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same guard
@@ -1572,12 +2190,23 @@ impl<'w> Session<'w> {
             .iter()
             .map(|(glyph, noun)| format!("{glyph} {noun}"))
             .collect();
+        let (picture, disclosure) = match self.lens {
+            crate::lens::Lens::Off => (plan.picture, String::new()),
+            lens => {
+                let coloured = self.chamber_plan(inside, Vec::new())?;
+                (
+                    tint(&plan.picture, &coloured, &lens),
+                    format!(" — lens: {}", lens.label()),
+                )
+            }
+        };
         Ok(format!(
-            "[plan: chamber {}, {} of {}]\n{}  legend: {}",
+            "[plan: chamber {}, {} of {}{}]\n{}  legend: {}",
             id,
             inside.at + 1,
             inside.structure.chambers.len(),
-            plan.picture,
+            disclosure,
+            picture,
             legend.join(", ")
         ))
     }
@@ -1641,6 +2270,134 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// Draw the fine layer: place this chamber's anchors into its cells, resolve
+    /// each co-located creature onto one of them, and cast sight from where the
+    /// possession stands. `None` out of doors, where there is no lattice and
+    /// therefore nothing to narrow.
+    ///
+    /// # The join, and the honest name for it
+    ///
+    /// Hornvale's two fine layers meet here (spec §2). `liveness::Occupancy`
+    /// records `(RoomAddr, AnchorId)` — the anchor a creature stands at in its
+    /// ROOM's interior, [`crate::interior::interior_of`]'s graph. A chamber
+    /// composes a DIFFERENT graph ([`crate::interior::chamber_interior_of`] is
+    /// role-gated, so a threshold chamber and a hearthroom do not compose alike),
+    /// and `Occupancy`'s own doc warns that an `AnchorId` is "only meaningful
+    /// paired with the SPECIFIC `Interior` that produced it".
+    ///
+    /// So the two are joined **by anchor KIND, never by ordinal**: a creature at
+    /// the room's threshold is drawn at this chamber's threshold, and a creature
+    /// whose kind this chamber does not compose is simply not drawn. Reusing the
+    /// raw offset would be the exact confusion that doc warns against — it would
+    /// put a creature "at the hearth" wherever this chamber's second anchor
+    /// happens to be — and it would make the drawn position mean nothing.
+    ///
+    /// What the join cannot do is decide WHICH CHAMBER a creature is in: the
+    /// coarse layer persists a room, and every chamber of a structure truncates
+    /// to one room. Every co-located creature is therefore drawn in the chamber
+    /// the possession is standing in. That is the resolution the persisted layer
+    /// has, stated rather than papered over; a chamber-scoped `Occupancy` is what
+    /// would change it, and nothing today produces one.
+    ///
+    /// # §7 rule 5 has a caller
+    ///
+    /// [`crate::lattice::Occupancy::place`] refuses rather than overwrites, and
+    /// the possession is seated FIRST — it is a creature standing in a cell like
+    /// any other, and `you` is already drawn there. A creature whose cell is
+    /// taken (by the possession, or by a creature earlier in `self.npcs`' own
+    /// derivation order) is left unplaced rather than stacked.
+    fn sighting(&self) -> Option<Sighting> {
+        let inside = self.inside.as_ref()?;
+        // The chamber's interior, through the SAME accessor `chamber_nouns_here`
+        // and `examine_chamber` read it through — the plan asked for reuse rather
+        // than a fourth derivation of `chamber_interior_of`, and this is it.
+        let chamber = self.chamber_interior_here()?;
+        // THE KIND JOIN IS ONLY WELL-DEFINED WHILE A CHAMBER'S KINDS ARE
+        // DISTINCT, and nothing upstream enforces that: `pattern::compose` keeps
+        // duplicates (`first_of.entry(p.kind).or_insert(id)`), and `INVENTORY`
+        // already carries one duplicated kind (`Ground`) that only stays out of
+        // one chamber because `draw` filters the pair on `built`. Add a second
+        // pattern of an existing kind at the same `built` and the `find` below
+        // silently collapses two distinct room anchors onto one chamber cell —
+        // the second creature is then refused and vanishes from `marks` while
+        // staying in `sensed.present`, indistinguishable from the legitimate
+        // cell-taken case. Silent creature loss is the hardest class to notice
+        // later, so it fails loudly in every test and debug run instead.
+        debug_assert!(
+            {
+                let mut kinds: Vec<_> = chamber
+                    .ids()
+                    .iter()
+                    .map(|&a| chamber.anchor(a).kind)
+                    .collect();
+                let before = kinds.len();
+                kinds.sort();
+                kinds.dedup();
+                kinds.len() == before
+            },
+            "chamber {} composes two anchors of one kind, so the kind join is no \
+             longer injective and a creature would be silently dropped",
+            inside.at
+        );
+        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+
+        let mut held = crate::lattice::Occupancy::default();
+        // `Inside::cell` is documented passable (`standing_cell`/`cell_beyond`
+        // both guarantee it), so this cannot refuse — asserted rather than
+        // assumed, and bound to a local first so the placement itself still
+        // happens in a release build.
+        let seated = held.place(&inside.lattice, inside.cell, self.agent_entity());
+        debug_assert!(
+            seated.is_ok(),
+            "the possession's own standing cell was refused: {seated:?}"
+        );
+
+        let terrain = self.terrain_here();
+        let room = crate::interior::interior_of(&self.agent.position, &terrain);
+        let mut placed = std::collections::BTreeMap::new();
+        for npc in self.colocated_npcs() {
+            // Room-CHECKED (`anchor_in`, not `at`): a creature whose recorded
+            // anchor belongs to some other room is not standing anywhere here,
+            // and reading it against this room's graph is what that method exists
+            // to prevent.
+            let Some(anchor) = self.occupancy.anchor_in(npc.entity, &self.agent.position) else {
+                continue;
+            };
+            // RANGE-CHECKED before the read. `Interior::anchor` indexes straight
+            // into its `Vec`, so an id recorded against a graph this room no
+            // longer composes would not be merely wrong — it would panic in a
+            // player's hands mid-turn. `anchor_in` rules out the wrong ROOM;
+            // this rules out the wrong SIZE of the right room's graph, which is
+            // what a furnishing epoch (`room/furnishing/v1`) would produce
+            // between the tick that recorded the anchor and this read.
+            if !room.ids().contains(&anchor) {
+                continue;
+            }
+            let kind = room.anchor(anchor).kind;
+            let Some(here) = chamber
+                .ids()
+                .into_iter()
+                .find(|&a| chamber.anchor(a).kind == kind)
+            else {
+                continue;
+            };
+            // A missing cell is legitimate, not a bug: `anchor_cells` leaves
+            // surplus anchors UNPLACED when a chamber holds fewer floor cells
+            // than the interior holds anchors (3 of 256 on the grown corpus).
+            let Some(&cell) = cells.get(&here) else {
+                continue;
+            };
+            if held.place(&inside.lattice, cell, npc.entity).is_ok() {
+                placed.insert(npc.entity, cell);
+            }
+        }
+
+        Some(Sighting {
+            lit: crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS),
+            placed,
+        })
+    }
+
     /// `examine <noun>` INDOORS: the chamber's own anchors first, then the floor
     /// plan's own legend.
     ///
@@ -1676,6 +2433,46 @@ impl<'w> Session<'w> {
         if let Some(detail) = crate::chamber_prose::glyph_detail(&wanted) {
             return detail.to_string();
         }
+        // A CREATURE THE POSSESSION SENSES, answered last (The Sighting, fix
+        // rounds 1-2).
+        //
+        // Three things about this arm, each of which was a decision:
+        //
+        // 1. **It closes a band regression.** Outdoors `examine <label>` resolves
+        //    through the chart's legend and answers; before this arm, walking
+        //    through a doorway made the same noun stop answering — while the plan
+        //    inside was drawing a mark bearing exactly that noun. §6 obliges
+        //    every depicted noun to answer, and The Lintel's water jar is what
+        //    happens when it does not.
+        // 2. **It answers with the SAME sentence the outdoor path does**
+        //    ([`crate::purview::creature_datum`], one definition, three callers),
+        //    because `a_noun_at_both_grains_resolves_to_one_datum` makes one
+        //    noun → one datum a tested contract and a band boundary must not be
+        //    the place it quietly stops holding.
+        // 3. **Its predicate is `sensed_npcs`, not "placed and lit"** (fix round
+        //    2). Those are not complements: an UNPLACED co-located creature — its
+        //    cell taken, or a surplus anchor — is in `sensed.present` and would
+        //    have been refused by a placed-and-lit test, so `present` did not
+        //    imply examinable. Keying on the channel's own roster makes the two
+        //    agree by construction, and keeps the withheld creature refused.
+        //
+        // Answered LAST, after the anchors and the glyph legend, because prose is
+        // the constitutionally primary surface (§3.5) and an anchor noun must win
+        // any tie. **The label match is hoisted ABOVE `sighting()`** so that an
+        // ordinary indoor `examine` MISS — every noun that is not a creature's —
+        // pays nothing: `sighting` is the one costly read on this path
+        // (`anchor_cells`, 42 us median / 410 us p99), and before the hoist even
+        // the parity test's own deliberate miss paid it.
+        if let Some(npc) = self
+            .colocated_npcs()
+            .into_iter()
+            .find(|npc| npc.label.to_lowercase() == wanted)
+        {
+            let sensed = self.sensed_npcs(self.sighting().as_ref());
+            if sensed.iter().any(|n| n.entity == npc.entity) {
+                return crate::purview::creature_datum(&npc.label, &npc.species);
+            }
+        }
         format!("You see no {noun} here.")
     }
 
@@ -1700,6 +2497,18 @@ impl<'w> Session<'w> {
             .npcs
             .iter()
             .map(|npc| agent_position(&self.ledger, npc, self.day))
+            .collect();
+        // ...and WHO the possession could sense as of that same moment (The
+        // Sighting, fix round 4). A departure is narrated about a creature that
+        // is, by the time it is narrated, no longer here — so the CURRENT sensed
+        // roster can never contain it, and gating a departure on "sensed now"
+        // would silently delete every departure line. The honest question for a
+        // departure is whether the player could see the creature WHILE IT WAS
+        // HERE, and this is the only moment that question is still answerable.
+        let sensed_before: std::collections::BTreeSet<EntityId> = self
+            .sensed_npcs(self.sighting().as_ref())
+            .iter()
+            .map(|npc| npc.entity)
             .collect();
         let from = self.day;
         self.day = WorldTime {
@@ -1818,7 +2627,7 @@ impl<'w> Session<'w> {
                 if let Err(e) = self.absorb_here() {
                     return Turn::Out(format!("error: {e}"));
                 }
-                Turn::Out(self.narrate_motion(moved, &before))
+                Turn::Out(self.narrate_motion(moved, &before, &sensed_before))
             }
             Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
@@ -1833,18 +2642,66 @@ impl<'w> Session<'w> {
     /// tick); both halves are read back from ledgers, never decorative
     /// flavor text. The generic "stirred" line is the fallback only for
     /// motion that never touches the player's own room.
-    fn narrate_motion(&self, moved: usize, before: &[RoomAddr]) -> String {
+    ///
+    /// # Gated on sight, and ASYMMETRICALLY — the fifth reader
+    ///
+    /// This is the richest of the disclosure channels The Sighting had to close
+    /// (fix round 4) and the last one found: it asserts presence **unprompted**,
+    /// with identity, without the player naming anything —
+    /// `You notice <label> here now.` — and `handle` puts no band guard on
+    /// `wait`, so it fires indoors.
+    ///
+    /// The gate cannot be one predicate, because the two transitions ask
+    /// different questions of different moments:
+    ///
+    /// - **An arrival** is about a creature that is here NOW, so it is gated on
+    ///   the CURRENT sensed roster. A creature that arrived into a cell sight
+    ///   does not reach has not been observed arriving.
+    /// - **A departure** is about a creature that is, by the time this runs,
+    ///   no longer here at all — so the current roster can never contain it and
+    ///   gating on it would delete every departure line ever printed. The honest
+    ///   question is whether the player could see the creature WHILE IT WAS
+    ///   HERE, which is why `wait` captures `sensed_before` at the same instant
+    ///   it captures `before`. Watching something you never saw arrive go is the
+    ///   same disclosure as watching it arrive.
+    ///
+    /// A redacted transition falls through to the generic "stirred" line, which
+    /// reports a COUNT of committed facts world-wide and claims nothing about
+    /// this room — motion without identity, which is what the player is entitled
+    /// to.
+    ///
+    /// **Latent, not demonstrable end-to-end.** A 200-turn indoor sweep never
+    /// fired either branch on seed 42, whose structure produces only the
+    /// `stirred` fallback (`possession_moves.rs` books that lost end-to-end
+    /// coverage as an open followup). The branch is live code all the same, and
+    /// `narrate_motion_does_not_name_a_creature_sight_withheld` pins it by
+    /// feeding the vector directly — "I could not reach it" is not coverage.
+    fn narrate_motion(
+        &self,
+        moved: usize,
+        before: &[RoomAddr],
+        sensed_before: &std::collections::BTreeSet<EntityId>,
+    ) -> String {
         if moved == 0 {
             return "Time passes; the world keeps its shape.".to_string();
         }
+        let sensed_now: std::collections::BTreeSet<EntityId> = self
+            .sensed_npcs(self.sighting().as_ref())
+            .iter()
+            .map(|npc| npc.entity)
+            .collect();
         let mut arrived: Vec<&str> = Vec::new();
         let mut departed: Vec<&str> = Vec::new();
         for (npc, prior) in self.npcs.iter().zip(before) {
             let was_here = *prior == self.agent.position;
             let is_here = agent_position(&self.ledger, npc, self.day) == self.agent.position;
             match (was_here, is_here) {
-                (false, true) => arrived.push(npc.label.as_str()),
-                (true, false) => departed.push(npc.label.as_str()),
+                (false, true) if sensed_now.contains(&npc.entity) => {
+                    arrived.push(npc.label.as_str())
+                }
+                (true, false) if sensed_before.contains(&npc.entity) => {
+                    departed.push(npc.label.as_str())
+                }
                 _ => {}
             }
         }
@@ -1945,9 +2802,82 @@ impl<'w> Session<'w> {
             // footer is omitted, never fabricated from the wrong depth.
             Err(_) => Vec::new(),
         };
-        Turn::Out(hornvale_scene::render_surrounds_ascii(
-            &scene, "terrain", &ways,
-        ))
+        // The colour lens is the default draw — Task 4's headline claim is
+        // that a possession sees as its own kind does, so the chart must
+        // already show that rather than requiring an opt-in. `Eyes::Off`
+        // falls all the way back to the plain terrain lens: no observer, no
+        // tint, no escape sequence — the same posture a screen reader takes.
+        let lens = if self.eyes == crate::eyes::Eyes::Off {
+            "terrain"
+        } else {
+            "colour"
+        };
+        Turn::Out(hornvale_scene::render_surrounds_ascii(&scene, lens, &ways))
+    }
+
+    /// Bare `eyes`: whose eyes the chart is coloured through, the arity of
+    /// what they see, and what the projection drops. `Eyes::Off` reports the
+    /// decline honestly rather than describing an observer that is not in
+    /// use.
+    /// type-audit: bare-ok(prose: return)
+    fn eyes_report(&self) -> String {
+        let Some((observer, name)) = crate::eyes::resolve(&self.eyes, &self.agent) else {
+            return "Your eyes are off: the chart draws no colour, and carries no sight \
+                    declaration."
+                .to_string();
+        };
+        let channels = observer.channels();
+        let chromatic = observer.chromatic_channels();
+        let preserves = observer
+            .projection()
+            .map(hornvale_kernel::color::Projection::preserves)
+            .unwrap_or("no projection");
+        // `ocular_reason` wants the PERCEPTION VECTOR the observer was built
+        // from, which `resolve` does not carry back out (it hands back the
+        // built `Observer`) — so it is looked up a second time, by the same
+        // name `resolve` used, from the same registry `observer_named`
+        // reads. "standard" has no row (it is the kernel's own observer, not
+        // a species'), so it gets its own sentence rather than a lookup that
+        // would always miss.
+        let reason = hornvale_species::perception_registry()
+            .get_by_label(&name)
+            .map(hornvale_worldgen::observer::ocular_reason)
+            .unwrap_or_else(|| {
+                "the standard observer is an authored full trichromat: every hue exemplar \
+                 stays distinct, unmerged"
+                    .to_string()
+            });
+        format!(
+            "You see through {name}'s eyes: {channels} channels ({chromatic} chromatic). \
+             {reason}. The projection preserves {preserves}."
+        )
+    }
+
+    /// `eyes own` / `eyes off` / `eyes <name>`: switch whose eyes the chart
+    /// is coloured through. An unknown name is refused loudly, naming what
+    /// was asked for and listing the roster — generation never guesses (spec
+    /// §4.6), so this never silently falls back to a default eye.
+    fn set_eyes(&mut self, rest: &str) -> Turn {
+        match rest {
+            "own" => {
+                self.eyes = crate::eyes::Eyes::Own;
+                Turn::Out(self.eyes_report())
+            }
+            "off" => {
+                self.eyes = crate::eyes::Eyes::Off;
+                Turn::Out(self.eyes_report())
+            }
+            name => {
+                if hornvale_worldgen::observer::observer_named(name).is_none() {
+                    return Turn::Out(format!(
+                        "There is no observer named '{name}'. Known: {}.",
+                        hornvale_worldgen::observer::observer_roster().join(", ")
+                    ));
+                }
+                self.eyes = crate::eyes::Eyes::Named(name.to_string());
+                Turn::Out(self.eyes_report())
+            }
+        }
     }
 
     /// Every noun this lens has surfaced, at either grain: the prose's own
@@ -1959,12 +2889,12 @@ impl<'w> Session<'w> {
     /// union — `examine` must be able to tell "the lens failed" from "no
     /// grain surfaced that noun", and only the latter is a bare absence.
     /// type-audit: bare-ok(identifier-text: return)
-    pub fn lens_nouns(&self) -> Result<Vec<(String, String)>, VesselError> {
-        let mut out: Vec<(String, String)> = self.focalized()?.nouns;
+    pub fn lens_nouns(&self) -> Result<Vec<crate::focalize::Noun>, VesselError> {
+        let mut out: Vec<crate::focalize::Noun> = self.focalized()?.nouns;
         let scene = self.purview(0)?;
         for e in &scene.legend {
-            if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
-                out.push((e.noun.clone(), e.datum.clone()));
+            if !out.iter().any(|n| n.display.eq_ignore_ascii_case(&e.noun)) {
+                out.push(crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum));
             }
         }
         Ok(out)
@@ -1986,17 +2916,38 @@ impl<'w> Session<'w> {
             Ok(f) => f,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
-        if let Some((_, detail)) = prose.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
-            return Turn::Out(detail.clone());
+        if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
+            return Turn::Out(n.datum.clone());
         }
         let scene = match self.purview(0) {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
+        // The chart legend resolves by the same word rule as the prose catalog,
+        // deriving a mark's words mechanically — safe for a plain
+        // `<kind> of <place>` construction in a way it is not for a
+        // comma-qualified room descriptor, which declares its noun phrase
+        // instead (The Handle, spec §2).
+        //
+        // A legend entry DUPLICATING a prose entry is skipped, and that is the
+        // load-bearing half. The legend keys its ground mark on the whole raw
+        // descriptor, so deriving from it re-admits exactly the qualifiers the
+        // prose entry deliberately declined: without this, `examine hollow`
+        // failed against the prose catalog and then succeeded against the
+        // legend's copy of the same name, in the same room, with different
+        // wording. The documented precedence — "a noun named by both grains
+        // resolves to the prose datum" — has to cover the grains DISAGREEING
+        // about a word, not merely which datum to print.
         match scene
             .legend
             .iter()
-            .find(|e| e.noun.to_lowercase() == wanted)
+            .filter(|e| {
+                !prose
+                    .nouns
+                    .iter()
+                    .any(|n| n.display.eq_ignore_ascii_case(&e.noun))
+            })
+            .find(|e| crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum).matches(&wanted))
         {
             Some(e) => Turn::Out(e.datum.clone()),
             None => Turn::Out(format!("You see no {noun} here.")),
@@ -2086,13 +3037,78 @@ impl<'w> Session<'w> {
             .collect()
     }
 
-    /// Resolve `who` to one co-located NPC (The First Mark): an empty
-    /// argument selects the first NPC sharing this room (the common case —
-    /// a lone co-located NPC needs no name), otherwise `who` is matched as a
-    /// numeric entity id or a case-insensitive substring of an NPC's label,
-    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// Who is here **and sensed** — [`Self::colocated_npcs`] narrowed by sight.
+    ///
+    /// **ONE PREDICATE, THREE READERS** (The Sighting, fix round 2): the
+    /// `sensed.present` channel, `needs`, and `examine_chamber` all key on this
+    /// and nothing else, so a verb and the channel cannot disagree about who the
+    /// possession can perceive. They did: `snapshot` withheld a creature and
+    /// `needs` named it — by label *and* felt state — one verb later, which is
+    /// the side channel around a structural redaction that gating `examine`
+    /// alone was meant to close.
+    ///
+    /// # The rule, and the row worth stating out loud
+    ///
+    /// A creature is withheld only when the embedding **placed** it in a cell
+    /// sight does not reach. An **unplaced** creature stays:
+    ///
+    /// | case | sensed here | examinable | drawn on the plan |
+    /// |---|---|---|---|
+    /// | placed and lit | yes | yes | yes |
+    /// | placed and unlit | no | no | no |
+    /// | **unplaced** | **yes** | **yes** | **no** |
+    ///
+    /// If the embedding could not place a creature we cannot say sight hid it —
+    /// presence is the conservative default, and "present but undrawable" is
+    /// honest where "absent" would be a lie. It is also what keeps spec §2.1
+    /// intact: **presence must never depend on the embedder's free draws; only
+    /// DRAWING may.** An unplaced creature arises for reasons that have nothing
+    /// to do with visibility (its cell was already held; it was a surplus anchor
+    /// — 3 of 256 on the grown corpus; no tick has recorded where it stands), so
+    /// reading absence-from-the-map as hidden would let the placement scan decide
+    /// what the player is told is *there*, not merely where it is drawn.
+    ///
+    /// Out of doors `sighting` is `None`, so this is exactly `colocated_npcs`
+    /// and no band but the chamber narrows anything.
+    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
+        self.colocated_npcs()
+            .into_iter()
+            .filter(|npc| {
+                !sighting.is_some_and(|s| {
+                    s.placed
+                        .get(&npc.entity)
+                        .is_some_and(|cell| !s.lit.contains(cell))
+                })
+            })
+            .collect()
+    }
+
+    /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
+    /// argument selects the first such NPC (the common case — a lone co-located
+    /// NPC needs no name), otherwise `who` is matched as a numeric entity id or
+    /// a case-insensitive substring of an NPC's label, mirroring `why`'s
+    /// resolution but restricted to NPCs actually here.
+    ///
+    /// **The fourth reader of [`Self::sensed_npcs`]** (The Sighting, fix round
+    /// 3), and the leak it closes is the same one a third time. `provoke`/
+    /// `soothe` resolve through here, and a *successful* act narrates the
+    /// creature by name — `You provoke <label>. They bristles.` — so an
+    /// unfiltered lookup disclosed exactly what the redaction was built to
+    /// withhold: presence, and disposition state, through a verb's success line.
+    /// A bare `provoke` was worse still, since it silently *selected* the hidden
+    /// creature. [`Self::would_turn_hostile`] rides the same resolution and so
+    /// narrows with it, which is what its own doc already promises.
+    ///
+    /// **This answers the game question conservatively: you cannot act on what
+    /// you cannot see.** That is a choice, not a derivation — "strike the thing
+    /// you heard but cannot see" is a perfectly good future mechanic. It would
+    /// be a deliberate feature with its own narration, though, not the residue
+    /// of a lookup nobody filtered.
+    ///
+    /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
+    /// creature the embedding could not place is sensed, so it stays provokable.
     fn colocated_npc(&self, who: &str) -> Option<&Npc> {
-        let here = self.colocated_npcs();
+        let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
             return here.into_iter().next();
@@ -2164,7 +3180,13 @@ impl<'w> Session<'w> {
     /// real fold over its own committed history, so its felt state is
     /// meaningful the moment the drive model exists.
     fn needs(&self) -> String {
-        let here = self.colocated_npcs();
+        // GATED ON SIGHT, through the same predicate `sensed.present` and
+        // `examine` use (The Sighting, fix round 2). Ungated this verb was a
+        // side channel straight around the structural redaction `snapshot` had
+        // just performed: it named — by label AND by felt state — a creature the
+        // pane had withheld one verb earlier. `sensed_npcs` is `colocated_npcs`
+        // out of doors, so nothing outside the chamber band changes.
+        let here = self.sensed_npcs(self.sighting().as_ref());
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
@@ -2386,6 +3408,56 @@ fn chamber_id(chamber: &RoomAddr) -> Result<u64, VesselError> {
         .0)
 }
 
+/// One glyph wrapped in a 24-bit foreground colour and a reset.
+///
+/// Truecolor rather than the 256-colour cube, for the reason
+/// `hornvale_scene::surrounds_ascii` already gives at its own escape: a terminal
+/// that does not understand truecolor degrades to an uncoloured glyph rather
+/// than to a *wrong* one.
+fn ansi(glyph: char, rgb: [u8; 3]) -> String {
+    format!(
+        "\u{1b}[38;2;{};{};{}m{glyph}\u{1b}[0m",
+        rgb[0], rgb[1], rgb[2]
+    )
+}
+
+/// The drawn plan's picture with each glyph tinted by its own cell's colour,
+/// seen through `lens`.
+///
+/// `plan.cells` is row-major over exactly the extent `picture`'s rows were drawn
+/// from, so the two are indexed by the same arithmetic rather than by re-reading
+/// the lattice — a second traversal is how a picture and a palette start
+/// disagreeing about which cell is which.
+///
+/// **Two glyphs keep no tint**, and both absences are deliberate:
+///
+/// - the `@` mark, because it draws *you*, not the ground under you — the same
+///   withholding `hornvale_scene`'s colour lens makes for marks and for the
+///   standing cell;
+/// - any cell whose palette entry carries no colour, because absence there means
+///   "no colour is claimed here", never black (a threshold has no fabric, an
+///   unlit cell is absent from the light field, and a declined observer emits
+///   nothing) — see [`crate::plan::PaletteEntry::color`].
+fn tint(picture: &str, plan: &crate::plan::SessionPlan, lens: &crate::lens::Lens) -> String {
+    let stride = plan.extent.w.max(0) as usize;
+    let mut out = String::with_capacity(picture.len() * 4);
+    for (row, line) in picture.lines().enumerate() {
+        for (col, glyph) in line.chars().enumerate() {
+            let colour = (glyph != crate::lattice::render::YOU)
+                .then(|| plan.cells.get(row * stride + col))
+                .flatten()
+                .and_then(|&ix| plan.palette.get(ix as usize))
+                .and_then(|entry| entry.color);
+            match colour {
+                Some(rgb) => out.push_str(&ansi(glyph, crate::lens::apply(lens, rgb))),
+                None => out.push(glyph),
+            }
+        }
+        out.push('\n');
+    }
+    out
+}
+
 /// The reader-facing word for a stratum.
 /// type-audit: bare-ok(prose: return)
 fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
@@ -2397,6 +3469,11 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
         Stratum::Bathypelagic => "the lightless water",
         Stratum::Abyssal => "the abyss",
         Stratum::Hadal => "a trench",
+        Stratum::Regolith => "the regolith",
+        Stratum::Cover => "the cover rock",
+        Stratum::Basement => "the basement rock",
+        Stratum::Roots => "the roots of the world",
+        Stratum::Underneath => "the underneath",
     }
 }
 
@@ -2485,6 +3562,72 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    fn world_at(seed: u64) -> Option<World> {
+        build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .ok()
+    }
+
+    /// The XOR applied to `Inside::seed` by
+    /// [`perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`]
+    /// and by the search that picks its world. An arbitrary constant — its only
+    /// job is to be a DIFFERENT draw of the same placement — but it must be the
+    /// same constant in both places, or the search filters on one experiment
+    /// while the test runs another.
+    /// type-audit: bare-ok(constructor-edge)
+    const PERTURBATION: u64 = 0x5169_4741_u64;
+
+    /// The seeds [`world_where`] searches. Wide enough that "no world in here
+    /// draws a creature" is a finding about the sim rather than about the
+    /// sample, and cheap in practice because the search stops at its first hit
+    /// — 19 of the first 24 seeds qualify.
+    const SIGHT_SEEDS: std::ops::Range<u64> = 0..64;
+
+    /// The first seed in [`SIGHT_SEEDS`] whose fresh possession satisfies
+    /// `pred`, with the world it was built from.
+    ///
+    /// **Why a search and not a seed.** These tests originally stood on seed
+    /// 42, on the accident that its opening chamber happened to hold a
+    /// creature after one tick. The Tense reseeded that world and the accident
+    /// went away — sight was untouched and still worked on most seeds, but the
+    /// evidence for it had been pinned to one world that stopped exercising it.
+    /// The sibling batteries in `lattice::anchor_cells` already sweep
+    /// `0u64..64` rather than assert over one fixture; this is that idiom,
+    /// applied to whole worlds.
+    ///
+    /// It panics, naming `what` and the range, when nothing matches. A sweep
+    /// that quietly found nothing and let its caller pass would be strictly
+    /// worse than the hardcoded seed it replaces: the loud preconditions are
+    /// what caught the reseed.
+    fn world_where(what: &str, pred: impl Fn(&mut Session<'_>) -> bool) -> (u64, World) {
+        for seed in SIGHT_SEEDS {
+            let Some(world) = world_at(seed) else {
+                continue;
+            };
+            let hit = {
+                let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
+                    continue;
+                };
+                session.handle("wait");
+                session.handle("enter");
+                session.inside.is_some() && pred(&mut session)
+            };
+            if hit {
+                return (seed, world);
+            }
+        }
+        panic!(
+            "no seed in {SIGHT_SEEDS:?} produces a world where {what} — the \
+             search found nothing, so nothing below could be tested. That is a \
+             finding about the sim, not a flaky fixture."
+        );
+    }
+
     /// The regression this pins: `examine` must be able to tell "the lens
     /// itself failed" from "no grain surfaced that noun" — before this fix,
     /// `lens_nouns` swallowed both `focalized()`'s and `purview(0)`'s errors
@@ -2529,6 +3672,84 @@ mod tests {
         );
     }
 
+    /// The chart legend resolves by word, not by whole string. This arm is a
+    /// SECOND matcher, separate from the prose catalog's, and The Handle's plan
+    /// changed only the first — so a walker could `examine forest` but not
+    /// `examine bugbear`, with the mark's full name sitting in the legend the
+    /// `map` verb had just printed. Two matchers for one question is how they
+    /// drift; this pins the second to the same rule as the first.
+    #[test]
+    fn a_legend_mark_resolves_by_word_and_not_only_by_its_whole_name() {
+        let w = seam_world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let scene = session.purview(0).expect("the chart builds");
+        let mark = scene
+            .legend
+            .iter()
+            .find(|e| e.noun.split_whitespace().count() > 1)
+            .expect("some legend entry is a multi-word name");
+        let head = mark
+            .noun
+            .split_whitespace()
+            .next()
+            .expect("a multi-word name has a first word")
+            .to_lowercase();
+        let reply = match session.examine(&head) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the legend names {:?} and examine refuses its first word {head:?}: {reply}",
+            mark.noun
+        );
+    }
+
+    /// The two grains must not disagree about a WORD. The chart legend keys its
+    /// ground mark on the whole raw descriptor, so deriving words from it
+    /// re-admits the qualifiers the prose entry declined by declaring only its
+    /// noun phrase. Before the duplicate-skip, `examine hollow` was refused by
+    /// the prose catalog and then answered by the legend's copy of the same
+    /// name — same room, same thing, two different answers depending on which
+    /// matcher got there.
+    #[test]
+    fn a_qualifier_the_prose_entry_declined_is_not_readmitted_by_the_legend() {
+        let w = seam_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        // Walk until the descriptor carries a qualifier; the flagship's own
+        // ("buttressed canopy") has none, so it cannot exercise this.
+        let mut qualifier = None;
+        for _ in 0..8 {
+            let prose = session.focalized().expect("the lens renders");
+            let qualified = prose
+                .nouns
+                .iter()
+                .find_map(|n| n.display.split_once(", ").map(|(_, tail)| tail.to_string()));
+            if let Some(tail) = qualified {
+                qualifier = tail
+                    .split(|c: char| !c.is_alphanumeric())
+                    .find(|w| w.chars().count() >= 4)
+                    .map(str::to_lowercase);
+                if qualifier.is_some() {
+                    break;
+                }
+            }
+            let _ = session.handle("go n");
+        }
+        let Some(word) = qualifier else {
+            // Not a pass: say so rather than reporting green on nothing.
+            panic!("no comma-qualified descriptor within 8 rooms of the flagship");
+        };
+        let reply = match session.handle(&format!("examine {word}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            reply.starts_with("You see no"),
+            "{word:?} is a qualifier, not a noun, and the legend re-admitted it: {reply}"
+        );
+    }
+
     /// The ordinary path still refuses cleanly when both grains genuinely
     /// have nothing to say — `lens_nouns`'s new `Result` must not turn every
     /// refusal into an `Err`.
@@ -2547,6 +3768,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none — seam_world() fixture) — false-positive
+    /// seed-loop flag; `s` binds an NPC social status
     #[test]
     fn the_opening_snapshot_carries_every_channel() {
         let world = seam_world();
@@ -2667,6 +3890,8 @@ mod tests {
         assert_eq!(a, b, "the read is pure — no hidden state advances");
     }
 
+    /// claim: structural(seed: none — seam_world() fixture) — false-positive
+    /// seed-loop flag; `s` binds an NPC social status
     #[test]
     fn provoking_shows_up_in_the_social_channel() {
         let world = seam_world();
@@ -3152,13 +4377,23 @@ mod tests {
                 "{line:?} indoors must refuse rather than ignore the argument"
             );
         }
-        // Out of doors both paths are untouched.
+        // Out of doors both paths are untouched. The default eyes are `Own`
+        // (colour on), so the walk-band chart now draws the colour lens
+        // (The Beholding, Task 5) — this assertion used to read "terrain"
+        // and was wrong for the default path once that shipped.
         session.handle("out");
         let chart = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
         };
-        assert!(chart.contains("[lens: terrain"), "{chart}");
+        assert!(chart.contains("[lens: colour"), "{chart}");
+        // `eyes off` falls all the way back to the plain terrain lens.
+        session.handle("eyes off");
+        let bare = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(bare.contains("[lens: terrain"), "{bare}");
     }
 
     #[test]
@@ -3348,6 +4583,753 @@ mod tests {
             crate::chamber_prose::glyph_detail(noun).is_none(),
             "a static detail for the mark is a second description of the possessed \
              agent, which is the drift §6 exists to prevent"
+        );
+    }
+
+    /// The first cave-bearing cell this seed's terrain places whose entrance
+    /// address (`band = 0, slot = 0`) resolves to `want_open`. Scans the
+    /// terrain directly (`GeneratedTerrain::cave_at`) rather than steering a
+    /// walk there: a terrain cell spans many walk-band rooms (measured while
+    /// developing this campaign — dozens to low hundreds of `go` steps per
+    /// terrain-cell crossing), and even once ON the right cell, only 51.5% of
+    /// caves have a chamber at their entrance at all (Task 3), so a walk
+    /// cannot be relied on to land on either specific outcome. Direct
+    /// scanning is what `windows/worldgen/tests/deep_realm_substrate.rs`
+    /// (Task 0) and `deep_realm_chamber.rs` (Tasks 2-3) already do for the
+    /// same reason.
+    fn find_cave_cell(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+        want_open: bool,
+    ) -> (hornvale_kernel::CellId, hornvale_terrain::Cave) {
+        let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
+        for cell in terrain.geosphere().cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            let Some(cave) = terrain.cave_at(cell) else {
+                continue;
+            };
+            let addr = hornvale_worldgen::chamber::ChamberAddr {
+                cell,
+                entrance: 0,
+                band: 0,
+                slot: 0,
+            };
+            let is_open =
+                hornvale_worldgen::chamber::chamber_at(seed, &cave, addr, &overrides).is_some();
+            if is_open == want_open {
+                return (cell, cave);
+            }
+        }
+        panic!(
+            "no {} cave found in seed 42's terrain — the fixture no longer has one \
+             of the three outcomes this campaign's descent verb needs to distinguish",
+            if want_open { "open" } else { "sealed" }
+        );
+    }
+
+    /// The Deep Realm, Task 5's own hazard: `delve` needs THREE
+    /// distinguishable outcomes, not the two the original plan sketch
+    /// anticipated. Task 3 measured that even a cell WITH a cave resolves no
+    /// chamber at its own entrance address 51.5% of the time (spec §3.4 rung
+    /// 0, `Sealed` — "the void exists and is unreachable," a real fact a
+    /// later dig could find, not a defect) — so "no cave" and "cave but
+    /// sealed" are different facts about the world and must read as such,
+    /// exactly the failure mode `dive`'s own doc warns a refusal that
+    /// doesn't name what stopped you falls into.
+    #[test]
+    fn delve_has_three_distinguishable_outcomes() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+
+        // Outcome 1: no cave at all. The flagship's own starting cell — no
+        // walk needed, mirroring `there_is_nothing_to_dive_into_on_dry_land`.
+        let no_cave = match session.handle("delve") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(no_cave.contains("no cave here"), "{no_cave}");
+        assert!(
+            session.underground.is_none(),
+            "a refused delve must not change the underground state"
+        );
+
+        // Outcome 2: a cave, but the entrance resolves to nothing — SEALED,
+        // named as such rather than read as "no cave here" again.
+        let (sealed_cell, sealed_cave) = find_cave_cell(&terrain, world.seed, false);
+        let sealed = match session.delve_at(sealed_cell, sealed_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(sealed.contains("sealed"), "{sealed}");
+        assert!(
+            session.underground.is_none(),
+            "a sealed entrance must not change the underground state"
+        );
+
+        // Outcome 3: a chamber — descend, and `climb` returns.
+        let (open_cell, open_cave) = find_cave_cell(&terrain, world.seed, true);
+        let open = match session.delve_at(open_cell, open_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_some(),
+            "a resolved entrance chamber must set the underground state: {open}"
+        );
+        let up = match session.handle("climb") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("climb must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "climb must clear the underground state"
+        );
+        assert!(up.contains("You climb back into the light"), "{up}");
+
+        // The whole point: each outcome must be told apart from the others.
+        assert_ne!(no_cave, sealed, "no-cave and sealed read identically");
+        assert_ne!(
+            sealed, open,
+            "sealed and a successful descent read identically"
+        );
+        assert_ne!(
+            no_cave, open,
+            "no-cave and a successful descent read identically"
+        );
+    }
+
+    /// `delve` refuses while indoors, mirroring `dive`'s own "no water in
+    /// here" guard one realm over — descending into rock through a
+    /// building's own floor is not what either verb means.
+    #[test]
+    fn delve_refuses_while_inside_a_structure() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session
+            .descend(path_structure(&session.agent.position, 2), 0)
+            .expect("a chamber to stand in");
+        let out = match session.handle("delve") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(out.contains("no rock to delve into in here"), "{out}");
+    }
+
+    /// Lateral movement is refused while underground, and says so
+    /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
+    /// realm over. Exercised directly against a hand-picked open cave
+    /// (`delve_at`) rather than a walk, for the same reason
+    /// `delve_has_three_distinguishable_outcomes` is.
+    #[test]
+    fn lateral_movement_is_refused_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        session.delve_at(cell, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        for line in ["go n", "back", "n"] {
+            let out = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("{line} must not release"),
+            };
+            assert!(!out.contains("No verb"), "{line}: {out}");
+            assert!(
+                out.contains("Climb out first"),
+                "{line} must refuse underground with the underground reason: {out}"
+            );
+        }
+    }
+
+    /// The snapshot's spatial channel and the `map` verb must answer the
+    /// SAME band question, including in a band neither was written against.
+    ///
+    /// Found at The Panes' merge, not during either campaign: The Deep Realm
+    /// added `underground` while The Panes added the spatial channel, in
+    /// parallel worktrees, and the textual merge was clean because they
+    /// touched different lines of the same file. `SpatialChannel` enumerates
+    /// bands; The Deep Realm added one; neither campaign's chronicle mentions
+    /// the other's surface. That is precisely the semantic collision
+    /// `make preflight` says it cannot score.
+    ///
+    /// What it asserts is a FOLD, not a correctness claim. Standing in a cave
+    /// chamber, the pane shows a chart of the country overhead — which is
+    /// odd, and is exactly what the `map` verb already does in the same
+    /// state, because both guard on `inside` alone. So the invariant worth
+    /// pinning is not "the pane is right here" but "the pane and the verb
+    /// cannot drift apart here": whichever answer the sim settles on, one
+    /// change must move both. Without this, adding a fourth band would fold
+    /// silently into `walk` and no test would notice.
+    #[test]
+    fn the_underground_band_folds_into_walk_as_map_does() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        session.delve_at(cell, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // The pane: `walk`, carrying a chart rather than a plan.
+        let snap = session.snapshot().expect("a descended session snapshots");
+        match &snap.spatial {
+            crate::snapshot::SpatialChannel::Walk { .. } => {}
+            crate::snapshot::SpatialChannel::Chamber { .. } => panic!(
+                "the underground band emitted `chamber` — if that is now intended, \
+                 `SpatialChannel`'s doc and the `map` verb's band arms must change WITH it"
+            ),
+        }
+        let json = crate::snapshot_json(&snap);
+        assert!(
+            json.contains(r#""band":"walk""#),
+            "the wire tag must read `walk` underground: {json:.120}"
+        );
+
+        // The verb, in the same state: the surface chart, not a plan and not
+        // a refusal. `plan_here` prints a legend; `map`'s chart prints a lens
+        // header — so the two are told apart by content, not by length.
+        let out = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(
+            out.contains("[lens:"),
+            "map underground must draw the walk-band chart, as the pane does: {out}"
+        );
+        assert!(
+            !out.contains(INDOOR_CHART_REFUSAL),
+            "map underground must not take the indoor refusal: {out}"
+        );
+    }
+
+    /// The Handle, Task 4: an underground `examine` must resolve against the
+    /// band's OWN catalog, not fall through to the surface locale's — which is
+    /// what `session.rs`'s dispatch did before this fix (the bare `"examine"`
+    /// arm has no `self.underground` guard, so it ran `examine(rest)` against
+    /// whatever the surface locale above the chamber names). This is the
+    /// campaign's only instance never reproduced live before now: the
+    /// controller could not reach a cave by walking (400 steps, none found),
+    /// and `delve_at` is crate-private, so only an in-crate test can drive it
+    /// directly at a hand-picked open cave the way
+    /// `lateral_movement_is_refused_underground` does.
+    #[test]
+    fn underground_examine_answers_for_the_rock_it_names() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let shown = match session.delve_at(cell, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            shown.contains("You worm down into the dark"),
+            "not underground: {shown}"
+        );
+        let reply = match session.handle("examine rock") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the underworld names rock and then refuses it: {reply}"
+        );
+    }
+
+    // ---- The Sighting -------------------------------------------------
+    //
+    // Tests 2-4 of the campaign's four live HERE rather than in
+    // `tests/session_snapshot.rs`, where the plan filed them, because each
+    // needs a lever the public surface deliberately does not offer: an NPC
+    // put at a chosen anchor (`Session::occupancy`), a second creature made
+    // co-located (`Session::ledger`), and — the negative control — the frame
+    // seed the embedding is drawn from (`Inside::seed`). Adding a public
+    // setter for any of those would ship a knob production never turns, which
+    // is worse than a unit test.
+
+    /// A session standing in `world`'s opening structure, one tick in — the
+    /// shared fixture for the three tests below. The tick matters: `Occupancy`
+    /// is populated by `DriveMovements::step_with_occupancy`, so before a
+    /// `wait` no creature has a within-room anchor at all.
+    fn possessed_inside(world: &World) -> Session<'_> {
+        let (mut session, _) = Session::start(world, &PossessOpts::default()).unwrap();
+        session.handle("wait");
+        session.handle("enter");
+        assert!(
+            session.inside.is_some(),
+            "this world's opening locale must be built and enterable, or nothing \
+             below is tested"
+        );
+        session
+    }
+
+    /// The marks this session's snapshot draws.
+    fn marks_of(session: &Session<'_>) -> Vec<crate::plan::PlanMark> {
+        match session
+            .snapshot()
+            .expect("a live session snapshots")
+            .spatial
+        {
+            SpatialChannel::Chamber { plan } => plan.marks,
+            SpatialChannel::Walk { .. } => panic!("expected the chamber band"),
+        }
+    }
+
+    #[test]
+    fn two_creatures_cannot_be_drawn_in_one_cell() {
+        // THE SIGHTING, TEST 2. `lattice::Occupancy::place`'s `Refusal` path
+        // shipped with no caller at all — its own module doc says a test over
+        // data that does not exist yet "reads as coverage". This is the caller,
+        // and this is the test that makes the refusal non-vacuous.
+        //
+        // The collision is built out of the two facts that make it reachable:
+        // `liveness::Occupancy` deliberately ALLOWS two creatures at one anchor
+        // ("a hearth crowded with three NPCs is a legitimate occupancy"), and
+        // `lattice::Occupancy` deliberately forbids two creatures in one cell.
+        // One anchor resolves to one cell, so the second creature must be
+        // refused and must not be drawn.
+        //
+        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`), and the
+        // predicate is both of this test's structural needs at once: one
+        // creature already drawn, and a second derived creature to collide with
+        // it. Asking for both up front is what keeps the assertions below about
+        // the REFUSAL rather than about whether some seed happened to oblige.
+        let (seed, world) = world_where(
+            "exactly one creature is drawn and a second is available to collide with it",
+            |s| {
+                let drawn = marks_of(s).len();
+                let others = s
+                    .colocated_npcs()
+                    .first()
+                    .copied()
+                    .map(|first| s.npcs.iter().any(|n| n.entity != first.entity));
+                drawn == 1 && others == Some(true)
+            },
+        );
+        let mut session = possessed_inside(&world);
+
+        let room = session.agent.position.clone();
+        let first = session
+            .colocated_npcs()
+            .first()
+            .copied()
+            .expect("the seed was chosen because a creature stands here")
+            .entity;
+        let anchor = session
+            .occupancy
+            .anchor_in(first, &room)
+            .expect("the tick recorded where it stands");
+        assert_eq!(
+            marks_of(&session).len(),
+            1,
+            "precondition: seed {seed} was chosen because exactly one creature \
+             is drawn before the second arrives"
+        );
+
+        // A second creature, made co-located the way the world makes one: an
+        // `agent-at` fact, which is what `colocated_npcs` reads.
+        let second = session
+            .npcs
+            .iter()
+            .map(|n| n.entity)
+            .find(|&e| e != first)
+            .expect("the seed was chosen because a second NPC is derived");
+        let fact = crate::liveness::place_agent(second, &room, session.day);
+        session
+            .ledger
+            .commit(fact, &session.registry)
+            .expect("agent-at is registered");
+        session.occupancy.place(second, &room, anchor);
+
+        assert_eq!(
+            session.colocated_npcs().len(),
+            2,
+            "both creatures are now in the possession's room"
+        );
+        assert_eq!(
+            session.occupancy.anchor_in(first, &room),
+            session.occupancy.anchor_in(second, &room),
+            "and both stand at the same anchor, which liveness permits"
+        );
+
+        let marks = marks_of(&session);
+        assert_eq!(
+            marks.len(),
+            1,
+            "one cell may hold one creature: the second must be REFUSED, not stacked — got {marks:?}"
+        );
+        // THE UNPLACED ROW (fix round 2), and this test is the only place that
+        // constructs it. The refused creature is co-located, is NOT drawn, and
+        // must nonetheless be present, examinable and readable by `needs` —
+        // because the embedding declining to place it says nothing whatever
+        // about whether the possession can perceive it, and presence must never
+        // depend on the embedder's free draws (spec §2.1). "Present but
+        // undrawable" is honest; "absent" would be a lie.
+        let refused = session
+            .npcs
+            .iter()
+            .find(|n| n.entity == second)
+            .expect("the second creature is derived")
+            .label
+            .clone();
+        let snap = session.snapshot().unwrap();
+        assert_eq!(
+            snap.sensed.present.len(),
+            2,
+            "a creature refused a cell must not vanish from `sensed.present`"
+        );
+        assert!(
+            !marks.iter().any(|m| m.noun == refused),
+            "precondition: the refused creature is genuinely UNDRAWN"
+        );
+        let answered = session.examine_chamber(&refused);
+        assert!(
+            !answered.starts_with("You see no"),
+            "an unplaced but present creature must be examinable — `present` must \
+             imply examinable, or the channel and the verb disagree: {answered}"
+        );
+        assert!(
+            session.needs().contains(&refused),
+            "and `needs` must read it too, for the same reason: {}",
+            session.needs()
+        );
+        // ...and it stays ACTABLE-ON. The sight gate on `colocated_npc` (fix
+        // round 3) must narrow on sight and on nothing else: an undrawable
+        // creature is not an unseen one, so refusing to provoke it would make
+        // the placement scan decide what the player may do.
+        let acted = match session.handle(&format!("provoke {refused}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("provoke must not release"),
+        };
+        assert!(
+            acted.contains(&refused),
+            "an unplaced but present creature must stay provokable: {acted}"
+        );
+    }
+
+    #[test]
+    fn a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks() {
+        // THE SIGHTING, TEST 3. The narrowing is structural and sim-side
+        // (`CLIENT-redaction-panes`): the client is never handed a creature it
+        // is trusted to hide.
+        //
+        // The creature is moved by putting it at a DIFFERENT anchor of its own
+        // room's interior — the same `Occupancy::place` catch-up itself uses —
+        // and the anchor is CHOSEN BY MEASUREMENT rather than by hand: the test
+        // asks the embedding which of this chamber's cells lies outside the
+        // shadowcast and then finds the room anchor that draws there. Hardcoding
+        // an anchor id would pin a number that moves with the pattern
+        // inventory.
+        let world = seam_world();
+        let mut session = possessed_inside(&world);
+        let room = session.agent.position.clone();
+        let who = session
+            .colocated_npcs()
+            .first()
+            .copied()
+            .expect("a creature is here")
+            .entity;
+
+        let (near, far) = {
+            let inside = session.inside.as_ref().unwrap();
+            let chamber = session.chamber_interior_here().unwrap();
+            let cells =
+                crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+            let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+            let terrain = session.terrain_here();
+            let interior = crate::interior::interior_of(&room, &terrain);
+            // For each of the ROOM's anchors, which cell it would be drawn at
+            // (joined by kind, exactly as `sighting` joins them), and whether
+            // that cell is lit.
+            let drawn = |a: crate::interior::AnchorId| {
+                let kind = interior.anchor(a).kind;
+                chamber
+                    .ids()
+                    .into_iter()
+                    .find(|&c| chamber.anchor(c).kind == kind)
+                    .and_then(|c| cells.get(&c).copied())
+            };
+            let mut near = None;
+            let mut far = None;
+            for a in interior.ids() {
+                match drawn(a) {
+                    Some(cell) if lit.contains(&cell) => near = near.or(Some(a)),
+                    Some(_) => far = far.or(Some(a)),
+                    None => {}
+                }
+            }
+            (near, far)
+        };
+        let near = near.expect("some anchor of this room draws inside the possession's sight");
+        let far = far.expect(
+            "some anchor of this room draws OUTSIDE it — without one this test asserts nothing",
+        );
+
+        let label = session
+            .npcs
+            .iter()
+            .find(|n| n.entity == who)
+            .expect("the creature is derived")
+            .label
+            .clone();
+
+        session.occupancy.place(who, &room, near);
+        let snap = session.snapshot().unwrap();
+        assert_eq!(
+            snap.sensed.present.len(),
+            1,
+            "precondition: a creature in sight IS sent"
+        );
+        assert_eq!(marks_of(&session).len(), 1, "precondition: and IS drawn");
+        assert!(
+            !session.examine_chamber(&label).starts_with("You see no"),
+            "precondition: and ANSWERS examine while it is depicted"
+        );
+        assert!(
+            session.needs().contains(&label),
+            "precondition: and `needs` reads it: {}",
+            session.needs()
+        );
+
+        session.occupancy.place(who, &room, far);
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.sensed.present.is_empty(),
+            "a creature out of sight must not be sent: {:?}",
+            snap.sensed.present
+        );
+        assert!(
+            marks_of(&session).is_empty(),
+            "and must not be drawn either — one shadowcast decides both"
+        );
+        // THE SIDE CHANNEL, closed. `examine_chamber` answers a creature's noun
+        // (fix round 1, so the noun does not stop answering at a doorway) — but
+        // gated on SIGHT, not on co-location. Ungated it would hand back the
+        // creature `snapshot` had just structurally redacted, one verb later.
+        let refused = session.examine_chamber(&label);
+        assert!(
+            refused.starts_with("You see no"),
+            "examine must refuse a creature sight withheld, or it is a side \
+             channel around the redaction: {refused}"
+        );
+        // THE SECOND SIDE CHANNEL, closed one round later (fix round 2). `needs`
+        // named the withheld creature by label AND by felt state — a strictly
+        // richer leak than `examine`'s, since it also reports the creature's
+        // interior. It is band-blind (`handle` does not gate it on `inside`), so
+        // the gate lives in the verb rather than in the dispatch.
+        let read = session.needs();
+        assert!(
+            !read.contains(&label),
+            "`needs` must not read a creature sight withheld — it is the same \
+             side channel `examine`'s gate closes, one verb over: {read}"
+        );
+
+        // THE THIRD (fix round 3), and the one that survived two rounds of
+        // closing the other two. `provoke`/`soothe` resolve through
+        // `colocated_npc`, and a SUCCESSFUL act narrates its target by name:
+        // `You provoke <label>. They bristles.` The leak is not that the action
+        // is permitted — that is a game question — but that the success line
+        // discloses presence and disposition state, which is the identical shape
+        // to the `needs` leak in a third location.
+        //
+        // Both forms are checked. The BARE form matters at least as much as the
+        // named one: it selects the first sensed NPC, and unfiltered it would
+        // silently pick the hidden creature without the player ever naming it.
+        for arg in ["", &label] {
+            let acted = match session.handle(&format!("provoke {arg}")) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("provoke must not release"),
+            };
+            assert!(
+                !acted.contains(&label),
+                "`provoke {arg:?}` named a creature sight withheld — a verb's \
+                 SUCCESS LINE is a disclosure channel: {acted}"
+            );
+        }
+        assert!(
+            !session.would_turn_hostile(&label),
+            "`would_turn_hostile` rides the same resolution, so it must not \
+             report a withheld creature's disposition either"
+        );
+
+        // THE FOURTH, and the richest (fix round 4). `wait`'s own narration
+        // asserts presence UNPROMPTED, with identity — the player names nothing
+        // and is simply told the creature is here. Fed directly rather than
+        // reached through a tick, because it cannot be reached: a 200-turn
+        // indoor sweep never fired either branch on seed 42, whose structure
+        // produces only the `stirred` fallback. A latent branch still needs a
+        // test; "I could not reach it" is not coverage.
+        //
+        // A real, packable room that is NOT this one: the last path digit
+        // stepped one place. Built rather than invented so `RoomAddr::pack`
+        // (which rejects any digit >= 4) still accepts it.
+        let elsewhere = {
+            let mut path = room.path.clone();
+            let last = path.last_mut().expect("a walk-band address has a path");
+            *last = (*last + 1) % 4;
+            RoomAddr {
+                face: room.face,
+                path,
+            }
+        };
+        let nowhere: std::collections::BTreeSet<EntityId> = Default::default();
+
+        // THE ARRIVAL. `before` says the creature was elsewhere; the ledger
+        // still says it is here; `moved` is nonzero so the early return does
+        // not swallow the call.
+        let arriving: Vec<RoomAddr> = session
+            .npcs
+            .iter()
+            .map(|npc| {
+                if npc.entity == who {
+                    elsewhere.clone()
+                } else {
+                    agent_position(&session.ledger, npc, session.day)
+                }
+            })
+            .collect();
+        let narrated = session.narrate_motion(1, &arriving, &nowhere);
+        assert!(
+            !narrated.contains(&label),
+            "`wait` must not announce the ARRIVAL of a creature sight withheld — \
+             it is the only channel that names a creature the player never asked \
+             about: {narrated}"
+        );
+
+        // ...AND ITS POSITIVE CONTROL, symmetric with the departure arm's below
+        // (fix round 5). Without it, an arrival guard restricted to nothing at
+        // all — `if false && sensed_now.contains(…)` — suppresses every arrival
+        // line the game can print and every test in the crate stays green. The
+        // review measured exactly that: 442 passed under that mutation. A gate
+        // needs both halves pinned, or only one direction of breaking it is
+        // visible.
+        session.occupancy.place(who, &room, near);
+        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere);
+        assert!(
+            seen_arriving.contains(&label),
+            "an arrival the player CAN see must still be narrated — without this \
+             the gate above could be suppressing everything: {seen_arriving}"
+        );
+        // Back out of sight for the departure checks below, which are about the
+        // creature the player could NOT see.
+        session.occupancy.place(who, &room, far);
+
+        // THE DEPARTURE, gated on a different moment and so checked separately:
+        // `before` says the creature WAS here, the ledger now says it left, and
+        // the sensed-before set says the player could not see it while it was.
+        // Watching something go that you never saw arrive is the same
+        // disclosure as watching it arrive.
+        let was_here: Vec<RoomAddr> = session
+            .npcs
+            .iter()
+            .map(|npc| agent_position(&session.ledger, npc, session.day))
+            .collect();
+        let fact = crate::liveness::place_agent(who, &elsewhere, session.day);
+        session
+            .ledger
+            .commit(fact, &session.registry)
+            .expect("agent-at is registered");
+        assert!(
+            !session.colocated_npcs().iter().any(|n| n.entity == who),
+            "precondition: the creature really left the room"
+        );
+        let leaving = session.narrate_motion(1, &was_here, &nowhere);
+        assert!(
+            !leaving.contains(&label),
+            "`wait` must not announce the DEPARTURE of a creature the player \
+             could not see while it was here: {leaving}"
+        );
+
+        // THE POSITIVE CONTROL, and it is what stops both assertions above
+        // being vacuous. The identical departure vector, with the creature in
+        // the sensed-before set, MUST name it — otherwise the two negatives
+        // would pass simply because this branch never narrates anything.
+        let seen: std::collections::BTreeSet<EntityId> = [who].into_iter().collect();
+        let announced = session.narrate_motion(1, &was_here, &seen);
+        assert!(
+            announced.contains(&label),
+            "a departure the player COULD see must still be narrated — without \
+             this the gate above could be suppressing everything: {announced}"
+        );
+    }
+
+    #[test]
+    fn perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known() {
+        // THE SIGHTING'S CENTRAL INVARIANT, and spec §2.1 as a test.
+        //
+        // Decision 0069 lets the fine layer "regenerate differently forever
+        // without corrupting a world" precisely because nothing stored points
+        // into it. The moment sight-derived knowledge accumulated, an agent's
+        // BELIEF would depend on the embedder's free draws — so the embedding
+        // may decide what a client is SHOWN and may never decide what an agent
+        // comes to BELIEVE.
+        //
+        // The experiment is the whole claim: change the placement seed and
+        // NOTHING ELSE, then read both channels. `spatial` must move (the
+        // embedding is load-bearing there, and a control that cannot see its
+        // own positive is as empty as one that cannot see its own negative) and
+        // `known` must be byte-identical.
+        //
+        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`). The
+        // predicate carries BOTH halves of the control, because both are
+        // properties of the world and not of the code under test: something must
+        // be drawn from the embedding at all, and every creature must stay in
+        // sight under both placements — otherwise the `sensed.present`
+        // assertion below is asserting a coincidence rather than the invariant.
+        let (seed, world) = world_where(
+            "the embedding draws a creature and every creature stays in sight under a perturbed placement",
+            |s| {
+                if marks_of(s).is_empty() {
+                    return false;
+                }
+                let before = s.snapshot().unwrap();
+                let inside = s.inside.as_ref().unwrap();
+                let original = inside.seed;
+                s.inside.as_mut().unwrap().seed = Seed(original.0 ^ PERTURBATION);
+                let after = s.snapshot().unwrap();
+                s.inside.as_mut().unwrap().seed = original;
+                before.spatial != after.spatial && before.sensed.present == after.sensed.present
+            },
+        );
+        let mut session = possessed_inside(&world);
+        assert!(
+            !marks_of(&session).is_empty(),
+            "precondition: seed {seed} was chosen because something is drawn \
+             from the embedding at all"
+        );
+
+        let before = session.snapshot().unwrap();
+        let placement = session.inside.as_ref().unwrap().seed;
+        // A different DRAW of the same placement, not a different world: only
+        // `Inside::seed` moves, and `anchor_cells` is the only reader of it.
+        // The SAME perturbation the search applied, named once so the two
+        // cannot drift apart and leave the search filtering on a different
+        // experiment than the one this test runs.
+        session.inside.as_mut().unwrap().seed = Seed(placement.0 ^ PERTURBATION);
+        let after = session.snapshot().unwrap();
+
+        assert_ne!(
+            before.spatial, after.spatial,
+            "perturbing the embedding must MOVE what is drawn — if it does not, \
+             the placement seed is not reaching the plan and this control is decoration"
+        );
+        assert_eq!(
+            before.known, after.known,
+            "perturbing the embedding must NOT move what is known (spec §2.1): \
+             sight has leaked into belief"
+        );
+        assert_eq!(
+            before.sensed.present, after.sensed.present,
+            "nor may it move who is REPORTED here in seed {seed}, which was \
+             chosen because every creature stays in sight under both placements"
         );
     }
 }

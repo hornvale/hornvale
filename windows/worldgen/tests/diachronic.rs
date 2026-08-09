@@ -38,6 +38,7 @@ fn at(day: f64) -> StdDays {
     StdDays::new(day).unwrap()
 }
 
+/// claim: invariant(forall-seed) — day-0 witnessed set is empty
 #[test]
 fn observations_at_day_zero_are_empty() {
     // Every placed culture, seeds 1..=3: nothing has happened by day 0,
@@ -63,6 +64,8 @@ fn observations_at_day_zero_are_empty() {
     }
 }
 
+/// claim: invariant(forall-seed) — observation count monotone in T, prefix
+/// property
 #[test]
 fn the_accumulation_law() {
     // Per culture, seeds 1..=3, over {0, 10_000, 36_525}: |observations|
@@ -189,6 +192,87 @@ type Row = (
 // seed 1..=5 and its witnessed count matches bugbear/kobold's exactly at
 // every seed (measured live, not assumed — it joins the lunar-witnessing
 // group, now three members not two).
+//
+// The Generalist re-pin (2026-08-03): human places at every seed 1..=5 too
+// and its witnessed count matches goblin/hobgoblin's exactly at every seed
+// (measured live) — it joins the solar-only pair, now a trio, not the
+// lunar-witnessing group. The world-global predicted day is unchanged.
+//
+// The Tense re-pin (2026-08-05), and it REVERSES the claim above that "every
+// placed culture now clears the SOC-1 gate". Three peoples dropped Predictive
+// -> Counted -- seed 2 hobgoblin, seed 3 hobgoblin, seed 4 kobold -- so the
+// folk-only rows this comment recorded as "gone" have partly come back.
+//
+// The shape of the loss is the interesting part, and it is uniform across all
+// three: the witnessed COUNT is UNCHANGED (49, 32, 3785 respectively) and only
+// the prediction is gone. They observe exactly what they observed before; what
+// they no longer have is a priesthood to turn observation into forecast.
+// `cult_form` reads `organized` iff a settlement's emergent castes include a
+// shaman, and castes are downstream of settlement scale -- which fell across
+// the board when capacity gained an era axis (seed 42: 209 settlements -> 122,
+// chief populations down a third to a half). So this is the ladder's own
+// structural rule ("no Numbered or higher without doctrine") reporting a real
+// consequence, not a mispinning.
+//
+// It moves BOTH ways, which is why to read it as a threshold rather than a
+// collapse: seed 57's bugbear flagship went folk -> ORGANIZED over the same
+// change, forcing `doctrine.rs`'s SOC-1 smoke test to be re-found. Smaller
+// settlements on average; some cross down, some cross up.
+// THE DELVERS RE-MEASURE (C2c, 2026-08-07). The table grew from 30 rows to
+// 45: the three dwarves are Settled peoples seven through nine, and all three
+// place on all five seeds. Re-measured wholesale rather than extended.
+//
+// The campaign re-measured this table three times — five dwarves on `MINERAL`
+// diets, five on `DETRITUS`, then three on `DETRITUS` after spec §11 withdrew
+// Mountain and Duergar as inexpressible depth kinds. **Every witnessed COUNT
+// held through all three.** What moved, every time, is `cult_form`, which
+// reads `organized` iff a settlement's emergent castes include a shaman, and
+// castes are downstream of settlement scale: a settling people added or
+// removed re-decides placement on every seed, so some flagships cross the
+// caste threshold and some cross back. That is this comment's own "it moves
+// BOTH ways" rule reporting a real consequence, not a mispinning.
+//
+// Against the FINAL shipped table, 27 of the 30 pre-Delvers rows are
+// byte-identical to their pre-campaign values. The three that are not:
+//
+//   seed 2 hobgoblin  Counted    -> Predictive  (gained a prediction)
+//   seed 3 hobgoblin  Counted    -> Predictive  (gained a prediction)
+//   seed 3 kobold     Predictive -> Counted     (lost one)
+//
+// and all three keep their witnessed counts (49, 32, 53). Note that seed 3
+// hobgoblin was Counted under BOTH the pre-campaign roster and the five-dwarf
+// roster and is Predictive only at three — the caste threshold is not
+// monotone in roster size, which is the standing reason to read these rows as
+// a threshold rather than a trend.
+//
+// THE RANGE re-measure (task 4, 2026-08-09). Seven of the 45 rows moved, ALL
+// of them Predictive -> Counted, and — for the fourth re-measure running —
+// **every witnessed COUNT held**:
+//
+//   seed 1 gnoll         Predictive -> Counted   (6472 witnessed, unchanged)
+//   seed 2 gnoll         Predictive -> Counted   (81)
+//   seed 3 gnoll         Predictive -> Counted   (53)
+//   seed 3 hobgoblin     Predictive -> Counted   (32)
+//   seed 4 gnoll         Predictive -> Counted   (3785)
+//   seed 4 desert-dwarf  Predictive -> Counted   (3785)
+//   seed 5 gnoll         Predictive -> Counted   (500)
+//
+// Gnoll loses its priesthood on ALL FIVE seeds, which is the campaign's first
+// declared biome affinity doing exactly what it was declared to do: gnoll's
+// settlement count falls hard (seed 1: 61 -> 13; seed 42: 20 -> 2), castes are
+// downstream of settlement scale, and `cult_form` reads `organized` only where
+// a shaman caste emerges. hobgoblin@3 and desert-dwarf@4 are the competitive
+// cascade — no other kind carries an affinity, but suppressing one people
+// frees ground the rest re-contest, and two of them land the wrong side of the
+// caste threshold (`windows/worldgen/tests/range_readout.rs` measures that
+// cascade directly).
+//
+// This is the first re-measure where the movement is entirely ONE-WAY. The
+// comment above reads two-way movement as evidence of a threshold rather than
+// a collapse; seven losses and no gains is the other shape, and it is the
+// honest reading that this change pushed the roster down rather than around.
+// The counts holding is what says it is a doctrine loss and not a world that
+// stopped observing.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -200,15 +284,39 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
     ),
     (
         1,
         "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         4010,
@@ -224,6 +332,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "human",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -240,15 +356,39 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
         "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         49,
@@ -264,6 +404,14 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         2,
+        "human",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
         "kobold",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -280,11 +428,19 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -296,7 +452,31 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         3,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        32,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        32,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        32,
+        None,
+    ),
+    (
+        3,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
@@ -306,9 +486,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         4,
@@ -320,15 +500,39 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
+    ),
+    (
+        4,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
         "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        2067,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        2067,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         2067,
@@ -344,11 +548,19 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         4,
-        "kobold",
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
-        3785,
+        2067,
         Some(36540.36159622378),
+    ),
+    (
+        4,
+        "kobold",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
     ),
     (
         5,
@@ -360,11 +572,19 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -376,7 +596,31 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,
@@ -392,23 +636,54 @@ const LADDER_TABLE: &[Row] = &[
     ),
 ];
 
+/// Two laws over the same five worlds, in one test because they share a build.
+///
+/// `nextest` is process-per-test, so splitting these costs five full world
+/// builds for no isolation gain — the two laws read the same `ladder_from`
+/// output and cannot interfere. This is a deliberate exception to
+/// one-assertion-per-test, taken because the build is the expensive thing
+/// (The Assay, spec Stage 5).
+///
+/// Law 1 (the ladder): the full measured (seed 1..=5 × culture × epoch) rung
+/// table, pinned exact, plus the structural law: no rung above Counted
+/// without doctrine_from (the SOC-1 gate's diachronic consequence).
+///
+/// Law 2 (the prophecy): C9 (The Corrigendum): the taught prediction is no
+/// longer omniscient, so it is no longer necessarily the TRUE future event
+/// (see `a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine`
+/// for a seed where it's demonstrably wrong). What still holds, and is the real
+/// law now: a Predictive culture's taught day, when `Some`, is EXACTLY what
+/// the naive model computes from that culture's OWN witnessed days for its
+/// own top recurrence class -- self-consistency between `ladder_from` and
+/// the model it's built from, not a truth guarantee.
+///
+/// Every assertion below names its law (`the ladder law:` / `the prophecy
+/// law:`) so a failure in the merged test still says which of the two
+/// properties broke, not just that "the test" failed.
+/// claim: invariant(forall-seed) — two laws merged into one test (Task 11,
+/// process-per-test exception): six builds total (`generated(seed)` for
+/// `1..=5` plus `generated(3)` below), with an embedded existential check
+/// (any_predictive)
 #[test]
-fn the_ladder_law() {
-    // The full measured (seed 1..=5 × culture × epoch) rung table, pinned
-    // exact, plus the structural law: no rung above Counted without
-    // doctrine_from (the SOC-1 gate's diachronic consequence).
+fn the_ladder_and_prophecy_laws() {
+    let t = at(EPOCH_2);
+    let mut any_predictive = false;
+
     for seed in 1..=5u64 {
         let w = generated(seed);
         let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         let placed = placed_peoples(&w);
+
+        // Law 1 (the ladder).
         let expected_rows: Vec<&Row> = LADDER_TABLE.iter().filter(|r| r.0 == seed).collect();
         assert_eq!(
             placed.len(),
             expected_rows.len(),
-            "seed {seed}: the pinned table must cover every placed culture"
+            "the ladder law: seed {seed}: the pinned table must cover every placed culture"
         );
-        for (kind, _) in placed {
+        for (kind, _) in &placed {
+            let kind = *kind;
             let row = LADDER_TABLE
                 .iter()
                 .find(|r| r.0 == seed && r.1 == kind)
@@ -419,11 +694,26 @@ fn the_ladder_law() {
                 .unwrap()
                 .events
                 .len();
-            assert_eq!(rung_1, row.2, "seed {seed} {kind} epoch 1 rung");
-            assert_eq!(pred_1, None, "seed {seed} {kind}: no epoch-1 prediction");
-            assert_eq!(rung_2, row.3, "seed {seed} {kind} epoch 2 rung");
-            assert_eq!(n_2, row.4, "seed {seed} {kind} epoch 2 witnessed count");
-            assert_eq!(pred_2, row.5, "seed {seed} {kind} epoch 2 prediction");
+            assert_eq!(
+                rung_1, row.2,
+                "the ladder law: seed {seed} {kind} epoch 1 rung"
+            );
+            assert_eq!(
+                pred_1, None,
+                "the ladder law: seed {seed} {kind}: no epoch-1 prediction"
+            );
+            assert_eq!(
+                rung_2, row.3,
+                "the ladder law: seed {seed} {kind} epoch 2 rung"
+            );
+            assert_eq!(
+                n_2, row.4,
+                "the ladder law: seed {seed} {kind} epoch 2 witnessed count"
+            );
+            assert_eq!(
+                pred_2, row.5,
+                "the ladder law: seed {seed} {kind} epoch 2 prediction"
+            );
 
             // Structural: no Numbered (or higher) without doctrine.
             let organized = doctrine_from(&w, kind, &terrain, &climate).is_some();
@@ -431,57 +721,21 @@ fn the_ladder_law() {
                 if matches!(rung, LadderRung::Numbered | LadderRung::Predictive) {
                     assert!(
                         organized,
-                        "seed {seed} {kind}: rung {rung:?} without an organized cult"
+                        "the ladder law: seed {seed} {kind}: rung {rung:?} without an organized cult"
                     );
                 }
             }
             if !organized {
                 assert!(
                     matches!(rung_2, LadderRung::Unknown | LadderRung::Counted),
-                    "seed {seed} {kind}: folk-only cultures never exceed Counted, got {rung_2:?}"
+                    "the ladder law: seed {seed} {kind}: folk-only cultures never exceed Counted, got {rung_2:?}"
                 );
             }
         }
-    }
 
-    // The full four-rung climb on one culture (measured: seed 3 goblin,
-    // the sparsest organized culture — 32 events/century), so the
-    // Numbered rung — which both committed epochs skip over — is
-    // exercised live, never vacuously.
-    let w = generated(3);
-    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-    let climb = [
-        (1_000.0, LadderRung::Unknown, None),
-        (2_000.0, LadderRung::Counted, None),
-        (4_000.0, LadderRung::Numbered, None),
-        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
-    ];
-    for (day, expected_rung, expected_pred) in climb {
-        let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
-        assert_eq!(rung, expected_rung, "seed 3 goblin at day {day}");
-        assert_eq!(pred, expected_pred, "seed 3 goblin at day {day}");
-    }
-}
-
-#[test]
-fn the_prophecy_law() {
-    // C9 (The Corrigendum): the taught prediction is no longer
-    // omniscient, so it is no longer necessarily the TRUE future event
-    // (see `a_crisis_fires_on_a_real_generated_sky` for a seed where
-    // it's demonstrably wrong). What still holds, and is the real law
-    // now: a Predictive culture's taught day, when `Some`, is EXACTLY
-    // what the naive model computes from that culture's OWN witnessed
-    // days for its own top recurrence class -- self-consistency between
-    // `ladder_from` and the model it's built from, not a truth guarantee.
-    let t = at(EPOCH_2);
-    let mut any_predictive = false;
-
-    for seed in 1..=5u64 {
-        let w = generated(seed);
-        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-        for (kind, _) in placed_peoples(&w) {
+        // Law 2 (the prophecy).
+        for (kind, _) in &placed {
+            let kind = *kind;
             let (rung, prediction) = ladder_from(&w, kind, t, &terrain, &climate).unwrap();
             if rung != LadderRung::Predictive {
                 continue;
@@ -524,15 +778,41 @@ fn the_prophecy_law() {
             assert_eq!(
                 day,
                 last + mean,
-                "seed {seed} {kind}: the taught day must equal the naive model's own \
+                "the prophecy law: seed {seed} {kind}: the taught day must equal the naive model's own \
                  extrapolation from this culture's own witnessed days"
             );
         }
     }
 
+    // Law 1 continued: the full four-rung climb on one culture (measured:
+    // seed 3 goblin, the sparsest organized culture — 32 events/century),
+    // so the Numbered rung — which both committed epochs skip over — is
+    // exercised live, never vacuously.
+    let w = generated(3);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let climb = [
+        (1_000.0, LadderRung::Unknown, None),
+        (2_000.0, LadderRung::Counted, None),
+        (4_000.0, LadderRung::Numbered, None),
+        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
+    ];
+    for (day, expected_rung, expected_pred) in climb {
+        let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
+        assert_eq!(
+            rung, expected_rung,
+            "the ladder law: seed 3 goblin at day {day}"
+        );
+        assert_eq!(
+            pred, expected_pred,
+            "the ladder law: seed 3 goblin at day {day}"
+        );
+    }
+
+    // Law 2 continued.
     assert!(
         any_predictive,
-        "NO culture in seeds 1..=5 reaches Predictive at epoch 2 -- the ladder's top must be \
+        "the prophecy law: NO culture in seeds 1..=5 reaches Predictive at epoch 2 -- the ladder's top must be \
          visible somewhere (the preregistered demand); widen the epoch or seed sweep"
     );
 }
@@ -567,45 +847,54 @@ fn diachronic_is_deterministic() {
     }
 }
 
+/// The seed whose crisis this test exercises, READ OUT OF THE CENSUS rather
+/// than hunted at test time (The Assay). At the 2026-08-07 regen (`d36be41b`,
+/// n = 1000), the census's `crisis-fires` column reports `true 659 · false
+/// 341 · Absent 0` -- two worlds in three hold a live prediction crisis -- and
+/// seed 0 is the first seed in that column with `true`. Replace this value
+/// only from a regenerated census's `crisis-fires` column, never by widening a
+/// search.
+const CRISIS_SEED: u64 = 0;
+
+/// A live crisis's own structure, on one world. What the census cannot say:
+/// that a crisis's predicted and actual days differ, and that a culture
+/// holding one also holds a doctrine.
+///
+/// This is a `claim: structural(seed: CRISIS_SEED)` — one build, no search.
+/// The frequency question it used to answer badly (by sweeping up to 200
+/// worlds for a single instance, and reporting only that the search
+/// terminated -- never whether it stopped at seed 1 or seed 187) is now
+/// `hornvale-lab::calibration::a_prediction_crisis_occurs_and_the_census_reports_its_rate`,
+/// over 1,000 worlds. If this seed ever stops holding a crisis, that is a
+/// census question first: regenerate, read the column, re-pin.
 #[test]
-fn a_crisis_fires_on_a_real_generated_sky() {
-    // C9 (The Corrigendum) T1/T3: prove the naive model's crisis
-    // detection fires on at least one live seed, not only on synthetic
-    // data. If none of 1..=200 shows one, WIDEN the search range and
-    // document the range that was needed -- never weaken
-    // PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN just to force a
-    // hit; those are the spec's own considered values (decision ledger
-    // #2).
+fn a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine() {
+    let w = generated(CRISIS_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let at = at(EPOCH_2);
+
     let mut found = None;
-    for seed in 1..=200u64 {
-        let w = generated(seed);
-        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-        for (kind, _) in placed_peoples(&w) {
-            if let Some(crisis) = crisis_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap() {
-                found = Some((seed, kind.to_string(), crisis));
-                break;
-            }
-        }
-        if found.is_some() {
+    for (kind, _) in placed_peoples(&w) {
+        if let Some(crisis) = crisis_from(&w, kind, at, &terrain, &climate).unwrap() {
+            found = Some((kind.to_string(), crisis));
             break;
         }
     }
-    let (seed, kind, crisis) = found.unwrap_or_else(|| {
+    let (kind, crisis) = found.unwrap_or_else(|| {
         panic!(
-            "no seed in 1..=200 exhibited a live prediction crisis by day {EPOCH_2} -- widen \
-            the search range rather than shipping this mechanism unexercised"
+            "seed {CRISIS_SEED} no longer exhibits a crisis at day {EPOCH_2}. This seed \
+             was read out of the census's `crisis-fires` column; regenerate the census \
+             and re-pin CRISIS_SEED from it. Do NOT reintroduce a seed sweep here \
+             (decision 0093), and do NOT weaken the tolerance constants."
         )
     });
     assert!(
         crisis.last_predicted != crisis.last_actual,
-        "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
+        "seed {CRISIS_SEED} {kind}: a crisis's predicted and actual days must differ"
     );
-    let w = generated(seed);
-    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     assert!(
         doctrine_from(&w, &kind, &terrain, &climate).is_some(),
-        "seed {seed} {kind}: a Predictive-rung culture with a crisis must hold a doctrine"
+        "seed {CRISIS_SEED} {kind}: a culture holding a crisis must hold a doctrine"
     );
 }

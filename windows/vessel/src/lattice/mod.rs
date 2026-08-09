@@ -46,12 +46,15 @@
 //! a separation rule and never takes a cell back.
 
 pub mod allocate;
+pub mod anchor_cells;
 pub mod classify;
 pub mod grow;
 pub mod occupancy;
 pub mod render;
+pub mod sight;
 
 pub use allocate::allocate;
+pub use anchor_cells::{anchor_cells, is_faithful};
 pub use classify::{
     bounds_of, cell_beyond, doorway_between, freedom_of_a_chain, kind_of, openings, reachable_from,
     realized_links, standing_cell,
@@ -59,6 +62,7 @@ pub use classify::{
 pub use grow::grow;
 pub use occupancy::{Occupancy, Refusal};
 pub use render::{Plan, render};
+pub use sight::shadowcast;
 
 use crate::brief::Brief;
 use crate::structure::Structure;
@@ -429,6 +433,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — determinism, over 0..8
     #[test]
     fn the_embedding_is_pure() {
         for seed in 0..8u64 {
@@ -438,6 +443,7 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: 0..8) — non-degeneracy: the seed is not ignored
     #[test]
     fn the_seed_is_read_at_all() {
         // Where a chamber count leaves freedom, the split position is the
@@ -449,6 +455,7 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — over 0..8
     #[test]
     fn no_chamber_is_degenerate() {
         for seed in 0..8u64 {
@@ -643,6 +650,10 @@ mod tests {
     /// type-audit: bare-ok(count)
     const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
 
+    /// claim: readout — a benchmark distribution (median/min/p99 ns) over
+    /// 1001 varying seeds, purely to avoid a single-seed allocation-cost
+    /// measurement being unrepresentative (Fix round 1, Class 2: `for i in
+    /// 0..SAMPLES` feeding `Seed(i as u64)`); not a world-property claim
     #[test]
     fn the_embedding_is_cheap_enough_to_re_derive() {
         // Spec §10 risk 1: no budget claim without a measurement. A lattice is

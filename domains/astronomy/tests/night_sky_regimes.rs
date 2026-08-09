@@ -17,6 +17,8 @@ const SEEDS: [u64; 3] = [1, 7, 42];
 /// A locked world has no local day, so every stage-1 derivation that reads
 /// the solar hour must say so honestly: a frozen sky, no heliacal events,
 /// no sky band.
+///
+/// claim: sanctioned-sweep(pinned regime, RotationPin::Locked — no census home)
 #[test]
 fn locked_worlds_freeze_the_instrument() {
     for seed in SEEDS {
@@ -54,6 +56,8 @@ fn locked_worlds_freeze_the_instrument() {
 /// ecliptic-longitude term in `solar_equatorial` doesn't depend on
 /// obliquity), so a star can still be lost behind the sun's glare and
 /// recovered — heliacal events survive.
+/// claim: sanctioned-sweep(pinned regime, obliquity 0 + ForcingPin::Zero —
+/// no census home)
 #[test]
 fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
     let mut any_pairs = false;
@@ -109,6 +113,7 @@ fn zero_obliquity_keeps_heliacal_events_but_kills_seasons() {
 /// heliacal timing (SKY-22's rule): the rising and setting fractions are
 /// computed from RA/dec geometry that doesn't know which way the local day
 /// counts its hour angle.
+/// claim: sanctioned-sweep(pinned regime, spin direction — no census home)
 #[test]
 fn retrograde_flips_wheeling_not_dates() {
     for seed in SEEDS {
@@ -166,6 +171,7 @@ fn retrograde_flips_wheeling_not_dates() {
 /// while the orbital-mechanical quantities (wanderer periods, the year
 /// itself) are entirely untouched: they're derived from Kepler's third law
 /// and the anchor's orbit, not from where the equinox currently points.
+/// claim: sanctioned-sweep(pinned regime, wanderers=2 — no census home)
 #[test]
 fn epoch_drift_moves_the_equinox_referenced_and_spares_the_orbital() {
     for seed in SEEDS {

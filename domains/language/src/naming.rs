@@ -97,7 +97,9 @@ pub enum NameKind {
     /// An epithet: a descriptive root, optionally reduplicated and
     /// optionally honorific-prefixed (see [`MorphOptions`]).
     Epithet,
-    /// A person's name: a bare stem, like a settlement's.
+    /// A person: the given-name element of a personal name — a bare stem,
+    /// drawn like a settlement's but off its own seed path so that adding
+    /// personal naming to a world reseeds nothing that already exists.
     Person,
 }
 
@@ -112,6 +114,14 @@ impl NameKind {
             NameKind::Epithet => "epithet",
             NameKind::Person => "person",
         }
+    }
+
+    /// The seed-path label, exposed for the save-format-contract test in
+    /// `tests/anthroponym.rs`. Not part of the ordinary API.
+    /// type-audit: bare-ok(identifier-text)
+    #[doc(hidden)]
+    pub fn label_for_test(self) -> &'static str {
+        self.label()
     }
 }
 
@@ -575,6 +585,37 @@ impl<'a> Namer<'a> {
         self.wear_under(segments, frequency, Prominence::None)
     }
 
+    /// [`Namer::wear`]'s reflex for a morpheme that stands **as an entire
+    /// name by itself** — [`Namer::worn_compound`]'s rung-0 treatment of a
+    /// solo part (`chosen.len() == 1`), exposed so a caller outside this
+    /// module can ask what production actually produces instead of guessing
+    /// candidate surface shapes.
+    ///
+    /// [`Namer::wear`] always reduces under [`Prominence::None`] — correct
+    /// for a morpheme *inside* a compound, where some other part carries the
+    /// word's stress, but wrong for a one-morpheme name: there the morpheme
+    /// IS the whole word, so its first nucleus is stressed and
+    /// [`reduce_nuclei`] must protect it (`Prominence::InitialVowel`), the
+    /// same rule [`Namer::worn_compound`] applies via [`Namer::part_prominence`]
+    /// when a chosen list has exactly one element. `Prominence` itself is
+    /// private (it is a positional bookkeeping type, not a species-facing
+    /// concept), so before this seam existed nothing outside `naming.rs`
+    /// could reconstruct that reflex — an external check was reduced to
+    /// enumerating candidate forms it hoped production might have produced,
+    /// which is a weaker property than asking production directly (The
+    /// Witness, `speakable_properties.rs`'s saturated-corpus battery: seed 1
+    /// salt 1 fell in exactly this gap). Unlike [`Namer::wear`], this applies
+    /// [`reduce_nuclei`] unconditionally — matching `worn_compound`'s rung 0,
+    /// which never floor-gates the positional reduction, only the cascade
+    /// limb inside [`Namer::sounded`].
+    ///
+    /// Pure, same as [`Namer::wear`]: a function of
+    /// `(seed, species, ph, segments, frequency)` and nothing else.
+    /// type-audit: bare-ok(ratio: frequency)
+    pub fn wear_as_whole_name(&self, segments: &[Segment], frequency: f64) -> Vec<Segment> {
+        self.wear_under(segments, frequency, Prominence::InitialVowel)
+    }
+
     /// [`Namer::wear`]'s two limbs with the reduction's [`Prominence`] left
     /// to the caller — the single composition site, so the citation-form
     /// reading ([`Namer::wear`], nothing prominent) and the in-a-word
@@ -608,7 +649,7 @@ impl<'a> Namer<'a> {
         if frequency < WEAR_FLOOR {
             return segments.to_vec();
         }
-        let cascade = draw_wear_cascade(&self.seed, &self.species);
+        let cascade = draw_wear_cascade(&self.seed, &self.species, self.ph);
         evolve(segments, &cascade, self.ph).modern
     }
 
@@ -1100,7 +1141,8 @@ impl<'a> Namer<'a> {
         stream: &mut Stream,
     ) -> GeneratedName {
         let syllables = match kind {
-            NameKind::Settlement | NameKind::Person => self.draw_syllables(stream, 2, 3, false),
+            NameKind::Settlement => self.draw_syllables(stream, 2, 3, false),
+            NameKind::Person => self.draw_syllables(stream, 2, 3, false),
             NameKind::Deity => self.draw_syllables(stream, 2, 3, true),
             NameKind::Epithet => {
                 let mut syllables = self.draw_syllables(stream, 1, 2, false);
@@ -2127,7 +2169,7 @@ mod tests {
         let ph = wordy_ph();
         let seed = Seed(42);
         let namer = Namer::new(&seed, "kobold", &ph);
-        let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold");
+        let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold", &ph);
         assert!(
             cascade.rules.iter().any(|r| matches!(
                 r.kind,
@@ -2664,6 +2706,8 @@ mod tests {
     /// ```text
     /// cargo test -p hornvale-language sweep_wear_fixture_seed -- --ignored --nocapture
     /// ```
+    /// claim: reachability(seed: 0..600) — finds fixture seeds satisfying the
+    /// test's preconditions
     #[test]
     #[ignore = "search: re-derives the wear fixture's seed; run explicitly with --ignored"]
     fn sweep_wear_fixture_seed() {
@@ -2689,7 +2733,7 @@ mod tests {
         // where `FinalLoss` can only ever touch the word's last segment)
         // would grind the same slot both times.
         let ph = wordy_ph();
-        // Lexicon seed 186 over `wordy_ph`: both roots are consonant-final,
+        // Lexicon seed 549 over `wordy_ph`: both roots are consonant-final,
         // so kobold@42's wear cascade has an environment to fire in for
         // each, AND both worn forms survive repair (asserted below as a
         // precondition — the survival rule would otherwise silently give
@@ -2706,23 +2750,32 @@ mod tests {
         // v4 reseeded the lexicon draws again and seed 186 stopped satisfying
         // the survive-repair precondition (both worn forms surrendered, 1/1
         // against a required 0/0) — the precondition caught it a second time,
-        // exactly as designed. Re-swept 0..600 on all six clauses: seed 19 is
-        // the ONLY one, so the fixture is narrower than ever and this comment
-        // is the standing warning for the next reseed.
+        // exactly as designed. Re-swept 0..600 on all six clauses and seed 19
+        // was the ONLY one — until The Witness (2026-07-30, F7) gated
+        // `Tonogenesis` on a prior merger, reseeding kobold@42's own wear
+        // cascade (which draws from the same `RULE_KINDS` roster) and every
+        // lexicon draw below it. Seed 19 stopped satisfying the give-up
+        // preconditions; re-swept 0..2000 on all six clauses and found only
+        // four survivors (549, 846, 1319, 1920) — narrower still.
         //
-        // And it caught it a THIRD time, at The Watershed's sonority merge —
-        // seed 19 surrendered both worn forms (1/1 against 0/0). The re-search
-        // is no longer by hand: [`sweep_wear_fixture_seed`] encodes the
-        // clauses as [`wear_fixture_seed_qualifies`] and the fixture reads the
-        // same predicate, so the two cannot drift. It reports FIVE qualifying
-        // seeds in 0..600 — [164, 305, 325, 370, 521] — because SSP-ordered
-        // templates are markedly more repairable than the unordered ones. The
-        // fixture is wider than it has ever been; 164 is simply the first.
-        let lex = two_word_lexicon(164);
+        // It caught it a further time, at The Watershed's sonority merge —
+        // seed 19 (searched independently on that branch) surrendered both
+        // worn forms (1/1 against 0/0) there too. The re-search is no longer
+        // by hand: [`sweep_wear_fixture_seed`] encodes the clauses as
+        // [`wear_fixture_seed_qualifies`] and the fixture reads the same
+        // predicate, so the two cannot drift.
+        //
+        // Absorbing The Witness's `Tonogenesis` gating and The Watershed's
+        // sonority merge together reseeds the draw a further time: re-swept
+        // with the merged predicate (`sweep_wear_fixture_seed`) and found
+        // four qualifying seeds in 0..600 — [367, 407, 549, 575]; 367 is
+        // simply the first (see the sweep's own doc comment for how to
+        // re-derive this when it goes stale again).
+        let lex = two_word_lexicon(367);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
-        let cascade = crate::etymology::draw_wear_cascade(&Seed(42), "kobold");
+        let cascade = crate::etymology::draw_wear_cascade(&Seed(42), "kobold", &ph);
         assert!(
             cascade.rules.iter().any(|r| matches!(
                 r.kind,
@@ -2810,12 +2863,15 @@ mod tests {
         // morphemes and left nine settlements committing a `name-gloss`
         // naming a word their name did not contain.
         //
-        // Lexicon seed 49 is exactly that case: kobold@42's wear cascade
-        // fires on both roots, and neither worn form survives repair. The
-        // survival rule must therefore give the wear back rather than let
-        // the morpheme vanish.
+        // Lexicon seed 2 (re-searched for Task 8b, The Witness, 2026-07-30/
+        // 31: the phonology gate in `draw_rule` reseeded kobold@42's wear
+        // cascade again on top of F7's own reseed, and lexicon seed 49 —
+        // F7's own pair — stopped satisfying the preconditions below. Swept
+        // 0..3000): kobold@42's wear cascade fires on both roots, and
+        // neither worn form survives repair. The survival rule must
+        // therefore give the wear back rather than let the morpheme vanish.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(49);
+        let lex = two_word_lexicon(2);
         let namer = Namer::new(&Seed(42), "kobold", &ph);
         let attested = attested_forms(&lex);
         let chosen = ["water", "fire"];
@@ -2866,17 +2922,22 @@ mod tests {
         // name is actually built from, because wear consumes nothing from
         // the name stream.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(19);
+        // Lexicon seed 1319, namer seed 0 (re-searched for Task 8b, The
+        // Witness, 2026-07-30/31): the phonology gate in `draw_rule` now
+        // additionally drops `Tonogenesis`/`VowelShift` a shipped species'
+        // phonology cannot host, reseeding kobold's wear cascade again on
+        // top of F7's own reseed. Lexicon seed 549 / namer seed 32 (F7's
+        // pair) stopped changing any of the 80 names below; swept lexicon
+        // seed against `[549, 19, 846, 1319, 1920]` (F7's own re-search
+        // candidates) then 0..2000, crossed with namer seed 0..300 — the
+        // first hit was (1319, 0). That guard is the point — the agreement
+        // asserted in the loop is worthless if no name ever wears.
+        let lex = two_word_lexicon(1319);
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
         let morph = morph(false);
-        // Namer seed 27, re-searched after The Wearing's nucleus fix: at the
-        // previous seed 42 the saturated corpus stopped changing ANY of the
-        // 80 names below, so the non-vacuity guard at the end of this test
-        // went red. That guard is the point — the agreement asserted in the
-        // loop is worthless if no name ever wears.
-        let namer = Namer::new(&Seed(27), "kobold", &ph);
+        let namer = Namer::new(&Seed(0), "kobold", &ph);
         let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
         saturated.insert("water".to_string(), 1.0);
         saturated.insert("fire".to_string(), 1.0);
@@ -2907,6 +2968,8 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — repaired compounds parse against drawn
+    /// templates, over 12 seeds
     #[test]
     fn repair_makes_real_evolved_compounds_conform() {
         // The structural invariant repair exists to uphold (spec §8), probed
@@ -3108,6 +3171,8 @@ mod tests {
     /// of *one of* several admissible lengths. A namer that drew simple
     /// nuclei the parser then rejected would send every name through
     /// [`repair_phonotactics`] and pad the vowel straight back in.
+    /// claim: reachability(seed: 0..64, seed-searched precondition witness) —
+    /// own doc comment: "Seed-searched runtime precondition"
     #[test]
     fn a_diphthong_admitting_language_still_speaks_simple_syllables() {
         // Seed-searched runtime precondition: the claim is only in play for a
@@ -3162,6 +3227,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — repair-to-identity over 64 seeds
     #[test]
     fn attested_compounds_repair_to_identity_across_the_seed_sweep() {
         // Spec §6: for 64 seeds, with the lexicon descending from a DIFFERENT
@@ -3276,6 +3342,8 @@ mod tests {
     /// Reds if [`reduce_nuclei`] ignores its [`Prominence`] argument in
     /// either direction — protecting nothing (the stressed nucleus is lost)
     /// or protecting everything (nothing reduces at all).
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a Segment, single hand-built word, no world seed
     #[test]
     fn a_words_first_nucleus_is_spared_and_the_rest_reduce() {
         let ph = wordy_ph();
@@ -3352,6 +3420,8 @@ mod tests {
     /// language must admit one, and some sampled name must actually carry a
     /// long FIRST nucleus — i.e. the sparing clause has to be in play, not
     /// just the reducing one.
+    /// claim: invariant(forall-seed) — nucleus-length ordering, with embedded
+    /// non-vacuity guards (admitting > 0, polysyllabic > 0, long_first > 0)
     #[test]
     fn a_drawn_stems_non_initial_nuclei_are_no_longer_than_its_first() {
         let morph = MorphOptions {
@@ -3418,6 +3488,8 @@ mod tests {
     /// Seed-searched: the claim is empty unless the word-initial morpheme
     /// actually carries a nucleus longer than the floor, so the test finds a
     /// lexicon where it does and names the seed it found.
+    /// claim: reachability(seed: 0..64, seed-searched precondition witness) —
+    /// own doc comment: "Seed-searched"
     #[test]
     fn a_compounds_stressed_morpheme_keeps_its_nucleus() {
         let ph = wordy_ph();
@@ -3522,6 +3594,8 @@ mod tests {
     /// share their chosen concepts (the affix is drawn after the concepts
     /// are picked), so the only difference is the prefix and the prominence
     /// that goes with it.
+    /// claim: reachability(seed: 0..64) — own doc comment: "An EXISTENTIAL
+    /// claim, deliberately" (witnesses > 0)
     #[test]
     fn an_honorific_prefix_takes_the_stress_from_the_compound() {
         let ph = wordy_ph();
@@ -3617,6 +3691,8 @@ mod tests {
     /// Both calls below use a saturated corpus, so the frequency gate is
     /// open for both and the ONLY difference is the morpheme count. Reds if
     /// the override drops its `chosen.len() > 1` clause.
+    /// claim: invariant(forall-seed, precondition-gated) — with an embedded
+    /// non-vacuity guard (checked > 0)
     #[test]
     fn a_frequent_morpheme_standing_alone_keeps_its_stressed_nucleus() {
         let ph = wordy_ph();

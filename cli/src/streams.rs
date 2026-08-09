@@ -301,6 +301,20 @@ mod tests {
         // campaign's bump was in flight on its branch, so the two met for the
         // first time at the close merge; the roster is updated to record the
         // bump, and the assertion is left exactly as strong as it was.
+        //
+        // The Witness (F7, 2026-07-30) adds `language/<species>/lexicon/
+        // cascade` at `v2` (and its `v2/wear` child): `draw_rule` becomes
+        // position-aware, offering `Tonogenesis` only once a merger has been
+        // drawn, so every cascade reseeds. See
+        // `domains/language/src/streams.rs`'s `CASCADE_V2` doc for the full
+        // reasoning, including why this is the leg that owes the bump and
+        // not `name/settlement/v4` or `lexicon/root/v4`.
+        //
+        // The Contour (position-aware conflict, decision 0096) adds
+        // `history/bake` at `v2`: the mechanism consumes no new draw, but it
+        // changes every generated world's committed history, so the label
+        // takes an epoch suffix per decision 0006 (an epoch suffix, never a
+        // rename). See `domains/history/src/streams.rs`'s `BAKE` doc.
         let rows: Vec<String> = versioned_labels()
             .into_iter()
             .map(|(k, v)| format!("{k} {v}"))
@@ -308,20 +322,81 @@ mod tests {
         assert_eq!(
             rows,
             vec![
+                // The Deep Realm: the underworld chamber derivation. A NEW
+                // label, additive at v1 — it perturbs no existing stream —
+                // but versioned from birth like `settlement/disposition v1`
+                // below, because its key (a ChamberAddr's cell, entrance,
+                // band NAME and slot — see `windows/worldgen/src/
+                // chamber.rs`'s `chamber_key`) is a save-format contract
+                // the moment anything commits a chamber fact, which this
+                // campaign deliberately does not do (spec §3.1/§3.3).
+                "chamber v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
+                "history/bake v2",
+                // The Salt re-keys the flesh seed from the occupation's
+                // entity id onto its material core, so residue and
+                // structures stop moving when an id moves. Taking the
+                // review decision here rather than deferring it, because
+                // this row sits at a genuine tension with decision 0084
+                // and the reasoning should be legible later:
+                //
+                // 0084 DECLINED an epoch for `room/furnishing`, and one of
+                // its three stated reasons was that the chamber composer
+                // "is read only by the chamber renderer, which commits
+                // nothing" — which describes `history/flesh` exactly. On
+                // that reading this label should stay unversioned and this
+                // row should not exist.
+                //
+                // It is recorded anyway, and the difference from 0084 is
+                // the one that matters: there, the measurement came back
+                // byte-identical — *nothing moved at all*, which is the
+                // empty epoch 0089 warns against writing into the
+                // manifest. Here the derivation genuinely moved (measured:
+                // cell 1400's rendered layer draws Seed(11388647889657673426)
+                // under the old key and Seed(10641468697408252209) under
+                // the new one), and a reader re-rendering `hornvale history
+                // --site` off an older save under newer code gets different
+                // prose with no other record of why. The stamp is that
+                // record. It claims nothing about the save's BYTES, and
+                // says so.
+                "history/flesh v2",
                 "language/<family>/lexicon/root/<concept> v3",
+                "language/<species>/lexicon/cascade v2",
+                "language/<species>/lexicon/cascade/wear v2",
                 "language/<species>/name/deity v3",
                 "language/<species>/name/epithet v3",
                 "language/<species>/name/settlement v3",
                 "religion/deity v2",
                 "room/chambers v1",
                 "room/furnishing v1",
+                // The Sighting: where a chamber's ANCHORS land in its cells,
+                // a third sibling in the layout family. Additive at v1 — a
+                // NEW label, so it perturbs no existing stream — and it is
+                // the label in this roster with the SMALLEST blast radius:
+                // an anchor placement is FRAME-tier (decision 0069), never
+                // serialized and never a fact's object, so bumping it could
+                // not corrupt a saved world even in principle. Versioned
+                // from birth anyway, because 0073 fixes epoch granularity at
+                // declaration and an unversioned label can only gain a
+                // version by a rename.
+                "room/layout/anchors v1",
                 "room/layout/grown v1",
                 "room/layout/rectilinear v1",
+                // The Tolerance: the per-settlement disposition draw, a
+                // people's authored mind perturbed by its authored
+                // dispersion. Additive at v1 — a NEW label, so it perturbs
+                // no existing stream, but it is versioned from birth
+                // because it will one day want an epoch: the draw shape
+                // (uniform on ±√3σ, per-dimension independent, clamped to
+                // [0, 1]) and the (site, founded-year) key are both
+                // save-format contracts, and changing either changes every
+                // settlement's mind. See
+                // `windows/worldgen/src/disposition.rs`.
+                "settlement/disposition v1",
             ]
         );
     }

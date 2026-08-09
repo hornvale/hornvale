@@ -330,6 +330,69 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // six move the descriptor space where nineteen site descriptors could not
     // (LANG-9's recorded limit).
     &["barley", "millet", "rice", "tuber", "vine", "wheat"],
+    // Epoch 6 — The Vernacular, Part 2: the nine spectral classes, each
+    // registered `lexeme: Absent(Void::Unnamed(...))` — a star's class is
+    // real whether or not anyone here has invented spectroscopy, but no
+    // culture has, so no word realizes it. These nine DO reach the exposures
+    // map: `exposure_of_impl` closes with a loop over every registered
+    // concept (`windows/worldgen/src/lib.rs`'s own doc: "the map's keys are
+    // always exactly `world.registry.concepts()`'s names"), so nothing in
+    // the registry is ever absent from it. What keeps a proto-root from
+    // being drawn for them is `hornvale_language::lexicon::
+    // proto_root_universe`'s `GapReason::Unnameable` filter, which excludes
+    // exactly this classification from `build_lexicon`'s universe before
+    // `assign_proto_roots` runs — a language-side exclusion, not a registry-
+    // side absence. This cohort exists to satisfy the parity check above and
+    // to keep the epoch-first sort giving these nine no influence on any
+    // earlier-epoch assignment, per that filter and the ordering property
+    // this module's own tests pin.
+    &[
+        "orange-dwarf",
+        "yellow-dwarf",
+        "yellow-white-dwarf",
+        "red-dwarf",
+        "sun-like-star",
+        "white-dwarf",
+        "orange-giant",
+        "red-giant",
+        "blue-giant",
+    ],
+    // Epoch 7 — the compass completed. `north` and `south` have been rooted
+    // since epoch 4, where they arrived as *toponymic* elements (Northriver,
+    // Southvalley) rather than as bearings; the exit graph has always been an
+    // eight-point compass, so six of its eight directions could be travelled
+    // and none of them named. These six close that gap, and a reverse audit
+    // over `Compass::all()` now keeps it closed.
+    //
+    // The two cardinals get roots in the universal stratum. The four
+    // intercardinals do NOT — they are compound-only concepts realized as
+    // (cardinal, cardinal) through `packs::compound_recipe`, the same footing
+    // as `sea` and `mountain`, because every attested language builds these by
+    // composition rather than minting an unanalysable eighth word.
+    //
+    // Appended rather than folded into epoch 4 beside `north`/`south`, per
+    // this module's absolute rule: re-sorting that cohort is exactly the churn
+    // the epoch-first ordering exists to prevent, and the withdrawn exception
+    // above is the record of what it costs to reason otherwise.
+    &[
+        "east",
+        "west",
+        "north-east",
+        "south-east",
+        "south-west",
+        "north-west",
+    ],
+    // Epoch 8 — The Generalist (2026-08-03): the sixth people, human. A
+    // single-concept cohort, appended per this module's absolute rule rather
+    // than folded into any earlier peopled-kind cohort (0, 2).
+    &["human-kind"],
+    // Epoch 9 — The Delvers (2026-08-07): the dwarf family, three kinds.
+    // ONE cohort, not three: the campaign is one arrival event and one epoch,
+    // and three cohorts would assert three successive language epochs — a
+    // stronger claim about the world's history than this campaign makes.
+    // Appended rather than folded into an earlier peopled-kind cohort (0, 2,
+    // 8), per this module's absolute rule.
+    &["desert-dwarf-kind", "gully-dwarf-kind", "hill-dwarf-kind"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

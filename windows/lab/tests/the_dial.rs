@@ -108,6 +108,7 @@ fn mean_pairwise_distinctiveness(accounts: &[&Account]) -> f64 {
 /// spec §6, as amended by decision ledger #13). A failure here is a
 /// campaign FINDING, not a bug: STOP and report the measured values rather
 /// than tuning any threshold.
+/// claim: readout — calibration-lab convention; kept (audit §3.3)
 #[test]
 fn the_dial_separates_the_poles() {
     const MEASURED_SEEDS: [u64; 4] = [1, 2, 3, 42];
@@ -199,10 +200,31 @@ fn the_dial_separates_the_poles() {
             // load-bearing invariant is still that the count of LOST entries
             // stays 3 (read-through), NOT the naive `!= Kept` value of 4/9
             // that would miscount the Kept-underlying moon-count as lost.
+            // The Generalist adds a sixth people (human) as a new placed
+            // neighbor: kobold's account gains one more `instance-of` entry
+            // ("human"), Kept (measured live, not assumed), so the entry
+            // count grows 9 -> 10, moving loss_fraction 3/9 -> 3/10; the
+            // count of LOST entries is still 3.
+            // The Delvers adds THREE peoples (the dwarves) as new placed
+            // neighbors: kobold's account gains three more `instance-of`
+            // entries (desert-dwarf, gully-dwarf, hill-dwarf), every one of
+            // them Kept — DUMPED AND CONFIRMED LIVE, not inferred from the
+            // fraction: 13 entries, 3 lost, and `moon-count` still reads
+            // `Explained { underlying: Kept }` while `day-length-std` still
+            // reads `Explained { underlying: Lost }`. So the entry count grows
+            // 10 -> 13, moving loss_fraction 3/10 -> 3/13; the count of LOST
+            // entries is still 3, and the naive `!= Kept` miscount this row
+            // exists to forbid would read 4/13.
+            //
+            // (It read 3/15 while the campaign carried five dwarves; spec §11
+            // withdrew Mountain and Duergar, and their two `instance-of`
+            // entries went with them. Re-dumped rather than subtracted: the
+            // remaining eight `instance-of` rows are all still Kept and the
+            // three lost entries are the same three.)
             if seed == 2 && voice.kind == "kobold" {
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 9.0,
+                    3.0 / 13.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

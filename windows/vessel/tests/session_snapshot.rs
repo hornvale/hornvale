@@ -6,7 +6,19 @@
 //! change.
 
 use hornvale_kernel::{Seed, World};
-use hornvale_vessel::{PossessOpts, Session, snapshot_json};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel, snapshot_json};
+
+mod common;
+
+/// The seed the **client fixture** is taken at.
+///
+/// A golden cannot sweep — it is one file holding the bytes of one world — so
+/// this stays concrete while the tests around it search (see `common/mod.rs`).
+/// It is the lowest seed in `common::SIGHT_SEEDS` that draws a creature, and
+/// `the_client_fixtures_are_current` asserts that it still does, loudly: if a
+/// future reseed moves this world the way The Tense moved seed 42, the fixture
+/// says so by name instead of quietly freezing an empty `marks` array.
+const OCCUPIED_SEED: u64 = 1;
 
 fn world() -> World {
     hornvale_worldgen::build_world(
@@ -38,6 +50,8 @@ fn opts() -> PossessOpts {
         day: hornvale_kernel::WorldTime { day: 0.0 },
         echo: false,
         wild_agents: true,
+        eyes: hornvale_vessel::eyes::Eyes::Own,
+        lens: hornvale_vessel::lens::Lens::Off,
     }
 }
 
@@ -129,28 +143,275 @@ fn the_embedded_room_carries_its_own_pinned_schema_tag() {
 
 #[test]
 fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
-    // Some worlds generate no settlement at all, so there is no flagship to
-    // mint and no snapshot to take; the refusal must be the sim's own
-    // error. SCOUTED, never hardcoded: which seeds are settlement-free is a
-    // worldgen output that moves, and hardcoding one is exactly the bug that
-    // left `make vessel-check` red on main (Task 4 fixes the same mistake in
-    // drive.mjs — do not reintroduce it here).
-    let refused = (43u64..80).find_map(|seed| {
-        let w = hornvale_worldgen::build_world(
-            Seed(seed),
-            &Default::default(),
-            hornvale_worldgen::SkyChoice::Generated,
-            &Default::default(),
-            &Default::default(),
-        )
-        .expect("the world builds even with no settlement");
-        Session::start(&w, &PossessOpts::default())
-            .err()
-            .map(|e| (seed, e))
-    });
-    let (seed, err) = refused.expect("some seed in 43..80 has no settlement");
+    // A world with no settlement has no flagship to mint and no snapshot to
+    // take; the refusal must be the sim's own typed error, not a panic.
+    //
+    // THE FIXTURE IS CONSTRUCTED, NOT HUNTED. This used to scout `43..80` for a
+    // seed that happened to generate no settlement, on the reasoning that
+    // hardcoding one seed is fragile because settlement-freeness is a worldgen
+    // output that moves. That reasoning was right and the remedy was wrong:
+    // scouting is fragile in the same way, just later and more expensively. The
+    // Tense made empty worlds rare -- habitability became a relation between a
+    // species and a cell instead of a global -10 C snowline, so cold ground is
+    // poor rather than forbidden, and seed 1234, which had ZERO survivors for a
+    // whole campaign, now carries 36. The scout found nothing in 43..80,
+    // widening it to 43..400 meant building 357 full worlds, and neither
+    // outcome would have told a reader anything about the refusal path.
+    //
+    // `BuildDepth::Terrain` gives the fixture directly: terrain and climate are
+    // present, so `Session::start`'s derivation succeeds and the error under
+    // test is reachable, while the settlement stage never runs -- so the world
+    // is settlement-free BY CONSTRUCTION rather than by luck, on every seed,
+    // forever, in one build.
+    let wc = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
+    let w = hornvale_worldgen::build_world_to(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+        &wc,
+        hornvale_worldgen::BuildDepth::Terrain,
+    )
+    .expect("a terrain-depth world builds");
+
+    let err = Session::start(&w, &PossessOpts::default())
+        .err()
+        .expect("possession must refuse a settlement-free world, not succeed");
     assert!(
         matches!(err, hornvale_vessel::VesselError::NoSettlement),
-        "seed {seed} refused for the wrong reason: {err}"
+        "refused for the wrong reason: {err}"
+    );
+}
+
+#[test]
+fn out_of_doors_the_spatial_channel_is_the_walk_band_chart() {
+    let world = world();
+    let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let snap = session.snapshot().expect("a live session snapshots");
+    match &snap.spatial {
+        SpatialChannel::Walk { chart } => {
+            // v2 since The Benchmark: the relief bands measure height above sea
+            // level rather than the raw isostatic reading, and the document now
+            // carries `sea_level_m` so a consumer can re-derive them. The
+            // embedded chart announces its own version, which is why the
+            // enclosing `vessel/session/v1` does not move with it.
+            assert_eq!(chart.schema, "scene/surrounds/v2");
+            assert!(
+                !chart.cells.is_empty(),
+                "a chart with no cells shows nothing"
+            );
+        }
+        SpatialChannel::Chamber { .. } => {
+            panic!("the possession opens out of doors, not inside a building")
+        }
+    }
+}
+
+#[test]
+fn inside_a_building_the_spatial_channel_is_the_chamber_plan() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    session.handle("enter");
+    let snap = session.snapshot().expect("a live session snapshots");
+    match &snap.spatial {
+        SpatialChannel::Chamber { plan } => {
+            assert_eq!(plan.schema, "vessel/plan/v1");
+            assert_eq!(
+                plan.cells.len(),
+                (plan.extent.w * plan.extent.h) as usize,
+                "the emitted grid must stay total"
+            );
+        }
+        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+    }
+}
+
+#[test]
+fn the_band_tag_is_what_the_client_switches_on() {
+    // The client reads `spatial.band` before anything else, so the wire tag
+    // is contract and a rename is a v2. Asserted on the BYTES, not the enum:
+    // a `#[serde(rename)]` slip is invisible to a match arm.
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let walk = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert!(
+        walk.contains(r#""band":"walk""#),
+        "walk tag missing: {walk:.200}"
+    );
+    session.handle("enter");
+    let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert!(
+        chamber.contains(r#""band":"chamber""#),
+        "chamber tag missing: {chamber:.200}"
+    );
+}
+
+#[test]
+fn a_creature_standing_in_the_chamber_reaches_the_plan() {
+    // The Sighting, test 1. `wait` before `enter` is load-bearing and is the
+    // answer to "why does the committed chamber fixture carry no marks": the
+    // within-room `Occupancy` is populated by `DriveMovements::step_with_occupancy`,
+    // which only runs on a tick, so before the first `wait` NO creature has a
+    // fine-layer position and the embedding has nothing to place. The fixture
+    // script is `enter` alone, at turn 1.
+    //
+    // THE WORLD IS SEARCHED FOR, NOT PINNED. Whether any creature happens to be
+    // standing in the chamber you walk into is an accident of a particular
+    // world, and The Tense's reseed of seed 42 removed that accident without
+    // touching sight at all. See `common/mod.rs`; the search is loud when it
+    // comes up empty.
+    let (seed, world) = common::world_that_draws_a_creature();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    common::step_inside(&mut session);
+    let snap = session.snapshot().expect("a live session snapshots");
+    let SpatialChannel::Chamber { plan } = &snap.spatial else {
+        panic!("`enter` puts the possession inside")
+    };
+    let marks = plan.marks.clone();
+    let extent = plan.extent;
+    let you = plan.you;
+
+    assert!(
+        !marks.is_empty(),
+        "seed {seed} was chosen BECAUSE it draws a creature, so an empty plan \
+         here means the search and the snapshot disagree: present = {:?}",
+        snap.sensed.present
+    );
+    for mark in &marks {
+        // The NPC's OWN noun, not a generic one — the join `PlanMark` took the
+        // focalizer's shape for.
+        assert!(
+            snap.sensed.present.iter().any(|p| p.label == mark.noun),
+            "mark {mark:?} names no creature `sensed.present` reports"
+        );
+        // `"agent"`, the SAME word `scene/surrounds/v2` marks this creature with
+        // one band up (`purview::AGENT_MARK_KIND`). A second word for one thing
+        // would make a client learn two vocabularies to draw one creature.
+        assert_eq!(mark.kind, "agent", "a creature's mark says what it is");
+        // Inside the extent, and standing on a cell it could stand on: the
+        // plan's own grid is total, so a mark outside it would be undrawable.
+        assert!(
+            mark.x >= extent.x
+                && mark.x < extent.x + extent.w
+                && mark.y >= extent.y
+                && mark.y < extent.y + extent.h,
+            "mark {mark:?} is outside the extent {extent:?}"
+        );
+        assert!(
+            !(mark.x == you.x && mark.y == you.y),
+            "a creature was drawn in the possession's own cell — §7 rule 5"
+        );
+    }
+
+    // `PlanMark.datum` promises to be "the datum `examine` prints". Asserted
+    // against the verb rather than against a literal, because a literal cannot
+    // tell the two apart when only one of them moves (fix round 1: they had
+    // already diverged, and no test could see it).
+    for mark in &marks {
+        let printed = match session.handle(&format!("examine {}", mark.noun)) {
+            hornvale_vessel::Turn::Out(t) | hornvale_vessel::Turn::Released(t) => t,
+        };
+        assert_eq!(
+            printed, mark.datum,
+            "the mark's datum is not what `examine {}` prints",
+            mark.noun
+        );
+    }
+}
+
+/// The committed fixtures the Casement's pane tests decode.
+///
+/// Byte goldens, refreshed with `REBASELINE=1` like every other golden in
+/// this repo. A diff here means the wire shape moved, which is the epoch
+/// decision point — never rebaseline to make a red run green without
+/// deciding that first.
+///
+/// **Three fixtures, and the third is The Sighting's.** `…-chamber.json` is
+/// taken at turn 1 on the script `enter` alone, so no tick has ever run, the
+/// within-room `Occupancy` is still its empty default, and its `marks` array is
+/// therefore `[]` — legitimately, not because nothing writes the field. That
+/// makes it the wrong fixture to decode a mark from, so
+/// `snapshot-seed-1-chamber-occupied.json` is taken one `wait` earlier and
+/// carries a real creature. It is ADDITIVE: the two older fixtures' scripts are
+/// untouched, because changing one to gain a mark would have moved `turn`,
+/// `day` and `narration` in a file whose whole job is to hold those still.
+///
+/// **And the third is taken at a DIFFERENT SEED**, which is the one thing here
+/// worth stopping on. Seed 42 is the flagship, and the other two fixtures are
+/// its. But seed 42's world no longer puts a creature in the chamber you walk
+/// into — The Tense reseeded it — and a fixture whose whole job is to carry a
+/// mark cannot be taken from a world that has none. It is named for the seed it
+/// is actually taken at, because a fixture named `seed-42` holding seed 1's
+/// bytes is the kind of quiet lie a golden exists to prevent.
+#[test]
+fn the_client_fixtures_are_current() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+
+    let walk = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    session.handle("enter");
+    let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+
+    let occupied_world = common::build(OCCUPIED_SEED).expect("the fixture's seed builds");
+    let (mut occupied_session, _) =
+        Session::start(&occupied_world, &PossessOpts::default()).unwrap();
+    common::step_inside(&mut occupied_session);
+    // The fixture's reason for existing, asserted rather than assumed. A golden
+    // cannot sweep, so this is the one place a concrete seed is still pinned —
+    // and a pinned seed is exactly what The Tense's reseed falsified. Fail here,
+    // by name, rather than silently re-freezing an empty `marks` array that the
+    // Casement's pane test would then decode nothing from.
+    assert!(
+        !common::marks_of(&occupied_session).is_empty(),
+        "seed {OCCUPIED_SEED} no longer draws a creature in the chamber it \
+         enters, so `snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json` \
+         cannot carry the mark it exists to carry. Re-point OCCUPIED_SEED at a \
+         seed that does (the sweeping tests in this crate name one), rename the \
+         fixture to match, and update clients/vessel/src/pane_plan_marks_test.ts, \
+         which decodes it by name AND by coordinate."
+    );
+    let occupied = hornvale_vessel::snapshot_json(&occupied_session.snapshot().unwrap());
+
+    for (name, body) in [
+        ("snapshot-seed-42-walk.json".to_string(), walk),
+        ("snapshot-seed-42-chamber.json".to_string(), chamber),
+        // Named from the constant, so the file on disk and the seed it was
+        // taken at cannot drift apart in a later re-point.
+        (
+            format!("snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json"),
+            occupied,
+        ),
+    ] {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(&name);
+        if std::env::var("REBASELINE").is_ok() {
+            std::fs::write(&path, &body).expect("the fixture directory exists");
+            continue;
+        }
+        let committed = std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("{name} is missing — run with REBASELINE=1"));
+        assert_eq!(
+            committed, body,
+            "{name} drifted: the vessel/session/v1 wire shape moved. Decide \
+             whether that is an epoch BEFORE rebaselining."
+        );
+    }
+}
+
+#[test]
+fn the_snapshot_stays_a_pure_read() {
+    // `Session::snapshot` documents that it never commits and never advances
+    // the turn counter. Adding a channel that BUILDS a chart is exactly the
+    // change that could break that, so it is asserted rather than assumed.
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    session.handle("look");
+    let a = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    let b = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert_eq!(
+        a, b,
+        "two snapshots with no verb between them must be identical"
     );
 }

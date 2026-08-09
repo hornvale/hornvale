@@ -355,6 +355,8 @@ mod tests {
         assert!(text.contains("habitable zone"));
     }
 
+    /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the
+    /// inner loop's `s` binds a pin string, not a seed)
     #[test]
     fn pin_strings_round_trip_through_parse() {
         let pins = SkyPins {
@@ -410,6 +412,8 @@ mod tests {
         assert_eq!(rebuilt.moons, pins.moons);
     }
 
+    /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the
+    /// inner loop's `s` binds a pin string, not a seed)
     #[test]
     fn spin_pin_parses_and_round_trips() {
         // SKY-22: the spin direction is its own orthogonal pin.
@@ -449,6 +453,8 @@ mod tests {
         assert_eq!(pin_strings(&pins), vec!["obliquity=7.5".to_string()]);
     }
 
+    /// claim: invariant(forall NeighborClass variant) — round-trip through
+    /// pin_strings/parse_pin
     #[test]
     fn every_neighbor_class_round_trips() {
         for class in [
@@ -527,6 +533,8 @@ mod tests {
         assert_eq!(rebuilt.forcing, Some(ForcingPin::Zero));
     }
 
+    /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the
+    /// inner loop's `s` binds a pin string, not a seed)
     #[test]
     fn wanderers_pin_round_trips() {
         let pins = SkyPins {

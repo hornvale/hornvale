@@ -55,17 +55,18 @@ pub struct Founder {
 pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
     let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
     for (i, r) in records.iter().enumerate() {
-        by_people.entry(r.people.0).or_default().push(i);
+        by_people.entry(r.core.people.0).or_default().push(i);
     }
 
     let mut cast = Vec::new();
     for idxs in by_people.values_mut() {
         idxs.sort_by(|&a, &b| {
             let (x, y) = (&records[a], &records[b]);
-            y.peak_population
-                .cmp(&x.peak_population)
-                .then(x.site.0.cmp(&y.site.0))
-                .then(x.founded.total_cmp(&y.founded))
+            y.core
+                .peak_population
+                .cmp(&x.core.peak_population)
+                .then(x.core.site.0.cmp(&y.core.site.0))
+                .then(x.core.founded.total_cmp(&y.core.founded))
                 // Total order, so the doc's claim is structural rather than
                 // lucky. Two records reaching this leg with the same handle are
                 // precisely what the uniqueness assert below rejects, so this
@@ -77,9 +78,16 @@ pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
             cast.push(Founder {
                 handle: founder_handle(r),
                 occupation: i,
-                people: r.people,
-                community: r.community,
-                founded: r.founded,
+                people: r.core.people,
+                // The Scaffold deleted `OccupationRecord::community`; the field
+                // held the occupation's OWN entity under a misleading name, and
+                // `reconstruct_occupation` now sets that same value as `id`.
+                // Numerically identical, so promotion keys on what it always
+                // did — NOT `founded_from`, and not a re-derivation, both of
+                // which compile cleanly and silently change the subject
+                // (`docs/retrospectives/the-scaffold.md`).
+                community: r.id,
+                founded: r.core.founded,
             });
         }
     }
@@ -130,7 +138,11 @@ pub fn promote(
         let life = wc
             .biosphere
             .get(&f.people)
-            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class));
+            // `schedule` is The Long Age's third time-law input: a paced kind
+            // matures later at unchanged mass, so passing the kind's own
+            // schedule (rather than ALLOMETRIC) is what keeps a founder's birth
+            // day consistent with the species it belongs to.
+            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule));
         // A founder was already grown when they founded, so birth precedes the
         // founding by a maturity. This goes NEGATIVE for day-0 settlements —
         // the history record begins at day 0 and the founder did not. Honest,
@@ -182,28 +194,28 @@ pub fn promote(
 mod tests {
     use super::*;
     use hornvale_history::record::{
-        Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+        Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
     };
     use hornvale_kernel::{CellId, EntityId, KindId};
 
     fn rec(people: &'static str, site: u32, founded: f64, peak: u32) -> OccupationRecord {
-        let e = EntityId::new(1).expect("nonzero");
         OccupationRecord {
-            people: KindId(people),
-            community: e,
-            lineage: e,
-            site: CellId(site),
-            founded,
-            ended: None,
-            peak_population: peak,
-            tech: TechHorizon::Neolithic,
-            function: Function::Agrarian,
-            deity: None,
-            tongue: None,
-            cause: None,
+            core: Occupation {
+                people: KindId(people),
+                site: CellId(site),
+                founded,
+                ended: None,
+                peak_population: peak,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+            },
+            id: EntityId::new(1).expect("nonzero"),
             ended_by: Ended::Nature,
             founded_from: Founding::Genesis(CellId(site)),
-            notability: Notability::Common,
         }
     }
 
@@ -237,7 +249,7 @@ mod tests {
             b.iter().map(|f| f.handle.0).collect::<Vec<_>>(),
             "the cast does not depend on input order"
         );
-        assert_eq!(a[0].community, forward[1].community);
+        assert_eq!(a[0].community, forward[1].id);
     }
 
     #[test]
@@ -245,9 +257,9 @@ mod tests {
         // Same people, site, founded and peak; different `ended`, so different
         // handles and a genuine three-way tie in the first three keys.
         let mut a = rec("goblin", 3, 100.0, 42);
-        a.ended = Some(500.0);
+        a.core.ended = Some(500.0);
         let mut b = rec("goblin", 3, 100.0, 42);
-        b.ended = Some(900.0);
+        b.core.ended = Some(900.0);
 
         let forward = select_founders(&[a.clone(), b.clone()]);
         let backward = select_founders(&[b, a]);

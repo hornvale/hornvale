@@ -94,6 +94,19 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
     // Walk away from the settlement until a locale reports nothing built.
+    //
+    // The walk is NORTHWARD-BIASED across three compass points rather than a
+    // bare `go n`, and that is load-bearing, not tidying. This mesh is
+    // triangular: every cell offers exactly one of two exit triads, `{N, SW,
+    // SE}` or `{NE, NW, S}`, so a single fixed direction is absent from half
+    // the cells outright. The Tense flipped the parity of the starting cell
+    // (the same flip `the_purview.rs` records at both its rungs), which left
+    // the old `go n` loop answering "No way n from here." twelve times and the
+    // walker standing exactly where it began — a search that had quietly
+    // stopped searching. `the_water_column_is_a_place_you_can_be` already
+    // carries this warning in its own comment; this test had the bug and no
+    // guard. Biasing over `n`/`ne`/`nw` means at least one point is always
+    // available whichever triad the cell offers.
     let mut refusal = None;
     for _ in 0..12 {
         let reply = out(session.handle("enter"));
@@ -105,7 +118,11 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
         // and lateral movement is refused indoors (§1b.6). Step back out of
         // doors before walking, or the loop would stand still for a dozen turns.
         let _ = session.handle("out");
-        let _ = session.handle("go n");
+        for dir in ["n", "ne", "nw"] {
+            if !out(session.handle(&format!("go {dir}"))).starts_with("No way ") {
+                break;
+            }
+        }
     }
     let refusal = refusal.expect("wilderness lies within a dozen steps of a village");
     assert!(!refusal.contains(COARSE_REFUSAL), "{refusal:?}");

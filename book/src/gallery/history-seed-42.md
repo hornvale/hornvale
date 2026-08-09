@@ -1,4 +1,4 @@
-# The Abandoned Clearing of Seed 42
+# The Contested Clearing of Seed 42
 
 A site read back out of the ledger by the `history` verb: the stratigraphy
 of every people that ever settled one cell, oldest layer deepest, and the
@@ -7,88 +7,93 @@ today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
 (structures, residue) derived on demand and never committed.
 
-This is a real clearing on the world of seed 42 — cell 28414 — and twelve
-peoples have failed on it. Every one of them arrived the same way: fleeing
-the ice of the clearing at cell 7169, looking for kinder ground. They kept
-finding the same ground. Bugbears held it seven times, then hobgoblins
-twice, then bugbears three times more, from the year 1175 to the year 1725 —
-and what the layers show is not progress but repetition: every steading
-arrives classical and ends classical, and every one of the twelve held the
-ground for exactly twenty-five years. Nor does the count improve: seven
-souls in the deepest layer, then six, five, seven, six, five, six, eight,
-six, four, three, and three in the last. Not one of the twelve was taken by
-force — every single one was ended by the cold, or by ground that stopped
-feeding them. What is left in the grass is potsherds, the low turf-lines of
-the dwellings, and a scatter of worked flint.
+This is a real clearing on the world of seed 42 — cell 5508 — and twelve
+kobold steadings have risen on it, one settling atop the ruins of the
+last, from the year 625 down to the present. Every one of the eleven
+completed layers ended at the hands of other kobolds: seven fell to a
+rival band, and four were not evictions at all — the occupants had
+just taken better ground from a neighbour and carried the settlement
+there, so the layer closes on a departure rather than a defeat. This
+is a people with only itself to fight, contesting one rise in a
+neighbourhood it had already filled.
+
+The cold is in this column, but never as an ending. Not one layer
+here fell to ice; every founding party instead *arrived* fleeing it,
+driven off one of four neighbouring clearings. Four of the twelve
+layers did not last a single year — founded and put to flight in the
+same year they began, which is what the record looks like when refuge
+and contest are the same ground. The twelfth was founded in 1950 and
+stands yet, fifty years on: some thirteen souls, two huts and a
+granary, and no ruin yet to read.
 
 ```text
-The clearing at cell 28414
-==========================
+The clearing at cell 5508
+=========================
 
 12 lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1175, it held for 25 years, until the year 1200.
-  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+The deepest layer — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
+  Founded in the year 625, it held for 0 years, until the year 625.
+  They fled — put to flight by kobolds — and did not return.
 
-Above it — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1225, it held for 25 years, until the year 1250.
-  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+Above it — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 19 souls.
+  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
+  Founded in the year 625, it held for 25 years, until the year 650.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
 
-Higher still — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1275, it held for 25 years, until the year 1300.
-  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
-
-Above that again — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1325, it held for 25 years, until the year 1350.
-  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
-
-And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1375, it held for 25 years, until the year 1400.
-  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
-
-And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1425, it held for 25 years, until the year 1450.
-  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
-
-And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
+Higher still — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at cell 21896, kobolds looking for kinder ground.
   Founded in the year 1475, it held for 25 years, until the year 1500.
-  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+  They fled — put to flight by kobolds — and did not return.
 
-And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  It was settled by hobgoblins sent out from the clearing at cell 28435.
-  Founded in the year 1525, it held for 25 years, until the year 1550.
-  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+Above that again — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 20 souls.
+  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
+  Founded in the year 1500, it held for 75 years, until the year 1575.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
 
-And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
-  Founded in the year 1575, it held for 25 years, until the year 1600.
-  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at cell 21896, kobolds looking for kinder ground.
+  Founded in the year 1625, it held for 25 years, until the year 1650.
+  They fled — put to flight by kobolds — and did not return.
 
-And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1600, it held for 25 years, until the year 1625.
-  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
+  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
+  Founded in the year 1650, it held for 0 years, until the year 1650.
+  They fled — put to flight by kobolds — and did not return.
 
-And later — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere three souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1650, it held for 25 years, until the year 1675.
-  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 26 souls.
+  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
+  Founded in the year 1650, it held for 250 years, until the year 1900.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
 
-The last of them — a classical bugbear steading, an ordinary place, neither famed nor forgotten, at its height a mere three souls.
-  Its founders fled the ice of the clearing at cell 7169, bugbears looking for kinder ground.
-  Founded in the year 1700, it held for 25 years, until the year 1725.
-  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 17 souls.
+  Its founders fled the ice of the clearing at cell 21896, kobolds looking for kinder ground.
+  Founded in the year 1900, it held for 25 years, until the year 1925.
+  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
+
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at cell 21896, kobolds looking for kinder ground.
+  Founded in the year 1925, it held for 25 years, until the year 1950.
+  They fled — put to flight by kobolds — and did not return.
+
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 11 souls.
+  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
+  Founded in the year 1950, it held for 0 years, until the year 1950.
+  They fled — put to flight by kobolds — and did not return.
+
+And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 11 souls.
+  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
+  Founded in the year 1950, it held for 0 years, until the year 1950.
+  They fled — put to flight by kobolds — and did not return.
+
+The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 13 souls.
+  Its founders fled the ice of the clearing at cell 21891, kobolds looking for kinder ground.
+  Founded in the year 1950, it stands yet — 50 years and counting.
+  It has never ended; the people are there still.
 
 In the grass today
 ------------------
-At its height a mere three souls, the last bugbears here raised a hut and a granary.
-The dwellings are long gone to grass, but the ground still keeps the shape of them: potsherds scattered where the huts once stood, the low turf-lines of the dwellings still ridging the grass, and a scatter of worked flint.
+At its height some 13 souls, the last kobolds here raised two huts and a granary.
+They are living there yet — there is no ruin to read, only smoke on the air.
 ```

@@ -16,6 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # FULL history, deliberately. `actions/checkout@v4` defaults to
+          # `fetch-depth: 1`, and `regenerate-artifacts.sh` now shells out to
+          # git archaeology (`digest render delta` walks `docs/decisions/` back
+          # to the commit that put a rule in force). Under a shallow clone the
+          # graft boundary makes every file look newly added, so that walk
+          # cannot answer — the renderer says so rather than guessing, but the
+          # artifact it writes then differs from the committed one and the
+          # `docs/digest/` drift check below goes red for the wrong reason. The
+          # delta view's live-git tests fail outright.
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Test
@@ -71,7 +82,15 @@ jobs:
           # `{{#include}}`s those snippets (The Margin's M5 fixup) — it is
           # never touched by regeneration, so it needs no exclusion and stays
           # under the strict check.
-          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
+          # docs/digest/ is in this list (The Digest, spec §4.7): the in-force
+          # decision index drifts whenever a decision record is added or
+          # superseded, and the delta report whenever the idea registry moves.
+          # Both are written by regenerate-artifacts.sh above, so leaving them
+          # out would regenerate two files and never look at them.
+          # book/src/domesday/ is in this list too (The Domesday, 2026-08-08):
+          # a pure read over the committed census, so it drifts whenever that
+          # CSV moves, even with no other code change at all.
+          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \

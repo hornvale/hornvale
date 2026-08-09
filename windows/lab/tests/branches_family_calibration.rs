@@ -219,12 +219,21 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
         // — the whole population turned over — and the tail is now five seeds
         // wide rather than one, 995/1000 clean.
         //
+        // The Tense (2026-08-06): seed 625 JOINS the tail, {47, 731, 752, 797,
+        // 825} -> {47, 625, 731, 752, 797, 825}, 994/1000 clean. A one-seed
+        // move, and re-derived rather than forced back to empty exactly as
+        // this assertion's message instructs. The three sibling sweeps
+        // (monophyly, divergence-real, inventory-closure) still pass with no
+        // exceptions, which is the boundary check this row's doc names: had
+        // those moved too it would be a boundary break rather than a re-pin.
+        //
         // This is the fourth observation of a tail the doc above has always
         // described as a STATISTICAL near-certainty: 2 seeds under The Words,
-        // 0 under `root/v2`, 1 at The Wearing, 5 now. Five in a thousand is
+        // 0 under `root/v2`, 1 at The Wearing, 5 at The Tolerance, 6 now. Six in a
+        // thousand is
         // well within what independent proto-root draws produce by chance, and
         // the re-pin keeps the EXCEPTION-LIST form rather than relaxing to a
-        // rate — a sixth coincidence still fails loudly and names its seed.
+        // rate — a seventh coincidence still fails loudly and names its seed.
         //
         // Checked, not assumed, before re-pinning: the sibling STRUCTURAL
         // guards are all green on this same census —
@@ -233,7 +242,7 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
         // `inventory_closure_holds_on_every_swept_seed_for_every_daughter`
         // each pass with no exceptions. A real family-boundary break would
         // have moved those too; a widening chance tail moves only this one.
-        vec![47, 731, 752, 797, 825],
+        vec![47, 625, 731, 752, 797, 825],
         "clean-outgroup-kobold coincided with the goblinoid family on seeds \
          {failures:?} — re-derive and re-pin, don't force back to empty"
     );
@@ -319,7 +328,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
     // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
     // The Toponym (name-gloss epoch): 2.486 -> 2.487.
-    assert!((mh - 2.448).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Tense (2026-08-06): hobgoblin 2.448 -> 2.449, bugbear 4.483 ->
+    // 4.418, goblin UNMOVED at 3.000. The aggregate ordering — the
+    // preregistered claim — still holds decisively: 4.418 >= 3.000 >= 2.449.
+    assert!((mh - 2.449).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
@@ -362,7 +374,14 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // pins and what the census shows.
     assert_eq!(bg, 866, "bugbear>=goblin rate drifted: {bg}/{n}");
     assert_eq!(gh, 713, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    // The Tense (2026-08-06): bugbear>=hobgoblin 908 -> 907, a ONE-seed move.
+    // The other three per-seed rates are unmoved (866 / 713 / 589) across a
+    // census regen that re-placed every world and gave 230 of them a goblin
+    // flagship they did not have — which is itself the reassuring reading:
+    // this test's claim is that the loudness ordering holds in AGGREGATE and
+    // not per seed, and the per-seed rates turn out to be near-invariant under
+    // a large placement change.
+    assert_eq!(bh, 907, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
     assert_eq!(chain, 589, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
@@ -493,10 +512,146 @@ fn homophony_count_is_measured_and_pinned() {
     // trend; this campaign corrected that conflation twice. A daughter can get
     // more homophonous while its names get shorter for entirely unrelated
     // reasons, and here they moved in opposite directions.
-    assert!((mg - 2.910).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.755).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 10.571).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.725).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Witness (cascade/v2 epoch), 0063: goblin 2.910 -> 3.505, hobgoblin
+    // 2.755 -> 3.219, bugbear 10.571 -> 12.491, kobold 2.725 -> 4.014.
+    // `draw_rule` stopped offering `Tonogenesis`/`VowelShift` to species whose
+    // phonology cannot host them, reseeding every cascade and therefore every
+    // daughter's periphery homophony draws — the same regen that moved the
+    // naming pins in `calibration.rs`. Bugbear stays highest among the
+    // goblinoid daughters by better than 3x (3.56x over goblin, 3.88x over
+    // hobgoblin), which is the claim this row guards; these re-pin the
+    // witnesses, not the observation. Each mean is an exact integer count
+    // over the 1000-seed census divided by 1000 (3505/1000, 3219/1000,
+    // 12491/1000, 4014/1000), which is why all four land on a clean three
+    // decimal digits.
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict (defensibility as a second
+    // contest axis) moved every world's raid/settle outcomes, reshaping each
+    // daughter's periphery homophony draws again — goblin 3.505 -> 3.536,
+    // hobgoblin 3.219 -> 3.243, bugbear 12.491 -> 12.332, kobold 4.014 ->
+    // 4.026. Bugbear stays highest among the goblinoid daughters by better
+    // than 3x (3.49x over goblin, 3.80x over hobgoblin), which is the claim
+    // this row guards; these re-pin the witnesses, not the observation.
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves every daughter's periphery
+    // homophony draws again — goblin 3.536 -> 3.562, hobgoblin 3.243 ->
+    // 3.268, bugbear 12.332 -> 12.517, kobold 4.026 -> 3.971. Bugbear stays
+    // highest among the goblinoid daughters by better than 3x (3.51x over
+    // goblin, 3.83x over hobgoblin), which is the claim this row guards;
+    // these re-pin the witnesses, not the observation.
+    // The Salt's close regen (2026-08-03, canonical census on lefford,
+    // 0063): goblin 3.562 -> 3.605, hobgoblin 3.268 -> 3.300, bugbear
+    // 12.517 -> 12.674, kobold 3.971 -> 4.016. The mover is NOT The Salt,
+    // which touches no language code: the same refresh absorbed ce13bae0
+    // (the language compass), whose east/west and four intercardinal
+    // concepts widen the lexicon every periphery homophony draw reads.
+    // Bugbear stays highest among the goblinoid daughters by better than
+    // 3x (3.52x over goblin, 3.84x over hobgoblin), which is the claim
+    // this row guards; these re-pin the witnesses, not the observation.
+    // The Generalist's close regen (2026-08-04, canonical census on lefford at
+    // 02172e96, 0063/0079): goblin 3.605 -> 3.693, hobgoblin 3.300 -> 3.337,
+    // bugbear 12.674 -> 13.227, kobold 4.016 -> 4.237. The mover is the sixth
+    // people: `human` joins the roster, so every world's settlement contest is
+    // decided among six competitors rather than five, which reshapes each
+    // daughter's periphery homophony draws exactly the way each previous
+    // roster or bake change in this comment's history did. Note all four rise
+    // together — this is not one daughter moving against the others. No epoch
+    // accompanies it: no seed-derivation label, hash constant or noise
+    // constant changed anywhere in the campaign, so no derivation moved
+    // (decision 0084) and what shifted is roster-competition data against
+    // unchanged algorithms. Bugbear stays highest among the goblinoid
+    // daughters by better than 3x (3.58x over goblin, 3.96x over hobgoblin),
+    // which is the claim this row guards; these re-pin the witnesses, not the
+    // observation.
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): goblin 3.693 -> 3.997, hobgoblin 3.337 -> 3.390,
+    // bugbear 13.227 -> 12.974, kobold 4.237 -> 4.248. The mover is the
+    // per-settlement warlikeness draw: a settlement's raid initiative is now
+    // drawn around its people's authored `threat_response` rather than read
+    // off the species, so every world's raid history — and with it each
+    // daughter's surviving periphery and the naming draws over it — differs.
+    // Unlike the last several regens the four do NOT move together: the three
+    // smaller daughters rise while bugbear falls, so the RATIO narrows more
+    // than at any prior re-pin here. The claim this row guards was therefore
+    // re-checked rather than assumed, and it HOLDS: bugbear is still highest
+    // among the goblinoid daughters by better than 3x (3.25x over goblin,
+    // 3.83x over hobgoblin, down from 3.58x/3.96x). That margin is now the
+    // narrowest this row has recorded — a future regen that narrows it again
+    // may falsify the claim outright, which would be a finding to report, not
+    // a bound to widen. These re-pin the witnesses, not the observation.
+    // The Tense (2026-08-06, canonical census on lefford at the merged SHA):
+    // goblin 3.997 -> 4.319, hobgoblin 3.390 -> 4.310, bugbear 12.974 ->
+    // 14.508, kobold 4.248 -> 4.791. All four rise together this time, which
+    // is the roster-competition signature again and not one daughter moving:
+    // era-varying capacity re-placed every world, and 230 worlds that had no
+    // goblin flagship at all now have one, so each daughter's surviving
+    // periphery — and the naming draws over it — is drawn from a materially
+    // larger population.
+    //
+    // The claim was re-checked rather than assumed, because the note above
+    // flagged the previous margin as the narrowest ever recorded and warned
+    // that a further narrowing would falsify it outright. It did NOT narrow:
+    // bugbear leads by 3.36x over goblin and 3.37x over hobgoblin, against
+    // 3.25x/3.83x before. The goblin margin — the binding one — widened. So
+    // this re-pins the witnesses, not the observation, and the row's warning
+    // stands unspent for the next regen.
+    //
+    // The Delvers (C2c) (2026-08-08, canonical census on the canonical box at
+    // the merged branch SHA, commit 867622f8, 0063/0079): goblin 4.319 ->
+    // 4.888, hobgoblin 4.310 -> 4.822, bugbear 14.508 -> 16.349, kobold 4.791
+    // -> 5.072. All four rise together again, the roster-competition signature
+    // rather than one daughter moving: three new settling peoples —
+    // desert-dwarf, gully-dwarf, hill-dwarf — take the settling roster from
+    // six to nine, so every world's settlement contest, each daughter's
+    // surviving periphery, and the naming draws over it are decided among nine
+    // competitors instead of six. No narrower cause is asserted, because none
+    // was measured. The campaign's other candidate mover IS ruled out rather
+    // than assumed away: `b0f32252`'s cross-roster lexicon repair measured
+    // ZERO moved cells on `the-census`, the fixture this file reads; its five
+    // repaired cells are all on `census-of-the-meeting`'s `goblin-solo`
+    // roster, and `homophony-count-goblin` there is one of them.
+    //
+    // The claim was re-checked rather than assumed, and it HOLDS — but the
+    // binding margin NARROWED, which the note above asks a reader to check
+    // for. Bugbear leads by 3.345x over goblin and 3.390x over hobgoblin,
+    // against 3.359x/3.366x before: goblin is still the binding daughter and
+    // its margin fell by 0.014x, while hobgoblin's widened. The narrowing is
+    // small and the margin is NOT the narrowest this row has recorded — The
+    // Tolerance's 3.25x over goblin still is — so the warning above stands
+    // where it stood, neither spent nor escalated. A regen that takes the
+    // goblin ratio below 3x falsifies the claim outright, and that is a
+    // finding to report, not a bound to widen. These re-pin the witnesses, not
+    // the observation. Each mean is again an exact integer count over the
+    // 1000-seed census divided by 1000 (4888, 4822, 16349, 5072), which is why
+    // all four land on a clean three decimal digits.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): goblin 4.888 -> 4.863,
+    // hobgoblin UNMOVED at 4.822, bugbear 16.349 -> 16.197, kobold 5.072 ->
+    // 5.131. Hobgoblin holding exactly still while the other three move is new
+    // in this row's history — every prior regen moved all four (roster
+    // competition) or the three smaller ones against bugbear (per-settlement
+    // draws); this is neither, so the biome-range mechanism reached the
+    // periphery goblin, bugbear and kobold draw from on this regen but left
+    // hobgoblin's untouched. No narrower cause than that observation is
+    // asserted, because nothing else was measured.
+    //
+    // The claim was re-checked rather than assumed, and it HOLDS, though the
+    // binding margin narrowed again as flagged at the previous regen: bugbear
+    // leads by 3.331x over goblin and 3.359x over hobgoblin, against
+    // 3.345x/3.390x before — both margins fell, and goblin's is again the
+    // binding one. It is not the narrowest this row has recorded (The
+    // Tolerance's 3.25x over goblin still is), so the warning stands where it
+    // stood: a regen that takes the goblin ratio below 3x falsifies the claim
+    // outright, and that would be a finding to report, not a bound to widen.
+    // These re-pin the witnesses, not the observation. Each mean is again an
+    // exact integer count over the 1000-seed census divided by 1000 (4863,
+    // 4822, 16197, 5131).
+    assert!((mg - 4.863).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 4.822).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 16.197).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.131).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

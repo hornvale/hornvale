@@ -1216,6 +1216,7 @@ mod tests {
         assert!(ring_mean(0.25) > ring_mean(0.40));
     }
 
+    /// claim: invariant(forall-seed) — lobed-envelope azimuthal variation
     #[test]
     fn envelope_rims_are_lobed_not_circular() {
         // At a fixed angular distance near the rim, envelope varies with
@@ -1246,6 +1247,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — craton count/id/rescale invariants
     #[test]
     fn craton_draws_are_sequential_and_in_range() {
         for seed in 0..16u64 {
@@ -1281,6 +1283,9 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — repulsion never reduces the minimum
+    /// pairwise angle (non-decreasing, per `post >= pre - 1e-12`, not a
+    /// strict increase), same draw count before/after
     #[test]
     fn repulsion_reduces_crowding_without_new_draws() {
         // Minimum pairwise angular separation over a craton set.
@@ -1393,6 +1398,8 @@ mod tests {
         assert_eq!(assembly, assemble_cratons(&cratons));
     }
 
+    /// claim: invariant(forall-seed) — repeated assemble_cratons calls are
+    /// byte-identical
     #[test]
     fn assembly_is_draw_free() {
         // `assemble_cratons` takes no `Seed`/`Stream` — its signature is
@@ -1472,6 +1479,9 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a Craton in `for (s, p) in
+    /// scattered.iter().zip(&pinned)`
     #[test]
     fn supercontinent_no_longer_transforms_the_drawn_craton_set() {
         // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
@@ -1702,6 +1712,8 @@ mod tests {
         assert_eq!(field.thickness_at(center).get(), CRUST_KM_MAX);
     }
 
+    /// claim: invariant(forall-seed) — supply band, including a small pinned
+    /// (continents: Some(1)) sub-sweep
     #[test]
     fn continental_supply_is_the_area_the_rescale_budgets() {
         // Empty set: no supply.

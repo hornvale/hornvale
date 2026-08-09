@@ -38,8 +38,16 @@ usage:
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
+                                            [--lens off|lantern]
                                             walk a frozen world as its flagship settler;
                                             --out saves the played world (the world remembers)
+                                            (--lens filters the DRAWN chamber plan's colour for
+                                            legibility: 'lantern' expands the crushed dark end of a
+                                            torchlit room, 'off' shows the model's own bytes. Screen
+                                            only — a presentation filter, never part of a saved
+                                            world or a committed artifact. Interactive defaults to
+                                            lantern; --script is always unlensed, because a
+                                            transcript is a recording.)
   hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column|features]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
@@ -55,9 +63,13 @@ usage:
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
-                            [--render json|ascii]
+                            [--render json|ascii] [--lens terrain|colour]
                                                       emit scene/surrounds/v1 JSON to stdout, or
-                                                      (--render ascii) the terrain-lens chart
+                                                      (--render ascii) the chart through a lens
+                                                      (--lens colour tints each glyph with the
+                                                      bedrock's colour, and withholds the tint from
+                                                      water, marks and you — the caption says how
+                                                      many it withheld)
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
@@ -78,11 +90,17 @@ usage:
   hornvale tropes [report|check] [--corpus <PATH>]
                           score the frozen dramatic-situation corpus against the live
                           registry (report: render to stdout; check: diff against the
-                          committed artifact; default corpus: tropes/polti.trope.json)
+                          artifact committed for that corpus's id; default corpus:
+                          tropes/polti.trope.json)
+  hornvale tropes matrix   render every corpus side by side: what each catalogue demands,
+                          ordered by where they disagree (ignores --corpus — the columns
+                          are the declared list, not the caller's choice)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
-  hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
+  hornvale proto [FAMILY]                  dump a language family's proto inventory/phonotactics/proto-root table
+                                            as markdown (default: goblinoid; known multi-member families today:
+                                            goblinoid, dwarf — an unknown one is refused with the admissible set)
   hornvale book [--initiate] [--at <DAY>]  render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
                                             (--initiate: the omniscient-reader edition — every organized culture's
                                             RevealedClaim entries disclosed too; compare-only, never committed)
@@ -95,6 +113,7 @@ usage:
   hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
   hornvale lab claim-status                is a heavy run holding the box? (0081)
+  hornvale lab domesday                    render the Domesday survey (book/src/domesday/) from the committed census
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -142,7 +161,7 @@ fn main() -> ExitCode {
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
-        Some("proto") => cmd_proto(),
+        Some("proto") => cmd_proto(&args),
         Some("book") => cmd_book(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
@@ -308,9 +327,29 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
 }
 
 /// Load a world from `--world` (default world.json).
+///
+/// `ConceptRegistry::manifests` is `#[serde(skip)]` (kernel/src/registry.rs)
+/// — the correspondence manifests (lexeme/percept/cognition edges,
+/// including `Void::Unnamed` for a concept the world records as objectively
+/// unnameable) are a compile-time coverage record, never save-format state,
+/// so a freshly loaded world's registry comes back with an empty manifests
+/// map. `register_all` is a pure function of static domain code (no world
+/// state, no seed) that is idempotent over an already-populated registry —
+/// every predicate/phenomenon-kind/concept it re-registers matches the
+/// loaded definition byte-for-byte, so this call can only ever add the
+/// missing in-memory manifests, never move a committed fact or concept
+/// definition. Re-running it here, at the single chokepoint every CLI
+/// command loads a world through, is what lets `dictionary` and `repl`'s
+/// `word` command see the same `Unnameable` classification a freshly built
+/// world would.
 fn load_world(args: &[String]) -> Result<World, String> {
     let path = flag_value(args, "--world").unwrap_or("world.json");
-    World::load(std::path::Path::new(path)).map_err(|e| format!("loading {path}: {e}"))
+    let mut world =
+        World::load(std::path::Path::new(path)).map_err(|e| format!("loading {path}: {e}"))?;
+    world_builder::register_all(&mut world.registry).map_err(|e| {
+        format!("loading {path}: reloaded registry could not re-register concepts: {e}")
+    })?;
+    Ok(world)
 }
 
 fn cmd_almanac(args: &[String]) -> Result<(), String> {
@@ -394,7 +433,8 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
         ));
     }
     let world = load_world(args)?;
-    let out = hornvale_explain::explain_sky(&world)
+    let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
+    let out = hornvale_explain::explain_sky(&world, &vocab)
         .ok_or("this world has no generated sky to explain")?;
     print!("{out}");
     Ok(())
@@ -466,6 +506,24 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     {
         println!("{notice}\n");
     }
+    // The Lantern, Task 8 (spec §7): a presentation filter over the emitted
+    // colour, and the one thing that must never reach an artifact. The two arms
+    // below therefore default OPPOSITE ways, which is the whole point.
+    //
+    // `--script` output is a RECORDING — `scripts/regenerate-artifacts.sh` pipes
+    // it into `book/src/gallery/possession-seed-42.md` — so it is unlensed
+    // unless the caller says otherwise, and the regeneration script says
+    // nothing. The interactive arm is a screen and defaults to the lantern,
+    // because the look is what the campaign was for.
+    let lens = |default: hornvale_vessel::lens::Lens| match flag_value(args, "--lens") {
+        None => Ok(default),
+        Some(name) => hornvale_vessel::lens::Lens::parse(name).ok_or_else(|| {
+            format!(
+                "--lens: unknown lens '{name}'; known lenses: {}",
+                hornvale_vessel::lens::Lens::roster().join(", ")
+            )
+        }),
+    };
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -480,6 +538,8 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 day: WorldTime { day },
                 echo: true,
                 wild_agents: true,
+                eyes: hornvale_vessel::eyes::Eyes::Own,
+                lens: lens(hornvale_vessel::lens::Lens::Off)?,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -495,6 +555,8 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 day: WorldTime { day },
                 echo: false,
                 wild_agents: true,
+                eyes: hornvale_vessel::eyes::Eyes::Own,
+                lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
             },
             stdin.lock(),
             stdout.lock(),
@@ -826,7 +888,38 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
 /// because every predicate registers up front; this exercises the fuller
 /// pipeline as a smoke test.
 fn cmd_tropes(args: &[String]) -> Result<(), String> {
-    let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `tropes` has no valueless flags. It is not a property of
+    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
+    // adding an equivalent here would resurrect the bug above. If `tropes`
+    // ever gains a valueless flag, this loop must learn which flags take
+    // values.
+    //
+    // Parsed BEFORE the corpus is read, so `matrix` can return without ever
+    // touching `--corpus`: the matrix is over every corpus in
+    // `tropes::CORPORA`, and a mode that scores all of them must not fail
+    // because the caller happened to pass a `--corpus` that does not exist.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    if mode == Some("matrix") {
+        return cmd_tropes_matrix();
+    }
+    // `CORPORA[0]`, not a second copy of the literal: the default corpus and
+    // the matrix's first column are the same fact, and a duplicated path
+    // could drift from the declared list without anything noticing.
+    let path = flag_value(args, "--corpus").unwrap_or(tropes::CORPORA[0]);
     let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     let corpus = tropes::load(&json)?;
     let world = world_builder::build_world(
@@ -838,43 +931,64 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     let outcomes = tropes::resolve(&corpus, &world.registry);
-    // Mode is positional but may follow flags, so scan past each flag AND its
-    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
-    // and exit 0 — a false pass for anything gating on `check`.
-    //
-    // This consumes the token after EVERY `--` flag, which is correct only
-    // because `tropes` has no valueless flags. It is not a property of
-    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
-    // adding an equivalent here would resurrect the bug above. If `tropes`
-    // ever gains a valueless flag, this loop must learn which flags take
-    // values.
-    let mut mode = None;
-    let mut rest = args.iter().skip(1);
-    while let Some(a) = rest.next() {
-        if a.starts_with("--") {
-            rest.next();
-        } else {
-            mode = Some(a.as_str());
-            break;
-        }
-    }
     match mode {
         Some("report") | None => {
-            print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
+            print!(
+                "{}",
+                tropes::render(&corpus, &outcomes, &world.registry, path)
+            );
             Ok(())
         }
         Some("check") => {
-            let live = tropes::render(&corpus, &outcomes, &world.registry);
-            let committed = std::fs::read_to_string("docs/audits/trope-coverage.md")
-                .map_err(|e| format!("docs/audits/trope-coverage.md: {e}"))?;
+            let live = tropes::render(&corpus, &outcomes, &world.registry, path);
+            let artifact = tropes::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
             if live == committed {
                 Ok(())
             } else {
-                Err("trope coverage drifted; run `make rebaseline` and review the diff".into())
+                Err(format!(
+                    "trope coverage drifted for `{}`; run `make rebaseline` and review the diff",
+                    corpus.corpus
+                ))
             }
         }
-        Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),
+        Some(other) => Err(format!(
+            "tropes: unknown mode '{other}' (report|check|matrix)"
+        )),
     }
+}
+
+/// The matrix over every corpus in `tropes::CORPORA`.
+///
+/// Deliberately takes no arguments: ADR 0095 makes the set of columns a
+/// declared list, not a caller's choice, so there is no `--corpus` to honour
+/// here and nothing the caller can pass that changes which corpora are
+/// scored. The world is built once and every corpus resolved against it —
+/// `build_world` is the expensive call, and a per-corpus build would also let
+/// two columns silently disagree because they were measured against different
+/// registries.
+fn cmd_tropes_matrix() -> Result<(), String> {
+    let world = world_builder::build_world(
+        Seed(0),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let mut corpora = Vec::new();
+    for path in tropes::CORPORA {
+        let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        corpora.push(tropes::load(&json)?);
+    }
+    let resolved: Vec<_> = corpora
+        .iter()
+        .map(|c| (c, tropes::resolve(c, &world.registry)))
+        .collect();
+    let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
+    print!("{}", tropes::render_matrix(&columns, &world.registry));
+    Ok(())
 }
 
 fn cmd_streams() -> Result<(), String> {
@@ -895,11 +1009,15 @@ fn cmd_dictionary(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Dump proto-goblinoid's reference page (inventory, phonotactics, and
-/// proto-root table) — a pure function of the reference seed, so unlike
-/// `dictionary` this takes no `--world`.
-fn cmd_proto() -> Result<(), String> {
-    print!("{}", proto::render_proto()?);
+/// Dump a language family's proto reference page (inventory, phonotactics,
+/// and proto-root table) — a pure function of the family and the reference
+/// seed, so unlike `dictionary` this takes no `--world`. The family is the
+/// first positional argument, defaulting to `goblinoid` (the roster's first
+/// multi-member family, and the only page this command emitted before The
+/// Delvers). An unregistered family is refused with the admissible set.
+fn cmd_proto(args: &[String]) -> Result<(), String> {
+    let family = positional_target(args).unwrap_or(proto::DEFAULT_FAMILY);
+    print!("{}", proto::render_proto(family)?);
     Ok(())
 }
 
@@ -1080,13 +1198,14 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 }
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
-/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, and `list-metrics`.
+/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, and `domesday`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
         Some("diff") => cmd_lab_diff(args),
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
+        Some("domesday") => cmd_lab_domesday(),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1097,7 +1216,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|claim-status)\n{}",
             usage()
         )),
     }
@@ -1199,6 +1318,51 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
     Ok(())
 }
 
+/// Render the Domesday survey (2026-08-08 campaign): read the committed
+/// census + comparators + expectations from their fixed paths, run the
+/// eight detectors, and write one page per domain plus an index into
+/// `book/src/domesday/`. Takes no arguments — unlike `backfill-schema`,
+/// there is nothing to select: it always reads the one committed census and
+/// always writes the one survey (spec §4.5, "it does not re-run the
+/// census").
+fn cmd_lab_domesday() -> Result<(), String> {
+    let census_dir = std::path::Path::new("book/src/laboratory/generated/the-census");
+    let census = hornvale_lab::domesday::census::load(census_dir)?;
+    let comparators = hornvale_lab::domesday::comparators::load_comparators(std::path::Path::new(
+        "studies/comparators.json",
+    ))?;
+    let expectations = hornvale_lab::domesday::comparators::load_expectations(
+        std::path::Path::new("studies/expectations.json"),
+    )?;
+    let findings = hornvale_lab::domesday::detect::detect(&census, &comparators, &expectations);
+
+    let out_dir = std::path::Path::new("book/src/domesday");
+    std::fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
+
+    let index_path = out_dir.join("index.md");
+    std::fs::write(
+        &index_path,
+        hornvale_lab::domesday::render::render_index(&census, &findings),
+    )
+    .map_err(|e| format!("writing {}: {e}", index_path.display()))?;
+
+    let domains = hornvale_lab::domesday::render::domains();
+    for domain in &domains {
+        let page = hornvale_lab::domesday::render::render_domain(&census, domain, &findings);
+        let path = out_dir.join(format!("{domain}.md"));
+        std::fs::write(&path, page).map_err(|e| format!("writing {}: {e}", path.display()))?;
+    }
+
+    println!(
+        "domesday: {} worlds, {} domains, {} findings -> {}",
+        census.rows.len(),
+        domains.len(),
+        findings.len(),
+        out_dir.display()
+    );
+    Ok(())
+}
+
 /// Record this run's per-test durations as the host's baseline (The
 /// Timekeeper). Reads what `make ci` just wrote; writes the rolling baseline
 /// that `cli/tests/timings_alarm.rs` compares against.
@@ -1292,9 +1456,10 @@ fn cmd_ci_record() -> Result<(), String> {
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
 /// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
 /// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
-/// ascii`) the same `terrain`-lens picture the possession's own `map` verb
-/// draws, via `hornvale_scene::render_surrounds_ascii`. Deterministic; CI
-/// drift-checks the committed example scene.
+/// ascii`) the same picture the possession's own `map` verb draws, via
+/// `hornvale_scene::render_surrounds_ascii` — through the `terrain` lens by
+/// default, or `--lens colour` to tint it. Deterministic; CI drift-checks the
+/// committed example scene, which is rendered through `terrain`.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -1385,6 +1550,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     "unknown --render mode '{render_mode}'; known modes: json, ascii"
                 ));
             }
+            // Same discipline: validate against the renderer's own registry
+            // rather than a second list here, so a lens added there is
+            // spellable here the same day.
+            let lens = flag_value(args, "--lens").unwrap_or("terrain");
+            if !hornvale_scene::SURROUNDS_LENSES.contains(&lens) {
+                return Err(format!(
+                    "unknown --lens '{lens}'; registered lenses: {}",
+                    hornvale_scene::SURROUNDS_LENSES.join(", ")
+                ));
+            }
             let world = load_world(args)?;
             let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
             let depth = match flag_value(args, "--depth") {
@@ -1417,8 +1592,54 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     settlement_room(&world, v.id, depth)?
                 }
             };
-            let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
-                .map_err(|e| e.to_string())?;
+            // `ctx` is already in hand, so build through the `_in` variants:
+            // `surrounds_scene` would build a second `LocaleContext` (~1.2 s
+            // in release) identical to this one. The colour path needs a
+            // context anyway, and taking the same route for both keeps the
+            // two lenses reading the same document.
+            let scene = if lens == "colour" {
+                // The CLI, not the scene builder, owns the star's daylight —
+                // the same illuminant `surrounds_scene_colored_in` used to
+                // compute internally, moved out so a caller can colour a
+                // chart under any light. This must agree with what the
+                // `sight` block declares below: `daylight_at` (the vessel's
+                // own light-plus-altitude pairing, spec §4.6) is the one
+                // call that builds both, so the declared
+                // `sun_altitude_deg` can never drift from the light the
+                // scene was actually lit with — two independent
+                // computations of "which light" is exactly how a caption
+                // and a picture end up disagreeing (The Beholding, F1).
+                let calendar = world_builder::sky_of(&world)
+                    .ok()
+                    .and_then(|sky| sky.calendar().cloned());
+                let latitude = room.coord().latitude;
+                let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
+                    &world,
+                    calendar.as_ref(),
+                    WorldTime { day },
+                    latitude,
+                );
+                hornvale_scene::surrounds_scene_colored_in(
+                    &world,
+                    &ctx,
+                    &room,
+                    radius,
+                    WorldTime { day },
+                    &hornvale_kernel::color::standard_observer(),
+                    &light,
+                    hornvale_scene::Sight {
+                        observer: "standard".to_string(),
+                        channels: 0,
+                        chromatic: 0,
+                        projection: String::new(),
+                        preserves: String::new(),
+                        sun_altitude_deg,
+                    },
+                )
+            } else {
+                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime { day })
+            }
+            .map_err(|e| e.to_string())?;
             if render_mode == "ascii" {
                 // The footer names the observer room's own lateral exits,
                 // the same source the possession's `map` verb reads
@@ -1442,7 +1663,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     .collect();
                 print!(
                     "{}",
-                    hornvale_scene::render_surrounds_ascii(&scene, "terrain", &ways)
+                    hornvale_scene::render_surrounds_ascii(&scene, lens, &ways)
                 );
             } else {
                 println!("{}", hornvale_scene::surrounds_json(&scene));
@@ -1548,9 +1769,22 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
         println!("Locale {} (depth {})", locale.id, locale.depth);
         println!("  at {:.4}, {:.4}", locale.latitude, locale.longitude);
         println!("  biome: {}", locale.biome);
+        let h = locale.fields.height_asl_m;
+        // Branch on what will be PRINTED, not on the raw sign — otherwise a
+        // shoreline 0.2 m under renders as "0 m below sea level". Deliberately
+        // duplicated from `windows/vessel`'s `height_phrase` rather than shared:
+        // `cli` must not reach into a window's private helpers, and four lines do
+        // not justify a new pub API. Keep the two wordings identical.
+        let height = if h.get().abs() < 0.5 {
+            "at sea level".to_string()
+        } else if h.get() < 0.0 {
+            format!("{:.0} m below sea level", h.depth())
+        } else {
+            format!("{:.0} m above sea level", h.get())
+        };
         println!(
-            "  temperature {:.1} °C · moisture {:.2} · elevation {:.0} m",
-            locale.fields.temperature_c, locale.fields.moisture, locale.fields.elevation_m
+            "  temperature {:.1} °C · moisture {:.2} · {height}",
+            locale.fields.temperature_c, locale.fields.moisture
         );
         println!(
             "  regime: {} (strangeness {:.1})",

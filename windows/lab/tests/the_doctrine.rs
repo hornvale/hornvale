@@ -91,6 +91,7 @@ fn the_soc1_gate_holds_at_seed_1() {
 /// separately below and confirmed to differ). A future change to the dial
 /// that let the doctrine delta leak into the folk roster's own params
 /// would redden this exact-value pin.
+/// claim: readout — calibration-lab convention; kept (audit §3.3)
 #[test]
 fn the_dial_roster_law_folk_params_are_stable() {
     for seed in 1u64..=5 {

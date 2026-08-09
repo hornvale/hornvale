@@ -5,9 +5,11 @@
 //! a *total function of its arguments*: no world, no global state, no
 //! replay. The deep-history bake (Task 3, run at the composition root)
 //! derives the `seed` these functions receive once per occupation, via
-//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&id))`;
-//! these functions never derive that top-level label themselves — they
-//! only derive their own sub-labels from whatever seed they're handed.
+//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&material_key))`
+//! — keyed on the occupation's material core (`record::material_key`), never
+//! its entity id, so derived prose does not move when an id moves (The
+//! Salt). These functions never derive that top-level label themselves —
+//! they only derive their own sub-labels from whatever seed they're handed.
 
 use crate::record::{CauseOfEnd, Function, Notability, OccupationRecord, TechHorizon};
 use crate::streams;
@@ -88,13 +90,13 @@ pub fn founder_handle(occ: &OccupationRecord) -> RoleHandle {
         *x = x.wrapping_mul(0x9E37_79B9_7F4A_7C15);
         *x ^= *x >> 29;
     };
-    for b in occ.people.0.bytes() {
+    for b in occ.core.people.0.bytes() {
         mix(u64::from(b), &mut x);
     }
-    mix(u64::from(occ.site.0), &mut x);
-    mix(occ.founded.to_bits(), &mut x);
-    mix(occ.ended.map_or(u64::MAX, f64::to_bits), &mut x);
-    mix(u64::from(occ.peak_population), &mut x);
+    mix(u64::from(occ.core.site.0), &mut x);
+    mix(occ.core.founded.to_bits(), &mut x);
+    mix(occ.core.ended.map_or(u64::MAX, f64::to_bits), &mut x);
+    mix(u64::from(occ.core.peak_population), &mut x);
     mix(FOUNDER_ROLE, &mut x);
     RoleHandle(x)
 }
@@ -271,16 +273,16 @@ pub const HAMLET_POPULATION_CEILING: u32 = 150;
 /// type-audit: bare-ok(count: now)
 pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Departure) -> Residue {
     let mut items = Vec::new();
-    let age = occ.ended.map_or(0.0, |end| (now - end).max(0.0));
-    let hamlet_scale = occ.peak_population <= HAMLET_POPULATION_CEILING;
+    let age = occ.core.ended.map_or(0.0, |end| (now - end).max(0.0));
+    let hamlet_scale = occ.core.peak_population <= HAMLET_POPULATION_CEILING;
 
-    if let Some(cause) = occ.cause {
+    if let Some(cause) = occ.core.cause {
         match cause {
             CauseOfEnd::Burned => {
                 // Fire leaves the fort's arms and its fallen, or a family
                 // hamlet's doll while it is young; either way the burnt daub
                 // and potsherds and the foundation lines of what stood endure.
-                if occ.function == Function::Fort {
+                if occ.core.function == Function::Fort {
                     items.push(ResidueItem::Weapon);
                     items.push(ResidueItem::Bones);
                 } else if hamlet_scale {
@@ -337,12 +339,12 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Depar
         }
     }
 
-    if occ.notability == Notability::Seat {
+    if occ.core.notability == Notability::Seat {
         // A regional seat's sacred goods: a buried reliquary (eternal) and its
         // durable bead ornaments; a cult seat also incises its stone.
         items.push(ResidueItem::Reliquary);
         items.push(ResidueItem::Bauble);
-        if occ.function == Function::Cult {
+        if occ.core.function == Function::Cult {
             items.push(ResidueItem::Inscription);
         }
     }
@@ -354,7 +356,7 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Depar
     if !hamlet_scale {
         let mut stream = seed
             .derive(streams::RESIDUE)
-            .derive(StreamLabel::dynamic(occ.people.0))
+            .derive(StreamLabel::dynamic(occ.core.people.0))
             .stream();
         if stream.range_u32(0, 1) == 1 {
             items.push(ResidueItem::WorkedStone);
@@ -406,26 +408,27 @@ pub fn structures_of(occ: &OccupationRecord, seed: Seed) -> Vec<Structure> {
 
     let mut structures = Vec::new();
 
-    let dwelling =
-        if occ.peak_population >= LONGHOUSE_POPULATION_FLOOR && occ.tech >= TechHorizon::Iron {
-            Structure::Longhouse
-        } else {
-            Structure::Hut
-        };
+    let dwelling = if occ.core.peak_population >= LONGHOUSE_POPULATION_FLOOR
+        && occ.core.tech >= TechHorizon::Iron
+    {
+        Structure::Longhouse
+    } else {
+        Structure::Hut
+    };
     let mut stream = seed.derive(streams::STRUCTURES).stream();
     let dwelling_count =
-        1 + occ.peak_population / DWELLING_POPULATION_STEP + stream.range_u32(0, 1);
+        1 + occ.core.peak_population / DWELLING_POPULATION_STEP + stream.range_u32(0, 1);
     for _ in 0..dwelling_count {
         structures.push(dwelling);
     }
 
-    match occ.function {
+    match occ.core.function {
         Function::Agrarian => structures.push(Structure::Granary),
         Function::Mine => structures.push(Structure::Mineshaft),
         Function::Trade => structures.push(Structure::Market),
         Function::Cult => {
             structures.push(Structure::Shrine);
-            if occ.tech == TechHorizon::Classical {
+            if occ.core.tech == TechHorizon::Classical {
                 structures.push(Structure::Temple);
             }
         }

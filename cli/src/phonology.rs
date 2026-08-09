@@ -38,8 +38,9 @@ pub fn render_phonology() -> String {
 
     // Speaker-only: the phonology page needs language, so it covers exactly the
     // minded kinds that speak. The psyche registry can hold a minded non-speaker,
-    // so skip any kind absent from the articulation registry; the four peoples
-    // and the three dragons (speakers since The Solitary Tongue) are all covered.
+    // so skip any kind absent from the articulation registry; the six settling
+    // peoples and the three dragons (speakers since The Solitary Tongue) are all
+    // covered.
     // `iter()` is `KindId`-ascending, byte-identical to the old
     // registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();
@@ -52,11 +53,11 @@ pub fn render_phonology() -> String {
         // The Cloister: `sample_names_for` needs the mind and society vectors.
         // Since this loop covers every minded speaker (dragons included since
         // The Solitary Tongue), a Solitary carries no society row — resolve
-        // the goblin baseline for it, mirroring genesis's mixed-consumer rule.
+        // the manikin for it, mirroring genesis's mixed-consumer rule.
         let society = hornvale_species::society_registry()
             .get(kind)
             .copied()
-            .unwrap_or(hornvale_species::SocietyVector::baseline());
+            .unwrap_or(hornvale_species::SocietyVector::MANIKIN);
 
         doc.push_str(&format!("## {}\n\n", capitalize(species)));
 
@@ -279,7 +280,7 @@ mod tests {
         let society = hornvale_species::society_registry()
             .get(kind)
             .copied()
-            .unwrap_or(hornvale_species::SocietyVector::baseline());
+            .unwrap_or(hornvale_species::SocietyVector::MANIKIN);
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
         let morph = world_builder::morph_options(mind, &society);
@@ -313,7 +314,7 @@ mod tests {
         let society = hornvale_species::society_registry()
             .get(kind)
             .copied()
-            .unwrap_or(hornvale_species::SocietyVector::baseline());
+            .unwrap_or(hornvale_species::SocietyVector::MANIKIN);
         let samples = sample_names_for(&world, kind.0, mind, &society);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {

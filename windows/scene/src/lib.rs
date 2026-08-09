@@ -1525,6 +1525,8 @@ mod tests {
         assert!(scene.biome.iter().all(|&i| (i as usize) < 22));
     }
 
+    /// claim: structural(seed: 1 — constant sky) — false-positive seed-loop
+    /// flag; `s` binds a swing f64
     #[test]
     fn climate_layers_are_sized_and_present() {
         let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 constant sky: spins, obliquity 23.5
@@ -1647,6 +1649,7 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: 42) — pinned RotationPin::Locked
     #[test]
     fn locked_world_omits_circulation_bands_and_zeroes_swing() {
         use hornvale_astronomy::{RotationPin, SkyPins};
@@ -1996,6 +1999,8 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: 0..50) — an icy-density draw exceeds the old
+    /// 0.5 albedo cap somewhere, plus a forall-seed clamp check
     #[test]
     fn icy_albedo_can_exceed_the_old_zero_point_five_cap() {
         // Seed 42's two real moons both land below 0.5 (neither is icy), so
@@ -2022,6 +2027,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — icy maria_fraction damped below rocky,
+    /// with a non-vacuity guard (compared_a_nonzero_case)
     #[test]
     fn icy_composition_damps_maria_fraction_but_never_zeroes_it() {
         // Review follow-up: composition-blind maria_fraction let an icy
@@ -2077,6 +2084,8 @@ mod tests {
         );
     }
 
+    /// claim: rate(forall-seed, aggregate mass-bias direction) — over 1..200,
+    /// no world-building (pure function of seed/index/mass)
     #[test]
     fn mass_bias_actually_bites_across_seeds() {
         // The bias is a pure function of (seed, index, mass) — exercise it
@@ -2174,6 +2183,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none — mooned_world() fixture) — false-positive
+    /// seed-loop flag; `s` binds a star
     #[test]
     fn neighbors_scene_fields_are_in_range() {
         let a = neighbors_scene(&mooned_world()).unwrap();

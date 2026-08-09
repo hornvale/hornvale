@@ -1,11 +1,18 @@
 //! §7 rule 5 — at most one creature per cell, and never in the fabric — as a
 //! TYPE rather than as a test over data that does not exist yet.
 //!
-//! No creature stands in a cell until The Sighting, so a test asserting the rule
-//! over today's lattices would pass without examining anything. A vacuous test is
-//! worse than a missing one: it reads as coverage. So the rule is enforced by the
-//! only structure that can hold an occupant — one keyed by cell, whose placement
-//! REFUSES rather than overwrites.
+//! Written when no creature stood in a cell at all, because a test asserting the
+//! rule over lattices with no occupants would pass without examining anything, and
+//! a vacuous test is worse than a missing one: it reads as coverage. So the rule is
+//! enforced by the only structure that can hold an occupant — one keyed by cell,
+//! whose placement REFUSES rather than overwrites.
+//!
+//! **The Sighting made it load-bearing.** [`crate::lattice::anchor_cells`] embeds a
+//! chamber's anchors into cells and creatures resolve through it, so `Held` is now a
+//! refusal that actually fires — it is one of the four legitimate reasons a
+//! co-located creature has no cell, and the one that proves the type was the right
+//! place for the rule. Absence from the map still never means "hidden"; see
+//! `Session::sighting`.
 //!
 //! Refuses rather than overwrites deliberately: silently displacing whoever was
 //! there is how two creatures come to believe they hold one cell.

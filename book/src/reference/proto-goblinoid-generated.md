@@ -1,8 +1,8 @@
-<!-- GENERATED FILE — do not edit. Regenerate with `hornvale proto`. -->
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale proto goblinoid`. -->
 
 # Proto-goblinoid
 
-The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language bugbear, goblin, and hobgoblin all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -62,17 +62,19 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `dark` | the color term for black/dark hues | *Tano | /tano/ |
 | `day` | the light half of the day-night cycle | *Gaage | /gaage/ |
 | `desert` | a biome class | *Nadoa | /nadoa/ |
+| `desert-dwarf-kind` | a desert dwarf | *Neoga | /neoga/ |
 | `die` | to cease living | *Toono | /toono/ |
 | `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
 | `drink` | to swallow liquid | *Ganae | /ganae/ |
 | `earth` | the ground underfoot | *Geo | /geo/ |
-| `eat` | to consume food | *Koo | /koo/ |
+| `east` | the direction of increasing longitude | *Neepa | /neepa/ |
+| `eat` | to consume food | *Nao | /nao/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Ne | /ne/ |
 | `epipelagic` | a biome class | *Naenoo | /naenoo/ |
 | `erg` | A sand sea of dunes. | *Genoe | /genoe/ |
 | `eye` | the organ of sight | *Ta | /ta/ |
 | `felsenmeer` | A field of frost-shattered boulders. | *Nenoa | /nenoa/ |
-| `fire` | flame and heat | *Nao | /nao/ |
+| `fire` | flame and heat | *Qaa | /qaa/ |
 | `fire-scrub` | Scrub regrowing after fire. | *Neanoa | /neanoa/ |
 | `fish-shoal` | A shoal moving as one body. | *Doqeo | /doqeo/ |
 | `foot` | the walking limb-end | *Nono | /nono/ |
@@ -95,6 +97,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `grass-sward` | Open grassland, unbroken by trees. | *Neonao | /neonao/ |
 | `great` | large in size or extent | *Goedono | /goedono/ |
 | `green` | the color term for green | *Koetoe | /koetoe/ |
+| `gully-dwarf-kind` | a gully dwarf | *Paono | /paono/ |
 | `hadal-trench` | a biome class | *Pea | /pea/ |
 | `hamada` | A stony desert pavement of bare rock. | *Daade | /daade/ |
 | `hand` | the manipulating limb-end | *Qaagaa | /qaagaa/ |
@@ -102,13 +105,15 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `heat` | felt, oppressive warmth | *Keqoo | /keqoo/ |
 | `high` | far above the ground | *Geanea | /geanea/ |
 | `hill` | ground that rises above what surrounds it | *Nootea | /nootea/ |
+| `hill-dwarf-kind` | a hill dwarf | *Dapae | /dapae/ |
 | `hobgoblin-kind` | a hobgoblin | *Qage | /qage/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Qa | /qa/ |
 | `home` | one's dwelling | *Doe | /doe/ |
+| `human-kind` | a human | *Pege | /pege/ |
 | `hydrothermal-vent` | a biome class | *Teo | /teo/ |
 | `ice` | frozen water | *Na | /na/ |
 | `ice-lead` | A channel of open water through sea ice. | *Kea | /kea/ |
-| `island` | land the water surrounds | *Goqao | /goqao/ |
+| `island` | land the water surrounds | *Pee | /pee/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Noonea | /noonea/ |
 | `kelp-forest` | a biome class | *Noo | /noo/ |
 | `killer-whale-kind` | a killer whale | *Neeqe | /neeqe/ |
@@ -134,14 +139,16 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `name` | a word that identifies one who bears it | *Noenae | /noenae/ |
 | `new` | recently come to be | *Nopee | /nopee/ |
 | `night` | the dark half of the day-night cycle | *Neqa | /neqa/ |
-| `nodule-field` | Seafloor strewn with mineral nodules. | *Negea | /negea/ |
-| `north` | the compass point opposite south | *Nanoe | /nanoe/ |
+| `nodule-field` | Seafloor strewn with mineral nodules. | *Koo | /koo/ |
+| `north` | toward the pole of increasing latitude | *Nanoe | /nanoe/ |
+| `north-east` | between north and east | *Doneo | /doneo/ |
+| `north-west` | between north and west | *Gea | /gea/ |
 | `old` | long in existence | *Tape | /tape/ |
 | `old-growth` | Mature forest, closed above and open beneath. | *Neneo | /neneo/ |
-| `one` | the cardinal number 1 | *Kaa | /kaa/ |
+| `one` | the cardinal number 1 | *Koego | /koego/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Paqoo | /paqoo/ |
 | `otyugh-kind` | an otyugh | *Neonoo | /neonoo/ |
-| `over` | above; atop | *Datee | /datee/ |
+| `over` | above; atop | *Dodoake | /dodoake/ |
 | `owlbear-kind` | an owlbear | *Poko | /poko/ |
 | `parent` | one's father or mother | *Gatea | /gatea/ |
 | `person` | a person; a member of a people (the autonym root) | *Neoda | /neoda/ |
@@ -156,7 +163,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `reef-shark-kind` | a reef shark | *Deopoe | /deopoe/ |
 | `reg` | A desert floor of wind-swept gravel. | *Neono | /neono/ |
 | `rest` | to stop and recover strength | *Kaeno | /kaeno/ |
-| `rhinoceros-kind` | a rhinoceros | *Qateo | /qateo/ |
+| `rhinoceros-kind` | a rhinoceros | *Naa | /naa/ |
 | `rice` | a staple crop | *Naoka | /naoka/ |
 | `river` | fresh water running across land | *Gootoe | /gootoe/ |
 | `rust-monster-kind` | a rust monster | *Koa | /koa/ |
@@ -175,16 +182,18 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `smoker-field` | A field of hydrothermal chimneys. | *Qoge | /qoge/ |
 | `snow` | frozen precipitation | *Noanee | /noanee/ |
 | `snowfield` | An unbroken field of snow. | *Qane | /qane/ |
-| `south` | the compass point opposite north | *Qaeneo | /qaeneo/ |
+| `south` | toward the pole of decreasing latitude | *Qaeneo | /qaeneo/ |
+| `south-east` | between south and east | *Napea | /napea/ |
+| `south-west` | between south and west | *Note | /note/ |
 | `spirit` | a lesser or unseen supernatural presence | *Paa | /paa/ |
 | `spring` | where water rises from the ground | *Negao | /negao/ |
 | `spur-and-groove` | The ribbed seaward face of a reef. | *Goakoo | /goakoo/ |
 | `staghorn-stand` | A thicket of branching coral. | *Ga | /ga/ |
 | `star` | a fixed point of light in the night sky | *Noe | /noe/ |
 | `starlit` | dark faintly lit by stars | *Kee | /kee/ |
-| `stone` | rock | *Tee | /tee/ |
+| `stone` | rock | *Poatoe | /poatoe/ |
 | `sun` | the sun | *Toa | /toa/ |
-| `taiga` | a biome class | *Naa | /naa/ |
+| `taiga` | a biome class | *Kaa | /kaa/ |
 | `temperate-forest` | a biome class | *Nena | /nena/ |
 | `temperate-grassland` | a biome class | *Dano | /dano/ |
 | `temperate-rainforest` | a biome class | *Doqa | /doqa/ |
@@ -202,13 +211,14 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `twig-blight-kind` | a twig blight | *Qaaqee | /qaaqee/ |
 | `twilight-water` | Water at the edge of the light. | *Taote | /taote/ |
 | `two` | the cardinal number 2 | *Naanee | /naanee/ |
-| `under` | beneath; below | *Nootae | /nootae/ |
+| `under` | beneath; below | *Tagee | /tagee/ |
 | `upwelling` | a biome class | *Qoa | /qoa/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Gee | /gee/ |
 | `valley` | low ground between heights | *Konoa | /konoa/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naote | /naote/ |
 | `vine` | a staple crop | *Teona | /teona/ |
 | `water` | the drinkable liquid | *Doege | /doege/ |
+| `west` | the direction of decreasing longitude | *Neakea | /neakea/ |
 | `wheat` | a staple crop | *Netea | /netea/ |
 | `white-dragon-kind` | a white dragon | *Qo | /qo/ |
 | `wind` | moving air | *Neqoo | /neqoo/ |

@@ -46,6 +46,7 @@ dependencies = [
  "hornvale-culture",
  "hornvale-history",
  "hornvale-kernel",
+ "hornvale-language",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
@@ -106,6 +107,7 @@ version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
  "hornvale-kernel",
+ "hornvale-language",
 ]
 
 [[package]]
@@ -139,6 +141,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",
@@ -146,6 +149,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-topology",
  "hornvale-vessel",
  "hornvale-worldgen",
  "serde",

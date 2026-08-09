@@ -48,6 +48,48 @@ fn peoples() -> Vec<KindId> {
     ]
 }
 
+/// The per-people capacity slice a fixture's single field becomes: the SAME
+/// field, handed to every people in `peoples` (whichever roster the call site
+/// passes to `bake` — the two must be the same length and the same order).
+///
+/// Uniform across peoples on purpose. Every fixture below encodes a value
+/// gradient *across cells* — the refuge step, the escarpment, the value-flat
+/// world — and that gradient is what the rules under test key on. Varying it per
+/// people as well would add a second independent variable to each test and make
+/// a failure ambiguous between "the rule moved" and "the fixture disagrees about
+/// who likes what". The niche-differentiation behaviour has its own coverage.
+/// One capacity field PER ERA, for fixtures whose hostility oscillates.
+fn caps_per_era(
+    fields: &[CellMap<f64>],
+    peoples: &[KindId],
+) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
+    fields.iter().map(|f| per_people(f, peoples)).collect()
+}
+
+fn caps_of(
+    field: &CellMap<f64>,
+    peoples: &[KindId],
+    eras: usize,
+) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
+    // The SAME field in every era. These fixtures were written when capacity was
+    // era-invariant, and keeping them so is what makes each still test the rule
+    // it names rather than also testing The Tense's era variation.
+    (0..eras).map(|_| per_people(field, peoples)).collect()
+}
+
+fn per_people(
+    field: &CellMap<f64>,
+    peoples: &[KindId],
+) -> Vec<hornvale_kernel::ecology::CapacityMap> {
+    peoples
+        .iter()
+        .map(|_| {
+            hornvale_kernel::ecology::CapacityMap::new(field.clone())
+                .expect("a fixture capacity field is finite and non-negative")
+        })
+        .collect()
+}
+
 /// A small test world with a genuine, *oscillating* glacial swing — the
 /// honest driver of climate displacement at volume:
 ///
@@ -78,11 +120,12 @@ fn peoples() -> Vec<KindId> {
 ///
 /// The `seed` argument is unused (the world is fixed; only the bake `Seed`
 /// varies between runs), and is kept so callers read `fixture(42)`.
+#[allow(clippy::type_complexity)]
 fn fixture(
     _seed: u64,
 ) -> (
     Geosphere,
-    CellMap<f64>,
+    Vec<CellMap<f64>>,
     CellMap<f64>,
     Vec<EraClimate>,
     CellMap<bool>,
@@ -108,19 +151,33 @@ fn fixture(
     // driven into the refuge by a glacial onset arrives over-capacity — the
     // pressure that drives the growth damping and, at the extreme, famine.
     // It never drives a raid: crowding is not a conflict trigger.
-    let capacity = CellMap::from_fn(&geo, |c| if refuge.contains(&c) { 60.0 } else { 120.0 });
+    // HOSTILITY IS NOW CAPACITY, NOT A MASK (The Tense, step 4). The era mask no
+    // longer excludes anything, so a region is made uninhabitable this era by
+    // giving it zero capacity — which is what the model itself now does when
+    // ground goes cold. The oscillation, the disjointness, and the 60-vs-120
+    // gradient are all preserved exactly; only the mechanism expressing them
+    // changed.
+    let capacity_at = |glacial: bool| {
+        CellMap::from_fn(&geo, |c| match (refuge.contains(&c), glacial) {
+            (true, true) => 60.0,    // refuge, alive in the cold
+            (false, false) => 120.0, // lowland, alive in the warm
+            _ => 0.0,                // the other region is dead this era
+        })
+    };
 
-    // Warm ⇒ lowlands (non-refuge) habitable; glacial ⇒ refuge habitable.
+    // The mask is now uniformly permissive: it is kept in the fixture only
+    // because `EraClimate` still carries the field, and it binds nothing.
     let era = |day: f64, glacial: bool| EraClimate {
         day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| refuge.contains(&c) == glacial),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     // Eight eras across the two millennia: warm/glacial alternating, four
     // glacial cycles.
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
+    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
 
     // River proximity is uniformly zero here (Task 5b): the fixture tests the
     // era-swing displacement mechanism, not the freshwater bias, so the river
@@ -139,7 +196,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -150,7 +207,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -170,7 +227,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -181,7 +238,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -207,7 +264,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -283,7 +340,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -319,13 +376,13 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     //     the community that later raided it (mutation-verified — moving the
     //     raider's `open` back onto its own cell must, and does, redden this).
     let conquest = h.records.iter().any(|loser| {
-        loser.cause == Some(CauseOfEnd::Fled)
+        loser.core.cause == Some(CauseOfEnd::Fled)
             && match loser.ended_by {
                 Ended::By(raider) => h.records.iter().any(|seat| {
                     seat.founded_from == Founding::From(raider)
-                        && seat.site == loser.site
+                        && seat.core.site == loser.core.site
                         && seat.community != loser.community
-                        && Some(seat.founded) == loser.ended
+                        && Some(seat.core.founded) == loser.core.ended
                 }),
                 Ended::Nature => false,
             }
@@ -410,7 +467,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -458,9 +515,10 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
 /// saturate and stabilise, then a hostile span that evicts cell 0 with no
 /// vacant refuge anywhere. Capacity is uniform across the cluster, so there
 /// is nothing to covet either — the trapped community has no way out.
+#[allow(clippy::type_complexity)]
 fn saturating_fixture() -> (
     Geosphere,
-    CellMap<f64>,
+    Vec<CellMap<f64>>,
     CellMap<f64>,
     Vec<EraClimate>,
     CellMap<bool>,
@@ -473,26 +531,32 @@ fn saturating_fixture() -> (
     }
     // Uniform capacity across the cluster; the rest of the world is worthless
     // AND uninhabitable in every era, so the cluster is the whole playfield.
-    let capacity = CellMap::from_fn(&geo, |c| if hab.contains(&c) { 100.0 } else { 0.0 });
     let refugia = CellMap::from_fn(&geo, |_| false);
     let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-    // Warm: the whole cluster is habitable. Hostile: cell 0 turns hostile with
-    // the rest of the cluster still habitable AND occupied — no vacant refuge.
-    let warm = EraClimate {
-        day: 0.0,
+    // HOSTILITY IS NOW CAPACITY (The Tense, step 4). Warm: the whole cluster
+    // feeds people. Hostile: cell 0's capacity goes to zero while the rest of
+    // the cluster stays alive AND occupied — so its community is squeezed out
+    // with no vacant refuge anywhere, which is the trap this fixture exists to
+    // set. The mask is uniformly permissive and binds nothing.
+    let capacity_at = |cell_zero_alive: bool| {
+        CellMap::from_fn(&geo, |c| {
+            // Outside the cluster is dead in every era; cell 0 additionally
+            // dies in the hostile one, which is the squeeze this fixture sets.
+            let alive = hab.contains(&c) && (c.0 != 0 || cell_zero_alive);
+            if alive { 100.0 } else { 0.0 }
+        })
+    };
+    let era = |day: f64| EraClimate {
+        day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c)),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
-    let hostile = EraClimate {
-        day: 1000.0,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c) && c.0 != 0),
-        sea_level: e(0.0),
-        ice_fraction: 0.0,
-    };
-    (geo, capacity, river_prox, vec![warm, hostile], refugia)
+    // Materialise before moving `geo` out: the closures borrow it.
+    let caps = vec![capacity_at(true), capacity_at(false)];
+    let eras = vec![era(0.0), era(1000.0)];
+    (geo, caps, river_prox, eras, refugia)
 }
 
 #[test]
@@ -509,7 +573,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -537,7 +601,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -668,6 +732,18 @@ fn value_flat_history() -> hornvale_worldgen::history_bake::History {
 fn value_flat_history_with(
     in_group_radius: std::collections::BTreeMap<KindId, f64>,
 ) -> hornvale_worldgen::history_bake::History {
+    value_flat_history_seeded_with(42, in_group_radius)
+}
+
+/// [`value_flat_history_with`] over an arbitrary seed. The fixture's own
+/// construction is seed-INDEPENDENT — 42 cells, uniform capacity, one era —
+/// so the seed enters only through `bake`, which is what makes a seed band
+/// affordable here: the whole 1..=100 sweep the concealment test runs costs
+/// well under a second.
+fn value_flat_history_seeded_with(
+    seed: u64,
+    in_group_radius: std::collections::BTreeMap<KindId, f64>,
+) -> hornvale_worldgen::history_bake::History {
     let (geo, cap, river, eras, refugia) = value_flat_fixture();
     let people = peoples();
     let cfg = BakeConfig {
@@ -679,9 +755,9 @@ fn value_flat_history_with(
     };
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
     bake(
-        Seed(42),
+        Seed(seed),
         &geo,
-        &cap,
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -727,6 +803,9 @@ fn tribute_flows_along_a_standing_relation() {
     );
 }
 
+/// claim: rate(forall-seed, pooled sign + strict majority over 1..=BAND) —
+/// existence-near-threshold, rate-shaped per decision 0097; structural
+/// invariance is reported, not asserted (0097 clause 3)
 #[test]
 fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_down() {
     // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —
@@ -793,74 +872,128 @@ fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_d
     // changing a line, because what it multiplies — the availability branch —
     // changed shape underneath it. A volume reading alone cannot tell "moved
     // the rate" from "moved the payer", and here it has been each in turn.
+    // **Widened to a seed band by The Contour (decision 0097), and the
+    // widening is a finding.** What stood here ran the two arms at seed 42
+    // alone and guarded the comparison with nine equality assertions on the
+    // ground that the arms "differ in EXACTLY ONE input". They do differ in
+    // exactly one INPUT. They do not differ in exactly one OUTCOME, and they
+    // never could: concealment moves tribute, tribute moves the subordinate's
+    // population, population moves strength, and strength enters the
+    // `RAID_MARGIN` comparison that decides a takeover
+    // (`history_bake.rs`'s `maybe_raid`). The guard held at seed 42's old
+    // draws only because no takeover happened to sit astride the margin.
+    //
+    // The `history/bake/v2` epoch re-minted those draws and one did. Measured
+    // over seeds 1..=100, both arms, all nine originally-guarded fields: the
+    // fixture is structurally invariant on **63 of 100 seeds**, and seed 42
+    // moved from the 63 to the 37 on the re-mint alone — the test passes at
+    // pre-epoch `e8c85d68` with the position-aware raid rule already live, so
+    // the mechanism did not move it. The mechanism could not have: this
+    // fixture's `full_land_graph` gives every edge conductance 1.0, so
+    // `defensibility` evaluates to the single constant 0.750001838 (`DEF_MIN`)
+    // over all 240 ordered adjacent pairs and is arm-invariant by
+    // construction.
+    //
+    // So the old guard was decision 0097's row three exactly — an existence
+    // claim near its threshold, carrying a value pin's noise profile with an
+    // invariant's authority. It is not re-pinned and not relaxed; it is
+    // replaced by the reading that is available at n = 100 and was not
+    // available at n = 1.
+    //
+    // **And the guard was asking the wrong question.** It treated
+    // concealment's own downstream consequences as confounds to be excluded.
+    // Over a band, they are not confounds — they ARE the effect, and the total
+    // effect is the honest thing to report. The DIRECT term, which is the one
+    // claim that genuinely needs a same-state comparison, is bound separately
+    // and unchanged in
+    // `an_insular_subordinate_remits_less_than_an_expansive_one`, which
+    // compares the two radii against the SAME state in a single epoch.
+    //
+    // Structural invariance is therefore REPORTED here and asserted nowhere
+    // (0097 clause 3: never the same claim in two instruments). What is
+    // asserted is the pooled sign, plus a strict majority of seeds — a
+    // majority being the weakest statement that still says "down" rather than
+    // "either way", so it is a floor with a reason and not a bar set just
+    // under a measurement.
+    //
+    // The sign itself is the amendment-4 direction (spec §4.3a): the reach
+    // stops at the patron's setpoint rather than at `FARM_FLOOR`, so
+    // availability is of the order of the epoch's increment, the `min` selects
+    // the availability branch often, and there the concealment factor binds —
+    // what a vassal hides is once again a share it does not hand over.
+    const BAND: u64 = 100;
+
     let expansive: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 1.0)).collect();
     let insular: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 0.0)).collect();
 
-    let ce = census(&value_flat_history_with(expansive));
-    let ci = census(&value_flat_history_with(insular));
+    let mut pooled_expansive = 0.0_f64;
+    let mut pooled_insular = 0.0_f64;
+    let mut sign_holds = 0u64;
+    let mut structurally_invariant = 0u64;
 
-    assert!(
-        ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
-        "precondition: relations must form in both arms: expansive {ce:?}, insular {ci:?}"
-    );
-    assert!(
-        ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
-        "precondition: tribute must flow in BOTH arms — a difference over two zeros \
-         proves nothing: expansive {}, insular {}",
-        ce.tribute_collected,
-        ci.tribute_collected
-    );
-    // (a) Structural invariance — what makes the comparison clean.
-    for (name, e, i) in [
-        (
-            "subordinations_formed",
-            ce.subordinations_formed,
-            ci.subordinations_formed,
-        ),
-        (
-            "patronage_transfers",
-            ce.patronage_transfers,
-            ci.patronage_transfers,
-        ),
-        (
-            "tribute_relations_at_now",
-            ce.tribute_relations_at_now,
-            ci.tribute_relations_at_now,
-        ),
-        (
-            "tribute_collection_events",
-            ce.tribute_collection_events,
-            ci.tribute_collection_events,
-        ),
-        ("records_total", ce.records_total, ci.records_total),
-        ("alive_at_now", ce.alive_at_now, ci.alive_at_now),
-        ("raided", ce.raided, ci.raided),
-        ("migrated", ce.migrated, ci.migrated),
-        ("collapsed", ce.collapsed, ci.collapsed),
-    ] {
-        assert_eq!(
-            e, i,
-            "the arms must differ in what MOVED and in nothing else: {name} is {e} expansive \
-             vs {i} insular, so this fixture is no longer structurally invariant and the \
-             comparison below would be reading two different histories"
+    for seed in 1..=BAND {
+        let ce = census(&value_flat_history_seeded_with(seed, expansive.clone()));
+        let ci = census(&value_flat_history_seeded_with(seed, insular.clone()));
+
+        assert!(
+            ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
+            "precondition: relations must form in both arms at seed {seed}: \
+             expansive {ce:?}, insular {ci:?}"
         );
+        assert!(
+            ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
+            "precondition: tribute must flow in BOTH arms at seed {seed} — a difference over \
+             two zeros proves nothing: expansive {}, insular {}",
+            ce.tribute_collected,
+            ci.tribute_collected
+        );
+
+        pooled_expansive += ce.tribute_collected;
+        pooled_insular += ci.tribute_collected;
+        if ci.tribute_collected < ce.tribute_collected {
+            sign_holds += 1;
+        }
+        // Reported, not asserted — see above.
+        let same = [
+            (ce.subordinations_formed, ci.subordinations_formed),
+            (ce.patronage_transfers, ci.patronage_transfers),
+            (ce.tribute_relations_at_now, ci.tribute_relations_at_now),
+            (ce.tribute_collection_events, ci.tribute_collection_events),
+            (ce.records_total, ci.records_total),
+            (ce.alive_at_now, ci.alive_at_now),
+            (ce.raided, ci.raided),
+            (ce.migrated, ci.migrated),
+            (ce.collapsed, ci.collapsed),
+        ]
+        .iter()
+        .all(|(e, i)| e == i);
+        if same {
+            structurally_invariant += 1;
+        }
     }
-    // (b) …and concealment is not inert. Asserted with its measured SIGN,
-    //     which under the setpoint runs the direct way again: what a vassal
-    //     hides is a share it does not hand over, and the availability branch
-    //     — the only place the factor binds — is now the branch that is
-    //     usually selected.
+
+    println!(
+        "concealment over seeds 1..={BAND}: structurally invariant {structurally_invariant}/{BAND}, \
+         sign holds {sign_holds}/{BAND}, pooled tribute expansive {pooled_expansive:.2} vs \
+         insular {pooled_insular:.2}"
+    );
+
+    // (a) Concealment is not inert, and pooled over the band it moves what the
+    //     patrons collected DOWN.
     assert!(
-        ci.tribute_collected < ce.tribute_collected,
-        "concealment must move what the patrons collected — and under the setpoint (amendment \
-         4) it moves it DOWN again, because the reach stops at the patron's target rather than \
-         at the floor, so availability is of the order of the epoch's increment and the \
-         concealment factor actually binds: insular {} vs expansive {}. Equal totals mean the \
-         term is inert.",
-        ci.tribute_collected,
-        ce.tribute_collected
+        pooled_insular < pooled_expansive,
+        "concealment must move what the patrons collected, and under the setpoint it moves it \
+         DOWN: pooled over seeds 1..={BAND}, insular {pooled_insular} vs expansive \
+         {pooled_expansive}. Equal totals mean the term is inert."
+    );
+    // (b) …and not by one outlier seed carrying the pool: it runs the same
+    //     direction on a strict majority of individual worlds.
+    assert!(
+        sign_holds * 2 > BAND,
+        "the pooled direction must not rest on a few large worlds: concealment lowered \
+         collections on only {sign_holds} of {BAND} seeds, which is not a majority"
     );
 }
 
@@ -933,31 +1066,37 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     );
 
     let refugia = CellMap::from_fn(&geo, |c| b.contains(&c));
-    let capacity = CellMap::from_fn(&geo, |c| if a.contains(&c) { 120.0 } else { 60.0 });
     let river = CellMap::from_fn(&geo, |_| 0.0);
+    // HOSTILITY IS CAPACITY (The Tense, step 4): island A feeds people in warm
+    // eras, island B in glacial ones, and the other is dead. Same disjoint
+    // oscillation the mask used to express, and the same 120-vs-60 gradient —
+    // what is under test here is whether an unbridged ocean can be CROSSED, and
+    // that is a property of the graph, which this leaves untouched.
+    let capacity_at = |glacial: bool| {
+        CellMap::from_fn(&geo, |c| match (a.contains(&c), b.contains(&c), glacial) {
+            (true, _, false) => 120.0,
+            (_, true, true) => 60.0,
+            _ => 0.0,
+        })
+    };
     let era = |day: f64, glacial: bool| EraClimate {
         day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| {
-            if glacial {
-                b.contains(&c)
-            } else {
-                a.contains(&c)
-            }
-        }),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
+    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
     let cfg = BakeConfig::default_millennia();
     let people = vec![KindId("goblin")];
-    let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.site));
+    let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.core.site));
 
     let graphs_no = vec![build_graph(false); eras.len()];
     let no_lane = bake(
         Seed(7),
         &geo,
-        &capacity,
+        &caps_per_era(&capacity, &people),
         &river,
         &eras,
         &refugia,
@@ -975,7 +1114,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
-        &capacity,
+        &caps_per_era(&capacity, &people),
         &river,
         &eras,
         &refugia,

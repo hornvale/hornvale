@@ -32,7 +32,7 @@ hornvale_kernel::stream_labels! {
         /// grow/found/migrate/raid/collapse draws, taken sequentially from
         /// one stream in commit order at the composition root
         /// (`windows/worldgen::history_bake::bake`).
-        BAKE = "history/bake" => "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root";
+        BAKE = "history/bake/v2" => "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake by The Contour's position-aware conflict, which changes committed history without moving stream consumption order (decision 0006: an epoch suffix, never a rename)";
         /// Root stream label for the deep-history bake's genesis draws:
         /// how many proto-communities a people seeds with, which sites
         /// they take, and their tech-advance offset. The bake further
@@ -43,10 +43,15 @@ hornvale_kernel::stream_labels! {
         GENESIS = "history/genesis" => "the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset; further derives a per-people sub-stream history/genesis/<people-kind> via StreamLabel::dynamic";
         /// The per-occupation flesh seed the legibility surface derives
         /// before expanding residue/structures on demand:
-        /// `seed.derive(FLESH).derive(StreamLabel::dynamic(&entity_id))`.
+        /// `seed.derive(FLESH).derive(StreamLabel::dynamic(&material_key))`.
         /// Flesh is never committed, so this label scopes only on-demand
         /// rendering, but it is a permanent derivation contract and is
         /// declared here like every other.
-        FLESH = "history/flesh" => "the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed)";
+        ///
+        /// Bumped from `history/flesh` by The Salt, which re-keyed the seed
+        /// from the occupation's entity id onto its material core
+        /// (`record::material_key`) so derived prose stops moving when an id
+        /// moves. An epoch suffix, never a rename (decision 0006).
+        FLESH = "history/flesh/v2" => "the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed); keyed on the occupation's material core, bumped from history/flesh by The Salt";
     }
 }

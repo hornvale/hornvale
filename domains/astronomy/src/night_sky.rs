@@ -240,6 +240,9 @@ mod tests {
         assert!(!sky.wheels_backward, "prograde spin wheels the sky forward");
     }
 
+    /// claim: structural(seed: none — false-positive seed-loop flag; the
+    /// `.any(|s| ...)` closure's `s` binds a Vec<usize> element, not a seed) —
+    /// single fixed spinning_system(), sampled at 12 points across one year
     #[test]
     fn seasonal_visibility_actually_varies() {
         let system = spinning_system();

@@ -8,11 +8,16 @@ pub mod band;
 pub mod brief;
 pub mod chamber_prose;
 pub mod clock;
+pub mod eyes;
+pub mod fabric;
 mod focalize;
 pub mod interior;
 mod knowledge;
 pub mod lattice;
+pub mod lens;
+pub mod light;
 pub mod liveness;
+pub mod plan;
 mod purview;
 mod session;
 pub mod snapshot;
@@ -26,11 +31,14 @@ pub use chamber_prose::describe_chamber;
 pub use focalize::*;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
+pub use plan::{
+    PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanMark, PlanPoint, SessionPlan, Shading, plan_of,
+};
 pub use purview::*;
 pub use session::Session;
 pub use snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry, snapshot_json,
+    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
@@ -78,6 +86,28 @@ pub struct PossessOpts {
     /// fauna walking alongside the peoples. A settled-population unit test
     /// that isolates the peopled narration path sets this off.
     pub wild_agents: bool,
+    /// Whose eyes the possession's chart is coloured through (The Beholding,
+    /// Task 4). Defaults to [`eyes::Eyes::Own`] — colour on, through the
+    /// possessed agent's own species.
+    pub eyes: eyes::Eyes,
+    /// Which presentation lens the *drawn* chamber plan is filtered through
+    /// (The Lantern, Task 8, spec §7).
+    ///
+    /// **Defaults to [`lens::Lens::Off`], which is deliberately the opposite of
+    /// [`lens::Lens`]'s own `Default`.** The two defaults answer different
+    /// questions. `Lens::default()` answers "if a caller asks for a lens and
+    /// does not say which, what do they get" — the lantern, obviously; handing
+    /// back the identity there would be perverse. `PossessOpts::default()`
+    /// answers "what does a possession do when nobody has said anything", and a
+    /// possession's output is routinely *captured*: the book's gallery
+    /// transcripts are `possess --script` output, and the client fixtures are
+    /// snapshots of a default session. Spec §7's fourth constraint is that
+    /// lensed colour must never land in a committed artifact, so the safe
+    /// default at that boundary is off, and the CLI's interactive path opts in.
+    ///
+    /// This field reaches **only the terminal draw**. `plan_of` and the
+    /// snapshot never see it — `lantern_lens.rs` proves both halves.
+    pub lens: lens::Lens,
 }
 
 impl Default for PossessOpts {
@@ -91,6 +121,8 @@ impl Default for PossessOpts {
             day: hornvale_kernel::WorldTime { day: 0.5 },
             echo: false,
             wild_agents: true,
+            eyes: eyes::Eyes::Own,
+            lens: lens::Lens::Off,
         }
     }
 }

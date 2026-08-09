@@ -812,6 +812,7 @@ mod tests {
         }
     }
 
+    /// claim: sanctioned-sweep(pinned regime, ocean_fraction: 0.65 — no census home)
     #[test]
     fn sea_level_hits_a_pinned_ocean_fraction() {
         let geo = Geosphere::new(3);

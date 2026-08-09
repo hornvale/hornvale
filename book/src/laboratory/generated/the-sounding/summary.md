@@ -2,22 +2,24 @@
 
 Measured on ONE machine; timings are wall-clock and machine-dependent (the sample biographies below are byte-deterministic). Budgets are lines, not gates.
 
+Because of that, this page and its `rows.csv` are **excluded from the artifact drift check** (decision 0087): the nanosecond columns and the exponents fitted from them move between any two runs, so a byte-identity check on them could never pass. `sample-biographies.txt` stays strictly checked. Read the exponents and the scan-vs-index ratio as the result; read the absolute nanoseconds as a record of one run on one box.
+
 ## Workload census (base config)
 
 The measurements below are trustworthy only because the phenomena fired at volume: Grew 267351, Founded 29, **Raided 210772** (the inter-community coupling), Fled 210741 (deliveries landing), Collapsed 9464 — 10439 communities ever, 975 alive at the end.
 
 ## The coupling, shown — naive scan vs node index
 
-- **bake vs communities, SCAN delivery**: exponent ≈ 2.14 (quadratic ⇒ the architectural dead end the benchmark exists to catch)
-- **bake vs communities, INDEX delivery**: exponent ≈ 1.20 (near-linear ⇒ the fix, and what the shipping path uses)
-- at 2000 communities the scan is 13× the index and diverging.
+- **bake vs communities, SCAN delivery**: exponent ≈ 1.86 (quadratic ⇒ the architectural dead end the benchmark exists to catch)
+- **bake vs communities, INDEX delivery**: exponent ≈ 0.96 (near-linear ⇒ the fix, and what the shipping path uses)
+- at 2000 communities the scan is 17× the index and diverging.
 
 ## Bake scaling by axis (index delivery)
 
-- **bake vs communities**: scaling exponent ≈ 1.09
-- **bake vs species**: scaling exponent ≈ 0.02
-- **bake vs epochs**: scaling exponent ≈ 1.18
-- **bake vs avg_degree**: scaling exponent ≈ 0.00
+- **bake vs communities**: scaling exponent ≈ 1.15
+- **bake vs species**: scaling exponent ≈ 0.00
+- **bake vs epochs**: scaling exponent ≈ 1.22
+- **bake vs avg_degree**: scaling exponent ≈ 0.02
 - **bake vs long_range**: scaling exponent ≈ -0.02
 
 ## Sample biographies (deterministic)

@@ -50,6 +50,10 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+  - [The Teller — narrative discourse as a layer of its own](#the-teller--narrative-discourse-as-a-layer-of-its-own)
+  - [The causal trace — the fabula as a partial order](#the-causal-trace--the-fabula-as-a-partial-order)
+  - [Salience is a relation, not a property](#salience-is-a-relation-not-a-property)
+  - [The naming game — the missing axis of agreement](#the-naming-game--the-missing-axis-of-agreement)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The living community — history as a baked, derivable biography](#the-living-community--history-as-a-baked-derivable-biography)
   - [The connection graph — society's transport topology](#the-connection-graph--societys-transport-topology)
@@ -67,6 +71,12 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Detail below the floor — erosion as a readout of the material buffer](#detail-below-the-floor--erosion-as-a-readout-of-the-material-buffer)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
+  - [Terrain as a medium — the transfer verb and its period](#terrain-as-a-medium--the-transfer-verb-and-its-period)
+  - [The place with users — what a dungeon feature is not](#the-place-with-users--what-a-dungeon-feature-is-not)
+  - [Aurorae — the shield seen where it is struck](#aurorae--the-shield-seen-where-it-is-struck)
+  - [Betweenness — one surface, many readouts](#betweenness--one-surface-many-readouts)
+  - [Chokepoints — the bridge is the degenerate case](#chokepoints--the-bridge-is-the-degenerate-case)
+  - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -677,6 +687,150 @@ working in a room), and coarse constrains fine. One guard-rail: an era loop in
 which magic forces climate is a chaotic forward integrator, so it must
 re-derive from the seed at full precision and can never be checkpointed from a
 save's quantized floats.
+
+### The named layer — what the drawn lemma set is for
+
+Sequencing draws a culture's lemma set without saying what a lemma is *for*.
+It is the design's second layer, and the two layers differ on every property
+that matters. **Productions are discovered; accords are invented.** A
+production is a fact about the seed's physics. An accord is a *named*
+mid-level derivation — cultural, per-seed, historically caused, and worth
+nothing in the next world. That seam explains an asymmetry the design would
+otherwise have to assert: fluency in the productions transfers between
+playthroughs and knowledge of the accords does not, because the lower layer
+is found and the upper layer is made.
+
+**Naming is therefore the progression, and the power cap.** If a derivation
+becomes cheap only once it is named, then the accord vocabulary is a budget
+the player curates rather than a list handed over, and the practical ceiling
+is that budget's size. This closes the leak MAP-gate-by-incidence names: a
+determined caster who routes around the named layer by deriving from scratch
+pays the full proof length every time, so unbounded flexibility stays
+unbounded in principle and prohibitive in practice. Mathematics and cuisine
+both run on exactly this — a lemma worth reusing gets a name, which is how a
+field's working vocabulary stays small while its reachable space does not.
+
+**The drawn set is what defeats procedural oatmeal, and it defeats it by
+compression rather than by variety.** Ten thousand derivable spells are less
+perceptibly various than six named ones, because oatmeal is a legibility
+failure and more oats do not fix it. But a *randomly* drawn accord set is the
+same failure one level up: six arbitrary composites are still arbitrary.
+Drawing them from what a culture actually needed and proved — a besieged
+coast and a plague yield a different vocabulary than deep mines and a long
+winter — makes the difference legible because it has causes the `explain`
+verb can walk back. MAP-two-axis-options then binds the draw: an accord set
+varying on one axis is six flavours of *more*, so the selector must
+guarantee joint variation, checkable at generation time.
+
+The per-seed vocabulary is the roguelike identification game moved up a
+level, and improved by the move. A potion's identity is an arbitrary
+mapping and can only be narrowed by exclusion; an accord is a composition of
+productions already known, so it can be **read**. Identification becomes
+proof-reading, admits partial results — three of five steps, expensive,
+shares a sub-derivation with something named — and supports a profession,
+since inspecting a derivation should cost far less than performing one.
+
+**A spell corpus is the instrument that sets the parameters.** Decision 0095
+makes a corpus an instrument carrying a declared bias, and the trope matrix
+is the working example. A published spell list read the same way answers what
+this section otherwise has to guess: how many named units a satisfying space
+carries, and at what depth of composition. Escoffier says five; a class-based
+list says eight schools and then contradicts itself; a componential system
+says fifty cells and uses far fewer. Those are extractable numbers and they
+are the generator's parameters. The corpus wants storing as decomposition and
+provenance rather than as text — which is what the tvtropes corpus already
+does, and which is also what its licence permits.
+
+### Who performs the proof — the second factorisation
+
+The balance sheet above sorts traditions by *what they spend*. A second and
+orthogonal factorisation sorts them by **who runs the search**, and the two
+together place a tradition far more tightly than either alone. Negating the
+scholastic model one definitional property at a time generates the others:
+negate *the mage performs the search* and get the cleric (someone else
+proved it) and the shaman (a prover who may argue); negate *the mage holds
+the rules* and get the druid, whose proofs are held by a place and a season;
+negate *acquisition is by study* and get the sorcerer, in whom the proof is
+compiled at birth; negate *derivation repeats on demand* and get the pact.
+Negating *the rules are impersonal* gives a form with no common name — a rule
+set indexed to a person, so that two casters get different results from the
+same production.
+
+One axis will not hold them, which is the usual sign that there are two.
+Sorcery owns its rules and runs no search; clericism runs no search and owns
+none; wizardry owns and searches; shamanism searches by negotiation over
+rules it does not own. **Rule ownership × search-at-cast, four corners, all
+occupied** — and because a tradition is a position rather than a name, an
+*unoccupied* position is a foundable one. A world can lack a tradition it is
+capable of, and a culture can invent it during play.
+
+The dimensional prompts then supply tradition signatures without further
+design. Rate: study runs on days, sorcery is instantaneous, druidry is
+seasonal because the world sets the tempo. Direction: wizardry accumulates,
+sorcery is steady and must therefore grow somewhere other than its rule set,
+druidry oscillates, shamanism drifts as a relationship does, and a tradition
+losing its canon decays — the cultural-memory economy pointed at magic.
+Homogeneity decides which traditions need per-caster generation and which
+need per-institution: every wizard's repertoire differs, every cleric of one
+god shares a table.
+
+### The vision and the closed canon
+
+Two corners repay detail because the axes sharpen them past their usual
+descriptions.
+
+**Shamanism is black-box proof search.** The petitioner does not hold the
+prover's rule set, so the craft is probing another agent's capabilities and
+the central skill is distinguishing *cannot* from *will not* — a limit maps
+the rule set permanently, a preference is negotiable and reveals what the
+prover wants. A petition returns a proof, a refusal, or **a proof other than
+the one intended**, and that third case is the entire bargain-granted-sideways
+register, falling out of handing a goal to an agent with goals of its own
+rather than needing to be written. It makes specification, not power, the
+difficulty.
+
+It also makes the vision literal rather than decorative. A prover deriving
+over rules the petitioner does not hold must report in its own vocabulary, so
+**the symbolic vision is a type mismatch and decoding it is the type
+conversion** — a genuine proof in a language not yet held. The Teller renders
+it; difficulty is a real quantity (how much of that prover's vocabulary has
+been mapped, so a tradition's progression *is* dictionary growth); partial
+decoding yields a derivation with a hole in it; and a mis-decode does not
+error, it substitutes a wrong but well-formed symbol and **runs**, producing
+a real working that does something else. Two constraints decide whether it
+lands: the symbols must be motivated by the culture's own bestiary,
+geography and myth or the puzzle is a substitution cipher, and the generator
+must know whether a vision is decodable from the petitioner's current
+dictionary, so that acting on a partial reading is a decision rather than a
+trap. Interpretation is properly communal, which is what the social graph is
+already for, and disagreement about meaning is playable.
+
+**Necromancy is the tradition whose prover is dead**, which is a structural
+definition where salvage above is an economic one, and the two describe the
+same corner. A dead prover proves nothing new, so the canon cannot grow and
+advancement is archaeology rather than study. Because rules can be indexed to
+persons, what is recovered is a *particular* practitioner's idiosyncratic
+repertoire — which makes famous dead casters resources the world contains and
+factions contest, and which is the only route by which a whole named
+vocabulary is acquired at once, naming rationale included and unexplained.
+Recovery degrades the source, so a rule drawn from a spoiled one may be
+subtly wrong: a production that still fires and yields something adjacent.
+Recency of death is a gradient — the lately dead retain goals and can refuse,
+approaching shamanism; the long dead are rule tables with nobody home, and
+consulting them is extraction. The taboo follows from the arithmetic rather
+than from sentiment: a closed canon that degrades on use is a finite
+non-renewable cultural resource, so the objection is conservation, which
+reasonable people hold and can argue, and which makes the practice
+licensable rather than merely hunted.
+
+One artifact falls out of the two together and is the cluster's best
+advertisement for deriving rather than authoring. An ancestor mis-decodes a
+vision; the resulting accord works well enough to keep; it is named, taught
+and canonised; and three centuries later a people practise a rite that does
+something quietly other than what was asked for. **A canon can contain a
+fossilised mistranslation** — discoverable, nobody's fault, with a provenance
+chain `explain` can walk. Errors with causes, which is what a world that
+derives its own history should be able to produce without anyone writing it.
 
 ---
 
@@ -2154,6 +2308,514 @@ ledger that now holds none) rendered as the still-set table.
 
 ---
 
+## The Teller — narrative discourse as a layer of its own
+
+*(High confidence on the order model and the tense bridge — pure emit-boundary
+work over machinery that already ships; medium on the authoring template and
+the spin. Source: Nick Montfort, "Curveship's Automatic Narrative Style",
+FDG 2011, read 2026-08-01.)*
+
+**Hornvale has a Simulator and no Teller.** Montfort's observation about
+interactive fiction — that decades of work went into computer-controlled
+*characters* and almost none into computer-controlled *narrators* — describes
+this project exactly. The constitutional layering already draws his line, and
+draws it harder than Curveship does: domains model, windows present, and a
+test enforces the direction. But having separated the telling from the world,
+we never gave the telling any parameters. Every window narrates in one voice,
+in one order, in one tense, and there is no seam at which those could be
+anything else.
+
+**The order model is the sharp part.** Genette's anachronies — analepsis
+(flashback), prolepsis (flashforward), syllepsis (grouping by category),
+achrony (unordered) — are *descriptive* categories, and Montfort's
+contribution is the observation that generating them requires algorithms, and
+that a flat sequence of events cannot represent what the algorithms produce.
+The sequence `3 4 5 1 2 6 7` is ambiguous between a flashback, an achronic
+jumble, and a two-category sylleptic telling; nothing in the flattened list
+distinguishes them. Only an **ordered tree** does, because an analepsis is
+*embedded* beneath a node of its main sequence rather than concatenated with
+it. The embedding is not bookkeeping: it is what later determines the verb.
+
+**Where this bites today.** The historiography window recounts an entity by
+replaying its committed facts, and the ledger yields those in **commit
+order** — a contract deliberate enough to carry its own kernel test. Each
+line is stamped with the day it was asserted; nothing sorts by it. So the one
+narrative surface the project has renders *storage* order and presents it as a
+timeline, which in Genette's vocabulary is nearer achrony than chronicle. The
+repair is not to reorder the ledger. That contract is load-bearing, and
+reordering it would be precisely the Simulator/Teller confusion the
+architecture exists to prevent: an order of telling is a structure computed
+*over* the ledger for one telling and discarded afterward.
+
+**Syllepsis is the one that comes free.** Ordering by category instead of by
+time needs a partition of the facts, and the concept registry already
+partitions every fact by predicate and by asserting domain. "Everything the
+world knows about its water, then everything about its stone, each internally
+chronological" is a telling available today and never used — the cheapest of
+the orders, and the least like anything a game normally does.
+
+**The tense bridge.** Reichenbach's three times — speech, reference, event —
+determine a clause's tense, and Montfort's move is to compute tense from them
+rather than author it, letting the telling tree's topology assign reference
+and speech times systematically across embedded sequences. Both ends of this
+bridge already ship here and have never been joined. A fact's day is event
+time. The language domain draws, per tongue, how deeply tense grammaticalizes
+and which side of the word its affix binds — machinery that is measured but
+never *realized* against a real event time, because nothing upstream has ever
+asked for a tense. Joining them makes an already-paid-for conlang feature do
+visible work, and it is why the order model and the time of narrating cannot
+be built separately: they determine the same verb.
+
+**Frequency, and the axis a simulation needs most.** Genette's third category
+asks how many tellings correspond to how many events. Singulative tells once
+what happened once; repetitive tells many times what happened once; and
+**iterative** tells *once* what happened *many times* — "for a long time I used
+to go to bed early." A world simulation structurally produces enormous
+quantities of near-identical events: daily routes, tides, seasons, migrations,
+a thousand years of anything. Iterative narration is the mechanism for
+narrating that without drowning in it, and it reuses the *same* set-assembly
+machinery syllepsis needs, so the grouping is paid for once and spent twice.
+It also carries a sharp failure mode worth stating with it: aggregation
+destroys meaning faster than grouping does. Events that group harmlessly for
+ordering — "killed the dragon, then acquired the grail" — collapse under a
+single utterance into "altered some entities." Iteration demands more
+similarity than syllepsis, and the threshold between them is a calibration,
+not a constant.
+
+**Speed, and a second kind of meaningful nothing.** Each proposed expression
+carries a length factor, and the vocabulary over it is ellipsis, summary,
+scene, stretch, and pause. Deep time makes this structural rather than
+decorative: a chronicle spanning ten thousand years cannot be narrated at
+scene speed, so summary and ellipsis are the operations that make the long
+view sayable at all. The category that earns its own attention is **explicit
+ellipsis** — a telling that announces its own omission, "no mention shall be
+made of what happened in the southern part of the plaza." That is the
+discourse-side twin of the
+[anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable):
+one surfaces a gap the *world* has, the other declares a gap the *telling* has.
+Implicit ellipsis stays honest by remaining inferable from consequences —
+describe a room as empty, then show someone crossing it, and the reader knows
+an entrance was elided.
+
+**These axes cannot be set independently, and the coupling is three-way.** A
+single event cannot be told iteratively, so a flashback to one moment is
+incompatible with narrating the past iteratively; and a singulative flashback
+reads as urgent and businesslike where an iterative one reads as diffuse and
+uneventful. Order, speed and frequency jointly determine the same clause, in
+the same way order and the time of narrating jointly determine the same verb.
+Any of these built alone will be rebuilt.
+
+**Style as data — the spin.** Curveship keeps its narrative parameters in a
+file applied to an unchanged simulation: one fiction, many tellings, the world
+untouched. That is a shape this project has already ratified elsewhere —
+studies are data, metrics are code — aimed at prose: *spins are data, tellers
+are code*. The payoff is not expressive so much as evidentiary. A telling
+becomes a seed-stable, drift-checked artifact like every other committed
+output, so a change in voice reddens a gate instead of going unnoticed.
+
+A spin need not be *chosen*, either. A later system in the same lineage adds a
+third source: **infer it from the material**. A genre-detecting subsystem reads
+the story so far, decides what kind of story it already is, and sets the
+telling parameters accordingly — for a confession, it makes the sinner the
+narrator, drops the narratee, sets the narrating time to *after*, and selects a
+hesitant style. Its authors note this is backwards from human practice, where
+one picks a genre and then writes into it. For a simulation that generates its
+history first and narrates it second, backwards is the right way round: a spin
+inferred from a committed ledger is a pure function of it, so this third source
+costs no epoch and stays as reproducible as the world it reads.
+
+**The authoring middle.** Montfort's string-with-slots template — `[*/s]
+[are/v] inside _a_building, _a_well_house for _a_large_spring` — is argued as
+a deliberate compromise, on the grounds that abstract syntax representations
+are too costly to author and fixed strings too rigid to vary. This project
+sits at both poles and not in the middle: the focalizer and the chamber prose
+are format strings, while the clause layer is the abstract pole carrying
+exactly one construction. What the middle buys is visible in his own example.
+Underscored noun phrases shift from indefinite to definite on second mention —
+"you are inside a building" becomes "the building" — which the clause layer
+can already express and the focalizer cannot, because nothing tracks what the
+prose has already said.
+
+**Disnarration — the absence that must never become a fact.** A telling can
+report not only what happened but *what did not*: she did not turn back, no one
+came to the door. The structural finding in the source is the useful half —
+disnarration "is not the representation of action," so it cannot live in the
+list of actions and must be handled in the spin instead. That makes a third
+kind of meaningful nothing, and the three sit in three different places: the
+[anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable) is
+a gap the *world* has, explicit ellipsis is a gap the *telling* has, and a
+disnarration is a non-event the telling asserts. Only the first is ever a fact.
+The other two are constructs of the discourse, and a disnarration committed to
+the ledger as a negative fact would quietly corrupt what the ledger means —
+which is exactly the mistake the placement rule exists to prevent.
+
+**Refusal is not failure — and it is not narration either.** An action *fails*
+when its preconditions were met and its postcondition does not hold; it is
+*refused* when nothing happens in the world at all and something is said
+anyway. The distinction is sharp here precisely because it sits badly against
+an append-only ledger: a refusal is an utterance with no fact behind it. The
+dissertation behind this essay resolves the awkwardness by splitting the output
+channel rather than the ledger. Text serving the player's working-through — "you
+notice something unusual" — is addressed to the player as **commander**, and
+the system speaking it is a **suggester**, a second discourse layer beside the
+narrator with its own mood (direct instruction against indirect hint) and its
+own voice. A refusal is suggester text. It sits badly against the ledger
+because it was never narration in the first place.
+
+**The focalized and the commanded need not be the same.** Both are parameters,
+settable independently and arbitrarily — even to an agent the focalizer cannot
+see — and the commanded character may be set to *none*, in which case the
+system runs without input until it reaches a conclusion. That single
+observation is the mechanism under two ideas already banked here: the
+scholar-or-ethnographer vantage, and the autonomous observer that watches
+rather than plays. Attract mode is not a feature to build; it is a parameter
+set to none.
+
+**What it costs, and what keeps it honest.** All of this is emit-boundary
+work: no new world-state, no seeded draws, and therefore no epoch and no
+save-format change — *provided* the telling's parameters are chosen by an
+author or a player rather than drawn from a stream. A spin that draws has
+become a domain wearing a window's clothes, with no registry entry and no
+pin-isolation test. The honest test is Montfort's own: the same world, told
+several ways, must remain recognizably the same world. A reordering that
+changes which facts are asserted has stopped being a telling and become a
+second simulation.
+
+**Sequencing.** The order model, the tense bridge, speed and frequency are one
+campaign, because each of them helps determine the clauses the others produce.
+The template middle, the suggester channel and the focalized/commanded split
+are independent of that knot, and cheaper.
+
+---
+
+## The causal trace — the fabula as a partial order
+
+*(High confidence on the causal-edge mechanism, which is additive and cheap;
+medium on the reading modes it enables; low on the invariant proofs, whose
+reach the source itself bounds sharply. Source: Chris Martens, "Programming
+Interactive Worlds with Linear Logic", CMU-CS-15-134, 2015, read 2026-08-01.)*
+
+**The ledger records who spoke, not what was used.** A fact carries a
+free-form provenance naming the system that asserted it, and nothing anywhere
+records which *antecedent facts* it was derived from. So the historiography
+window can attribute but it cannot explain: it says "asserted by terrain," and
+it can never say "because of these three facts." The distinction sounds
+pedantic and is not — it is the difference between a byline and a causal
+graph, and every interesting question about a world is on the far side of it.
+
+**Causality is computable from resource-threading.** This is the borrowed
+result. In a forward-chaining proof, each rule application records which
+resources it consumed and which it produced. Give every resource a name and
+write each step as a binding — one rule, its inputs, its freshly-created
+outputs — and then causality is *derived*: draw an edge from one step to
+another whenever a name leaves the first and enters the second. That is the
+whole algorithm, and it produces the causal graph of a run without anyone ever
+authoring a causal link. Nothing in it requires linear logic as a substrate.
+It requires only that a rule application record its inputs and outputs, which
+is a property of how facts are committed, not of the logic they are written
+in.
+
+**Independence, and why a fabula is a partial order.** Two steps are
+interchangeable exactly when neither uses a name the other introduced. So a
+trace is not a sequence — it is a *partial order*, and the two readings of
+that structure are the same computation: what is ordered is causality, and
+what is unordered is concurrency. In the source's worked folktale, three
+characters building three houses are provably independent, so the order in
+which those are told is arbitrary; the antagonist, threaded as a single
+resource through every confrontation, forces those confrontations into a
+strict line. Nobody declared either fact. Both were read off the threading.
+
+**What this does to the telling.** The [Teller](#the-teller--narrative-discourse-as-a-layer-of-its-own)
+argues that an order of telling needs an ordered tree. This supplies the layer
+beneath it: the simulation determines a DAG, and a telling is a *linearization*
+of that DAG. Anachrony becomes a choice of which linearization, and where to
+embed it. The consequence that matters is a check rather than a feature — the
+set of legal tellings is *bounded* by the partial order, so a telling that
+places a consequence before its cause has not chosen an unusual style, it has
+lied. That is a mechanically checkable property, which is rarer in this
+territory than it sounds.
+
+**Reading modes fall out of the graph.** The sharpest is *follow the
+resource*: re-interpret simultaneity as alternation, and at each event offer
+the choice of which thread to follow to its next use. Follow the water;
+follow the tribute; follow this lineage. It is navigation over the causal
+graph rather than over space, and it is the cheapest real use of the graph
+once the graph exists. The [anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+sharpens in the same move: an absence backed by a causal graph can say what
+failed to happen *because* of what, rather than merely noting a gap.
+
+**The tension worth naming: linear versus persistent.** Our ledger is
+append-only and contradiction-checked — monotonic, which in this vocabulary is
+the *persistent* modality. Linear logic's premise is the opposite: a resource
+is consumed by being used. Two things survive translation even if the
+formalism never arrives. Conservation becomes *structural* rather than
+asserted — "this moves from here to there" is a single rule, and nothing can
+leak, so conservation stops being a property one has to remember to test.
+And multiplicity becomes expressible without indexing propositions by an
+integer, which planning formalisms cannot manage; in a resource logic one
+cannot even write a rule that deletes a fact, because other copies of that
+fact may exist. Whether any domain here should be *written* this way is
+genuinely open. That several of them are *about* conserved quantities is not.
+
+**Generative invariants, and the honest bound on them.** A generative
+signature is a grammar that generates every permissible state — the dual of a
+description that tears a state down — and a rule preserves the invariant
+exactly when it maps generated states to generated states. The appeal against
+a laboratory that samples is immediate: a census reports that two thousand
+worlds satisfied a property, where an invariant would say that every reachable
+world does. But the source bounds its own result sharply, and the bounds bite
+precisely here. There is no general algorithm for checking preservation; the
+decidability result covers only the variable-free fragment, by way of an
+arithmetic the author himself calls impractical; and *apartness constraints
+are inexpressible*, so well-formed **graph** properties — no self-loops, no
+multi-edges — are out of reach. Nearly all of this world's state is
+graph-shaped. What survives is the modest half, and it costs a document rather
+than a proof: write the generative signature down *at all* — a grammar of what
+a well-formed world state is, independent of the code that happens to build
+one. Neither it nor its dual exists anywhere in this project today, and even
+unproven it is a specification the laboratory can be checked against.
+
+**What keeps it honest.** A derived causal graph is only as true as the
+recording is complete. A rule that quietly reads a fact it does not declare
+produces an edge that does not exist, and the graph will look authoritative
+either way — the failure mode is a confident wrong explanation, which is worse
+than the missing one we have now. So the test is not that the graph renders;
+it is that a fact's recorded antecedents are exactly what its derivation
+touched, which wants a mechanical check rather than a reviewer's attention.
+
+**A generative system admits output that is not worth having.** This deserves
+recording on its own, because five independent sources now agree on it. The thesis
+behind this essay derives a perfectly valid proof in which the antagonist visits the
+last house first, nothing is contested, and two characters never act again — an
+outcome it concedes "can hardly be argued to have any conflict." A choice-generation
+system built on answer-set solving needs a whole third rule category, distinct from
+the rules that *construct* structure and the rules that reject *nonsense*, purely to
+"discard some valid stories as uninteresting." A planning-based quest generator
+reports an *unclassifiable* category as the single tallest bar in its own results
+figure, and passes over it without comment. And two of this project's own
+campaigns ran aground on simulations that admitted consistent, degenerate outcomes.
+The shape is constant: consistency is cheap, sense is checkable, and *interest* is
+neither — it is a separate class of constraint that no amount of correctness supplies,
+and a system that does not name it will keep rediscovering it one campaign at a time.
+
+The fifth source is also the only one that answers it with a **mechanism**
+rather than a bucket. A plot generator in a story-generation blackboard
+alternates two phases: *engagement*, which generates freely under content and
+rhetorical constraints while deliberately **avoiding explicit goals**, and
+*reflection*, which evaluates the material for novelty and interestingness and
+verifies its coherence. Filtering says "discard the dull." A cycle says
+generate goal-blind so the generator can surprise the evaluator, then prune,
+then generate again from the pruned state. The goal-blindness is the load-
+bearing part and the part a filter cannot supply: a generator steered by the
+interest criterion can only produce what the criterion already knows to want.
+
+**Sequencing.** The causal edges come first, because everything else here is
+downstream of them. The reading modes follow the graph. The generative
+signature is independent of both and is a writing task before it is an
+engineering one.
+
+---
+
+## Salience is a relation, not a property
+
+*(High confidence in the diagnosis, which is checkable against the code today;
+medium on the model, whose weights are unfitted; the religion consequence is
+the concrete payoff and has a falsified measurement already waiting for it.
+Source: Farrell and Ware, AIIDE-17, on Indexter's pairwise event salience
+hypothesis over Zwaan and Radvansky's event-indexing situation model. Read
+2026-08-01.)*
+
+**What salience is in this project today.** A phenomenon carries a scalar in
+`[0, 1]` — "how much this demands attention" — chosen by the domain that
+produced it. An observer's perception lens multiplies it by one of three
+per-venue weights, the result is sorted descending, and anything below a floor
+is dropped. The registry already states this signature exactly: *salience is a
+function of the phenomenon and the observer*. Nothing about **when**,
+**where**, or **after what** enters into it anywhere.
+
+**The missing argument.** The cognitive literature on how narrative events are
+stored and retrieved gives five indices — protagonist, time, space, causality,
+intentionality — and the pairwise hypothesis states that a past event is more
+salient when it shares at least one index with the most recent one. This is
+not an aesthetic claim: it was validated on *recall speed*, with readers
+interrupted mid-story remembering index-sharing events faster. The signature it
+implies has a third argument. Salience is a function of the phenomenon, the
+observer, **and the situation** — and the third is the one that makes an
+observation feel like it is about you.
+
+**Four of the five indices already exist as fields.** A fact carries its
+subject, its day, and its place; an agent's plans supply intentionality. The
+fifth, causality, is exactly the missing derivation argued
+[one section above](#the-causal-trace--the-fabula-as-a-partial-order). That is
+the third distinct payoff for the same small change, arrived at from a third
+direction — which is worth more than any one of the arguments for it.
+
+**The religion consequence, which is the reason this matters now.** Pantheon
+genesis takes the phenomena an observer sees, salience-descending, and mints
+one deity per phenomenon at or above a floor, the most salient presiding where
+society is stratified. Society shapes only the *structure* — which god presides,
+whether the cult is folk or organized — never the *membership*. And the
+observation feeding it is taken **once, at world genesis, from a single place**:
+the species' flagship settlement, its hemisphere culling the sky.
+
+Follow that through. Which phenomena are divine is a threshold applied to a
+number a domain author chose, adjusted by a species constant, sampled once at
+one location before any history exists. So a pantheon encodes **founding
+order** — it cannot encode lived experience, because no channel exists through
+which lived experience could reach it. Nothing a people survives can make a
+thing holy.
+
+This is not a prediction. A campaign chased a religion payoff, measured it,
+falsified it, and diagnosed the cause as "an artifact of founding order that
+has nothing to do with the physics," banking the repair as needing a campaign
+of its own. A context-free, genesis-time, one-observation-per-species model is
+precisely a machine for manufacturing that artifact, and no amount of
+correcting the *physics* upstream will move it. This essay is the shape of the
+second fix.
+
+**What the relation buys is coincidence.** Under an index model a phenomenon
+becomes salient to a people by *sharing* something with what they have lived:
+the comet that shared a year with the famine (time), the mountain that shares a
+place with the founding (space), the tide that shares a causal ancestor with a
+drowning (causality), the eclipse that thwarted a war (intentionality). Two
+communities of the same species under the same sky would then hold different
+gods, which is what religions observably do, and which the current model cannot
+express at any price.
+
+**Their limitations are our instrument's opening.** The source is candid that
+it weights all five indices equally ("which is likely untrue"), asks only
+whether *at least one* index is shared rather than how many, and considers only
+the single most recent event rather than all past events weighted by recency.
+Those are unfitted parameters — and a laboratory that generates thousands of
+worlds can fit what a hand-authored branching study never could. Index weights
+are a preregistrable calibration with a real null available.
+
+**What to refuse.** The source's own application is covert influence:
+engineering choices so that readers pick the ending the author wanted, with 82%
+reporting they had not felt influenced. Decline that. The line worth holding is
+that ranking by what an observer *would actually notice* is modelling
+perception, while ranking to move an observer toward a chosen outcome is
+manipulation — and this project has already committed to the view that nothing
+presented is exempt from having been chosen, with the caption carrying the
+honesty rather than the picture.
+
+**What keeps it honest.** A relational salience depends on history, and history
+makes it **path-dependent** — which is where determinism becomes expensive.
+Today's scalar is a pure function of a phenomenon and an observer, so it
+reproduces trivially. A salience that folds over what a community has lived
+must fold over a *committed, ordered* history or it will not reproduce at all.
+That is a positive argument for deriving it from the ledger, in the same
+posture as belief and drive, rather than accumulating it into a mutable score
+that a reload would have to reconstruct and could silently reconstruct wrong.
+
+**Sequencing.** Downstream of the causal trace, which supplies the fifth index.
+The pantheon is the first consumer worth converting, both because the model's
+poverty is most visible there and because a falsified measurement is already
+sitting in the record waiting for it.
+
+---
+
+## The naming game — the missing axis of agreement
+
+*(High confidence in the diagnosis, which is checkable against the code; medium
+on the mechanism's transfer from vocabulary to interpretation; the convergence
+prediction is preregistrable with a real null. Source: Inukai, Taniguchi,
+Taniguchi and Hagiwara, "Recursive Metropolis-Hastings Naming Game", Frontiers
+2023, over the two-agent MHNG. Expanded through three ideonomy passes,
+2026-08-01.)*
+
+**The acceptance rate is exactly zero.** Not low — zero. Pantheon genesis
+*proposes* a deity for every phenomenon above a threshold, and nothing anywhere
+in the model ever evaluates a proposal, so no belief can be revised, adopted
+from a neighbour, or abandoned. The same hole sits one domain over: the lexicon
+models transmission and change but never *agreement*. A word exists because a
+sound-change cascade produced it and a lineage inherited it. There is no
+mechanism by which a community converges on a word, and therefore none by which
+convergence could fail, or by which two neighbourhoods could settle differently
+for reasons of who-talks-to-whom rather than who-descends-from-whom.
+
+Both models have an inheritance axis and no interaction axis. That is the same
+diagnosis the [salience essay](#salience-is-a-relation-not-a-property) reaches
+from the other side, which is the reason to trust it.
+
+**The mechanism is one comparison.** A speaker samples a sign from its own
+percept; a listener accepts it with probability equal to the ratio of how well
+the proposed sign explains the listener's *own* evidence against how well its
+current sign does. Nothing else. The locality is not incidental — it is
+simultaneously what makes the exchange a valid Metropolis-Hastings sampler and
+what makes it a defensible model of communication, since no agent may read
+another's internal state. What the population does collectively is approximate
+Bayesian inference over a shared latent variable that no individual is
+inferring.
+
+Two properties make it unusually implementable here. The uniform draw the
+acceptance test needs is exactly what the kernel's seeded streams already
+provide, so the method is deterministic without modification. And the
+precondition — *joint attention*, two agents attending the same thing — is
+already computed, because two agents co-observing one phenomenon is joint
+attention in the required sense.
+
+**One machine at two sites.** Exonyms and endonyms are this same sampler with
+an unmixed chain: an exonym is what remains when two communities never ran
+enough rounds to converge. The lexicon case and the pantheon case are not
+analogous, they are one mechanism at two sites, which argues for building it
+once low in the stack rather than twice in two domains. A reasonable division
+of labour with the existing language work: the sound-change cascade owns
+**form**, and the naming game owns **the assignment of form to meaning**.
+Differential lexical replacement is where the two must be reconciled.
+
+**A priesthood is a biased proposal distribution.** This is the structural
+result, and it *removes* code rather than adding it. Acceptance is already
+asymmetric — one party proposes, the other judges — so the only knob needed is
+how far that asymmetry is pushed. Today a priesthood flips a rendered string
+between folk and organized. Under this model, orthodoxy, scripturalism,
+prophecy and heresy are positions of a single parameter over *who is listened
+to*, and the cross-product of acceptance rule against proposal source
+enumerates them: likelihood-from-a-stranger is syncretism, prestige-from-a-text
+is scripturalism, never-accept-from-anyone is the hermit. That last cell is
+already shipped here under another name, which is some evidence the
+cross-product describes something real.
+
+**Model the burn-in, never the limit.** The convergence theorems are all
+statements about infinite time, and the temptation is to run to stationarity
+and report the equilibrium. That instinct is exactly wrong for this
+application: real traditions never mix, and the transient *is* the history. A
+pantheon that has converged is a pantheon with nothing left to narrate.
+
+**Writing pins a sample.** A culture that acquires its own ledger freezes a
+state the chain cannot leave, converting steady drift into punctuated
+equilibrium and making reform a phase transition rather than an authored event.
+That is a *derived* account of why literate traditions are conservative, where
+today the project can only assert it.
+
+**The prediction, and its null.** A deity is currently atomic — name, epithet
+and sentiment minted together in one call. Decomposed, each component
+negotiates at its own rate, which predicts that neighbouring peoples agree on
+the fast-converging components and differ on the slow ones: sharing ritual
+while differing on names, or sharing names while differing on sentiment. The
+null is that all components converge together, so agreement between two peoples
+is all-or-nothing. Both are measurable against the census machinery, and the
+null is worth shipping.
+
+**Three risks, named before any spec.** The agents' shuffle order becomes
+**stream consumption order**, which is a save-format contract sitting in the
+middle of the method. The full recursion costs exponentially in the number of
+agents, so only the one-sample and limited-length approximations are usable —
+and the fidelity of those approximations is itself a measurement question. And
+the deepest: **a sampler has no memory of why it accepted anything.** If belief
+becomes a chain, provenance interrogation gets *worse* rather than better,
+unless every acceptance commits a fact carrying its antecedents — which is the
+[causal trace](#the-causal-trace--the-fabula-as-a-partial-order) again,
+arriving from a fourth direction.
+
+**Sequencing.** Downstream of relational salience, which decides what is
+jointly attended in the first place, and of the causal trace, which keeps the
+chain explicable. The pantheon is the better first site despite the lexicon
+being the mechanism's home domain, because the pantheon already has a falsified
+measurement waiting and the lexicon does not.
+
+---
+
 ## The social graph — a derived, self-balancing relational layer
 
 *(High confidence in the architecture and the balance dynamic; medium on the
@@ -2546,6 +3208,22 @@ toward vigilance or credulity, UNI-16), bumps a GOAP goal's priority (fear promo
 the safety goal), charges the social-graph edges (the affect *is* the edge's colour,
 SOC-9), and gates salience so emotional things surface first in the phenomena rank.
 It is the derived readout *and* the affective loop over the cognitive core.
+
+**The gap has a typology, and this essay does not yet use it.** *Expectedness*
+above is a single scalar — prediction-error against belief — where the choice-poetics
+literature types both of its sides. An action carries, per goal, one or more
+**expectations** (irrelevant, threatens, enables, fails, achieves) assigned from the
+outcomes that are *possible*; its result carries exactly one **perceived consequence**
+(irrelevant, hinders, advances, fails, achieves) assigned from what *actually*
+happened. The asymmetry is the load-bearing part — expectations are plural because
+several futures are live, consequences are singular because only one occurred — and
+the emotion is a function of the pair, not of either alone. Two further notes. An
+expectation is derived from the agent's *believed capability*, not from the true
+probability, which is the same substitution The Surmise made at the decision seam.
+And the source's own central limitation — that it reasons about an author's *guess*
+at expectations — does not bind here for NPCs: the planner computes the plan, so an
+NPC's expectations are known exactly rather than estimated. It binds only for the
+player.
 
 **Sequencing.** Lands with Milestone-2 liveness (it needs the appraisal inputs — the
 gap, the provenance, the prediction-error, the plan) and colours the focalizer before
@@ -3408,6 +4086,558 @@ psychology substrate is the discipline that saves this.
 
 ---
 
+## Terrain as a medium — the transfer verb and its period
+
+*(High confidence on the shape, which is a convergence rather than a
+discovery; medium on the verb roster's completeness. Prompted by a roguelike
+terrain-effect taxonomy of some forty effects across movement, character,
+item, combat and light — see [Intellectual lineage](#intellectual-lineage).)*
+
+**Forty terrain effects reduce to a shape the registry already holds twice.**
+Stripping the nouns — mud, lava, ice, brush and wall all become *a place*;
+slows, burns, destroys and blocks all become *conditions an attempted action*
+— every entry in such a taxonomy is of the form `(place, channel, body) →
+transfer verb`. That is precisely what `MAP-perceive-apertures` and
+`MAP-connectors-as-apertures` established from the perception side, with the
+collapse spelled out: an exit *is* an aperture, and passability is the `body`
+channel of the same `transmit(aperture, channel)`. A wall stops body and
+sight; a river stops body but not sight; a doorway passes both. A place is a
+**medium**, and the six categories such taxonomies use are not six kinds of
+terrain but one partition on *what crosses*.
+
+**The scalar cannot say what the roster needs.** Nine transfer verbs cover
+the forty, and a multiplier in `[0, 1]` spans only four of them — PASS,
+ATTENUATE, BLOCK, and ABSORB as its degenerate zero. The five it cannot
+express are the ones that make a place interesting rather than merely in the
+way. **AMPLIFY**: a faerie path, a killing ground that doubles a missile.
+**REDIRECT**: an ice slide, a teleport trap, refraction — what emerges leaves
+by a *different edge*. **DELAY**: mud, where passage succeeds but later.
+**TRANSFORM**: what emerges differs in kind from what entered — lava cooks
+the dropped food, a pane reddens the light, a tunnel returns a shout as an
+echo. **EMIT**: a source with no input at all, which no transfer function has
+a slot for — lava's own light, a swamp's smell, brambles' ticks. The channel
+roster is short too: the item and combat wings demand `object` (a portcullis
+passes sight and arrows but not a body or a crate) and `force` as distinct
+from `body`, and `scent` is required by `EXP-9` independently. Author M
+channels plus N verbs, never M×N — `MAP-27`'s economy applied to the place
+instead of to the object.
+
+**A transmit function with a period is a zeitgeber, and that is the half a
+roguelike cannot have.** The terrain-effect literature is almost entirely
+instantaneous and one-shot: you step on it, it resolves. Of forty effects,
+one is temporal, and it is filed under *other*. The reason is structural —
+such a game has no calendar its terrain can consult. This world has tides,
+seasons, a diurnal cycle, and an astronomy that dates all three.
+`MAP-connectors-as-apertures` names a single instance in passing, "flooded at
+this tide", as a derived Reason, and stops there. Generalised, transmission
+is a function of world-time: the tidal causeway is road twice a day and sea
+twice a day; the pass opens in summer; the river becomes a *road* when it
+freezes, a channel whose polarity inverts with the season; the night-only
+path. The payoff is not the obstacle. A periodic aperture **entrains** —
+`PSY-9`'s oscillator stack takes zeitgebers, The Quickening's people already
+walk daily routes, and a route gated by a period becomes a routine, a routine
+a market day, a market day a calendar and a pilgrimage.
+
+**Rate is the axis underneath, and it collapses a whole category.** The band
+runs instantaneous, per-step, accumulating, diurnal, tidal, seasonal,
+successional, geological. Two collapses fall out. Dwell effects — thirst in
+the desert, exposure on a peak — are transit effects *integrated over
+residence time*, not a separate category, so the taxonomy's entire character
+wing is the same function with the clock running, and `PSY-10` and `PSY-11`
+already own those homeostats. And STORE is DELAY at long rate: the bog that
+holds a body for two thousand years is the mud that slows you, one rate band
+over.
+
+**The roster is negatively skewed, and the positive pole is the one that
+generates history.** Catalogues run to BLOCK, DAMAGE, DESTROY, DRAIN because
+a roguelike prices terrain as combat friction. Flipped systematically — the
+prosease move — each has an analogue this world wants more. Blocks becomes
+**channels**: a ford, a pass, the only way through, therefore something that
+*concentrates* traffic and is an edge in `MAP-61`'s graph rather than a wall.
+Destroys becomes **preserves**; drains becomes **stores**; a hidden hazard
+becomes a hidden boon. The load-bearing one is preservation, because a bog
+that destroys what falls into it yields no archaeology while a bog that
+preserves it yields Tollund Man. `MAP-impression` grades trace durability by
+*material*; durability is equally a property of the *place*, and what
+survives is the product of the two — so anoxic bog, dry cave, ice and ash are
+the world's own long-term memory, and `MAP-30`'s palimpsest is thickest
+exactly where the negative-pole catalogue would have written "destroys
+items". Polarity is also **relational, never intrinsic** — the Gibson
+affordance point `MAP-19` already cites. Mud slows a walker and is *home* to
+a mudskipper; a wall stops a body and is a *road* to a climber. The sign of a
+transfer verb is a function of place, channel and **body**, and the body is
+already modelled.
+
+**Below full transmission the residue is error, not absence.** This is the
+channel the aperture model has no slot for, and it sits one step from
+machinery already argued: `MAP-perceive-apertures` says a hedged glimpse
+yields a low-confidence belief the planner treats as a hypothesis to verify.
+Take transmission below one and a place does not merely hide things, it makes
+observers *wrong*. Fog and dusk manufacture false identifications; a canyon
+misreports distance; an echo misreports bearing and count; a mirage
+manufactures water that is not there; still air holds a scent for hours after
+its source has left — a true perception of a false present, which is the
+DELAY verb operating in the scent channel. Under `UNI-1` belief is a fold
+over the ledger, so a systematically biased medium gives a whole region a
+shared and *derivable* folk error, and a culture whose territory contains one
+will lexicalise it. The two failure modes are worth keeping apart: a place
+that transmits **nothing**, where you know you cannot see, and a place that
+transmits **wrongly**, where you do not.
+
+The open fork, and a scale commitment `MAP-20` says to draw deliberately
+rather than by drift: whether the verb set becomes a richer return type on
+`transmit` — one function, nine outcomes — or a second function beside it,
+with `transmit` staying scalar for perception while a new `traverse` owns
+delay, redirect and transform for bodies and objects.
+
+## The place with users — what a dungeon feature is not
+
+*(High confidence on the negation and on the four-parent split; medium on how
+much of it is worth building. Prompted by ADoM's altars, herb bushes, statues
+and vaults — see [Intellectual lineage](#intellectual-lineage).)*
+
+**A classic dungeon feature is a vending machine for the protagonist.** Take
+four of them — an altar, a herb bush, a statue, a vault — and negate the
+properties that define the category. It is immobile; it is placed at
+generation; it is pointlike; it *reacts to the player*; it is known to the
+game but not to the world; its effect is authored; it affects the
+protagonist's statistics. The fourth and fifth negations are the same finding
+approached from two sides, and together they are the keystone. Every such
+feature fires only on player input, and no inhabitant has any relationship to
+it: monsters know the altar solely through a hardcoded rule about sacrificing
+whoever stands on it; nobody maintains, visits, avoids, or inherits any of
+them. The single exception proves the rule. The herb bush runs Conway's Game
+of Life whether or not anyone is watching, and it is the one feature of the
+four that generated an actual **practice** — gardening, seed planting, glider
+patterns, farming — rather than a one-shot payload. Negated, a place has
+**users**: a well someone draws from, a mill someone owns, a grove someone is
+forbidden to enter, a shrine that decays when its congregation leaves.
+
+**"Dungeon feature" is an implementation category, not a design one** — a
+thing occupying a tile that is not a monster, an item, or a wall. Walking the
+tree upward splits it into four unrelated parents, and each lands on a
+different layer of this world. A **station** is a verb you can only perform
+here (forge, altar, well) and belongs to the action layer of `MAP-27`. A
+**stock** is a renewable population with its own dynamics (the herb bush) and
+belongs to the ecology. A **monument** is a message about the past (statue,
+grave) and belongs with `MAP-impression` and `NARR-placed-content`. A
+**district** is a bounded region with a population (the vault) and belongs to
+demography. The same source further splits *forge*, a feature, from *smith*,
+an NPC; a station and its keeper should be one thing.
+
+**A place can change what agents are permitted to do rather than what
+physically happens.** The terrain-effect roster above is
+`(place, channel, body) → outcome`. An altar is
+`(place, occupant, witness, absent patron) → outcome`, and the difference is
+not a refinement but a different layer. An altar does nothing to you at all,
+yet standing on one is among the most dangerous acts available, because any
+intelligent creature that can *see* you acquires a new option — sacrifice —
+and will take it at four tiles' range, even when co-aligned. Its type is not
+intrinsic but a **match** between the place's alignment and the occupant's.
+It is **convertible by use**, contested between the user and the incumbent
+owner. Destroying one costs ten thousand piety with a party who was never
+present. Lifted, this is the **normative** twin of `MAP-19`'s physical
+commonsense ruleset, and it is culture-relative in the way physics is not: a
+stranger does not know this grove is a burial ground, and the whole dramatic
+content of trespass lives in that gap. Every input already ships — typed
+social edges in `SOC-9`, taboo and register in `LANG-25` and `LANG-34`, the
+religion domain, and a planner in `PSY-6` that can express "my available
+actions changed because you stood there". Sacredness is *believed*, so under
+`UNI-1` it is a fold over the ledger and can be locally wrong.
+
+**A stock is not a field.** The `Terrain` trait exposes `forage_value` as a
+number you read, unchanged by reading it. A herb bush is the other thing: a
+standing population that grows, spreads, dies, is damaged by harvest — an
+unskilled picker always degrades the bush — and can be deliberately
+cultivated with seeds and holy water, or exploited by anyone who has worked
+out the automaton. The empty branch is the finding. That game has exactly one
+stock, and the siblings are obvious and unbuilt: game, fish, timber, pasture,
+ore, water. This world is unusually equipped for the general case, holding
+supply fields in `BIO-35`, carrying capacity in `MAP-31`, and a trophic
+homeostat in `PSY-10` at world scale, with nothing at *room* scale to spend
+them on. Two implications. Harvest that damages the stock makes depletion and
+husbandry both possible, which is the room-scale face of `BIO-8` and of the
+extraction discount-rate family The Tithe left open. And cultivating a patch
+is `UNI-33`'s hysteresis at room scale — play committing an ordinary fact
+that conditions all future sampling — so gardening is not a minigame but the
+smallest instance of the world remembering.
+
+**Authored content is single-use, and its own community destroys it.** This
+is a third argument for derivation, orthogonal to the two the constitution
+already rests on. The statue table in that game is some two hundred
+crowdfunded entries, each a bespoke tuple of description, inscription,
+trigger and effect, and the entire experience each one delivers is a *first
+contact* — a one-shot information asymmetry between player and author. A wiki
+page ends it permanently, and the table becomes a lookup. The herb system is
+the control: eleven herbs and one cellular automaton, fully publishable, and
+knowing the rule makes it *better*, because the rule is what you play with.
+So the two poles differ not only in cost per unit but in whether the content
+survives being understood. A derived system's rules can be published in full
+and stay alive, since the instance is still new. `MAP-authoring-exchange`
+prices authored content by decay against situation prep; this prices it
+against **disclosure**, which is faster and total, and sharpens the case
+`REJ-6` and decision 0009 already settled from a direction neither argued.
+
+**A monument is placed content whose text the world can derive.** That is the
+concrete instance `NARR-placed-content` asks for, and a case where the
+authored pole is demonstrably payable in derivation. Two hundred statues were
+crowdfunded to obtain description, inscription, and a whiff of history; every
+input is held separately here already. *Who* it commemorates is a committed
+historical fact. *What it says* is the language engine at that culture's
+register and formulaic stratum. *Whether you can read it* is literacy plus
+tongue-distance, and an eroded or half-legible inscription is a **partial**
+reading rather than a coin flip — the same hedged-glimpse currency as
+`MAP-perceive-apertures`, now applied to text. *How worn it is* is age
+against material, `MAP-impression`'s durability ladder crossed with the
+preservation coefficient argued above. And what it does *not* say is the
+sharp part, since a monument is erected by a winner and its silences are
+derivable from the history it omits. Rendering, not authoring, is then the
+whole cost. One counter-case is worth keeping in view: the statue *effects* —
+kick for one point of speed — are arbitrary, and nothing here recovers them.
+A monument's payload is its **testimony**, which is the part this world can
+actually generate.
+
+## Aurorae — the shield seen where it is struck
+
+*(High confidence on the physics and on the existing-inputs claim, which was
+read off `domains/astronomy/src/anchor.rs` and `star.rs`; medium on how much
+of the cultural payoff is reachable. `SKY-11` filed aurorae as a one-line gap
+with the wrong gate.)*
+
+**The gate is magnetic latitude, not geographic.** A dipole is tilted and
+offset from the spin axis, so the auroral oval is centred on a pole the sky
+does not mark, and the oval's radius is not fixed either — harder stellar
+wind pushes it equatorward, which is exactly why a great storm is seen where
+an aurora does not belong. Three payoffs follow from the offset alone. A
+world can hold **two competing norths**, the celestial one that `SKY-circumpolar`'s
+geometry already supplies and the lodestone one, with the angle between them
+varying by where you stand: declination is therefore a genuine discovery a
+culture can make, wrong in a structured way before it is made, and the
+numeracy layer already grades who can make it. The magnetic pole **wanders**
+on a scale of centuries, so a navigational constant quietly goes stale within
+living memory — the sharpest available instance of a fact that is committed,
+true, and later false. And over deep time the field **reverses**, which the
+diachronic Book can render and which leaves a signature in rock that
+`MAP-39`'s lithology substrate could carry.
+
+**A dipole is derivable from facts the sim already commits, and half the
+worlds should have none.** A dynamo needs a convecting conductive core, which
+is a function of planet mass, spin rate and age; `Anchor.mass` at 0.5–2.0
+Earth masses, `Anchor.rotation` as `Spinning { day }` or `Locked`, and
+`Star.age` in gigayears all ship today, so the *existence* question costs no
+new draw. Stellar wind pressure likewise falls out of `Star.mass` and
+`Star.age`, which is the gap `SKY-13` names. The null is the finding, and it
+is not a shrug: a small, old, or tidally locked world has a frozen or
+sluggish core, hence no field, hence nothing deflecting the wind, hence a
+*stripped atmosphere*. "No aurora" and "no air" are one fact seen twice, and
+the pretty thing turns out to be the survival thing. That couples to
+`SKY-19`'s marginal-habitability consequences from a direction it does not
+yet argue, and gives `SKY-3`'s locked worlds a second visible cost beside the
+terminator. One caution: `Star.age` and effective temperature are documented
+as forbidden inputs to luminosity, habitable zone, insolation, orbit
+admission and climate. An aurora reads neither of those channels, but a
+campaign that let wind pressure leak into climate would breach the rule.
+
+**It is the one sky phenomenon that is not shared.** Everything else
+overhead is effectively at infinity — sun, moons, wanderers, neighbours — or
+is weather. An aurora sits *inside* the atmosphere at one to three hundred
+kilometres, which makes it the only sky object with real parallax, the only
+one that can be **below** an observer, and, the load-bearing part, the only
+one that two cultures a thousand kilometres apart do not see the same
+instance of. A shared sky is precisely what makes astronomy transmissible and
+corroborable between peoples; the aurora breaks that, and cannot be checked
+against a distant correspondent the way an eclipse can. Set beside Eclipse
+Seasons and The Long Count it is their negation on every axis: undated,
+local, unpredictable, and frequency-shaped rather than event-shaped. The
+payoff is historiographic. A great storm is **globally simultaneous but
+locally described**, so independent chronicles record that the sky burned on
+one night in mutually unrecognisable terms — and `UNI-27`'s meet-computation
+over disagreeing evidence acquires a first-class worked example in which the
+storm's date is recoverable from accounts that agree on nothing else.
+
+**Emission lines, where every other light in the world is a continuum.**
+Starlight, daylight, moonlight and surface reflectance are all broad; an
+aurora is a handful of narrow peaks — atomic oxygen green and red, molecular
+nitrogen blue-violet — so on the shipped ten-band grid from 340 to 740
+nanometres it lights two or three bands and leaves the rest dark. Two
+consequences follow at no cost. A species can be **blind to the aurora
+alone**: miss those specific lines and the rest of the sky is unaffected,
+which is the strongest and cheapest demonstration `EXP-3`'s "different
+species, different skies" will ever get, and the first case where the gap is
+a *line* rather than an acuity. And the palette **is a readout of the air** —
+change the atmospheric mix and the colour set changes, making the aurora to
+the atmosphere what `EXP-3a`'s reflectance naming is to the ground. A third
+falls out of the colour lexicon: a hue outside a culture's basic-term
+inventory gets named by its *motion* instead, which is what every Earth
+culture that saw one actually did. The dancers, the merry dancers, the fox
+fires. The aurora is named by its verb.
+
+**Three readings, from animacy, cardinality and age.** It is the only thing
+in the sky that moves unpredictably, and unpredictable self-motion is the
+classic animacy cue — everything else overhead is clockwork, which reads as
+machinery. So a world with aurorae should generate a *personal* sky-being
+where a world without generates an impersonal one, which is a derivable
+prediction over `PSY-4`'s deity valence rather than a flavour note. There are
+**two** of them, conjugate: northern and southern ovals firing simultaneously
+as magnetically linked mirror images, so a culture that establishes this has
+proved its sky is one object with two ends, an inferential step it can get
+wrong first. And the cardinality of the *field* is the health axis, because a
+dying dynamo goes multipolar — many ragged ovals is what a world losing its
+atmosphere looks like. Both terms decay with age: the pole wanders, the field
+reverses, the star's wind slackens. A world's aurora is brightest when it is
+young.
+
+**Lifted, this is a family the frontier already holds unlabelled members
+of.** An auroral oval is a magnetosphere drawing its own map at the moment of
+assault — invisible while it works, luminous exactly where the wind gets
+through, and its *shape* is the field's shape. Re-instantiated, that is one
+pattern rather than an analogy. In **belief**, `UNI-16`'s immune model makes
+doctrine legible at its heresies: a creed's edges are surveyed by the trials,
+not by the catechism. In **norms**, a taboo grove is invisible until
+trespassed and the reaction is what reveals it, which is also why `EXP-4`'s
+benign-violation humour works as a norm-*probe*. In **language**, a
+phonological rule surfaces in its repairs. In **terrain**, a BLOCK verb is
+inferred from what fails to arrive and never observed directly. The
+methodological edge is the sharp one: where a boundary is invisible by
+construction, the violation log is not a poor proxy for it — it is the *only*
+instrument, and a world with no recorded transgressions has not shown that
+its boundaries are strong.
+
+## Betweenness — one surface, many readouts
+
+*(High confidence that the readouts collapse to one computation; medium on
+the desire-path feedback claim, which is explicitly preregistered below
+rather than assumed. Prompted by Red Blob Games on all-pairs pathfinding —
+see [Intellectual lineage](#intellectual-lineage).)*
+
+**One all-pairs computation, many readouts — and betweenness is not
+traffic.** Counting how many shortest paths cross each cell yields a single
+surface off which crossroads, choke points, road placement, encounter rate,
+refuse deposition and stall rent are all *readouts* rather than separate
+systems: `MAP-27`'s M+N economy applied to the place graph. Two distinctions
+hide inside the phrase "traffic map". Betweenness assumes **uniform demand**
+— every pair of cells trades equally — whereas real traffic is betweenness
+weighted by who actually wants to go where, and this world holds populations,
+so the demand-weighted surface is a different picture entirely: all roads
+lead to the large settlement, not to the geometric middle. And **busy is not
+the same as forced**. A choke point is high betweenness with *low*
+redundancy, a Tarjan bridge or articulation point whose removal splits the
+graph; a crossroads is high betweenness with *high* redundancy. Only the
+first is worth fortifying, taxing, or besieging. Cost is the constitutional
+fit: the published demo measures a fortyfold gap between Floyd–Warshall and a
+specialised breadth-first search, which makes this a compute-once-and-commit
+quantity under decision 0009, exactly as The Waymark's `home_nav` cache is
+already a partial all-pairs.
+
+**A desire path modifies the graph it is computed from.** Betweenness is a
+function *of* a fixed graph; a desire path is positive feedback *on* it —
+use packs the ground, packing lowers cost, lower cost raises use — which is a
+categorically different object and the one place in this family where the
+quantity is not a readout. The prototype already ships and is not recognised
+as one: the globe computes a per-cell upstream `drainage` accumulation, and
+"how much flow crosses this cell" is the same shape as "how many paths cross
+this cell" with gravity supplying the destination. Channel incision is the
+identical reinforcement loop, which is why drainage networks are self-similar
+and power-law. The measured distribution is already heavy-tailed —
+`domains/terrain/src/water.rs` documents seed 42's land cells at median
+drainage 2 and ninetieth percentile 11. **The caution is earned.** The
+Tumult's sandpile and The Tithe's accumulation each predicted a power law and
+each was falsified, at sigma near 0.05 and 0.11 respectively with the shape
+staying geometric. A *spatial reinforcement* process is a structurally
+different third candidate with considerably stronger empirical backing than
+either, which is exactly the situation in which the prediction should be
+frozen before the code rather than after. The opposite-sign sibling is
+**wear**: a rut that deepens into a gully accumulates traffic's trace while
+*raising* cost, so the same input with the feedback flipped gives abandonment
+instead of a road.
+
+**A refuge is not merely a place nobody passes.** Low betweenness alone
+describes empty ground, which is most of a world. A refugium is low
+betweenness **times high detour cost from the nearest high-betweenness node**
+— nobody goes there *and* going there is expensive — which is what actually
+makes mountain valleys, marsh interiors and islands hold relict populations.
+The second term is already modelled, since The Uncommon Ground gates
+`endemic` on isolation, but the pairing is not, and it hands `MAP-22`'s
+coexistence stack a spatial mechanism for holding the weak open beside its
+price-the-might one. The **dual** is deposition: refuse concentrates as
+betweenness times *dwell* time, so a midden sits where people stop rather
+than where they pass, and what a midden yields centuries on is that product
+times the place's preservation coefficient — which is why middens are the
+richest archaeological source there is. High-traffic and no-traffic are one
+axis read from both ends.
+
+**Encounters are a product, not a sum.** You do not meet people where the
+paths are busy; you meet them where *your* path and *theirs* both go, so
+encounter rate goes as the product of two path distributions rather than as
+betweenness itself, and the surface squares. A cell everyone crosses is where
+you meet everyone, and the falloff away from it is much steeper than the
+traffic map suggests. Three things fall out of the same number. An **ambush
+predator's optimal station is the betweenness maximum** — that is what a
+highwayman is, and what a trapdoor spider is — so predation placement becomes
+derived behaviour rather than an authored spawn table, and the
+wandering-monster table is retired by a quantity the graph already implies. A
+**market stall** wants the same cell, and since not everyone can have it the
+allocation is a bid-rent equilibrium over the betweenness surface, sorting
+sellers by margin per passer: the same shape as `MAP-22`'s
+might-buys-cost-and-rarity, one scale down. And the two uses **compete for
+one cell**, which is a derivable reason a place is contested with nobody
+authoring the contest.
+
+**Derived infrastructure that the culture believes was authored.** A desire
+path is invented by its walkers collectively and chosen by none of them —
+spontaneous order, with no builder to name. But a culture arriving three
+centuries later finds a *road*, and a road implies a road-maker, so it
+attributes one: ancestors, a king, a god, giants. That is `MAP-19` and
+`MAP-20`'s folk-knowledge gap pointed at *artifice* rather than at physics,
+and it is sharper there, because a wrong belief about gravity rarely has a
+name attached while a wrong belief about a road generates a **founder
+figure**, a claim of descent, and a territorial argument. The sim knows the
+road was derived; `UNI-1`'s fold knows only what the ledger recorded; the gap
+between them is free, durable, checkable content. It generalises past roads
+to any accreted structure — a ford, a terrace, a boundary hedge, a midden
+mound built upon.
+
+## Chokepoints — the bridge is the degenerate case
+
+*(High confidence on the substitution and on the institutional split; the
+feudalism claim at the end is preregistered, with the null named. Prompted by
+Tarjan's bridge-finding algorithm read against The Twins — see
+[Intellectual lineage](#intellectual-lineage).)*
+
+**A graph bridge is boolean and a strategic chokepoint is not.** The Twins is
+the worked example precisely *because it fails the definition*: removing it
+disconnects nothing, since the Green Fork can be forded elsewhere, and House
+Frey's leverage was never "there is no other crossing" but "the other
+crossing costs three weeks and Robb has not got three weeks". So the quantity
+is **detour cost** — delete the edge, recompute, sum the path-length increase
+over the pairs that used it — and a place is strategic when that detour
+exceeds what the traveller can afford, which is a relation between the edge
+and a **budget** of time, supply, season or spoilage rather than a property
+of the edge. It is therefore **time-varying by construction**: the same ford
+is a chokepoint in flood and nothing in drought, and The Sundering already
+shipped the time-varying graph this wants. Two practical notes. Tarjan is
+O(V+E), a single depth-first search, and therefore far cheaper than the
+all-pairs half above — run it first and let it, plus the betweenness surface,
+nominate the few edges worth the expensive deletion test. And a chokepoint is
+a fact about the **modality set**, not about geography: which edges count
+depends on foot versus cart versus keel versus winter road, so *adding a mode
+destroys a chokepoint*, which is why maritime powers break land monopolies
+and which puts `MAP-55` and `MAP-11` straight onto this machinery.
+
+**A realm's natural borders are its bridges.** Tarjan's by-product is the set
+of maximal subgraphs containing no bridge: regions inside which movement is
+robust, always with two ways round, joined to their neighbours only through
+edges whose loss splits them. That is a candidate derivation of what a
+**region** *is*, replacing a Voronoi blob around a capital with a topological
+object, and it yields the march and the frontier for free, since a marcher
+lord is precisely a lord stationed at a bridge. The two graph primitives
+further split into two settlement archetypes. A bridge is an *edge*, and an
+edge-chokepoint grows a **castle** with a toll and a holding lineage. An
+articulation point is a *vertex*, and a vertex-chokepoint grows a **capital
+that cannot be bypassed**, whose fall severs a realm rather than taxing it.
+Different institutions, different failure modes, one search. Like everything
+on this graph it is scale-relative: a bridge is a door at room scale, a pass
+at cell scale, a strait at world scale.
+
+**A chokepoint is not found, it is made, and the making runs the desire-path
+loop backwards.** A natural detour-cost maximum attracts a fortification —
+nobody builds a castle where there is a way round — the fortification adds a
+toll, and the toll converts detour cost into **rent**. Set against the desire
+path above the symmetry is exact, and the pair is one mechanism at two signs:
+a desire path is *emergent* positive feedback **lowering** cost at a
+high-traffic cell, while a tollhouse is a *deliberate institution* **raising**
+cost at the same kind of cell in order to extract from it. A ford gets both
+at once — the path wears in, and someone builds a gate on it — so the same
+surface simultaneously grows infrastructure nobody authored and an
+institution somebody did. The rent is bounded by the detour, which makes the
+toll **derivable rather than authored**: charge more than the going-round
+cost and the traffic goes round, so the equilibrium toll tracks the
+second-best path and *falls* the moment a rival crossing opens. That gives
+the station-with-a-keeper argued above its first fully derived instance.
+
+**The distribution of detour costs is a knob on how feudal a world can be.**
+The null runs the argument. In a fully biconnected graph every place has two
+ways round, no place is worth holding, and the political map is flat — so
+strategic geography is not a given but a *property of the terrain the sim
+already generated*. River-cut, high-relief and archipelagic land yields many
+bridges and therefore many petty holders with real, local, non-delegated
+leverage; flat steppe yields almost none, and admits either empire or
+nothing, with no stable middle. That is a **terrain → polity** derivation
+over geometry computed today, and unlike most claims in this neighbourhood it
+is measurable: bridge count and detour-cost distribution per world are census
+metrics, testable against settlement fragmentation across the seed battery
+rather than argued. Preregistered, the prediction is a *monotone* relation
+between bridge density and polity count at fixed population, and the
+interesting outcome is the null — `MAP-61`'s graph may already be too
+well-connected at cell scale for any true bridge to exist at all.
+
+## The far field is low-rank — multipole summaries and one-way aggregation
+
+*(Medium confidence on the applications, high on the negative result and on
+the aggregation argument, which explains an existing decision from outside.
+Prompted by the Fast Multipole Method — see
+[Intellectual lineage](#intellectual-lineage).)*
+
+**The tempting application is the wrong one.** Read next to the betweenness
+essay above, the natural leap is to accelerate all-pairs shortest paths with
+it. That does not work, and the reason is worth recording so nobody spends a
+campaign discovering it. The Fast Multipole Method sums a smoothly decaying
+kernel — inverse distance, logarithmic — over many sources; shortest-path is
+min-plus algebra, and a `min` admits no multipole expansion, because there is
+no way to write "the shortest route through this distant cluster" as a
+truncated moment series. The right family for hierarchical routing is
+contraction hierarchies, hub labelling, and transit-node routing, which
+exploit hierarchy for far-field *routing* queries the way this method does
+for far-field *sums*. The two look adjacent and are not.
+
+**Where it genuinely applies, the signature is a sum over many sources of a
+distance-decaying kernel.** In this world that is the gravity-model shape,
+population times population over distance to some power, and it appears
+wherever pairwise interaction between places is computed: settlement
+interaction, migration, trade volume, cultural and language diffusion,
+contagion. All are quadratic in settlements and all are correctly
+accelerable. Thaumic flux qualifies too, if it is a sum of source
+contributions rather than a graph flow. The honest negatives matter as much:
+tides and gravity involve at most four moons and one star, and the method
+only beats direct summation above roughly a thousand sources, so it is
+strictly worse there; the same holds for the starfield at two to five
+neighbours. The speedup is not the reason to care.
+
+**A far-away many is a near-away few, to controlled precision.** That is the
+lift, and it is the part worth keeping. A multipole expansion is a
+*sufficient statistic for far-field influence*, and the truncation order buys
+a stated error bound that falls off as the distance ratio raised to that
+order. This world asks "what does a distant aggregate look like?" in at least
+four places — perception falloff through apertures, the Cartographer's
+salience-budgeted feature selection per zoom, coarse-to-fine field
+refinement, and the book's altitude hierarchy — and answers it *ad hoc* each
+time. The method says the answer has a **form** and an **error bar**, which
+reframes level of detail from a design choice into a controlled
+approximation, and that is much closer to this project's temperament than
+"it looks fine at that zoom".
+
+**The moment vocabulary renders directly as prose.** Monopole: how many.
+Dipole: which way it is shifting. Quadrupole: strung out along a line versus
+blobbed. *The Vale folk, numerous, drifting south, strung along the river* is
+a rank-three multipole readout of a population — cheap, hierarchical,
+derivable — and the truncation order is exactly the label rung in
+`NARR-altitude`'s hierarchy. A regional summary at any zoom is a truncated
+expansion, and choosing the altitude is choosing where to truncate.
+
+**Why this world is allowed to aggregate one way when the method cannot.**
+The method is bidirectional: aggregate upward, disaggregate downward.
+Decision 0038 is deliberately one-way — coarse constrains fine, and fine may
+refine but never re-quantize coarse, because a finer re-quantization would be
+an epoch. The asymmetry is not conservatism, and the reason is decomposability.
+The method's aggregate is an **associative sum**: two clusters' moments merge
+into the pair's moments exactly, which is what makes its upward pass sound.
+Coarse truth here is **categorical** — biome resolved by max-weight corner
+inheritance — and categorical aggregation is not associative, so "tundra" and
+"steppe" have no well-defined merged parent the way two dipoles have a sum.
+Decision 0038's one-way rule is forced by the algebra of what is being
+aggregated, which is a justification for it that the decision record does not
+currently give.
+
 ## Intellectual lineage
 
 So the reasoning is recoverable when it has gone cold: benign-violation
@@ -3456,6 +4686,29 @@ the ideonomy monographs, via Grace Kind's synthesis essays at gracekind.net
 organons, dimensions — over captured ideas); Rune Skovbo Johansen, "Fast and
 Gorgeous Erosion Filter" (2026) (gradient-aligned procedural erosion as a
 pointwise filter rather than a simulation — the technique the material-buffer
-readout above is argued against).
+readout above is argued against); Gérard Genette, *Narrative Discourse*, with
+Hans Reichenbach, *Elements of Symbolic Logic*, via Nick Montfort's Curveship
+(narrative order as generating algorithms over an ordered tree, and tense
+computed from speech, reference, and event times rather than authored); Chris
+Martens, *Programming Interactive Worlds with Linear Logic* (causality derived
+from resource-threading, a trace as a partial order rather than a sequence,
+and generative signatures as grammars over well-formed state); Michael Mateas,
+Peter Mawhorter and Noah Wardrip-Fruin on choice poetics (a choice as context,
+options and outcomes, read against expectations and perceived consequences —
+taken here as an instrument for recognising dramatic structure, never as a
+generator of it); Rolf Zwaan and Gabriel Radvansky's event-indexing situation
+model, via Rachelyn Farrell and Stephen Ware on Indexter (salience as a
+relation between an event and the situation, over five shared indices — taken
+here for the perception model and explicitly not for the influence result
+built on it); Tadahiro Taniguchi and colleagues on the Metropolis-Hastings
+naming game (a population converging on shared signs by accepting whatever
+better explains each hearer's own evidence — decentralized inference over a
+latent variable nobody infers alone); Dov Monderer and Lloyd Shapley on
+potential games, via Diehl et al. (an N-agent equilibrium collapsing to a
+single optimization when pairwise coupling is symmetric); Gerald Prince on
+*disnarration* and Rafael Pérez y Pérez on the engagement–reflection cycle,
+both via Slant (the narrated non-event as a construct of discourse rather than
+of world; and goal-blind generation alternating with evaluative pruning, as the
+one mechanism offered against consistent-but-uninteresting output).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.

@@ -56,8 +56,8 @@ unrest or aridity, whichever is worse) toward exactly zero. Each species
 reads its own copy of `K`, its psychology folding in much as it did under
 the retired formula: a longer time horizon scales up the freshwater term,
 a bolder threat response scales down the effective hostility — an identity
-substitution at the goblin baseline, a real divergence at kobold's
-authored values. The field's grounding is calibration-checked, not
+substitution at the manikin, where goblin's authored values currently sit,
+and a real divergence at kobold's own. The field's grounding is calibration-checked, not
 asserted: measured against the real biomass-by-latitude gradient, the
 tropical-and-temperate band supports roughly **27×** the capacity of the
 polar band, decisively reproducing the pattern real biomes show.
@@ -105,7 +105,8 @@ mechanism kept, just read off the flow instead of a suitability score.
 
 **Joint condensation, the settling peoples (Campaign Y2-1; The Branches;
 recut by *The Menagerie*).** Every world places for the settling peoples —
-goblin, hobgoblin, bugbear, and kobold — filtered from a registry that now
+goblin, hobgoblin, bugbear and kobold when this was written; today also the
+gnoll, the human and the three dwarves — filtered from a registry that now
 also holds a biosphere-only menagerie (fauna do not settle). Originally each
 people condensed its own carrying field independently; since *The Menagerie*
 cut genesis over onto the competitive niche-K coexistence stack, the peoples
@@ -227,8 +228,19 @@ never stored. The present frame is a *query* over the communities still alive,
 not a separate tier of state. Because the world is finite and equilibrating,
 displacement is kept perpetually alive without a floor: era-varying
 habitability (glacial advance and retreat) drives sustained migration, and a
-preregistered census gate *aborts the build* if displacement fails to fire at
-volume. On the world that campaign measured, displacement resolved as climate
+preregistered gate fails the build if displacement stops firing.
+
+Two things about that sentence changed under The Tense and are worth stating
+plainly, because the shape of the claim moved rather than its truth. First,
+*habitability* is no longer a mask laid over the world: it is a **relation
+between a people, a cell and an era**, expressed as that people's carrying
+capacity there (decision 0107). Cold ground is not switched off, it is made
+poor, and a species is excluded by arithmetic rather than by decree. Second,
+the displacement gate is no longer read off one world. Migration now scales
+with how much a given world's climate actually moves, so a mild deep past and
+an inert bake are indistinguishable from a single seed; the gate reads a
+**spread** — total volume across a panel, plus a requirement that displacement
+fires on more than one world. On the world that campaign measured, displacement resolved as climate
 **migration**, not war — vacant land let a frozen-out community move rather
 than raid — so organised conflict was deferred to a later campaign of the
 program, which has since arrived (see the conflict section below). Two measured
@@ -241,6 +253,17 @@ site's layers and their flesh render through a read-only surface (the `history`
 CLI verb and the almanac); see [The Living
 Community](../chronicle/the-living-community.md).
 
+The "committed fact" that flesh is a function of is specifically the
+occupation's **material core** — its people, site, span, size, tech, function,
+cause and notability — and deliberately *not* its entity id, which is a mint
+counter and says nothing about the world. [The Salt](../chronicle/the-salt.md)
+made that true of every derived readout here: a ruin's remains, the order its
+layers stack in, and the name of the figure who founded it are all functions of
+what the world states, so they no longer move when an unrelated change shifts
+the numbering. The consequence is deliberate — two occupations identical in
+every material fact leave *identical* remains, because the alternative was
+distinguishing them by mint order, which is entropy the world does not have.
+
 **Communities fight over value, not over room (The Tumult).** The history's
 conflict rule was rewritten to drop density entirely. Each epoch, after growth,
 a community scans the occupied cells it can reach across that era's connection
@@ -248,10 +271,13 @@ graph and raids the best one that is both **worth more than its own** (the
 era-effective capacity field, the same one growth reads) and **held by someone
 it can beat** (population scaled by technological horizon, by a margin). Two
 vetoes inhibit it: a target already starving against its own capacity has
-nothing worth taking, and a people whose authored threat response falls below a
+nothing worth taking, and a community whose threat response falls below a
 threshold does not raid at all — which makes the aversion structure asymmetric
-with no pairwise machinery, since each people gates on its own trait. On the
-shipped roster the goblin never raids anyone. A raid is a **conquest**: the
+with no pairwise machinery, since each raider gates on its own trait. That
+second veto read a *species constant* until *The Tolerance*, when it became a
+per-settlement draw: two towns of one people, founded on different ground in
+different centuries, can now answer it differently, so no people is simply
+warlike or simply not. A raid is a **conquest**: the
 raider takes the cell and the loser is driven off, war destroys a fraction of
 the combined population on both sides rather than transferring it, and the
 displaced people re-enters the same rule with its baseline substituted —
@@ -363,21 +389,27 @@ Tithe](../chronicle/the-tithe.md).
   (`pays-tribute-to`) over the ledger's existing entity-to-entity fact
   envelope, and no new fact shape, cause of ending, or stream label.
 
-Seed 42 under a spinning sky now grows **329 settlements** as the present
+Seed 42 under a spinning sky now grows **145 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
-competitive niche-K stack, five peoples share the landscape — the four
+competitive niche-K stack, nine peoples share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
-Branches](../chronicle/the-branches.md) gave them two new members) and the
-gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added —
-but history now separates them into distinct territories and each holds its own
-chief settlement: the hobgoblin **Feamjeafeoqoanoagoo** (127 souls,
-tropical-rainforest) is the world flagship, with the gnoll
-**Gzaadmzhooqdsootngsootqzhoof** (119, tropical-rainforest), the bugbear
-**Qvooshtvoagootao** (118, tropical-seasonal-forest), the goblin
-**Fneksvotngetnoaboo** (118, tropical-rainforest), and the kobold
-**Roqrrarogxok** (110, temperate-forest) each holding their own — real,
+Branches](../chronicle/the-branches.md) gave them two new members), the
+gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added,
+the human, the no-refuge generalist [The
+Generalist](../chronicle/the-generalist.md) added, and the three dwarves —
+desert, gully and hill — that [The Delvers](../chronicle/the-delvers.md)
+added as one family — but history now separates
+them into distinct territories and each holds its own
+chief settlement: the hobgoblin **Toa** (84 souls,
+tropical-seasonal-forest) is the world flagship, with the bugbear **Googo**
+(68, tropical-rainforest), the desert-dwarf **Daddadpadgad** (51,
+shrubland), the kobold **Xoraxa** (46, temperate-forest), the gnoll
+**Psoaxsmaapgzhopgshoop** (41, temperate-forest), the gully-dwarf **Tabtat**
+(37, tropical-seasonal-forest), the hill-dwarf **Bagsmogbatgat** (35,
+temperate-forest), the human **Moengato** (35, temperate-forest), and the
+goblin **Toabebe** (34, taiga) each holding their own — real,
 phonology-drawn names
 (Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
 worth stating because it is easy to misread: a *people's* chief settlement is
@@ -392,7 +424,7 @@ the equilibrium snapshot's, because a settlement's headcount is now something
 that *grew* there over the history rather than a single field readout. The
 gallery holds the exit-demo pair: [The
 Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
-tidally-locked twin](../gallery/settlement-seed-42-locked.md) (250
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (224
 settlements), where habitability's collapse toward the terminator ring
 (Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm

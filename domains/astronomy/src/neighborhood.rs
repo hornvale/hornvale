@@ -61,6 +61,21 @@ pub fn class_name(class: NeighborClass) -> &'static str {
     }
 }
 
+/// The registered concept for a neighbour of this class. Total by
+/// construction: a new variant fails to compile here, so no call site needs a
+/// fallible lookup.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn class_concept(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::RedDwarf => "red-dwarf",
+        NeighborClass::SunLike => "sun-like-star",
+        NeighborClass::WhiteDwarf => "white-dwarf",
+        NeighborClass::OrangeGiant => "orange-giant",
+        NeighborClass::RedGiant => "red-giant",
+        NeighborClass::BlueGiant => "blue-giant",
+    }
+}
+
 fn class_color(class: NeighborClass) -> &'static str {
     match class {
         NeighborClass::RedDwarf => "dim red",
@@ -203,5 +218,72 @@ mod tests {
         // it brightest here (asserted, not assumed).
         assert_eq!(neighbors[0].class, NeighborClass::BlueGiant);
         assert_eq!(neighbors[0].color, "hard blue-white");
+    }
+
+    /// Every neighbour class maps into the spectral table the ledger commits
+    /// through. `facts.rs` `.expect()`s this lookup, so a drift between the two
+    /// tables is a panic on whatever seed first draws the orphaned variant —
+    /// seed 42 draws only five of the six.
+    ///
+    /// The `match` below has no wildcard arm, so adding a `NeighborClass`
+    /// variant fails to compile right here, forcing an author to visit this
+    /// test — the same shape of guard `class_name`'s own `match` already
+    /// gives the display table, now extended to this test instead of
+    /// stopping at `class_name`. That is real value, but it is narrower than
+    /// it may look: the compile error is fixed by extending the or-pattern,
+    /// which does not oblige anyone to also extend the array above. The
+    /// array itself stays hand-kept in sync — proven by mutation: deleting
+    /// `NeighborClass::BlueGiant` from the array (leaving the `match` arms
+    /// untouched) still compiles and still passes, silently testing five of
+    /// six variants. Read this test as "the compiler points you here," not
+    /// as "the array cannot drift."
+    #[test]
+    fn every_neighbour_class_is_in_the_spectral_table() {
+        fn assert_covered(class: NeighborClass) {
+            let display = class_name(class);
+            assert!(
+                crate::star::class_concept(display).is_some(),
+                "{class:?} mints {display:?}, which SPECTRAL_CLASSES does not carry"
+            );
+        }
+
+        for class in [
+            NeighborClass::RedDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::BlueGiant,
+        ] {
+            match class {
+                NeighborClass::RedDwarf
+                | NeighborClass::SunLike
+                | NeighborClass::WhiteDwarf
+                | NeighborClass::OrangeGiant
+                | NeighborClass::RedGiant
+                | NeighborClass::BlueGiant => assert_covered(class),
+            }
+        }
+    }
+
+    /// Every variant maps to a concept totally — no lookup, no Option, so no
+    /// call site needs an `.expect()`.
+    #[test]
+    fn every_variant_derives_a_concept_agreeing_with_its_display() {
+        for class in [
+            NeighborClass::RedDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::BlueGiant,
+        ] {
+            assert_eq!(
+                crate::star::tests::display_of(class_concept(class)),
+                Some(class_name(class)),
+                "{} derives a concept whose display disagrees with class_name",
+                class_name(class)
+            );
+        }
     }
 }

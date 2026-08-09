@@ -47,7 +47,7 @@ biome classification, the coastlines, and every downstream census. Read
 2. **Artifact drift check** — regenerate and diff, because a byte change may
    pass every test yet move the committed elevation map / census:
    `SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh` then
-   `git diff book/src/gallery book/src/reference book/src/laboratory docs/audits`.
+   `git diff book/src/gallery book/src/reference book/src/laboratory docs/audits docs/digest book/src/domesday`.
 3. If you changed a `pub` signature, `type-audit check` too (moving a tagged
    primitive staled its tag once this session — see the memory note).
 

@@ -13,9 +13,9 @@
 //! fields — it never post-processes a finished English string.
 
 /// Per-species voice knobs the composition root derives from the psychology
-/// vector. Every field lives in `[0, 1]`; `0.5` on every field is the goblin
-/// baseline (identity — a goblin-voiced line is what v1's templates default
-/// to).
+/// vector. Every field lives in `[0, 1]`; `0.5` on every field is the
+/// manikin's neutral midpoint, at which every knob is the identity — the
+/// unmodulated line v1's templates default to.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VoiceParams {
@@ -66,7 +66,8 @@ pub struct LineContent {
 
 /// A word chosen from either an archaic or a plain register, keyed by
 /// `formality`. `formality < 0.5` picks `plain`; otherwise `archaic` — the
-/// midpoint (the goblin baseline) resolves to the archaic half, matching a
+/// manikin's neutral midpoint therefore resolves to the archaic half, a
+/// tie-break rather than a neutral reading, and one that happens to match
 /// goblin's honorific-dense, formal psychology vector (spec §6).
 fn register_word(formality: f64, archaic: &str, plain: &str) -> String {
     if formality < 0.5 {
@@ -212,18 +213,18 @@ mod tests {
     }
 
     #[test]
-    fn goblin_baseline_and_contrasting_voice_produce_different_strings() {
+    fn manikin_and_contrasting_voice_produce_different_strings() {
         let content = cyclic("Xar", "the Tidewalker");
-        let goblin_baseline = base();
+        let manikin_voice = base();
         let contrasting = VoiceParams {
             formality: 1.0,
             repetition: 1.0,
             epithet_density: 1.0,
         };
-        let baseline_line = render_line(&content, &goblin_baseline);
+        let manikin_line = render_line(&content, &manikin_voice);
         let contrasting_line = render_line(&content, &contrasting);
         assert_ne!(
-            baseline_line, contrasting_line,
+            manikin_line, contrasting_line,
             "the voice knobs must actually modulate the rendered surface"
         );
     }

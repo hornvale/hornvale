@@ -88,6 +88,37 @@ external systems had been verified at all. Fold this into G2's own
 self-review pass explicitly; don't rely on it being implied by "spec
 consistency."
 
+### Four more claim-classes, each with a command that settles it
+
+The Benchmark and The Handle added seven more plan-text defects (2026-08-06/07),
+**all in the author's own text, none in implementers' code**, and each was
+caught by something *executable* rather than by re-reading. Plan review compares
+a document to a document; these were claims about the world. Extend the rule:
+
+| claim in a spec or plan | what settles it, at drafting time |
+|---|---|
+| "retyping this / changing this signature is safe" | stub the change and `cargo check --workspace --all-targets`. The Benchmark's operator design died on 21 errors, two of which were quantities the type would have *lied* about. |
+| "this invariant holds" | measure it against real data before writing it down. A spec asserted a room on dry land never reports a negative height; 18.5% of rooms did, and the probe that would have shown it had already been written. |
+| "the N sites are …" | grep for the **observable** the behaviour produces — a shared output string, an error message — not for the function you happened to open. `examine` had two matchers; teaching one never taught the other, twice. |
+| "call `foo()` / `foo` returns X" | read the signature. Plans named a method clippy bans by policy and asserted the wrong return prefix for another. |
+
+**And two rules about the verification itself, both learned the hard way:**
+
+- **A mutation test must prove it mutated.** Assert the target text exists
+  before substituting it (`assert old in s, "TARGET NOT FOUND"`). A `cargo fmt`
+  rewrap once made a single-line replacement match nothing, and the resulting
+  green looked exactly like a robust implementation. A no-op mutation is worse
+  than no mutation, because it produces evidence.
+- **A RED from a compile error proves nothing about an assertion.** Where the
+  type under test does not exist yet, capture the *behavioural* red from the
+  live surface first, before touching code. "Fails to compile" is not "would
+  have caught the defect".
+
+**Name the direction a check enforces**, in its own doc comment. A gate
+asserting *declared ⊆ resolvable* is structurally blind to over-admission and
+still reads as total to the next person. A check that states its direction
+cannot be silently mistaken for a guarantee.
+
 ## Capture discipline
 
 **Invariant: no idea dies in conversation.** Before any gate auto-passes,

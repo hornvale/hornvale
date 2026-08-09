@@ -32,13 +32,26 @@ compiles knowing nothing about any of them.
 
 3. **Phenomena** — the universal read, and the protocol's biggest bet: one
    query, *"enumerate the phenomena salient to an observer at this place and
-   time, with periodicity and character,"* consumed by every meaning-making
-   system. The two moons and the dragon's monthly flight are both just
-   phenomena — recurring lights in the sky with a period and an emotional
-   valence. Religion mythologizes them, language names them, and the game's
-   place descriptions render them, all through the same interface.
-   Results are salience-ranked with fully deterministic ordering, because
-   "what you notice first" must survive the determinism constitution too.
+   time,"* consumed by every meaning-making system. The two moons and the
+   dragon's monthly flight are both just phenomena — recurring lights in the
+   sky with a period and a referent. Religion mythologizes them, language names
+   them, and the game's place descriptions render them, all through the same
+   interface.
+
+   A phenomenon carries **no text**. It names what was observed — a concept id
+   plus qualifiers, the only thing a consumer may branch on — and nothing about
+   how to say it. This is forced rather than tidy: an observer context carries
+   place, time, lens and position and deliberately carries no *species*, so a
+   producer cannot know who is looking, and any sentence it stored could only
+   be culture-neutral or wrong. Words are chosen where the speaker is known,
+   which is to say in a window, from that people's lexicon — and where their
+   language has no word, the absence is a fact about them rather than a gap in
+   the authoring.
+
+   Results are salience-ranked with deterministic ordering, because "what you
+   notice first" must survive the determinism constitution too. That ordering
+   is deterministic but not *total*: phenomena that tie on every key resolve by
+   a stable sort over a fixed emission order.
 
 ## Agents are level-of-detail'd like everything else
 

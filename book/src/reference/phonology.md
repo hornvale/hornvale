@@ -68,6 +68,46 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Settlement | Vngoshngavngo | /vŋoʃŋavŋo/ | `[[vN'oSNavNo]]` | <audio controls preload="none" src="../audio/6ef1df96.mp3"></audio> |
 | Deity | Vngoshngo | /vŋoʃŋo/ | `[[vN'oSNo]]` | <audio controls preload="none" src="../audio/60c65e76.mp3"></audio> |
 
+## Desert-dwarf
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiceless | `p` | `p` | voiceless labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Alveolar/Stop/voiced | `d` | `d` | voiced alveolar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Uvular/Stop/voiceless | `q` | `q` | voiceless uvular stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Labial/Fricative/voiced | `v` | `v` | voiced labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Alveolar/Sibilant/voiceless | `s` | `s` | voiceless alveolar sibilant |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Postalveolar/Sibilant/voiced | `zh` | `ʒ` | voiced postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Alveolar/Nasal/voiced | `n` | `n` | voiced alveolar nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Labial/Approximant/voiced | `w` | `w` | voiced labial approximant |
+| Mid/Front/unrounded | `e` | `e` | mid front vowel |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** sibilant, nasal
+- **Nuclei:** v, v+v
+- **Codas:** nasal
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Shenshangnon | /ʃenʃaŋnon/ | `[[S'enSaNnon]]` | <audio controls preload="none" src="../audio/ce1d98a4.mp3"></audio> |
+| Settlement | Noonzhan | /noonʒan/ | `[[n'oonZan]]` | <audio controls preload="none" src="../audio/ab69f6e3.mp3"></audio> |
+| Settlement | Shansang | /ʃansaŋ/ | `[[S'ansaN]]` | <audio controls preload="none" src="../audio/8b9c0d57.mp3"></audio> |
+| Deity | Momzhommam | /momʒommam/ | `[[m'omZommam]]` | <audio controls preload="none" src="../audio/76db75e6.mp3"></audio> |
+
 ## Gnoll
 
 ### Inventory
@@ -148,6 +188,82 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Settlement | Vnesov | /vnesov/ | `[[vn'esov]]` | <audio controls preload="none" src="../audio/f29360e6.mp3"></audio> |
 | Deity | Naxxnef | /naxxnef/ | `[[n'axxnef]]` | <audio controls preload="none" src="../audio/1cc57fbe.mp3"></audio> |
 
+## Gully-dwarf
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiced | `b` | `b` | voiced labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Velar/Stop/voiceless | `k` | `k` | voiceless velar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Uvular/Stop/voiceless | `q` | `q` | voiceless uvular stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Postalveolar/Sibilant/voiced | `zh` | `ʒ` | voiced postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Alveolar/Nasal/voiced | `n` | `n` | voiced alveolar nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Labial/Approximant/voiced | `w` | `w` | voiced labial approximant |
+| Mid/Front/unrounded | `e` | `e` | mid front vowel |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** sibilant+nasal, stop+fricative
+- **Nuclei:** v
+- **Codas:** approximant, ∅
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Qxabxawgxow | /qxabxawgxow/ | `[[qx'abxawgxow]]` | <audio controls preload="none" src="../audio/1bb09429.mp3"></audio> |
+| Settlement | Kfowzhnew | /kfowʒnew/ | `[[kf'owZnew]]` | <audio controls preload="none" src="../audio/09d873c8.mp3"></audio> |
+| Settlement | Kxebxaw | /kxebxaw/ | `[[kx'ebxaw]]` | <audio controls preload="none" src="../audio/619711f6.mp3"></audio> |
+| Deity | Bfowshmow | /bfowʃmow/ | `[[bf'owSmow]]` | <audio controls preload="none" src="../audio/7d878631.mp3"></audio> |
+
+## Hill-dwarf
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiced | `b` | `b` | voiced labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Velar/Stop/voiceless | `k` | `k` | voiceless velar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Uvular/Stop/voiceless | `q` | `q` | voiceless uvular stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Labial/Fricative/voiced | `v` | `v` | voiced labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Alveolar/Sibilant/voiceless | `s` | `s` | voiceless alveolar sibilant |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Alveolar/Approximant/voiced | `l` | `l` | voiced alveolar approximant |
+| Labial/Approximant/voiced | `w` | `w` | voiced labial approximant |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** sibilant, approximant
+- **Nuclei:** v, v+v
+- **Codas:** ∅
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Shosha | /ʃoʃa/ | `[[S'oSa]]` | <audio controls preload="none" src="../audio/87d60da6.mp3"></audio> |
+| Settlement | Laosha | /laoʃa/ | `[[l'aoSa]]` | <audio controls preload="none" src="../audio/8d8f4bec.mp3"></audio> |
+| Settlement | Losho | /loʃo/ | `[[l'oSo]]` | <audio controls preload="none" src="../audio/d363f517.mp3"></audio> |
+| Deity | Wowo | /wowo/ | `[[w'owo]]` | <audio controls preload="none" src="../audio/99ea054a.mp3"></audio> |
+
 ## Hobgoblin
 
 ### Inventory
@@ -185,6 +301,43 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Settlement | Njeqom | /njeqom/ | `[[nj'eqom]]` | <audio controls preload="none" src="../audio/0b729184.mp3"></audio> |
 | Settlement | Tenjaveng | /tenjaveŋ/ | `[[t'enjaveN]]` | <audio controls preload="none" src="../audio/6afe0c78.mp3"></audio> |
 | Deity | Tongxong | /toŋxoŋ/ | `[[t'oNxoN]]` | <audio controls preload="none" src="../audio/ad90da74.mp3"></audio> |
+
+## Human
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiceless | `p` | `p` | voiceless labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Velar/Stop/voiceless | `k` | `k` | voiceless velar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Labial/Fricative/voiced | `v` | `v` | voiced labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Alveolar/Sibilant/voiced | `z` | `z` | voiced alveolar sibilant |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Postalveolar/Sibilant/voiced | `zh` | `ʒ` | voiced postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Mid/Front/unrounded | `e` | `e` | mid front vowel |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** nasal, stop, sibilant+nasal
+- **Nuclei:** v, v+v
+- **Codas:** ∅, ∅
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Maagaga | /maagaga/ | `[[m'aagaga]]` | <audio controls preload="none" src="../audio/da22e431.mp3"></audio> |
+| Settlement | Teaznga | /teazŋa/ | `[[t'eazNa]]` | <audio controls preload="none" src="../audio/ae45a83f.mp3"></audio> |
+| Settlement | Zhngazhnge | /ʒŋaʒŋe/ | `[[ZN'aZNe]]` | <audio controls preload="none" src="../audio/3e8ea916.mp3"></audio> |
+| Deity | Ngeota | /ŋeota/ | `[[N'eota]]` | <audio controls preload="none" src="../audio/90a8fb56.mp3"></audio> |
 
 ## Kobold
 

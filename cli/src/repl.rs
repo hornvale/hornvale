@@ -322,8 +322,19 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 };
                 match result {
                     Ok(phenomena) => {
+                        // A phenomenon carries no text, so its words are
+                        // realized here, through the SAME renderer the almanac
+                        // uses. The REPL has no speaker — it interrogates a
+                        // world from outside it — so the register is Common.
+                        let vocab = world_builder::common_vocabulary(&world.registry);
                         for p in phenomena {
-                            writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
+                            writeln!(
+                                output,
+                                "[{:.2}] {} — {}",
+                                p.salience,
+                                p.kind,
+                                hornvale_almanac::phenomenon_line(&p, None, &vocab)
+                            )?;
                         }
                     }
                     Err(e) => writeln!(output, "error: {e}")?,
@@ -397,6 +408,13 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     day: WorldTime { day: 0.0 },
                     echo: false,
                     wild_agents: true,
+                    eyes: hornvale_vessel::eyes::Eyes::Own,
+                    // Unlensed, deliberately. The repl writes into a caller's
+                    // `output`, which a script or a test may be capturing, and
+                    // the presentation lens is screen-only (The Lantern, spec
+                    // §7). `hornvale possess --lens lantern` is the documented
+                    // way to ask for it.
+                    lens: hornvale_vessel::lens::Lens::Off,
                 };
                 match hornvale_vessel::Session::start(world, &opts) {
                     Err(e) => writeln!(output, "error: {e}")?,
@@ -507,12 +525,32 @@ mod tests {
     /// Both halves are load-bearing. Without the first this test would pass
     /// on any world whose names happen not to collide, so it asserts against
     /// an independently computed count of what the *bare* listing would
-    /// duplicate (13 lines in 6 groups at seed 42). Without the second it
+    /// duplicate (18 lines in 9 groups at seed 0). Without the second it
     /// would pass on a name-scoped qualifier that spends a coordinate on all
-    /// 129 name-colliding settlements.
+    /// 101 name-colliding settlements.
     #[test]
     fn the_settlements_listing_qualifies_exactly_the_lines_that_would_repeat() {
-        let world = constant_world();
+        // SEED 0, not the module's usual 42, and that is the whole repair.
+        //
+        // This test needs a world whose bare listing actually REPEATS, or its
+        // first half asserts nothing. The Tense left seed 42 with 122
+        // settlements, every one of them a distinct (name, population, biome)
+        // triple — so the anti-vacuity guard reddened, which is exactly its
+        // job. Swept 0..30 for a constant-sky world that still collides; all
+        // thirty do, and seed 0 is the earliest, which keeps the choice
+        // reproducible rather than hand-picked.
+        //
+        // Measured at seed 0: 180 settlements, 18 lines across 9 colliding
+        // groups, and 101 name-colliding settlements — so both halves bite,
+        // the second harder than at seed 42 ever did.
+        let world = build_world(
+            Seed(0),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .unwrap();
         let rendered: Vec<String> = {
             let mut out = Vec::new();
             run(&world, b"settlements\nquit\n" as &[u8], &mut out).unwrap();
@@ -719,18 +757,38 @@ mod tests {
         )
         .unwrap();
         let out = String::from_utf8(out).unwrap();
-        assert!(out.contains("celestial-body"));
+        // The Tense (2026-08-05) re-aimed this at the STRUCTURE rather than at
+        // one phenomenon. `beliefs[0]` used to mythologize a celestial body, so
+        // the explanation happened to contain the string "celestial-body"; seed
+        // 42's re-placement means belief one now mythologizes HEAT, and the
+        // explanation is otherwise complete and correct — deity name, epithet,
+        // sentiment, holder, cult form, gloss, and the species lens beneath it.
+        //
+        // Pinning one phenomenon kind was incidental to what this test is
+        // named for. What `why` must actually do is render the derivation
+        // chain, and the mythologized-phenomenon line is the link in it that
+        // makes a belief explicable at all — so that is what is asserted, and
+        // it holds whichever phenomenon the draw lands on.
+        assert!(
+            out.contains("phenomenon kind a belief mythologizes:"),
+            "`why` must name the phenomenon the belief mythologizes: {out}"
+        );
+        assert!(
+            out.contains("a belief's deity name (roman):"),
+            "`why` must render the belief's own deity name: {out}"
+        );
     }
 
     #[test]
     fn facts_lists_an_entity() {
         let out = drive("facts 2\nquit\n");
         // Each fact line is tagged with the domain that asserted it. Under The
-        // Living Community epoch (this merge), entity 2 is the flagship
-        // settlement, whose is-settlement/population/cell-id facts are now
-        // committed by the deep-history bake (tag "(history/bake)") rather than
-        // the settlement domain. The OR tolerates entity-numbering shifts.
-        assert!(out.contains("(history/bake)") || out.contains("(terrain)"));
+        // Living Community epoch, entity 2 is the flagship settlement, whose
+        // is-settlement/population/cell-id facts are now committed by the
+        // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
+        // the label — decision 0006, an epoch suffix, never a rename) rather
+        // than the settlement domain. The OR tolerates entity-numbering shifts.
+        assert!(out.contains("(history/bake/v2)") || out.contains("(terrain)"));
     }
 
     #[test]

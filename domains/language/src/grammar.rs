@@ -202,8 +202,9 @@ pub fn realize_tongue(
         }
         Some(LexEntry::Gap { reason }) => {
             // `GapReason`'s Display is the canonical recountable rendering
-            // ("gap (experiential): ..." / "gap (perceptual): ...") — never
-            // `{reason:?}`; the reason is prose to recount, not debug.
+            // ("gap (experiential): ..." / "gap (perceptual): ..." / "gap
+            // (unnameable): ...") — never `{reason:?}`; the reason is prose
+            // to recount, not debug.
             return Err(TongueGap {
                 concept: clause.complement_concept.clone(),
                 reason: reason.to_string(),
@@ -464,8 +465,8 @@ mod tests {
     use hornvale_kernel::Seed;
     use std::collections::BTreeMap;
 
-    /// A goblin-baseline articulation envelope — per `phonology.rs`'s own
-    /// test-constructor pattern (`goblin_env`), reconstructed locally here
+    /// The manikin's articulation envelope — per `phonology.rs`'s own
+    /// test-constructor pattern (`manikin_env`), reconstructed locally here
     /// since that helper is private to `phonology`'s own test module.
     fn test_envelope() -> Envelope {
         Envelope {
@@ -486,6 +487,9 @@ mod tests {
         draw_phonology(&Seed(1), "test-tongue", &test_envelope())
     }
 
+    /// claim: structural(seed: 42) — determinism/species-keying at one fixed
+    /// seed, with an embedded reachability check (any(1..=20)) confirming the
+    /// draw is not a constant function
     #[test]
     fn tongue_grammar_is_deterministic_and_species_keyed() {
         let ph = test_phonology();
@@ -509,6 +513,7 @@ mod tests {
         let _ = (kobold, hobgoblin);
     }
 
+    /// claim: rate(forall-seed, sov_svo > 120 / 200) — typology-weight check
     #[test]
     fn constituent_order_weights_favor_sov_and_svo() {
         // Authored typology (approximate WALS frequencies): SOV+SVO must
@@ -527,6 +532,8 @@ mod tests {
         );
     }
 
+    /// claim: rate(forall-seed, [100, 140] / 200) — authored copula-presence
+    /// weight, wide smoke-test band
     #[test]
     fn copula_presence_rate_matches_authored_weight() {
         // Authored: 60% of tongues bear an overt copula. Measure over 200
@@ -545,6 +552,8 @@ mod tests {
         );
     }
 
+    /// claim: rate(forall-seed, [40, 80] / 200) — authored article-presence
+    /// weight
     #[test]
     fn articles_presence_rate_matches_authored_weight() {
         // Authored: 30% of tongues have articles.
@@ -561,6 +570,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: 1..=50, find_map for a copula-bearing draw) —
+    /// then checks non-emptiness and determinism at the found seed
     #[test]
     fn copula_form_is_nonempty_and_deterministic() {
         // The copula's form (when present) is a real drawn word: never

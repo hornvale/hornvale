@@ -84,4 +84,21 @@ hornvale_kernel::stream_labels! {
     /// than a shared one, and for what bumps both.
     ROOM_LAYOUT_GROWN = "room/layout/v1/grown"
         => "where the growing method places chambers";
+    /// Stream label for WHERE a chamber's ANCHORS land in its cells (The
+    /// Sighting).
+    ///
+    /// A third sibling in the layout family, for the reason the other two are
+    /// split from each other: the unit of independent change is the ALGORITHM,
+    /// and the anchor scan has nothing to do with the cut band or the flood
+    /// order. Retuning it must not relocate a single chamber.
+    ///
+    /// **Its blast radius is the smallest in this file.** A placement is
+    /// `FRAME`-tier (decision 0069): never serialized, never a fact's object,
+    /// re-derived on entry. Nothing committed points into it, so bumping this
+    /// label could not corrupt a saved world even in principle — it is
+    /// versioned anyway, because 0073 fixes epoch granularity at DECLARATION
+    /// and a label minted unversioned can never gain a version without a
+    /// rename.
+    ROOM_LAYOUT_ANCHORS = "room/layout/v1/anchors"
+        => "where a chamber's anchors land in its cells";
 }
