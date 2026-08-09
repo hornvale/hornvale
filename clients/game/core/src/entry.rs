@@ -117,12 +117,16 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// prose is short enough that this never triggers.
 ///
 /// The prose body (and the marker, should it appear) is attributed to
-/// [`Source::Prose`]; the prompt is attributed to [`Source::WaysOn`] — a
-/// structural distinction (a separate draw call, on a separate row), not a
-/// read of the prose for meaning. This module never special-cases the
-/// prose's own trailing `"Ways on:"` sentence (see the module doc), so that
-/// exit list is carried as ordinary [`Source::Prose`] text, same as the rest
-/// of the passage.
+/// [`Source::Prose`]; the prompt is attributed to [`Source::Chrome`] —
+/// `PROMPT_GLYPH` is a hardcoded constant, not derived from any
+/// `vessel/session/v1` field, so it is UI chrome rather than a datum this
+/// client read off the wire. (An earlier draft attributed the prompt to a
+/// since-deleted `Source::WaysOn`, on the theory that the command line
+/// represents the character's own "ways on" — see [`Source::Chrome`]'s doc
+/// for why that was a false provenance claim.) This module never
+/// special-cases the prose's own trailing `"Ways on:"` sentence (see the
+/// module doc), so that exit list is carried as ordinary [`Source::Prose`]
+/// text, same as the rest of the passage.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -154,7 +158,7 @@ pub fn draw(
     into.set(
         origin.0,
         command_row,
-        Cell::glyph(PROMPT_GLYPH, Weight::Bold, Source::WaysOn),
+        Cell::glyph(PROMPT_GLYPH, Weight::Bold, Source::Chrome),
     );
 }
 

@@ -59,16 +59,29 @@ pub enum Source {
     /// — the marker is an honest signal about that same channel, not an
     /// invented one.
     Prose,
-    /// The entry's command line: the `>` prompt `entry.rs` draws on the
-    /// page's last row, read as the next line the possessed character is
-    /// about to write — the character's own onward affordance, not a datum
-    /// this client reads off the wire.
-    WaysOn,
     /// The endpaper identity strip (`SelfChannel`, plus `day`/`turn`, drawn
     /// by `endpaper.rs`).
     Identity,
-    /// Declared-inert decoration: rules, gutters, margins. Never a dumping
-    /// ground for a cell whose real channel was merely inconvenient to name.
+    /// Declared-inert decoration: rules, gutters, margins, and the entry's
+    /// `>` command-line prompt (`entry.rs`). Never a dumping ground for a
+    /// cell whose real channel was merely inconvenient to name — the prompt
+    /// qualifies honestly: `PROMPT_GLYPH` is a hardcoded constant, not
+    /// derived from any wire field, so it is UI chrome, not a datum.
+    ///
+    /// **There is deliberately no `WaysOn` variant.** An earlier draft of
+    /// this enum had one, assigned to that same prompt cell, on the theory
+    /// that the command line represents the character's own "ways on." Task
+    /// 9's review caught the defect: `Source` is a claim about which
+    /// snapshot channel a cell traces to, and there is no `ways_on` (or
+    /// equivalent) field anywhere on `vessel/session/v1` — `"Ways on:"` is
+    /// text *inside* `Narration::prose`, and `entry.rs` deliberately never
+    /// parses it out (see that module's doc). A category naming a channel
+    /// the wire never separately emits is the exact defect this enum exists
+    /// to make impossible; keeping it dormant "for a future channel" would
+    /// still assert something false about today's schema, so it was
+    /// deleted rather than left unreachable. If the sim ever does emit an
+    /// exit list as its own field, that is the moment to add the variant
+    /// back — not before.
     Chrome,
 }
 

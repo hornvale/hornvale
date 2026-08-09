@@ -73,11 +73,17 @@ fn every_drawn_cell_names_its_channel_in_the_chamber_band() {
         p.get(&Source::Identity).copied().unwrap_or(0) > 0,
         "the endpaper is drawn"
     );
-    // The command line is drawn every turn regardless of band — its
-    // presence here is what proves `Source::WaysOn` is reachable at all
-    // (the acceptance test above never checks it either).
+    // The command line (the `>` prompt) is drawn every turn regardless of
+    // band, attributed to `Source::Chrome` — it is a hardcoded constant
+    // (`entry.rs::PROMPT_GLYPH`), not derived from any wire field, so it is
+    // UI chrome rather than a datum (see `Source::Chrome`'s doc for the
+    // provenance defect this replaced: a since-deleted `Source::WaysOn`).
+    // This is also the acceptance test above never checks: it is the only
+    // assertion in this file that proves `Source::Chrome` is reachable from
+    // a real render at all, so it must stay a positive count, not merely
+    // ride along on the `Unattributed == 0` check above.
     assert!(
-        p.get(&Source::WaysOn).copied().unwrap_or(0) > 0,
+        p.get(&Source::Chrome).copied().unwrap_or(0) > 0,
         "the command line is drawn"
     );
 }
