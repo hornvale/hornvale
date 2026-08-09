@@ -120,13 +120,15 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// [`Source::Prose`]; the prompt is attributed to [`Source::Chrome`] —
 /// `PROMPT_GLYPH` is a hardcoded constant, not derived from any
 /// `vessel/session/v1` field, so it is UI chrome rather than a datum this
-/// client read off the wire. (An earlier draft attributed the prompt to a
-/// since-deleted `Source::WaysOn`, on the theory that the command line
-/// represents the character's own "ways on" — see [`Source::Chrome`]'s doc
-/// for why that was a false provenance claim.) This module never
-/// special-cases the prose's own trailing `"Ways on:"` sentence (see the
-/// module doc), so that exit list is carried as ordinary [`Source::Prose`]
-/// text, same as the rest of the passage.
+/// client read off the wire. (An earlier draft attributed the prompt to
+/// `Source::WaysOn` instead, on the theory that the command line represents
+/// the character's own "ways on"; that was a false provenance claim, and
+/// the variant now names a real, separately-drawn element — see
+/// `ways.rs` and [`Source::WaysOn`]'s doc.) This module never special-cases
+/// the prose's own trailing `"Ways on:"` sentence (see the module doc), so
+/// that exit list is carried as ordinary [`Source::Prose`] text, same as
+/// the rest of the passage — `ways.rs` draws the same information again,
+/// from the wire channel rather than the prose, elsewhere on the page.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,

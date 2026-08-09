@@ -183,6 +183,8 @@ mod tests {
         // A 3x2 plan: wall, floor, threshold on row 0; wall, floor, wall on
         // row 1. `you` stands on the floor at (1, 1).
         Plan {
+            at: 0,
+            of: 1,
             extent: PlanExtent {
                 x: 0,
                 y: 0,
