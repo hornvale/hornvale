@@ -273,7 +273,63 @@ boundary. "Did you consider failure?" is not.
 
 ## Follow-ups (promoted from the campaign's scratch register)
 
-`.superpowers/sdd/` dies with the worktree, so these are the durable copy.
+`.superpowers/sdd/` dies with the checkout, so these are the durable copy.
+
+**F1–F8 were briefly believed lost, and the reason is a lesson in its own right.**
+The close agent found the register beginning mid-file and no trace of F1–F8 in the
+scratch, the plan, or the spec. They were not lost — they were **split across two
+files**. This campaign wrote its early scratch to the flat `.superpowers/sdd/`
+path, then the workspace resolver moved it to a per-plan
+`.superpowers/sdd/<plan>/` directory, and every later append went to the new
+location while the old file sat there unread. Nothing was deleted and nothing
+warned; a mid-campaign path change silently forked the record, and the second half
+looked like the whole of it.
+
+That is worth more than "scratch dies with the checkout", which the project already
+knows. The sharper rule: **when a tool relocates a scratch file mid-campaign, the
+old path keeps its contents and stops being read.** Check the ancestor path before
+concluding anything is gone — and note that the campaign whose *second job* is
+preventing expensive rediscovery nearly lost eight of its own findings this way.
+
+- **F1 — The ~75% rung: route-by-path at the touch point.** *Trigger:* a
+  `PreToolUse` hook warning when a session edits a path another session posted a
+  `hold-off` on. Deferred from v1: it adds an interrupt surface and a second
+  failure mode, and `scripts/hv-guard-bash.sh` already occupies that seam. The v1
+  relevance filter delivers most of the value at render time instead.
+- **F2 — Cross-host operation, and the merge model it needs.** *Trigger:* the first
+  time a claim or notice genuinely needs to cross machines. Compare-and-swap
+  serializes writers within one ref store only, so two clones that both write and
+  push diverge and CAS gives nothing there; the problem is divergent-history merge,
+  and git-bug's operation-log model is the prior art. Steal the design, not the
+  dependency. (Superseded in part by **F15**, which names the dependency question
+  that gates the census-claim read.)
+- **F3 — Subsume decision 0081's `/tmp` census claim.** *Trigger:* the board
+  proving itself reliable across several campaigns. One claim mechanism would be
+  tidier, but it would put a new tool in front of the guard protecting census
+  writes.
+- **F4 — `git notes` annotation of landed changes.** *Trigger:* additive interest.
+  The substrate rejected as primary is genuinely good at the one thing it does —
+  anchoring a note to the commit that caused it — so a notice about a *landed*
+  change could migrate to `refs/notes/board` and gain union-merge for free.
+- **F5 — Acknowledgement semantics for `hold-off`.** *Trigger:* the first time a
+  `hold-off` is ignored and costs a merge. Only the negative polarity is
+  meaningless without an ack; v1 ships no `ack` verb at all, and acknowledgement is
+  expressible today as a `reply`. See **F11**: the delivered/held/refused
+  vocabulary supersedes this entry's original binary framing.
+- **F6 — Evaluate git-bug properly if that decision is ever reopened.** *Trigger:*
+  reopening it. Only its README was read; the reversal cost was zero when nothing
+  was built and rises with every task shipped.
+- **F7 — Measure the render's real steady-state volume** (spec assumption 1).
+  *Trigger:* the render cap being hit routinely. The ≤ 15-line / ≤ 1 KB budget is a
+  budget, not a measurement, and if it is hit the diagnosis differs by cause —
+  either the content rule is being violated or the relevance filter is too loose.
+- **F8 — Replay the campaign's motivating collisions against the finished tool**
+  (spec assumption 3). *Trigger:* it can be run today, against history, rather than
+  waiting for a new collision. Would a `hold-off` naming the colliding paths have
+  reached the other session in time during The Tumult/The Waterline, or The
+  Actants? This is the only real test of whether relevance-by-changed-paths matches
+  the collisions the board was built for, and it is the assumption the whole design
+  rests on that remains unmeasured.
 
 - **F9 — Push urgent `hold-off` notices over the wire.** *Trigger:* the board
   renders only at session start, the self-map, and preflight, so a notice posted
