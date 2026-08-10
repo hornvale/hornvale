@@ -4,6 +4,7 @@
 //! linear recomputation, over seeded random ledgers (generator coverage is
 //! part of the review — the c4 signed-zero lesson).
 
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
 use hornvale_species::{
     BiosphereTraits, SPECIES_MASS_KG, SPECIES_POTENCY, biosphere_registry, instance_biosphere,
@@ -32,7 +33,13 @@ fn lens_returns_kind_defaults_when_no_overrides() {
     let reg = biosphere_registry();
     let e = w
         .ledger
-        .mint_instance("owlbear", None, "test", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "owlbear",
+            None,
+            "test",
+            &w.registry,
+        )
         .unwrap();
     let eff = instance_biosphere(&w.ledger, e, &reg).unwrap();
     let authored = reg.get_by_label("owlbear").unwrap();
@@ -46,7 +53,13 @@ fn override_beats_default_and_latest_override_wins() {
     let reg = biosphere_registry();
     let e = w
         .ledger
-        .mint_instance("owlbear", None, "test", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "owlbear",
+            None,
+            "test",
+            &w.registry,
+        )
         .unwrap();
     w.ledger
         .commit(override_fact(e, SPECIES_MASS_KG, 900.0), &w.registry)
@@ -69,7 +82,13 @@ fn overrides_survive_kind_change() {
     let reg = biosphere_registry();
     let e = w
         .ledger
-        .mint_instance("owlbear", None, "test", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "owlbear",
+            None,
+            "test",
+            &w.registry,
+        )
         .unwrap();
     w.ledger
         .commit(override_fact(e, SPECIES_MASS_KG, 900.0), &w.registry)
@@ -95,19 +114,33 @@ fn lens_is_total_never_panicking() {
     let mut w = world();
     let reg = biosphere_registry();
     // No instance-of fact at all -> None.
-    let bare = w.ledger.mint_entity();
+    let bare = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
     assert!(instance_biosphere(&w.ledger, bare, &reg).is_none());
     // Dangling label -> None.
     let dangling = w
         .ledger
-        .mint_instance("no-such-kind", None, "test", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "no-such-kind",
+            None,
+            "test",
+            &w.registry,
+        )
         .unwrap();
     assert!(instance_biosphere(&w.ledger, dangling, &reg).is_none());
     // Physically invalid override (negative mass) -> None, loudly absent
     // rather than silently defaulted.
     let bad = w
         .ledger
-        .mint_instance("owlbear", None, "test", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "owlbear",
+            None,
+            "test",
+            &w.registry,
+        )
         .unwrap();
     w.ledger
         .commit(override_fact(bad, SPECIES_MASS_KG, -5.0), &w.registry)
@@ -176,12 +209,21 @@ fn join_equals_scan_over_random_ledgers() {
     for seed in 0..64u64 {
         let mut w = world();
         let mut st = seed.wrapping_add(1);
-        let mut entities: Vec<EntityId> = vec![w.ledger.mint_entity()]; // kindless
+        let mut entities: Vec<EntityId> = vec![
+            w.ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16)),
+        ]; // kindless
         for _ in 0..12 {
             let label = labels[(splitmix(&mut st) as usize) % labels.len()];
             entities.push(
                 w.ledger
-                    .mint_instance(label, None, "gen", &w.registry)
+                    .mint_instance(
+                        test_lineage(w.ledger.entity_count() as u16),
+                        label,
+                        None,
+                        "gen",
+                        &w.registry,
+                    )
                     .unwrap(),
             );
         }
@@ -233,7 +275,13 @@ fn lens_demo_world_fact_count_is_pinned() {
     let mut w = world();
     let e = w
         .ledger
-        .mint_instance("owlbear", None, "budget", &w.registry)
+        .mint_instance(
+            test_lineage(w.ledger.entity_count() as u16),
+            "owlbear",
+            None,
+            "budget",
+            &w.registry,
+        )
         .unwrap();
     w.ledger
         .commit(override_fact(e, SPECIES_MASS_KG, 900.0), &w.registry)

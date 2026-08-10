@@ -55,7 +55,7 @@ Deno.test("the caption states whose eyes and what the projection drops", () => {
   // (it was mutated to `return null;` unconditionally) left every test
   // green: the wire-to-caption path had a gap no single unit test covered.
   const json = JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     turn: 0,
     day: 0.5,
     self: { agent: "1", species: "bugbear", settlement: "X", population: 118, room: 7 },

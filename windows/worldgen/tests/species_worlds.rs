@@ -20,6 +20,7 @@
 //! every registry people, given exclusive placement via its own species
 //! pin (no competing dominance to lose), places its own flagship; an
 //! unknown species pin fails loudly.
+use hornvale_kernel::test_lineage;
 use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
 
 fn pins(species: Option<&str>) -> SettlementPins {
@@ -151,11 +152,27 @@ fn minting_validates_the_kind_against_the_union_roster() {
     let wc = hornvale_worldgen::WorldComponents::assemble().unwrap();
     let mut w = hornvale_kernel::World::new(hornvale_kernel::Seed(9));
     // A canonical non-species kind mints fine…
-    let d =
-        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "deity", Some(0.0), "test").unwrap();
+    let minted = w.ledger.entity_count() as u16;
+    let d = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "deity",
+        Some(0.0),
+        "test",
+    )
+    .unwrap();
     assert_eq!(w.ledger.kind_of(d), Some("deity"));
     // …an unknown kind fails loudly with the physical reason.
-    let err = hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "tarrasque", None, "test");
+    let minted = w.ledger.entity_count() as u16;
+    let err = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "tarrasque",
+        None,
+        "test",
+    );
     assert!(err.is_err(), "unknown kind must be rejected: {err:?}");
 }
 

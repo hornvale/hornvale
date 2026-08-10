@@ -116,7 +116,7 @@ rm -f "$possess_tmp"
 # The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
 # render tests read this instead of paying for genesis (measured 1.43 s).
 # Regenerated here, beside the transcripts above, so it cannot silently lag
-# `vessel/session/v1`'s schema.
+# `vessel/session/v2`'s schema.
 #
 # `--script` is REQUIRED here, even though the script is empty (the fixture
 # is turn 0, the opening — no verb should run before the snapshot). Every

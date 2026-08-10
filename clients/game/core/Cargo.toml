@@ -3,7 +3,7 @@ name = "hornvale-game-core"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "Hornvale's game client: vessel/session/v1 to a character grid. No hornvale dependency, by design."
+description = "Hornvale's game client: vessel/session/v2 to a character grid. No hornvale dependency, by design."
 
 # DELIBERATELY EMPTY OF HORNVALE CRATES. This crate parses the emitted
 # schema and nothing else; `Session` is not in its dependency graph, so no

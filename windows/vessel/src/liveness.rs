@@ -11,7 +11,7 @@ use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use hornvale_kernel::{
-    ANIMAL_PREY, AStarSolver, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE,
+    ANIMAL_PREY, AStarSolver, ConditionResponse, EntityId, Fact, Ledger, Lineage, PHOTOSYNTHATE,
     PLANT_FORAGE, ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, Solver, TickSystem,
     Value, World, WorldTime, astar,
 };
@@ -5287,7 +5287,23 @@ pub fn derive_npcs(
             // The threat niche (The Bane): derived from the temperature niche +
             // metabolic class already on hand — no fresh authoring.
             let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
-            let entity = ledger.mint_entity();
+            // A settlement NPC belongs to its settlement, and this map yields
+            // exactly one per settlement, so ordinal 0. Deriving from
+            // `village.id` is what makes an NPC's id independent of how many
+            // entities genesis minted before it — the property this campaign
+            // exists to give the six fixtures.
+            //
+            // `reuse_or_mint_entity`, not `mint_entity`: this derivation runs
+            // again on every session, including a session opened on a world
+            // that was already played and saved — whose ledger clone therefore
+            // already carries this NPC. The herder of a settlement is the same
+            // herder in every session, so re-deriving must FIND it. (Under the
+            // counter it could not: each reload minted a fresh duplicate.)
+            let entity = ledger.reuse_or_mint_entity(Lineage {
+                parent: Some(village.id),
+                role: "npc",
+                ordinal: 0,
+            });
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
             // `windows/historiography::recount`) leads with the NPC's own
@@ -5357,7 +5373,8 @@ pub fn derive_wild_npcs(
     let psyche = hornvale_species::psyche_registry();
     concentrations
         .into_iter()
-        .map(|(species, position)| {
+        .enumerate()
+        .map(|(i, (species, position))| {
             let home = RoomAddr::containing(position, walk_depth(ctx));
             let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
                 .unwrap_or_else(|| home.clone());
@@ -5394,7 +5411,15 @@ pub fn derive_wild_npcs(
                 .map(|p| p.threat_response)
                 .unwrap_or(BOLDNESS_STEADY);
             let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
-            let entity = ledger.mint_entity();
+            // A herd or lair has no ledger entity — a concentration is a
+            // (species, position) pair, not an entity — so a wild NPC roots.
+            // Two concentrations can share a species, so the ordinal is the
+            // concentration's index, not anything about the species.
+            let entity = ledger.reuse_or_mint_entity(Lineage {
+                parent: None,
+                role: "wild-npc",
+                ordinal: i as u16,
+            });
             let label = format!("a wild {species}");
             ledger
                 .commit(
@@ -6002,7 +6027,7 @@ mod tests {
     // sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
-    use hornvale_kernel::{ConceptRegistry, Seed};
+    use hornvale_kernel::{ConceptRegistry, Seed, test_lineage};
 
     /// Test-only helper: fits the coexistence stack once and reads the `k`
     /// densest wild concentrations — the prelude `derive_wild_npcs` used to
@@ -6098,7 +6123,7 @@ mod tests {
     fn believed_water_is_none_until_the_agent_has_stood_in_water() {
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
@@ -6137,7 +6162,7 @@ mod tests {
     fn believed_water_ignores_dry_rooms_the_agent_stood_in() {
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let dry = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only(std::iter::empty()); // `dry` is never fresh
@@ -6172,7 +6197,7 @@ mod tests {
         // belief is the near one (fewer hops from home).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let near = home.neighbors()[0].clone(); // 1 hop
         let far = near
@@ -6217,7 +6242,7 @@ mod tests {
     fn believed_water_only_counts_sightings_at_or_before_t() {
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
@@ -6252,8 +6277,8 @@ mod tests {
         // sightings never leak in (subject-scoped).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
-        let other = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let other = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
@@ -6302,7 +6327,7 @@ mod tests {
         // the `BTreeSet` + `min_by((hop, RoomAddr))` fold makes it total.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let n = home.neighbors();
         let (first, second) = (n[0].clone(), n[1].clone()); // both exactly 1 hop from home
@@ -6403,7 +6428,7 @@ mod tests {
         // peoples' set).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let elsewhere = raddr(-1.0);
         let t = PlantedTerrain::default(); // no hazard anywhere
@@ -6423,7 +6448,7 @@ mod tests {
         // absent (the creature must have STOOD there to remember it).
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0); // safe, visited ([1,0,0])
         let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act, visited → shunned ([-1,0,0])
         let unvisited_scary = RoomAddr::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
@@ -6450,7 +6475,7 @@ mod tests {
         // across a safe visit sandwiched between two frightened ones.
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let safe = raddr(1.0);
         let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act
         let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
@@ -6477,20 +6502,20 @@ mod tests {
         let x = ns[1].clone(); // X: safe, in B's halo (the phantom cell)
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5, then far away by 9.5.
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
         // A (coward) stands at X while B is beside it (0.5), then SAFELY
         // revisits X after B is gone (9.5) — the disproof.
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
         commit_agent_at(&mut ledger, &reg, a_e, &x, 9.5);
         // C (coward) stands at X only while B is beside it (0.5), never revisits.
-        let c_e = ledger.mint_entity();
+        let c_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut c = haunt_npc(c_e, x.clone());
         c.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, c_e, &x, 0.5);
@@ -6527,11 +6552,11 @@ mod tests {
         let x = ns[1].clone(); // X: terrain-safe, inside B's one-hop halo
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // Emitter B: beside X on day 0.5 (primary-afraid — E is its neighbour).
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
         // A (coward) stood on BOTH the transient cell X and the terrain hazard E.
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
@@ -6570,7 +6595,7 @@ mod tests {
         let hazard = d_cell.neighbors()[0].clone();
         let x = d_cell.neighbors()[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
@@ -6598,10 +6623,10 @@ mod tests {
         let hazard = d_cell.neighbors()[0].clone();
         let x = d_cell.neighbors()[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
@@ -6635,18 +6660,18 @@ mod tests {
         // B: primary-afraid beside X on day 0.45, then far away by day 0.55.
         // The days are DAYLIGHT ones (the fractional-day sun is up around noon):
         // a sleeping Diurnal emitter pursues rest, not fear, and emits nothing.
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
         // A (coward): stood at X while B panicked beside it, and is there still.
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
         // C (coward): never stood at X before — it is there now for the first
         // time, arriving after B is already gone.
-        let c_e = ledger.mint_entity();
+        let c_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut c = haunt_npc(c_e, x.clone());
         c.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, c_e, &x, 0.55);
@@ -6684,11 +6709,11 @@ mod tests {
         let hazard = ns[0].clone();
         let x = ns[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
@@ -6718,9 +6743,9 @@ mod tests {
         let here = raddr(1.0);
         let water = here.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         // knower's perception history: stood at water, now back at `here`.
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
@@ -6745,7 +6770,7 @@ mod tests {
         // reading (`urgency ≥ DANGER_ACT`, alarm-free) on the same cell — the
         // memory and the live drive never disagree about frightening ground.
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let scary = raddr(1.0); // UNCANNY 0.8 → frightened
         let mild = raddr(-1.0); // UNCANNY 0.1 → below act, not frightened
         let t = PlantedTerrain::hazard(
@@ -6776,7 +6801,7 @@ mod tests {
         // re-derived alarm is 0 at EVERY day, so `frightened_at` collapses to
         // The Haunt's terrain-only verdict — the byte-identity guard.
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let scary = raddr(1.0); // UNCANNY 0.8 → frightened
         let mild = raddr(-1.0); // UNCANNY 0.1 → below act
         let t = PlantedTerrain::hazard(
@@ -6813,13 +6838,13 @@ mod tests {
         let x = ns[1].clone(); // X: safe, in B's halo, two hops from E
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
         // B: a steady emitter, committed at D on `day`, then walks far LATER.
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
         // A: a coward rememberer (feels borrowed alarm strongly).
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         let day = WorldTime { day: 0.5 };
@@ -6848,12 +6873,12 @@ mod tests {
         let hazard = ns[0].clone();
         let x = ns[1].clone();
         let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = haunt_npc(b_e, d_cell.clone());
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
         let far = raddr(-1.0);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let mut a = haunt_npc(a_e, x.clone());
         a.boldness = 0.0;
         // At `day` the alarm is present (guard: the setup really does frighten).
@@ -6891,9 +6916,9 @@ mod tests {
         let here = raddr(1.0);
         let water = here.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
@@ -6920,7 +6945,7 @@ mod tests {
         let here = raddr(1.0);
         let water = here.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
@@ -6958,9 +6983,9 @@ mod tests {
         let water = neighbors[0].clone();
         let elsewhere = neighbors[1].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         // knower has stood at water (knows it) but its LATEST position is
         // `elsewhere`, not `here`.
@@ -7018,9 +7043,9 @@ mod tests {
             threat: std::collections::BTreeMap::new(),
             prey: std::collections::BTreeMap::new(),
         };
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
@@ -7036,12 +7061,28 @@ mod tests {
             day_length_std: None,
             terrain: &t,
         };
+        // The subject prints as its ROLE in this fixture, not as its raw id.
+        // The golden's claim is about which creature emitted what, in what
+        // order, on what day — never about an id's value (The Salt). Printing
+        // the id would also re-pin this eighty-line literal on every epoch that
+        // moves the derivation, which is precisely what The Signet exists to
+        // stop; the two ids used to read `EntityId(1)`/`EntityId(2)` only
+        // because they were the first two entities minted in a bare ledger.
+        let role = |e: hornvale_kernel::EntityId| {
+            if e == knower_e {
+                "knower"
+            } else if e == lost_e {
+                "lost"
+            } else {
+                "unexpected-subject"
+            }
+        };
         sys.step(&ledger)
             .iter()
             .map(|f| {
                 format!(
-                    "{:?}|{}|{:?}|{:?}|{}",
-                    f.subject,
+                    "{}|{}|{:?}|{:?}|{}",
+                    role(f.subject),
                     f.predicate,
                     f.object,
                     f.day.map(f64::to_bits),
@@ -7107,86 +7148,86 @@ mod tests {
         // not, so the emitted stream is still a pure function of the pre-tick
         // ledger.
         const EXPECTED: &[&str] = &[
-            r#"EntityId(1)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"knower|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"knower|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"knower|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"lost|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"knower|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"lost|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"knower|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"knower|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"lost|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"knower|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"lost|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"knower|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"lost|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -7239,7 +7280,7 @@ mod tests {
             threat: std::collections::BTreeMap::new(),
             prey: std::collections::BTreeMap::new(),
         };
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let npc = shared_belief_npc(e, here.clone(), water.clone(), "walker");
         // Stood at the water on day 0, home again by day 1 — the same history
         // the shared-belief tests give their `knower`, so belief is real.
@@ -7266,7 +7307,7 @@ mod tests {
         let reg = agent_at_reg();
         let here = raddr(1.0);
         let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let base = shared_belief_npc(e, here.clone(), here.clone(), "walker");
         commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
         let moves = |mass_kg: f64| {
@@ -7383,7 +7424,7 @@ mod tests {
         let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
         let mut npcs: Vec<Npc> = Vec::new();
         for mass_kg in masses {
-            let e = ledger.mint_entity();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             let mut npc = shared_belief_npc(e, here.clone(), here.clone(), "walker");
             npc.mass_kg = *mass_kg;
             commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
@@ -7530,9 +7571,9 @@ mod tests {
             threat: std::collections::BTreeMap::new(),
             prey: std::collections::BTreeMap::new(),
         };
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         // knower's perception history: stood at water (day 0), back at `here`
         // by day 1 — same shape as the pure-`shared_believed_water` tests.
@@ -8008,7 +8049,7 @@ mod tests {
         reg.register_predicate(DRANK, false, "drank").unwrap();
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // no drank yet: rises from day 0
         assert!(
             (drive_at(
@@ -8062,8 +8103,8 @@ mod tests {
         reg.register_predicate(DRANK, false, "drank").unwrap();
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
-        let e = ledger.mint_entity();
-        let other = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let other = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // Another entity's drink must not affect `e`'s drive (subject-scoped fold).
         ledger
             .commit(
@@ -8170,7 +8211,7 @@ mod tests {
         reg.register_predicate(DRANK, false, "drank").unwrap();
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         for day in [1.0, 4.0, 9.0] {
             ledger
                 .commit(
@@ -8393,7 +8434,7 @@ mod tests {
             .unwrap();
         world_reg.register_predicate(EATEN, false, "eaten").unwrap();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
         let npc = Npc {
@@ -8488,7 +8529,9 @@ mod tests {
             .registry
             .register_predicate(EATEN, false, "eaten")
             .unwrap();
-        let entity = world.ledger.mint_entity();
+        let entity = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         world
             .ledger
             .commit(
@@ -8745,7 +8788,7 @@ mod tests {
         reg.register_predicate(DRANK, false, "drank").unwrap();
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = addr(1.0);
         let resource = home.neighbors()[0].clone();
         let npc = Npc {
@@ -9027,7 +9070,7 @@ mod tests {
         // there. Both know water (a committed visit to W) and start at S.
         let run = |remember_x: bool| -> (Ledger, EntityId) {
             let mut ledger = Ledger::default();
-            let e = ledger.mint_entity();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(&mut ledger, &reg, e, &water, 0.1); // knows water
             if remember_x {
                 commit_agent_at(&mut ledger, &reg, e, &x, 0.15); // frightened here → remembers X
@@ -9066,7 +9109,7 @@ mod tests {
         // creature and empty for the control (the one-source-of-truth fold).
         {
             let mut fl = Ledger::default();
-            let fe = fl.mint_entity();
+            let fe = fl.mint_entity(test_lineage(fl.entity_count() as u16));
             commit_agent_at(&mut fl, &reg, fe, &water, 0.1);
             commit_agent_at(&mut fl, &reg, fe, &x, 0.15);
             commit_agent_at(&mut fl, &reg, fe, &start, 0.2);
@@ -9245,11 +9288,11 @@ mod tests {
         // on day 0.35 — makes X remembered-dangerous though it is now safe.
         {
             let mut fl = Ledger::default();
-            let a = fl.mint_entity();
+            let a = fl.mint_entity(test_lineage(fl.entity_count() as u16));
             commit_agent_at(&mut fl, &reg, a, &water, 0.30);
             commit_agent_at(&mut fl, &reg, a, &x, 0.35);
             commit_agent_at(&mut fl, &reg, a, &start, 0.40);
-            let b = fl.mint_entity();
+            let b = fl.mint_entity(test_lineage(fl.entity_count() as u16));
             commit_agent_at(&mut fl, &reg, b, &d_cell, 0.35);
             commit_agent_at(&mut fl, &reg, b, &far, 0.40);
             let an = npc_at(a);
@@ -9278,7 +9321,7 @@ mod tests {
         let run = |remember: bool, disprove: bool| -> (Ledger, EntityId, f64) {
             let from_day = if disprove { 3.0 } else { 1.0 };
             let mut ledger = Ledger::default();
-            let a = ledger.mint_entity();
+            let a = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(&mut ledger, &reg, a, &water, 0.30); // knows water
             if remember {
                 commit_agent_at(&mut ledger, &reg, a, &x, 0.35); // frightened by B's alarm
@@ -9298,7 +9341,7 @@ mod tests {
                 // B: knows water, panics beside X at 0.35, gone to far ground by
                 // 0.40 — so X is SAFE at planning time. Only present when there is
                 // a memory to re-derive (the control needs no alarm source).
-                let b = ledger.mint_entity();
+                let b = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
                 commit_agent_at(&mut ledger, &reg, b, &water, 0.29);
                 commit_agent_at(&mut ledger, &reg, b, &d_cell, 0.35);
                 commit_agent_at(&mut ledger, &reg, b, &far, 0.40);
@@ -9470,7 +9513,7 @@ mod tests {
         let mut ledger = Ledger::default();
         // B: primary-afraid at D (beside the hazard E) on day 0.45, and far away
         // by 0.55 — so at `now` the ground is unremarkable and B is long gone.
-        let b_e = ledger.mint_entity();
+        let b_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let b = npc_at(b_e, far.clone(), "herd-mate");
         commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
         commit_agent_at(&mut ledger, &reg, b_e, &far, 0.55);
@@ -9479,7 +9522,7 @@ mod tests {
         // disproof, so granting one early would empty the memory before the test
         // could feel anything. Homed AT X, so the walk that discharges the dread
         // also brings it back to the ground it fears.
-        let a_e = ledger.mint_entity();
+        let a_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let a = npc_at(a_e, x.clone(), "rememberer");
         commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
 
@@ -9841,7 +9884,7 @@ mod tests {
         };
         let home = raddr(1.0);
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // No meal yet → hunger has risen by day 5 (a thermoneutral/unreadable
         // cell couples at the base HUNGER rate).
         let t = PlantedTerrain::forage(std::iter::empty());
@@ -9926,7 +9969,7 @@ mod tests {
         let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]);
         let mild = PlantedTerrain::thermal([(home.clone(), 25.0)]);
         let mut ledger = Ledger::default(); // no eaten, no sightings → held at home
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let day = WorldTime { day: 3.0 };
         let hot_h = hunger_at(&ledger, e, &home, day, &hot, MetabolicClass::Endotherm);
         let mild_h = hunger_at(&ledger, e, &home, day, &mild, MetabolicClass::Endotherm);
@@ -10348,7 +10391,7 @@ mod tests {
     /// `ledger` — the common emitter/reader for the `alarm_field` tests.
     /// `boldness` dials whether it is primary-afraid on hazard ground.
     fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &RoomAddr, boldness: f64) -> Npc {
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         commit_agent_at(ledger, reg, e, pos, 0.0);
         Npc {
             entity: e,
@@ -10508,7 +10551,7 @@ mod tests {
         // A — a mortal dreading the uncanny fully (weight 1), steady boldness:
         // felt threat 0.8 ≥ DANGER_ACT, cornered, emits arousal 0.8 every tick.
         let build_a = |ledger: &mut Ledger| -> Npc {
-            let e = ledger.mint_entity();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(ledger, &reg, e, &x, 0.0);
             Npc {
                 entity: e,
@@ -10533,7 +10576,7 @@ mod tests {
         // DANGER_ACT (0.3): NO primary fear of its own. Its home is the safe
         // escape cell it flees to.
         let build_b = |ledger: &mut Ledger| -> Npc {
-            let e = ledger.mint_entity();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             commit_agent_at(ledger, &reg, e, &b_start, 0.0);
             Npc {
                 entity: e,
@@ -10973,7 +11016,7 @@ mod tests {
         let away = raddr(-1.0); // far side of the world (home reachable within budget)
         let terrain = PlantedTerrain::fresh_only(std::iter::empty());
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let reg = {
             let mut r = agent_at_reg();
             r.register_predicate(DRANK, false, "drank").unwrap();
@@ -11086,7 +11129,7 @@ mod tests {
         let terrain = PlantedTerrain::fresh_only([w1.clone(), w2.clone()]);
         let run = |seed_room: &RoomAddr| -> Vec<RoomAddr> {
             let mut ledger = Ledger::default();
-            let e = ledger.mint_entity();
+            let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
             // The prior sighting (day 0), THEN a return-home (day 0.5): history holds
             // the sighting (→ belief) but the agent's current position is home, not
             // the water. (Position = latest agent-at; belief = the fold over history.)
@@ -11181,7 +11224,7 @@ mod tests {
             ..Default::default()
         };
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -12138,7 +12181,7 @@ mod tests {
         let home = raddr(1.0);
         let terrain = PlantedTerrain::thermal([(home.clone(), 80.0)]); // blistering, no water
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let base = Npc {
             entity: e,
             home: home.clone(),
@@ -12191,7 +12234,7 @@ mod tests {
                 .map(|r| (r, 1.0)),
         );
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let base = Npc {
             entity: e,
             home: home.clone(),
@@ -12331,7 +12374,7 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         assert!((fatigue_at(&ledger, e, WorldTime { day: 0.5 }) - FATIGUE_RISE * 0.5).abs() < 1e-9);
         ledger.commit(rested_fact(e, 2.0, "t"), &reg).unwrap();
         assert!(fatigue_at(&ledger, e, WorldTime { day: 2.0 }) < 1e-9);
@@ -12552,9 +12595,9 @@ mod tests {
         let here = raddr(1.0);
         let water = here.neighbors()[0].clone();
         let t = PlantedTerrain::fresh_only([water.clone()]);
-        let knower_e = ledger.mint_entity();
+        let knower_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
-        let lost_e = ledger.mint_entity();
+        let lost_e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
         // knower's perception history: stood at water, now back at `here`.
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
@@ -12757,7 +12800,7 @@ mod tests {
 
         let home = raddr(1.0);
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -13167,7 +13210,7 @@ mod tests {
             inner: &planted,
         };
         let mut ledger = Ledger::default();
-        let e1 = ledger.mint_entity();
+        let e1 = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let sys = DriveMovements {
             npcs: vec![build_npc(e1)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -13214,7 +13257,7 @@ mod tests {
             inner: &planted,
         };
         let mut ledger2 = Ledger::default();
-        let e2 = ledger2.mint_entity();
+        let e2 = ledger2.mint_entity(test_lineage(ledger2.entity_count() as u16));
         let sys2 = DriveMovements {
             npcs: vec![build_npc(e2)],
             // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
@@ -13595,7 +13638,7 @@ mod tests {
 
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         // Entered the room at a waking moment (sidesteps the sleep gate),
         // long before `from` — the unobserved gap catch-up must close.
         let entry_day = waking_offset(ActivityCycle::Diurnal);
@@ -13870,8 +13913,8 @@ mod tests {
         let entry_day = waking_offset(ActivityCycle::Diurnal);
         let reg = agent_at_reg();
         let mut ledger = Ledger::default();
-        let a = ledger.mint_entity();
-        let b = ledger.mint_entity();
+        let a = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let b = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         commit_agent_at(&mut ledger, &reg, a, &home, entry_day);
         commit_agent_at(&mut ledger, &reg, b, &home, entry_day);
 

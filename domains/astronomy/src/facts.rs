@@ -8,7 +8,7 @@
 use crate::anchor::Rotation;
 use crate::streams;
 use crate::system::GenesisOutcome;
-use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
+use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World};
 
 /// The host star's spectral class, committed as its registered concept id
 /// (e.g. `"yellow-dwarf"`), never as Morgan-Keenan prose — no creature in
@@ -492,8 +492,15 @@ pub fn genesis(
         )?;
     }
 
-    for neighbor in &system.neighbors {
-        let id = world.ledger.mint_entity();
+    for (i, neighbor) in system.neighbors.iter().enumerate() {
+        // A neighbouring star belongs to this system — `subject`, the entity
+        // every other system-level fact here hangs off — so it is its child,
+        // ordinaled by its position in the generated neighbourhood.
+        let id = world.ledger.mint_entity(Lineage {
+            parent: Some(subject),
+            role: "neighbor",
+            ordinal: i as u16,
+        });
         world
             .ledger
             .commit(fact(id, IS_NEIGHBOR, Value::Flag(true)), &world.registry)?;
@@ -661,6 +668,7 @@ mod tests {
     use crate::register_concepts;
     use crate::system::generate;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::test_lineage;
 
     fn world_with(seed: u64) -> World {
         let mut w = World::new(Seed(seed));
@@ -675,7 +683,9 @@ mod tests {
     fn committed_world(seed: u64) -> (World, EntityId, GenesisOutcome) {
         let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
         let mut w = world_with(seed);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         (w, subject, outcome)
     }
@@ -689,7 +699,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         assert_eq!(
@@ -733,7 +745,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         // The ledger quantizes numeric objects on commit, so the stored value
@@ -762,7 +776,9 @@ mod tests {
             "test setup must actually exercise a degradation"
         );
         let mut w = world_with(23);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         let notes: Vec<&str> = w
@@ -789,7 +805,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         let tides: Vec<f64> = w
@@ -820,7 +838,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         let inclinations: Vec<f64> = w
@@ -851,7 +871,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         for pred in [MOON_MASS_LUNAR, MOON_DISTANCE_MM, MOON_ANGULAR_SIZE_REL] {
             assert_eq!(
@@ -876,7 +898,9 @@ mod tests {
         };
         let outcome = generate(Seed(1), &retro_pins).unwrap();
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         assert_eq!(
             w.ledger.value_of(subject, RETROGRADE_SPIN),
@@ -892,7 +916,9 @@ mod tests {
             }
         ));
         let mut w = world_with(1);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         assert!(w.ledger.value_of(subject, RETROGRADE_SPIN).is_none());
     }
@@ -901,11 +927,15 @@ mod tests {
     fn genesis_is_deterministic() {
         let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
         let mut a = world_with(42);
-        let subject_a = a.ledger.mint_entity();
+        let subject_a = a
+            .ledger
+            .mint_entity(test_lineage(a.ledger.entity_count() as u16));
         genesis(&mut a, subject_a, &outcome).unwrap();
 
         let mut b = world_with(42);
-        let subject_b = b.ledger.mint_entity();
+        let subject_b = b
+            .ledger
+            .mint_entity(test_lineage(b.ledger.entity_count() as u16));
         genesis(&mut b, subject_b, &outcome).unwrap();
 
         assert_eq!(a.to_json(), b.to_json());
@@ -915,7 +945,9 @@ mod tests {
     fn every_committed_fact_has_astronomy_provenance() {
         let outcome = generate(Seed(3), &SkyPins::default()).unwrap();
         let mut w = world_with(3);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         assert!(w.ledger.iter().all(|f| f.provenance == "astronomy"));
     }
@@ -924,7 +956,9 @@ mod tests {
     fn genesis_mints_one_neighbor_entity_per_neighbor_with_structured_facts() {
         let outcome = generate(Seed(3), &SkyPins::default()).unwrap();
         let mut w = world_with(3);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         let neighbor_ids: Vec<_> = w.ledger.find(IS_NEIGHBOR).map(|f| f.subject).collect();
@@ -948,7 +982,9 @@ mod tests {
     fn genesis_commits_the_star_and_anchor_numbers() {
         let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
         let mut w = world_with(42);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
         for pred in [
             STAR_MASS_SOLAR,
@@ -992,7 +1028,9 @@ mod tests {
         for seed in 0..64u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
 
             let calendar = crate::calendar::calendar_of(&outcome.system);
@@ -1079,7 +1117,9 @@ mod tests {
             "test setup must exercise two distinct wanderer classes"
         );
         let mut w = world_with(118);
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, subject, &outcome).unwrap();
 
         assert_eq!(
@@ -1157,7 +1197,9 @@ mod tests {
             let expected = crate::figures::figures(astronomy_seed, &outcome.system).len();
 
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
 
             assert_eq!(
@@ -1196,7 +1238,9 @@ mod tests {
             found = true;
 
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
 
             let committed: Vec<f64> = w
@@ -1239,7 +1283,9 @@ mod tests {
             let any_on_ecliptic = figs.iter().any(|f| f.on_ecliptic);
 
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
 
             let flag_present = w
@@ -1434,7 +1480,9 @@ mod tests {
                 continue;
             };
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
             assert_eq!(
                 w.ledger.value_of(subject, MOON_PERIOD_RATIO),
@@ -1464,7 +1512,9 @@ mod tests {
                 continue;
             }
             let mut w = world_with(seed);
-            let subject = w.ledger.mint_entity();
+            let subject = w
+                .ledger
+                .mint_entity(test_lineage(w.ledger.entity_count() as u16));
             genesis(&mut w, subject, &outcome).unwrap();
             assert!(
                 w.ledger.value_of(subject, MOON_PERIOD_RATIO).is_none(),

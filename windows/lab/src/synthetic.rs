@@ -33,8 +33,8 @@
 use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, PLANT_FORAGE, ResourceVector, RoomAddr,
-    WorldTime,
+    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, Lineage, PLANT_FORAGE, ResourceVector,
+    RoomAddr, WorldTime,
 };
 use hornvale_species::{ActivityCycle, MetabolicClass};
 use hornvale_vessel::liveness::{
@@ -245,6 +245,20 @@ fn creature(
     }
 }
 
+/// The lineage of the `n`th creature a synthetic scenario plants.
+///
+/// A planted creature belongs to no world entity — a scenario builds a bare
+/// `Ledger::default()` with no world above it — so it roots, and `n` is its
+/// position among the creatures THIS scenario plants. Every scenario owns its
+/// own ledger, so numbering restarts at 0 in each.
+fn synthetic_creature(n: u16) -> Lineage<'static> {
+    Lineage {
+        parent: None,
+        role: "synthetic-creature",
+        ordinal: n,
+    }
+}
+
 /// Two near-antipodal rooms guaranteed to be past the plan budget apart (the
 /// uniform-cost search exhausts its 1000-node budget long before crossing the
 /// mesh): `.0` sits on water and serves as a home a belief can anchor to, `.1`
@@ -266,7 +280,7 @@ pub fn stranded_from_known_water() -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
     let mut ledger = Ledger::default();
     let registry = harness_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(synthetic_creature(0));
     // History: stood in the spring (belief), then stranded far away (position).
     let reg = &registry;
     ledger
@@ -297,7 +311,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
     let mut ledger = Ledger::default();
     let registry = harness_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
         .expect("place at spring");
@@ -342,7 +356,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
     let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(synthetic_creature(0));
     // Seed the water belief immediately (stood in the spring on day 0).
     ledger
         .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
@@ -383,7 +397,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
     let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(synthetic_creature(0));
     // Seed the water belief and position (stands in the spring on day 0).
     ledger
         .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
@@ -421,7 +435,7 @@ pub fn a_creature_cornered_by_dread() -> Scenario {
     let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
     let mut ledger = Ledger::default();
     let registry = harness_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
         .expect("place at spring");
@@ -461,8 +475,12 @@ pub fn dread_pit_steady_vs_bold() -> Scenario {
     let registry = harness_registry();
     let mut threat = BTreeMap::new();
     let mut fresh = BTreeSet::new();
+    let mut next_creature: u16 = 0;
     let mut mint_pit = |ledger: &mut Ledger, spring: &RoomAddr| {
-        let e = ledger.mint_entity();
+        // Two creatures share this ledger, so each needs its own ordinal —
+        // reusing 0 would (correctly) trip the mint-time collision assert.
+        let e = ledger.mint_entity(synthetic_creature(next_creature));
+        next_creature += 1;
         ledger
             .commit(place_agent(e, spring, WorldTime { day: 0.0 }), &registry)
             .expect("place at spring");
@@ -517,7 +535,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
     let mut ledger = Ledger::default();
     let registry = harness_registry();
 
-    let stricken = ledger.mint_entity();
+    let stricken = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(
             place_agent(stricken, &spring, WorldTime { day: 0.0 }),
@@ -531,7 +549,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
         )
         .expect("stricken in exile");
 
-    let healthy = ledger.mint_entity();
+    let healthy = ledger.mint_entity(synthetic_creature(1));
     ledger
         .commit(
             place_agent(healthy, &healthy_spring, WorldTime { day: 0.0 }),
@@ -613,7 +631,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
 
     // The stricken: homed at spring, stood there, then marooned at exile. Its
     // home-anchored belief = spring (unreachable from exile) → chronic Frustrated.
-    let stricken = ledger.mint_entity();
+    let stricken = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(
             place_agent(stricken, &spring, WorldTime { day: 0.0 }),
@@ -631,7 +649,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
     // takes its "no active drive" branch and, since its home matches its
     // stationed position, simply Holds there forever. Stationed at exile
     // (colocated) or safely away (apart); never moves either way.
-    let knower = ledger.mint_entity();
+    let knower = ledger.mint_entity(synthetic_creature(1));
     let station = if colocated {
         exile.clone()
     } else {

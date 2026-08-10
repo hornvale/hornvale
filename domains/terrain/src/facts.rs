@@ -136,13 +136,16 @@ pub fn genesis(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Seed, Value, World};
 
     #[test]
     fn genesis_commits_the_summary_facts() {
         let mut world = World::new(Seed(42));
         crate::register_concepts(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         let geo = hornvale_kernel::Geosphere::new(3);
         let outcome = crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).unwrap();
         genesis(&mut world, subject, &outcome).unwrap();
@@ -189,7 +192,9 @@ mod tests {
     fn genesis_commits_rift_facts_on_a_default_world() {
         let mut world = World::new(Seed(42));
         crate::register_concepts(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         let geo = hornvale_kernel::Geosphere::new(3);
         let outcome = crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).unwrap();
         assert!(
@@ -218,7 +223,9 @@ mod tests {
     fn genesis_commits_zero_rift_facts_on_a_single_craton_world() {
         let mut world = World::new(Seed(3));
         crate::register_concepts(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         let geo = hornvale_kernel::Geosphere::new(3);
         let pins = crate::TerrainPins {
             continents: Some(1),

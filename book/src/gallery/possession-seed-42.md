@@ -133,8 +133,8 @@ Night. The vast moon shows its first-quarter face. The small, distant moon shows
 4 things seen:
   room/750518284 = {"schema":"locale/room/v2","id":750518284,"face":12,"path…
   room/750518380 = {"schema":"locale/room/v2","id":750518380,"face":12,"path…
-  settlement/7/name = Googo
-  settlement/7/population = 68
+  settlement/10760661430244474880/name = Googo
+  settlement/10760661430244474880/population = 68
 > release
 You let go.
 ```

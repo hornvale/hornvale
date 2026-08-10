@@ -140,6 +140,7 @@ pub fn genesis(
 mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
+    use hornvale_kernel::test_lineage;
     use hornvale_kernel::{CellMap, ReferenceElevation, Seed, World};
 
     /// Test-only helper: a validated `ReferenceElevation`.
@@ -173,7 +174,9 @@ mod tests {
         let geo = Geosphere::new(3);
         let mut world = World::new(Seed(1));
         register_concepts(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         let record = cold_world_record(&geo);
         genesis(&mut world, subject, &geo, &record).unwrap();
         let frost = world.ledger.find(FROST_RETREAT).count();
@@ -196,7 +199,9 @@ mod tests {
         let record = extract(&geo, &elev, e(0.0), &eras);
         let mut world = World::new(Seed(1));
         register_concepts(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         genesis(&mut world, subject, &geo, &record).unwrap();
         assert_eq!(world.ledger.find(FROST_RETREAT).count(), 0);
     }

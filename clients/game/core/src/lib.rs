@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-//! Hornvale's game client, renderer half: `vessel/session/v1` to a
+//! Hornvale's game client, renderer half: `vessel/session/v2` to a
 //! character grid. This crate does not depend on any hornvale crate.
 
 pub mod cell;
@@ -13,7 +13,7 @@ pub use cell::*;
 pub use schema::*;
 
 impl Snapshot {
-    /// Parse an emitted `vessel/session/v1` document.
+    /// Parse an emitted `vessel/session/v2` document.
     pub fn parse(json: &str) -> Result<Snapshot, serde_json::Error> {
         serde_json::from_str(json)
     }
@@ -31,7 +31,7 @@ pub const MIN_HEIGHT: u16 = 24;
 /// Everything that can keep [`render`] from producing a [`Grid`].
 #[derive(Debug)]
 pub enum Error {
-    /// `json` was not a valid `vessel/session/v1` document.
+    /// `json` was not a valid `vessel/session/v2` document.
     Parse(serde_json::Error),
     /// The requested grid was smaller than the monochrome floor
     /// ([`MIN_WIDTH`] by [`MIN_HEIGHT`]).
@@ -46,7 +46,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Parse(e) => write!(f, "failed to parse vessel/session/v1: {e}"),
+            Error::Parse(e) => write!(f, "failed to parse vessel/session/v2: {e}"),
             Error::TooSmall { w, h } => write!(
                 f,
                 "grid {w}x{h} is smaller than the {MIN_WIDTH}x{MIN_HEIGHT} floor"
@@ -63,7 +63,7 @@ impl From<serde_json::Error> for Error {
     }
 }
 
-/// Render `json` — an emitted `vessel/session/v1` document — into a
+/// Render `json` — an emitted `vessel/session/v2` document — into a
 /// `w`-by-`h` character grid: the plate left, the entry right, the
 /// endpaper strip below (see [`spread::compose`]). Fails if `json` does
 /// not parse, or if the requested grid is smaller than the monochrome

@@ -19,14 +19,14 @@ function glyphRows(grid: PaneGrid | null): string[] | null {
   return grid ? grid.map((row) => row.map((c) => c.glyph).join("")) : null;
 }
 
-/** A minimal `vessel/session/v1` snapshot with one `scene/surrounds/v2`
+/** A minimal `vessel/session/v2` snapshot with one `scene/surrounds/v2`
  * chart, built from bare cell payloads — for tests that care about a
  * specific field (colour, water) rather than a real fixture. The four-entry
  * `WaterKind::LEGEND` order (`ocean`, `salt-basin`, `river`, `dry-land`) is
  * fixed so a caller can write `water: 0` / `water: 3` and mean it. */
 function snapshotWithChart(cells: unknown[]): Snapshot {
   return parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -87,7 +87,7 @@ Deno.test("a chart with no schema tag draws nothing", () => {
   // to the envelope. Before this guard existed, an absent tag degraded to
   // "read what's there," which is luck, not design.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -106,7 +106,7 @@ Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
   // refuse, not render. A denylist would render it and could silently
   // mis-draw a field a future schema reused with new meaning.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -123,7 +123,7 @@ Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
 
 Deno.test("a chart with the current schema tag renders", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -140,7 +140,7 @@ Deno.test("a chart with the current schema tag renders", () => {
 
 Deno.test("a chamber-band snapshot draws no chart", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: { band: "chamber", plan: {} },
   }))!;
   assertEquals(chartCells(snap), null);
@@ -148,7 +148,7 @@ Deno.test("a chamber-band snapshot draws no chart", () => {
 
 Deno.test("a snapshot with no spatial channel draws no chart", () => {
   assertEquals(
-    chartCells(parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" }))!),
+    chartCells(parseSnapshot(JSON.stringify({ schema: "vessel/session/v2" }))!),
     null,
   );
 });
@@ -157,7 +157,7 @@ Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
   // A seam cell has null u/v/w: no honest local coordinate exists, so there
   // is nowhere correct to draw it. Dropping it is the honest choice.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -198,7 +198,7 @@ Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
 
 Deno.test("a chart with no cells array draws nothing", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: { band: "walk", chart: {} },
   }))!;
   assertEquals(chartCells(snap), null);
@@ -206,7 +206,7 @@ Deno.test("a chart with no cells array draws nothing", () => {
 
 Deno.test("a chart with an empty cells array draws nothing", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: { band: "walk", chart: { cells: [] } },
   }))!;
   assertEquals(chartCells(snap), null);
@@ -214,7 +214,7 @@ Deno.test("a chart with an empty cells array draws nothing", () => {
 
 Deno.test("a spatial channel with a null chart draws nothing", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: { band: "walk", chart: null },
   }))!;
   assertEquals(chartCells(snap), null);
@@ -222,7 +222,7 @@ Deno.test("a spatial channel with a null chart draws nothing", () => {
 
 Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -243,7 +243,7 @@ Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
 
 Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -267,7 +267,7 @@ Deno.test("a cell past the coordinate ceiling is refused, not drawn", () => {
   // This pins MAX_COORD against that class of payload: only the in-bound
   // cell should ever be placed.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -293,7 +293,7 @@ Deno.test("a non-string water_legend entry does not shift subsequent indices", (
   // as land. This pins the position-preserving fix (`.map` to `""` rather
   // than `.filter`) against that regression.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {
@@ -321,7 +321,7 @@ Deno.test("a real dry-land cell does not render as water", () => {
   // `water !== "none"` check would misread every dry cell as water. This
   // pins the positive-match fix against that regression.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "walk",
       chart: {

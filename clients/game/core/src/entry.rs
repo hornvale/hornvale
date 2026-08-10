@@ -137,7 +137,7 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// The prose body (and the marker, should it appear) is attributed to
 /// [`Source::Prose`]; the prompt is attributed to [`Source::Chrome`] —
 /// `PROMPT_GLYPH` is a hardcoded constant, not derived from any
-/// `vessel/session/v1` field, so it is UI chrome rather than a datum this
+/// `vessel/session/v2` field, so it is UI chrome rather than a datum this
 /// client read off the wire. (An earlier draft attributed the prompt to a
 /// since-deleted `Source::WaysOn`, on the theory that the command line
 /// represents the character's own "ways on" — see [`Source::Chrome`]'s doc

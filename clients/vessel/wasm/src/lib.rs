@@ -3,7 +3,7 @@
 //! (spec: docs/superpowers/specs/2026-07-13-the-casement-design.md).
 //!
 //! The module imports **nothing** — no clock, no network, no DOM. Memory
-//! in, prose (and the structured `vessel/session/v1` snapshot) out; that
+//! in, prose (and the structured `vessel/session/v2` snapshot) out; that
 //! emptiness is the exhibit's one-line sandbox audit. No wasm-bindgen:
 //! strings cross as (ptr, len) pairs over the module's linear memory.
 #![warn(missing_docs)]
@@ -31,7 +31,7 @@ static mut STATE: Option<Possession> = None;
 static mut OUT: String = String::new();
 /// The input buffer JS writes UTF-8 command bytes into.
 static mut INBUF: [u8; 4096] = [0; 4096];
-/// The current turn's `vessel/session/v1` JSON, which JS reads via
+/// The current turn's `vessel/session/v2` JSON, which JS reads via
 /// `hv_snapshot_ptr`/`hv_snapshot_len`. Empty when there is no live
 /// possession, or when the snapshot read itself failed — the client then
 /// degrades to the prose transcript rather than to a blank pane.

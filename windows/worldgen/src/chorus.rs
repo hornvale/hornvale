@@ -1932,6 +1932,7 @@ pub struct PredictionCrisis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
     use hornvale_language::LossReason;
 
     /// The naive model's own worked example (spec "Hit or miss, and a
@@ -2282,7 +2283,9 @@ mod tests {
         let mut world = World::new(Seed(1));
         hornvale_astronomy::register_concepts(&mut world.registry)
             .expect("astronomy concepts register on a fresh registry");
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         world
             .ledger
             .commit(

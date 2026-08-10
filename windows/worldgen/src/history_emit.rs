@@ -17,7 +17,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
+use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Build one fact about occupation entity `subject`, day-stamped at `day` —
@@ -106,10 +106,22 @@ fn resolve_people(label: &str) -> Option<KindId> {
 pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     // Mint one entity per record, strictly in `records` order (determinism:
     // same history ⇒ same ids ⇒ same facts, every time).
+    // An occupation has no ledger entity above it — its site is a `CellId` and
+    // its people a `KindId`, neither of which is an entity — so it roots, and
+    // its ordinal is its position in the baked `records` order. Spec P4: a
+    // future bake that reorders `records` still moves these ids, and that is
+    // the lineage's own churn rather than a residual defect.
     let minted: Vec<EntityId> = h
         .records
         .iter()
-        .map(|_| world.ledger.mint_entity())
+        .enumerate()
+        .map(|(i, _)| {
+            world.ledger.mint_entity(Lineage {
+                parent: None,
+                role: "occupation",
+                ordinal: i as u16,
+            })
+        })
         .collect();
 
     // The bake's own (non-ledger) community handles referenced by
