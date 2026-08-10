@@ -2596,8 +2596,10 @@ pub struct BiosphereTraits {
     /// creatures buffer environmental constraint. Authored as the creature's
     /// 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
     /// supernatural set (dragon/plant/elemental — treant is 5E plant-typed);
-    /// mundane beasts and the four
-    /// peoples carry 0.
+    /// mundane beasts and the peoples carry 0 (count-free deliberately, like
+    /// [`biosphere_registry`]'s doc 35 lines below — this line read "the four
+    /// peoples" for four campaigns after there were nine, and was fixed only
+    /// when its sibling was).
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
     /// How this creature organizes socially (universal; every kind carries

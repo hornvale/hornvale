@@ -99,6 +99,7 @@ run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-generated.md
 run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
+run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
 run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
 # The live-pane preamble is hand-authored framing (The Casement, decision
 # 0052): the possess dump replaces the whole file, so re-emit the preamble

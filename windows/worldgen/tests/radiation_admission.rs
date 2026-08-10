@@ -6,6 +6,7 @@
 //! registries.
 
 use hornvale_kernel::KindId;
+use hornvale_language::ArticulationVector;
 use hornvale_species::{HabitatRealm, SocialForm};
 
 /// The six, in ascending `KindId` order — the order every `ComponentStore`
@@ -179,6 +180,88 @@ fn the_sea_elf_draws_on_the_marine_supply_axis() {
             "{name} weights MARINE_FORAGE; only sea-elf may, or Sea stops \
              being the family's marine isolate"
         );
+    }
+}
+
+/// The five authored scalar dimensions of an [`ArticulationVector`], in the
+/// order the registry rows write them. `tonality` is excluded deliberately —
+/// every shipped humanoid is 0.0, so counting it would only ever add zero and
+/// would make the "differs on at least three" claim below weaker than it
+/// reads. `exotic` is excluded for the same reason in reverse: it is a
+/// categorical innovation the divergence claim already covers separately.
+fn differing_scalar_dimensions(a: &ArticulationVector, b: &ArticulationVector) -> usize {
+    usize::from(a.labiality != b.labiality)
+        + usize::from(a.vowel_space != b.vowel_space)
+        + usize::from(a.voicing != b.voicing)
+        + usize::from(a.sibilance != b.sibilance)
+        + usize::from(a.voice_loudness != b.voice_loudness)
+}
+
+/// **P5's divergence clause has a PRECONDITION in the authoring, and this is
+/// it.** The spec (§5, P5) measures whether some concept rooted in all six
+/// daughters has ≥ 2 distinct present-day forms — descent proven by shared
+/// *innovations*, not by a shared ancestor alone. The cascade consumes the
+/// daughters' articulation vectors, so six daughters authored identically to
+/// the `elf` proto (or to each other) would be six names for one tongue, and
+/// P5 would correctly read false. The campaign would then have measured a null
+/// it authored into existence.
+///
+/// The `articulation_registry` block comment already asserts this in prose —
+/// "each row below DIVERGES from `family_proto`'s `KindId("elf")` vector … on
+/// at least three dimensions". This test is that sentence made able to fail,
+/// on the file's own standard: **a precondition that cannot fire is worse than
+/// a comment**, because a later editor tidying two vectors toward the family
+/// mean would take P5 down silently.
+///
+/// Asserted in both of the shapes the clause needs: no daughter equals the
+/// proto (there is a family, not an alias), and no two daughters are equal
+/// (there are six tongues, not fewer). Compared on the authored `f64`s exactly
+/// — these are hand-written literals, never computed, so exact equality is the
+/// right predicate and a near-miss is a different (and permitted) thing.
+#[test]
+fn every_elf_diverges_from_the_proto_and_from_its_siblings() {
+    let wc = hornvale_worldgen::WorldComponents::assemble()
+        .expect("canonical registries are well-formed");
+    let proto = wc
+        .family_proto
+        .get(&KindId("elf"))
+        .expect("the elf family carries a proto vector");
+    for name in ELVES {
+        let v = wc
+            .articulation
+            .get(&KindId(name))
+            .unwrap_or_else(|| panic!("{name} has no articulation row"));
+        let n = differing_scalar_dimensions(v, proto);
+        println!("   {name:<12} differs from proto-Elvish on {n}/5 scalar dimensions");
+        assert_ne!(
+            v, proto,
+            "{name}'s articulation vector IS the `elf` proto vector. A daughter \
+             that has not moved at all is a proto with a second name: its \
+             cascade has nothing to consume, and P5's divergence clause would \
+             read false for a reason the author created rather than the model."
+        );
+        assert!(
+            n >= 3,
+            "{name} differs from proto-Elvish on only {n} of five scalar \
+             dimensions; the `articulation_registry` block comment claims at \
+             least three for every row. Either the row drifted toward the \
+             proto or the comment is now false — fix whichever is wrong, do \
+             not lower this bound."
+        );
+    }
+    for (i, a) in ELVES.into_iter().enumerate() {
+        for b in ELVES.into_iter().skip(i + 1) {
+            let va = wc.articulation.get(&KindId(a)).expect("checked above");
+            let vb = wc.articulation.get(&KindId(b)).expect("checked above");
+            assert_ne!(
+                va, vb,
+                "{a} and {b} carry IDENTICAL articulation vectors, so the \
+                 family has fewer distinct tongues than daughters. P5's \
+                 divergence clause is stated over SIX draws precisely because \
+                 six have more room to differ than three; two aliases spend \
+                 that room without measuring anything."
+            );
+        }
     }
 }
 

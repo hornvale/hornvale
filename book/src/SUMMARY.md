@@ -109,6 +109,7 @@
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [Proto-dwarf](./reference/proto-dwarf-generated.md)
+- [Proto-elf](./reference/proto-elf-generated.md)
 - [The Layering](./reference/layering.md)
 
 # Open Questions

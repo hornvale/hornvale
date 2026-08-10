@@ -711,6 +711,13 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // above is the real surviving claim, and it clears tenfold.
     //
     // WHY THE POLES ARE STILL ~ZERO, given the tent that zeroed them is gone.
+    //
+    // >>> THE PARAGRAPH THAT FOLLOWS IS WRONG. It is kept verbatim, not
+    // >>> deleted, because two campaigns inherited it and elaborated on it
+    // >>> instead of re-deriving it, and the next reader should be able to see
+    // >>> how the error survived. The correction, with the measurements that
+    // >>> establish it, is in THE RADIATION RE-PIN block below. <<<
+    //
     // Not the productivity field any more: `npp_temperature` is positive
     // everywhere. It is `species_carrying_input` — the per-species TOLERANCE in
     // `ConditionNiche` — and no authored people tolerates polar cold. So the
@@ -740,27 +747,101 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // tolerating polar cold. The degeneracy this assertion documents is
     // unchanged, and the ratio is still exactly 100 * trop_mean.
     //
-    // THE RADIATION RE-PIN (C2d, 2026-08-10): 35.8831 -> 36.3288, and the
+    // THE RADIATION RE-PIN (C2d, 2026-08-10): 35.8831 -> 36.3288. The
     // MECHANISM is again the roster and only the roster — the settling
-    // population went from nine to fifteen, so six more tolerance curves
-    // entered the mean. Nothing latitudinal moved.
+    // population went from nine to fifteen, so six more terms entered the
+    // mean. Nothing latitudinal moved. **They are PSYCHE terms, not tolerance
+    // curves**, which is where the paragraphs above go wrong; see the
+    // correction below.
     //
-    // AND THE PREDICTION FAILS A THIRD TIME, WHICH IS THE PART WORTH READING.
-    // This campaign ships a genuinely COLD-ADAPTED people (snow-elf, authored
-    // at a 0.0 C temperature optimum, below the settleable p5 of 3.27) and a
-    // SUBTERRANEAN one (drow) — exactly the two kinds the paragraph above
-    // says would lift the poles off the floor. Measured: raw_pole_mean
-    // 0.004574 -> 0.004589, still an order of magnitude under
-    // POLE_FLOOR = 0.01, and `pole floored: true`. The reason is this
-    // campaign's own authoring strategy rather than the prediction being
-    // wrong about the model: every elf sits BELOW its sovereignty floor on
-    // elevation devotion, so the Liebig minimum discards its temperature
-    // curve on every cell (spec §3.1, and see the C2d block comment in
-    // `domains/species/src/lib.rs`). Snow-elf's cold tolerance is authored,
-    // honest, and never read. **A people can be cold-adapted in the registry
-    // and not cold-adapted in the field**, and this line is the measurement
-    // that says so. The prediction remains untested rather than refuted, and
-    // the campaign that tests it must author a cold people ABOVE its floor.
+    // WHAT THIS LOOP ACTUALLY READS, since two campaigns have now got it
+    // wrong. Per cell it reads `carrying_inputs_of(geo, terrain, climate)` —
+    // a species-BLIND per-cell record of land/temperature/precipitation/
+    // freshwater/coast/hostility. Per species it reads exactly one thing:
+    // `species_carrying_input(CarryingInput, &MindVector)`, whose signature
+    // (`windows/worldgen/src/lib.rs`) contains no `ConditionNiche`, and whose
+    // body touches `time_horizon` and `threat_response` and nothing else.
+    // `ConditionNiche` and `BiomeAffinity` reach K only through
+    // `per_species_suitability`, which this loop never calls — the same
+    // disjointness this test's own header asserts for the vector supply.
+    // **This metric cannot evaluate `tolerance_liebig` at all.**
+    //
+    // THE MOVEMENT, ATTRIBUTED ARITHMETICALLY rather than narrated. The pole
+    // is floored, so ratio == 100 * trop_mean exactly, and trop_mean is the
+    // unweighted mean of the per-kind tropical means (every kind contributes
+    // the same 4380 tropical land cells). Measured per kind on seed 42:
+    //
+    //   bugbear   0.344060   desert-dwarf 0.369867   gnoll      0.338622
+    //   goblin    0.353578   gully-dwarf  0.364961   hill-dwarf 0.369628
+    //   hobgoblin 0.354906   human        0.364780   kobold     0.369080
+    //     -> mean over these NINE = 0.358831 -> 35.8831, the previous pin
+    //
+    //   desert-elf 0.369521  drow     0.370663  high-elf 0.372182
+    //   sea-elf    0.367904  snow-elf 0.369703  wood-elf 0.369867
+    //     -> mean over all FIFTEEN = 0.363288 -> 36.3288, this pin
+    //
+    // The nine-kind subset reproduces the old pin to every digit, so the six
+    // new terms account for the whole movement and nothing else moved. The
+    // direction is `time_horizon`, through `freshwater_factor = 0.5 +
+    // time_horizon`: the elves carry 0.85-0.95 against a nine-kind spread of
+    // 0.20-0.90, and a mean pulled toward the high end rises.
+    //
+    // ---- THE CORRECTION: WHY THE POLES ARE ~ZERO. It is the GROUND, not
+    // ---- the roster, and never was the roster.
+    //
+    // Measured on seed 42 (probe run 2026-08-10, reverted): polar land
+    // averages **T = -42.65 C** and 757.1 mm/yr over its 1855 cells, so
+    // inside `carrying_capacity` the species-blind Liebig minimum reads
+    //
+    //     npp_temperature(-42.65) = 0.001674
+    //     npp_precipitation(757.1) = 0.395099      min = 0.001674
+    //
+    // — the temperature term, smaller by 236x. Running `carrying_capacity`
+    // over the BASE inputs with no psyche folded in at all gives trop_mean
+    // 0.353578 and pole_mean 0.004473: **the ground alone is already an order
+    // of magnitude under POLE_FLOOR before any species exists.** Folding
+    // psyche in moves each kind's polar mean only into 0.004366 (gnoll) ..
+    // 0.004696 (drow), a +-4% modulation. goblin reproduces the ground
+    // reading to every digit (0.004473 / 0.353578) because its psyche is
+    // 0.50/0.50 and both factors are exactly 1.0.
+    //
+    // So the retired tent's zero did NOT relocate from the ground to the
+    // roster. It stayed in the ground and changed shape — Lieth's saturating
+    // curve is merely very small at -42 C rather than exactly zero at +2 C.
+    //
+    // ---- AND THE PREDICTION IS NOT UNTESTED. IT IS UNTESTABLE HERE.
+    //
+    // This campaign ships a genuinely COLD-ADAPTED people (snow-elf, 0.0 C
+    // optimum) and a SUBTERRANEAN one (drow) — the two kinds the Tense
+    // paragraph says would lift the poles. raw_pole_mean moved 0.004574 ->
+    // 0.004589 and `pole floored: true`. That is not a third failure of a
+    // live prediction; no authoring could have succeeded, because the only
+    // per-species channel this metric has is psyche and psyche does not know
+    // what a temperature is. FALSIFIED BY EXECUTION rather than by reading
+    // (mutations run 2026-08-10, all reverted):
+    //
+    //   snow-elf elevation devotion 0.30 -> 0.90, i.e. authored ABOVE its
+    //     0.435955 floor — the exact remedy an earlier draft of this comment
+    //     prescribed                            -> 36.3288, byte-identical
+    //   snow-elf temperature optimum 0.0 -> -40.0 C, width 14 -> 3,
+    //     devotion 0.35 -> 0.99                 -> 36.3288, byte-identical
+    //   snow-elf psyche time_horizon 0.88 -> 0.10 -> 36.0686, RED
+    //
+    // The positive control is what makes the two nulls mean anything: the
+    // measurement is live and snow-elf IS in the loop. It simply cannot see a
+    // niche. The same fact read from the other end: drow (0.004696) and
+    // high-elf (0.004694) carry the two HIGHEST polar means in the roster,
+    // while snow-elf, the only cold-adapted kind, sits mid-pack at 0.004650.
+    // That ordering is `time_horizon`'s. It is not cold tolerance's.
+    //
+    // **Do not author a cold people to test the polar prediction** — it was
+    // tried here and moved nothing. Testing it means re-pointing this loop
+    // onto `per_species_suitability`, the path that does read `ConditionNiche`
+    // and `BiomeAffinity`; that is a campaign, not an authoring change. And
+    // the sentence "a people can be cold-adapted in the registry and not
+    // cold-adapted in the field" may well be true of this commit, but **this
+    // line is not the measurement that says so** and must not be cited as
+    // one.
     assert!(
         (ratio - 36.3288).abs() < 1e-3,
         "scalar-path productivity drifted: {ratio:.4} (expected ~36.3288). NOTE this is \

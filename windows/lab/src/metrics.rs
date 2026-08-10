@@ -9454,6 +9454,13 @@ mod tests {
         //
         // No same-seed second species at seed 7, so this witness is
         // load-bearing alone.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** The seed goes 2 -> 7 (the
+        // species stays bugbear), so nothing below is comparable, line for
+        // line, with what this test asserted at the previous commit: it is a
+        // different world. Read no continuity into the seed number. A witness
+        // is re-DERIVED by the sweep above, never bumped to whatever makes
+        // the old subject pass — that would turn a witness into a claim.
         let view = FullView::build(Seed(7), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
@@ -11074,6 +11081,13 @@ mod tests {
         // row at seed 5) and the species returns to bugbear, which carried it
         // two passes ago. Same-seed corroboration is back: (5, hobgoblin)
         // qualifies too, so this witness is not load-bearing alone.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** The species goes desert-dwarf ->
+        // bugbear, so the assertion below is about a different people than at
+        // the previous commit even though the seed is unchanged. A stable seed
+        // number is exactly what makes this easy to misread as continuity; it
+        // is not. The witness is re-DERIVED by the sweep above, never bumped
+        // to whatever keeps the old subject green.
         let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
