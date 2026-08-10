@@ -3302,6 +3302,22 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| monophyly(v, "dwarf")),
         },
         Metric {
+            // THE RADIATION (C2d): the roster's third multi-member family and
+            // the first with six daughters — the family the language machinery
+            // has been waiting for. Same check, not a third implementation.
+            name: "monophyly-elf",
+            doc: "Whether every elf daughter's (desert-elf, drow, high-elf, sea-elf, \
+                   snow-elf, wood-elf) Root derivation.proto matches an INDEPENDENT \
+                   re-draw of the shared \"elf\" family proto-root for that concept \
+                   (spec §3: cognates share a proto ancestor) — never reading the \
+                   family proto back from a sibling's own recorded derivation; Absent \
+                   if no elf daughter minted a Root",
+            summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "elf")),
+        },
+        Metric {
             name: "clean-outgroup-kobold",
             doc: "Whether kobold — the family with no siblings — never coincides with the \
                    goblinoid family: for every concept kobold holds as a Root, its \
@@ -3409,7 +3425,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Flag,
             domain: Domain::Language,
             role: Role::Descriptor,
-            extract: Extractor::Full(divergence_real),
+            extract: Extractor::Full(|v: &FullView| divergence_real_for(v, "goblinoid")),
         },
         Metric {
             name: "homophony-count-goblin",
@@ -6916,6 +6932,30 @@ const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 /// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
 const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
 
+/// THE RADIATION (C2d): the elf family's six daughters — the roster's third
+/// and largest multi-member family, and `monophyly-elf`'s subject. Same shape,
+/// same rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`]: an
+/// authored MEMBERSHIP CLAIM, deliberately not derived from
+/// [`hornvale_worldgen::family_daughter_kinds`], because a derived list changes
+/// value on the Lab's synthetic rosters and moving a null control's value is a
+/// deliberate act rather than a refactor.
+const ELF_DAUGHTERS: [&str; 6] = [
+    "desert-elf",
+    "drow",
+    "high-elf",
+    "sea-elf",
+    "snow-elf",
+    "wood-elf",
+];
+
+/// Every family [`family_daughters_of`] answers for, and therefore every family
+/// `authored_daughter_lists_match_the_default_rosters_family_membership` drift-
+/// checks. Kept beside the lists rather than restated in the test so a fourth
+/// family cannot be added to the match arm and silently miss the guard — which
+/// is exactly what the elf family would have done had this stayed a literal in
+/// the test body.
+const AUTHORED_FAMILIES: [&str; 3] = ["goblinoid", "dwarf", "elf"];
+
 /// The authored daughter list for a family the family-level metrics below are
 /// registered over. Panics on any other family: a `monophyly-<family>` metric
 /// must never be registered without the membership claim it measures against.
@@ -6923,7 +6963,10 @@ fn family_daughters_of(family: &str) -> &'static [&'static str] {
     match family {
         "goblinoid" => &GOBLINOID_DAUGHTERS,
         "dwarf" => &DWARF_DAUGHTERS,
-        other => panic!("no authored daughter list for family '{other}'"),
+        "elf" => &ELF_DAUGHTERS,
+        other => {
+            panic!("no authored daughter list for family '{other}'; known: {AUTHORED_FAMILIES:?}")
+        }
     }
 }
 
@@ -7186,7 +7229,7 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Number(merged.len() as f64)
 }
 
-/// Whether some concept rooted in ALL THREE goblinoid daughters has \u{2265}2
+/// Whether some concept rooted in EVERY daughter of `family` has \u{2265}2
 /// distinct present-day forms (spec §3's divergence-reality guard,
 /// generalized from `windows/worldgen/src/lib.rs`'s test-only
 /// `goblinoid_daughters_actually_diverge` to every seed): stemmatics proves
@@ -7194,16 +7237,23 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
 /// degenerate family whose daughters are silent aliases of one another must
 /// read false here. Compares recorded `derivation.modern` segment
 /// sequences directly (not romanized views) to avoid any rendering-layer
-/// false negative. `Absent` if no concept is rooted in all three daughters.
-fn divergence_real(v: &FullView) -> MetricValue {
-    if !GOBLINOID_DAUGHTERS.iter().all(|s| in_roster(v, s)) {
+/// false negative. `Absent` if no concept is rooted in every daughter.
+///
+/// Parameterised by THE RADIATION (C2d), exactly as [`monophyly`] already was:
+/// divergence-reality is a property of a *family*, and this was hardcoded to
+/// `GOBLINOID_DAUGHTERS`. The `divergence-real` census metric keeps its name,
+/// its doc string and its goblinoid subject byte-identically — a metric's name
+/// and doc are a published contract — and the six-daughter reading is taken in
+/// `windows/worldgen/tests/radiation_language.rs`, where it costs no census
+/// column.
+fn divergence_real_for(v: &FullView, family: &str) -> MetricValue {
+    let daughters = family_daughters_of(family);
+    if !daughters.iter().all(|s| in_roster(v, s)) {
         return MetricValue::Absent;
     }
-    let lexes: Vec<hornvale_language::Lexicon> = GOBLINOID_DAUGHTERS
-        .iter()
-        .filter_map(|s| lex(v, s).ok())
-        .collect();
-    if lexes.len() < GOBLINOID_DAUGHTERS.len() {
+    let lexes: Vec<hornvale_language::Lexicon> =
+        daughters.iter().filter_map(|s| lex(v, s).ok()).collect();
+    if lexes.len() < daughters.len() {
         return MetricValue::Absent;
     }
     let Some((first, rest)) = lexes.split_first() else {
@@ -8214,7 +8264,20 @@ mod tests {
         // three surviving prevalence assertions are robust claims that stay
         // in the gate, and 0097 prescription 3 forbids the same claim living
         // in both instruments.
-        assert_eq!(registry().len(), 194);
+        //
+        // +1 for THE RADIATION (C2d Task 5: monophyly-elf — the roster's THIRD
+        // multi-member family, and the first with six daughters, measured by
+        // the SAME generalized check `monophyly-goblinoid` and
+        // `monophyly-dwarf` use). ONE column and not more, deliberately: the
+        // per-daughter `inventory-closure-*` / `homophony-count-*` /
+        // `confusable-homophony-*` families stay frozen at four kinds (goblin,
+        // hobgoblin, bugbear, kobold — the dwarves never got them either), and
+        // `divergence-real` stays goblinoid-scoped. Extending either to the
+        // elves would add 24+ columns to each of the nine `"metrics": "all"`
+        // studies and be paid on every census forever; both readings are taken
+        // instead in `windows/worldgen/tests/radiation_language.rs`, where they
+        // cost no column. See that file's header and the campaign chronicle.
+        assert_eq!(registry().len(), 195);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -10227,14 +10290,57 @@ mod tests {
         );
     }
 
+    /// THE RADIATION (C2d): the same property for the roster's third and
+    /// largest multi-member family. P5's first clause at the reference seed;
+    /// the seed-swept form is
+    /// `windows/worldgen/tests/radiation_language.rs::monophyly_elf_holds_over_the_seed_panel`.
+    #[test]
+    fn monophyly_elf_holds_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "monophyly-elf"),
+            MetricValue::Flag(true),
+            "every elf daughter's Root proto must match the family proto-root"
+        );
+    }
+
+    /// `divergence-real` still measures GOBLINOID after the parameterisation
+    /// — the metric's subject is as much a published contract as its name, and
+    /// a `family_daughters_of("elf")` slip in the extractor would be invisible
+    /// to `divergence_real_holds_at_seed_42` (both families diverge at seed
+    /// 42). Compares the registered extractor's value against the goblinoid
+    /// call directly, and asserts the elf call is a DIFFERENT computation by
+    /// checking it is reachable at all.
+    #[test]
+    fn divergence_real_the_census_column_still_reads_the_goblinoid_family() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "divergence-real"),
+            divergence_real_for(&view, "goblinoid"),
+            "the census column's subject must stay goblinoid"
+        );
+        assert_ne!(
+            divergence_real_for(&view, "elf"),
+            MetricValue::Absent,
+            "the elf family is rooted and rostered at seed 42, so the \
+             generalised function must reach a verdict there"
+        );
+    }
+
     /// The drift guard the authored daughter constants trade against being
     /// derived: on the CANONICAL roster each list must be exactly the set
     /// `family_daughter_kinds` computes from `family_of`. A future campaign
     /// that adds a fourth dwarf and forgets the constant reddens here.
+    ///
+    /// Ranges over [`AUTHORED_FAMILIES`] rather than over a literal list, so a
+    /// family added to `family_daughters_of` cannot be added without being
+    /// drift-checked. It was a literal `["goblinoid", "dwarf"]` until THE
+    /// RADIATION (C2d), which means the guard would have stayed green over an
+    /// `ELF_DAUGHTERS` that disagreed with `family_of` on every row.
     #[test]
     fn authored_daughter_lists_match_the_default_rosters_family_membership() {
         let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
-        for family in ["goblinoid", "dwarf"] {
+        for family in AUTHORED_FAMILIES {
             let mut derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, family)
                 .iter()
                 .map(|k| k.0)
@@ -10285,6 +10391,14 @@ mod tests {
     /// a list someone has to remember to extend. Pinned against the two kinds
     /// the retired constant had silently omitted since The Generalist and The
     /// Vacancy, and against the three The Delvers adds.
+    ///
+    /// THE RADIATION (C2d) adds the six elves, and they are here as EVIDENCE
+    /// rather than as bookkeeping. The campaign's spec asked for the elf family
+    /// to be "extended past `GOBLINOID_DAUGHTERS` / `ALL_DAUGHTERS`"; the
+    /// second of those was retired by The Delvers in favour of this derived
+    /// function, so `lexicon-regular-family` was claimed to cover the elves
+    /// already, with no edit at all. That claim is only worth as much as a run,
+    /// so it is asserted here instead of stated in a chronicle.
     #[test]
     fn all_daughters_is_the_rosters_own_lexicon_population() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -10299,6 +10413,12 @@ mod tests {
             "desert-dwarf",
             "gully-dwarf",
             "hill-dwarf",
+            "desert-elf",
+            "drow",
+            "high-elf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
         ] {
             assert!(
                 daughters.contains(&expected),
