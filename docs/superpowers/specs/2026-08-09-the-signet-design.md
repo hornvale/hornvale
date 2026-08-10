@@ -63,9 +63,15 @@ parent, and which sibling it is.
   *in that role*. Caller-supplied, because the caller is the code that knows
   "this is the third occupation of this settlement"; the ledger has no
   semantic basis for guessing it. 65,536 siblings per (parent, role).
-- **Roots** — entities with no parent derive from a synthetic root:
-  `derive(world.seed, "root", role)`. A world's own seed is already its
-  identity, so roots need nothing further.
+- **Roots** — entities with no parent derive from the role label alone against
+  a fixed root label: `derive(ENTITY_ROOT, role)`. **The world seed is
+  deliberately not an input**, which makes ids a pure function of structure:
+  two structurally identical worlds get identical ids. That is not a
+  regression but the preservation of a property that already holds — today
+  every world numbers its entities 1, 2, 3…, so ids have never been
+  world-unique. Excluding the seed also keeps `Ledger` free of it: minting
+  needs only (parent, role, ordinal), so no mint path has to thread a `Seed`
+  it does not already hold.
 
 **Siblings share their high 48 bits and differ only in the low 16.** That is
 deliberate: ids become inspectable, and a lineage is legible in a hex dump.
