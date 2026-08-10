@@ -15,8 +15,8 @@ Ways on: NE, NW, S.
 [lens: colour · depth 12 · radius 4 · lattice-aligned, not north-up]
   colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
-  +++++
- +++++++
+  ~~~~~
+ ~~~~~++
 ++++@++++
  +++++++
   + + +
@@ -97,8 +97,8 @@ No way n from here.
 [lens: colour · depth 10 · radius 4 · lattice-aligned, not north-up]
   colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
-  +++++
- +++++++
+  ~~~~~
+ ~~~~~++
 ++++@++++
  +++++++
   + + +
@@ -126,7 +126,7 @@ Ways on: N, SW, SE.
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (766 stirred).
+Time passes. You sense movement nearby (389 stirred).
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
 > knows
