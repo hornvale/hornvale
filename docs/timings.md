@@ -617,3 +617,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T23:06:44Z | gate | 633.696 | 2408.448 | 141.599 | 4.02 | 0 | 94f1a58e | the-radiation | MacBookPro | 10 |
 | 2026-08-10T02:01:15Z | rebaseline | 126.519 | 153.323 | 10.027 | 1.29 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
 | 2026-08-10T02:12:01Z | gate | 623.565 | 2967.549 | 239.978 | 5.14 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T03:07:08Z | gate | 394.469 | 2066.178 | 122.606 | 5.55 | 0 | bc9c12ca | the-radiation | MacBookPro | 10 |
+| 2026-08-10T10:00:29Z | rebaseline | 166.237 | 157.215 | 9.119 | 1.00 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
+| 2026-08-10T10:02:20Z | gate | 68.266 | 83.991 | 41.361 | 1.84 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
+| 2026-08-10T10:03:32Z | gate | 39.038 | 84.424 | 16.313 | 2.58 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
+| 2026-08-10T10:09:28Z | gate | 255.735 | 2061.482 | 100.763 | 8.46 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
