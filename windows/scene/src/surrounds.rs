@@ -90,9 +90,12 @@ pub struct LegendEntry {
 }
 
 /// One cell of the chart. Lattice coordinates are RELATIVE to the observer
-/// and absent on a seam cell. Fine-grain fields are `null` at coarse grain —
-/// a cell carries the detail its epistemic state warrants, which is what
-/// makes the chart and the prose one lens rather than two.
+/// and absent on a seam cell. Several fields below are `null` on every cell
+/// but the observer's own — that is an EMIT gate (`is_here`), not a grain
+/// gate: `ctx.describe` computes them for every cell in the build loop, and
+/// the value is discarded rather than absent. See [`SurroundsCell::regime`]
+/// for the full explanation. [`SurroundsCell::micro`] is the field that
+/// genuinely is emitted for every cell, sub-cell grain included.
 /// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(diagnostic-value: height_asl_m), bare-ok(artifact: color)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsCell {
@@ -118,18 +121,31 @@ pub struct SurroundsCell {
     pub water: u32,
     /// Index into `relief_legend`.
     pub relief: u32,
-    /// The strangeness overlay's descriptor — fine grain, `null` when coarse.
+    /// The strangeness overlay's descriptor — **emitted only for the
+    /// observer's own cell** (`state == "here"`), `null` on every other.
+    ///
+    /// This is an EMIT gate, not a grain gate. `ctx.describe` runs for every
+    /// cell in the build loop, so the value exists everywhere and is
+    /// discarded here. These comments previously read "fine grain, `null`
+    /// when coarse", which led a campaign to design around the premise that
+    /// the data did not exist at coarse grain. If you are looking for the
+    /// per-cell sub-cell signal, it is [`SurroundsCell::micro`], which is
+    /// emitted for every cell.
     pub regime: Option<String>,
-    /// Annual-mean temperature, °C — fine grain, `null` when coarse.
+    /// Annual-mean temperature, °C — emitted only for the observer's own
+    /// cell (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub temperature_c: Option<f64>,
-    /// Moisture — fine grain, `null` when coarse.
+    /// Moisture — emitted only for the observer's own cell (`is_here`),
+    /// `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub moisture: Option<f64>,
-    /// Elevation, metres — fine grain, `null` when coarse.
+    /// Elevation, metres — emitted only for the observer's own cell
+    /// (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub elevation_m: Option<f64>,
-    /// Height above sea level, metres — fine grain, `null` when coarse.
+    /// Height above sea level, metres — emitted only for the observer's own
+    /// cell (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     /// Signed: negative below. `relief` is banded from this.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub height_asl_m: Option<f64>,
@@ -139,8 +155,45 @@ pub struct SurroundsCell {
     /// it was before the colour layer existed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<[u8; 3]>,
+    /// The sub-cell micro-field at this room — always present, for every
+    /// cell. See [`Micro`].
+    pub micro: Micro,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
+}
+
+/// The sub-cell micro-field at a room: four independent axes in `[-1, 1]`,
+/// each drawn from the room's own address noise, so a walk through
+/// homogeneous biome still varies room to room.
+///
+/// A scene-side type rather than a re-export of `hornvale_locale::MicroField`,
+/// for the reason every other float on this schema is: the wire type carries
+/// the emit-boundary quantization (decision 0033) and the producer's type
+/// carries the compute-path value. Coupling the published schema to a
+/// window's internal struct would make a refactor there a cross-repo schema
+/// change here.
+///
+/// **Not `Option`.** Every room has a micro-field — it is a pure function of
+/// the room's address and the world seed — so an absent value would mean
+/// "this emitter chose not to say", which is the exact confusion the
+/// `is_here` gate on the fields above created. See this module's doc.
+/// type-audit: bare-ok(ratio: relief), bare-ok(ratio: aspect), bare-ok(ratio: wetness), bare-ok(ratio: openness)
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Micro {
+    /// Micro-relief, hollow (`-1`) to rise (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub relief: f64,
+    /// Slope aspect / insolation, shaded (`-1`) to sunlit (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub aspect: f64,
+    /// Local wetness, dry (`-1`) to wet (`+1`). **Address noise, not
+    /// hydrology** — it does not say where the water is, and a consumer must
+    /// not band a water kind from it. `water` is the field that answers that.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub wetness: f64,
+    /// Canopy openness, closed (`-1`) to open (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub openness: f64,
 }
 
 /// The eye a coloured chart was seen through, and what its projection to
@@ -320,6 +373,12 @@ pub fn surrounds_scene_in(
             // is the only writer, which is what keeps every committed
             // artifact byte-identical.
             color: None,
+            micro: Micro {
+                relief: locale.regime.micro.relief,
+                aspect: locale.regime.micro.aspect,
+                wetness: locale.regime.micro.wetness,
+                openness: locale.regime.micro.openness,
+            },
             marks,
         });
     }
@@ -1201,6 +1260,81 @@ mod tests {
         // The two fields the builder CANNOT know are the caller's and survive.
         assert_eq!(sight.observer, "bugbear");
         assert_eq!(sight.sun_altitude_deg, 12.5);
+    }
+
+    /// `micro` is emitted for EVERY cell, not just the observer's. The mutation
+    /// that reintroduces an `is_here` gate must fail this.
+    ///
+    /// Stated over the count of cells whose micro is non-default rather than
+    /// over a specific value, because the values are address noise and
+    /// pinning one would pin the noise function rather than the emit.
+    ///
+    /// Not `#[ignore]`: every other single-seed-42-world-build test in this
+    /// file (e.g. `a_radius_four_neighbourhood_holds_thirty_one_cells`) runs
+    /// in the ordinary gate; `cli/tests/heavy_tier.rs`'s `heavy:` token is
+    /// reserved for the one test in this file that sweeps multiple seeds
+    /// (`no_land_cell_bands_as_marine_relief_across_seeds`), and tagging a
+    /// single-world test with it would fail that guard's canonical-string
+    /// check anyway.
+    #[test]
+    fn every_cell_carries_its_own_micro_field() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        // Every cell, including the 30 that are not `here`.
+        assert_eq!(
+            s.cells.len(),
+            31,
+            "the fixture's premise moved: a radius-4 chart is no longer 31 cells"
+        );
+
+        // The four axes are independent sub-streams, so distinct rooms give
+        // distinct tuples. A single shared value would mean the field was read
+        // once and copied.
+        let distinct: std::collections::BTreeSet<String> = s
+            .cells
+            .iter()
+            .map(|c| {
+                format!(
+                    "{},{},{},{}",
+                    c.micro.relief, c.micro.aspect, c.micro.wetness, c.micro.openness
+                )
+            })
+            .collect();
+        assert!(
+            distinct.len() > 25,
+            "31 cells produced only {} distinct micro tuples; the field is being \
+             shared rather than derived per room",
+            distinct.len()
+        );
+    }
+
+    /// The spec's H3, as a test: `openness` spans more than half of [-1, 1]
+    /// within one neighbourhood. This is the property that makes the field worth
+    /// drawing, and it is allowed to fail.
+    #[test]
+    fn micro_openness_spans_more_than_half_its_range_in_one_neighbourhood() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for c in &s.cells {
+            lo = lo.min(c.micro.openness);
+            hi = hi.max(c.micro.openness);
+        }
+        assert!(
+            hi - lo > 1.0,
+            "openness spanned only {:.3} of its 2.0 range ({lo:.3}..{hi:.3}); a \
+             glyph keyed to it would barely vary",
+            hi - lo
+        );
     }
 
     #[test]

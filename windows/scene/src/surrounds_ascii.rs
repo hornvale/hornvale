@@ -251,6 +251,12 @@ mod tests {
             elevation_m: None,
             height_asl_m: None,
             color: None,
+            micro: crate::Micro {
+                relief: 0.0,
+                aspect: 0.0,
+                wetness: 0.0,
+                openness: 0.0,
+            },
             marks: vec![],
         }
     }
