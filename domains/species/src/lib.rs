@@ -2566,11 +2566,21 @@ impl Component for BiomeAffinity {}
 /// same question one level coarser — over classes rather than along an axis —
 /// so it takes the same answer instead of an unrelated second one.
 ///
-/// The consequence reads correctly as biology, which is the check that it is
-/// the right quantity and not merely an available one: a woolly mammoth is far
-/// less diminished by being off its ground (`0.692`) than a wood elf is
-/// (`0.429`), because six tonnes of homeostasis is exactly what being off your
-/// ground costs less when you have.
+/// The consequence reads correctly as biology: a woolly mammoth is far less
+/// diminished by being off its ground (`0.692`) than a wood elf is (`0.429`),
+/// which is what six tonnes of homeostatic buffering ought to buy.
+///
+/// That is a plausibility reading and it is offered as nothing more — a sanity
+/// check on the *sign and ordering* of the result, not evidence that the
+/// quantity is the right one. Nothing measured here distinguishes
+/// `sovereignty_floor` from any other function increasing in mass. An earlier
+/// version of this paragraph called it "the check that it is the right quantity
+/// and not merely an available one"; it is not a check at all, and the whole
+/// reason this ladder needed re-deriving is that a number nobody had checked
+/// looked settled. The argument for the quantity is the paragraph above: the
+/// model already answers this exact question in
+/// [`hornvale_kernel::ConditionResponse::eval`], and a second answer would be a
+/// second model.
 ///
 /// ## Why a PREFERENCE remap, and not simply "default = floor"
 ///

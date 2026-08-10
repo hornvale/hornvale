@@ -171,11 +171,79 @@ The Warren's `availability`. Two properties of it are load-bearing here:
   pool filters on strictly positive capacity. Any zero in an elf's row is a
   deliberate act.
 
+> ### ERRATUM, 2026-08-10 — the first bullet above is false as stated
+>
+> Marked in place rather than rewritten, per this campaign's own discipline: the
+> claim is what tasks 1–3 reasoned from, and the next reader should see why it
+> survived a spec, a plan, a ledger *and* a task brief before a measurement
+> caught it.
+>
+> **What is false.** "The level is gauge" holds only for how a *single kind ranks
+> cells*. The same factor also multiplies the capacity that becomes a
+> settlement's **population**, and the history bake's volume is a function of
+> population — so the level is gauge for the placement contest and load-bearing
+> for the very next consumer downstream. What is true, and all that is true, is
+> the sentence before it: a uniform affinity cannot reorder a kind's own ranking.
+>
+> **What replaced it.** Task 3 (`cda3e3c4`) stopped authoring the level. The
+> ladder's rungs are now *preferences* in `[0, 1]` mapped through the kind's own
+> `sovereignty_floor`: `factor(biome) = floor + (1 − floor) · preference`, so a
+> row's default **is** that floor and a stronghold is exactly `1.00` for every
+> kind. The derivation is registry-wide — it releveled The Range's `gnoll` and
+> `woolly-mammoth` rows too, which no task edited. Full argument in
+> `biome_affinity_registry`'s doc comment (`domains/species/src/lib.rs`);
+> enforced by
+> `radiation_affinity.rs::every_row_is_the_ladder_mapped_through_the_kinds_sovereignty_floor`.
+>
+> **What it cost to find.** At the authored `0.25` level the six elf rows took
+> seed 42's tithe census from 552 occupation records to 193, breaching four
+> deliberate fidelity floors. Derived, the same six rows give 704 — *above* the
+> 552 measured with no elf rows at all, because the relevel relaxes The Range's
+> two rows as well.
+>
+> **What it means for §4 and §5.** The predictions are not invalidated, but three
+> of them read differently and Task 4 must not apply them unexamined:
+>
+> - **P2** — still interpretable, and its *falsifier* is safer than when frozen
+>   (the "count and share both falling" failure mode was largely an artifact of
+>   the level; gnoll's count now rises 13 → 40 while its arid share rises to
+>   0.825). But its **effect size roughly halves**: the stronghold-to-default
+>   contrast was `1.00 / 0.25` = 4× and is now `1.00 / 0.429202` ≈ 2.33× for an
+>   elf. A P2 null on a marginal elf is therefore more likely to mean "the mask
+>   is too shallow to reorder this kind's ranking" than "the destination is
+>   contested", and P2's **pre-committed diagnosis** (The Range's P1‴,
+>   suppression-without-relocation, repaired by an affinity above 1.0) was
+>   calibrated on the abandoned level. Do not reach for it without re-deriving it.
+> - **P3(a)** — its escape clause, "if their biosphere rows differ in mass or
+>   potency, which moves the sovereignty floor", names a mechanism that
+>   `per_species_suitability` **discards**. Within that function `bio.mass`
+>   reaches only `sovereignty_floor`, which reaches only `tolerance_liebig`'s
+>   floored axes, and every affinity occupant has `elevation.devotion` below its
+>   floor, so the unfloored elevation term is the minimum at every cell.
+>   Mutation-proven: setting drow's mass to 500.0 kg leaves the occupancy readout
+>   byte-identical. Wood and High share mass (55.0 kg) regardless, and their
+>   twelve occupancy rows are already **identical in every column**, so P3(a) is
+>   known *in advance* to resolve to the branch the spec itself calls "a wiring
+>   check with no information in it". The information is in P3(b).
+> - **P4** — the level is no longer a confound (Drow takes Wood's row entire,
+>   floor included), and mass never was one. But Drow still differs from Wood in
+>   its **resource vector** (`DETRITUS`-dominant against `PLANT_FORAGE`), which
+>   this path does read, and the occupancy fixture shows Drow diverging from Wood
+>   on all twelve shared biome rows. P4's second falsifier — "still separated
+>   without the realm row, so something other than the gate is doing the work" —
+>   is therefore likely to fire, and the honest attribution is the niche, not a
+>   defect in the gate. Hold the niche fixed in the mutation arm, or report the
+>   split.
+>
+> P1, P1′, P5 and N1 are untouched by this: none reads the affinity's level.
+
 The authoring instrument is already committed:
 `windows/worldgen/tests/fixtures/occupancy.csv`, the per-kind per-biome record
-of where each roster kind actually lives (386 rows today). The Range threaded it
-with the live affinity store precisely so the elves would be authored against
-measured occupancy rather than against intuition. It grows by six kinds here.
+of where each roster kind actually lives (386 rows when this spec was written;
+**466 as of 2026-08-10**, the six elves having added 80 — `sea-elf` 20, the other
+five 12 each). The Range threaded it with the live affinity store precisely so
+the elves would be authored against measured occupancy rather than against
+intuition. It grows by six kinds here.
 
 ### 3.3 The six
 

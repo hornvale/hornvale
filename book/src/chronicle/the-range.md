@@ -112,8 +112,26 @@ multiplying gnoll's non-desert cells down raises its desert cells within the
 only ranking that decides anything. Two consequences fall straight out. A
 **uniform** affinity is inert by construction, because a scale-free ranking
 cannot be reordered by a constant; only the shape across biomes carries
-information, and the level is gauge. And `0.0` is not a strong preference but a
-hard exclusion, because the founding pool filters on strictly positive capacity.
+information, and the level is gauge.
+
+> **That last clause is false, and The Radiation falsified it on 2026-08-10.**
+> It is left standing above rather than quietly rewritten, because it is what
+> this campaign reasoned from and because it then survived a spec, a plan, a
+> ledger and this chronicle without anyone having to say where it came from.
+>
+> "The level is gauge" is true only of how a *single kind ranks cells*, which is
+> what the read of the settlement bake examined. The same factor also multiplies
+> the capacity that becomes a settlement's **population**, and the history bake's
+> volume is a function of population — so a level that is gauge for the placement
+> contest is load-bearing for the very next consumer downstream. Measured: at the
+> authored `0.25` level six elf affinity rows took seed 42's tithe census from
+> 552 occupation records to **193**, breaching four deliberate fidelity floors;
+> with the level derived instead from each kind's `sovereignty_floor` the same
+> six rows give **704**. A level is gauge for one consumer and load-bearing for
+> the next.
+
+And `0.0` is not a strong preference but a hard exclusion, because the founding
+pool filters on strictly positive capacity.
 
 The occupants declared are `gnoll` — desert 1.00, temperate grassland and
 shrubland 0.70, savanna 0.45, everything else 0.25 — and `woolly-mammoth` —
@@ -127,6 +145,15 @@ ice and tundra 1.00, taiga 0.70, alpine 0.45, default 0.25.
 > reads 1.00 / 0.848615 / 0.722461 / 0.495384 and the mammoth's 1.00 / 0.907710
 > / 0.830802 / 0.692367. Every figure quoted below was measured under the old
 > level and is kept as this campaign published it.
+>
+> **Two of those figures are not figures but interpretations, and both reverse.**
+> A stale number is inert; a stale reading is not, because the next reader
+> carries it forward as a property of the mechanism. The "nine settlements
+> removed for every one relocated" caveat below is corrected in place where it
+> appears, and this campaign's Confidence Gradient entry in
+> `book/src/open-questions.md` — which scores the bet on a mask that "relocates
+> rather than merely thinning" — is re-scored at The Radiation's close under
+> decision 0030, not here.
 
 Both were admitted by an arithmetic test rather than chosen by theme. A
 tolerance floored by the kind's sovereignty can never read below that floor; the
@@ -162,6 +189,24 @@ run descriptively after unblinding and are kinder — seed 7 keeps all four of i
 gnoll settlements and moves every one of them onto arid ground — but seed 42's
 baseline of twenty is the outlier, and the collapse should not be read as the
 mechanism's general behaviour.
+
+> **The caveat does not survive, 2026-08-10 (The Radiation).** "Nine settlements
+> removed for every one relocated" was a consequence of the undeviced `0.25`
+> level, not of the mechanism. Under the derived level the arms read
+>
+> ```
+>   seed 42   affinity ABSENT    13 settlements    0 arid   share 0.000000
+>             affinity SHIPPED   40 settlements   33 arid   share 0.825000
+> ```
+>
+> — the count **rises** 13 → 40 while the arid share rises to 0.825, where the
+> published reading had it fall 20 → 2 for a share of 0.500. The descriptive
+> seeds move the same way (seed 7: 67 → 31 at 0.645; seed 1234: 7 → 6 at 1.000).
+> So P1″ passes far more strongly than it was frozen to, and the *thinning* this
+> campaign apologised for was the level rather than the mask. The correction is
+> pinned in `windows/worldgen/tests/range_readout.rs`, which carries the arms
+> live; the paragraph above is left as published so that the two readings can be
+> compared.
 
 The second asked whether the factor **differentiates**: gnoll's capacity field
 must separate from the other peoples'. Pairwise Pearson correlation over every

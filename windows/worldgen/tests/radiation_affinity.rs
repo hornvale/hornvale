@@ -156,6 +156,22 @@ fn every_row_is_the_ladder_mapped_through_the_kinds_sovereignty_floor() {
             .unwrap_or_else(|| panic!("{source} has no biosphere row"));
         let floor = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
         let mapped = |p: f64| floor + (1.0 - floor) * p;
+        // Whose mass and potency the failure message is about. Without this the
+        // red for a drow regression reads `sovereignty_floor(55 kg, …)` while
+        // drow is 52.0 kg, and the next reader spends the session looking for
+        // the bug in the biosphere registry instead of in the substitution three
+        // lines above. A failure message that does not explain its own numbers
+        // is the same defect this whole arc keeps finding, one level down.
+        let whose = if source == kind.0 {
+            String::from("its own")
+        } else {
+            format!(
+                "{source}'s, NOT {}'s — drow and high-elf take wood-elf's row \
+                 entire, level included, so that each stays a single-variable \
+                 control",
+                kind.0
+            )
+        };
 
         println!(
             "   {:<16} level from {:<14} floor {floor:.6}  near {:.6}  marginal {:.6}",
@@ -169,10 +185,11 @@ fn every_row_is_the_ladder_mapped_through_the_kinds_sovereignty_floor() {
             aff.default.to_bits(),
             floor.to_bits(),
             "{kind:?}'s default is {} but its derived level is \
-             sovereignty_floor({} kg, potency {}) = {floor}. The default is NOT \
-             an authored number — it is the model's own statement of how much \
-             environmental unsuitability this kind's mass and potency buy it \
-             off, and a literal here is the `0.25` failure returning",
+             sovereignty_floor({} kg, potency {}) = {floor}, and that mass and \
+             potency are {whose}. The default is NOT an authored number — it is \
+             the model's own statement of how much environmental unsuitability \
+             that kind's mass and potency buy it off, and a literal here is the \
+             `0.25` failure returning",
             aff.default,
             bio.mass.kilograms(),
             bio.potency,
