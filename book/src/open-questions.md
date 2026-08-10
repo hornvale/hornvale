@@ -215,7 +215,51 @@ threshold that *would* have made it fire was refused because it would have been
 chosen for firing. Disclosing an unfalsifiable check beats quietly shipping one,
 which is this chapter's practice working rather than a new failure.
 
-A ninth campaign moves the family off checks and metrics entirely, onto the
+A ninth campaign returns to the module the seventh worked in, knowing what the
+seventh found there, and finds two more. [The Armature](./chronicle/the-armature.md)
+(2026-08-09) set out to declare thirty causal links across the census — *this
+quantity should move when that one does* — freeze them from physics before any
+correlation was computed, and measure once. The first defect is arithmetic
+defeating a guard that reads correctly. The correlation function documents that
+it returns nothing when either column is constant, and tests that by asking
+whether the variance is at or below zero; but `sum()` accumulates left to right,
+so a thousand copies of one value leave the mean about `1e-13` off the constant
+and the variance at roughly `3.4e-22` of rounding residue — **strictly greater
+than zero**. The function returned correlations computed entirely from summation
+noise, on precisely the six rows the campaign existed to interrogate, and the
+survey published them. Nothing about that guard is wrong as written; it is
+wrong as *evaluated*, which no amount of reading it catches. The second is a
+comment disagreeing with the code beneath it in the direction that flatters the
+result: the detector's strength branch withheld the observed sign
+unconditionally, three lines below a comment stating that the sign is withheld
+only "when nothing was measured", so three measured backwards couplings — the
+worst of them `r = −0.755` against a declared *positive* link — rendered as bare
+strength mismatches beside a headline reading *zero backwards links*.
+
+Both were found by a reviewer who left the repository's own tooling and
+re-derived every published number in another language, and one was confirmed by
+**reverting the repair** to check that the resulting red was behavioural rather
+than a compile error. That count is now seven instances in a single module
+across two consecutive campaigns, each of which knew the family by name before
+it began. The floor's practice therefore gains a narrower question, aimed at
+the residue that mutation testing does not reach: *is this guard's predicate
+true of the values it will actually see, or only of the values it describes?*
+A zero-variance test is exactly right about mathematics and exactly wrong about
+floating-point summation, and the gap between those two is where this one
+lived.
+
+The same campaign contributes the family's most useful positive result, and it
+belongs here rather than with the failures. Silence from an instrument had been
+carrying two meanings — *the claim held* and *the claim could not be tested* —
+and the second is indistinguishable from the first at the point of reading.
+Six declared links now report `D5 unmeasurable`, naming the frozen column and
+its single value, rather than passing quietly; and a sign, once measured, is
+never withheld. **An instrument's silence must mean exactly one thing**, and
+everything else it might have meant needs its own name. That is the cannot-fire
+family stated as a design rule instead of as a caution, and it is the first time
+this chapter can offer one.
+
+A tenth campaign moves the family off checks and metrics entirely, onto the
 data. The Particular (2026-08-10) registered four predicates for individual
 persons, one of which — the day a person died — is committed only once that day
 has passed. It has never been committed. Across three seeds and 364 promoted
@@ -1488,6 +1532,39 @@ its honest size.
    so no world quantity reaches any creature's physiology. Between the two, the
    census's coverage of *what influences what* is materially thinner than its
    193-metric breadth suggested.
+
+   **[The Armature](./chronicle/the-armature.md) (2026-08-09) put a number on
+   that thinness, and the number is worse than the sentence above allowed.**
+   Thirty causal links were declared from physics, frozen before any
+   correlation was computed, and measured once: five silent, nineteen
+   mis-strengthed, six unmeasurable. Ten of the nineteen measure `|r| < 0.1`
+   and **seven of those ten were declared moderate** — mean land temperature
+   against ocean fraction at `−0.0005`, against mountain coverage at `−0.041`;
+   habitable fraction against obliquity at `+0.058`; settlement count against
+   mountain coverage at `|r| = 0.015`. So the previous entry's finding generalizes
+   past astronomy: climate is uninfluenced by its **terrain** as well, measured
+   directly against drivers the census does hold, and settlement reaches the
+   land only through one habitability scalar. These readings are not an
+   artifact of a blunt instrument — the same frame measures `+0.951` between
+   standing tribute and settlement count, and `+0.730` between fertile land and
+   temperature, so it sees couplings where they exist. The frame was
+   re-measured against the replacement census The Signet's epoch landed, with
+   `studies/expectations.json` unchanged, and every count in this entry held.
+
+   Two cautions temper the re-score, and both sharpen it rather than soften it.
+   The six biology rows fired as **unmeasurable**, not as refutations: their
+   metrics hold one distinct value across a thousand worlds, so the census
+   cannot test those claims at all, and the spec's prediction that all six would
+   fire came true for a reason that is not evidence about biology. And
+   twenty-five of thirty rows firing triggers the campaign's own falsification
+   clause, which says a frame that fires nearly everywhere indicts its author.
+   That indictment is half right: four failures are strength over-claims with
+   the declared sign intact, and three are sign errors the author owns. The
+   seven near-zero readings are structurally different — an over-claim gets the
+   sign right and the magnitude wrong, while a severed wire produces no signal
+   at all — and that partition is a judgement laid over a measurement, which is
+   why the frame was published whole rather than pruned to the rows that
+   flattered it.
 
    That campaign also moved the self-scorable half in both directions at once.
    Sonority sequencing made pronounceability a property held **by

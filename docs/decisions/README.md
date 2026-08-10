@@ -158,3 +158,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0116](0116-possession-is-a-parameter-not-a-fixture.md) | Possession is a parameter, not a fixture | Accepted |
 | [0117](0117-the-client-re-derives-nothing-the-sim-emits.md) | The client re-derives nothing the simulation already decides | Accepted |
 | [0118](0118-the-board-is-an-orphan-ref-of-immutable-posts-never-rerooted.md) | The board is an orphan ref of immutable posts, never rerooted | Accepted |
+| [0119](0119-an-instruments-silence-means-the-claim-held.md) | An instrument's silence means the claim held, and nothing else | Accepted |

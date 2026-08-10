@@ -43,7 +43,7 @@ pub struct Comparator {
 /// against, rather than a frozen `r` value chosen after the data was
 /// already seen. `load_expectations` rejects any other value, so a caller
 /// can trust `declared` is one of the five without re-checking.
-/// type-audit: bare-ok(identifier-text: metric), bare-ok(identifier-text: tracks), bare-ok(prose: why), bare-ok(identifier-text: declared)
+/// type-audit: bare-ok(identifier-text: metric), bare-ok(identifier-text: tracks), bare-ok(prose: why), bare-ok(identifier-text: declared), bare-ok(identifier-text: direction)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expectation {
     /// The census metric expected to respond.
@@ -55,6 +55,10 @@ pub struct Expectation {
     pub why: String,
     /// The declared strength class, e.g. `dominant`.
     pub declared: String,
+    /// The declared sign of the relationship: `positive`, `negative`, or
+    /// `none`. A `declared` of `none` requires this to be `none` too — a claim
+    /// of no relationship has no sign.
+    pub direction: String,
 }
 
 /// The permitted values of [`Expectation::declared`] (conventional
@@ -65,6 +69,12 @@ pub struct Expectation {
 /// detector.
 /// type-audit: bare-ok(identifier-text)
 pub const DECLARED_CLASSES: &[&str] = &["dominant", "strong", "moderate", "weak", "none"];
+
+/// The permitted values of [`Expectation::direction`]. A backwards coupling —
+/// the right strength with the wrong sign — is a defect a strength-only check
+/// cannot see, which is why this field exists (spec §2).
+/// type-audit: bare-ok(identifier-text)
+pub const DIRECTIONS: &[&str] = &["positive", "negative", "none"];
 
 /// Read one field's value as a `&str`, erroring with the file and field
 /// name if it is missing or not a string.
@@ -164,11 +174,28 @@ pub fn load_expectations(path: &Path) -> Result<Vec<Expectation>, String> {
                     path.display()
                 ));
             }
+            let direction = required_str(e, "direction", path)?.to_string();
+            if !DIRECTIONS.contains(&direction.as_str()) {
+                return Err(format!(
+                    "{}: expectation for {metric} declares direction {direction:?}, \
+                     which is not one of {DIRECTIONS:?}",
+                    path.display()
+                ));
+            }
+            if (declared == "none") != (direction == "none") {
+                return Err(format!(
+                    "{}: expectation for {metric} pairs declared {declared:?} with \
+                     direction {direction:?}; `none` must appear in both or neither \
+                     — a claim of no relationship has no sign",
+                    path.display()
+                ));
+            }
             Ok(Expectation {
                 metric,
                 tracks,
                 why,
                 declared,
+                direction,
             })
         })
         .collect()
@@ -255,6 +282,59 @@ mod tests {
         );
 
         std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn an_expectation_with_an_unknown_direction_is_rejected() {
+        let dir = std::env::temp_dir().join("armature-dir-test");
+        std::fs::create_dir_all(&dir).expect("tmp");
+        let p = dir.join("expectations.json");
+        std::fs::write(
+            &p,
+            r#"{"expect":[{"metric":"a","tracks":"b","why":"w","declared":"weak","direction":"sideways"}]}"#,
+        )
+        .expect("write");
+        let err = load_expectations(&p).expect_err("an unknown direction must be rejected");
+        assert!(
+            err.contains("sideways"),
+            "error must name the offending value: {err}"
+        );
+        assert!(
+            err.contains("positive"),
+            "error must name the permitted set: {err}"
+        );
+    }
+
+    #[test]
+    fn declared_none_requires_direction_none() {
+        let dir = std::env::temp_dir().join("armature-none-test");
+        std::fs::create_dir_all(&dir).expect("tmp");
+        let p = dir.join("expectations.json");
+        std::fs::write(
+            &p,
+            r#"{"expect":[{"metric":"a","tracks":"b","why":"w","declared":"none","direction":"positive"}]}"#,
+        )
+        .expect("write");
+        let err = load_expectations(&p)
+            .expect_err("declared none with a signed direction must be rejected");
+        assert!(
+            err.contains("none"),
+            "error must explain the coupling: {err}"
+        );
+    }
+
+    #[test]
+    fn a_well_formed_signed_expectation_loads() {
+        let dir = std::env::temp_dir().join("armature-ok-test");
+        std::fs::create_dir_all(&dir).expect("tmp");
+        let p = dir.join("expectations.json");
+        std::fs::write(
+            &p,
+            r#"{"expect":[{"metric":"a","tracks":"b","why":"w","declared":"dominant","direction":"negative"}]}"#,
+        )
+        .expect("write");
+        let es = load_expectations(&p).expect("loads");
+        assert_eq!(es[0].direction, "negative");
     }
 
     #[test]
