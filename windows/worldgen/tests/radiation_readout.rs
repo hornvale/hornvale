@@ -259,6 +259,24 @@ const ELVES: [&str; 6] = [
     "wood-elf",
 ];
 
+/// The elves whose P2 result the FROZEN axis can see, asserted together in
+/// [`each_elf_concentrates_in_its_authored_stronghold_biomes`].
+///
+/// The split is a carrying decision, not a scoping one: **nothing about P2
+/// changed** — not the axis, not the falsifier, not a threshold, not the seed
+/// set. `desert-elf` is measured by the identical code in
+/// [`desert_elf_concentrates_in_its_authored_stronghold_biomes`], which is
+/// `#[ignore]`d under the repo's `PREREGISTERED, not met:` idiom because that
+/// prediction is FALSIFIED on the axis as frozen and stays on the record as
+/// such. See that test's doc comment for the measurement and the diagnosis.
+///
+/// `high-elf` is in this roster because it is *reported* by the same run; it is
+/// exempt from the assertion by design (spec §4) and the test skips it.
+const P2_ON_AXIS: [&str; 5] = ["drow", "high-elf", "sea-elf", "snow-elf", "wood-elf"];
+
+/// The one elf P2's frozen axis cannot see — measured separately, identically.
+const P2_OFF_AXIS: [&str; 1] = ["desert-elf"];
+
 /// Which authored rows an arm's [`WorldComponents`] carries.
 ///
 /// Every variant is built by REMOVING or SUBSTITUTING rows from the canonical
@@ -997,6 +1015,33 @@ fn every_elf_has_a_proper_nonempty_stronghold_set() {
     );
 }
 
+/// P2 is asserted from two tests, and between them they must still cover the
+/// whole family exactly once. Builds no world; stays in the gate.
+///
+/// This is the guard on the SPLIT itself, and it exists because the failure
+/// mode of splitting a preregistered test is silent: drop a kind from both
+/// rosters and P2 simply stops measuring it, with nothing red and nothing to
+/// grep. A partition check is the cheapest statement that carrying the
+/// falsification separately did not quietly narrow the prediction.
+#[test]
+fn the_two_p2_rosters_partition_the_family_exactly_once() {
+    let mut union: Vec<&str> = P2_ON_AXIS
+        .iter()
+        .chain(P2_OFF_AXIS.iter())
+        .copied()
+        .collect();
+    union.sort_unstable();
+    let mut family: Vec<&str> = ELVES.to_vec();
+    family.sort_unstable();
+    assert_eq!(
+        union, family,
+        "P2's two rosters no longer partition the family. Every elf must be \
+         measured by exactly one of the two tests: dropping one from both \
+         narrows a preregistered prediction with nothing to show for it, and \
+         listing one in both double-counts a seed sweep for no gain."
+    );
+}
+
 // ===========================================================================
 // The heavy tier. Everything below builds worlds.
 // ===========================================================================
@@ -1068,25 +1113,27 @@ fn each_elf_changes_the_committed_ledger() {
     );
 }
 
-/// **P2.** Each elf's share of settlements on its authored stronghold biomes
-/// must not fall while its count also falls.
+/// P2's frozen falsifier, evaluated over `elves` and returning the kinds it
+/// fires for.
 ///
-/// **Falsifier:** the share is flat or falling **while the count also falls**,
-/// on a majority of seeds. A falling count with a RISING share is success
-/// (relocation, The Range's P1″); both falling is the failure mode.
+/// **The single implementation of the frozen axis.** Both P2 tests call it with
+/// a different roster and assert the identical emptiness condition on its
+/// result; nothing here knows which roster it was handed. That is deliberate:
+/// the split exists so that a falsified prediction can be *carried* in the
+/// repo's idiom, not so that it can be *measured differently*, and a shared
+/// body is the only form in which that is checkable by reading.
+///
+/// **Falsifier, verbatim as frozen:** the share is flat or falling **while the
+/// count also falls**, on a majority of seeds. A falling count with a RISING
+/// share is success (relocation, The Range's P1″); both falling is the failure
+/// mode.
 ///
 /// **High is exempt by design** (spec §4) and is reported without being
 /// asserted: its row is Wood's, it has no stronghold of its own, and it is
 /// predicted to show no concentration relative to Wood. That is not a
 /// falsification, and this comment plus the print below exist so a later reader
 /// does not "fix" it.
-///
-/// claim: rate(3 seeds x 5 asserted elves, each must avoid the both-falling
-/// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
-/// at that quantifier in the spec before any row was authored.
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
+fn p2_falsified_among(elves: &[&'static str]) -> Vec<String> {
     println!("== P2: stronghold share, shipped vs the affinity rows removed ==");
     let arms: Vec<(u64, WorldRead, WorldRead)> = SEEDS
         .iter()
@@ -1100,7 +1147,7 @@ fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
         .collect();
 
     let mut falsified: Vec<String> = Vec::new();
-    for elf in ELVES {
+    for &elf in elves {
         let home = strongholds(elf);
         let mut both_fell = 0usize;
         for (seed, before_read, after_read) in &arms {
@@ -1162,29 +1209,141 @@ fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
             falsified.push(format!("{elf} (both fell on {both_fell} seeds)"));
         }
     }
+    falsified
+}
+
+/// The failure message both P2 tests raise, verbatim. Held in one place so the
+/// diagnosis a reader meets cannot drift between the two.
+const P2_FALSIFICATION_DIAGNOSIS: &str = "the stronghold share was flat or \
+     falling WHILE the settlement count also fell, on a majority of seeds. \
+     That is suppression, not relocation.\n\n\
+     DIAGNOSIS — RE-DERIVE IT, DO NOT REACH FOR THE FROZEN ONE. P2's \
+     pre-committed diagnosis (The Range's P1''', a downward-only mask \
+     suppressing without relocating, repaired by an affinity permitted \
+     above 1.0) was calibrated when the stronghold:default contrast was 4x \
+     (1.00/0.25). Since cda3e3c4 it is ~2.33x (1.00/0.429202) for an elf, \
+     so a null on a marginal kind is now MORE likely to mean the mask is \
+     too shallow to reorder that kind's ranking at all. Whichever reading \
+     holds, the repair is a recorded DECISION, never a retuned constant.\n\n\
+     AND READ THE [descriptive] HISTOGRAMS ABOVE BEFORE EITHER. Measured \
+     2026-08-10: desert-elf went from 0 of 27 settlements on ANY biome its \
+     row names (three seeds, affinity absent) to 7 of 7 (affinity shipped) \
+     — savanna and shrubland, the row's `near` and `marginal` rungs. That \
+     is total relocation onto authored ground, and P2's frozen axis cannot \
+     see it, because the axis is the STRONGHOLD rung alone and this kind's \
+     stronghold is a single scarce biome. The falsification is real ON THE \
+     AXIS AS FROZEN; the mechanism is not what failed. Widening the axis \
+     after unblinding would be exactly the metric-chasing decision 0016 \
+     exists to prevent, so the axis stays and the finding is reported.";
+
+/// **P2, for the five elves whose result the frozen axis can see.** Each one's
+/// share of settlements on its authored stronghold biomes must not fall while
+/// its count also falls.
+///
+/// **Falsifier, unchanged:** the share is flat or falling **while the count
+/// also falls**, on a majority of seeds. A falling count with a RISING share is
+/// success (relocation, The Range's P1″); both falling is the failure mode.
+/// **High is exempt by design** (spec §4): reported, never asserted.
+///
+/// **Measured 2026-08-10, absent → shipped, per seed (42 / 7 / 1234):**
+///
+/// ```text
+///   wood-elf   30 @ 0.967 -> 6 @ 1.000 | 5 @ 0.000 -> 10 @ 0.100 | 3 @ 0.000 ->  8 @ 1.000
+///   snow-elf    5 @ 0.000 -> 25 @ 0.960 | 15 @ 0.000 -> 11 @ 1.000 | 4 @ 0.250 ->  2 @ 1.000
+///   sea-elf     3 @ 0.000 ->  3 @ 0.000 | 2 @ 0.500 ->  2 @ 0.500 | 10 @ 0.300 -> 11 @ 0.636
+///   drow        5 @ 0.400 ->  5 @ 0.400 | 3 @ 0.000 ->  3 @ 0.333 | 43 @ 0.023 -> 13 @ 0.462
+///   high-elf    8 @ 0.500 ->  2 @ 1.000 | 9 @ 0.000 ->  2 @ 0.000 | 6 @ 0.333 ->  4 @ 0.750
+/// ```
+///
+/// Wood and Snow rose on 3 of 3 seeds; Drow on 2 of 3; Sea's count never fell,
+/// so its falsifier could not fire. Snow is the strongest result in the
+/// campaign: `0.000 → 0.960` with the count RISING 5 → 25. High, the control,
+/// moves *with* Wood because Wood's row is its row — that is the null reading
+/// correctly, not an elf succeeding.
+///
+/// **This test is one half of a split, and the split changed no number.** The
+/// sixth elf is measured by the identical helper in
+/// [`desert_elf_concentrates_in_its_authored_stronghold_biomes`], which is
+/// preregistered-not-met and `#[ignore]`d. Nothing here was widened, rescoped
+/// or rethresholded to make this half green; the roster is the only difference,
+/// and [`the_two_p2_rosters_partition_the_family_exactly_once`] holds the two
+/// rosters to the whole family.
+///
+/// claim: rate(3 seeds x 4 asserted elves, each must avoid the both-falling
+/// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
+/// at that quantifier in the spec before any row was authored.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
+    let falsified = p2_falsified_among(&P2_ON_AXIS);
     assert!(
         falsified.is_empty(),
-        "P2 FALSIFIED for {falsified:?}: the stronghold share was flat or \
-         falling WHILE the settlement count also fell, on a majority of seeds. \
-         That is suppression, not relocation.\n\n\
-         DIAGNOSIS — RE-DERIVE IT, DO NOT REACH FOR THE FROZEN ONE. P2's \
-         pre-committed diagnosis (The Range's P1''', a downward-only mask \
-         suppressing without relocating, repaired by an affinity permitted \
-         above 1.0) was calibrated when the stronghold:default contrast was 4x \
-         (1.00/0.25). Since cda3e3c4 it is ~2.33x (1.00/0.429202) for an elf, \
-         so a null on a marginal kind is now MORE likely to mean the mask is \
-         too shallow to reorder that kind's ranking at all. Whichever reading \
-         holds, the repair is a recorded DECISION, never a retuned constant.\n\n\
-         AND READ THE [descriptive] HISTOGRAMS ABOVE BEFORE EITHER. Measured \
-         2026-08-10: desert-elf went from 0 of 27 settlements on ANY biome its \
-         row names (three seeds, affinity absent) to 7 of 7 (affinity shipped) \
-         — savanna and shrubland, the row's `near` and `marginal` rungs. That \
-         is total relocation onto authored ground, and P2's frozen axis cannot \
-         see it, because the axis is the STRONGHOLD rung alone and this kind's \
-         stronghold is a single scarce biome. The falsification is real ON THE \
-         AXIS AS FROZEN; the mechanism is not what failed. Widening the axis \
-         after unblinding would be exactly the metric-chasing decision 0016 \
-         exists to prevent, so the axis stays and the finding is reported."
+        "P2 FALSIFIED for {falsified:?}: {P2_FALSIFICATION_DIAGNOSIS}"
+    );
+}
+
+/// **P2 for desert-elf — FALSIFIED on the axis as frozen, and carried as such.**
+///
+/// The assertion, the falsifier, the seeds and the thresholds are the ones the
+/// five-elf test uses, because they are the same code
+/// ([`p2_falsified_among`]). **This test's failure is the record**, in the
+/// project's idiom for a preregistered prediction that was not met.
+///
+/// **Falsifier, unchanged:** the share is flat or falling **while the count
+/// also falls**, on a majority of seeds.
+///
+/// **Measured 2026-08-10, absent → shipped:** seed 42 `3 @ 0.000 → 3 @ 0.000`,
+/// seed 7 `19 @ 0.000 → 3 @ 0.000`, seed 1234 `5 @ 0.000 → 1 @ 0.000`. Share
+/// flat at zero in both arms and the count fell on 2 of 3 seeds, so the
+/// falsifier fires. That is a real falsification of P2 as written.
+///
+/// # What the axis could not see — POST-HOC AND DESCRIPTIVE
+///
+/// The numbers in this section were computed **after unblinding**, from the
+/// `[descriptive]` biome histograms the helper prints for every elf. They are
+/// reported, never asserted, and they do **not** make P2 confirmed for this
+/// kind. P2's axis is the stronghold rung alone; that axis is frozen and stays
+/// frozen.
+///
+/// ```text
+///   seed 42    absent  temperate-forest 2, tropical-rainforest 1   ->  shrubland 2, savanna 1
+///   seed 7     absent  trop-seasonal-forest 16, trop-rainforest 3  ->  savanna 3
+///   seed 1234  absent  temperate-forest 3, taiga 2                 ->  shrubland 1
+/// ```
+///
+/// Desert-elf's row is `desert 1.00 / savanna 0.827 / temperate-grassland
+/// 0.827 / shrubland 0.682`, so across the three seeds it went from **0 of 27
+/// settlements on any biome its row names** to **7 of 7** — landing on the
+/// `near` and `marginal` rungs, never on the stronghold. The axis registers
+/// that as `0.000000 → 0.000000`, because this kind's stronghold is a single
+/// scarce biome. Widening the axis to "any authored biome", or to a
+/// rung-weighted score, *after* seeing this would change what counts as success
+/// in order to rescue a falsified prediction — precisely what decision 0016
+/// exists to prevent. The successor axis belongs in a preregistration, and is
+/// filed as `BIO-rung-weighted-concentration`.
+///
+/// # The frozen diagnosis was RE-DERIVED and RULED OUT
+///
+/// P2 shipped with a pre-committed diagnosis: The Range's P1‴, a downward-only
+/// mask that suppresses without relocating, made likelier by the halved
+/// stronghold:default contrast (4× → ~2.33× since `cda3e3c4`). That is **not
+/// what happened here.** P1‴ predicts a people thinned and left *where it was*;
+/// desert-elf was thinned **and moved entirely**, its off-row occupancy going
+/// to zero. The 2.33× contrast was ample to reorder this kind's ranking — it
+/// simply did not carry it to the top rung. Neither "the mask is too shallow"
+/// nor "the destination is contested" describes the measurement. **Nothing was
+/// retuned.**
+///
+/// claim: rate(3 seeds x 1 elf, must avoid the both-falling failure mode on a
+/// majority of seeds) — the same quantifier the spec froze, on the one kind it
+/// does not hold for.
+#[test]
+#[ignore = "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)"]
+fn desert_elf_concentrates_in_its_authored_stronghold_biomes() {
+    let falsified = p2_falsified_among(&P2_OFF_AXIS);
+    assert!(
+        falsified.is_empty(),
+        "P2 FALSIFIED for {falsified:?}: {P2_FALSIFICATION_DIAGNOSIS}"
     );
 }
 
