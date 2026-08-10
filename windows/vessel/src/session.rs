@@ -209,8 +209,8 @@ verbs:
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen
-  npcs             the derived NPCs sharing this world (label, id)
-  why <who>        recount an NPC's dated history (by label or id)
+  npcs             the derived NPCs sharing this world (label, number)
+  why <who>        recount an NPC's dated history (by label or number)
   needs            read the felt state of anyone sharing this room
   provoke [who]    shift a co-located NPC's disposition, your own mark
   soothe [who]     ease a co-located NPC's disposition, your own mark
@@ -1060,7 +1060,8 @@ impl<'w> Session<'w> {
     /// (their grievance fold at or past `HOSTILITY_THRESHOLD`)? A pure read
     /// — never commits anything. `who` resolves exactly as `provoke`/
     /// `soothe` do (`colocated_npc`): empty selects the sole co-located
-    /// NPC, else a numeric id or a case-insensitive label substring; an
+    /// NPC, else the `npcs` listing's 1-based handle or a case-insensitive
+    /// label substring; an
     /// unresolved (not-here) `who` reads as not-hostile rather than
     /// erroring. This mechanic's whole consequence is Task 3's; this task
     /// stops at the gate.
@@ -1097,13 +1098,14 @@ impl<'w> Session<'w> {
     /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
     /// ALL derived NPCs, not only co-located ones — grievance is a ledger
     /// fold over that NPC's own facts, not a proximity check — matched by
-    /// numeric id or case-insensitive label substring; `None` if no derived
-    /// NPC matches `who`.
+    /// the `npcs` listing's 1-based handle or case-insensitive label
+    /// substring; `None` if no derived NPC matches `who`.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
-        who.parse::<u64>()
+        who.parse::<usize>()
             .ok()
-            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 self.npcs
@@ -3142,13 +3144,17 @@ impl<'w> Session<'w> {
         )
     }
 
-    /// List every derived NPC this session knows about, with the entity id
-    /// `why` accepts (mirrors the repl's `beliefs` → `why <id>` pattern: an
-    /// id-listing verb feeding the recount verb).
+    /// List every derived NPC this session knows about, with a short,
+    /// typeable handle `why` (and `provoke`/`soothe`/`npc_grievance`) accept:
+    /// the NPC's 1-based position in `self.npcs`, not its `EntityId`. The
+    /// entity id is a wide, lineage-derived value (The Signet) that a player
+    /// cannot reasonably type back; the handle is a display/input affordance
+    /// only, scoped to this listing within this session — it is never stored
+    /// and never crosses into a committed fact.
     fn list_npcs(&self) -> String {
         let mut lines = vec![format!("{} NPC(s) derived this session:", self.npcs.len())];
-        for npc in &self.npcs {
-            lines.push(format!("  [{}] {}", npc.entity.0, npc.label));
+        for (i, npc) in self.npcs.iter().enumerate() {
+            lines.push(format!("  [{}] {}", i + 1, npc.label));
         }
         lines.join("\n")
     }
@@ -3157,19 +3163,23 @@ impl<'w> Session<'w> {
     /// T4): the world remembers, so `why` over an NPC that has moved names
     /// each committed `agent-at` with the day it was asserted (`recount` in
     /// `windows/historiography` renders the day suffix). `who` is matched
-    /// first as a numeric entity id, else as a case-insensitive substring of
-    /// an NPC's label — this mirrors the CLI repl's `why <id>` (see
-    /// `cli/src/repl.rs`) over the one kind of subject a possess session
-    /// actually has on hand without a prior id-listing step: a name.
+    /// first as the `npcs` listing's 1-based handle, else as a
+    /// case-insensitive substring of an NPC's label — this mirrors the CLI
+    /// repl's `why <id>` (see `cli/src/repl.rs`) over the one kind of subject
+    /// a possess session actually has on hand without a prior listing step:
+    /// a name. The handle is deliberately NOT the NPC's `EntityId` (The
+    /// Signet) — it is a short-lived, session-local position a player can
+    /// type back, resolved fresh from `self.npcs` on every call.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
-            return "Why what? Name an NPC (label or id — see 'npcs').".to_string();
+            return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
         }
         let target = who
-            .parse::<u64>()
+            .parse::<usize>()
             .ok()
-            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 self.npcs
@@ -3258,9 +3268,14 @@ impl<'w> Session<'w> {
 
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
     /// argument selects the first such NPC (the common case — a lone co-located
-    /// NPC needs no name), otherwise `who` is matched as a numeric entity id or
-    /// a case-insensitive substring of an NPC's label, mirroring `why`'s
-    /// resolution but restricted to NPCs actually here.
+    /// NPC needs no name), otherwise `who` is matched as the `npcs` listing's
+    /// 1-based handle or a case-insensitive substring of an NPC's label,
+    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// The handle is resolved against `self.npcs` (so it means the same
+    /// number `npcs` printed) and then re-checked against `here` — resolving
+    /// it directly against `here`'s own positions would let a handle's
+    /// meaning shift with who happens to be sensed, and silently answer for
+    /// an NPC the player typed a stale number for.
     ///
     /// **The fourth reader of [`Self::sensed_npcs`]** (The Sighting, fix round
     /// 3), and the leak it closes is the same one a third time. `provoke`/
@@ -3286,9 +3301,11 @@ impl<'w> Session<'w> {
         if who.is_empty() {
             return here.into_iter().next();
         }
-        who.parse::<u64>()
+        who.parse::<usize>()
             .ok()
-            .and_then(|id| here.iter().find(|n| n.entity.0.get() == id).copied())
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
+            .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 here.iter()
