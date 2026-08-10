@@ -215,6 +215,34 @@ threshold that *would* have made it fire was refused because it would have been
 chosen for firing. Disclosing an unfalsifiable check beats quietly shipping one,
 which is this chapter's practice working rather than a new failure.
 
+A ninth campaign moves the family off checks and metrics entirely, onto the
+data. The Particular (2026-08-10) registered four predicates for individual
+persons, one of which — the day a person died — is committed only once that day
+has passed. It has never been committed. Across three seeds and 364 promoted
+founders the count is zero, because the arithmetic deriving the death day
+subtracts a maturity in *days* from a founding day in *years* and compares the
+sum against a present in years; the gating condition is unsatisfiable for every
+species in the roster by an order of magnitude. The predicate is registered,
+documented, hand-tested on both of its branches, and counted by the capability
+probe as vocabulary the world holds. The live-world test that walks every person
+and asserts death follows birth contains a conditional that has never once been
+entered, and stayed green throughout. So the floor gains a third question, asked
+of vocabulary rather than of checks or measurements: *does any world actually
+produce this?* Nothing in the suite asks it. The instance was found by scoring a
+preregistered prediction numerically at the close, which is the only step in the
+campaign that computed a figure the tests did not already assert.
+
+The same campaign supplies a smaller lesson about preregistration itself. Its
+size bound — the ledger grows by no more than 2.1% — was **falsified** at 6.25%,
+while the exact-count identity beside it held to the fact on every seed. Both
+readings are correct and together they localise the cause: the mechanism did
+what it was specified to do, and the estimate was computed against a world that
+had since been rebuilt, its fact count falling by a factor of three and a half
+in the interval. A ratio frozen before the code is only as durable as its
+denominator, and a prediction expressed as a *fraction of current state* silently
+re-aims itself every time that state moves. Freezing the numerator as an identity
+is what made the falsification readable instead of merely disappointing.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
