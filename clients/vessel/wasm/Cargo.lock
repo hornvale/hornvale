@@ -116,6 +116,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-person"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-religion"
 version = "0.1.0"
 dependencies = [
@@ -211,6 +218,7 @@ dependencies = [
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-paleoclimate",
+ "hornvale-person",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
