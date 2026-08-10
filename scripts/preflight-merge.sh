@@ -111,6 +111,21 @@ echo "    preflight after every time main moves"
 echo "  - if any subagent was killed mid-run, sweep its worktree for orphaned"
 echo "    scaffolding before trusting the gate"
 
+# The Cairn: other live branches' HOLD-OFF notices. Advisory only — this never
+# changes the verdict (D7), because the board has no standing to block a merge.
+board_bin=""
+for candidate in tools/board/target/release/board tools/board/target/debug/board; do
+  [ -x "${candidate}" ] && board_bin="${candidate}" && break
+done
+if [ -n "${board_bin}" ]; then
+  holds="$("${board_bin}" read 2>/dev/null | grep -F 'polarity=hold-off' || true)"
+  if [ -n "${holds}" ]; then
+    printf '\nADVISORY — hold-off notices from other sessions:\n'
+    printf '%s\n' "${holds}" | sed 's/^/  /'
+    printf '  (advisory only; it does not change the verdict)\n'
+  fi
+fi
+
 section "Verdict"
 if [[ "$nogo" -eq 0 ]]; then
     echo "  GO (mechanical checks passed; the judgment half above is yours)"

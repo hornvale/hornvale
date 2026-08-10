@@ -30,7 +30,7 @@ pub fn choose_consistent<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::{EntityId, Value};
+    use crate::ledger::{EntityId, Lineage, Value};
     use crate::seed::Seed;
 
     fn setup() -> (ConceptRegistry, Ledger, EntityId) {
@@ -38,7 +38,11 @@ mod tests {
         r.register_predicate("name", true, "canonical name")
             .unwrap();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "refine-test-subject",
+            ordinal: 0,
+        });
         (r, l, e)
     }
 

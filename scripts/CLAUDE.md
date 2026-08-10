@@ -10,7 +10,7 @@ them.
 `regenerate-artifacts.sh` regenerates **every** committed generated artifact
 (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
 studies, the type-audit report, the digest's decision index + delta report
-under `docs/digest/`, and the committed `vessel/session/v1` client fixtures
+under `docs/digest/`, and the committed `vessel/session/v2` client fixtures
 under `clients/game/core/tests/fixtures/` — one walk-band (turn 0), one
 chamber-band, reached via `scripts/possession-chamber.txt`) — and CI + `make
 rebaseline` both call it, so local and CI regeneration cannot silently

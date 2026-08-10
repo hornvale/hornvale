@@ -774,7 +774,8 @@ reconstruct it from the generator.
 [The Snapshot](./chronicle/the-snapshot.md) moved the seam onto an axis it had
 never been tested on. Every layer before it was a **query**: a client asks the
 world about a place or a day window and receives a document describing what is
-there. `vessel/session/v1` is an **emit** — one document per committed turn of
+there. The session document (`vessel/session/v2` today, `v1` when The Snapshot
+shipped it) is an **emit** — one document per committed turn of
 an interactive session, and not a view *of* the world but a view *from* an
 agent inside it, which means the interesting part is what it must withhold. It
 carries the redaction boundary in its own shape: channels grouped by how the
@@ -793,7 +794,7 @@ committed a golden for a document its client merely *parses*. The distinction
 that survives both is not who reads the artifact but what the artifact pins.
 The Shadow Track's dead golden pinned a *client contract* the end-to-end wasm
 fixture already pinned better. This one pins something no client-side test can
-reach: `vessel/session/v1` is declared save-format-class, so a change in what
+reach: the session document is declared save-format-class, so a change in what
 its bytes *mean* is an epoch event, and the committed fixture is the tripwire
 that makes such a change arrive as a reviewable diff instead of arriving
 silently — its own failure message names the epoch decision. An in-process

@@ -782,14 +782,29 @@ mod tests {
 
     #[test]
     fn facts_lists_an_entity() {
-        let out = drive("facts 2\nquit\n");
+        // The subject is LOOKED UP, not typed. Since The Signet an entity id
+        // is derived from its lineage rather than being its position in mint
+        // order, so there is no "entity 2" to ask about — this used to read
+        // `facts 2` and lean on a comment about numbering shifts. Asking the
+        // world which entity is a settlement is what the line always meant.
+        let world = constant_world();
+        let subject = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .next()
+            .expect("the constant world places at least one settlement");
+        let out = drive(&format!("facts {}\nquit\n", subject.get()));
         // Each fact line is tagged with the domain that asserted it. Under The
-        // Living Community epoch, entity 2 is the flagship settlement, whose
-        // is-settlement/population/cell-id facts are now committed by the
+        // Living Community epoch the flagship settlement's
+        // is-settlement/population/cell-id facts are committed by the
         // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
         // the label — decision 0006, an epoch suffix, never a rename) rather
-        // than the settlement domain. The OR tolerates entity-numbering shifts.
-        assert!(out.contains("(history/bake/v2)") || out.contains("(terrain)"));
+        // than the settlement domain.
+        assert!(
+            out.contains("(history/bake/v2)") || out.contains("(terrain)"),
+            "expected a domain-tagged fact line for {subject:?}: {out}"
+        );
     }
 
     #[test]

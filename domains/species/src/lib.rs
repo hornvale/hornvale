@@ -3744,6 +3744,7 @@ pub fn instance_biosphere(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Fact, Seed};
 
     #[test]
@@ -3954,13 +3955,17 @@ mod tests {
         // here.
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
-        let settlement = w.ledger.mint_entity();
+        let settlement = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         people(&mut w, settlement, "kobold").unwrap();
         assert_eq!(species_of(&w, settlement).as_deref(), Some("kobold"));
 
         // `species_entity` resolves a committed SPECIES_NAME fact back to its
         // entity (the fact worldgen's genesis commits at world build).
-        let kobold = w.ledger.mint_entity();
+        let kobold = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         w.ledger
             .commit(
                 Fact {

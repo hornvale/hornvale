@@ -22,13 +22,13 @@ Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands 
 Ways on: NE, NW, S.
 > npcs
 7 NPC(s) derived this session:
-  [654] bugbear of Googo
-  [655] hobgoblin of Nenagabo
-  [656] hobgoblin of Toa
-  [657] a wild rust-monster
-  [658] a wild otyugh
-  [659] a wild xorn
-  [660] a wild giant-goat
+  [1] bugbear of Googo
+  [2] hobgoblin of Nenagabo
+  [3] hobgoblin of Toa
+  [4] a wild rust-monster
+  [5] a wild otyugh
+  [6] a wild xorn
+  [7] a wild giant-goat
 > needs
 The bugbear of Googo seems content.
 > wait 5

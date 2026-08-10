@@ -5,7 +5,7 @@
 //! 6): **the driver drives across the linker; everything displayed comes
 //! across the serializer.** `Driver` links `hornvale-vessel` and owns
 //! exactly the two functions the spec names — start a session, hand it a
-//! line — and only [`String`] (a `vessel/session/v1` document) ever crosses
+//! line — and only [`String`] (a `vessel/session/v2` document) ever crosses
 //! back out. `hornvale-game-core` never depends on `hornvale-vessel` at all,
 //! so no render path built on top of this module can reach `npc_grievance`,
 //! `would_turn_hostile`, `agent()` or `knowledge()` — there is no symbol to
@@ -73,7 +73,7 @@ pub struct Driver {
     ctx: *mut WorldContext<'static>,
     /// The live possession, borrowing `ctx` (which borrows `world`).
     session: Session<'static>,
-    /// The current turn's `vessel/session/v1` JSON — the only shape any
+    /// The current turn's `vessel/session/v2` JSON — the only shape any
     /// world state takes once it leaves this struct. Refreshed by `start`
     /// and by every `handle`, so `snapshot()` never needs to touch the
     /// session again.
@@ -142,7 +142,7 @@ impl Driver {
         Ok(driver)
     }
 
-    /// The current turn's `vessel/session/v1` JSON — what `hornvale-game-
+    /// The current turn's `vessel/session/v2` JSON — what `hornvale-game-
     /// core::render` consumes. Does not advance the turn.
     pub fn snapshot(&self) -> String {
         self.cached.clone()

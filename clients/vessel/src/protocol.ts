@@ -20,7 +20,7 @@ export type WorkerRequest = StartRequest | CommandRequest;
 export interface StartedResponse {
   type: "started";
   text: string;
-  /** The opening turn's `vessel/session/v1` JSON; "" if unavailable. */
+  /** The opening turn's `vessel/session/v2` JSON; "" if unavailable. */
   snapshot: string;
 }
 
@@ -35,7 +35,7 @@ export interface OutResponse {
   type: "out";
   text: string;
   released: boolean;
-  /** This turn's `vessel/session/v1` JSON; "" if unavailable. */
+  /** This turn's `vessel/session/v2` JSON; "" if unavailable. */
   snapshot: string;
 }
 

@@ -606,6 +606,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T16:04:25Z | census | 775.777 | 21482.605 | 338.046 | 28.13 | 0 | 4c2156a4 |  | lefford | 40 |
 | 2026-08-09T16:14:37Z | gate | 458.530 | 2197.705 | 174.988 | 5.17 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T16:16:29Z | rebaseline | 111.946 | 145.349 | 10.084 | 1.39 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
+| 2026-08-09T23:39:41Z | gate | 409.207 | 2236.787 | 161.801 | 5.86 | 0 | 3a8c88f6 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T01:02:24Z | gate (RED, aborted at test 44/3283 — not a gate cost) | 24.238 | 42.983 | 7.331 | 2.08 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T01:10:45Z | gate | 409.351 | 2222.986 | 159.006 | 5.82 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
 | 2026-08-09T19:24:28Z | rebaseline | 211.979 | 155.238 | 7.988 | 0.77 | 0 | 58fcbecc | the-quire | MacBookPro | 10 |
 | 2026-08-09T19:37:58Z | gate | 398.608 | 2656.919 | 143.351 | 7.03 | 0 | 58fcbecc | the-quire | MacBookPro | 10 |
 | 2026-08-09T19:53:22Z | rebaseline | 120.383 | 157.567 | 7.035 | 1.37 | 0 | f466f316 | the-quire | MacBookPro | 10 |
@@ -624,3 +627,23 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T22:39:04Z | gate | 563.267 | 2443.566 | 142.836 | 4.59 | 0 | b16005b7 | the-quire | MacBookPro | 10 |
 | 2026-08-09T22:56:34Z | rebaseline | 107.223 | 152.765 | 8.804 | 1.51 | 0 | a97ac55a | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-09T23:06:59Z | gate | 609.521 | 2343.316 | 151.764 | 4.09 | 0 | a97ac55a | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T01:45:39Z | rebaseline | 127.620 | 156.252 | 10.190 | 1.30 | 0 | 88aef9dc | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T01:51:35Z | gate | 272.482 | 2134.445 | 114.845 | 8.25 | 0 | 88aef9dc | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:15:37Z | rebaseline | 114.912 | 154.800 | 10.212 | 1.44 | 0 | 9c6b95bf | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:21:35Z | gate | 284.371 | 2112.746 | 126.739 | 7.88 | 0 | 9c6b95bf | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:40:05Z | rebaseline | 109.909 | 156.297 | 9.723 | 1.51 | 0 | ed57246b | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:40:39Z | gate | 3.844 | 5.094 | 2.040 | 1.86 | 0 | ed57246b | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:45:41Z | gate | 291.280 | 2129.468 | 118.224 | 7.72 | 0 | ed57246b | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T03:03:48Z | rebaseline | 200.074 | 158.414 | 9.014 | 0.84 | 0 | 5f8e3b18 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T03:08:04Z | gate | 52.126 | 84.010 | 26.128 | 2.11 | 0 | 5f8e3b18 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T03:13:03Z | gate | 256.533 | 2069.197 | 101.954 | 8.46 | 0 | 5f8e3b18 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T03:37:07Z | rebaseline | 111.097 | 156.105 | 9.495 | 1.49 | 0 | d99a4c19 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T03:43:51Z | gate | 328.105 | 2139.246 | 168.508 | 7.03 | 0 | d99a4c19 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T04:10:31Z | rebaseline | 114.255 | 156.864 | 10.167 | 1.46 | 0 | d05f89b9 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T04:16:36Z | gate | 347.746 | 2143.352 | 188.071 | 6.70 | 0 | d05f89b9 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T04:40:40Z | gate | 367.501 | 2142.911 | 187.664 | 6.34 | 0 | 62bd32d2 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T02:01:15Z | rebaseline | 126.519 | 153.323 | 10.027 | 1.29 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T02:12:01Z | gate | 623.565 | 2967.549 | 239.978 | 5.14 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T09:59:10Z | gate | 346.491 | 2077.436 | 113.068 | 6.32 | 0 | 9e196cf7 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T10:01:26Z | rebaseline | 122.330 | 156.725 | 11.028 | 1.37 | 0 | 9e196cf7 | campaign/the-signet | MacBookPro | 10 |
+| 2026-08-10T12:07:30Z | rebaseline | 201.426 | 157.966 | 8.343 | 0.83 | 0 | 12046ad9 | campaign/the-particular | MacBookPro | 10 |

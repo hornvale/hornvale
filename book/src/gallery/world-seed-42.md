@@ -9,4 +9,4 @@ The complete fact ledger:
 | Bolnar | name | Bolnar | settlement |
 | Bolnar | revered-phenomenon | celestial-body | religion |
 
-Entities: 1 (the vale), 2 (the village). Facts: 2. That is everything. Every rerun of this document produces these exact bytes.
+Entities: 9222568859608023040 (the vale), 3707018031091679232 (the village). Facts: 2. That is everything. Every rerun of this document produces these exact bytes.

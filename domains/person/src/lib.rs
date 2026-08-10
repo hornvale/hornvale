@@ -8,7 +8,10 @@
 //! lifespans, and a domain may reach only the kernel (decision 0002).
 //! `windows/worldgen` resolves those and hands over [`PersonSeed`] values.
 
-use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
+use hornvale_kernel::{
+    ConceptRegistry, EntityId, Fact, LedgerError, Lineage, RegistryError, Value, World,
+};
+use std::collections::BTreeMap;
 
 /// Marks an entity as an individual person.
 /// type-audit: bare-ok(identifier-text)
@@ -98,8 +101,25 @@ fn fact(subject: EntityId, predicate: &str, object: Value, community: EntityId, 
 /// as-of-day query never sees a newborn as already a founder.
 pub fn genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>, LedgerError> {
     let mut ids = Vec::with_capacity(seeds.len());
+    // A person's identity derives from the occupation they founded, which is
+    // the entity every one of their facts is already `place`d at. The ordinal
+    // counts persons *within* that occupation, so promoting a founder cannot
+    // move any entity outside their own lineage — the property The Signet
+    // exists to give, and the reason this campaign was parked until it landed.
+    //
+    // Counting rather than hardcoding 0: today `select_founders` picks each
+    // occupation at most once, so every community has exactly one person. That
+    // is an invariant of the caller, not of this function, and if it ever
+    // relaxes a second founder should become a sibling rather than a collision.
+    let mut nth_of_community: BTreeMap<EntityId, u16> = BTreeMap::new();
     for s in seeds {
-        let id = world.ledger.mint_entity();
+        let ordinal = nth_of_community.entry(s.community).or_insert(0);
+        let id = world.ledger.mint_entity(Lineage {
+            parent: Some(s.community),
+            role: "person",
+            ordinal: *ordinal,
+        });
+        *ordinal += 1;
         world.ledger.commit(
             fact(id, IS_PERSON, Value::Flag(true), s.community, s.birth_day),
             &world.registry,
@@ -183,7 +203,7 @@ mod tests {
     fn a_living_founder_gets_no_death_fact() {
         let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
         crate::register_concepts(&mut world.registry).expect("registers");
-        let community = world.ledger.mint_entity();
+        let community = world.ledger.mint_entity(hornvale_kernel::test_lineage(0));
         let ids = crate::genesis(
             &mut world,
             &[
@@ -230,7 +250,7 @@ mod tests {
     fn a_founder_matures_before_founding_and_the_stamps_say_so() {
         let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
         crate::register_concepts(&mut world.registry).expect("registers");
-        let community = world.ledger.mint_entity();
+        let community = world.ledger.mint_entity(hornvale_kernel::test_lineage(0));
         let ids = crate::genesis(
             &mut world,
             &[crate::PersonSeed {

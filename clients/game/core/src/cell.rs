@@ -71,7 +71,7 @@ pub enum Source {
     /// **There is deliberately no `WaysOn` variant, on its second deletion
     /// for two different reasons.** Task 9's review first deleted it (it had
     /// been assigned to this same prompt cell) as a false provenance claim:
-    /// there was no `ways_on` field on `vessel/session/v1`, so the category
+    /// there was no `ways_on` field on `vessel/session/v2`, so the category
     /// named a channel the wire never separately emitted. Task 9b restored
     /// it on better information — `sensed.room.exits` really is on the wire
     /// — and gave it its own always-visible row (`ways.rs`), re-deriving the

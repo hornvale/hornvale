@@ -5,8 +5,8 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError, Manifest,
-    Phenomenon, RegistryError, Value, Venue, Void, World,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError, Lineage,
+    Manifest, Phenomenon, RegistryError, Value, Venue, Void, World,
 };
 
 /// Predicate marking an entity as a belief.
@@ -306,7 +306,14 @@ pub fn genesis(
     for (i, p) in members.iter().enumerate() {
         let sentiment = Sentiment::of(p);
 
-        let belief = world.ledger.mint_entity();
+        // A belief belongs to the community that holds it — `community` is
+        // the caller-supplied parent already in scope — and its ordinal is
+        // its rank in the salience-descending pantheon (element 0 presides).
+        let belief = world.ledger.mint_entity(Lineage {
+            parent: Some(community),
+            role: "belief",
+            ordinal: i as u16,
+        });
         let salt = belief.get();
         let (deity_name, deity_ipa) = names.deity(salt);
         let (epithet, epithet_ipa) = names.epithet(salt, sentiment);
@@ -436,6 +443,7 @@ pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Referent, Seed};
 
     /// A deterministic test `DeityNamer`: `("XarN", "xarN")` for deities,
@@ -459,7 +467,9 @@ mod tests {
     fn world(seed: u64) -> (World, EntityId) {
         let mut w = World::new(Seed(seed));
         register_concepts(&mut w.registry).unwrap();
-        let community = w.ledger.mint_entity();
+        let community = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         (w, community)
     }
 
@@ -659,7 +669,9 @@ mod tests {
     #[test]
     fn each_deity_is_salted_by_its_own_belief_id() {
         let (mut w, c) = world(42);
-        let c2 = w.ledger.mint_entity();
+        let c2 = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
         genesis(&mut w, c2, &sky(), &society(), &mut StubNamer).unwrap();
         let all = beliefs_of(&w);
@@ -681,7 +693,9 @@ mod tests {
     #[test]
     fn cult_form_is_read_per_community() {
         let (mut w, c) = world(42);
-        let c2 = w.ledger.mint_entity();
+        let c2 = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
         let flat = SocietySummary {
             strata: 2,

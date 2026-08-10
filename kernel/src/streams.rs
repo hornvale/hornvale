@@ -15,6 +15,9 @@ crate::stream_labels! {
     ROOM_FACE = "room/face" => "room base face";
     /// Label for a room's child descent.
     ROOM_CHILD = "room/child" => "room child descent";
+    /// The leg an entity's identity derives on. Save-format-contract stable:
+    /// changing it silently renumbers every entity in every saved world.
+    ENTITY_IDENTITY = "entity/identity/v1" => "entity identity derivation leg";
 }
 
 /// Static per-octave derivation labels for `noise::fbm_2d`'s common octave
