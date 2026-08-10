@@ -2415,7 +2415,54 @@ impl BiomeAffinity {
             .map(|(_, factor)| *factor)
             .unwrap_or(self.default)
     }
+
+    /// Build a row from a **preference** ladder and the kind's sovereignty
+    /// floor, mapping each preference `p` in `[0, 1]` to the factor
+    /// `floor + (1 - floor) * p` and setting `default` to `floor` itself
+    /// (the `p == 0.0` case, which is why the elsewhere rung is never listed).
+    ///
+    /// This is the only constructor [`biome_affinity_registry`] uses, and the
+    /// separation it enforces is the point: a row's author states a *shape*
+    /// — [`AFFINITY_STRONGHOLD`] / [`AFFINITY_NEAR`] / [`AFFINITY_MARGINAL`],
+    /// derived from the classifier at the kind's own authored climate — and
+    /// never states a *level*. The level is
+    /// [`hornvale_kernel::sovereignty_floor`], the model's existing statement
+    /// of how much environmental unsuitability a creature's mass and potency
+    /// buy it off; the registry's doc carries the derivation and the
+    /// double-count argument in full.
+    ///
+    /// `floor` must be in `[0, 1)` — every value `sovereignty_floor` can
+    /// return, whose ceiling is `0.95`. Outside that the mapping is not
+    /// monotone and the caller has already lost the ladder, so this is a
+    /// caller's contract in the same style as
+    /// [`hornvale_kernel::ConditionResponse::eval`]'s, not a validated one.
+    /// type-audit: bare-ok(ratio: floor), bare-ok(ratio: preferences), waiver(constructor-return)
+    pub fn from_preferences(floor: f64, preferences: Vec<(&'static str, f64)>) -> Self {
+        Self {
+            default: floor,
+            by_biome: preferences
+                .into_iter()
+                .map(|(name, p)| (name, floor + (1.0 - floor) * p))
+                .collect(),
+        }
+    }
 }
+
+/// The affinity ladder's top rung, as a **preference** in `[0, 1]`: the biome
+/// the classifier returns for the kind's own authored reading. Maps to a factor
+/// of exactly `1.00` for every kind, whatever its sovereignty floor.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_STRONGHOLD: f64 = 1.00;
+
+/// The affinity ladder's second rung, as a **preference** in `[0, 1]`: one band
+/// out in the classifier's lookup table, still recognisably the kind's country.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_NEAR: f64 = 0.70;
+
+/// The affinity ladder's third rung, as a **preference** in `[0, 1]`: two bands
+/// out, or the right climate in the wrong form.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_MARGINAL: f64 = 0.45;
 
 impl Component for BiomeAffinity {}
 
@@ -2474,41 +2521,106 @@ impl Component for BiomeAffinity {}
 /// `windows/worldgen/tests/radiation_admission.rs` asserts it a second time for
 /// the six elves specifically, as a task-1 precondition.
 ///
-/// # The ladder every row is authored on
+/// # The ladder every row is authored on, and where its LEVEL comes from
 ///
-/// Four steps, so the rows are read against one another rather than each
-/// tuned by eye. Level is gauge for placement (genesis and `best_home` rank
-/// cells in the kind's *own* units, so a constant factor reorders nothing) —
-/// only the shape matters, and the shape is:
+/// A row carries two separable things. Its **shape** says which biomes are the
+/// kind's country and how far out each one sits; that is derived per kind from
+/// the classifier read at the kind's own authored climate (see below, and every
+/// row says its own working). Its **level** says how much of a cell the kind
+/// still takes where the biome is not its country at all; that is derived from
+/// the model and is not authored at any row.
+///
+/// The four steps are a **preference in `[0, 1]`**, not a factor:
 ///
 /// ```text
 ///   1.00  stronghold  the biome the classifier returns for the kind's OWN
 ///                     authored reading
 ///   0.70  near        one band out, still recognisably the kind's country
 ///   0.45  marginal    two bands out, or the right climate in the wrong form
-///   0.25  default     everything else
+///   0.00  elsewhere   everything else
 /// ```
 ///
-/// **"Level is gauge" is true of RANKING and false of everything downstream of
-/// it — measured, The Radiation task 3.** Genesis and `best_home` rank cells in
-/// the kind's own units, so a constant factor reorders nothing *for that kind*,
-/// and the sentence above is correct as far as it goes. But the factor also
-/// multiplies the capacity that becomes the settlement's POPULATION, and the
-/// history bake's volume is a function of population. On seed 42, adding the
-/// six elf rows at this ladder's `0.25` default takes the tithe census from 552
-/// occupation records to **193** (alive at now 192 → 100, subordinations formed
-/// 232 → 41, tribute relations standing 83 → 17) and breaches four deliberate
-/// fidelity floors in `history_tithe.rs` and `history_sundering.rs`. Raising
-/// only this fourth step to `0.50`, with the `1.00 / 0.70 / 0.45` shape
-/// untouched, restores every one of them (495 / 172 / 166 / 58).
+/// and the factor the world actually sees is that preference mapped through the
+/// kind's own **sovereignty floor**:
 ///
-/// No single row causes it and the dose is not linear: wood+high+drow alone
-/// give 366 records, desert+sea+snow alone give 660, and all six together give
-/// 193. The ladder was calibrated on a store holding two of forty kinds — one
-/// of them fauna, so ONE settling people in nine. It now holds seven settling
-/// peoples of fifteen, and its fourth step is doing something at that density
-/// that it did not do at the density it was authored for. Treat the number as
-/// **open**, not settled, and do not read a green suite as evidence it is fine.
+/// ```text
+///   factor(biome) = floor + (1 - floor) * preference(biome)
+///   floor         = hornvale_kernel::sovereignty_floor(mass, potency)
+/// ```
+///
+/// so [`BiomeAffinity::default`] is the floor exactly, a stronghold is exactly
+/// `1.00` for every kind however heavy, and the rows stay comparable rung for
+/// rung. [`BiomeAffinity::from_preferences`] is the only constructor these rows
+/// use, so the mapping cannot be bypassed by hand.
+///
+/// ## The derivation, and why this quantity
+///
+/// This is the model's own algebra rather than a new one.
+/// [`hornvale_kernel::ConditionResponse::eval`] is
+/// `floor + (1 - floor) * devotion * bump` — the same `sovereignty_floor`, in
+/// the same position, mapping a preference in `[0, 1]` into `[floor, 1]`. And
+/// `sovereignty_floor` is the model's single existing statement of *how much
+/// environmental unsuitability a creature's mass and potency buy it off*:
+/// "preference is the luxury of the unconstrained", a tiny material creature
+/// environment-placed and a dragon self-determined. A biome affinity asks that
+/// same question one level coarser — over classes rather than along an axis —
+/// so it takes the same answer instead of an unrelated second one.
+///
+/// The consequence reads correctly as biology, which is the check that it is
+/// the right quantity and not merely an available one: a woolly mammoth is far
+/// less diminished by being off its ground (`0.692`) than a wood elf is
+/// (`0.429`), because six tonnes of homeostasis is exactly what being off your
+/// ground costs less when you have.
+///
+/// ## Why a PREFERENCE remap, and not simply "default = floor"
+///
+/// Because replacing the fourth step alone inverts the ladder for the two
+/// heaviest occupants. Gnoll's floor is `0.495` and the mammoth's is `0.692`,
+/// both above the old `0.45` marginal step — so a biome listed as *marginal*
+/// would have scored **below** an unlisted one, and declaring a preference
+/// would have been a penalty for holding it. Expressing the steps as a
+/// preference and mapping the whole ladder keeps `stronghold > near > marginal
+/// > default` true by construction for any floor in `[0, 1)`.
+///
+/// ## Why this is not the double count the admission test forbids
+///
+/// For any kind *not* in this registry it would be. For these eight it is not,
+/// and the reason is the admission test above: every occupant has
+/// `elevation.devotion < sovereignty_floor`, so `tolerance_liebig`'s minimum is
+/// the **unfloored** elevation term at every cell of every world and the floor
+/// never reaches the product at all. The quantity is computed and discarded for
+/// exactly the kinds this registry admits — which is the same sentence that
+/// admitted them. That stays true by enforcement rather than by memory:
+/// `range_readout.rs::every_occupant_has_climate_curves_the_minimum_currently_discards`
+/// reddens the moment an edit to a mass, a potency or an elevation devotion
+/// would let the floor bind, and that is precisely the edit that would turn
+/// this reuse into a double count.
+///
+/// ## The number this replaced
+///
+/// The fourth step read `0.25` from The Range through The Radiation task 3, and
+/// **it was never derived**: it appears in The Range's plan only inside
+/// illustrative test-fixture code, its spec never names it, and it was then
+/// adopted as house style for six more kinds. What exposed it was a
+/// measurement, not a review — at `0.25` the six elf rows took seed 42's tithe
+/// census from 552 occupation records to **193** (alive at now 192 → 100,
+/// subordinations formed 232 → 41, tribute relations standing 83 → 17),
+/// breaching four deliberate fidelity floors in `history_tithe.rs` and
+/// `history_sundering.rs`. No single row caused it and the dose was not linear
+/// (wood+high+drow alone gave 366, desert+sea+snow alone gave 660, all six gave
+/// 193): the ladder had been calibrated on a store holding one settling people
+/// in nine, and it now holds seven of fifteen.
+///
+/// "Level is gauge" is what made a bare constant look safe, and it is true only
+/// of RANKING. Genesis and `best_home` rank cells in the kind's own units, so a
+/// constant factor reorders nothing *for that kind* — but the same factor
+/// multiplies the capacity that becomes a settlement's POPULATION, and the
+/// history bake's volume is a function of population. A level is gauge for one
+/// consumer and load-bearing for the next.
+///
+/// Note what the derivation is **not**: it is not `0.50`, the value measured to
+/// restore those floors. Restoring them was not the criterion, and whether the
+/// derived level restores them is a reading, not a requirement.
 ///
 /// "The classifier" is `classify_land` for a terrestrial kind, read at its
 /// authored `(temperature.optimum, moisture.optimum)`. For the one marine
@@ -2536,17 +2648,38 @@ impl Component for BiomeAffinity {}
 /// is not the shipped design, and taking it is a decision to record rather than
 /// a knob to turn.
 ///
-/// The floor is `0.25` and never `0.0`. Zero is a **hard exclusion**, not a
-/// strong preference — genesis filters its founding pool on
-/// `caps_now()[pidx].at(c) > 0.0` ("a proto-site a people cannot feed is not a
-/// founding, it is a death two epochs later"). No kind here means *never*:
-/// a gnoll war-band in a temperate forest is a rarity, not an impossibility,
-/// and neither is a snow-elf outpost in a savanna. The deep ocean is the case
-/// that most tempts a zero — sea-elf has no business in the abyss — and it
-/// still takes `0.25`, because "no settlement has ever been founded there" is
-/// a result the placement layer should produce, not an input the registry
-/// should assert.
+/// The floor is the kind's sovereignty floor and never `0.0` — and it cannot
+/// reach `0.0`, since `sovereignty_floor` is strictly positive for any mass
+/// above 1 kg. Zero is a **hard exclusion**, not a strong preference: genesis
+/// filters its founding pool on `caps_now()[pidx].at(c) > 0.0` ("a proto-site a
+/// people cannot feed is not a founding, it is a death two epochs later"). No
+/// kind here means *never*: a gnoll war-band in a temperate forest is a rarity,
+/// not an impossibility, and neither is a snow-elf outpost in a savanna. The
+/// deep ocean is the case that most tempts a zero — sea-elf has no business in
+/// the abyss — and it still takes the floor, because "no settlement has ever
+/// been founded there" is a result the placement layer should produce, not an
+/// input the registry should assert.
 pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
+    // Every row's LEVEL, read live from the same biosphere row the capacity
+    // path reads rather than transcribed as a literal. A kind's mass moving is
+    // therefore a kind's affinity default moving, in the same commit, with no
+    // second copy to forget — the failure mode the admission table's own
+    // "the inputs live three places apart" note describes.
+    let biosphere = biosphere_registry();
+    let floor_of = |kind: &'static str| -> f64 {
+        let bio = biosphere.get(&KindId(kind)).unwrap_or_else(|| {
+            panic!("{kind} carries a biome affinity but has no biosphere row to derive its floor")
+        });
+        hornvale_kernel::sovereignty_floor(bio.mass, bio.potency)
+    };
+    // Wood's row is built ONCE and cloned into Drow and High, which is stronger
+    // than three calls to one helper: the three are the same value, not three
+    // values a helper currently happens to agree on. See the two rows below for
+    // why each takes it, and note that this hands Drow WOOD's floor rather than
+    // its own (52.0 kg vs 55.0 kg, 0.424802 vs 0.429202) — deliberately. Drow
+    // is the REALM control; a control that differs environmentally, in level or
+    // in shape, controls nothing.
+    let wood = wood_elf_biome_affinity(floor_of("wood-elf"));
     [
         // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
         // DESERT authoring and — until this row — a people that selected no
@@ -2562,23 +2695,23 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // 0.12) returns `Desert` exactly (hot band, moisture < 0.20).
         (
             KindId("gnoll"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("gnoll"),
+                vec![
                     // Stronghold — gnoll's own authored climate, classified.
-                    ("desert", 1.00),
+                    ("desert", AFFINITY_STRONGHOLD),
                     // Near: the two temperate dry bands (moisture < 0.25 and
                     // 0.25-0.40). Right dryness, wrong thermal band — a gnoll
                     // steppe is a real place, a gnoll rainforest is not.
-                    ("temperate-grassland", 0.70),
-                    ("shrubland", 0.70),
+                    ("temperate-grassland", AFFINITY_NEAR),
+                    ("shrubland", AFFINITY_NEAR),
                     // Marginal: the hot band's next step out (moisture
                     // 0.20-0.45) — the ground the savanna-authored giant-hyena
                     // is documented onto, which a desert pack raids and does
                     // not hold.
-                    ("savanna", 0.45),
+                    ("savanna", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
         // THE RANGE (task 4), occupant two: the woolly mammoth — gnoll's defect
         // in the opposite climate. Temperature optimum **-25.0 °C at devotion
@@ -2603,22 +2736,27 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // of where the lookup cuts, not a claim about the animal.
         (
             KindId("woolly-mammoth"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("woolly-mammoth"),
+                vec![
                     // Stronghold — the two cold-dry classes its own authored
                     // curve covers.
-                    ("ice", 1.00),
-                    ("tundra", 1.00),
+                    ("ice", AFFINITY_STRONGHOLD),
+                    ("tundra", AFFINITY_STRONGHOLD),
                     // Near: the same cold band, wetter than its 0.30 optimum
                     // (moisture >= 0.35) — forest rather than open plain.
-                    ("taiga", 0.70),
+                    ("taiga", AFFINITY_NEAR),
                     // Marginal: cold, but reached by ALTITUDE rather than by
                     // latitude, and this is a 200 m lowland grazer. The right
                     // climate in the wrong form — the giant goat's country.
-                    ("alpine", 0.45),
+                    //
+                    // This is the row that forced the ladder to be expressed as
+                    // a preference: at 6000 kg the floor is 0.692367, so a
+                    // literal `0.45` here would have scored alpine BELOW the
+                    // eighteen biomes this row never mentions.
+                    ("alpine", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
         // ---------------------------------------------------------------
         // THE RADIATION (C2d, task 3): the six elves.
@@ -2653,27 +2791,28 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // margin, so savanna is `near` here and `marginal` there.
         (
             KindId("desert-elf"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("desert-elf"),
+                vec![
                     // Stronghold — desert-elf's own authored climate,
                     // classified.
-                    ("desert", 1.00),
+                    ("desert", AFFINITY_STRONGHOLD),
                     // Near: one moisture band wetter in the same hot tier,
                     // reached at +1 sigma of this kind's own moisture curve.
-                    ("savanna", 0.70),
+                    ("savanna", AFFINITY_NEAR),
                     // Near: one thermal band cooler at the same dryness,
                     // reached at -1 sigma of its temperature curve (18.0 °C).
                     // Right dryness, wrong thermal band — the same reading
                     // gnoll's row makes of the same biome.
-                    ("temperate-grassland", 0.70),
+                    ("temperate-grassland", AFFINITY_NEAR),
                     // Marginal: two bands out — cooler AND wetter. Scrub, not
                     // sand.
-                    ("shrubland", 0.45),
+                    ("shrubland", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
-        // Drow: WOOD'S ROW, taken from the same helper the surface elves use.
+        // Drow: WOOD'S ROW — the same VALUE the surface elves carry, cloned,
+        // level and shape together.
         //
         // Its own authored reading would NOT produce this row. `classify_land`
         // at (13.0 °C, moisture 0.85) returns `TemperateRainforest` — the
@@ -2689,16 +2828,21 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // derived from Drow's own cave-air reading would make that mutation
         // measure the gate plus a biome difference, and P4 would have no clean
         // reading. `radiation_affinity::drows_affinity_is_wood_elfs` pins it.
-        (KindId("drow"), wood_elf_biome_affinity()),
+        //
+        // Since The Radiation's derivation task the row's LEVEL is wood's too,
+        // not drow's — see `wood_elf_biome_affinity`'s `floor` parameter.
+        (KindId("drow"), wood.clone()),
         // High elf: WOOD'S ROW, and for the reason High exists at all. It is
         // the MIND control (spec §3.6) — same mass, same potency, same
         // resource vector, same curves, same affinity — so that Wood vs High
         // isolates psyche. P3(a) predicts the two capacity fields are
         // BIT-IDENTICAL, which is only possible if this row is wood's, not
-        // merely similar to it. Read from the same helper for the same reason
-        // `high_elf_condition_niche` delegates: an equality maintained by hand
-        // is an equality that eventually stops holding.
-        (KindId("high-elf"), wood_elf_biome_affinity()),
+        // merely similar to it. Cloned from one constructed value for the same
+        // reason `high_elf_condition_niche` delegates: an equality maintained by
+        // hand is an equality that eventually stops holding. (High and Wood are
+        // both 55.0 kg, so this row's level would have been wood's either way —
+        // drow's, one row up, would not.)
+        (KindId("high-elf"), wood.clone()),
         // Sea elf: the ONE marine occupant, and therefore the one row derived
         // through `classify_marine` rather than `classify_land`.
         //
@@ -2722,7 +2866,18 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // because the admission table above shows this kind's climate curves
         // discarded like every other occupant's.
         //
-        // THE DEEP CLASSES ARE UNLISTED AND THEREFORE 0.25 — not zero.
+        // THE MARINE SUPPLY FIELD'S OWN GRADING WAS THE ALTERNATIVE ANCHOR
+        // CONSIDERED FOR THE LADDER'S LEVEL, and this row is why it was
+        // rejected. It is a marine PRODUCTIVITY gradient — the water's yield,
+        // not a people's preference — it exists only for the ocean, so it can
+        // anchor nothing on land, and here it would be a literal squaring:
+        // sea-elf's resource axis already reads it, so grading the affinity by
+        // it too would apply the identical curve twice to the one kind the
+        // admission test flags as closest to a double count.
+        //
+        // THE DEEP CLASSES ARE UNLISTED AND THEREFORE AT THE DEFAULT — not
+        // zero, and since the derivation task that default is 0.433335, sea-
+        // elf's own sovereignty floor.
         // `radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band` pins
         // both halves: the four shelf classes strictly above the default, the
         // five deep ones at or below it. Authored to the whole ocean this kind
@@ -2731,23 +2886,23 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // the rest of the family.
         (
             KindId("sea-elf"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("sea-elf"),
+                vec![
                     // Stronghold — sea-elf's own authored (depth, SST)
                     // reading, classified, on an upwelling cell.
-                    ("upwelling", 1.00),
+                    ("upwelling", AFFINITY_STRONGHOLD),
                     // Near: the same 0-200 m shelf, one SST step either side of
                     // the 12-20 °C gap this kind sits in — reef above, kelp
                     // below. Both are the shelf's productive communities and
                     // both grade 0.85 on the supply field.
-                    ("coral-reef", 0.70),
-                    ("kelp-forest", 0.70),
+                    ("coral-reef", AFFINITY_NEAR),
+                    ("kelp-forest", AFFINITY_NEAR),
                     // Marginal: the identical depth and temperature with no
                     // upwelling — open shelf water. Right place, thin table.
-                    ("epipelagic", 0.45),
+                    ("epipelagic", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
         // Snow elf: TWO strongholds, for the woolly mammoth's reason exactly.
         //
@@ -2767,30 +2922,30 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // and the ladder's first line is the standing instruction against it.
         (
             KindId("snow-elf"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("snow-elf"),
+                vec![
                     // Stronghold — the two cold classes its own authored
                     // moisture curve straddles.
-                    ("taiga", 1.00),
-                    ("tundra", 1.00),
+                    ("taiga", AFFINITY_STRONGHOLD),
+                    ("tundra", AFFINITY_STRONGHOLD),
                     // Near: one thermal band colder — the permanent ice, at
                     // -1.43 sigma of its temperature curve. The margin this
                     // people is named for, and not the ground it holds.
-                    ("ice", 0.70),
+                    ("ice", AFFINITY_NEAR),
                     // Marginal: cold reached by ALTITUDE rather than by
                     // latitude, above the tree line. The right climate in the
                     // wrong form — the same call the woolly mammoth's row
                     // makes of the same biome, three rows up.
-                    ("alpine", 0.45),
+                    ("alpine", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
         // Wood elf: the family's ancestral row, and the row High and Drow are
         // defined against. The values live in `wood_elf_biome_affinity` so that
         // all three read one authored source; editing it moves three kinds,
         // which is the intended coupling.
-        (KindId("wood-elf"), wood_elf_biome_affinity()),
+        (KindId("wood-elf"), wood),
     ]
     .into_iter()
     .collect()
@@ -2829,23 +2984,30 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
 /// Wood's curves are wide (sigma 18.0 °C, 0.30 moisture) and would put all four
 /// within one sigma, which is exactly why the ladder walks the lookup table and
 /// not the sigma — a sigma reading of this kind would rank nothing.
-fn wood_elf_biome_affinity() -> BiomeAffinity {
-    BiomeAffinity {
-        default: 0.25,
-        by_biome: vec![
+///
+/// `floor` is **wood-elf's** sovereignty floor, and the caller hands it the same
+/// value for all three kinds. Drow's own mass (52.0 kg) would give 0.424802
+/// against wood's 0.429202; taking wood's is the same call the shape already
+/// makes, for the same reason — a REALM control that also differs in level is
+/// not a control. `radiation_affinity::drows_affinity_is_wood_elfs` pins the
+/// whole row, level included.
+fn wood_elf_biome_affinity(floor: f64) -> BiomeAffinity {
+    BiomeAffinity::from_preferences(
+        floor,
+        vec![
             // Stronghold — wood-elf's own authored climate, classified.
-            ("temperate-forest", 1.00),
+            ("temperate-forest", AFFINITY_STRONGHOLD),
             // Near: one moisture band wetter, still closed canopy.
-            ("temperate-rainforest", 0.70),
+            ("temperate-rainforest", AFFINITY_NEAR),
             // Near: one thermal band cooler, still closed canopy — the boreal
             // forest.
-            ("taiga", 0.70),
+            ("taiga", AFFINITY_NEAR),
             // Marginal: a forest in the wrong thermal band.
-            ("tropical-seasonal-forest", 0.45),
+            ("tropical-seasonal-forest", AFFINITY_MARGINAL),
             // Marginal: the right thermal band with the canopy gone.
-            ("shrubland", 0.45),
+            ("shrubland", AFFINITY_MARGINAL),
         ],
-    }
+    )
 }
 
 /// The biosphere component: every entity has one. The packer and the

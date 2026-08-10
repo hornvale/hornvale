@@ -281,7 +281,7 @@ The Tetas are wood elfs — neighbors.
 Xoaboa is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Tleavese strides the sky, slowly.
-The day returns because Voobo strides the sky, briskly.
+The day returns because Vooboo strides the sky, briskly.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -425,7 +425,7 @@ The Tetas are wood elfs — neighbors.
 Xoaboa is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Qaxvavvox walks the sky, slowly.
-The day returns because Goovbat strides the sky, briskly.
+The day returns because Goovbata strides the sky, briskly.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -997,7 +997,7 @@ The Kopnop are snow elfs — neighbors.
 The Keqnguq are wood elfs — neighbors.
 Boaboo is the earth with one moon.
 The moon crosses because it is Jokjo's kin.
-The day returns because Laklajokjo rows the sky, briskly.
+The day returns because Laklajokjo walks the sky, briskly.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -1656,6 +1656,30 @@ The moon crosses because Zhoopnoa walks the sky, slowly.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
+##### As the priesthood of the Fnaaxnoo teach it
+
+Zao Fnozha Fno. ("Zao is the earth — as it is taught.")
+
+The Zooqsha are bugbears — rivals.
+The Baovoo are desert dwarfs — rivals.
+The Maaxmue are desert elfs — rivals.
+The Fnaaxnoo are drows — ourselves.
+The Pjojpjoj are gnolls — rivals.
+The Zhooqsa are goblins — rivals.
+The Daoboo are gully dwarfs — rivals.
+The Pmaaxmoe are high elfs — rivals.
+The Zozha are hill dwarfs — rivals.
+The Zhooqsha are hobgoblins — rivals.
+The Shoammoem are humans — rivals.
+The Jaojjao are kobolds — rivals.
+The Fzaakzue are sea elfs — rivals.
+The Pnaaknoo are snow elfs — rivals.
+The Daaxdue are wood elfs — rivals.
+Zao is the earth with one moon.
+The moon crosses because Zhoopnoa walks the sky, slowly.
+
+*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
 #### As the Pjojpjoj tell it
 
 The Zooqsha are bugbears — neighbors.
@@ -1674,7 +1698,7 @@ The Fzaakzue are sea elfs — neighbors.
 The Pnaaknoo are snow elfs — neighbors.
 The Daaxdue are wood elfs — neighbors.
 Zao is the earth with one moon.
-The moon crosses because Najpjaj steers the sky, slowly.
+The moon crosses because Najpjaj strides the sky, slowly.
 The day returns because the sky must be crossed.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
@@ -2100,6 +2124,9 @@ The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who
 Among the Baovoo, the sky has darkened, now and again.
 Among the Maaxmue, the sky has darkened, now and again.
 Among the Fnaaxnoo, the sky has darkened, now and again.
+The priesthood of the Fnaaxnoo numbers the darkenings: 53.
+The next darkening, it teaches, comes on day 36125.
+The Fnaaxnoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Pjojpjoj, the sky has darkened, now and again.
 Among the Zhooqsa, the sky has darkened, now and again.
 The priesthood of the Zhooqsa numbers the darkenings: 32.
@@ -2134,6 +2161,7 @@ The next darkening, it teaches, comes on day 36125.
 The Daaxdue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Fnaaxnoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*

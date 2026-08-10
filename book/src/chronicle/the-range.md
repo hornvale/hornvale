@@ -119,6 +119,15 @@ The occupants declared are `gnoll` — desert 1.00, temperate grassland and
 shrubland 0.70, savanna 0.45, everything else 0.25 — and `woolly-mammoth` —
 ice and tundra 1.00, taiga 0.70, alpine 0.45, default 0.25.
 
+> **Superseded, 2026-08-10 (The Radiation).** Those four numbers were a *shape*
+> and a *level* run together, and the level was never derived — `0.25` reached
+> this campaign from illustrative fixture code in its own plan. The shape
+> stands; the level is now each kind's `sovereignty_floor`, with the rungs read
+> as preferences and mapped `floor + (1 − floor) · p`. Gnoll's row therefore
+> reads 1.00 / 0.848615 / 0.722461 / 0.495384 and the mammoth's 1.00 / 0.907710
+> / 0.830802 / 0.692367. Every figure quoted below was measured under the old
+> level and is kept as this campaign published it.
+
 Both were admitted by an arithmetic test rather than chosen by theme. A
 tolerance floored by the kind's sovereignty can never read below that floor; the
 unfloored elevation axis can never read above its own devotion. So a kind whose

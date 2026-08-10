@@ -75,18 +75,16 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 
 - **Googo** — tropical-rainforest
 - **Dooga** — tropical-rainforest
-- **Goodogodogo** — temperate-forest
-- **Daddadpadgad** — shrubland
+- **Godogodogo** — temperate-forest
 - **Pozhzaosngoshpeshpaosh** — savanna
+- **Pezhpvozhpoazpkooz** — shrubland
 - **Pkozhpvaaz** — shrubland
-- **Pkozhngoshpeshpaosh** — shrubland
 - **Govo** — taiga
-- **Bavo** — taiga
-- **Bagasgo** — taiga
+- **Gaa** — temperate-forest
 - **Goo** — taiga
-- **Zngaavsma** — savanna
-- **Gzozngavsma** — shrubland
-- **Nenateona** — temperate-forest
+- **Googoozhgvoogaa** — temperate-forest
+- **Toabeobee** — taiga
+- **Nenatena** — temperate-forest
 - **Nagbatga** — tropical-seasonal-forest
 - **Bababatgat** — temperate-forest
 - **Bvozhgo** — temperate-forest
@@ -94,85 +92,217 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Batgat** — temperate-forest
 - **Bagsmogbatgat** — temperate-forest
 - **Qagbababa** — temperate-forest
-- **Geoboge** — savanna
-- **Geoboge** — tropical-rainforest
-- **Nena** — temperate-forest
-- **Moengato** — temperate-forest
-- **Ngoezmo** — temperate-forest
-- **Ngaomongato** — temperate-forest
-- **Ngatongozmo** — taiga
-- **Xoraxa** — temperate-forest
-- **Nadbbeusbud** — coral-reef
-- **Nushbeshbaushdbeushnuzh** — coral-reef
-- **Nadbbeusbkueshnash** — upwelling
-- **Dduzgu** — temperate-forest
-- **Ngeezgdueduazdxuu** — temperate-forest
-- **Gaago** — temperate-forest
-- **Gxea** — temperate-forest
-- **Beobeebaabo** — temperate-forest
-- **Netea** — temperate-forest
-- **Baba (21.1°N, 5.1°W)** — temperate-forest
-- **Ngozmope** — tropical-seasonal-forest
-- **Ngamange** — temperate-forest
-- **Goodo** — tropical-seasonal-forest
-- **Goozhgvoo** — temperate-forest
-- **Padgadgad** — shrubland
-- **Baba (20.8°N, 3.0°W)** — temperate-forest
-- **Bagtnog** — temperate-forest
-- **Godogododaga** — tropical-rainforest
-- **Goa** — tropical-rainforest
-- **Godogodogo** — tropical-seasonal-forest
-- **Ngozmomo** — temperate-forest
-- **Nene** — temperate-forest
-- **Doa** — tropical-rainforest
-- **Ngozmonge** — temperate-forest
-- **Daddaddnod** — temperate-forest
-- **Shngaddag** — temperate-forest
-- **Bboshboaztfooz** — taiga
-- **Nanae** — temperate-forest
-- **Nenanoneadoebe** — temperate-forest
-- **Raaxora** — temperate-forest
-- **Xoxo** — temperate-forest
-- **Daddad** — temperate-forest
-- **Teona** — temperate-forest
-- **Bebebo** — temperate-forest
-- **Mengangozmo** — tropical-rainforest
-- **Kaangongozmo** — tropical-seasonal-forest
-- **Rooxoraxa** — temperate-forest
-- **Ngoto** — temperate-forest
-- **Gaddaddad** — shrubland
-- **Ngakagamenge** — temperate-forest
-- **Gadqag** — temperate-forest
-- **Dadagad** — temperate-forest
-- **Xoaxoro** — taiga
-- **Tboasbas** — taiga
-- **Boaztfoozngoshboshbaosh** — tundra
-- **Padgaddadgog** — shrubland
-- **Bozngoosh** — tundra
-- **Boaztfooz** — tundra
-- **Sngopadoq** — taiga
-- **Dnoddada** — temperate-forest
-- **Sngoddodqadgoqdnga** — savanna
-- **Noageboge** — tropical-rainforest
-- **Snoddngod** — tropical-seasonal-forest
-- **Gad** — temperate-forest
-- **Snoddngodshngogdod** — tropical-seasonal-forest
-- **Qadgoqdngadnaqgaq** — tropical-seasonal-forest
-- **Gadpadgaddaddad** — temperate-forest
-- **Padgadqadgoqdnga** — savanna
-- **Snoddngod (4.7°N, 69.8°E)** — savanna
-- **Dnaqgaq** — tropical-seasonal-forest
-- **Snoddngod (4.7°N, 68.8°E)** — savanna
-- **Bo of the bugbears** — temperate-forest
-- **Daddad** — savanna
-- **Godo** — tropical-seasonal-forest
-- **Shngogdod** — tropical-seasonal-forest
+- **Gootoenoona** — temperate-forest
 - **Nenagabo** — temperate-forest
-- **Bo of the hobgoblins** — temperate-forest
-- **Gootoetoa** — tropical-rainforest
-- **Padgadgad** — temperate-forest
-- **Paddagsngoddod** — savanna
-- **Dnaqgaq** — tropical-rainforest
+- **Mongato (2.9°S, 101.7°W)** — temperate-forest
+- **Ngamamo** — temperate-forest
+- **Ngaomongato** — temperate-forest
+- **Mongato (25.8°N, 176.9°E)** — temperate-forest
+- **Nushbeshbaush** — coral-reef
+- **Nadbbeus** — kelp-forest
+- **Duuddush** — kelp-forest
+- **Ngasbozbboz** — taiga
+- **Ngasboz (23.6°N, 110.2°W)** — taiga
+- **Dudduzgu** — temperate-forest
+- **Dduzgutaungusde** — temperate-forest
+- **Gasgoba** — taiga
+- **Duazdxuugxea** — temperate-forest
+- **Gzhopgshooshngaopgzox** — shrubland
+- **Gzhopgsho (11.9°N, 61.2°E)** — shrubland
+- **Gzop (12.9°N, 61.5°E)** — shrubland
+- **Tabtat** — temperate-forest
+- **Taungusdedu** — temperate-forest
+- **Mongama** — temperate-forest
+- **Gzhopgshogza** — shrubland
+- **Goa** — tropical-rainforest
+- **Ngasboz (22.7°N, 110.6°W)** — taiga
+- **Du (20.2°S, 53.4°W)** — temperate-forest
+- **Botena** — temperate-forest
+- **Teona (6.6°S, 115.5°W)** — temperate-forest
+- **Du (19.9°S, 55.4°W)** — temperate-forest
+- **Toa** — savanna
+- **Raaxora (0.9°S, 121.4°W)** — temperate-forest
+- **Xoxo (1.9°S, 121.1°W)** — temperate-forest
+- **Bozngoosh (32.6°N, 148.3°W)** — tundra
+- **Gzazhnax** — shrubland
+- **Raaxora (10.5°N, 110.1°W)** — temperate-forest
+- **Dadgogshnagdad** — shrubland
+- **Gaabo** — temperate-forest
+- **Dzagzap** — savanna
+- **Geoboge (6.6°N, 68.5°E)** — temperate-forest
+- **Boaztfoozbbosh** — tundra
+- **Geobogeto** — shrubland
+- **Bbozbosngoshboshbaosh** — tundra
+- **Bbosh** — taiga
+- **Boosh** — taiga
+- **Zngavsmazhnax** — shrubland
+- **Bbosh** — tundra
+- **Bozngoosh (35.3°N, 64.1°E)** — tundra
+- **Bboshngoshboshbaosh** — taiga
+- **Gzagzhopgsho (17.3°N, 58.9°E)** — shrubland
+- **Shngaopgzox** — shrubland
+- **Geoboge** — savanna
+- **Geogeeteona** — temperate-forest
+- **Geoge** — savanna
+- **Zngavsmagzhopgsho** — temperate-forest
+- **Bo (7.6°N, 67.8°E)** — temperate-forest
+- **Nena (21.2°N, 100.0°E)** — temperate-forest
+- **Netea (22.2°N, 100.7°E)** — temperate-forest
+- **Zngavsmagza** — shrubland
+- **Toa (19.9°N, 103.0°E)** — temperate-forest
+- **Bo (21.0°N, 102.4°E)** — temperate-forest
+- **Geoboegeneekae** — savanna
+- **Ngastfoaz (35.2°N, 142.1°W)** — tundra
+- **Booshbbosh** — tundra
+- **Toateaneeboqa** — temperate-rainforest
+- **Xoaxoro (23.6°N, 140.6°W)** — taiga
+- **Zngavsmagshovzngav** — shrubland
+- **Qatgoqngababa** — temperate-forest
+- **Bagsmogbaba** — temperate-forest
+- **Kooneogeoboege** — tropical-seasonal-forest
+- **Bozngooshngoshboshbaosh** — tundra
+- **Zngaavsma** — tropical-seasonal-forest
+- **Gshopzngavgzhopgsho** — temperate-forest
+- **Rooxoraxa** — temperate-forest
+- **Toa** — temperate-rainforest
+- **Bonena** — temperate-forest
+- **Nena (29.3°N, 100.4°E)** — temperate-forest
+- **Raarora (24.5°N, 138.3°W)** — taiga
+- **Psapqsaax** — savanna
+- **Xoaxoro (23.4°N, 138.4°W)** — taiga
+- **Xoaxoro (24.1°N, 139.4°W)** — taiga
+- **Xoxaxora** — temperate-forest
+- **Roara (23.8°N, 137.3°W)** — taiga
+- **Ngasboz (21.8°N, 109.9°W)** — taiga
+- **Dadgogdag** — shrubland
+- **Gzazngavsma** — shrubland
+- **Neneo** — temperate-rainforest
+- **Netea (21.2°S, 80.0°W)** — temperate-forest
+- **Geoboge (21.3°S, 81.2°W)** — temperate-forest
+- **Toa (9.4°N, 64.4°E)** — shrubland
+- **Xoaxoro (24.8°N, 140.5°W)** — taiga
+- **Dza** — savanna
+- **Zngaavsmashngaopgzox** — shrubland
+- **Teona (9.4°N, 65.4°E)** — shrubland
+- **Teona (7.6°N, 68.8°E)** — temperate-forest
+- **Boosh** — temperate-forest
+- **Ngoshboshbaosh** — tundra
+- **Toanetea** — temperate-forest
+- **Psoaxsmaapgzao** — shrubland
+- **Qaneoneneo** — temperate-forest
+- **Basngasboz** — taiga
+- **Gzao (16.4°N, 61.7°E)** — shrubland
+- **Toa (22.2°S, 79.3°W)** — temperate-forest
+- **Toateanee** — temperate-forest
+- **Raaxoraxora** — temperate-forest
+- **Roo (8.5°N, 110.8°W)** — temperate-forest
+- **Xoaxoro (21.7°N, 137.6°W)** — taiga
+- **Xaora** — taiga
+- **Roara (22.7°N, 137.4°W)** — taiga
+- **Shnagdadqadgoqdnga** — shrubland
+- **Shnagdad** — shrubland
+- **Shngaopgzoxgza** — shrubland
+- **Qaneo (11.3°N, 64.0°E)** — shrubland
+- **Gzhopgshopzopdzhax (17.3°N, 62.0°E)** — shrubland
+- **Geoboge** — temperate-rainforest
+- **Tboas** — taiga
+- **Shnagdaddadgog** — shrubland
+- **Teaneenena** — temperate-forest
+- **Raarora (24.3°N, 141.6°W)** — taiga
+- **Roara (25.0°N, 142.7°W)** — taiga
+- **Gadshnagdad** — shrubland
+- **Xoaxoro (25.4°N, 141.6°W)** — taiga
+- **Bboazbosh** — taiga
+- **Xoraxa (23.0°N, 139.5°W)** — temperate-forest
+- **Daddadpadgad** — shrubland
+- **Bozngooshboaztfooz** — tundra
+- **Neneo** — temperate-forest
+- **Naokato** — tropical-rainforest
+- **Teonato** — shrubland
+- **Toa (8.5°N, 67.1°E)** — shrubland
+- **Ngasboz (34.9°N, 148.3°W)** — taiga
+- **Ngoshboshbaoshngasboz** — taiga
+- **Zngavsmazhnaxgzhopgsho** — shrubland
+- **Toa (18.1°N, 104.9°E)** — temperate-forest
+- **Netea (19.0°N, 104.5°E)** — temperate-rainforest
+- **Zngavsmagzhopgsho** — shrubland
+- **Toa (20.2°N, 100.5°E)** — temperate-forest
+- **Neteanoneaboege** — temperate-forest
+- **Dadgoggad** — shrubland
+- **Naneo** — tropical-seasonal-forest
+- **Kenegeoboegenaneo** — tropical-seasonal-forest
+- **Zngavsmagzop** — shrubland
+- **Gzagzhopgshogshovzngav** — shrubland
+- **Gzhopgshopzopdzhax (16.4°N, 58.5°E)** — shrubland
+- **Psapqsaaxgzap** — savanna
+- **Gzop (15.7°N, 59.4°E)** — shrubland
+- **Gzao (16.7°N, 59.7°E)** — shrubland
+- **Neeka** — savanna
+- **Kooneo** — tropical-seasonal-forest
+- **Togeboge** — shrubland
+- **Gzhopgshogshovzngav** — shrubland
+- **Gshoovzngavgzop** — shrubland
+- **Raxaroxoro (23.8°N, 142.8°W)** — taiga
+- **Teona (9.4°N, 67.5°E)** — shrubland
+- **Geoboegeneneonetea** — temperate-forest
+- **Ngastfoaz (34.6°N, 140.9°W)** — tundra
+- **Xoaxoro (22.5°N, 140.7°W)** — taiga
+- **Naka (8.5°N, 64.1°E)** — shrubland
+- **Gzhopgsho (8.5°N, 65.1°E)** — shrubland
+- **Noneaboege (22.0°N, 101.9°E)** — temperate-forest
+- **Nena (21.1°N, 101.2°E)** — temperate-forest
+- **Zngaavsmashngaopgzoxgzao** — shrubland
+- **Raarora (25.2°N, 139.4°W)** — taiga
+- **Roxoroxoxoro** — taiga
+- **Xoraxa** — taiga
+- **Raarararora** — taiga
+- **Raarora (27.5°N, 139.2°W)** — taiga
+- **Geoboge (17.2°N, 105.3°E)** — temperate-forest
+- **Roara (25.7°N, 138.2°W)** — taiga
+- **Raarora (25.0°N, 137.2°W)** — taiga
+- **Toa (18.1°N, 102.7°E)** — temperate-forest
+- **Xoraxa (4.4°S, 126.2°W)** — temperate-forest
+- **Roara** — temperate-forest
+- **Geobogenena** — temperate-forest
+- **Dadgaqdag** — shrubland
+- **Toa** — temperate-grassland
+- **Netea (18.1°N, 107.0°E)** — temperate-forest
+- **Boto** — temperate-forest
+- **Qaneo (10.4°N, 65.8°E)** — shrubland
+- **Bobo** — shrubland
+- **Netea (17.2°N, 106.4°E)** — temperate-forest
+- **Roaxora** — temperate-forest
+- **Roo (21.4°N, 140.7°W)** — temperate-forest
+- **Naka (12.3°N, 63.4°E)** — shrubland
+- **Geoboge (23.1°S, 78.7°W)** — temperate-forest
+- **Gzop (12.2°N, 62.3°E)** — shrubland
+- **Tobobo** — shrubland
+- **Gzhopgshogzop** — shrubland
+- **Xoaxoro (26.1°N, 137.1°W)** — taiga
+- **Gaaboteona** — temperate-forest
+- **Geoboegenaneo** — tropical-seasonal-forest
+- **Zngaavsma** — shrubland
+- **Gzop (11.3°N, 63.0°E)** — shrubland
+- **Xoaxoro (23.2°N, 141.7°W)** — taiga
+- **Raxaroxoro (22.7°N, 142.8°W)** — taiga
+- **Noneaboege (19.0°N, 102.3°E)** — temperate-forest
+- **Nenanoneaboege** — temperate-forest
+- **Xoxo (21.6°N, 142.9°W)** — temperate-forest
+- **Raxaroxorororaxoxoro** — taiga
+- **Naanoa** — savanna
+- **Gzopsnapdzho** — shrubland
+- **Teona (5.7°N, 71.2°E)** — temperate-forest
+- **Tonena** — temperate-forest
+- **Dadagad** — temperate-forest
+- **Nena (6.6°N, 70.5°E)** — temperate-forest
+- **Gzagzhopgsho (18.3°N, 59.2°E)** — shrubland
+- **Teonaqaneo** — shrubland
+- **Boosh** — tundra
+- **Naka (10.4°N, 64.7°E)** — shrubland
+- **Netea (18.1°N, 108.1°E)** — temperate-rainforest
+- **Toaqaneo** — shrubland
+- **Teona (12.3°N, 64.4°E)** — shrubland
+- **Gootoebo** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -212,11 +342,11 @@ Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
 
 ## The Vestige
 
-The underworld's residue marks 1% of the land — the buried palimpsest of ages before.
-0 abandoned delvings and 166 buried undercities lie beneath the land.
-97 layers of that residue are still venerated against 70 forgotten — memory still holds most of the ground.
+The underworld's residue marks 2% of the land — the buried palimpsest of ages before.
+0 abandoned delvings and 652 buried undercities lie beneath the land.
+227 layers of that residue are still venerated against 426 forgotten — forgetting outpaces memory.
 1 pre-human gate-scars still weep dread into the deep.
-The residue's dominant hazard is structural collapse — 166 layers so afflicted.
+The residue's dominant hazard is structural collapse — 652 layers so afflicted.
 
 ## Deep Time
 
@@ -225,22 +355,22 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 100 settlement(s).
+The land holds 230 settlement(s).
 The chief bugbear settlement, Googo, holds 68 souls amid tropical-rainforest.
-The chief desert-dwarf settlement, Daddadpadgad, holds 51 souls amid shrubland.
-The chief desert-elf settlement, Pozhzaosngoshpeshpaosh, holds 24 souls amid savanna.
-The chief drow settlement, Govo, holds 19 souls amid taiga.
-The chief gnoll settlement, Zngaavsma, holds 19 souls amid savanna.
-The chief goblin settlement, Nenateona, holds 38 souls amid temperate-forest.
+The chief desert-dwarf settlement, Dadgogshnagdad, holds 44 souls amid shrubland.
+The chief desert-elf settlement, Pozhzaosngoshpeshpaosh, holds 29 souls amid savanna.
+The chief drow settlement, Govo, holds 23 souls amid taiga.
+The chief gnoll settlement, Gzhopgshooshngaopgzox, holds 34 souls amid shrubland.
+The chief goblin settlement, Toabeobee, holds 34 souls amid taiga.
 The chief gully-dwarf settlement, Nagbatga, holds 37 souls amid tropical-seasonal-forest.
 The chief high-elf settlement, Bvozhgo, holds 34 souls amid temperate-forest.
 The chief hill-dwarf settlement, Batgat, holds 36 souls amid temperate-forest.
-The chief hobgoblin settlement, Geoboge, holds 84 souls amid savanna.
-The chief human settlement, Moengato, holds 35 souls amid temperate-forest.
-The chief kobold settlement, Xoraxa, holds 46 souls amid temperate-forest.
-The chief sea-elf settlement, Nadbbeusbud, holds 26 souls amid coral-reef.
-The chief snow-elf settlement, Bboshboaztfooz, holds 23 souls amid taiga.
-The chief wood-elf settlement, Dduzgu, holds 34 souls amid temperate-forest.
+The chief hobgoblin settlement, Gootoenoona, holds 61 souls amid temperate-forest.
+The chief human settlement, Mongato, holds 35 souls amid temperate-forest.
+The chief kobold settlement, Raaxora, holds 42 souls amid temperate-forest.
+The chief sea-elf settlement, Nushbeshbaush, holds 33 souls amid coral-reef.
+The chief snow-elf settlement, Ngasbozbboz, holds 28 souls amid taiga.
+The chief wood-elf settlement, Dudduzgu, holds 34 souls amid temperate-forest.
 
 The bugbear lair of **Googo**, population 68.
 
@@ -248,33 +378,33 @@ Googo lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The desert-dwarf waterhold of **Daddadpadgad**, population 51.
+The desert-dwarf waterhold of **Dadgogshnagdad**, population 44.
 
-Daddadpadgad lives by fishing.
+Dadgogshnagdad lives by herding.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
-The desert-elf wellcamp of **Pozhzaosngoshpeshpaosh**, population 24.
+The desert-elf wellcamp of **Pozhzaosngoshpeshpaosh**, population 29.
 
 Pozhzaosngoshpeshpaosh lives by farming.
 Its roles, lowest to highest: waterfinder, pathkeeper.
 The desert-elf run a basal metabolism of 64 W; slow, long-lived, and sparse, lifespan ~317 yr, matures ~63 yr.
 
-The drow hold of **Govo**, population 19.
+The drow hold of **Govo**, population 23.
 
 Govo lives by farming.
 Its roles, lowest to highest: delver, dark-speaker, matron.
 The drow run a basal metabolism of 66 W; slow, long-lived, and sparse, lifespan ~320 yr, matures ~64 yr.
 
-The gnoll camp of **Zngaavsma**, population 19.
+The gnoll camp of **Gzhopgshooshngaopgzox**, population 34.
 
-Zngaavsma lives by farming.
+Gzhopgshooshngaopgzox lives by fishing.
 Its roles, lowest to highest: gleaner, packlord.
 The gnoll run a basal metabolism of 135 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The goblin village of **Nenateona**, population 38.
+The goblin village of **Toabeobee**, population 34.
 
-Nenateona lives by farming.
+Toabeobee lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
@@ -296,39 +426,39 @@ Batgat lives by farming.
 Its roles, lowest to highest: crofter, stonespeaker, thane.
 The hill-dwarf run a basal metabolism of 82 W; slow, long-lived, and sparse, lifespan ~276 yr, matures ~55 yr.
 
-The hobgoblin legion of **Geoboge**, population 84.
+The hobgoblin legion of **Gootoenoona**, population 61.
 
-Geoboge lives by farming.
-Its roles, lowest to highest: laborer, warlord.
+Gootoenoona lives by farming.
+Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
-The human town of **Moengato**, population 35.
+The human town of **Mongato**, population 35.
 
-Moengato lives by farming.
+Mongato lives by farming.
 Its roles, lowest to highest: farmer, priest, steward.
 The human run a basal metabolism of 82 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The kobold warren of **Xoraxa**, population 46.
+The kobold warren of **Raaxora**, population 42.
 
-Xoraxa lives by farming.
-Its roles, lowest to highest: digger, keeper, elders.
+Raaxora lives by farming.
+Its roles, lowest to highest: digger, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The sea-elf haven of **Nadbbeusbud**, population 26.
+The sea-elf haven of **Nushbeshbaush**, population 33.
 
-Nadbbeusbud lives by fishing.
+Nushbeshbaush lives by fishing.
 Its roles, lowest to highest: netter, provider.
 The sea-elf run a basal metabolism of 71 W; slow, long-lived, and sparse, lifespan ~329 yr, matures ~66 yr.
 
-The snow-elf wintering of **Bboshboaztfooz**, population 23.
+The snow-elf wintering of **Ngasbozbboz**, population 28.
 
-Bboshboaztfooz lives by farming.
+Ngasbozbboz lives by farming.
 Its roles, lowest to highest: herder, frostspeaker, hearthkeeper.
 The snow-elf run a basal metabolism of 73 W; slow, long-lived, and sparse, lifespan ~332 yr, matures ~66 yr.
 
-The wood-elf grove of **Dduzgu**, population 34.
+The wood-elf grove of **Dudduzgu**, population 34.
 
-Dduzgu lives by farming.
+Dudduzgu lives by farming.
 Its roles, lowest to highest: gatherer, greenspeaker, boughgiver.
 The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
@@ -372,7 +502,7 @@ In the lair of **Googo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-The waterhold of **Daddadpadgad** keeps its own folk pantheon:
+The waterhold of **Dadgogshnagdad** keeps its own folk pantheon:
 
 > Pado Pado comes back every 112.53 days. That's how it's always been. That's how it's always been. Pado is a great one among the gods.
 >
@@ -482,7 +612,7 @@ In the hold of **Govo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The camp of **Zngaavsma** keeps its own folk pantheon:
+The camp of **Gzhopgshooshngaopgzox** keeps its own folk pantheon:
 
 > Snaxdzhop Snaxdzhop comes back every 112.53 days. That's how it's always been.
 >
@@ -524,7 +654,7 @@ The camp of **Zngaavsma** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the village of **Nenateona**, an organized priesthood tends its own pantheon:
+In the village of **Toabeobee**, an organized priesthood tends its own pantheon:
 
 > Toa the Notoa returns every 0.88 days. So it was, so it is.
 >
@@ -696,7 +826,7 @@ In the steading of **Batgat**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The legion of **Geoboge** keeps its own folk pantheon:
+In the legion of **Gootoenoona**, an organized priesthood tends its own pantheon:
 
 > Toa the Ngjonto returns every 0.88 days. So it was, so it is.
 >
@@ -738,7 +868,7 @@ The legion of **Geoboge** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the town of **Moengato**, an organized priesthood tends its own pantheon:
+In the town of **Mongato**, an organized priesthood tends its own pantheon:
 
 > Ngoezmo Ngoezmo comes back every 0.88 days. That's how it's always been.
 >
@@ -780,7 +910,7 @@ In the town of **Moengato**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the warren of **Xoraxa**, an organized priesthood tends its own pantheon:
+The warren of **Raaxora** keeps its own folk pantheon:
 
 > Raoxo Raoxo comes back every 15.99 days. That's how it's always been. That's how it's always been. Raoxo is a great one among the gods.
 >
@@ -818,7 +948,7 @@ In the warren of **Xoraxa**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The haven of **Nadbbeusbud** keeps its own folk pantheon:
+The haven of **Nushbeshbaush** keeps its own folk pantheon:
 
 > Nuddkush Nuddkush comes back every 0.88 days. That's how it's always been. That's how it's always been. Nuddkush is a great one among the gods.
 >
@@ -860,7 +990,7 @@ The haven of **Nadbbeusbud** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the wintering of **Bboshboaztfooz**, an organized priesthood tends its own pantheon:
+In the wintering of **Ngasbozbboz**, an organized priesthood tends its own pantheon:
 
 > Ngoz Ngoz comes back every 112.53 days. That's how it's always been. That's how it's always been. Ngoz is a great one among the gods.
 >
@@ -902,7 +1032,7 @@ In the wintering of **Bboshboaztfooz**, an organized priesthood tends its own pa
 >
 > — derived from the phenomenon *tide*
 
-In the grove of **Dduzgu**, an organized priesthood tends its own pantheon:
+In the grove of **Dudduzgu**, an organized priesthood tends its own pantheon:
 
 > Ngu Ngu comes back every 112.53 days. That's how it's always been. That's how it's always been. Ngu is a great one among the gods.
 >

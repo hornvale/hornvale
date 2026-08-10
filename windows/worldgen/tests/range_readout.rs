@@ -131,6 +131,30 @@
 //!   still reads `0.291124` in the ABSENT arm, to six places. That is the
 //!   number that would have caught a mistake here, and it did not move.
 //!
+//! **Amended the same day, by the derivation of the ladder's level.** The
+//! fourth ladder step stopped being the literal `0.25` and became each kind's
+//! own `sovereignty_floor` (see `biome_affinity_registry`'s doc for the
+//! derivation), which moves GNOLL'S OWN ROW as well as the six elf rows —
+//! gnoll's default rose 0.25 → 0.495384, its near step 0.70 → 0.848615 and its
+//! marginal step 0.45 → 0.722461. The bullets above are superseded by:
+//!
+//! ```text
+//!   seed 42  arm                settlements   arid   arid share
+//!            affinity ABSENT             13      0     0.000000
+//!            affinity SHIPPED            40     33     0.825000
+//! ```
+//!
+//! P1″ passes far more strongly than it was frozen to: the count now RISES
+//! 13 → 40 while the share rises 0.000 → 0.825, where the published reading had
+//! it fall 20 → 2 for a share of 0.500. The descriptive seeds move the same
+//! way (seed 7: 67 → 31 at 0.645, against 67 → 6 at 1.000; seed 1234: 7 → 6 at
+//! 1.000, against 7 → 1). The Range's own honest caveat — "this affinity
+//! removes nine gnoll settlements for every one it relocates" — was a
+//! consequence of the undeviced level, not of the mechanism, and it does not
+//! survive the derivation. P2's seed-42 mean now reads 0.818414 → 0.794172
+//! (d −0.024241) — still a fall on all three seeds, smaller because the mask is
+//! shallower — and `gnoll vs kobold` in the ABSENT arm is still `0.291124`.
+//!
 //! ## P2 — CONFIRMED on 3 of 3 seeds
 //!
 //! Gnoll's mean pairwise Pearson `r` against the other eight peopled kinds,

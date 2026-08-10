@@ -24,7 +24,7 @@ Ways on: NE, NW, S.
 7 NPC(s) derived this session:
   [1] bugbear of Googo
   [2] hobgoblin of Geoboge
-  [3] hobgoblin of Geoboge
+  [3] hobgoblin of Nenagabo
   [4] a wild rust-monster
   [5] a wild otyugh
   [6] a wild xorn

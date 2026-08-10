@@ -32,20 +32,20 @@ The clearing at cell 5508
 
 Two lives have passed over this ground, one settling atop the ruins of the last.
 
-Every layer here is a bronze-working kobold steading, an ordinary place, neither famed nor forgotten.
+Every layer here is an iron-working kobold steading, an ordinary place, neither famed nor forgotten.
 
 The whole lineage traces to one root: Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
 
-The deepest layer — at its height a mere six souls.
-  Founded in the year 375, it held for 25 years, until the year 400.
+The deepest layer — at its height a mere eight souls.
+  Founded in the year 1025, it held for 0 years, until the year 1025.
   They fled — put to flight by kobolds — and did not return.
 
-The last of them — at its height some 12 souls.
-  Founded in the year 400, it held for 25 years, until the year 425.
+The last of them — at its height some 14 souls.
+  Founded in the year 1025, it held for 25 years, until the year 1050.
   They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
 
 In the grass today
 ------------------
-At its height some 12 souls, the last kobolds here raised a hut and a granary.
+At its height some 14 souls, the last kobolds here raised a hut and a granary.
 The dwellings are long gone to grass, but the ground still keeps the shape of them: potsherds scattered where the huts once stood and the low turf-lines of the dwellings still ridging the grass.
 ```
