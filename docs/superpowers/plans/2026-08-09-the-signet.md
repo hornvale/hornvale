@@ -31,7 +31,41 @@
 - Consumes: `Seed`, `StreamLabel` from `kernel/src/seed.rs`; `EntityId` from `kernel/src/ledger.rs`.
 - Produces: `pub struct Lineage<'a> { parent: Option<EntityId>, role: &'a str, ordinal: u16 }` and `pub fn derive_entity_id(lineage: Lineage<'_>) -> EntityId`. Tasks 2 and 3 both call these by exactly these names.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Capture the behavioural RED on the live surface, BEFORE adding any type**
+
+A compile error is not a RED — it proves nothing about an assertion. The
+campaign's actual claim *can* be falsified against today's API, so do that
+first. Add to `kernel/src/ledger.rs`'s test module and run it:
+
+```rust
+#[test]
+fn an_inserted_mint_does_not_move_an_unrelated_id() {
+    // Today's API, no new types. The star is minted first in one ledger and
+    // second in the other; under a counter its id moves, which is the whole
+    // defect this campaign removes.
+    let mut before = Ledger::default();
+    let star_first = before.mint_entity();
+
+    let mut after = Ledger::default();
+    let _interloper = after.mint_entity();
+    let star_second = after.mint_entity();
+
+    assert_eq!(
+        star_first, star_second,
+        "minting an unrelated entity first must not move the star's id"
+    );
+}
+```
+
+Run: `cargo test -p hornvale-kernel --lib an_inserted_mint 2>&1 | tail -20`
+
+Expected: **FAIL** with a real assertion diff — `EntityId(1)` vs `EntityId(2)`,
+not a compile error. **Paste that output into the report file**; it is this
+campaign's before-arm and the evidence that the test can fail. Leave the test
+in place — Task 2 re-expresses it against the lineage API, where it must go
+green.
+
+- [ ] **Step 2: Write the derivation's unit tests**
 
 Add to `kernel/src/ledger.rs`'s test module:
 
@@ -80,14 +114,17 @@ fn a_root_needs_no_parent_and_no_world_seed() {
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 3: Confirm the derivation tests do not yet compile**
 
 Run: `cargo test -p hornvale-kernel --lib ledger::tests 2>&1 | tail -20`
-Expected: FAIL to compile — `cannot find function derive_entity_id` / `cannot find struct Lineage`.
+Expected: `cannot find function derive_entity_id` / `cannot find struct Lineage`.
 
-Note: a compile failure is an acceptable RED **here only** because the type under test does not exist yet and these tests assert on a pure function with no live surface to probe first.
+This is a **compile check, not a RED** — it confirms only that the names are
+genuinely absent, so the tests written in Step 2 cannot be passing vacuously
+against something that already exists. The campaign's behavioural RED is
+Step 1's, and that is the one whose output belongs in the report.
 
-- [ ] **Step 3: Declare the derivation label**
+- [ ] **Step 4: Declare the derivation label**
 
 In `kernel/src/streams.rs`, add to the existing label declarations:
 
@@ -99,7 +136,7 @@ In `kernel/src/streams.rs`, add to the existing label declarations:
 
 Match the surrounding macro's exact syntax — read the neighbouring entries before editing rather than assuming the arm shape.
 
-- [ ] **Step 4: Implement the derivation**
+- [ ] **Step 5: Implement the derivation**
 
 In `kernel/src/ledger.rs`:
 
@@ -144,12 +181,12 @@ pub fn derive_entity_id(lineage: Lineage<'_>) -> EntityId {
 
 Verify `EntityId::MIN` exists (`fact_index.rs:23` references it); if it does not, use `EntityId::new(1).expect("1 is nonzero")`.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `cargo test -p hornvale-kernel --lib ledger::tests 2>&1 | tail -20`
 Expected: PASS, 4 new tests.
 
-- [ ] **Step 6: Regenerate the stream manifest**
+- [ ] **Step 7: Regenerate the stream manifest**
 
 A new label in `streams.rs` reaches the generated manifest through `stream_labels()`, so the committed artifact drifts:
 
@@ -160,7 +197,7 @@ git diff --stat book/src/reference/
 
 Expected: exactly one added row, `entity/identity/v1`. If the diff is empty, the label was not wired into the macro — go back to Step 3.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cargo fmt
@@ -360,14 +397,51 @@ Expected: `0`.
 
 Run: `HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast 2>&1 | tee /tmp/signet-t3.txt | grep -E "^\s+FAIL|Summary"`
 
-Expected: every failure is a **committed-fixture byte mismatch** (world JSON, session/snapshot fixtures, gallery prose). Task 6 re-pins those, as the epoch. **Any failure that is not a fixture mismatch is a logic error in this task — fix it here, do not carry it forward.** In particular `cli/tests/id_shift_invariance.rs` must be GREEN: it reads no fixture.
+Expected: every failure is a **committed-fixture byte mismatch** (world JSON, session/snapshot fixtures, gallery prose) — those are the epoch, re-pinned in Step 6 below. **Any failure that is not a fixture mismatch is a logic error in this task — fix it here, do not carry it forward.** In particular `cli/tests/id_shift_invariance.rs` must be GREEN: it reads no fixture.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Re-pin the epoch — this is where ids actually change**
+
+Every commit must compile and pass the suite (root `CLAUDE.md`), so the
+re-pin lands with the change that moves the ids, not in a later task:
+
+```bash
+make rebaseline
+make rebaseline-goldens
+```
+
+Then read the prose diff **as prose**, not as a line count:
+
+```bash
+git diff --stat book/src/gallery/ book/src/reference/ book/src/laboratory/ \
+  docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
+git diff book/src/gallery/possession-seed-42.md
+```
+
+The Salt's handoff predicts the prose files that move are **exactly**
+`possession-seed-42.md` and `possession-over-time-seed-42.md` (spec P3).
+**Anything else that moves is a channel The Salt missed** — record it in
+`.superpowers/sdd/followups.md` as a finding and report it in the task
+report. Do not retune anything to make the prediction come true; a
+falsified P3 is the campaign's cheapest discovery.
+
+- [ ] **Step 7: Full gate, including what the gate cannot see**
+
+```bash
+make gate
+make game-check
+make vessel-check
+```
+
+Pass an explicit Bash `timeout: 3600000`. `clients/` is outside the cargo
+workspace, so `make gate` alone is not sufficient evidence. All three must be
+green before committing — this task does not hand a red tree to the next one.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 cargo fmt
 git add -A
-git commit -m "refactor(the-signet): every mint passes a real lineage"
+git commit -m "epoch(the-signet): every mint passes a real lineage, and ids move once"
 ```
 
 ---
@@ -513,7 +587,7 @@ git commit -m "feat(the-signet): ids cross to JavaScript as strings, not as loss
 
 ---
 
-### Task 6: The epoch — re-pin every artifact, and guard the property
+### Task 6: Guard the property — the acceptance test
 
 **Files:**
 - Modify: every committed world/session/snapshot fixture and generated artifact
@@ -556,12 +630,16 @@ Run: `cargo test -p hornvale --test id_stability_under_insertion 2>&1 | tail -20
 
 This test must be seen **GREEN on the new derivation**. To prove it is not vacuous, temporarily revert `derive_entity_id` to `EntityId::new(self.next_entity)` and confirm the test goes RED, then restore. A test that has never failed proves nothing; record both outcomes in the commit message.
 
-- [ ] **Step 3: Regenerate everything**
+- [ ] **Step 3: Confirm the epoch already landed in Task 3**
 
 ```bash
-make rebaseline
-make rebaseline-goldens
+make rebaseline && make rebaseline-goldens
+git status --porcelain
 ```
+
+Expected: **clean**. Task 3 re-pinned the epoch in the commit that moved the
+ids, so nothing should drift here. Any drift means a later task moved ids
+again — investigate before proceeding rather than re-pinning on top of it.
 
 - [ ] **Step 4: Read the prose diff as prose (spec P3)**
 
