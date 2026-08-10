@@ -1,0 +1,289 @@
+//! Promotion: which founders a people remembers, and how their identity is
+//! derived.
+//!
+//! This lives in the composition root rather than in `domains/person` because
+//! it reads `domains/history`'s occupation records, and a domain crate may
+//! reach only the kernel (decision 0002).
+
+use hornvale_history::flesh::{RoleHandle, founder_handle};
+use hornvale_history::record::OccupationRecord;
+use hornvale_kernel::{EntityId, KindId};
+use std::collections::BTreeMap;
+
+use crate::{language_of_wc, morph_options};
+
+/// How many founders one people remembers.
+///
+/// A constant per *holder*, not per world and not a ratio: oral genealogies
+/// hold roughly constant depth however much time has passed, because the
+/// binding constraint is transmission rather than history length. The world's
+/// cast is therefore the sum over peoples of `min(MEMORY_DEPTH, occupations)`,
+/// which grows when the species roster grows and needs no retuning.
+/// type-audit: bare-ok(count)
+pub const MEMORY_DEPTH: usize = 20;
+
+/// One remembered founder: an identity plus where it came from.
+/// type-audit: bare-ok(index: occupation), waiver(decision-0014: founded)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Founder {
+    /// The stable identity, expandable by `persona_of`.
+    pub handle: RoleHandle,
+    /// Index into the records slice this founder was selected from.
+    pub occupation: usize,
+    /// The people who remember this founder.
+    pub people: KindId,
+    /// The community whose occupation they founded.
+    pub community: EntityId,
+    /// The occupation's founding day — this founder's birth.
+    pub founded: f64,
+}
+
+/// The founders a world remembers: per people, the `MEMORY_DEPTH` occupations
+/// with the largest peak population.
+///
+/// Ranking is `(peak_population DESC, site ASC, founded ASC, handle ASC)` — a
+/// total order: the first three keys alone can tie (an exact three-way
+/// match), so the handle breaks it. Iteration is over a `BTreeMap`, so the
+/// result does not depend on input order.
+///
+/// # Panics
+///
+/// If two selected founders share a handle. That would mean two occupations
+/// indistinguishable in every semantic field both reached the cast, and they
+/// would silently become one identity with one name. Failing loudly is the
+/// point: this is the campaign's determinism guard, not a formality.
+pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
+    let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
+    for (i, r) in records.iter().enumerate() {
+        by_people.entry(r.core.people.0).or_default().push(i);
+    }
+
+    let mut cast = Vec::new();
+    for idxs in by_people.values_mut() {
+        idxs.sort_by(|&a, &b| {
+            let (x, y) = (&records[a], &records[b]);
+            y.core
+                .peak_population
+                .cmp(&x.core.peak_population)
+                .then(x.core.site.0.cmp(&y.core.site.0))
+                .then(x.core.founded.total_cmp(&y.core.founded))
+                // Total order, so the doc's claim is structural rather than
+                // lucky. Two records reaching this leg with the same handle are
+                // precisely what the uniqueness assert below rejects, so this
+                // defers to the guard rather than hiding from it.
+                .then(founder_handle(x).0.cmp(&founder_handle(y).0))
+        });
+        for &i in idxs.iter().take(MEMORY_DEPTH) {
+            let r = &records[i];
+            cast.push(Founder {
+                handle: founder_handle(r),
+                occupation: i,
+                people: r.core.people,
+                // The Scaffold deleted `OccupationRecord::community`; the field
+                // held the occupation's OWN entity under a misleading name, and
+                // `reconstruct_occupation` now sets that same value as `id`.
+                // Numerically identical, so promotion keys on what it always
+                // did — NOT `founded_from`, and not a re-derivation, both of
+                // which compile cleanly and silently change the subject
+                // (`docs/retrospectives/the-scaffold.md`).
+                community: r.id,
+                founded: r.core.founded,
+            });
+        }
+    }
+
+    let mut seen = std::collections::BTreeSet::new();
+    for f in &cast {
+        assert!(
+            seen.insert(f.handle.0),
+            "two selected founders share handle {:#x} — occupations \
+             indistinguishable in every semantic field both reached the cast, \
+             so they would become one person with one name. Widen the key in \
+             founder_handle rather than suppressing this.",
+            f.handle.0
+        );
+    }
+    cast
+}
+
+/// Promote every remembered founder into a ledger person.
+///
+/// Reads occupation records back out of the committed ledger — the `History`
+/// value is local to an earlier stage's closure and out of scope here.
+///
+/// Birth is `founded − age_at_maturity` and death is `birth + lifespan`, both
+/// from `domains/species::allometry::life_history`, which draws nothing. The
+/// `person-died` fact is committed only once that day has passed at `now`; a
+/// living person is the absence of one. A species with no lifespan
+/// (`Ametabolic`) yields no death fact either, which reads as "not known to have
+/// died", and one with no maturity falls back to founding day as birth.
+pub fn promote(
+    world: &mut hornvale_kernel::World,
+    wc: &crate::components::WorldComponents,
+) -> Result<Vec<EntityId>, crate::BuildError> {
+    let records = crate::occupation_records(world);
+    let now = world
+        .ledger
+        .find("history-now")
+        .filter_map(|f| match f.object {
+            hornvale_kernel::Value::Number(n) => Some(n),
+            _ => None,
+        })
+        .last()
+        .unwrap_or(0.0);
+
+    let cast = select_founders(&records);
+    let mut seeds = Vec::with_capacity(cast.len());
+    for f in &cast {
+        let life = wc
+            .biosphere
+            .get(&f.people)
+            // `schedule` is The Long Age's third time-law input: a paced kind
+            // matures later at unchanged mass, so passing the kind's own
+            // schedule (rather than ALLOMETRIC) is what keeps a founder's birth
+            // day consistent with the species it belongs to.
+            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class, b.schedule));
+        // A founder was already grown when they founded, so birth precedes the
+        // founding by a maturity. This goes NEGATIVE for day-0 settlements —
+        // the history record begins at day 0 and the founder did not. Honest,
+        // not clamped (spec D4).
+        let maturity_days = life
+            .as_ref()
+            .and_then(|l| l.age_at_maturity)
+            .map_or(0.0, |y| y.days());
+        let birth_day = f.founded - maturity_days;
+        // Death follows BIRTH by a lifespan, not the founding, and is committed
+        // only once it has already passed at `now`.
+        let death = life
+            .as_ref()
+            .and_then(|l| l.lifespan)
+            .map(|y| birth_day + y.days())
+            .filter(|d| *d <= now);
+        // Named here, where the language machinery already stands. `Namer` holds
+        // no mutable stream and derives fresh per call, so this draw is on a
+        // path disjoint from every other name in the world.
+        let ph = language_of_wc(world, wc, f.people.0);
+        let namer = hornvale_language::Namer::new(&world.seed, f.people.0, &ph);
+        let mind = wc
+            .psyche
+            .get(&f.people)
+            .expect("a placed people carries a mind vector");
+        let society = wc
+            .society
+            .get(&f.people)
+            .expect("a placed people carries a society vector");
+        let name = namer
+            .name(
+                hornvale_language::NameKind::Person,
+                f.handle.0,
+                &morph_options(mind, society),
+            )
+            .roman;
+        seeds.push(hornvale_person::PersonSeed {
+            community: f.community,
+            name,
+            birth_day,
+            founding_day: f.founded,
+            death_day: death,
+        });
+    }
+    hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_history::record::{
+        Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
+    };
+    use hornvale_kernel::{CellId, EntityId, KindId};
+
+    fn rec(people: &'static str, site: u32, founded: f64, peak: u32) -> OccupationRecord {
+        OccupationRecord {
+            core: Occupation {
+                people: KindId(people),
+                site: CellId(site),
+                founded,
+                ended: None,
+                peak_population: peak,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+            },
+            id: EntityId::new(1).expect("nonzero"),
+            ended_by: Ended::Nature,
+            founded_from: Founding::Genesis(CellId(site)),
+        }
+    }
+
+    #[test]
+    fn each_people_is_capped_at_memory_depth() {
+        let mut records = Vec::new();
+        for i in 0..(MEMORY_DEPTH as u32 + 5) {
+            records.push(rec("goblin", i, f64::from(i), 100 - i));
+        }
+        records.push(rec("kobold", 900, 0.0, 7));
+        let cast = select_founders(&records);
+        let goblins = cast.iter().filter(|f| f.people.0 == "goblin").count();
+        let kobolds = cast.iter().filter(|f| f.people.0 == "kobold").count();
+        assert_eq!(
+            goblins, MEMORY_DEPTH,
+            "a populous people is capped at the depth"
+        );
+        assert_eq!(kobolds, 1, "a people with one occupation gets one founder");
+    }
+
+    #[test]
+    fn selection_takes_the_largest_and_is_order_independent() {
+        let forward = vec![rec("goblin", 1, 0.0, 5), rec("goblin", 2, 0.0, 99)];
+        let mut backward = forward.clone();
+        backward.reverse();
+        let a = select_founders(&forward);
+        let b = select_founders(&backward);
+        assert_eq!(a.len(), 2);
+        assert_eq!(
+            a.iter().map(|f| f.handle.0).collect::<Vec<_>>(),
+            b.iter().map(|f| f.handle.0).collect::<Vec<_>>(),
+            "the cast does not depend on input order"
+        );
+        assert_eq!(a[0].community, forward[1].id);
+    }
+
+    #[test]
+    fn a_tie_resolves_the_same_way_whichever_order_it_arrives_in() {
+        // Same people, site, founded and peak; different `ended`, so different
+        // handles and a genuine three-way tie in the first three keys.
+        let mut a = rec("goblin", 3, 100.0, 42);
+        a.core.ended = Some(500.0);
+        let mut b = rec("goblin", 3, 100.0, 42);
+        b.core.ended = Some(900.0);
+
+        let forward = select_founders(&[a.clone(), b.clone()]);
+        let backward = select_founders(&[b, a]);
+        let key = |c: &[Founder]| -> Vec<(u64, EntityId, f64)> {
+            c.iter()
+                .map(|f| (f.handle.0, f.community, f.founded))
+                .collect()
+        };
+        assert_eq!(
+            key(&forward),
+            key(&backward),
+            "a tie must resolve identically whichever order it arrives in — \
+             Task 3 keys facts on `community`, so a flip would attribute a \
+             person to a different settlement"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "share handle")]
+    fn indistinguishable_occupations_in_the_cast_are_a_hard_error() {
+        // Two records identical in every field the handle keys on. The live
+        // corpus must never produce this; the guard must fire when it does.
+        let a = rec("goblin", 7, 50.0, 60);
+        let b = a.clone();
+        let _ = select_founders(&[a, b]);
+    }
+}

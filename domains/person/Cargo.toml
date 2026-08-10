@@ -1,0 +1,9 @@
+[package]
+name = "hornvale-person"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale person domain: the individuals a people remembers."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }

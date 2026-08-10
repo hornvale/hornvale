@@ -248,3 +248,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D3**: p25..p75 spans 0.0093925 (4.02% of the 0.23342053570000001 min..max range), under the 5% bar
 
+### `settlement-count`
+
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.225 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.015 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.062 (1000 pairs) is none
+

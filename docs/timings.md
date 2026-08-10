@@ -198,6 +198,12 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-01T06:59:35Z | gate | 297.581 | 2616.119 | 95.368 | 9.11 | 0 | 021a005b | campaign/the-repertoire | ambrose | 12 |
 | 2026-08-01T07:23:17Z | gate | 236.467 | 2428.581 | 45.044 | 10.46 | 0 | f372fdcd | campaign/the-repertoire | ambrose | 12 |
 | 2026-08-01T13:44:06Z | gate | 276.853 | 2318.461 | 65.112 | 8.61 | 0 | 84e5c617 | campaign/the-repertoire | ambrose | 12 |
+| 2026-08-01T16:08:05Z | rebaseline | 105.505 | 114.418 | 2.705 | 1.11 | 0 | 9fab7c44 | campaign/the-particular | ambrose | 12 |
+| 2026-08-01T16:12:03Z | rebaseline | 108.063 | 114.538 | 2.649 | 1.08 | 0 | 9fab7c44 | campaign/the-particular | ambrose | 12 |
+| 2026-08-01T16:36:50Z | rebaseline | 108.766 | 113.282 | 2.779 | 1.07 | 0 | 3126c7bc | campaign/the-particular | ambrose | 12 |
+| 2026-08-01T16:47:15Z | rebaseline | 104.098 | 113.237 | 2.764 | 1.11 | 0 | 78b66c69 | campaign/the-particular | ambrose | 12 |
+| 2026-08-01T18:00:00Z | rebaseline | 106.946 | 115.737 | 2.575 | 1.11 | 0 | 354e9c32 | campaign/the-particular | ambrose | 12 |
+| 2026-08-01T18:12:33Z | rebaseline | 103.073 | 121.544 | 3.688 | 1.21 | 0 | 354e9c32 | campaign/the-particular | ambrose | 12 |
 | 2026-08-01T20:53:26Z | gate | 291.538 | 2481.986 | 82.033 | 8.79 | 0 | 55f998eb | campaign/the-scaffold | ambrose | 12 |
 | 2026-08-01T21:19:49Z | gate | 355.136 | 2754.334 | 59.809 | 7.92 | 0 | 606bf5e1 | the-commonplace | MacBookPro | 10 |
 | 2026-08-01T21:26:22Z | gate | 303.998 | 2324.708 | 87.210 | 7.93 | 0 | 3a567d76 | campaign/the-scaffold | ambrose | 12 |
@@ -588,6 +594,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T03:42:08Z | gate | 166.773 | 970.250 | 52.143 | 6.13 | 0 | a1397eb4 | the-domesday | Greyjoy | 10 |
 | 2026-08-09T03:56:04Z | gate | 609.495 | 5351.635 | 105.095 | 8.95 | 0 | 3c8bce1d | the-domesday | Greyjoy | 10 |
 | 2026-08-09T11:32:23Z | gate | 712.251 | 5392.274 | 132.705 | 7.76 | 0 | d5556484 | the-domesday | MacBookPro | 10 |
+| 2026-08-09T16:33:22Z | gate | 1687.264 | 5427.848 | 188.191 | 3.33 | 0 | 1f919b35 | the-armature | MacBookPro | 10 |
+| 2026-08-09T19:17:17Z | gate | 681.660 | 5374.890 | 125.911 | 8.07 | 0 | b8e54666 | the-armature | MacBookPro | 10 |
 | 2026-08-09T16:50:36Z | rebaseline | 1031.462 | 221.929 | 24.358 | 0.24 | 0 | a0425d42 | the-quire | MacBookPro | 10 |
 | 2026-08-09T17:01:34Z | gate | 598.129 | 120.308 | 34.201 | 0.26 | 0 | a0425d42 | the-quire | MacBookPro | 10 |
 | 2026-08-09T15:58:04Z | rebaseline | 219.623 | 221.226 | 12.718 | 1.07 | 0 | f376b02e | the-range | MacBookPro | 10 |
@@ -600,6 +608,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T16:04:25Z | census | 775.777 | 21482.605 | 338.046 | 28.13 | 0 | 4c2156a4 |  | lefford | 40 |
 | 2026-08-09T16:14:37Z | gate | 458.530 | 2197.705 | 174.988 | 5.17 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T16:16:29Z | rebaseline | 111.946 | 145.349 | 10.084 | 1.39 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
+| 2026-08-09T19:55:57Z | gate | 414.534 | 2641.861 | 147.536 | 6.73 | 0 | 07e09902 | the-armature | MacBookPro | 10 |
+| 2026-08-10T13:08:26Z | gate | 544.580 | 2048.597 | 153.368 | 4.04 | 0 | 26695a7f | the-armature | MacBookPro | 10 |
 | 2026-08-09T23:39:41Z | gate | 409.207 | 2236.787 | 161.801 | 5.86 | 0 | 3a8c88f6 | campaign/the-cairn | ambrose | 12 |
 | 2026-08-10T01:02:24Z | gate (RED, aborted at test 44/3283 — not a gate cost) | 24.238 | 42.983 | 7.331 | 2.08 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
 | 2026-08-10T01:10:45Z | gate | 409.351 | 2222.986 | 159.006 | 5.82 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
@@ -612,6 +622,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T17:10:54Z | gate | 1573.493 | 742.990 | 142.404 | 0.56 | 0 | 48273750 | the-range | MacBookPro | 10 |
 | 2026-08-09T19:29:23Z | gate | 375.331 | 2055.533 | 104.130 | 5.75 | 0 | 48273750 | the-range | MacBookPro | 10 |
 | 2026-08-09T22:11:09Z | gate | 303.086 | 2011.615 | 99.506 | 6.97 | 0 | 0e9f71b2 | the-range | MacBookPro | 10 |
+| 2026-08-09T22:25:06Z | rebaseline | 178.263 | 150.929 | 8.414 | 0.89 | 0 | 9363ff1c | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-09T22:34:08Z | gate | 290.502 | 792.287 | 67.996 | 2.96 | 0 | 88bed44d | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-09T22:38:12Z | gate | 128.288 | 413.589 | 32.564 | 3.48 | 0 | 88bed44d | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-09T22:45:41Z | rebaseline | 80.575 | 147.217 | 8.415 | 1.93 | 0 | 88bed44d | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-09T22:52:55Z | gate | 348.570 | 2091.756 | 128.937 | 6.37 | 0 | 88bed44d | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-09T22:23:31Z | rebaseline | 136.973 | 153.062 | 7.758 | 1.17 | 0 | c19b61f7 | the-quire | MacBookPro | 10 |
 | 2026-08-09T22:39:04Z | gate | 563.267 | 2443.566 | 142.836 | 4.59 | 0 | b16005b7 | the-quire | MacBookPro | 10 |
 | 2026-08-09T23:06:44Z | gate | 633.696 | 2408.448 | 141.599 | 4.02 | 0 | 94f1a58e | the-radiation | MacBookPro | 10 |
@@ -622,6 +637,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-10T10:02:20Z | gate | 68.266 | 83.991 | 41.361 | 1.84 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
 | 2026-08-10T10:03:32Z | gate | 39.038 | 84.424 | 16.313 | 2.58 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
 | 2026-08-10T10:09:28Z | gate | 255.735 | 2061.482 | 100.763 | 8.46 | 0 | 419d3278 | the-radiation | MacBookPro | 10 |
+| 2026-08-09T22:56:34Z | rebaseline | 107.223 | 152.765 | 8.804 | 1.51 | 0 | a97ac55a | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-09T23:06:59Z | gate | 609.521 | 2343.316 | 151.764 | 4.09 | 0 | a97ac55a | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-10T01:45:39Z | rebaseline | 127.620 | 156.252 | 10.190 | 1.30 | 0 | 88aef9dc | campaign/the-signet | MacBookPro | 10 |
 | 2026-08-10T01:51:35Z | gate | 272.482 | 2134.445 | 114.845 | 8.25 | 0 | 88aef9dc | campaign/the-signet | MacBookPro | 10 |
 | 2026-08-10T02:15:37Z | rebaseline | 114.912 | 154.800 | 10.212 | 1.44 | 0 | 9c6b95bf | campaign/the-signet | MacBookPro | 10 |
@@ -649,3 +666,16 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-10T14:37:13Z | rebaseline | 185.990 | 213.737 | 12.750 | 1.22 | 0 | 59904d50 | the-radiation | MacBookPro | 10 |
 | 2026-08-10T17:13:38Z | rebaseline | 131.539 | 211.853 | 13.984 | 1.72 | 0 | cda3e3c4 | the-radiation | MacBookPro | 10 |
 | 2026-08-10T18:15:15Z | rebaseline | 127.071 | 212.247 | 13.766 | 1.78 | 0 | cbcf2935 | the-radiation | MacBookPro | 10 |
+| 2026-08-10T12:07:30Z | rebaseline | 201.426 | 157.966 | 8.343 | 0.83 | 0 | 12046ad9 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T12:17:37Z | gate | 431.641 | 2595.365 | 151.810 | 6.36 | 0 | 6fd3160e | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T13:08:12Z | rebaseline | 242.973 | 160.486 | 9.357 | 0.70 | 0 | 2fa333e7 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T13:12:39Z | gate | 134.287 | 580.288 | 42.008 | 4.63 | 0 | 2fa333e7 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T13:19:54Z | gate | 378.616 | 2111.765 | 118.044 | 5.89 | 0 | 2fa333e7 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T13:25:35Z | gate | 335.821 | 2091.030 | 109.572 | 6.55 | 0 | 2fa333e7 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T14:03:37Z | gate | 690.572 | 2125.383 | 174.449 | 3.33 | 0 | 162df445 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T14:26:18Z | gate | 282.108 | 2068.115 | 108.860 | 7.72 | 0 | 6d5369de | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T13:53:05Z | gate | 246.286 | 597.441 | 56.589 | 2.66 | 0 | 43b91fc0 | the-armature | MacBookPro | 10 |
+| 2026-08-10T14:04:42Z | gate | 596.929 | 2067.602 | 109.774 | 3.65 | 0 | d51e13a3 | the-armature | MacBookPro | 10 |
+| 2026-08-10T14:34:48Z | rebaseline | 128.926 | 160.771 | 11.007 | 1.33 | 0 | 147dab73 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T14:46:29Z | gate | 511.306 | 2143.033 | 120.630 | 4.43 | 0 | 9bf32382 | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T16:01:59Z | gate | 268.627 | 2070.073 | 103.159 | 8.09 | 0 | 4a8123bd | campaign/the-particular | MacBookPro | 10 |

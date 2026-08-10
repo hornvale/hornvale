@@ -991,6 +991,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "(retired at The Words, superseded by name/epithet/v2) per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed",
         ),
         (
+            "language/<species>/name/person",
+            "(The Particular, Task 2) per-founder name: a bare stem, like the settlement v1 draw above. Not an epoch of `name/settlement` — a fourth, disjoint `NameKind`, so it consumes nothing from any existing stream",
+        ),
+        (
             "language/<species>/name/settlement/v2",
             "(retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires",
         ),

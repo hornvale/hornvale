@@ -90,6 +90,7 @@ pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
 pub mod observer;
+pub mod person_promote;
 pub mod render;
 pub mod schedule;
 pub mod settlement_pins;
@@ -311,6 +312,9 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // seed labels, so its predicates must be registered and its stream labels
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
+    // Order matters on this roster only for concept lenders and borrowers;
+    // person is neither, so it sits last with no ordering constraint.
+    &hornvale_person::Person,
 ];
 
 /// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
@@ -7384,6 +7388,22 @@ fn build_to(
         Ok(())
     })?;
 
+    // LAST, deliberately. `mint_entity` is a monotonic counter, so appending
+    // mints cannot shift an existing `EntityId` only while nothing mints after
+    // — the same reason species entities are appended rather than interleaved.
+    // Moving this earlier silently rewrites every world.
+    //
+    // Not added to `GENESIS_HAND_ORDER` / `genesis_systems()`: `schedule.rs`'s
+    // module doc already scopes that schema to the eight core stages and
+    // excludes the classification tail (`"planet"`, `"peoples"`) for the same
+    // reason — predicate-granular, subject-blind edges would falsely force a
+    // late `name`-writer before an early `name`-reader. A `"person"` stage
+    // after `"peoples"` is the same case.
+    stage("person", || -> Result<(), BuildError> {
+        person_promote::promote(&mut world, wc)?;
+        Ok(())
+    })?;
+
     Ok(BuildArtifacts {
         world,
         terrain: Some(terrain),
@@ -11986,7 +12006,7 @@ mod tests {
     #[test]
     fn domains_roster_crate_names_are_unique_and_nonempty() {
         let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-        assert_eq!(names.len(), 10, "expected ten domains in the roster");
+        assert_eq!(names.len(), 11, "expected eleven domains in the roster");
         assert!(names.iter().all(|n| !n.is_empty()));
         let before = names.len();
         names.sort_unstable();

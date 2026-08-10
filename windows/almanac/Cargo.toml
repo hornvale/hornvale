@@ -12,6 +12,7 @@ hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-climate = { path = "../../domains/climate" }
 hornvale-terrain = { path = "../../domains/terrain" }
 hornvale-settlement = { path = "../../domains/settlement" }
+hornvale-person = { path = "../../domains/person" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-species = { path = "../../domains/species" }

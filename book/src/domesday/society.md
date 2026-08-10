@@ -63,3 +63,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 - **D2**: min == median == max == 0 across 1000 worlds
 - **D4**: median 0 equals the min (0 .. 0)
 
+### `tribute-relations-standing`
+
+- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.951 (1000 pairs) is dominant (positive)
+
