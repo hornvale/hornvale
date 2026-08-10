@@ -31,6 +31,19 @@ fn every_person_is_born_before_they_die_and_after_their_community() {
                 _ => None,
             })
             .expect("every person has a birth day");
+        // THIS ARM IS CURRENTLY UNREACHABLE, and the test is green without it.
+        // `person-died` is committed by no world: promotion derives the death
+        // day by subtracting a maturity in DAYS from a founding day in YEARS
+        // (`occ-founded` is a year — see `descent.rs::founded_year`), adding a
+        // lifespan in DAYS, and comparing the sum against a present in YEARS.
+        // The earliest death any species in the roster reaches is 14,379.2
+        // against `now = 2000`, so the `<= now` filter never passes and every
+        // founder is recorded as still living. Measured zero `Some` entries
+        // across five seeds and 587 promoted founders.
+        //
+        // Whoever repairs that unit mismatch should also assert that SOME
+        // person in the world carries a death fact, so this test cannot
+        // silently lose its subject again (The Particular, F9/F10).
         if let Some(died) = w
             .ledger
             .facts_about(p.subject)

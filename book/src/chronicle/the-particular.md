@@ -122,19 +122,33 @@ blocked situation needed four bundles and now needs three.
 remembered founders has overlapping lifespans — the prediction the design was
 least sure of, because founding days spread across two millennia while lifespans
 are decades, so the mean gap between successive founders of one people runs near
-a century. Measured on the three seeds, reading births and deaths on the
-history calendar: 175 of 988 same-people pairs overlap on seed 42, 211 of 976 on
+a century.
+
+The measurement is a reconstruction rather than a reading, and the distinction
+matters enough to state before the numbers. The committed ledger records no
+deaths at all — the last section of this chapter explains why — so its own answer
+to the question is the vacuous one: every founder is recorded as still living, so
+every interval runs to infinity and all 988 same-people pairs of seed 42 overlap
+trivially. Re-deriving each life on the calendar the history subsystem actually
+keeps gives the informative answer, and it is that figure the prediction is
+scored against: 175 of 988 same-people pairs overlap on seed 42, 211 of 976 on
 seed 7, 199 of 1,075 on seed 1000 — and on every seed, *every* people has at
 least one overlapping pair. Roughly a fifth of the pairs, which is discriminating
 rather than saturated. The cast contains contemporaries. Had it not, the world
 would have held a hundred individuals who could never have met, and no
 two-actant situation could have been staged even in principle.
 
-**An identity that held, and a bound that did not.** The added fact count was
-predicted to be exactly four facts per remembered founder plus one more for each
-already dead, and it is exactly that on every seed: 468, 476 and 512 facts
-against casts of 117, 119 and 128. The *bound* on that count — that the ledger
-grows by no more than 2.1% — is **falsified**: growth is 6.25%, 3.57% and 6.72%.
+**An identity that held in half, and a bound that did not.** The added fact
+count was predicted to be exactly four facts per remembered founder plus one
+more for each already dead, and it is exactly that on every seed: 468, 476 and
+512 facts against casts of 117, 119 and 128. **Only the first term was
+exercised.** The count of founders already dead is zero on every seed — for the
+reason this chapter closes with — so what the measurement confirms is `4 × cast`,
+and the `+ deaths` term went untested. An identity confirmed in its degenerate
+half is the same shape this campaign is otherwise pleased to have caught,
+arriving unannounced in its own scoring. The *bound* on that count — that the
+ledger grows by no more than 2.1% — is **falsified**: growth is 6.25%, 3.57%
+and 6.72%.
 
 The identity holding while the bound fails localises the cause precisely. The
 mechanism is doing what it was specified to do; the estimate was computed
@@ -166,9 +180,11 @@ request. Promotion subtracts a maturity *in days* from a founding day *in
 years*, adds a lifespan *in days* to the result, and compares the sum against a
 present expressed in years. Every term is individually correct and the
 expression is nonsense: a founder's recorded birth precedes their founding by
-some five thousand of the wrong unit, and a death lands three centuries past a
-present that arrives at year two thousand, so the condition gating the death
-fact can never be true.
+between 3,595 and 20,165 of the wrong unit, depending on their people, and the
+earliest death any species in the roster can reach falls at 14,379 against a
+present that arrives at year 2,000 — an overshoot of more than twelve thousand,
+rising to seventy-eight thousand for the long-lived dwarf peoples. The condition
+gating the death fact can never be true.
 
 The unreachability is structural rather than unlucky. A death fact requires the
 mistyped sum to fall below the present, which for a founding in year *f* means a

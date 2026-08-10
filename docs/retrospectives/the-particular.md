@@ -22,8 +22,9 @@ so an entity's identifier is its lineage rather than its position.
 The measurement on unparking is the whole argument for the decision. With
 promotion on, against `main` with it off, **all six fixtures are now
 byte-identical** — where eight days earlier the same six moved (NPCs 537–543 →
-654–660). And the probe still discriminates: `is-person` facts go 0 → 119 in the
-fixture world, `next_entity` 536 → 653, and the world fixture's growth is purely
+654–660). And the probe still discriminates: `is-person` facts go 0 → **117** in
+`cli/tests/fixtures/world-seed-42.json`, corroborated by `next_entity` moving
+536 → 653 (a difference of exactly 117), and the world fixture's growth is purely
 additive (4,701 insertions, the single deletion being the entity counter). The
 same diff that was noise eight days ago is now evidence.
 
@@ -81,8 +82,18 @@ have made the mismatch visible on the page.
 ## A preregistered ratio is only as durable as its denominator
 
 P5 froze two clauses: an exact identity (added facts = 4 × cast + deaths) and a
-bound (ledger growth ≤ 2.1%). The identity held to the fact on all three seeds;
-the bound failed at 6.25% / 3.57% / 6.72%.
+bound (ledger growth ≤ 2.1%). The identity matched to the fact on all three
+seeds; the bound failed at 6.25% / 3.57% / 6.72%.
+
+**The identity was confirmed only in its degenerate half, and saying so is the
+point.** Its second term — founders already dead at `now` — is **zero on every
+seed, because of F9**, so what the measurement tested is `4 × cast` and the
+`+ deaths` term was never exercised. The death rule remains unverified against
+live data. This is precisely the vacuity shape the campaign is otherwise pleased
+to have caught, arriving inside the campaign's own score, and it went unnoticed
+in the first draft of both the chronicle and this document: an identity that
+reads as corroboration of two mechanisms when one of its terms is identically
+zero is corroboration of one.
 
 The cause was not the mechanism. The spec's measured ground was taken on
 2026-08-01 — 26,309 facts and 1,776 occupations for seed 42 — and by the time the
@@ -119,6 +130,22 @@ stated motivation was retired without being satisfied, and the retirement was no
 noticed until the close. **Generalisable:** when a spec's "what already exists"
 section is load-bearing, re-read it at close and check the claim is still the
 claim you shipped against.
+
+## Freshness sweep: the null, stated
+
+**No Confidence Gradient bet moved, and none was re-scored** (decision 0030).
+That is the campaign's own prediction rather than an omission: P2 froze
+"stageable stays 0 of 36" and it did, so the campaign added *representability* —
+a person can be the subject of a fact — and nothing in the gradient's tiers is
+scored on representability alone. What did move is the chapter's *floor* thread,
+which gained two paragraphs: a ninth instance of the check-that-cannot-fire
+family in a new position (a **fact** that cannot be committed), and the
+preregistration lesson that a bound stated as a fraction of current state
+re-aims itself whenever that state moves.
+
+Recorded here rather than only in the campaign's scratch, because that scratch
+is git-ignored and dies with the worktree — a null that lives only there is a
+null nobody can later check was considered.
 
 ---
 
@@ -223,11 +250,18 @@ comment on `descent.rs::founded_year`. **One of the two should move.**
 turn the conditional into an assertion that *some* person in the world carries a
 death fact, so the test can never silently lose its subject again.
 
-**F11 — the campaign's brief carried an `is-person` count of 119 for the seed-42
-fixture world; direct measurement gives 117** (and `next_entity` moves 536 → 653,
-a difference of exactly 117). The discrepancy is unexplained and small, but a
-count quoted in a handoff and never re-derived is exactly the shape this project
-has been burned by. Re-derive counts at the point of use.
+**F11 — a count travelled through two documents without ever being re-derived,
+and it was wrong.** The dispatch briefing this task quoted `is-person` facts
+going 0 → 119 in the seed-42 fixture world. The true figure is **117**:
+`next_entity` moves 536 → 653, a difference of exactly 117, and the fixture
+holds 117 such facts. The error was the controller's, not the implementer's —
+it came from counting string occurrences rather than facts — and it was
+reproduced verbatim into the first draft of this retrospective by an
+implementer who had independently measured 117 in the same session and did not
+reconcile the two. **Both halves are the lesson**: a count in a handoff is an
+assertion, not a datum, and a figure you have measured yourself should win over
+one you were handed. Re-derive counts at the point of use, and notice when your
+own measurement disagrees with the brief.
 
 **F12 — the spec's §4 "Measured ground" table is stale and nothing marks it.**
 Every figure in it (26,309 facts, 1,776 occupations, 5 peoples, cast 90) was
