@@ -1,12 +1,20 @@
-// The `vessel/session/v1` reader. Pure module: no DOM, no worker globals —
+// The `vessel/session/v2` reader. Pure module: no DOM, no worker globals —
 // everything here is unit-tested, matching protocol.ts's discipline.
 //
 // Every pane is a pure function of one snapshot (The Snapshot spec §3), and
 // the snapshot is grouped by epistemic channel, so a pane reads one channel
 // and cannot see outside it.
 
-/** The schema tag this client understands. A different tag is refused. */
-export const SESSION_SCHEMA = "vessel/session/v1";
+/** The schema tag this client understands. A different tag is refused.
+ *
+ * v2 since The Signet: `sensed.present[].entity` and `social[].entity` moved
+ * from JSON numbers to decimal strings, because a lineage-derived `EntityId`
+ * is a full-width 64-bit value and `JSON.parse` rounds anything above 2^53.
+ * A wire *type* change is not additive, so the producer minted a version
+ * rather than mutating v1 — which is precisely why refusing an unknown tag is
+ * the right default: a v1 payload reaching this build would hand every pane a
+ * silently wrong id. */
+export const SESSION_SCHEMA = "vessel/session/v2";
 
 /** One exit as `locale/room/v2` carries it. */
 export interface Exit {
@@ -78,10 +86,13 @@ export interface Snapshot {
   sensed: {
     room: { schema: string; id: number; exits: Exit[] };
     sky: string;
-    present: { entity: number; label: string; felt: string }[];
+    // `entity` is a decimal string for the same reason `self.agent` is: a
+    // lineage-derived `EntityId` exceeds 2^53. Never coerce it with `Number()`
+    // — compare and key on the string.
+    present: { entity: string; label: string; felt: string }[];
   };
   known: { entries: { key: string; value: string }[] };
-  social: { entity: number; label: string; grievance: number; hostile: boolean }[];
+  social: { entity: string; label: string; grievance: number; hostile: boolean }[];
   narration: { prose: string; nouns: { noun: string; datum: string }[] };
   // Optional on purpose: a sim older than The Panes emits no spatial
   // channel, and the transcript must still work against one. The pane

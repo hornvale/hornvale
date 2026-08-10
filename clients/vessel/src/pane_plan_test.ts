@@ -37,7 +37,7 @@ Deno.test("the standing cell is marked, and exactly once", () => {
 Deno.test("a walk-band snapshot draws no plan", () => {
   const snap = parseSnapshot(
     JSON.stringify({
-      schema: "vessel/session/v1",
+      schema: "vessel/session/v2",
       spatial: { band: "walk", chart: {} },
     }),
   )!;
@@ -45,7 +45,7 @@ Deno.test("a walk-band snapshot draws no plan", () => {
 });
 
 Deno.test("a snapshot with no spatial channel draws no plan", () => {
-  const snap = parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" }))!;
+  const snap = parseSnapshot(JSON.stringify({ schema: "vessel/session/v2" }))!;
   assertEquals(planCells(snap), null);
 });
 
@@ -54,7 +54,7 @@ Deno.test("a grid whose length disagrees with its extent is refused", () => {
   // worse than a pane that draws none, because only one of the two is
   // visibly wrong.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -71,7 +71,7 @@ Deno.test("a grid whose length disagrees with its extent is refused", () => {
 
 Deno.test("an index past the end of the palette is refused", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -93,7 +93,7 @@ Deno.test("an unknown extra field still renders; a known one (color) flows throu
   // wire and Task 7 gave this client a real parse for it — so `warmth`
   // alone now stands in for a field this client has never heard of.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -119,7 +119,7 @@ Deno.test("an unknown extra field still renders; a known one (color) flows throu
 
 Deno.test("an unknown cell kind renders as the fallback, not a throw", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -139,7 +139,7 @@ Deno.test("a plan with no `you` at all is refused, not thrown", () => {
   // malformed in exactly the same sense as a cells-length mismatch — refuse
   // it the same way rather than rendering an unmarked map.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -159,7 +159,7 @@ Deno.test("a null palette entry is refused, not thrown on", () => {
   // validation instead — the same "refuse the whole plan" posture the
   // length and index checks already have.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -181,7 +181,7 @@ Deno.test("a palette entry naming 'constructor' as its kind does not leak the pr
   // client-controlled string reaching into the prototype chain and splicing
   // a function's source text into a rendered map row.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -198,7 +198,7 @@ Deno.test("a palette entry naming 'constructor' as its kind does not leak the pr
 
 Deno.test("a `you` with a non-integer coordinate is refused", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {

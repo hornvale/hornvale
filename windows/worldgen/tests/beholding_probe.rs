@@ -190,7 +190,7 @@ fn a_dichromat_separates_red_from_green_less_than_a_trichromat_does() {
 /// F3 — each of the three arms `observer_for` can build (hue 5's `native`,
 /// hue 4's `native-anomalous`, hue ≤ 3's `yellow-blue`) gets its own direct
 /// coverage of the projection it declares, rather than relying on the
-/// vessel `vessel/session/v1` goldens — an incidental guard that only
+/// vessel `vessel/session/v2` goldens — an incidental guard that only
 /// exercised seed 42's single flagship species (bugbear, the `yellow-blue`
 /// arm) and is re-baselineable on any drift, colour or not. Two mutations
 /// slipped past that golden entirely: swapping the `preserves` strings

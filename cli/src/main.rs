@@ -53,7 +53,7 @@ usage:
                                             world or a committed artifact. Interactive defaults to
                                             lantern; --script is always unlensed, because a
                                             transcript is a recording.)
-                                            (--snapshot writes the `vessel/session/v1` JSON for the
+                                            (--snapshot writes the `vessel/session/v2` JSON for the
                                             turn the possession is left on — the opening turn with
                                             no --script, or wherever the script's last line left it
                                             with one — via hornvale_vessel::snapshot_json, the only
@@ -659,7 +659,7 @@ fn drive_session<'w>(
     Ok(session)
 }
 
-/// Write a session's current-turn snapshot as `vessel/session/v1` JSON to
+/// Write a session's current-turn snapshot as `vessel/session/v2` JSON to
 /// `path` (The Quire, Task 3) — the fixture every `hornvale-game-core`
 /// render test reads instead of paying for genesis.
 /// `hornvale_vessel::snapshot_json` is the only correct serializer: floats

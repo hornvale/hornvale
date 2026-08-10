@@ -1,4 +1,4 @@
-//! Our own mirror of `vessel/session/v1`.
+//! Our own mirror of `vessel/session/v2`.
 //!
 //! Deliberately NOT the producer's types. `windows/vessel` derives
 //! `Serialize` only, and a mirror written by an outsider is a stronger proof
@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 /// One committed turn, as this client is willing to see it.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Snapshot {
-    /// Schema tag; must be `vessel/session/v1`.
+    /// Schema tag; must be `vessel/session/v2`.
     pub schema: String,
     /// Turn counter; 0 is the opening.
     pub turn: u64,

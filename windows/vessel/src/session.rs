@@ -780,7 +780,7 @@ impl<'w> Session<'w> {
         &self.wctx.ctx
     }
 
-    /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
+    /// This turn as `vessel/session/v2` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
     /// CLI never does, so its measured per-turn cost is unchanged. For a

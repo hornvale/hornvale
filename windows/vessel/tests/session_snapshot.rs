@@ -1,4 +1,4 @@
-//! The `vessel/session/v1` byte pin and its tie to the published
+//! The `vessel/session/v2` byte pin and its tie to the published
 //! transcript. This fixture changing is the epoch decision point (The
 //! Snapshot spec §9): regenerate deliberately, never casually, with
 //! `REBASELINE=1 cargo test -p hornvale-vessel --test session_snapshot`
@@ -67,7 +67,7 @@ fn snapshots(world: &World) -> Vec<String> {
 }
 
 #[test]
-fn v1_bytes_are_pinned() {
+fn v2_bytes_are_pinned() {
     let world = world();
     let joined = snapshots(&world).join("\n");
     hornvale_kernel::golden::assert_golden(
@@ -76,8 +76,198 @@ fn v1_bytes_are_pinned() {
             "/tests/fixtures/session-seed-42.json"
         )),
         &joined,
-        "vessel/session/v1 bytes moved — this is the epoch decision point (The Snapshot \
+        "vessel/session/v2 bytes moved — this is the epoch decision point (The Snapshot \
          spec §9); accept deliberately and review the diff as a contract change",
+    );
+}
+
+#[test]
+fn the_schema_tag_is_the_one_every_client_pins() {
+    // Asserted on the BYTES and against a literal, not against
+    // `SESSION_SCHEMA`: the constant and the wire agreeing is tautological,
+    // and the thing that must not move silently is the string three separate
+    // consumers compare against by hand (`clients/vessel/src/snapshot.ts`,
+    // `clients/vessel/wasm/drive.mjs`, `clients/game/core/tests/schema.rs`).
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let json = snapshot_json(&session.snapshot().unwrap());
+    assert!(
+        json.contains(r#""schema":"vessel/session/v2""#),
+        "the session schema tag moved; every consumer that pins it by literal \
+         must move in the same commit: {json:.120}"
+    );
+}
+
+/// The largest integer a JavaScript `number` (an IEEE-754 double) holds
+/// exactly. Above this, `JSON.parse` silently rounds — two ids can collapse
+/// onto one value, which is a correctness bug and not a display one.
+const MAX_SAFE_INTEGER: u64 = (1u64 << 53) - 1;
+
+/// Every `"key": <bare integer>` in `json` whose magnitude exceeds
+/// [`MAX_SAFE_INTEGER`], as `(key, digits)`.
+///
+/// A text scan rather than a `serde_json` walk on purpose: parsing turns the
+/// very numbers under test into `f64`s and destroys the evidence — the
+/// scanner would be asking the question with the answer already rounded off.
+/// String state is tracked so a colon or a long run of digits inside
+/// narration prose cannot masquerade as a key or a value. The corollary is
+/// that it does not descend into the `known` channel's values, which are
+/// *escaped* JSON documents carried as strings: a client re-parsing one gets
+/// its own numbers back, and nothing in there is an id (they are room ids,
+/// which are ~30 bits). If a channel ever carries an escaped id, this scan
+/// will not see it.
+fn javascript_unsafe_integers(json: &str) -> Vec<(String, String)> {
+    let bytes = json.as_bytes();
+    let mut found = Vec::new();
+    let mut key = String::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'"' => {
+                let start = i + 1;
+                let mut j = start;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    j += if bytes[j] == b'\\' { 2 } else { 1 };
+                }
+                let text = &json[start..j.min(json.len())];
+                i = j + 1;
+                // A string immediately followed by `:` is an object key.
+                if bytes.get(i) == Some(&b':') {
+                    key = text.to_string();
+                }
+            }
+            c if c.is_ascii_digit() || c == b'-' => {
+                let start = i;
+                let mut j = i + usize::from(c == b'-');
+                while j < bytes.len() && bytes[j].is_ascii_digit() {
+                    j += 1;
+                }
+                // A float is not the hazard this scan is for: it is already
+                // an inexact type on both sides of the wire, and the emit
+                // boundary quantizes it (decision 0033).
+                let is_float = matches!(bytes.get(j), Some(b'.' | b'e' | b'E'));
+                let digits = &json[start..j];
+                if !is_float
+                    && digits
+                        .trim_start_matches('-')
+                        .parse::<u64>()
+                        .is_ok_and(|v| v > MAX_SAFE_INTEGER)
+                {
+                    found.push((key.clone(), digits.to_string()));
+                }
+                i = j.max(start + 1);
+            }
+            _ => i += 1,
+        }
+    }
+    found
+}
+
+#[test]
+fn no_emitted_number_can_lose_precision_in_a_javascript_client() {
+    // The whole reason `vessel/session/v1` became v2. Swept over every
+    // snapshot of the pinned script AND over the chamber band, because the
+    // two bands emit different documents and only one of them was ever the
+    // fixture a client test happened to read.
+    let world = world();
+    let mut documents = snapshots(&world);
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    documents.push(snapshot_json(&session.snapshot().unwrap()));
+    session.handle("enter");
+    documents.push(snapshot_json(&session.snapshot().unwrap()));
+
+    for json in &documents {
+        let wide = javascript_unsafe_integers(json);
+        assert!(
+            wide.is_empty(),
+            "these keys emit bare integers above 2^53, which JSON.parse rounds: \
+             {wide:?} — encode them as decimal strings the way `self.agent` and \
+             `entity` already are"
+        );
+    }
+}
+
+#[test]
+fn the_precision_scan_would_catch_a_regression() {
+    // POSITIVE CONTROL. The test above passes by finding nothing, which is
+    // exactly the shape a broken scanner also has. So un-quote the ids in a
+    // real emitted document — the precise regression a future `#[serde]`
+    // slip would reintroduce — and require the scanner to name them.
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let snap = session.snapshot().unwrap();
+    let json = snapshot_json(&snap);
+
+    let ids: Vec<u64> = snap
+        .sensed
+        .present
+        .iter()
+        .map(|p| p.entity)
+        .chain(snap.social.iter().map(|entry| entry.entity))
+        .filter(|id| *id > MAX_SAFE_INTEGER)
+        .collect();
+    assert!(
+        !ids.is_empty(),
+        "VACUOUS TEST GUARD: this world emits no entity id above 2^53, so \
+         un-quoting them proves nothing about the scanner"
+    );
+
+    let mut regressed = json.clone();
+    for id in &ids {
+        regressed = regressed.replace(&format!(r#""entity":"{id}""#), &format!(r#""entity":{id}"#));
+    }
+    assert_ne!(
+        regressed, json,
+        "the mutation must actually change the bytes"
+    );
+
+    let wide = javascript_unsafe_integers(&regressed);
+    assert!(
+        !wide.is_empty(),
+        "the scanner found nothing in a document that deliberately carries \
+         bare 64-bit ids, so it cannot fail and proves nothing"
+    );
+    for id in &ids {
+        assert!(
+            wide.iter()
+                .any(|(k, v)| k == "entity" && v == &id.to_string()),
+            "the scanner missed the bare id {id} it was mutated to carry: {wide:?}"
+        );
+    }
+}
+
+#[test]
+fn entity_ids_are_emitted_as_decimal_strings() {
+    // Named fields rather than a generic sweep, so a regression says WHICH
+    // channel lost its encoding. `sensed.present` and `social` are the only
+    // two `EntityId`-typed fields on this wire; `self.agent` is an `AgentId`
+    // and has carried this encoding since The Snapshot.
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let snap = session.snapshot().unwrap();
+    let json = snapshot_json(&snap);
+
+    assert!(
+        !snap.sensed.present.is_empty() || !snap.social.is_empty(),
+        "VACUOUS TEST GUARD: no entity is emitted at all, so nothing below \
+         asserts anything"
+    );
+    for id in snap
+        .sensed
+        .present
+        .iter()
+        .map(|p| p.entity)
+        .chain(snap.social.iter().map(|entry| entry.entity))
+    {
+        assert!(
+            json.contains(&format!(r#""entity":"{id}""#)),
+            "entity {id} is not emitted as a decimal string: {json:.200}"
+        );
+    }
+    assert!(
+        json.contains(r#""agent":""#),
+        "`self.agent`'s string encoding is the precedent `entity` copies; if \
+         it has gone, the two have diverged"
     );
 }
 
@@ -196,7 +386,9 @@ fn out_of_doors_the_spatial_channel_is_the_walk_band_chart() {
             // level rather than the raw isostatic reading, and the document now
             // carries `sea_level_m` so a consumer can re-derive them. The
             // embedded chart announces its own version, which is why the
-            // enclosing `vessel/session/v1` does not move with it.
+            // enclosing envelope did not move with it — and, symmetrically,
+            // why the envelope's own bump to `vessel/session/v2` (The Signet)
+            // does not move the chart.
             assert_eq!(chart.schema, "scene/surrounds/v2");
             assert!(
                 !chart.cells.is_empty(),
@@ -395,7 +587,7 @@ fn the_client_fixtures_are_current() {
             .unwrap_or_else(|_| panic!("{name} is missing — run with REBASELINE=1"));
         assert_eq!(
             committed, body,
-            "{name} drifted: the vessel/session/v1 wire shape moved. Decide \
+            "{name} drifted: the vessel/session/v2 wire shape moved. Decide \
              whether that is an epoch BEFORE rebaselining."
         );
     }

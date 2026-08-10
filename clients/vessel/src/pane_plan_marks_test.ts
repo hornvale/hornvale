@@ -55,7 +55,7 @@ Deno.test("a mark renders its glyph at its cell", () => {
 
 Deno.test("marks draw over the floor but never over `@`", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -82,7 +82,7 @@ Deno.test("a mark's cell withholds colour even when the floor beneath it supplie
   // actually ran, which is not a discriminating assertion (fix-round 1
   // verified this by mutation: see the task report).
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -105,7 +105,7 @@ Deno.test("a mark's cell withholds colour even when the floor beneath it supplie
 
 Deno.test("a mark outside the extent is ignored, not thrown on and not clamped", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -129,7 +129,7 @@ Deno.test("an absent `marks` key renders the plan unchanged", () => {
   // no such key), and the interface says so — this payload has no
   // `marks` field at all, not even an empty array.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -146,7 +146,7 @@ Deno.test("an absent `marks` key renders the plan unchanged", () => {
 
 Deno.test("a malformed mark entry is refused, not thrown on — and its siblings still draw", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -185,7 +185,7 @@ Deno.test("an extent missing x/y is refused, not thrown on, once a mark is prese
   // skips and the draw proceeds into `rows[NaN]` (`undefined`), throwing —
   // the exact unguarded-dereference shape The Panes shipped twice.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -208,7 +208,7 @@ Deno.test("two marks on the same cell: last in the array wins, deliberately", ()
   // later in the array, which is a deliberate, cheap choice rather than an
   // attempt to pick "the more salient" one by re-deriving Rust's own sort.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
