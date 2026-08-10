@@ -174,6 +174,45 @@ better.**
   caught. A guard is what makes the difference: the zero-row test was required
   to fail against the interim renderer before it was believed.
 
+## 7. A frozen frame absorbs an epoch; a chronicle's prose does not
+
+The campaign measured once, against the census committed at the time. Between
+that measurement and the merge, The Signet shipped an epoch and **replaced the
+census** — 78 of the 196 shared columns moved — so the campaign's entire
+published result, which is a pure read over that file, was stale before it
+landed. Re-measuring was not optional.
+
+Three things are worth carrying forward.
+
+**Re-measure the frozen frame; never re-fit it.** The temptation at this point
+is to reconcile the frame with the new census. Doing so would convert a
+prediction back into a description and destroy the campaign. The correct move
+is mechanical: absorb main, re-run the read, and publish whichever tally comes
+out. `git diff <freeze-commit> -- studies/expectations.json` returning empty is
+the evidence, and it should be pasted, not asserted.
+
+**The verdict survived; the prose did not.** All four counts came back
+identical (5 / 19 / 0 / 6), as did the direction-eligible three, the backwards
+three, and the six frozen biology values. Nine correlations moved anyway, all
+in the families the epoch touched, and every one of them was quoted somewhere
+in the chronicle, the Confidence Gradient or the idea registry to three decimal
+places. **A stable headline is not evidence that the prose under it is still
+true** — the tally is the cheapest thing to check and the least likely to move.
+Re-derive every published number, not the summary.
+
+**A number the instrument declines to report must not be reported in prose.**
+Settlement count against mountain coverage flipped from `+0.015` to `−0.015`.
+The detector suppresses the sign in the `none` band precisely because it is
+noise, and the chronicle had published the signed value as prose anyway — so
+the rendered artifact stayed correct across the epoch while the hand-written
+sentence beside it silently became wrong. The suppression rules that govern the
+renderer bind the chapter too.
+
+**Also:** main minted its own `0114` while this branch held a draft `0114`.
+`make preflight` compares decision *filenames*, never the number, so it
+reported a clean GO. The unmerged branch yields — renumbered to `0119` — but
+the check has to be run by hand: `ls docs/decisions/` on both sides.
+
 ## What went right, briefly
 
 The blinding held on both sides — neither implementer nor reviewer read a

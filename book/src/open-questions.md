@@ -1513,13 +1513,15 @@ its honest size.
    and **seven of those ten were declared moderate** — mean land temperature
    against ocean fraction at `−0.0005`, against mountain coverage at `−0.041`;
    habitable fraction against obliquity at `+0.058`; settlement count against
-   mountain coverage at `+0.015`. So the previous entry's finding generalizes
+   mountain coverage at `|r| = 0.015`. So the previous entry's finding generalizes
    past astronomy: climate is uninfluenced by its **terrain** as well, measured
    directly against drivers the census does hold, and settlement reaches the
    land only through one habitability scalar. These readings are not an
-   artifact of a blunt instrument — the same frame measures `+0.954` between
+   artifact of a blunt instrument — the same frame measures `+0.951` between
    standing tribute and settlement count, and `+0.730` between fertile land and
-   temperature, so it sees couplings where they exist.
+   temperature, so it sees couplings where they exist. The frame was
+   re-measured against the replacement census The Signet's epoch landed, with
+   `studies/expectations.json` unchanged, and every count in this entry held.
 
    Two cautions temper the re-score, and both sharpen it rather than soften it.
    The six biology rows fired as **unmeasurable**, not as refutations: their

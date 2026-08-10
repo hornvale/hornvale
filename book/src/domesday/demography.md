@@ -90,6 +90,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.226 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.307 (1000 pairs) is moderate (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.227 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.288 (1000 pairs) is weak (positive)
 

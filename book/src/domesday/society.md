@@ -65,5 +65,5 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `tribute-relations-standing`
 
-- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.954 (1000 pairs) is dominant (positive)
+- **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.951 (1000 pairs) is dominant (positive)
 

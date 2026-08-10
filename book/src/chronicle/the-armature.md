@@ -63,7 +63,7 @@ six fired as unmeasurable, and **none** fired as a direction mismatch.
 
 Both rows that declared *no* relationship were silent — mean land temperature
 against day length at `r = +0.018` over 952 paired worlds, and total population
-against the plate-size Gini at `r = +0.020`. The frame invented no coupling
+against the plate-size Gini at `r = +0.018`. The frame invented no coupling
 that the implementation does not have, which is the one direction in which
 these two rows can fail and the reason a frame whose author is also its subject
 needs them.
@@ -74,8 +74,8 @@ The direction finding requires the observed band to *match* the declared band
 and to be something other than `none`. Only three rows in thirty ever reached a
 sign comparison: karst fraction against mean land temperature (`+0.111`,
 declared weak positive), population-weighted absolute latitude against mean
-land temperature (`+0.394`, declared moderate positive), and climate
-displacement events against habitable fraction (`−0.334`, declared moderate
+land temperature (`+0.474`, declared moderate positive), and climate
+displacement events against habitable fraction (`−0.310`, declared moderate
 negative). All three matched. **"Zero backwards links" is zero of three, not
 zero of thirty**, and publishing the count without that denominator would have
 been the project's documented top failure mode — the right measurement under
@@ -124,17 +124,18 @@ rate reaches the mean. Habitable fraction against obliquity is `+0.058`: the
 tilt does not reach habitability.
 
 *Settlement reads one scalar and nothing else.* Settlement count tracks
-habitable fraction at `+0.230` — weak where strong was declared, but present.
-Against mountain coverage it is `+0.015` and against ocean fraction `−0.085`.
-Terrain reaches settlement only through a single habitability number, and not
-at all through the shape of the ground.
+habitable fraction at `+0.225` — weak where strong was declared, but present.
+Against mountain coverage it is `|r| = 0.015` and against ocean fraction
+`|r| = 0.062`, both reported unsigned because the instrument withholds the sign
+of a near-zero `r`. Terrain reaches settlement only through a single
+habitability number, and not at all through the shape of the ground.
 
 *Hydrological form does not read terrain form.* Waterfall count against
 mountain coverage is `+0.083` — knickpoints without gradient. Shoreline
 development against continent count is `+0.004`.
 
 These readings need a positive control, and the frame supplies one. Standing
-tribute relations track settlement count at `+0.954`; fertile land fraction
+tribute relations track settlement count at `+0.951`; fertile land fraction
 tracks mean land temperature at `+0.730` (declared moderate — the author was
 too *modest* there); shelf fraction tracks ocean fraction at `|r| = 0.755`. The
 instrument sees strong couplings where they exist, so a reading of `0.000` is a
@@ -153,8 +154,8 @@ interesting than either pole it anticipated. The failures do not form one
 population. Six are about the census's reach rather than anyone's physics.
 Four are strength over-claims with the declared sign intact — orbital period
 against temperature at `−0.245` where dominant was declared, and three
-population-and-settlement rows declared strong that measure between `+0.226`
-and `+0.307`. Those are the author being wrong about *how strongly this
+population-and-settlement rows declared strong that measure between `+0.225`
+and `+0.288`. Those are the author being wrong about *how strongly this
 simulation should express a real effect*, which the spec named in advance as
 the frame's least defensible part, and they are calibration error rather than
 discovery. Three are sign errors the author owns: shelf fraction against ocean
@@ -162,7 +163,7 @@ fraction is almost certainly a definitional mistake about what a shelf fraction
 is a fraction *of*, and the other two are weak enough to sit near noise. Two
 are under-claims — the same calibration error with its sign reversed. Fertile
 land fraction against temperature at `+0.730` and standing tribute relations
-against settlement count at `+0.954` were both declared merely moderate; the
+against settlement count at `+0.951` were both declared merely moderate; the
 author was too modest, and these are the rows that serve above as the frame's
 positive controls. A frame that only ever over-claimed would be a frame tuned
 to flatter itself, so the two rows pointing the other way are worth counting
@@ -237,6 +238,49 @@ weaknesses, found by two consecutive campaigns each of which knew about the
 family before it started. Knowing the failure mode confers no immunity to it,
 and an instrument built to see what does not fire is not thereby able to see
 itself.
+
+## The frame outlived the census it was measured against
+
+Everything above was first measured against one committed census. While this
+campaign ran, The Signet shipped an epoch and replaced it: of the 196 columns
+the two censuses share, **78 moved** — the settlement, population, naming, raid
+and tribute families — and The Range added a 197th. The campaign's entire
+published result is a pure read over that file, so at the merge the frame was
+re-measured against the new one. `studies/expectations.json` was not touched:
+re-measuring a frozen frame against a newer census is the honest move, and
+editing the frame to suit it would have destroyed the thing the campaign is
+for.
+
+The verdict did not move. Both tallies read **five silent, nineteen strength,
+zero direction, six unmeasurable**. So do the numbers underneath it: the same
+three rows reach a sign comparison, the same three run backwards, ten strength
+findings still measure `|r| < 0.1` and seven of those ten were still declared
+moderate, and the six biology metrics are still frozen at the same six values.
+No row changed classification.
+
+What moved were nine correlations, all of them in the settlement-and-population
+rows the epoch actually touched; rows one through twenty-one are identical to
+the last digit. Three of those nine are worth naming. Total population against
+habitable fraction fell from `+0.307` to `+0.288`, crossing from a moderate
+band to a weak one — invisible in the tally, because the declaration was
+*strong* and the row was a strength mismatch either way. Settlement count
+against mountain coverage flipped sign, `+0.015` to `−0.015`; both readings sit
+in the `none` band, where the instrument withholds the sign as noise, and the
+first draft of this chapter published `+0.015` as prose anyway. It is corrected
+above to `|r| = 0.015`, and the flip is the suppression rule earning its keep —
+a sign the instrument declined to claim is exactly the sign that did not
+survive a new census. Third, climate displacement events against habitable
+fraction relaxed from `−0.334` to `−0.310` against a boundary at `−0.300`. It
+still matches its declared moderate band, so the direction denominator is still
+three; another epoch of the same size could take it below the bar and make that
+denominator two, which would change the headline null's meaning without
+changing the headline null.
+
+That is a fact about the instrument rather than about the world, and it is this
+campaign's own subject. A frame authored blind, against metric names and doc
+strings, returned the same verdict on a census it had never seen. The claims it
+makes are evidently about the shape of the simulation and not about the
+particular thousand worlds that were committed the week it was written.
 
 ## What is left standing
 

@@ -1441,6 +1441,25 @@ mod tests {
         //                        "none" (mean-land-temperature-c/day-
         //                        length-hours, total-population/plate-
         //                        size-gini; rows #4, #29).
+        //
+        // RE-MEASURED at the merge against a DIFFERENT census. The Signet
+        // shipped an epoch while the campaign ran and replaced the
+        // committed census -- 78 of the 196 shared columns moved -- so the
+        // frame was run again over the new file with
+        // studies/expectations.json byte-unchanged. All four counts came
+        // back identical, as did the three direction-eligible rows, the
+        // three backwards rows and the six frozen Biology values; nine
+        // correlations moved, all in the settlement/population/tribute
+        // families the epoch touched, and none crossed a band edge in a
+        // way the tally can see. Two rows now sit within 0.011 of one:
+        // #28 climate-displacement-events/habitable-fraction at r = -0.310
+        // against the 0.300 edge, and #15 karst-fraction/mean-land-
+        // temperature-c at +0.111 against 0.100. Either crossing drops
+        // that row out of the direction-eligible set and takes the "zero
+        // out of 3" denominator to 2 -- so if `d5_direction` is still 0
+        // but this file's story stops matching, check the denominator
+        // before trusting the null.
+        //
         // These counts are a measurement to investigate, not a target: if
         // any moves, find out why before updating it.
         let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
