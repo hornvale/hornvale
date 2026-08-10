@@ -199,3 +199,130 @@ fn later_epoch_roots_degrade_to_epoch_zero_when_no_closed_coda_exists() {
          the identity"
     );
 }
+
+/// THE RADIATION (C2d): appending a cohort leaves every PRE-EXISTING
+/// concept's proto-root untouched, and folding the same six concepts into an
+/// earlier cohort does not.
+///
+/// This is the campaign's save-format guard. `concept_epoch` sorts by epoch
+/// first, so an appended concept lands strictly last — the one position that
+/// provably displaces nothing. The alternative is not hypothetical: before
+/// this module existed, twelve species kinds added at once left ten free while
+/// `treant` moved 5 facts and `otyugh` 65, and omitting the cohort entirely
+/// changes which proto-root a concept draws (commit `ee4e6a00`).
+///
+/// **The test discriminates by construction.** Two arms differ only in the
+/// epoch function: the shipped one (elf concepts at the new last cohort) and a
+/// mutant that reports epoch 0 for them, i.e. exactly what folding them into
+/// cohort 0 would do. The shipped arm must reproduce the no-elf assignment
+/// EXACTLY on every seed; the mutant must break it on at least one. Without
+/// the second clause the first is satisfiable by an assignment that ignores
+/// epochs altogether.
+///
+/// claim: invariant(forall-seed) — save-format contract. The additivity
+/// clause is a universal over seeds (it must hold for every one, so the loop
+/// is a quantifier, not a sample). The anti-vacuity clause is deliberately
+/// existential over the SAME loop — one seed on which the mutant moves
+/// something is enough to prove the epoch ordering reaches the assignment,
+/// and demanding it on all eight would assert a stronger collision rate than
+/// this campaign measures. Observed at the cohort's landing: the mutant moved
+/// 1–4 pre-existing roots on each of the eight seeds (17 in total), while the
+/// appended table moved none.
+#[test]
+fn appending_the_elf_cohort_displaces_no_existing_proto_root() {
+    const ELF_CONCEPTS: [&str; 6] = [
+        "desert-elf-kind",
+        "drow-kind",
+        "high-elf-kind",
+        "sea-elf-kind",
+        "snow-elf-kind",
+        "wood-elf-kind",
+    ];
+
+    // The whole accessioned universe, which `cli/tests/accession.rs` pins
+    // equal to the concept registry in both directions — so this is the real
+    // population, not a hand-picked slice.
+    let all: Vec<&'static str> = hornvale_language::EPOCH_COHORTS
+        .iter()
+        .flat_map(|cohort| cohort.iter().copied())
+        .collect();
+    assert!(
+        ELF_CONCEPTS.iter().all(|c| all.contains(c)),
+        "the elf cohort has not been appended yet — this test measures the \
+         appended table against a synthetic no-elf control, so it cannot run \
+         before the cohort exists"
+    );
+    let without_elves: Vec<&'static str> = all
+        .iter()
+        .copied()
+        .filter(|c| !ELF_CONCEPTS.contains(c))
+        .collect();
+    assert_eq!(
+        without_elves.len() + ELF_CONCEPTS.len(),
+        all.len(),
+        "the six elf concepts must appear exactly once each in the table"
+    );
+
+    let shipped_epoch = hornvale_language::concept_epoch;
+    let folded_epoch = |c: &str| {
+        if ELF_CONCEPTS.contains(&c) {
+            0
+        } else {
+            hornvale_language::concept_epoch(c)
+        }
+    };
+
+    let mut folded_moved_somewhere = false;
+    for raw in 1u64..=8 {
+        let seed = Seed(raw);
+        let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
+
+        let control = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &without_elves,
+            &[],
+            shipped_epoch,
+        );
+        let appended = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &all,
+            &[],
+            shipped_epoch,
+        );
+        let folded = assign_proto_roots_with_epoch_for_test(
+            &seed,
+            "goblinoid",
+            &ph,
+            &all,
+            &[],
+            folded_epoch,
+        );
+
+        for concept in &without_elves {
+            assert_eq!(
+                control.get(*concept),
+                appended.get(*concept),
+                "seed {raw}: appending the elf cohort moved `{concept}`'s \
+                 proto-root. Appending must be additive BY CONSTRUCTION — if \
+                 this fires, the six concepts are not in the LAST cohort, or \
+                 an existing cohort was edited. Do not re-pin this; fix the \
+                 table."
+            );
+            if control.get(*concept) != folded.get(*concept) {
+                folded_moved_somewhere = true;
+            }
+        }
+    }
+
+    assert!(
+        folded_moved_somewhere,
+        "ANTI-VACUITY: folding the six elf concepts into cohort 0 moved no \
+         existing proto-root on any of eight seeds, so the additivity clause \
+         above proves nothing — the epoch ordering is not reaching the \
+         assignment at all. Investigate before trusting this test."
+    );
+}

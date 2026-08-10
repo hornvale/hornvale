@@ -813,6 +813,12 @@
         "kind": "Living",
         "doc": "a desert dwarf"
       },
+      "desert-elf-kind": {
+        "name": "desert-elf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a desert elf"
+      },
       "die": {
         "name": "die",
         "domain": "language",
@@ -830,6 +836,12 @@
         "domain": "language",
         "kind": "Act",
         "doc": "to swallow liquid"
+      },
+      "drow-kind": {
+        "name": "drow-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a drow"
       },
       "earth": {
         "name": "earth",
@@ -1058,6 +1070,12 @@
         "domain": "language",
         "kind": "Quality",
         "doc": "far above the ground"
+      },
+      "high-elf-kind": {
+        "name": "high-elf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a high elf"
       },
       "hill": {
         "name": "hill",
@@ -1497,6 +1515,12 @@
         "kind": "Terrain",
         "doc": "a body of salt water"
       },
+      "sea-elf-kind": {
+        "name": "sea-elf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a sea elf"
+      },
       "sea-ice": {
         "name": "sea-ice",
         "domain": "climate",
@@ -1544,6 +1568,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "frozen precipitation"
+      },
+      "snow-elf-kind": {
+        "name": "snow-elf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a snow elf"
       },
       "snowfield": {
         "name": "snowfield",
@@ -1808,6 +1838,12 @@
         "domain": "climate",
         "kind": "Substance",
         "doc": "Ground swept bare by wind."
+      },
+      "wood-elf-kind": {
+        "name": "wood-elf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a wood elf"
       },
       "wooded-grassland": {
         "name": "wooded-grassland",

@@ -3576,6 +3576,19 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("desert-dwarf-kind", "a desert dwarf"),
     ("gully-dwarf-kind", "a gully dwarf"),
     ("hill-dwarf-kind", "a hill dwarf"),
+    // THE RADIATION (C2d): the elf family's six — the roster's largest family,
+    // and the programme's last. These six ids are what
+    // `domains/language/src/accession.rs`'s epoch-10 cohort lists;
+    // `cli/tests/accession.rs` checks the two agree in BOTH directions, and
+    // commit `ee4e6a00` records that omitting the cohort also changes which
+    // proto-root each concept draws. Glosses are authored, not derived from
+    // the id, so `drow` reads as "a drow" and not as its own key.
+    ("desert-elf-kind", "a desert elf"),
+    ("drow-kind", "a drow"),
+    ("high-elf-kind", "a high elf"),
+    ("sea-elf-kind", "a sea elf"),
+    ("snow-elf-kind", "a snow elf"),
+    ("wood-elf-kind", "a wood elf"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no

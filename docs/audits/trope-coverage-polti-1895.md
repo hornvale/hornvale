@@ -111,7 +111,7 @@ that is the difference.
 
 ## Supply
 
-296 registered tokens no situation in this corpus requires.
+302 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -149,8 +149,10 @@ missing half before this list can serve it.
 - `concept:day` (language)
 - `concept:desert` (climate)
 - `concept:desert-dwarf-kind` (species)
+- `concept:desert-elf-kind` (species)
 - `concept:dire-wolf-kind` (species)
 - `concept:drink` (language)
+- `concept:drow-kind` (species)
 - `concept:earth` (language)
 - `concept:east` (language)
 - `concept:eat` (language)
@@ -188,6 +190,7 @@ missing half before this list can serve it.
 - `concept:hearth` (settlement)
 - `concept:heat` (climate)
 - `concept:high` (language)
+- `concept:high-elf-kind` (species)
 - `concept:hill` (terrain)
 - `concept:hill-dwarf-kind` (species)
 - `concept:hobgoblin-kind` (species)
@@ -258,6 +261,7 @@ missing half before this list can serve it.
 - `concept:sclerophyll-scrub` (climate)
 - `concept:scoured-ice` (climate)
 - `concept:sea` (terrain)
+- `concept:sea-elf-kind` (species)
 - `concept:sea-ice` (climate)
 - `concept:shadow` (language)
 - `concept:shrieker-kind` (species)
@@ -265,6 +269,7 @@ missing half before this list can serve it.
 - `concept:sleep` (language)
 - `concept:smoker-field` (climate)
 - `concept:snow` (climate)
+- `concept:snow-elf-kind` (species)
 - `concept:snowfield` (climate)
 - `concept:south` (language)
 - `concept:south-east` (language)
@@ -308,6 +313,7 @@ missing half before this list can serve it.
 - `concept:white-dwarf` (astronomy)
 - `concept:wind` (language)
 - `concept:wind-scour` (climate)
+- `concept:wood-elf-kind` (species)
 - `concept:wooded-grassland` (climate)
 - `concept:woolly-mammoth-kind` (species)
 - `concept:xorn-kind` (species)

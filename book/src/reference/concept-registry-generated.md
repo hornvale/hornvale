@@ -180,9 +180,11 @@
 | `day` | language | celestial | the light half of the day-night cycle |
 | `desert` | climate | terrain | a biome class |
 | `desert-dwarf-kind` | species | living | a desert dwarf |
+| `desert-elf-kind` | species | living | a desert elf |
 | `die` | language | act | to cease living |
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
+| `drow-kind` | species | living | a drow |
 | `earth` | language | terrain | the ground underfoot |
 | `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
@@ -221,6 +223,7 @@
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
 | `high` | language | quality | far above the ground |
+| `high-elf-kind` | species | living | a high elf |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
 | `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
@@ -294,6 +297,7 @@
 | `sclerophyll-scrub` | climate | substance | Hard-leaved drought-adapted scrub. |
 | `scoured-ice` | climate | substance | Ice swept bare and carved by wind. |
 | `sea` | terrain | terrain | a body of salt water |
+| `sea-elf-kind` | species | living | a sea elf |
 | `sea-ice` | climate | terrain | a biome class |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
 | `shrieker-kind` | species | living | a shrieker |
@@ -302,6 +306,7 @@
 | `sleep` | language | act | to rest unconscious |
 | `smoker-field` | climate | substance | A field of hydrothermal chimneys. |
 | `snow` | climate | substance | frozen precipitation |
+| `snow-elf-kind` | species | living | a snow elf |
 | `snowfield` | climate | substance | An unbroken field of snow. |
 | `south` | language | quality | toward the pole of decreasing latitude |
 | `south-east` | language | quality | between south and east |
@@ -346,6 +351,7 @@
 | `white-dwarf` | astronomy | celestial | the dense cinder a spent star leaves |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |
+| `wood-elf-kind` | species | living | a wood elf |
 | `wooded-grassland` | climate | substance | Grassland with scattered trees. |
 | `woolly-mammoth-kind` | species | living | a woolly mammoth |
 | `xorn-kind` | species | living | a xorn |

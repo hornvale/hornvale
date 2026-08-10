@@ -393,6 +393,27 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // Appended rather than folded into an earlier peopled-kind cohort (0, 2,
     // 8), per this module's absolute rule.
     &["desert-dwarf-kind", "gully-dwarf-kind", "hill-dwarf-kind"],
+    // Epoch 10 — The Radiation (C2d, 2026-08-09): the elf family, six kinds.
+    // ONE cohort, not six: the campaign is one arrival event and one epoch,
+    // and six cohorts would assert six successive language epochs — a far
+    // stronger claim about the world's history than this campaign makes, and
+    // one that would permanently separate the family's roots. Appended rather
+    // than folded into an earlier peopled-kind cohort (0, 2, 8, 9), per this
+    // module's absolute rule.
+    //
+    // The roster's largest family: six daughters against goblinoid's three and
+    // dwarf's three. `domains/language/tests/accession_properties.rs`'s
+    // `appending_the_elf_cohort_displaces_no_existing_proto_root` measures the
+    // additivity this placement buys, and measures the mutant that would lose
+    // it.
+    &[
+        "desert-elf-kind",
+        "drow-kind",
+        "high-elf-kind",
+        "sea-elf-kind",
+        "snow-elf-kind",
+        "wood-elf-kind",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

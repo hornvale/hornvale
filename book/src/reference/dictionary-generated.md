@@ -37,9 +37,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Zhog | /ʒog/ | Djog | Djog → clustersimplify → Zhog |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): black-dragon has no exposure to 'desert-dwarf-kind' |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): black-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Saad | /saad/ | Dsaad | Dsaad → clustersimplify → Saad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Sag | /sag/ | Dsak | Dsak → clustersimplify → Sag |
+| `drow-kind` | a drow | — | — | — | gap (experiential): black-dragon has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Zhodgshod | /ʒodgʃod/ | Gjedkshed | Gjedkshed → clustersimplify → Zhodgshod |
 | `east` | the direction of increasing longitude | Zhaddsood | /ʒaddsood/ | Djabpseod | Djabpseod → clustersimplify → Zhaddsood |
 | `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
@@ -78,6 +80,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): black-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): black-dragon has no exposure to 'heat' |
 | `high` | far above the ground | Shoggood | /ʃoggood/ | Pshokngood | Pshokngood → clustersimplify → Shoggood |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): black-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): black-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): black-dragon has no exposure to 'hill-dwarf-kind' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): black-dragon has no exposure to 'hobgoblin-kind' |
@@ -151,6 +154,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): black-dragon has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): black-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): black-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | God | /god/ | Ngod | Ngod → no change → God |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): black-dragon has no exposure to 'shrieker-kind' |
@@ -159,6 +163,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Shoag | /ʃoag/ | Kshoag | Kshoag → clustersimplify → Shoag |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): black-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): black-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): black-dragon has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Shoggsad | /ʃoggsad/ | Gshegksap | Gshegksap → clustersimplify → Shoggsad |
 | `south-east` | between south and east | Zhaddsoodshoggsad | /ʒaddsoodʃoggsad/ | — | compound: `south` + `east` |
@@ -203,6 +208,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Dog | /dog/ | Kwok | Kwok → clustersimplify → Dog |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): black-dragon has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): black-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): black-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): black-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): black-dragon has no exposure to 'xorn-kind' |
@@ -243,9 +249,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Gaago | /gaago/ | Gaage | Gaage → no change → Gaago |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Dooga | /dooga/ | Neoga | Neoga → no change → Dooga |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): bugbear has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Doodo | /doodo/ | Toono | Toono → lenition → Doodo |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): bugbear has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Gadao | /gadao/ | Ganae | Ganae → no change → Gadao |
+| `drow-kind` | a drow | — | — | — | gap (experiential): bugbear has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Goo | /goo/ | Geo | Geo → no change → Goo |
 | `east` | the direction of increasing longitude | Dooba | /dooba/ | Neepa | Neepa → lenition → Dooba |
 | `eat` | to consume food | Dao | /dao/ | Nao | Nao → no change → Dao |
@@ -284,6 +292,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Dobo | /dobo/ | Nope | Nope → lenition → Dobo |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): bugbear has no exposure to 'heat' |
 | `high` | far above the ground | Goadoa | /goadoa/ | Geanea | Geanea → no change → Goadoa |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): bugbear has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): bugbear has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Dabao | /dabao/ | Dapae | Dapae → lenition → Dabao |
 | `hobgoblin-kind` | a hobgoblin | Qago | /qago/ | Qage | Qage → no change → Qago |
@@ -357,6 +366,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): bugbear has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): bugbear has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Doodoodoogo | /doodoodoogo/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): bugbear has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Doodoo | /doodoo/ | Neetoe | Neetoe → lenition → Doodoo |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): bugbear has no exposure to 'shrieker-kind' |
@@ -365,6 +375,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Doogoa | /doogoa/ | Noegoa | Noegoa → no change → Doogoa |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): bugbear has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): bugbear has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): bugbear has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Qaodoo | /qaodoo/ | Qaeneo | Qaeneo → no change → Qaodoo |
 | `south-east` | between south and east | Qaodoodooba | /qaodoodooba/ | — | compound: `south` + `east` |
@@ -409,6 +420,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Doqoo | /doqoo/ | Neqoo | Neqoo → no change → Doqoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): bugbear has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): bugbear has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): bugbear has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): bugbear has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): bugbear has no exposure to 'xorn-kind' |
@@ -449,9 +461,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Sna | /sna/ | Sna | Sna → no change → Sna |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Dngod | /dŋod/ | Zngot | Zngot → lenition → Dngod |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Do | /do/ | To | To → lenition → Do |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Doddngad | /doddŋad/ | Todzngat | Todzngat → lenition → Doddngad |
+| `drow-kind` | a drow | — | — | — | gap (experiential): desert-dwarf has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Dnga | /dŋa/ | Znga | Znga → no change → Dnga |
 | `east` | the direction of increasing longitude | Dadshnag | /dadʃnag/ | Dadshnag | Dadshnag → no change → Dadshnag |
 | `eat` | to consume food | Snaddngad | /snaddŋad/ | Snatzngad | Snatzngad → lenition → Snaddngad |
@@ -490,6 +504,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Qa | /qa/ | Qa | Qa → no change → Qa |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'heat' |
 | `high` | far above the ground | Dagsnog | /dagsnog/ | Dagsnog | Dagsnog → no change → Dagsnog |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): desert-dwarf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Sngaqdnog | /sŋaqdnog/ | Sngaqznog | Sngaqznog → no change → Sngaqdnog |
 | `hobgoblin-kind` | a hobgoblin | Dnopshnad | /dnopʃnad/ | Znobshnad | Znobshnad → no change → Dnopshnad |
@@ -563,6 +578,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Qadgoqdnaddop | /qadgoqdnaddop/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Pado | /pado/ | Bato | Bato → lenition → Pado |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): desert-dwarf has no exposure to 'shrieker-kind' |
@@ -571,6 +587,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Qodngo | /qodŋo/ | Qozngo | Qozngo → no change → Qodngo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Snadsnad | /snadsnad/ | Snadsnad | Snadsnad → no change → Snadsnad |
 | `south-east` | between south and east | Dadshnagsnadsnad | /dadʃnagsnadsnad/ | — | compound: `south` + `east` |
@@ -615,6 +632,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Dngadad | /dŋadad/ | Zngatad | Zngatad → lenition → Dngadad |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): desert-dwarf has no exposure to 'xorn-kind' |
@@ -655,9 +673,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Sngap | /sŋap/ | Sngaf | Sngaf → fortition → Sngap |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Gshapqshap | /gʃapqʃap/ | Gshafqshaf | Gshafqshaf → fortition → Gshapqshap |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): gnoll has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Dzhax | /dʒax/ | Tzhax | Tzhax → lenition → Dzhax |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gnoll has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Qshopznoox | /qʃopznoox/ | Qshofznoox | Qshofznoox → fortition → Qshopznoox |
+| `drow-kind` | a drow | — | — | — | gap (experiential): gnoll has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Sma | /sma/ | Sma | Sma → no change → Sma |
 | `east` | the direction of increasing longitude | Shmoovzhnaop | /ʃmoovʒnaop/ | Shmoovzhnaof | Shmoovzhnaof → fortition → Shmoovzhnaop |
 | `eat` | to consume food | Pshaoxshngaap | /pʃaoxʃŋaap/ | Pshaoxshngaaf | Pshaoxshngaaf → fortition → Pshaoxshngaap |
@@ -696,6 +716,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Shmoaqzov | /ʃmoaqzov/ | Shmoaqzov | Shmoaqzov → no change → Shmoaqzov |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gnoll has no exposure to 'heat' |
 | `high` | far above the ground | Pzaovdshop | /pzaovdʃop/ | Pzaovdshof | Pzaovdshof → fortition → Pzaovdshop |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): gnoll has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): gnoll has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Psaaxpshav | /psaaxpʃav/ | Psaaxpshav | Psaaxpshav → no change → Psaaxpshav |
 | `hobgoblin-kind` | a hobgoblin | Snapdzho | /snapdʒo/ | Snaftzho | Snaftzho → fortition → lenition → Snapdzho |
@@ -769,6 +790,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): gnoll has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): gnoll has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Zngaavznoa | /zŋaavznoa/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): gnoll has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Snaxdzhoap | /snaxdʒoap/ | Snaxtzhoaf | Snaxtzhoaf → fortition → lenition → Snaxdzhoap |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): gnoll has no exposure to 'shrieker-kind' |
@@ -777,6 +799,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Dzhaox | /dʒaox/ | Tzhaox | Tzhaox → lenition → Dzhaox |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): gnoll has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): gnoll has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gnoll has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Gsoov | /gsoov/ | Gsoov | Gsoov → no change → Gsoov |
 | `south-east` | between south and east | Shmoovzhnaopgsoov | /ʃmoovʒnaopgsoov/ | — | compound: `south` + `east` |
@@ -821,6 +844,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Gzhovsmoap | /gʒovsmoap/ | Gzhovsmoaf | Gzhovsmoaf → fortition → Gzhovsmoap |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): gnoll has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): gnoll has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | Gzap | /gzap/ | Gzaf | Gzaf → fortition → Gzap |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): gnoll has no exposure to 'xorn-kind' |
@@ -861,9 +885,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Baabe | /baabe/ | Gaage | Gaage → no change → Baabe |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Neoba | /neoba/ | Neoga | Neoga → no change → Neoba |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): goblin has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Toono | /toono/ | Toono | Toono → no change → Toono |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): goblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Banae | /banae/ | Ganae | Ganae → no change → Banae |
+| `drow-kind` | a drow | — | — | — | gap (experiential): goblin has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Beo | /beo/ | Geo | Geo → no change → Beo |
 | `east` | the direction of increasing longitude | Neeba | /neeba/ | Neepa | Neepa → no change → Neeba |
 | `eat` | to consume food | Nao | /nao/ | Nao | Nao → no change → Nao |
@@ -902,6 +928,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Nobe | /nobe/ | Nope | Nope → no change → Nobe |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): goblin has no exposure to 'heat' |
 | `high` | far above the ground | Beanea | /beanea/ | Geanea | Geanea → no change → Beanea |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): goblin has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): goblin has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Dabae | /dabae/ | Dapae | Dapae → no change → Dabae |
 | `hobgoblin-kind` | a hobgoblin | Tabe | /tabe/ | Qage | Qage → no change → Tabe |
@@ -975,6 +1002,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): goblin has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): goblin has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): goblin has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): goblin has no exposure to 'shrieker-kind' |
@@ -983,6 +1011,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Noeboa | /noeboa/ | Noegoa | Noegoa → no change → Noeboa |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): goblin has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): goblin has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): goblin has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Taeneo | /taeneo/ | Qaeneo | Qaeneo → no change → Taeneo |
 | `south-east` | between south and east | Taeneoneeba | /taeneoneeba/ | — | compound: `south` + `east` |
@@ -1027,6 +1056,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Netoo | /netoo/ | Neqoo | Neqoo → no change → Netoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): goblin has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): goblin has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): goblin has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): goblin has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): goblin has no exposure to 'xorn-kind' |
@@ -1067,9 +1097,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Na | /na/ | Sna | Sna → clustersimplify → Na |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Ngot | /ŋot/ | Zngot | Zngot → clustersimplify → Ngot |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | To | /to/ | To | To → no change → To |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Tobnngat | /tobnŋat/ | Todzngat | Todzngat → no change → Tobnngat |
+| `drow-kind` | a drow | — | — | — | gap (experiential): gully-dwarf has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Nga | /ŋa/ | Znga | Znga → clustersimplify → Nga |
 | `east` | the direction of increasing longitude | Babshnag | /babʃnag/ | Dadshnag | Dadshnag → no change → Babshnag |
 | `eat` | to consume food | Natnngab | /natnŋab/ | Snatzngad | Snatzngad → clustersimplify → Natnngab |
@@ -1108,6 +1140,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Qa | /qa/ | Qa | Qa → no change → Qa |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'heat' |
 | `high` | far above the ground | Bagtnog | /bagtnog/ | Dagsnog | Dagsnog → no change → Bagtnog |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): gully-dwarf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Ngaqnnog | /ŋaqnnog/ | Sngaqznog | Sngaqznog → clustersimplify → Ngaqnnog |
 | `hobgoblin-kind` | a hobgoblin | Nobshnab | /nobʃnab/ | Znobshnad | Znobshnad → clustersimplify → Nobshnab |
@@ -1181,6 +1214,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Qatgoqnatbob | /qatgoqnatbob/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Bato | /bato/ | Bato | Bato → no change → Bato |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): gully-dwarf has no exposure to 'shrieker-kind' |
@@ -1189,6 +1223,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Qonngo | /qonŋo/ | Qozngo | Qozngo → no change → Qonngo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Nabtnab | /nabtnab/ | Snadsnad | Snadsnad → clustersimplify → Nabtnab |
 | `south-east` | between south and east | Babshnagnabtnab | /babʃnagnabtnab/ | — | compound: `south` + `east` |
@@ -1233,6 +1268,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Ngatab | /ŋatab/ | Zngatad | Zngatad → clustersimplify → Ngatab |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): gully-dwarf has no exposure to 'xorn-kind' |
@@ -1273,9 +1309,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Ma | /ma/ | Sna | Sna → clustersimplify → Ma |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Ngot | /ŋot/ | Zngot | Zngot → clustersimplify → Ngot |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | To | /to/ | To | To → no change → To |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Tobsngat | /tobsŋat/ | Todzngat | Todzngat → no change → Tobsngat |
+| `drow-kind` | a drow | — | — | — | gap (experiential): hill-dwarf has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Nga | /ŋa/ | Znga | Znga → clustersimplify → Nga |
 | `east` | the direction of increasing longitude | Babshmag | /babʃmag/ | Dadshnag | Dadshnag → no change → Babshmag |
 | `eat` | to consume food | Matsngab | /matsŋab/ | Snatzngad | Snatzngad → clustersimplify → Matsngab |
@@ -1314,6 +1352,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Qa | /qa/ | Qa | Qa → no change → Qa |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'heat' |
 | `high` | far above the ground | Bagsmog | /bagsmog/ | Dagsnog | Dagsnog → no change → Bagsmog |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): hill-dwarf has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Ngaqsmog | /ŋaqsmog/ | Sngaqznog | Sngaqznog → clustersimplify → Ngaqsmog |
 | `hobgoblin-kind` | a hobgoblin | Mobshmab | /mobʃmab/ | Znobshnad | Znobshnad → clustersimplify → Mobshmab |
@@ -1387,6 +1426,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Qatgoqmatbob | /qatgoqmatbob/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): hill-dwarf has no exposure to 'shrieker-kind' |
@@ -1395,6 +1435,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Qosngo | /qosŋo/ | Qozngo | Qozngo → no change → Qosngo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Mabsmab | /mabsmab/ | Snadsnad | Snadsnad → clustersimplify → Mabsmab |
 | `south-east` | between south and east | Babshmagmabsmab | /babʃmagmabsmab/ | — | compound: `south` + `east` |
@@ -1439,6 +1480,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Ngatab | /ŋatab/ | Zngatad | Zngatad → clustersimplify → Ngatab |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): hill-dwarf has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): hill-dwarf has no exposure to 'xorn-kind' |
@@ -1479,9 +1521,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Gaage | /gaage/ | Gaage | Gaage → no change → Gaage |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Neoga | /neoga/ | Neoga | Neoga → no change → Neoga |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): hobgoblin has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Toono | /toono/ | Toono | Toono → no change → Toono |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Ganae | /ganae/ | Ganae | Ganae → no change → Ganae |
+| `drow-kind` | a drow | — | — | — | gap (experiential): hobgoblin has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Geo | /geo/ | Geo | Geo → no change → Geo |
 | `east` | the direction of increasing longitude | Neeba | /neeba/ | Neepa | Neepa → no change → Neeba |
 | `eat` | to consume food | Nao | /nao/ | Nao | Nao → no change → Nao |
@@ -1520,6 +1564,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Nobe | /nobe/ | Nope | Nope → no change → Nobe |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): hobgoblin has no exposure to 'heat' |
 | `high` | far above the ground | Geanea | /geanea/ | Geanea | Geanea → no change → Geanea |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): hobgoblin has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): hobgoblin has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Babae | /babae/ | Dapae | Dapae → no change → Babae |
 | `hobgoblin-kind` | a hobgoblin | Qage | /qage/ | Qage | Qage → no change → Qage |
@@ -1593,6 +1638,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): hobgoblin has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): hobgoblin has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Nooneoboege | /nooneoboege/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): hobgoblin has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): hobgoblin has no exposure to 'shrieker-kind' |
@@ -1601,6 +1647,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Noegoa | /noegoa/ | Noegoa | Noegoa → no change → Noegoa |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): hobgoblin has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): hobgoblin has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hobgoblin has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Qaeneo | /qaeneo/ | Qaeneo | Qaeneo → no change → Qaeneo |
 | `south-east` | between south and east | Qaeneoneeba | /qaeneoneeba/ | — | compound: `south` + `east` |
@@ -1645,6 +1692,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Neqoo | /neqoo/ | Neqoo | Neqoo → no change → Neqoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): hobgoblin has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): hobgoblin has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | Neekae | /neekae/ | Neekae | Neekae → no change → Neekae |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): hobgoblin has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): hobgoblin has no exposure to 'xorn-kind' |
@@ -1685,9 +1733,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Mashmaa | /maʃmaa/ | Zmashmaa | Zmashmaa → clustersimplify → Mashmaa |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Ngoezngea | /ŋoezŋea/ | Ngoezngea | Ngoezngea → no change → Ngoezngea |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): human has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Moepoe | /moepoe/ | Moepoe | Moepoe → no change → Moepoe |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): human has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Moaga | /moaga/ | Moaga | Moaga → no change → Moaga |
+| `drow-kind` | a drow | — | — | — | gap (experiential): human has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Game | /game/ | Game | Game → no change → Game |
 | `east` | the direction of increasing longitude | Toema | /toema/ | Toema | Toema → no change → Toema |
 | `eat` | to consume food | Ngatao | /ŋatao/ | Zngatao | Zngatao → clustersimplify → Ngatao |
@@ -1726,6 +1776,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Nge | /ŋe/ | Shnge | Shnge → clustersimplify → Nge |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): human has no exposure to 'heat' |
 | `high` | far above the ground | Gaago | /gaago/ | Gaago | Gaago → no change → Gaago |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): human has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): human has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Pa | /pa/ | Pa | Pa → no change → Pa |
 | `hobgoblin-kind` | a hobgoblin | Ngopoe | /ŋopoe/ | Shngopoe | Shngopoe → clustersimplify → Ngopoe |
@@ -1799,6 +1850,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): human has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): human has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | Ngakaengoezhmea | /ŋakaeŋoeʒmea/ | — | compound: `many` + `water` |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): human has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.15 |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): human has no exposure to 'shrieker-kind' |
@@ -1807,6 +1859,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Peoshmo | /peoʃmo/ | Peoshmo | Peoshmo → no change → Peoshmo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): human has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): human has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): human has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): human has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Meopaa | /meopaa/ | Zhmeopaa | Zhmeopaa → clustersimplify → Meopaa |
 | `south-east` | between south and east | Toemameopaa | /toemameopaa/ | — | compound: `south` + `east` |
@@ -1851,6 +1904,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Kemee | /kemee/ | Kemee | Kemee → no change → Kemee |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): human has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): human has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): human has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): human has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): human has no exposure to 'xorn-kind' |
@@ -1891,9 +1945,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Raa | /raa/ | Raa | Raa → no change → Raa |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | Roaxoro | /roaxoro/ | Roaxoro | Roaxoro → no change → Roaxoro |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): kobold has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Raarao | /raarao/ | Raarao | Raarao → no change → Raarao |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): kobold has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Roroxao | /roroxao/ | Roroxao | Roroxao → no change → Roroxao |
+| `drow-kind` | a drow | — | — | — | gap (experiential): kobold has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Roorao | /roorao/ | Roorao | Roorao → no change → Roorao |
 | `east` | the direction of increasing longitude | Roaraoro | /roaraoro/ | Roaraoro | Roaraoro → no change → Roaraoro |
 | `eat` | to consume food | Xaro | /xaro/ | Xaro | Xaro → no change → Xaro |
@@ -1932,6 +1988,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Xorao | /xorao/ | Xorao | Xorao → no change → Xorao |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): kobold has no exposure to 'heat' |
 | `high` | far above the ground | Xoraroa | /xoraroa/ | Xoraroa | Xoraroa → no change → Xoraroa |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): kobold has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): kobold has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | Raxoaxo | /raxoaxo/ | Raxoaxo | Raxoaxo → no change → Raxoaxo |
 | `hobgoblin-kind` | a hobgoblin | Xooxa | /xooxa/ | Xooxa | Xooxa → no change → Xooxa |
@@ -2005,6 +2062,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | Raaroroa | /raaroroa/ | Raaroroa | Raaroroa → no change → Raaroroa |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): kobold has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): kobold has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Raoxoa | /raoxoa/ | Raoxoa | Raoxoa → no change → Raoxoa |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): kobold has no exposure to 'shrieker-kind' |
@@ -2013,6 +2071,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Raoroo | /raoroo/ | Raoroo | Raoroo → no change → Raoroo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): kobold has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): kobold has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
 | `south-east` | between south and east | Roaraoroxaaraa | /roaraoroxaaraa/ | — | compound: `south` + `east` |
@@ -2057,6 +2116,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Xaaro | /xaaro/ | Xaaro | Xaaro → no change → Xaaro |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): kobold has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): kobold has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): kobold has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): kobold has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): kobold has no exposure to 'xorn-kind' |
@@ -2097,9 +2157,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Djod | /djod/ | Djog | Djog → no change → Djod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): red-dragon has no exposure to 'desert-dwarf-kind' |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): red-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Dsaad | /dsaad/ | Dsaad | Dsaad → no change → Dsaad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
+| `drow-kind` | a drow | — | — | — | gap (experiential): red-dragon has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Djodkshod | /djodkʃod/ | Gjedkshed | Gjedkshed → no change → Djodkshod |
 | `east` | the direction of increasing longitude | Djadksood | /djadksood/ | Djabpseod | Djabpseod → no change → Djadksood |
 | `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
@@ -2138,6 +2200,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): red-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): red-dragon has no exposure to 'heat' |
 | `high` | far above the ground | Kshokdood | /kʃokdood/ | Pshokngood | Pshokngood → no change → Kshokdood |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): red-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): red-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): red-dragon has no exposure to 'hill-dwarf-kind' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): red-dragon has no exposure to 'hobgoblin-kind' |
@@ -2211,6 +2274,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): red-dragon has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): red-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): red-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Dod | /dod/ | Ngod | Ngod → no change → Dod |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): red-dragon has no exposure to 'shrieker-kind' |
@@ -2219,6 +2283,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Kshoad | /kʃoad/ | Kshoag | Kshoag → no change → Kshoad |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): red-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): red-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): red-dragon has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
 | `south-east` | between south and east | Djadksooddshodksak | /djadksooddʃodksak/ | — | compound: `south` + `east` |
@@ -2263,6 +2328,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Kjok | /kjok/ | Kwok | Kwok → no change → Kjok |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): red-dragon has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): red-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): red-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): red-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): red-dragon has no exposure to 'xorn-kind' |
@@ -2303,9 +2369,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Dzhod | /dʒod/ | Djog | Djog → no change → Dzhod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `desert-dwarf-kind` | a desert dwarf | — | — | — | gap (experiential): white-dragon has no exposure to 'desert-dwarf-kind' |
+| `desert-elf-kind` | a desert elf | — | — | — | gap (experiential): white-dragon has no exposure to 'desert-elf-kind' |
 | `die` | to cease living | Dsaad | /dsaad/ | Dsaad | Dsaad → no change → Dsaad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
+| `drow-kind` | a drow | — | — | — | gap (experiential): white-dragon has no exposure to 'drow-kind' |
 | `earth` | the ground underfoot | Dzhodkshod | /dʒodkʃod/ | Gjedkshed | Gjedkshed → no change → Dzhodkshod |
 | `east` | the direction of increasing longitude | Dzhadksood | /dʒadksood/ | Djabpseod | Djabpseod → no change → Dzhadksood |
 | `eat` | to consume food | Nood | /nood/ | Need | Need → no change → Nood |
@@ -2344,6 +2412,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): white-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): white-dragon has no exposure to 'heat' |
 | `high` | far above the ground | Kshokngood | /kʃokŋood/ | Pshokngood | Pshokngood → no change → Kshokngood |
+| `high-elf-kind` | a high elf | — | — | — | gap (experiential): white-dragon has no exposure to 'high-elf-kind' |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): white-dragon has no exposure to 'hill' |
 | `hill-dwarf-kind` | a hill dwarf | — | — | — | gap (experiential): white-dragon has no exposure to 'hill-dwarf-kind' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): white-dragon has no exposure to 'hobgoblin-kind' |
@@ -2417,6 +2486,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): white-dragon has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
+| `sea-elf-kind` | a sea elf | — | — | — | gap (experiential): white-dragon has no exposure to 'sea-elf-kind' |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Ngod | /ŋod/ | Ngod | Ngod → no change → Ngod |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): white-dragon has no exposure to 'shrieker-kind' |
@@ -2425,6 +2495,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sleep` | to rest unconscious | Kshoad | /kʃoad/ | Kshoag | Kshoag → no change → Kshoad |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): white-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
+| `snow-elf-kind` | a snow elf | — | — | — | gap (experiential): white-dragon has no exposure to 'snow-elf-kind' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): white-dragon has no exposure to 'snowfield' |
 | `south` | toward the pole of decreasing latitude | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
 | `south-east` | between south and east | Dshodksakdzhadksood | /dʃodksakdʒadksood/ | — | compound: `south` + `east` |
@@ -2469,6 +2540,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Kdok | /kdok/ | Kwok | Kwok → no change → Kdok |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'wind-scour' |
+| `wood-elf-kind` | a wood elf | — | — | — | gap (experiential): white-dragon has no exposure to 'wood-elf-kind' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): white-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): white-dragon has no exposure to 'xorn-kind' |
