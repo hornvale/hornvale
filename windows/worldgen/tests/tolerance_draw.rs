@@ -50,6 +50,7 @@
 //! after `Ledger::commit` quantized it to 8 significant digits. Both reduce it
 //! through the one shared `occupation_draw_key`, and the tests below pin that.
 
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World};
 use hornvale_species::{Dispersion, MindVector};
 use std::collections::BTreeMap;
@@ -81,9 +82,13 @@ fn synthetic_settlement(
     hornvale_history::register_concepts(&mut world.registry)
         .expect("history concepts register cleanly");
     for _ in 0..filler {
-        world.ledger.mint_entity();
+        world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     }
-    let id = world.ledger.mint_entity();
+    let id = world
+        .ledger
+        .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     for (predicate, object) in [
         (hornvale_history::IS_OCCUPATION, Value::Flag(true)),
         (
@@ -470,7 +475,9 @@ fn a_people_with_no_authored_mind_has_no_disposition() {
 #[test]
 fn an_entity_that_is_not_an_occupation_has_no_disposition() {
     let (mut world, _) = synthetic_settlement(0, CellId(7), 100.0, "human");
-    let bare = world.ledger.mint_entity();
+    let bare = world
+        .ledger
+        .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     assert_eq!(settlement_disposition(&world, bare), None);
 }
 

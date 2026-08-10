@@ -11,8 +11,9 @@ use crate::snapshot::{
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::{
-    Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
-    TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
+    Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget,
+    Projection, TemplateFocalizer, Turn, VesselError, absorb_common, mint_at, mint_flagship,
+    most_populous_settlement, observable, reader_set,
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
@@ -208,8 +209,8 @@ verbs:
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen
-  npcs             the derived NPCs sharing this world (label, id)
-  why <who>        recount an NPC's dated history (by label or id)
+  npcs             the derived NPCs sharing this world (label, number)
+  why <who>        recount an NPC's dated history (by label or number)
   needs            read the felt state of anyone sharing this room
   provoke [who]    shift a co-located NPC's disposition, your own mark
   soothe [who]     ease a co-located NPC's disposition, your own mark
@@ -220,12 +221,174 @@ verbs:
   release          let go (quit works too)
 ";
 
+/// The world-scoped half of starting a possession: everything
+/// [`Session::start`] used to derive per session that does not depend on WHO
+/// is possessed. Build it once and start many sessions from it.
+///
+/// Splitting this out is what makes possession and release cheap (The Quire).
+/// The derivation ORDER inside [`WorldContext::build`] is copied verbatim from
+/// the old `Session::start` and is a save-format contract — a reorder changes
+/// which seed draws are taken and is an epoch event, not a refactor.
+///
+/// Nothing here is agent-scoped, and nothing here is mutated after `build`
+/// returns: a `&WorldContext` is shared by every session started from it
+/// ([`Session::start_in`]), so a field that a turn could write would alias
+/// across sessions. The per-session mutable state — the ledger clone, the
+/// registry clone, the derived NPC roster — stays on [`Session`].
+pub struct WorldContext<'w> {
+    /// The world this context was derived from.
+    pub(crate) world: &'w World,
+    /// The world's terrain, sculpted once (`hornvale_worldgen::terrain_of`).
+    ///
+    /// Held as an `Option` — never `None` in practice, because `build`'s `?`
+    /// already succeeded — so that every downstream `(terrain, climate)` match
+    /// in this module reads exactly as it did before the hoist. The `Option`
+    /// is this field's defensive posture, inherited from the `Session::terrain`
+    /// field it replaced, and never a second derivation that could fail.
+    pub(crate) terrain: Option<hornvale_terrain::GeneratedTerrain>,
+    /// The world's climate, fit once from `terrain`
+    /// (`hornvale_worldgen::climate_from`). `Option` for the same reason
+    /// `terrain` is.
+    pub(crate) climate: Option<hornvale_climate::GeneratedClimate>,
+    /// The locale context every observation is taken through, built from the
+    /// `terrain`/`climate` pair above rather than re-sculpting its own.
+    pub(crate) ctx: LocaleContext,
+    /// The assembled world components (the species/biosphere roster). `None`
+    /// when assembly fails, exactly as the old `start` had it.
+    pub(crate) wc: Option<hornvale_worldgen::WorldComponents>,
+    /// The coexistence-stack demography fit, run ONCE over
+    /// `(world, wc, terrain, climate)` and shared by the predator/prey
+    /// pressures and the wild-NPC concentrations. `None` whenever `wc` or the
+    /// fit itself fails.
+    pub(crate) report: Option<hornvale_worldgen::DemographyReport>,
+}
+
+impl<'w> WorldContext<'w> {
+    /// Derive the world-scoped half. Terrain/climate failure is a hard
+    /// failure, exactly as it was in `Session::start`.
+    // Named construction site (decision 0092): `WorldComponents::assemble` is
+    // called here, once per context rather than once per session.
+    #[allow(clippy::disallowed_methods)]
+    pub fn build(world: &'w World) -> Result<WorldContext<'w>, VesselError> {
+        // ONE derivation block (The Weir, Stage 2; hoisted out of
+        // `Session::start` by The Quire): terrain, climate, the locale
+        // context, the species roster and the demography report are each
+        // derived EXACTLY ONCE here, then threaded into everything below —
+        // `LocaleContext::build_from`, the predator/prey pressures, the
+        // wild-NPC concentration fit — instead of a consumer quietly
+        // re-sculpting or re-fitting its own copy. Terrain/climate failure
+        // is a hard failure for `build`, exactly the failure
+        // `LocaleContext::build` used to surface on this identical call
+        // (`build` is still the right entry point for a caller that has not
+        // already sculpted its own pair — see its doc).
+        //
+        // THE ORDER OF THESE FIVE DERIVATIONS IS A SAVE-FORMAT CONTRACT, and
+        // it is worth being exact about what does and does not check it.
+        //
+        // The committed `possess --script` gallery transcripts
+        // (`book/src/gallery/possession-*.md`) are the ONLY guard on the order
+        // itself. Re-derive them with `make rebaseline` and diff.
+        //
+        // `windows/vessel/tests/world_context.rs` does NOT guard it, despite
+        // living next door and looking like it should. Both arms of its
+        // comparison — `Session::start` and `Session::start_in` — route
+        // through THIS function, so a change made inside this block moves both
+        // arms identically and cancels. That is measured, not assumed: The
+        // Quire swapped two of these derivations and all 490 vessel tests
+        // stayed green. What that test does guard is the OTHER direction —
+        // that `start_in` agrees with `start`, and that a reused context does
+        // not drift between sessions.
+        //
+        // So: change the order here and the vessel suite will not stop you.
+        // The transcripts will.
+        let terrain = hornvale_worldgen::terrain_of(world)
+            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
+        let climate = hornvale_worldgen::climate_from(world, &terrain)
+            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
+        let ctx = LocaleContext::build_from(world, &terrain, &climate);
+        // The species roster and the demography report, assembled/fit ONCE
+        // per CONTEXT (The Weir, Stage 1b/2; per session before The Quire):
+        // shared below by `predator`/`prey` and by the wild-NPC derivation
+        // instead of each independently re-running the coexistence-stack fit
+        // over the same `(world, wc, terrain, climate)`. `None` whenever `wc`
+        // or the fit itself fails — the same `Option` posture as
+        // `calendar`/`predator`/`prey` on the session.
+        //
+        // `mint_flagship` used to sit between `ctx` and this fit, so that a
+        // settlement-less or unspecied world failed before paying for the
+        // fit. It cannot stay there: it is agent-scoped, and the whole point
+        // of this type is that it is not. The fast-fail is therefore gone
+        // from the SINGLE-possession path (`Session::start` now pays the fit
+        // before it learns the world has no settlement) and irrelevant to the
+        // reusing path, which pays the fit once for any number of sessions.
+        // The error a caller sees is unchanged: `start` still returns
+        // `VesselError::NoSettlement`/`NoSpecies`.
+        let wc = hornvale_worldgen::WorldComponents::assemble().ok();
+        let report = match wc.as_ref() {
+            Some(wc) => {
+                hornvale_worldgen::demography_report_from(world, wc, &terrain, &climate).ok()
+            }
+            None => None,
+        };
+        // Wrapped in `Some` from here on: both derivations above already
+        // succeeded (the `?`s), so `terrain`/`climate` are `Option` only for
+        // the field's own defensive posture (see its doc), never because a
+        // second, independent derivation could fail where this one didn't.
+        let terrain = Some(terrain);
+        let climate = Some(climate);
+        Ok(WorldContext {
+            world,
+            terrain,
+            climate,
+            ctx,
+            wc,
+            report,
+        })
+    }
+
+    /// The locale context this world is observed through (read-only).
+    pub fn context(&self) -> &LocaleContext {
+        &self.ctx
+    }
+}
+
+/// How a [`Session`] holds its [`WorldContext`]: BORROWED from a caller that
+/// means to start many sessions over one world ([`Session::start_in`]), or
+/// OWNED by a session that derived its own ([`Session::start`]).
+///
+/// A hand-rolled two-variant `Cow` rather than `std::borrow::Cow`, which would
+/// require `WorldContext: Clone` — and cloning the derivation is precisely the
+/// cost this campaign exists to remove. Deref rather than accessor methods so
+/// that `self.wctx.ctx` stays a *place* expression: the borrow checker then
+/// still sees it as disjoint from `self.ledger`, `self.npcs` and the rest,
+/// exactly as the old `self.ctx` field was.
+enum HeldContext<'w> {
+    /// Derived by [`Session::start`] for this one session.
+    Owned(Box<WorldContext<'w>>),
+    /// Shared with every other session started from the same context.
+    Borrowed(&'w WorldContext<'w>),
+}
+
+impl<'w> std::ops::Deref for HeldContext<'w> {
+    type Target = WorldContext<'w>;
+
+    fn deref(&self) -> &WorldContext<'w> {
+        match self {
+            HeldContext::Owned(owned) => owned,
+            HeldContext::Borrowed(shared) => shared,
+        }
+    }
+}
+
 /// A live possession over a frozen world. The possessed agent's own senses
 /// stay pinned to the frozen `world` (byte-identical, never mutated); only
 /// the NPC layer evolves, in a session-owned ledger clone (the-quickening).
 pub struct Session<'w> {
     world: &'w World,
-    ctx: LocaleContext,
+    /// The world-scoped derivations — the locale context, the terrain/climate
+    /// pair, the species roster and the demography fit — either owned by this
+    /// session or shared with its siblings. See [`HeldContext`].
+    wctx: HeldContext<'w>,
     agent: Agent,
     knowledge: Knowledge,
     trail: Vec<RoomAddr>,
@@ -251,20 +414,16 @@ pub struct Session<'w> {
     lens: crate::lens::Lens,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
-    /// The world's terrain, sculpted once at `start` (The Shuttle), so every
-    /// book-reading verb (`write`, `consult`) shares one sculpt instead of
-    /// re-sculpting the globe per call; `None` on a world whose committed
-    /// terrain pins fail to parse. Threaded into the worldgen/book `_from`
-    /// readout family (`reckoning_at_from`, `esoteric_lines_from`,
-    /// `hornvale_book::parse_context_from`) whenever both this and
-    /// [`Session::climate`] are present; the unthreaded (`_of`/bare) form is
-    /// the fallback on a `None`, matching what those calls already did
-    /// before this campaign.
-    terrain: Option<hornvale_terrain::GeneratedTerrain>,
-    /// The world's climate, sculpted once at `start` from [`Session::terrain`]
-    /// (The Shuttle); `None` exactly when `terrain` is `None` or the climate
-    /// fit itself fails. See `terrain`'s doc for what shares it.
-    climate: Option<hornvale_climate::GeneratedClimate>,
+    // The world's terrain and climate — sculpted once (The Shuttle), so every
+    // book-reading verb (`write`, `consult`) shares one sculpt instead of
+    // re-sculpting the globe per call — used to be owned HERE. They moved to
+    // [`WorldContext`] (The Quire) because they are world-scoped, not
+    // session-scoped: `self.wctx.terrain` / `self.wctx.climate` read them, and
+    // their `Option` posture is unchanged. They are threaded into the
+    // worldgen/book `_from` readout family (`reckoning_at_from`,
+    // `esoteric_lines_from`, `hornvale_book::parse_context_from`) whenever
+    // both are present; the unthreaded (`_of`/bare) form is the fallback on a
+    // `None`, matching what those calls already did before this campaign.
     /// The world's calendar, built once at `start`, so the NPC wake cycle reads
     /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
     calendar: Option<hornvale_astronomy::Calendar>,
@@ -423,57 +582,65 @@ struct Sighting {
 }
 
 impl<'w> Session<'w> {
-    /// Begin a possession: build the locale context, mint the flagship
-    /// agent, absorb the first projection, and return the opening text.
+    /// Begin a possession, deriving a fresh [`WorldContext`] for it: build the
+    /// locale context, mint the flagship agent, absorb the first projection,
+    /// and return the opening text.
+    ///
+    /// Kept so every existing caller compiles unchanged; prefer
+    /// [`Session::start_in`] when starting more than one session over the same
+    /// world, which is what this whole split exists for (The Quire).
     /// type-audit: bare-ok(prose: return)
-    // Named construction site (decision 0092): the motivating fix — sculpts/
-    // fits exactly ONCE per session (The Weir, Stage 2), threaded below.
-    #[allow(clippy::disallowed_methods)]
     pub fn start(
         world: &'w World,
         opts: &PossessOpts,
     ) -> Result<(Session<'w>, String), VesselError> {
-        // ONE derivation block (The Weir, Stage 2): terrain, climate, the
-        // locale context, the species roster and the demography report are
-        // each derived EXACTLY ONCE here, then threaded into everything
-        // below — `LocaleContext::build_from`, the predator/prey pressures,
-        // the wild-NPC concentration fit — instead of a consumer quietly
-        // re-sculpting or re-fitting its own copy. Terrain/climate failure
-        // is a hard failure for `start`, exactly the failure
-        // `LocaleContext::build` used to surface on this identical call
-        // (`build` is still the right entry point for a caller that has not
-        // already sculpted its own pair — see its doc).
-        let terrain = hornvale_worldgen::terrain_of(world)
-            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
-        let climate = hornvale_worldgen::climate_from(world, &terrain)
-            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
-        let ctx = LocaleContext::build_from(world, &terrain, &climate);
-        // A cheap failure path (a settlement/species lookup) — resolved
-        // before the expensive coexistence-stack fit below (Task 3 review
-        // carry-over), so a settlement-less or unspecied world fails fast
-        // rather than paying for a fit `start` would then discard.
-        let agent = mint_flagship(world, &ctx)?;
-        // The species roster and the demography report, assembled/fit ONCE
-        // per session (The Weir, Stage 1b/2): shared below by `predator`/
-        // `prey` and by the wild-NPC derivation instead of each
-        // independently re-running the coexistence-stack fit over the same
-        // `(world, wc, terrain, climate)`. `None` whenever `wc` or the fit
-        // itself fails — the same `Option` posture as `calendar`/
-        // `predator`/`prey` below.
-        let wc = hornvale_worldgen::WorldComponents::assemble().ok();
-        let report = match wc.as_ref() {
-            Some(wc) => {
-                hornvale_worldgen::demography_report_from(world, wc, &terrain, &climate).ok()
+        let ctx = WorldContext::build(world)?;
+        Self::start_held(HeldContext::Owned(Box::new(ctx)), opts)
+    }
+
+    /// Begin a possession from an already-derived [`WorldContext`], paying
+    /// none of its cost. Every session started from one `ctx` is
+    /// byte-identical to one started by [`Session::start`] over the same
+    /// world, and independently drivable —
+    /// `windows/vessel/tests/world_context.rs` holds both halves.
+    /// type-audit: bare-ok(prose: return)
+    pub fn start_in(
+        ctx: &'w WorldContext<'w>,
+        opts: &PossessOpts,
+    ) -> Result<(Session<'w>, String), VesselError> {
+        Self::start_held(HeldContext::Borrowed(ctx), opts)
+    }
+
+    /// The agent-scoped half of starting a possession, over a context this
+    /// session either owns or shares. ONE body, so the two public entry points
+    /// above cannot drift — which is the only reason `start`'s output can be
+    /// claimed identical to `start_in`'s.
+    fn start_held(
+        held: HeldContext<'w>,
+        opts: &PossessOpts,
+    ) -> Result<(Session<'w>, String), VesselError> {
+        let world = held.world;
+        let ctx = &held.ctx;
+        let terrain = &held.terrain;
+        let wc = &held.wc;
+        let report = &held.report;
+        // The commanded agent: a cheap failure path (a settlement/species
+        // lookup). It used to sit between `ctx` and the coexistence-stack
+        // fit, so that a settlement-less or unspecied world failed before
+        // paying for the fit; the fit is world-scoped and now lives in
+        // `WorldContext::build`, so this resolves after it. See that
+        // function's own note. `opts.target` picks WHICH settlement's agent
+        // is minted (The Quire, Task 2) — BOTH arms mint, via `mint_at`;
+        // neither adopts an agent `derive_npcs` already produced. `Flagship`
+        // stays the exact call that predates the target, so that path is
+        // byte-identical.
+        let agent = match opts.target {
+            PossessTarget::Flagship => mint_flagship(world, ctx)?,
+            PossessTarget::MostPopulousSettlement => {
+                let village = most_populous_settlement(world).ok_or(VesselError::NoSettlement)?;
+                mint_at(world, ctx, village)?
             }
-            None => None,
         };
-        // Wrapped in `Some` from here on: both derivations above already
-        // succeeded (the `?`s), so `Session::terrain`/`Session::climate`
-        // are `Option` only for the field's own defensive posture (see its
-        // doc), never because a second, independent derivation could fail
-        // where this one didn't.
-        let terrain = Some(terrain);
-        let climate = Some(climate);
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
         // Idempotent (same def every session): never conflicts, since
@@ -520,7 +687,7 @@ impl<'w> Session<'w> {
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
-        let mut npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
+        let mut npcs = derive_npcs(world, ctx, &mut ledger, NPC_COUNT, agent.village.id);
         // The Wilding: append a few wild beast agents (a herd, a lair) so the
         // world's fauna walks alongside its peoples — and a herbivore beast
         // finally fears predator ground (The Quarry, live). Off only for the
@@ -534,7 +701,7 @@ impl<'w> Session<'w> {
                 }
                 _ => Vec::new(),
             };
-            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, concentrations));
+            npcs.extend(derive_wild_npcs(world, ctx, &mut ledger, concentrations));
         }
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
@@ -564,10 +731,10 @@ impl<'w> Session<'w> {
         // hearth — the real answer Task 5's arming had nothing to read before
         // this. Built once here, the same one-shot-at-start discipline as
         // `calendar`/`predator`/`prey`.
-        let built = built_rooms(world, &ctx);
+        let built = built_rooms(world, ctx);
         let mut session = Session {
             world,
-            ctx,
+            wctx: held,
             agent,
             knowledge: Knowledge::default(),
             trail: Vec::new(),
@@ -579,8 +746,6 @@ impl<'w> Session<'w> {
             eyes: opts.eyes.clone(),
             lens: opts.lens,
             npcs,
-            terrain,
-            climate,
             calendar,
             predator,
             prey,
@@ -612,10 +777,10 @@ impl<'w> Session<'w> {
 
     /// The locale context this session walks (for the battery's checks).
     pub fn context(&self) -> &LocaleContext {
-        &self.ctx
+        &self.wctx.ctx
     }
 
-    /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
+    /// This turn as `vessel/session/v2` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
     /// CLI never does, so its measured per-turn cost is unchanged. For a
@@ -633,7 +798,7 @@ impl<'w> Session<'w> {
     /// every channel that turn (self, sensed, known, social, structured
     /// narration), not just the map.
     pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
-        let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        let vantage = observable(self.world, &self.wctx.ctx, &self.agent, self.day)?;
         // The noun catalog comes from the focalizer; the PROSE comes from
         // `last_text` (this turn's real response), not from here.
         let focalized = self.focalizer.render(&vantage);
@@ -642,7 +807,7 @@ impl<'w> Session<'w> {
         // (Finding 1's cache field is a shared borrow, not a mutation) but
         // cannot prefill it fresh — `wait`'s tick is where that happens.
         let terrain = LocaleTerrain::with_fields(
-            &self.ctx,
+            &self.wctx.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
@@ -895,7 +1060,8 @@ impl<'w> Session<'w> {
     /// (their grievance fold at or past `HOSTILITY_THRESHOLD`)? A pure read
     /// — never commits anything. `who` resolves exactly as `provoke`/
     /// `soothe` do (`colocated_npc`): empty selects the sole co-located
-    /// NPC, else a numeric id or a case-insensitive label substring; an
+    /// NPC, else the `npcs` listing's 1-based handle or a case-insensitive
+    /// label substring; an
     /// unresolved (not-here) `who` reads as not-hostile rather than
     /// erroring. This mechanic's whole consequence is Task 3's; this task
     /// stops at the gate.
@@ -932,13 +1098,14 @@ impl<'w> Session<'w> {
     /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
     /// ALL derived NPCs, not only co-located ones — grievance is a ledger
     /// fold over that NPC's own facts, not a proximity check — matched by
-    /// numeric id or case-insensitive label substring; `None` if no derived
-    /// NPC matches `who`.
+    /// the `npcs` listing's 1-based handle or case-insensitive label
+    /// substring; `None` if no derived NPC matches `who`.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
-        who.parse::<u64>()
+        who.parse::<usize>()
             .ok()
-            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 self.npcs
@@ -988,7 +1155,7 @@ impl<'w> Session<'w> {
 
     /// The current room, focalized (for the battery's checks).
     pub fn focalized(&self) -> Result<Focalized, VesselError> {
-        let v = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        let v = observable(self.world, &self.wctx.ctx, &self.agent, self.day)?;
         Ok(self.focalizer.render(&v))
     }
 
@@ -997,7 +1164,7 @@ impl<'w> Session<'w> {
     /// base-edge neighbors). For the walker battery's deterministic pick.
     /// type-audit: bare-ok(index: return)
     pub fn ways(&self) -> Vec<(Compass, u64)> {
-        let v = observable(self.world, &self.ctx, &self.agent, self.day)
+        let v = observable(self.world, &self.wctx.ctx, &self.agent, self.day)
             .expect("the current position is always observable");
         v.locale
             .exits
@@ -1047,7 +1214,7 @@ impl<'w> Session<'w> {
         );
         crate::purview_scene(
             self.world,
-            &self.ctx,
+            &self.wctx.ctx,
             &self.agent.position,
             &self.knowledge,
             &self.npcs,
@@ -1215,14 +1382,16 @@ impl<'w> Session<'w> {
     /// first; empty on land.
     fn column_here(&self) -> Vec<hornvale_climate::Stratum> {
         let Ok(v) =
-            crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, None)
+            crate::vantage::observable_at(self.world, &self.wctx.ctx, &self.agent, self.day, None)
         else {
             return Vec::new();
         };
         let Some(cw) = v.locale.corners.iter().max_by_key(|c| c.weight) else {
             return Vec::new();
         };
-        self.ctx.water_column_at(hornvale_kernel::CellId(cw.cell))
+        self.wctx
+            .ctx
+            .water_column_at(hornvale_kernel::CellId(cw.cell))
     }
 
     /// The cave at the cell the possession stands on, if the terrain places
@@ -1236,9 +1405,10 @@ impl<'w> Session<'w> {
     /// addressing a chamber (`ChamberAddr`) needs the cell, where a water
     /// stratum needs no address at all, so the caller needs both.
     fn chamber_column_here(&self) -> Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)> {
-        let terrain = self.terrain.as_ref()?;
-        let v = crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, None)
-            .ok()?;
+        let terrain = self.wctx.terrain.as_ref()?;
+        let v =
+            crate::vantage::observable_at(self.world, &self.wctx.ctx, &self.agent, self.day, None)
+                .ok()?;
         let cw = v.locale.corners.iter().max_by_key(|c| c.weight)?;
         let cell = hornvale_kernel::CellId(cw.cell);
         terrain.cave_at(cell).map(|cave| (cell, cave))
@@ -1428,7 +1598,7 @@ impl<'w> Session<'w> {
 
     /// Absorb the current room's projection into knowledge.
     fn absorb_here(&mut self) -> Result<(), VesselError> {
-        let v = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        let v = observable(self.world, &self.wctx.ctx, &self.agent, self.day)?;
         self.knowledge
             .absorb(self.projection.project(&v, &self.agent.perception));
         Ok(())
@@ -1446,8 +1616,13 @@ impl<'w> Session<'w> {
             None if !self.column_here().is_empty() => Some(hornvale_climate::Stratum::Surface),
             None => None,
         };
-        let v =
-            crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, vantage)?;
+        let v = crate::vantage::observable_at(
+            self.world,
+            &self.wctx.ctx,
+            &self.agent,
+            self.day,
+            vantage,
+        )?;
         let f = self.focalizer.render(&v);
         let ways: Vec<String> = v
             .locale
@@ -1480,7 +1655,7 @@ impl<'w> Session<'w> {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        let v = match observable(self.world, &self.ctx, &self.agent, self.day) {
+        let v = match observable(self.world, &self.wctx.ctx, &self.agent, self.day) {
             Ok(v) => v,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
@@ -1784,7 +1959,7 @@ impl<'w> Session<'w> {
     /// session state rather than as a module path.
     /// type-audit: bare-ok(count: return)
     fn walk_depth(&self) -> u32 {
-        crate::agent::walk_depth(&self.ctx)
+        crate::agent::walk_depth(&self.wctx.ctx)
     }
 
     /// The terrain provider, built exactly as every other reader in this module
@@ -1793,7 +1968,7 @@ impl<'w> Session<'w> {
     /// built anywhere.
     fn terrain_here(&self) -> LocaleTerrain<'_> {
         LocaleTerrain::with_fields(
-            &self.ctx,
+            &self.wctx.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
@@ -1809,8 +1984,8 @@ impl<'w> Session<'w> {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
             self.world,
-            self.ctx.climate().geosphere(),
-            self.ctx.nearest_index(),
+            self.wctx.ctx.climate().geosphere(),
+            self.wctx.ctx.nearest_index(),
             &self.agent.position,
             &terrain,
             self.walk_depth(),
@@ -2015,7 +2190,7 @@ impl<'w> Session<'w> {
     /// never re-derived: a caption that says granite over a picture drawn in
     /// basalt grey is the failure `fabric.rs`'s module doc exists to prevent.
     ///
-    /// Read through `self.ctx` rather than `self.terrain`/`self.climate` for the
+    /// Read through `self.wctx.ctx` rather than `self.wctx.terrain`/`self.wctx.climate` for the
     /// same reason — the locale context is what described this room, so the
     /// fabric and the prose read one world.
     fn fabric_here(&self) -> Option<crate::fabric::FabricContext> {
@@ -2027,12 +2202,12 @@ impl<'w> Session<'w> {
         let locale = crate::band::truncate_to_walk(&self.agent.position, self.walk_depth());
         let cell = crate::brief::containing_cell(
             &locale,
-            self.ctx.climate().geosphere(),
-            self.ctx.nearest_index(),
+            self.wctx.ctx.climate().geosphere(),
+            self.wctx.ctx.nearest_index(),
         )?;
         Some(crate::fabric::FabricContext::at(
-            self.ctx.terrain(),
-            self.ctx.climate(),
+            self.wctx.ctx.terrain(),
+            self.wctx.ctx.climate(),
             cell,
         ))
     }
@@ -2525,8 +2700,8 @@ impl<'w> Session<'w> {
         // correct answer, just an unmemoized one (`corner_weights_lookup`'s
         // fall-through), which is the whole point of the miss path.
         {
-            let geo = self.ctx.climate().geosphere();
-            let index = self.ctx.nearest_index();
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
             for pos in &before {
                 pos.corner_weights_memo(geo, index, &mut self.mesh_memo);
                 for n in pos.neighbors_memo(&mut self.mesh_memo) {
@@ -2544,7 +2719,7 @@ impl<'w> Session<'w> {
         // next to the grid scans it is standing in for.
         let mesh_snapshot = self.mesh_memo.clone();
         let terrain = LocaleTerrain::with_fields(
-            &self.ctx,
+            &self.wctx.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
@@ -2766,7 +2941,7 @@ impl<'w> Session<'w> {
             _ => return Turn::Out("Say 'map' or 'map out [N]'.".to_string()),
         };
         let depth = self.agent.position.depth();
-        let max_zoom = depth.saturating_sub(self.ctx.globe_level());
+        let max_zoom = depth.saturating_sub(self.wctx.ctx.globe_level());
         if zoom > max_zoom {
             return Turn::Out(
                 "There is no coarser rung to show; the chart already draws at the coarsest \
@@ -2787,7 +2962,7 @@ impl<'w> Session<'w> {
         // this arithmetic is exactly how the footer and the drawn cell end
         // up disagreeing about which room is centred.
         let centre = crate::chart_centre(&self.agent.position, zoom);
-        let ways: Vec<String> = match self.ctx.describe(&centre, self.day) {
+        let ways: Vec<String> = match self.wctx.ctx.describe(&centre, self.day) {
             Ok(locale) => locale
                 .exits
                 .iter()
@@ -2969,13 +3144,17 @@ impl<'w> Session<'w> {
         )
     }
 
-    /// List every derived NPC this session knows about, with the entity id
-    /// `why` accepts (mirrors the repl's `beliefs` → `why <id>` pattern: an
-    /// id-listing verb feeding the recount verb).
+    /// List every derived NPC this session knows about, with a short,
+    /// typeable handle `why` (and `provoke`/`soothe`/`npc_grievance`) accept:
+    /// the NPC's 1-based position in `self.npcs`, not its `EntityId`. The
+    /// entity id is a wide, lineage-derived value (The Signet) that a player
+    /// cannot reasonably type back; the handle is a display/input affordance
+    /// only, scoped to this listing within this session — it is never stored
+    /// and never crosses into a committed fact.
     fn list_npcs(&self) -> String {
         let mut lines = vec![format!("{} NPC(s) derived this session:", self.npcs.len())];
-        for npc in &self.npcs {
-            lines.push(format!("  [{}] {}", npc.entity.0, npc.label));
+        for (i, npc) in self.npcs.iter().enumerate() {
+            lines.push(format!("  [{}] {}", i + 1, npc.label));
         }
         lines.join("\n")
     }
@@ -2984,19 +3163,23 @@ impl<'w> Session<'w> {
     /// T4): the world remembers, so `why` over an NPC that has moved names
     /// each committed `agent-at` with the day it was asserted (`recount` in
     /// `windows/historiography` renders the day suffix). `who` is matched
-    /// first as a numeric entity id, else as a case-insensitive substring of
-    /// an NPC's label — this mirrors the CLI repl's `why <id>` (see
-    /// `cli/src/repl.rs`) over the one kind of subject a possess session
-    /// actually has on hand without a prior id-listing step: a name.
+    /// first as the `npcs` listing's 1-based handle, else as a
+    /// case-insensitive substring of an NPC's label — this mirrors the CLI
+    /// repl's `why <id>` (see `cli/src/repl.rs`) over the one kind of subject
+    /// a possess session actually has on hand without a prior listing step:
+    /// a name. The handle is deliberately NOT the NPC's `EntityId` (The
+    /// Signet) — it is a short-lived, session-local position a player can
+    /// type back, resolved fresh from `self.npcs` on every call.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
-            return "Why what? Name an NPC (label or id — see 'npcs').".to_string();
+            return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
         }
         let target = who
-            .parse::<u64>()
+            .parse::<usize>()
             .ok()
-            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 self.npcs
@@ -3085,9 +3268,14 @@ impl<'w> Session<'w> {
 
     /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
     /// argument selects the first such NPC (the common case — a lone co-located
-    /// NPC needs no name), otherwise `who` is matched as a numeric entity id or
-    /// a case-insensitive substring of an NPC's label, mirroring `why`'s
-    /// resolution but restricted to NPCs actually here.
+    /// NPC needs no name), otherwise `who` is matched as the `npcs` listing's
+    /// 1-based handle or a case-insensitive substring of an NPC's label,
+    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// The handle is resolved against `self.npcs` (so it means the same
+    /// number `npcs` printed) and then re-checked against `here` — resolving
+    /// it directly against `here`'s own positions would let a handle's
+    /// meaning shift with who happens to be sensed, and silently answer for
+    /// an NPC the player typed a stale number for.
     ///
     /// **The fourth reader of [`Self::sensed_npcs`]** (The Sighting, fix round
     /// 3), and the leak it closes is the same one a third time. `provoke`/
@@ -3113,9 +3301,11 @@ impl<'w> Session<'w> {
         if who.is_empty() {
             return here.into_iter().next();
         }
-        who.parse::<u64>()
+        who.parse::<usize>()
             .ok()
-            .and_then(|id| here.iter().find(|n| n.entity.0.get() == id).copied())
+            .filter(|n| *n >= 1)
+            .and_then(|n| self.npcs.get(n - 1))
+            .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
             .or_else(|| {
                 let needle = who.to_lowercase();
                 here.iter()
@@ -3196,7 +3386,7 @@ impl<'w> Session<'w> {
         // `&self`-only: shares whatever `self.mesh_memo` already holds
         // (free — no mutation), same posture as `snapshot`.
         let terrain = LocaleTerrain::with_fields(
-            &self.ctx,
+            &self.wctx.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
@@ -3242,14 +3432,14 @@ impl<'w> Session<'w> {
     /// NPC addressing yet (a future `write <npc> <sentence>` is a UX
     /// decision this spec doesn't commit to, G3 flag 2). Threaded (The
     /// Shuttle): calls `hornvale_book::parse_context_from` with
-    /// `self.terrain`/`self.climate` when both are `Some`, so a session's
+    /// `self.wctx.terrain`/`self.wctx.climate` when both are `Some`, so a session's
     /// repeated `write` calls share `start`'s one sculpt instead of
     /// re-sculpting the globe every turn, the same posture as `consult`.
     fn write(&mut self, line: &str) -> String {
         if line.is_empty() {
             return "Write what? Speak a line of Common.".to_string();
         }
-        let ctx = match (self.terrain.as_ref(), self.climate.as_ref()) {
+        let ctx = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::parse_context_from(self.world, t, c),
             _ => hornvale_book::parse_context(self.world),
         };
@@ -3268,7 +3458,7 @@ impl<'w> Session<'w> {
     /// nothing has unlocked yet. Reads only: the session's owned `ledger`
     /// and `knowledge` are both untouched (the purity law, spec §4.3);
     /// this method takes `&self`, not `&mut self`. Threaded (The Shuttle):
-    /// calls the `_from` twin of each with `self.terrain`/`self.climate`
+    /// calls the `_from` twin of each with `self.wctx.terrain`/`self.wctx.climate`
     /// when both are `Some`, so a session's repeated `consult`/`write`
     /// calls share one sculpt instead of re-sculpting the globe every turn;
     /// falls back to the re-sculpting bare form on the `None` a failed
@@ -3278,14 +3468,14 @@ impl<'w> Session<'w> {
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
         let at = hornvale_astronomy::StdDays::new(self.day.day)
             .expect("a session's day is always finite and non-negative");
-        let epoch = match (self.terrain.as_ref(), self.climate.as_ref()) {
+        let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
             _ => hornvale_book::reckoning_at(self.world, at),
         };
         lines.extend(epoch.lines);
         lines.extend(epoch.margin);
         let reader = reader_set(&self.knowledge);
-        let initiated = match (self.terrain.as_ref(), self.climate.as_ref()) {
+        let initiated = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::esoteric_lines_from(self.world, &reader, t, c),
             _ => hornvale_book::esoteric_lines(self.world, &reader),
         };
@@ -4642,7 +4832,11 @@ mod tests {
     fn delve_has_three_distinguishable_outcomes() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
 
         // Outcome 1: no cave at all. The flagship's own starting cell — no
         // walk needed, mirroring `there_is_nothing_to_dive_into_on_dry_land`.
@@ -4727,7 +4921,11 @@ mod tests {
     fn lateral_movement_is_refused_underground() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
         let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
         session.delve_at(cell, cave);
         assert!(
@@ -4770,7 +4968,11 @@ mod tests {
     fn the_underground_band_folds_into_walk_as_map_does() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
         let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
         session.delve_at(cell, cave);
         assert!(
@@ -4824,7 +5026,11 @@ mod tests {
     fn underground_examine_answers_for_the_rock_it_names() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
         let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
         let shown = match session.delve_at(cell, cave) {
             Turn::Out(t) => t,

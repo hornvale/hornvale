@@ -15,6 +15,7 @@
 //! seed is checked directly for liveness.
 #![allow(clippy::disallowed_methods)]
 
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{EntityId, Fact, Value};
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
@@ -59,7 +60,9 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
     hornvale_terrain::register_concepts(&mut w.registry).expect("terrain predicates register");
 
     let provenance = || "synthetic negative arm (decision 0093)".to_string();
-    let settlement = w.ledger.mint_entity();
+    let settlement = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
     w.ledger
         .commit(
             Fact {
@@ -104,7 +107,9 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
         )
         .expect("commit peopled-by");
 
-    let belief = w.ledger.mint_entity();
+    let belief = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
     w.ledger
         .commit(
             Fact {

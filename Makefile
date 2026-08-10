@@ -18,11 +18,12 @@
 #   make gate-remote  # ABANDONED (decision 0063): the AWS path is unused; kept only as history
 #   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
 #   make world-check  # the world catalog's local gate: fmt/clippy + byte-identity smoke + size gate
+#   make game-check  # the game client's local gate: fmt/clippy/test on both crates + the containment guard
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -31,7 +32,7 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit type-audit-report ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
 
-gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
@@ -188,6 +189,16 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 		exit 1; \
 	fi
 
+# The Cairn (tools/board): a git-native message board for parallel agent
+# sessions, outside the cargo workspace like type-audit and the digest above
+# (so `make gate` never builds it — its own tests run under
+# `cargo test --manifest-path tools/board/Cargo.toml`).
+board: ## The Cairn: read the board (full, unfiltered)
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- read
+
+board-digest: ## The Cairn: the human digest over the board's history (default 14 days)
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- digest $(DAYS)
+
 test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
 	cargo nextest run --workspace
 	cargo test --workspace --doc
@@ -202,6 +213,17 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
+	# The Cairn's binary, without which THREE of its four read seams are
+	# silently inert in a fresh worktree: `scripts/board-render.sh` (the
+	# SessionStart hook), `doctor`, and `preflight` all require a prebuilt
+	# binary and all deliberately refuse to compile one. `tools/board/target/`
+	# is gitignored and per-worktree, so nothing else in the repo ever
+	# produces it — a new campaign therefore started with the board dead and
+	# no signal anywhere, which is this tool's own failure mode aimed at
+	# itself. Release, so the hook prefers it and the per-post cost is lower.
+	# `-` prefixed: prewarm is a convenience, and a board that will not build
+	# must not fail the target that warms the workspace.
+	-cargo build --release --manifest-path tools/board/Cargo.toml
 
 rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
@@ -355,3 +377,12 @@ world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity
 	  gz=$$(gzip -9 -c clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm | wc -c); \
 	  echo "world wasm size: $$gz bytes gzipped ($$raw raw)"; \
 	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }
+
+game-check: ## The game client's local gate: fmt/clippy/test on both crates
+	cargo fmt --check --manifest-path clients/game/core/Cargo.toml
+	cargo fmt --check --manifest-path clients/game/bin/Cargo.toml
+	cargo clippy --manifest-path clients/game/core/Cargo.toml --all-targets -- -D warnings
+	cargo clippy --manifest-path clients/game/bin/Cargo.toml --all-targets -- -D warnings
+	cargo test --manifest-path clients/game/core/Cargo.toml
+	cargo test --manifest-path clients/game/bin/Cargo.toml
+	@bash scripts/game-no-vessel-dep.sh

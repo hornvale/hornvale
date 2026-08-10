@@ -118,27 +118,6 @@ The day returns, as all things return.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Kabja teach it
-
-Xoaboa Paab Paokaa. ("Xoaboa is the earth — as it is taught.")
-
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Kabja are gnolls — ourselves.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-Xoaboa is the earth with two moons.
-The moons cross because Ja walks the sky, slowly.
-The day returns, as all things return.
-
-— though the folk say The moons cross because they are Ja's kin.
-
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
-
 #### As the Woove tell it
 
 The Booxo are bugbears — neighbors.
@@ -371,9 +350,6 @@ The next darkening, it teaches, comes on day 36531.
 The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Tngobpngap, the sky has darkened, now and again.
 Among the Kabja, the sky has darkened, now and again.
-The priesthood of the Kabja numbers the darkenings: 6472.
-The next darkening, it teaches, comes on day 36531.
-The Kabja's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Woove, the sky has darkened, now and again.
 The priesthood of the Woove numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
@@ -400,7 +376,6 @@ The next darkening, it teaches, comes on day 36531.
 The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Kabja's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
@@ -521,28 +496,7 @@ The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
 Boaboo is the earth with one moon.
 The moon crosses because it is Jokjo's kin.
-The day returns because Laklajokjo walks the sky, briskly.
-
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-##### As the priesthood of the Loshjo teach it
-
-Boaboo Shjo Lapja La. ("Boaboo is the earth — as it is taught.")
-
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Loshjo are gnolls — ourselves.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-Boaboo is the earth with one moon.
-The moon crosses because it answers Jokjo.
-The day returns, as all things return.
-
-— though the folk say The moon crosses because it is Jokjo's kin.
+The day returns because Laklajokjo rows the sky, briskly.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -776,9 +730,6 @@ The next darkening, it teaches, comes on day 36337.
 The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wazwo, the sky has darkened, now and again.
 Among the Loshjo, the sky has darkened, now and again.
-The priesthood of the Loshjo numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Loshjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Mepmee, the sky has darkened, now and again.
 The priesthood of the Mepmee numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
@@ -805,7 +756,6 @@ The next darkening, it teaches, comes on day 36337.
 The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Loshjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
@@ -927,29 +877,8 @@ The Zhooqsha are hobgoblins — neighbors.
 The Shoammoem are humans — neighbors.
 The Jaojjao are kobolds — neighbors.
 Zao is the earth with one moon.
-The moon crosses because Najpjaj strides the sky, slowly.
+The moon crosses because Najpjaj steers the sky, slowly.
 The day returns because the sky must be crossed.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
-##### As the priesthood of the Pjojpjoj teach it
-
-Zao Pjaajpjajpjaj Nooj. ("Zao is the earth — as it is taught.")
-
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Pjojpjoj are gnolls — ourselves.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-Zao is the earth with one moon.
-The moon crosses because it answers Najpjaj.
-The day returns because Najpjaj walks the sky, briskly.
-
-— though the folk say The moon crosses because Najpjaj strides the sky, slowly.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -1077,26 +1006,6 @@ The day returns because the sky must be crossed.
 
 *In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Zhooqsha teach it
-
-Zao Qjoo Shoezae. ("Zao is the earth — as it is taught.")
-
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — ourselves.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-Zao is the earth.
-The moon is counted and known to the priesthood.
-The moon crosses because Zhjoozhjo strides the sky, slowly.
-The day returns to keep the balance.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
 #### As the Shoammoem tell it
 
 Zao is the earth.
@@ -1164,9 +1073,6 @@ The next darkening, it teaches, comes on day 36125.
 The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Baovoo, the sky has darkened, now and again.
 Among the Pjojpjoj, the sky has darkened, now and again.
-The priesthood of the Pjojpjoj numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Pjojpjoj's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Zhooqsa, the sky has darkened, now and again.
 The priesthood of the Zhooqsa numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
@@ -1180,9 +1086,6 @@ The priesthood of the Zozha numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
 The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Zhooqsha, the sky has darkened, now and again.
-The priesthood of the Zhooqsha numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Shoammoem, the sky has darkened, now and again.
 The priesthood of the Shoammoem numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
@@ -1190,10 +1093,8 @@ The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any w
 Among the Jaojjao, the sky has darkened, now and again.
 
 *In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Pjojpjoj's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the darkenings of the first hundred years number 53.*

@@ -231,6 +231,16 @@ fn gaps_have_reasons() {
     // astronomy's `Void::Unnamed` text for the objectively unnameable
     // spectral classes — every reason `build_lexicon` can produce matches at
     // least one.
+    //
+    // **This list is a hand-maintained allowlist over strings production
+    // composes elsewhere, and nothing ties the two together.** The Watershed's
+    // staple gap (`"{species} lives by {subsistence} here and raises no
+    // staple"`, `windows/worldgen/src/lib.rs`) shipped without a marker and
+    // stayed green for as long as seed 42 happened to settle no speaker on a
+    // cell that both grows a crop and is worked by herding/fishing/foraging.
+    // The Range moved gnoll onto exactly such a cell and this test went red on
+    // a production string that had always been legitimate. Adding a gap reason
+    // means adding its marker here; the test cannot tell you that itself.
     let markers = [
         "night-vision",
         "no settlement",
@@ -238,6 +248,7 @@ fn gaps_have_reasons() {
         "no compound recipe",
         "needs",
         "encountered the main sequence",
+        "raises no staple",
     ];
 
     // Language/lexicon coverage is a speaker-only concern. Since The Eremite the

@@ -42,14 +42,20 @@ const OCCUPIED = Deno.readTextFileSync(
 Deno.test("a mark renders its glyph at its cell", () => {
   const snap = parseSnapshot(OCCUPIED)!;
   const grid = planCells(snap)!;
-  // The fixture's one mark: noun "bugbear of Bobakoba" at (5, 3),
+  // The fixture's one mark: noun "bugbear of Boxa" at (4, 11),
   // lattice-local == pane-local since this plan's extent origin is (0, 0).
-  assertEquals(grid[3][5].glyph, "b");
+  // Re-pinned when The Lantern's absorption regenerated this fixture
+  // (windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json) —
+  // a generated artifact has no merge (see clients/CLAUDE.md), so its
+  // search-for-a-qualifying-world result moved to a different room, mark
+  // position and noun. The glyph is still `b`, coincidentally: this
+  // fixture's search only requires SOME agent mark, not this one.
+  assertEquals(grid[11][4].glyph, "b");
 });
 
 Deno.test("marks draw over the floor but never over `@`", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -76,7 +82,7 @@ Deno.test("a mark's cell withholds colour even when the floor beneath it supplie
   // actually ran, which is not a discriminating assertion (fix-round 1
   // verified this by mutation: see the task report).
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -99,7 +105,7 @@ Deno.test("a mark's cell withholds colour even when the floor beneath it supplie
 
 Deno.test("a mark outside the extent is ignored, not thrown on and not clamped", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -123,7 +129,7 @@ Deno.test("an absent `marks` key renders the plan unchanged", () => {
   // no such key), and the interface says so — this payload has no
   // `marks` field at all, not even an empty array.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -140,7 +146,7 @@ Deno.test("an absent `marks` key renders the plan unchanged", () => {
 
 Deno.test("a malformed mark entry is refused, not thrown on — and its siblings still draw", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -179,7 +185,7 @@ Deno.test("an extent missing x/y is refused, not thrown on, once a mark is prese
   // skips and the draw proceeds into `rows[NaN]` (`undefined`), throwing —
   // the exact unguarded-dereference shape The Panes shipped twice.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {
@@ -202,7 +208,7 @@ Deno.test("two marks on the same cell: last in the array wins, deliberately", ()
   // later in the array, which is a deliberate, cheap choice rather than an
   // attempt to pick "the more salient" one by re-deriving Rust's own sort.
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     spatial: {
       band: "chamber",
       plan: {

@@ -1,0 +1,11 @@
+# Standalone workspace: the root Cargo.toml `exclude`s this path, like
+# clients/vessel/wasm and tools/type-audit. Nothing here is bound by the
+# workspace dependency allowlist (decision 0055).
+#
+# Task 4 scoped this to `members = ["core"]` because `bin/` did not exist yet
+# (a workspace member path that does not exist is a hard `cargo metadata`/
+# `build`/`test` error, not a lazily-resolved glob). Task 10 creates `bin/`,
+# so `"bin"` is restored here.
+[workspace]
+members = ["core", "bin"]
+resolver = "3"

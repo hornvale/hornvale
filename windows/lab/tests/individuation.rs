@@ -3,6 +3,7 @@
 //! overrides surviving the change — over a from_stores test roster, never
 //! canonical (spec §4.4: genesis/placement must not see these kinds).
 
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_lab::roster::awakened_owlbear_components;
 use hornvale_species::{SPECIES_MASS_KG, instance_biosphere};
@@ -34,8 +35,16 @@ fn the_roster_passes_integrity_and_stays_out_of_the_canon() {
 fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
     let wc = awakened_owlbear_components();
     let mut w = world();
-    let e =
-        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "owlbear", Some(0.0), "lab").unwrap();
+    let minted = w.ledger.entity_count() as u16;
+    let e = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "owlbear",
+        Some(0.0),
+        "lab",
+    )
+    .unwrap();
     // An unusually large individual: a per-instance override.
     w.ledger
         .commit(
@@ -80,8 +89,10 @@ fn mighty_things_in_the_cold_north() {
     w.registry
         .register_predicate("located-in", false, "spatial containment")
         .unwrap();
-    let north = w.ledger.mint_entity();
-    let south = w.ledger.mint_entity();
+    let minted = w.ledger.entity_count() as u16;
+    let north = w.ledger.mint_entity(test_lineage(minted));
+    let minted = w.ledger.entity_count() as u16;
+    let south = w.ledger.mint_entity(test_lineage(minted));
     let place = |w: &mut World, e, region| {
         w.ledger
             .commit(
@@ -98,14 +109,36 @@ fn mighty_things_in_the_cold_north() {
             .unwrap();
     };
     // Three instances: a mighty northerner, a mundane northerner, a mighty southerner.
-    let mighty_north =
-        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "awakened-owlbear", None, "lab")
-            .unwrap();
-    let mundane_north =
-        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "owlbear", None, "lab").unwrap();
-    let mighty_south =
-        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "awakened-owlbear", None, "lab")
-            .unwrap();
+    let minted = w.ledger.entity_count() as u16;
+    let mighty_north = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "awakened-owlbear",
+        None,
+        "lab",
+    )
+    .unwrap();
+    let minted = w.ledger.entity_count() as u16;
+    let mundane_north = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "owlbear",
+        None,
+        "lab",
+    )
+    .unwrap();
+    let minted = w.ledger.entity_count() as u16;
+    let mighty_south = hornvale_worldgen::mint_instance_of_kind(
+        &mut w,
+        &wc,
+        test_lineage(minted),
+        "awakened-owlbear",
+        None,
+        "lab",
+    )
+    .unwrap();
     place(&mut w, mighty_north, north);
     place(&mut w, mundane_north, north);
     place(&mut w, mighty_south, south);

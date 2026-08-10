@@ -1,0 +1,14 @@
+[package]
+name = "hornvale-game-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Hornvale's game client: vessel/session/v2 to a character grid. No hornvale dependency, by design."
+
+# DELIBERATELY EMPTY OF HORNVALE CRATES. This crate parses the emitted
+# schema and nothing else; `Session` is not in its dependency graph, so no
+# render path can reach world truth the character does not know. See The
+# Quire spec section 6.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

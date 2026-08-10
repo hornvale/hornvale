@@ -223,7 +223,7 @@ the whole principle. Deriving the roster from the findings fixed the stale
 literal and introduced its mirror: a detector that fires nothing has no finding
 to derive a name from, so it lost its row altogether. Absence in that table then
 meant either *no such detector* or *this detector ran and every claim it checks
-held* — the two meanings decision 0114, this campaign's own, forbids sharing a
+held* — the two meanings decision 0119, this campaign's own, forbids sharing a
 channel.
 `D7 | 0` disappeared from the published index, and `D5 direction | 0`, the
 headline null, had never appeared in it at all. The renderer now publishes the

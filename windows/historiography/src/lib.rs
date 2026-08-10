@@ -65,6 +65,7 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
     use hornvale_kernel::{Fact, Seed};
 
     fn world() -> World {
@@ -92,7 +93,9 @@ mod tests {
     #[test]
     fn recount_replays_facts_with_docs_and_provenance() {
         let mut w = world();
-        let e = w.ledger.mint_entity();
+        let e = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         w.ledger
             .commit(
                 fact(
@@ -145,7 +148,9 @@ mod tests {
         // reverting the `f.day` branch above to the undated format string
         // reds this test (it would no longer contain "day 5").
         let mut w = world();
-        let e = w.ledger.mint_entity();
+        let e = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         w.ledger
             .commit(
                 Fact {
@@ -173,7 +178,9 @@ mod tests {
         // (day: None) should read exactly as it always has, with no
         // dangling "day" text.
         let mut w = world();
-        let e = w.ledger.mint_entity();
+        let e = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         w.ledger
             .commit(
                 Fact {
@@ -194,7 +201,9 @@ mod tests {
     #[test]
     fn recount_is_deterministic() {
         let mut w = world();
-        let e = w.ledger.mint_entity();
+        let e = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         w.ledger
             .commit(
                 fact(e, "tenet", Value::Text("x".to_string()), "religion"),

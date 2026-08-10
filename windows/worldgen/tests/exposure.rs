@@ -381,8 +381,44 @@ fn river_exposure_tracks_real_proximity() {
 /// Note also what did NOT happen: total gaps across these four concepts are
 /// 25 on 9 peoples, i.e. 2.8 per people against 3.4 for the pre-Delvers six.
 /// Proportionally MORE exposure, not less, on a half-again larger roster.
+///
+/// # THE RANGE re-measure (task 4, 2026-08-09)
+///
+/// Gnoll gains the campaign's first declared biome affinity (Desert), which
+/// takes its seed-42 settlement count from 20 to 2 and — through the bake's
+/// multi-era competition for ground — re-places every OTHER people too
+/// (goblin 21 -> 12, kobold 34 -> 43, human 9 -> 17; measured in
+/// `windows/worldgen/tests/range_readout.rs`). All four partitions moved
+/// again:
+///
+/// ```text
+///              three dwarves (pre-Range)      The Range
+///   hill     kobold roots, 8 gap            NO rooter, 9 gap
+///   valley   gnoll+goblin+human+kobold,     goblin+kobold root, 7 gap
+///            5 gap
+///   spring   goblin roots, 8 gap            NO rooter, 9 gap
+///   marsh    5 root, 4 gap                  6 root, 3 gap
+/// ```
+///
+/// `hill` and `spring` are saturated again — a Gap for every placed people —
+/// so both tests are RENAMED to the shape they now measure rather than kept
+/// under a name asserting a rooter that no longer exists (decision 0106: a
+/// wrong label defends itself; this file's own established policy).
+///
+/// **The phonology returned byte-identical once more**, which is the reading
+/// that matters most here: kobold's `marsh` is `Rorora` and its `valley` is
+/// `Raxoroo`, hobgoblin's `marsh` is `Qaneo` — the same strings these peoples
+/// carried before The Delvers and before this campaign. Entries appear and
+/// disappear where exposure does; words do not move. Nothing about a biome
+/// affinity touches the accession discipline, and this is the evidence.
+///
+/// Total gaps across the four concepts are 28 on 9 peoples (3.11 per people),
+/// against 25 (2.8) before. Slightly LESS exposure this time — the opposite
+/// direction from the last two re-measures, which is worth recording because
+/// "suppressing a people shrinks the world's vocabulary" is the obvious story
+/// and it has now gone both ways.
 #[test]
-fn spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it() {
+fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -404,6 +440,7 @@ fn spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it() {
             "bugbear",
             "desert-dwarf",
             "gnoll",
+            "goblin",
             "gully-dwarf",
             "hill-dwarf",
             "hobgoblin",
@@ -414,10 +451,10 @@ fn spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it() {
     );
     assert_eq!(
         rooted,
-        vec![("goblin", "Nebao".to_string())],
-        "at seed 42 goblin alone roots 'spring', as `Nebao` — the same people \
-         and the same word it carried before this campaign, though nothing \
-         else about this partition returned"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 NO placed people roots 'spring' — goblin, its sole rooter \
+         before The Range, lost the exposure when the competitive cascade \
+         re-placed it"
     );
 }
 
@@ -473,7 +510,7 @@ fn spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it() {
 /// quantity that has moved four times under changes that never touched
 /// kobold's own niche is a threshold being crossed rather than a trend.
 #[test]
-fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -503,16 +540,18 @@ fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
             "gully-dwarf",
             "hill-dwarf",
             "hobgoblin",
-            "human"
+            "human",
+            "kobold"
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("kobold", "Roxoro".to_string())],
-        "at seed 42 kobold, the authored highland specialist, roots 'hill' as \
-         `Roxoro` — a word it has carried before, though NO people rooted \
-         'hill' at all immediately before this campaign"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 NO placed people roots 'hill' — kobold, the authored highland \
+         specialist and its sole rooter before The Range, lost the exposure \
+         when the competitive cascade re-placed it (it GAINED settlements, 34 \
+         -> 43, and still lost this one)"
     );
 }
 
@@ -557,7 +596,7 @@ fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
 /// entry set moved, the phonology did not. See the file-level note on
 /// `spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it`.
 #[test]
-fn valley_is_a_root_at_seed_42_for_gnoll_goblin_human_and_kobold() {
+fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -578,22 +617,24 @@ fn valley_is_a_root_at_seed_42_for_gnoll_goblin_human_and_kobold() {
         vec![
             "bugbear",
             "desert-dwarf",
+            "gnoll",
             "gully-dwarf",
             "hill-dwarf",
-            "hobgoblin"
+            "hobgoblin",
+            "human"
         ],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Dsavshmaov".to_string()),
             ("goblin", "Konoa".to_string()),
-            ("human", "Ngaatae".to_string()),
             ("kobold", "Raxoroo".to_string()),
         ],
-        "at seed 42 four peoples root 'valley'; kobold's `Raxoroo` is \
-         byte-identical to the word it carried before this campaign"
+        "at seed 42 two peoples root 'valley'; kobold's `Raxoroo` is still \
+         byte-identical to the word it carried before The Delvers, and gnoll — \
+         a rooter under the pre-Range roster — now gaps it, which is its own \
+         affinity re-placing it"
     );
 }
 
@@ -659,8 +700,22 @@ fn valley_is_a_root_at_seed_42_for_gnoll_goblin_human_and_kobold() {
 /// a BYTE-IDENTICAL root across all three movements (`Gshoovzngaov`,
 /// `Qaneo`, `Rorora`). The phonology of the standing roster did not move;
 /// entries appeared and disappeared where exposure did.
+///
+/// THE RANGE re-pin (task 4, 2026-08-09): `marsh` splits 6/9 Root, 3/9 Gap —
+/// the WIDEST it has been. Bugbear and human regain it (`Qadoo` and
+/// `Meashngeo`, both byte-identical to the words they held two re-pins ago)
+/// while GNOLL loses it, which is the one movement this campaign can claim
+/// directly: gnoll is the kind whose affinity was declared, and its two
+/// surviving seed-42 settlements no longer sit beside a marsh cell. The other
+/// two are the competitive cascade.
+///
+/// **Case (2) a third time.** Every people that rooted `marsh` before this
+/// campaign and still does kept a BYTE-IDENTICAL root (`Taneo`, `Tag`,
+/// `Qaneo`, `Rorora`), and the two that regained it did so with the exact
+/// strings they carried when they last held it. A romanization has still
+/// never moved for a reason other than its own cohort changing.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_five_peoples_including_one_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_six_peoples_including_one_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -678,20 +733,22 @@ fn marsh_is_a_root_at_seed_42_for_five_peoples_including_one_dwarf() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "desert-dwarf", "gully-dwarf", "human"],
+        vec!["desert-dwarf", "gnoll", "gully-dwarf"],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Gshoovzngaov".to_string()),
+            ("bugbear", "Qadoo".to_string()),
             ("goblin", "Taneo".to_string()),
             ("hill-dwarf", "Tag".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
+            ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 five of nine placed peoples root 'marsh' — bugbear and \
-         human lost it; goblin regained it and hill-dwarf gained it"
+        "at seed 42 six of nine placed peoples root 'marsh' — bugbear and \
+         human regained it with byte-identical words; gnoll, the kind this \
+         campaign moved on purpose, lost it"
     );
 }
 

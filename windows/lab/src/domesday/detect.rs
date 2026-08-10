@@ -54,7 +54,7 @@ pub struct Finding {
 /// D5 reports under three.
 ///
 /// It exists for exactly one purpose: so a renderer can publish a count of
-/// `0` for a detector that ran and found nothing, which decision 0114
+/// `0` for a detector that ran and found nothing, which decision 0119
 /// requires (an absent row would make "does not exist" and "found nothing"
 /// share one channel). It is **not** a closed set and must never be used to
 /// filter findings — a renderer takes `declared ∪ observed`, so a detector

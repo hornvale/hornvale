@@ -373,36 +373,49 @@ fn world_with_registry() -> World {
     test_world()
 }
 
-/// Commit one hand-built occupation directly into `w`'s ledger via
-/// `emit_history` (a one-record `History`, the same committing style
-/// `hand_history` uses), returning the entity minted for it. Finds the new
-/// entity by set difference against the `is-occupation` subjects already
-/// present before the commit, so it works regardless of how many occupations
-/// already sit on `w`'s ledger.
-fn commit_occupation(
-    w: &mut World,
+/// One hand-built occupation of `site`, ready to take its place in a
+/// multi-record `History`. Its position in that `History`'s `records` is what
+/// fixes its entity id: since The Signet an occupation's id derives from
+/// `(parent: None, role: "occupation", ordinal: index)`, and siblings of one
+/// lineage share their high 48 bits and differ only in the low-16 ordinal — so
+/// **records order and ascending-id order are the same order**, which is what
+/// lets the test below still arrange a materially-backward mint sequence.
+fn an_occupation(
     site: CellId,
     founded: f64,
     ended: Option<f64>,
     peak_population: u32,
-) -> EntityId {
-    let before: std::collections::BTreeSet<EntityId> = w
+) -> BakeOccupation {
+    let mut record = base_record(1, "goblin", site.0, founded);
+    record.core.ended = ended;
+    record.core.peak_population = peak_population;
+    record
+}
+
+/// Commit `records` in one `emit_history` call and return the minted entity
+/// for each, in the same order.
+///
+/// One call, not one per record: `emit_history` ordinals its occupations by
+/// position in `records`, so calling it twice against the same world would
+/// re-derive `ordinal: 0` and trip the mint-time collision assert — correctly,
+/// since a world has exactly one baked history. That is a fixture constraint
+/// this test now respects rather than a limitation to work around.
+fn commit_occupations(w: &mut World, records: Vec<BakeOccupation>) -> Vec<EntityId> {
+    let now = records
+        .iter()
+        .map(|r| r.core.ended.unwrap_or(r.core.founded) + 1.0)
+        .fold(0.0_f64, f64::max);
+    let h = History::new(records, now);
+    emit_history(w, &h).unwrap();
+    let mut ids: Vec<EntityId> = w
         .ledger
         .find(hornvale_history::IS_OCCUPATION)
         .map(|f| f.subject)
         .collect();
-
-    let mut record = base_record(1, "goblin", site.0, founded);
-    record.core.ended = ended;
-    record.core.peak_population = peak_population;
-    let h = History::new(vec![record], ended.unwrap_or(founded) + 1.0);
-    emit_history(w, &h).unwrap();
-
-    w.ledger
-        .find(hornvale_history::IS_OCCUPATION)
-        .map(|f| f.subject)
-        .find(|e| !before.contains(e))
-        .expect("emit_history must mint exactly one new occupation entity")
+    // `find` yields commit order, which IS records order here (one entity per
+    // record, minted and committed in sequence).
+    ids.dedup();
+    ids
 }
 
 #[test]
@@ -414,18 +427,25 @@ fn same_day_layers_order_by_material_facts_not_mint_order() {
     // deliberately arranged to disagree with BOTH placements, so a
     // mint-order comparator fails every assertion below.
     //
-    // Commit order (and why): `none_end` first (so it gets the SMALLEST
+    // Records order (and why): `none_end` first (so it gets the SMALLEST
     // entity id, even though it must sort LAST materially), `late_end`
     // second, `early_end` last (so it gets the LARGEST id, even though it
     // must sort FIRST materially). Ascending-id order therefore reads
-    // none_end, late_end, early_end — backward on every pair. Committing in
-    // an order that let mint order agree with material order on any pair
-    // would let the old comparator pass that pair by coincidence, and the
-    // guard below would never fire.
+    // none_end, late_end, early_end — backward on every pair. An order that
+    // let mint order agree with material order on any pair would let the old
+    // comparator pass that pair by coincidence, and the guard below would
+    // never fire. The `assert!` on the ids is what proves the arrangement
+    // actually took.
     let mut w = world_with_registry();
-    let none_end = commit_occupation(&mut w, CellId(4), 100.0, None, 20);
-    let late_end = commit_occupation(&mut w, CellId(4), 100.0, Some(900.0), 20);
-    let early_end = commit_occupation(&mut w, CellId(4), 100.0, Some(150.0), 20);
+    let ids = commit_occupations(
+        &mut w,
+        vec![
+            an_occupation(CellId(4), 100.0, None, 20),
+            an_occupation(CellId(4), 100.0, Some(900.0), 20),
+            an_occupation(CellId(4), 100.0, Some(150.0), 20),
+        ],
+    );
+    let (none_end, late_end, early_end) = (ids[0], ids[1], ids[2]);
     assert!(
         none_end.get() < late_end.get() && late_end.get() < early_end.get(),
         "fixture must mint in exactly this (materially-backward) order, or the test proves nothing"
@@ -700,12 +720,37 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// Choosing a new witnessing seed would be a change to the instrument, not a
 /// re-pin, and is recorded here rather than made silently.
 ///
+/// **THE RANGE (task 4, 2026-08-09): the witness is BACK — 0/0/0 -> 1/0/1.**
+/// The campaign's first biome-affinity row redecides settlement survival on
+/// every seed, and two of the three worlds now carry a restacking site. The
+/// note above recorded 0/0/0 as the degenerate reading, unable to tell the
+/// material fourth key from a dead one; at 1/0/1 the measurement discriminates
+/// again, on two independent worlds rather than one. The CLAIM this test was
+/// frozen for is unchanged and still true: two restacking sites across three
+/// worlds of ~19k land cells each is "barely" by any reading.
+///
+/// The loop now COLLECTS all three counts and asserts the vector, instead of
+/// asserting per seed inside it. The old shape stopped at the first difference,
+/// so a re-pin touching two seeds cost two full runs at ~5 s a world to
+/// discover the second one — this campaign paid that toll and removed it.
+///
 /// claim: invariant(seed: [42,7,1000]) — per-seed exact pinned
-/// order-change count, tuple pattern `(seed, expected)` (Fix round 1,
+/// order-change count, asserted once as a whole vector (Fix round 1,
 /// Class 1)
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 0)] {
+    // Collected and asserted as a whole rather than per-seed, so ONE run
+    // reports all three counts. The per-seed `assert_eq!` stopped at the first
+    // difference, which meant every re-pin of this table needed as many runs as
+    // it had moved seeds — a real cost at ~5 s a world.
+    //
+    // The pin lives in ONE place — the `assert_eq!` below. The loop iterates
+    // bare seeds rather than `(seed, expected)` pairs: carrying the expected
+    // values here as well would be the same pin written twice, and the copy the
+    // loop held was already dead (`_expected` was never read), so the two could
+    // have drifted apart with nothing to notice.
+    let mut measured: Vec<(u64, usize)> = Vec::new();
+    for seed in [42u64, 7, 1000] {
         let w = build_world(
             Seed(seed),
             &Default::default(),
@@ -729,6 +774,11 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
                     != group.iter().map(|r| r.id).collect::<Vec<_>>()
             })
             .count();
-        assert_eq!(changed, expected, "seed {seed}: order changes");
+        measured.push((seed, changed));
     }
+    assert_eq!(
+        measured,
+        vec![(42u64, 1usize), (7, 0), (1000, 1)],
+        "the per-seed order-change counts moved"
+    );
 }

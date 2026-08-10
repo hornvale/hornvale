@@ -126,15 +126,15 @@ Ways on: N, SW, SE.
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (770 stirred).
+Time passes. You sense movement nearby (766 stirred).
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
 > knows
 4 things seen:
   room/750518284 = {"schema":"locale/room/v2","id":750518284,"face":12,"path…
   room/750518380 = {"schema":"locale/room/v2","id":750518380,"face":12,"path…
-  settlement/7/name = Googo
-  settlement/7/population = 68
+  settlement/10760661430244474880/name = Googo
+  settlement/10760661430244474880/population = 68
 > release
 You let go.
 ```

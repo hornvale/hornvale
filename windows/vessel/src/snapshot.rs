@@ -1,4 +1,4 @@
-//! `vessel/session/v1` — the per-turn structured session emit.
+//! `vessel/session/v2` — the per-turn structured session emit.
 //!
 //! One snapshot per committed turn, grouped by the epistemic channel each
 //! datum belongs to rather than by data type: a pane reads one channel and
@@ -6,24 +6,38 @@
 //! than conventional (The Snapshot spec §3).
 //!
 //! Save-format contract: additive changes are free, a meaning change mints
-//! `vessel/session/v2`, and nothing is ever renamed.
+//! the next version, and nothing is ever renamed.
+//!
+//! **Why v2 (The Signet).** `EntityId` stopped being a small mint-counter
+//! value and became a full-width 64-bit derivation of an entity's lineage, so
+//! the `entity` key on `sensed.present` and `social` began emitting numbers
+//! above 2^53 — silently lossy in any JavaScript consumer. Those two fields
+//! now carry the same decimal-string encoding `self.agent` has always used.
+//! That is a wire *type* change, not an addition, so it mints a version
+//! rather than mutating `v1` in place. **The bump is exactly one schema
+//! deep**: `sensed.room` (`locale/room/v2`), the walk band's chart
+//! (`scene/surrounds/v2`) and the chamber band's plan (`vessel/plan/v1`) are
+//! embedded verbatim, carry no `EntityId`, and each announces its own
+//! version — the same reason the chart's own bump to `scene/surrounds/v2` did
+//! not move the envelope around it.
 
 use hornvale_locale::Locale;
 use serde::{Serialize, Serializer};
 
 /// The schema tag every snapshot carries.
 /// type-audit: bare-ok(identifier-text)
-pub const SESSION_SCHEMA: &str = "vessel/session/v1";
+pub const SESSION_SCHEMA: &str = "vessel/session/v2";
 
 /// Serialize a `u64` as its decimal text rather than a JSON number. JSON has
 /// no int64 type, and JavaScript's `number` is an IEEE-754 double: lossy
-/// above 2^53. A uniform 64-bit draw like `AgentId` routinely exceeds that
-/// (seed 42's `7225590595188407000` round-trips through `JSON.parse` as
-/// `7225590595188407296`, and two ids within 2048 of each other collapse to
-/// the same JS number). Emitting the exact decimal digits as a string side-
-/// steps the lossy conversion; the Rust field stays `u64` in memory and this
-/// only governs the emit boundary. Private: not a `pub` API boundary, so it
-/// carries no `type-audit:` tag of its own.
+/// above 2^53. Both id families on this wire are full-width 64-bit draws that
+/// routinely exceed it — `AgentId` (seed 42's `7225590595188407000`
+/// round-trips through `JSON.parse` as `7225590595188407296`, and two ids
+/// within 2048 of each other collapse to the same JS number) and, since The
+/// Signet made ids lineage-derived, `EntityId`. Emitting the exact decimal
+/// digits as a string side-steps the lossy conversion; the Rust field stays
+/// `u64` in memory and this only governs the emit boundary. Private: not a
+/// `pub` API boundary, so it carries no `type-audit:` tag of its own.
 fn u64_as_decimal_string<S: Serializer>(x: &u64, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_str(&x.to_string())
 }
@@ -32,7 +46,7 @@ fn u64_as_decimal_string<S: Serializer>(x: &u64, s: S) -> Result<S::Ok, S::Error
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(count: turn), waiver(decision-0014: day)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SessionSnapshot {
-    /// Schema tag (`vessel/session/v1`).
+    /// Schema tag (`vessel/session/v2`).
     pub schema: String,
     /// Advances by one for every non-empty verb line since the possession
     /// began; 0 is the opening. Not a commit count — it also advances for
@@ -100,7 +114,12 @@ pub struct SensedChannel {
 /// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label), bare-ok(prose: felt)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PresentEntry {
-    /// The creature's ledger entity id.
+    /// The creature's ledger entity id. Serializes as a decimal **string**
+    /// for the same reason `SelfChannel::agent` does: since The Signet an
+    /// `EntityId` is a full-width 64-bit derivation of the entity's lineage,
+    /// which a JS `number` cannot hold losslessly (see
+    /// `u64_as_decimal_string`). The Rust type stays `u64`.
+    #[serde(serialize_with = "u64_as_decimal_string")]
     pub entity: u64,
     /// Its label, as the narration names it.
     pub label: String,
@@ -145,7 +164,10 @@ pub struct KnownEntry {
 /// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label), bare-ok(ratio: grievance), bare-ok(flag: hostile)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SocialEntry {
-    /// The creature's ledger entity id.
+    /// The creature's ledger entity id. Serializes as a decimal **string**,
+    /// exactly as `PresentEntry::entity` does — same id family, same 2^53
+    /// hazard, so one encoding rather than two.
+    #[serde(serialize_with = "u64_as_decimal_string")]
     pub entity: u64,
     /// Its label.
     pub label: String,
@@ -360,7 +382,7 @@ mod tests {
             },
         };
         let json = snapshot_json(&snap);
-        assert!(json.contains(r#""schema":"vessel/session/v1""#));
+        assert!(json.contains(r#""schema":"vessel/session/v2""#));
         for key in [
             "\"self\":",
             "\"sensed\":",

@@ -1,4 +1,4 @@
-# 0114. An instrument's silence means the claim held, and nothing else
+# 0119. An instrument's silence means the claim held, and nothing else
 
 **Status:** Accepted (2026-08-10, G6) · **Decider:** Nathan · **Relates to:**
 [0011](0011-studies-are-data-metrics-are-code.md),

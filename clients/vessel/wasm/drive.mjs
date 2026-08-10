@@ -108,7 +108,7 @@ const snapshotJson = () =>
   );
 assert.ok(hv_snapshot_len() > 0, "a live possession carries a snapshot");
 const snap = JSON.parse(snapshotJson());
-assert.equal(snap.schema, "vessel/session/v1");
+assert.equal(snap.schema, "vessel/session/v2");
 for (const key of ["self", "sensed", "known", "social", "narration"]) {
   assert.ok(key in snap, `snapshot carries the ${key} channel`);
 }

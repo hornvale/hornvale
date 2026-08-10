@@ -385,7 +385,11 @@ mod tests {
         r.register_predicate("count-a", false, "").unwrap();
         r.register_predicate("count-b", false, "").unwrap();
         let mut base = crate::Ledger::default();
-        let e = base.mint_entity();
+        let e = base.mint_entity(crate::ledger::Lineage {
+            parent: None,
+            role: "schedule-test-subject",
+            ordinal: 0,
+        });
         // frozen ledger has 0 facts. Two systems each write frozen.len() == 0.
         let a = CountThenName {
             label: "a",
@@ -419,7 +423,11 @@ mod tests {
         r.register_predicate("count-a", false, "").unwrap();
         r.register_predicate("count-b", false, "").unwrap();
         let mut base = crate::Ledger::default();
-        let e = base.mint_entity();
+        let e = base.mint_entity(crate::ledger::Lineage {
+            parent: None,
+            role: "schedule-test-subject",
+            ordinal: 0,
+        });
         let a = CountThenName {
             label: "a",
             subject: e,

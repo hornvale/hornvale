@@ -558,7 +558,7 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
     // detector that fired NOTHING, so `D7 | 0` disappeared and this
     // campaign's `D5 direction | 0` null was never published at all, making
     // an absent row mean either "does not exist" or "found nothing"
-    // (decision 0114 forbids exactly that sharing). The union degrades in
+    // (decision 0119 forbids exactly that sharing). The union degrades in
     // the one safe direction: a stale [`DECLARED_DETECTORS`] can omit a
     // ZERO row, never a real finding.
     let mut detectors: BTreeSet<&str> = DECLARED_DETECTORS.iter().copied().collect();
@@ -815,7 +815,7 @@ mod tests {
         // roster introduced: a detector that fires no finding must still
         // appear, with a count of 0. Absence would otherwise carry two
         // meanings at once -- "no such detector" and "this detector ran and
-        // found nothing" -- which is the conflation decision 0114 forbids.
+        // found nothing" -- which is the conflation decision 0119 forbids.
         // On the committed census this is not hypothetical: D7 fires
         // nothing, and `D5 direction` -- the campaign's headline null --
         // fires nothing either, so both vanished from the published index.

@@ -125,6 +125,18 @@ fn waterline_probe() {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster this probe scores. So this is a deliberate CONTROL,
+    // not a copy of the registry.
+    //
+    // Deliberate because the waterline probe asks a question about the LAND
+    // MASK — which cells the capacity field reaches at all — and an affinity
+    // multiplies a field the mask has already admitted or excluded. Holding it
+    // at the pre-affinity physics (bit-identical, per task 3's
+    // `an_absent_affinity_is_bit_identical`) keeps the probe's answer about the
+    // waterline rather than about which kinds were declared since.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let ks = per_species_suitability(
         geo,
@@ -135,6 +147,7 @@ fn waterline_probe() {
         &regime,
         &bio,
         &realm,
+        &affinity,
     );
     let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };

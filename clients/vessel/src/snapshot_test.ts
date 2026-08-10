@@ -4,7 +4,7 @@ import { narrationOf, parseSnapshot, type Sight, sightOf, waysOf } from "./snaps
 // A minimal fixture in the real schema's shape. Kept small on purpose: the
 // full-fidelity byte pin is Rust's (windows/vessel/tests/fixtures).
 const FIXTURE = JSON.stringify({
-  schema: "vessel/session/v1",
+  schema: "vessel/session/v2",
   turn: 0,
   day: 0.5,
   self: { agent: "1", species: "bugbear", settlement: "X", population: 118, room: 7 },
@@ -25,16 +25,21 @@ const FIXTURE = JSON.stringify({
   narration: { prose: "You stand in a wood.\nWays on: SE.", nouns: [] },
 });
 
-Deno.test("parseSnapshot accepts a v1 payload", () => {
+Deno.test("parseSnapshot accepts a v2 payload", () => {
   const snap = parseSnapshot(FIXTURE);
-  assertEquals(snap?.schema, "vessel/session/v1");
+  assertEquals(snap?.schema, "vessel/session/v2");
   assertEquals(snap?.turn, 0);
 });
 
 Deno.test("parseSnapshot rejects junk and a wrong schema rather than throwing", () => {
   assertEquals(parseSnapshot("not json"), null);
   assertEquals(parseSnapshot(""), null);
-  assertEquals(parseSnapshot(JSON.stringify({ schema: "vessel/session/v2" })), null);
+  // The SUPERSEDED tag, not a made-up one. v1 emitted `entity` as a bare
+  // 64-bit number, which `JSON.parse` rounds — so a v1 payload reaching this
+  // build is exactly the case the tag check exists to stop, and refusing it
+  // is the reason the producer minted a version instead of mutating v1.
+  assertEquals(parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" })), null);
+  assertEquals(parseSnapshot(JSON.stringify({ schema: "vessel/session/v3" })), null);
 });
 
 Deno.test("narrationOf returns the prose verbatim", () => {
@@ -54,7 +59,7 @@ Deno.test("waysOf filters compass edges, so no `ways` field is needed", () => {
 // refuse-don't-guess posture `parseSnapshot`'s own sibling tests already
 // hold `pane_plan.ts`/`pane_chart.ts` to.
 
-/** A minimal `vessel/session/v1` payload on the walk band, with the given
+/** A minimal `vessel/session/v2` payload on the walk band, with the given
  * raw `chart` object substituted in whole — `sightOf` reads only
  * `chart.sight`, so the rest of `SURROUNDS_SCHEMA`'s shape is irrelevant to
  * it and is omitted here on purpose (the real, full-fidelity shape is
@@ -62,7 +67,7 @@ Deno.test("waysOf filters compass edges, so no `ways` field is needed", () => {
  * `sightOf` is cross-checked against separately — see the task report). */
 function walkSnapshot(chart: unknown): string {
   return JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     turn: 0,
     day: 0.5,
     self: { agent: "1", species: "bugbear", settlement: "X", population: 118, room: 7 },
@@ -109,7 +114,7 @@ Deno.test("sightOf is null on a partially malformed block — never a partial ob
 
 Deno.test("sightOf is null on a chamber-band snapshot, even with a walk-shaped sight lying around", () => {
   const snap = parseSnapshot(JSON.stringify({
-    schema: "vessel/session/v1",
+    schema: "vessel/session/v2",
     turn: 0,
     day: 0,
     self: { agent: "1", species: "bugbear", settlement: "X", population: 1, room: 0 },
