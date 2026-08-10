@@ -99,6 +99,41 @@
 //! run so a later reader can score whatever axis they prefer against the same
 //! transcript, including the one that fired.
 //!
+//! **The replacement is NOT A PURE WEAKENING, and that is the load-bearing
+//! reason a later reader should accept it.** A per-seed 2× ceiling is blind to
+//! a leak running at a consistent 1.5× on *every* seed — which is the exact
+//! shape this clause's own mechanism predicts, and which passes the retired
+//! ceiling on every seed of any panel. **S2 fires on it.** So the swap is not
+//! `{same test, laxer}`; it is `{weaker on magnitude, PLUS a constraint the
+//! original lacked on the axis the falsifier actually names}`. A rescue removes
+//! constraints on the axis under test; this one adds one. That asymmetry is the
+//! strongest available evidence that this was a correction rather than a
+//! rescue, and it is the reason the per-seed ceiling must not be quietly
+//! restored later: restoring it would **lose** a constraint, not regain one.
+//!
+//! ## Why this is NOT carried in Task 4's `PREREGISTERED, not met:` idiom
+//!
+//! One commit earlier, `bd2498a9` recorded P2's desert-elf clause as
+//! `PREREGISTERED, not met:` rather than moving its axis. The two clauses sit
+//! one commit apart, so the next reader will ask why they were treated
+//! differently. The difference is precise, not convenient.
+//!
+//! **P2's spec supplies the axis, the comparison arm, the falsifier AND the
+//! seed quantifier** ("on a majority of seeds"). Nothing was left for the
+//! implementer to choose, so moving that axis would have required editing the
+//! spec — a visible act — and the idiom was the only honest carrying option.
+//! **P5 clause 3's spec supplies none of them**: no axis, no statistic, no
+//! threshold, no seed quantifier, and the plan adds none. There was no frozen
+//! axis to falsify against — the per-seed ceiling was minted in this file, and
+//! frozen only for the minutes between "it compiled" and "it ran".
+//!
+//! Applying P2's idiom here would therefore enter into the record a
+//! sibling-count leak that this data positively argues **against** (the sign
+//! reverses; the largest excursion is downward). A false falsification is not
+//! the safer error — it is the same error pointing the other way. Both tasks
+//! apply the same *rule*, "a frozen axis may not be moved after unblinding";
+//! they differ only because Task 5 had no frozen axis to move.
+//!
 //! **Both means are +1 smoothed** before either ratio is taken. Two of the
 //! three counts (core, confusable) read **zero across all twelve daughters** on
 //! every seed of this panel, and an unsmoothed ratio against a zero denominator
@@ -124,11 +159,36 @@
 //!     re-reading as a possible tautology; it is not one here, because the
 //!     denominator is "rooted in all six" and the numerator is "≥2 distinct
 //!     modern forms", and nothing forces the second from the first.
-//!   * **`core pairs` and `confusable pairs` read exactly zero for all twelve
-//!     daughters on all three seeds.** Clause 3's assertions therefore carry no
-//!     information on those two counts — they pass, but vacuously. Only
-//!     `colliding pairs` is a live comparison. That is a limit of the panel,
-//!     stated here rather than left for a reader to infer from three zeroes.
+//!   * **Clause 3 is NOT FALSIFIED — held on `colliding pairs` only, on a
+//!     panel too small to make the holding strong.** It is deliberately not
+//!     recorded as "confirmed"; three limits, below, are why. **The evidence
+//!     that carries it is the SIGN, not the magnitude:** the direction
+//!     *reverses* across the panel and the largest single-seed excursion is
+//!     **downward** — the elves sit 7.60× BELOW the controls at seed 7 (1.667
+//!     vs 12.667), against 2.66× above at 1234 and 1.65× above at 42. An
+//!     inconsistent direction contradicts the mechanism the frozen falsifier
+//!     names, and is stronger evidence than the pooled 1.13× (S1), which is the
+//!     weaker of the two readings and is reported second.
+//!   * **Two of the three counts the clause names are unmeasured.** `core
+//!     pairs` and `confusable pairs` read exactly zero for all twelve daughters
+//!     on all three seeds — so **1 of the 3 counts the clause names is live,
+//!     and 2 of the 6 assertions carry data**. S2's core and confusable arms
+//!     are *structurally* incapable of firing on all-zero data (`0 > 0` is
+//!     never true). A zero-against-zero comparison confirms nothing; those arms
+//!     pass vacuously. A limit of the panel, stated here rather than left for a
+//!     reader to infer from three zeroes.
+//!   * **The holding rests on ONE SEED OF THREE.** Dropping only the seed that
+//!     reverses — `SEEDS = &[42, 1234]` — fires **both** shipped assertions:
+//!     S1 at 12.667 vs 5.583, and, with the ceiling raised so S1 cannot mask
+//!     it, S2 at 2/2 seeds. Seed 7 is carrying the result. That is not circular
+//!     (seed 7 is real data, not a discarded outlier), but it caps how strongly
+//!     the result may be stated: with per-daughter counts ranging 0 to 41 and
+//!     n=6 per arm per seed, **this panel cannot distinguish a 2× systematic
+//!     leak from noise in either direction.** Clause 3 is weak evidence both
+//!     ways. An adequately powered successor — many more seeds, and a panel on
+//!     which core/confusable are non-zero — belongs in a *spec* before any
+//!     code, exactly as P2's falsification minted
+//!     `BIO-rung-weighted-concentration`.
 //!
 //! # What this file deliberately does not say
 //!
@@ -427,6 +487,12 @@ fn divergence_is_real_across_all_six_elf_daughters() {
 /// fires. **The module header records that the per-seed ceiling was written
 /// first, was run, and fired** — read it before reading these numbers.
 ///
+/// **A pass here means NOT FALSIFIED, not "confirmed".** Only `colliding pairs`
+/// is a live comparison — `core` and `confusable` are zero on every daughter of
+/// every seed, so four of the six assertions compare zero against zero — and
+/// dropping seed 7 from the panel fires both live ones. The verdict line
+/// printed at the end of this test says so on every run.
+///
 /// claim: readout(P5 clause 3; panel-pooled magnitude and sign over the
 /// [42, 7, 1234] panel, per-seed table printed)
 #[test]
@@ -526,4 +592,32 @@ fn homophony_does_not_leak_the_sibling_count() {
              elevation looks like, and homophony must not see the sibling count"
         );
     }
+
+    // --- The verdict. Printed so the transcript carries what this run
+    // --- ESTABLISHED rather than leaving a reader to read six passes as six
+    // --- confirmations. Derived from this run's own numbers, so the count of
+    // --- live comparisons can never drift from the data behind it.
+    let live: Vec<&str> = LABELS
+        .iter()
+        .enumerate()
+        .filter(|(pick, _)| {
+            panel
+                .iter()
+                .any(|(_, c)| c[*pick].0 > 0.0 || c[*pick].1 > 0.0)
+        })
+        .map(|(_, label)| *label)
+        .collect();
+    println!(
+        "VERDICT clause 3: NOT FALSIFIED — held on {live:?} only, which is {} of \
+         the {} counts the clause names ({} of {} assertions carry data; the \
+         rest compare zero against zero and establish nothing). NOT 'confirmed'. \
+         The evidence is the SIGN — the direction reverses across the panel and \
+         the largest excursion is DOWNWARD (seed 7) — not the pooled magnitude. \
+         Dropping seed 7 fires BOTH live assertions, so the holding rests on one \
+         seed of three. Read the module header before quoting any of this.",
+        live.len(),
+        LABELS.len(),
+        live.len() * 2,
+        LABELS.len() * 2
+    );
 }
