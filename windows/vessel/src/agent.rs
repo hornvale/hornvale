@@ -36,11 +36,14 @@ pub fn walk_depth(ctx: &LocaleContext) -> u32 {
     ctx.globe_level() + 6
 }
 
-/// Mint the flagship settlement's agent: its argmax cell's containing room
-/// at walk depth, its species' perception vector. Fails loudly with the
+/// Mint an agent at a NAMED settlement: its argmax cell's containing room at
+/// walk depth, its species' perception vector. Fails loudly with the
 /// physical reason — generation never retries.
-pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, VesselError> {
-    let village = village_info(world).ok_or(VesselError::NoSettlement)?;
+pub fn mint_at(
+    world: &World,
+    ctx: &LocaleContext,
+    village: VillageInfo,
+) -> Result<Agent, VesselError> {
     let species = species_of(world, village.id)
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
     // `species` is free text read from the ledger (a committed `Value::Text`),
@@ -75,6 +78,28 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
         position,
         village,
     })
+}
+
+/// Mint the flagship settlement's agent. Retained verbatim in behaviour:
+/// this is the default possession and every committed transcript depends on
+/// it being unchanged.
+pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, VesselError> {
+    let village = village_info(world).ok_or(VesselError::NoSettlement)?;
+    mint_at(world, ctx, village)
+}
+
+/// The world's most-populous settlement — population descending, then id
+/// ascending.
+///
+/// Deliberately the SAME *comparator* `ordered_for_derivation` (`liveness.rs`)
+/// uses, so possession introduces no new tie-break rule. Not the same resulting
+/// **order**: `ordered_for_derivation` then hoists the home settlement to the
+/// front, so its first element is the home settlement and this function's is
+/// the most-populous one. Only the comparator is shared.
+pub fn most_populous_settlement(world: &World) -> Option<VillageInfo> {
+    let mut all = hornvale_settlement::all_settlements(world);
+    all.sort_by(|a, b| b.population.cmp(&a.population).then(a.id.cmp(&b.id)));
+    all.into_iter().next()
 }
 
 /// A settlement's committed numeric fact, or a loud `NoPosition`.

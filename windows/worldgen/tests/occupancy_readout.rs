@@ -99,6 +99,27 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // THE LIVE `biome_affinity` REGISTRY, in the same `wc.biosphere` order as
+    // `bios` and `realm` so all three slices stay index-aligned; a kind absent
+    // from the sparse store resolves to `None`, which task 3's
+    // `an_absent_affinity_is_bit_identical` proved is the unrestricted 1.0
+    // no-op.
+    //
+    // Threaded rather than stubbed to `None`, because a stub would make this
+    // file's own header false. It calls itself "a committed measurement of where
+    // each of the roster's kinds ACTUALLY lives", and tasks 7-9 of a future
+    // campaign author new kinds' condition niches against percentiles read out
+    // of the fixture it writes. A biome affinity is precisely a statement about
+    // where a kind lives; scoring the readout without it would publish the
+    // pre-affinity world under a header promising the current one, and — worse —
+    // the drift check would stay green through the change, because nothing would
+    // have moved. Green because nothing moved is not the same as green because
+    // nothing should have.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| wc.biome_affinity.get(k).cloned())
+        .collect();
 
     // Accumulated across every seed in the sweep, keyed by (kind, biome).
     // `occupied_k`: the K values of cells at/above the viability floor (the
@@ -138,7 +159,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
         };
 
         let ks = per_species_suitability(
-            geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+            geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
         );
         let biome_map = climate.biome_map();
 
@@ -223,7 +244,12 @@ fn regenerate_occupancy_readout() {
 ///
 /// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
 /// gain at least one kind *centred* there. Measured against the committed
-/// readout, regenerated 2026-08-08 (The Assize):
+/// readout, regenerated 2026-08-09 (The Range, fix wave — the regeneration that
+/// threaded the live `biome_affinity` store into this readout for the first
+/// time). **Every row in the table below is byte-identical to the 2026-08-08
+/// (The Assize) fixture**, checked rather than assumed: that regeneration moved
+/// exactly 24 of 386 rows, all of them `gnoll` or `woolly-mammoth`, and none of
+/// EC6's subjects is either.
 ///
 /// | region | new kinds present | top occupant |
 /// |---|---|---|
@@ -234,7 +260,7 @@ fn regenerate_occupancy_readout() {
 /// **EC6 is met in ZERO of three regions, not one — and it always was.** The
 /// previous version of this table claimed `giant-scorpion` (0.0177) topped
 /// desert. That figure matches nothing in either fixture: `giant-scorpion`'s
-/// desert `mean_k` is **0.0359774** (`≈0.0359`), it is not the top occupant
+/// desert `mean_k` is **0.035982774** (`≈0.0359`), it is not the top occupant
 /// there (`otyugh` at 0.0470 is), and it is not even the best newly-authored
 /// kind in the region — `carrion-crawler` is, at rank 2 of 29 kinds present
 /// in desert. (A naively-inherited "rank 2 of 26" would be wrong here: 26 was
@@ -253,6 +279,33 @@ fn regenerate_occupancy_readout() {
 /// them against the fixture's other occupants, and so missed that desert's
 /// verdict was already NOT MET at the values it was quoting. This is the
 /// **third** under-checked attribution recorded against this one file.
+///
+/// **The 2026-08-09 regeneration (The Range, fix wave) has exactly one cause,
+/// and its blast radius is the arithmetic of the mechanism.** The row count did
+/// not move (386 → 386) and **24 rows changed, every one of them `gnoll` (12) or
+/// `woolly-mammoth` (12)** — the two and only two occupants of
+/// `biome_affinity_registry`. The other 362 rows are byte-identical. That is
+/// what a per-kind multiplier should do, and it is the check that the store is
+/// reaching this path rather than being silently dropped: had the readout still
+/// been fed an all-`None` slice, the regeneration would have produced a
+/// byte-identical file and the drift check would have stayed green *because
+/// nothing moved*, not because nothing should have.
+///
+/// Two internal consistencies worth naming, because they are what distinguishes
+/// "the affinity arrived" from "some number changed":
+///
+/// - **A `1.00` stronghold leaves `mean_k` alone and moves only the share.**
+///   `gnoll,desert` and `woolly-mammoth,ice` carry the identical `mean_k`,
+///   `p50_k` and `p95_k` before and after, while their `share_of_kind_k` rises
+///   (gnoll's desert share `0.0052262188 → 0.017680314`). The factor there is
+///   1.0, so the kind's absolute capacity on that ground is untouched; what
+///   changed is that every *other* biome was scaled down beneath it.
+/// - **Every non-stronghold share moves by the ratio of its factor to 0.25.**
+///   `gnoll,shrubland` (0.70) and `gnoll,savanna` (0.45) rise; the eight biomes
+///   taking the 0.25 default fall together, by an identical 0.846×, and hold
+///   their order exactly —
+///   `temperate-forest / tropical-seasonal-forest` reads 1.0773 both before and
+///   after, to five figures.
 ///
 /// **This regeneration (2026-08-08, The Assize) has two disjoint causes of its
 /// own**, measured rather than inherited from the campaign brief that
@@ -313,24 +366,46 @@ fn regenerate_occupancy_readout() {
 /// climate cannot outrank it there. That is BIO-supply-drowns-niche, and it is the named
 /// prerequisite for this test.
 ///
-/// The gnoll is the sharpest case, and the 2026-08-05 re-pin **corrected two
-/// statements of it**, one stale and one that was never right.
+/// The gnoll is the sharpest case, and it is also where this doc has been wrong
+/// most often. **Every figure in the two bullets below is re-derived from the
+/// fixture as it stands after the 2026-08-09 regeneration**, not carried
+/// forward; the prior version of each is kept beside it, because the pattern of
+/// how they went stale is the more useful thing.
 ///
-/// - *Stale:* a people authored explicitly for hot-arid desert had **zero**
-///   desert occupancy. It no longer does — `is_land` opened desert to the
-///   capacity field, and the gnoll now holds 3793 desert cells. But that is
-///   presence, not dominance: desert is worth **0.0097** of the gnoll's world
-///   total K, which is its **smallest share of any biome it reaches — 11th of
-///   11** — while `giant-scorpion` still tops the region. (Desert is the
-///   gnoll's 8th biome by `mean_k`, a different column; the two rankings
-///   disagree and only the share one is quoted here.) The diagnosis is
-///   untouched; only the starkest way of phrasing it is gone.
-/// - *Never right:* "its largest share is temperate-forest". The gnoll's
-///   largest share is **tropical-seasonal-forest** (0.3006), and it was
-///   tropical-seasonal-forest (0.3007) in the fixture this sentence was
-///   written against too. The claim was wrong on the day it was committed, and
-///   a drift check cannot catch that — it pins output against *change*, never
-///   against being *wrong*.
+/// - *Presence, still not dominance.* A people authored explicitly for hot-arid
+///   desert once had **zero** desert occupancy. It holds **5498** desert cells
+///   now, and declaring its affinity lifted desert's share of its world total K
+///   from **0.0052262188 to 0.017680314** — a 3.38× rise, the single largest
+///   proportional move in the file. It is still not dominance: desert is
+///   gnoll's **third-smallest share of the twelve biomes it reaches** (only
+///   `ice` and `alpine` are lower), and the region's top occupant by `mean_k` is
+///   `otyugh` (0.04704871), then `carrion-crawler` and `shrieker`, with gnoll at
+///   **0.0036231586** — an order of magnitude below. Desert is gnoll's 8th biome
+///   by `mean_k`, a different column; the two rankings disagree and both are
+///   quoted here rather than one.
+///
+///   *What the prior version said:* "3793 desert cells", share "0.0097",
+///   "smallest share of any biome it reaches — 11th of 11", and
+///   "`giant-scorpion` still tops the region". All four were true of a fixture
+///   two regenerations back. `giant-scorpion` has not topped desert since The
+///   Assize — the table at the head of this doc already said `otyugh` did, in
+///   the same comment, four paragraphs up.
+/// - *"Its largest share is temperate-forest" was right, and the correction of
+///   it was wrong.* A previous version of this bullet called that claim "never
+///   right" and asserted the largest share was **tropical-seasonal-forest
+///   (0.3006)**. That was true when written — `75a0f450`'s fixture reads
+///   `tropical-seasonal-forest 0.3005768` against `temperate-forest 0.27692454`
+///   — but The Tense's regeneration (`979508f8`) reversed the pair, to
+///   `temperate-forest 0.25118309` over `tropical-seasonal-forest 0.23314924`,
+///   and the prose was not swept. After the affinity landed, both fall by the
+///   same 0.25 default and the order is unchanged: **`temperate-forest`
+///   (0.21243829)**, then `tropical-seasonal-forest` (0.19718615).
+///
+///   So the sentence this doc "corrected" had become true again by the time it
+///   was corrected. A drift check pins output against *change*, never against
+///   being *wrong* — which is what the prior version said, and is exactly how it
+///   itself went wrong. The lesson it drew was right; it just did not apply it
+///   to its own replacement text.
 ///
 /// Its niche was deliberately left untuned — fitting the world to a
 /// preregistered criterion is the one move that would invalidate the result.

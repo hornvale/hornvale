@@ -205,6 +205,7 @@ fn peopled_components() -> WorldComponents {
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("the peopled-only component set is well-formed")
 }

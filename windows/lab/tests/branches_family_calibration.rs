@@ -625,10 +625,33 @@ fn homophony_count_is_measured_and_pinned() {
     // the observation. Each mean is again an exact integer count over the
     // 1000-seed census divided by 1000 (4888, 4822, 16349, 5072), which is why
     // all four land on a clean three decimal digits.
-    assert!((mg - 4.888).abs() < 1e-9, "goblin mean drifted: {mg}");
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): goblin 4.888 -> 4.863,
+    // hobgoblin UNMOVED at 4.822, bugbear 16.349 -> 16.197, kobold 5.072 ->
+    // 5.131. Hobgoblin holding exactly still while the other three move is new
+    // in this row's history — every prior regen moved all four (roster
+    // competition) or the three smaller ones against bugbear (per-settlement
+    // draws); this is neither, so the biome-range mechanism reached the
+    // periphery goblin, bugbear and kobold draw from on this regen but left
+    // hobgoblin's untouched. No narrower cause than that observation is
+    // asserted, because nothing else was measured.
+    //
+    // The claim was re-checked rather than assumed, and it HOLDS, though the
+    // binding margin narrowed again as flagged at the previous regen: bugbear
+    // leads by 3.331x over goblin and 3.359x over hobgoblin, against
+    // 3.345x/3.390x before — both margins fell, and goblin's is again the
+    // binding one. It is not the narrowest this row has recorded (The
+    // Tolerance's 3.25x over goblin still is), so the warning stands where it
+    // stood: a regen that takes the goblin ratio below 3x falsifies the claim
+    // outright, and that would be a finding to report, not a bound to widen.
+    // These re-pin the witnesses, not the observation. Each mean is again an
+    // exact integer count over the 1000-seed census divided by 1000 (4863,
+    // 4822, 16197, 5131).
+    assert!((mg - 4.863).abs() < 1e-9, "goblin mean drifted: {mg}");
     assert!((mh - 4.822).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 16.349).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 5.072).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mb - 16.197).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.131).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

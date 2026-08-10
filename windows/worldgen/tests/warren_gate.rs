@@ -104,6 +104,7 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
         wc.biosphere.iter().map(|(_, b)| b).collect();
     let realm = realm_slice(&wc);
 
+    let none_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
     let ks = per_species_suitability(
         geo,
         &terrain,
@@ -113,6 +114,7 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
         &regime,
         &bio,
         &realm,
+        &none_affinity,
     );
 
     let tag = names
@@ -173,6 +175,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
         wc.biosphere.iter().map(|(_, b)| b).collect();
     let realm = realm_slice(&wc);
 
+    let none_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
     let ks = per_species_suitability(
         geo,
         &terrain,
@@ -182,6 +185,7 @@ fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
         &regime,
         &bio,
         &realm,
+        &none_affinity,
     );
 
     let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();

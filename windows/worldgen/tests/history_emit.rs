@@ -700,12 +700,37 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// Choosing a new witnessing seed would be a change to the instrument, not a
 /// re-pin, and is recorded here rather than made silently.
 ///
+/// **THE RANGE (task 4, 2026-08-09): the witness is BACK — 0/0/0 -> 1/0/1.**
+/// The campaign's first biome-affinity row redecides settlement survival on
+/// every seed, and two of the three worlds now carry a restacking site. The
+/// note above recorded 0/0/0 as the degenerate reading, unable to tell the
+/// material fourth key from a dead one; at 1/0/1 the measurement discriminates
+/// again, on two independent worlds rather than one. The CLAIM this test was
+/// frozen for is unchanged and still true: two restacking sites across three
+/// worlds of ~19k land cells each is "barely" by any reading.
+///
+/// The loop now COLLECTS all three counts and asserts the vector, instead of
+/// asserting per seed inside it. The old shape stopped at the first difference,
+/// so a re-pin touching two seeds cost two full runs at ~5 s a world to
+/// discover the second one — this campaign paid that toll and removed it.
+///
 /// claim: invariant(seed: [42,7,1000]) — per-seed exact pinned
-/// order-change count, tuple pattern `(seed, expected)` (Fix round 1,
+/// order-change count, asserted once as a whole vector (Fix round 1,
 /// Class 1)
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 0)] {
+    // Collected and asserted as a whole rather than per-seed, so ONE run
+    // reports all three counts. The per-seed `assert_eq!` stopped at the first
+    // difference, which meant every re-pin of this table needed as many runs as
+    // it had moved seeds — a real cost at ~5 s a world.
+    //
+    // The pin lives in ONE place — the `assert_eq!` below. The loop iterates
+    // bare seeds rather than `(seed, expected)` pairs: carrying the expected
+    // values here as well would be the same pin written twice, and the copy the
+    // loop held was already dead (`_expected` was never read), so the two could
+    // have drifted apart with nothing to notice.
+    let mut measured: Vec<(u64, usize)> = Vec::new();
+    for seed in [42u64, 7, 1000] {
         let w = build_world(
             Seed(seed),
             &Default::default(),
@@ -729,6 +754,11 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
                     != group.iter().map(|r| r.id).collect::<Vec<_>>()
             })
             .count();
-        assert_eq!(changed, expected, "seed {seed}: order changes");
+        measured.push((seed, changed));
     }
+    assert_eq!(
+        measured,
+        vec![(42u64, 1usize), (7, 0), (1000, 1)],
+        "the per-seed order-change counts moved"
+    );
 }

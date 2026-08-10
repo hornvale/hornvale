@@ -92,6 +92,21 @@ fn temperature_gate_versus_era_mask() {
                     .expect("settler has biosphere traits")
             })
             .collect();
+        let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+        // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+        // `woolly-mammoth` carry rows since task 4, and `SETTLERS` contains
+        // gnoll. So this is a deliberate CONTROL, not a copy of the registry.
+        //
+        // Deliberate because this is a SHADOW comparison of two exclusion rules,
+        // and its whole value is that the difference it prints is the rules'
+        // and not something else's. The gate side asks whether every settler's
+        // capacity falls below `SURVIVE_K`; an affinity multiplies exactly that
+        // capacity, so threading it would push gnoll under the threshold on
+        // whole biome classes and be read as the gate excluding more land than
+        // the mask. All-`None` is bit-identical to the physics this shadow run
+        // was characterised under (task 3's
+        // `an_absent_affinity_is_bit_identical`).
+        let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,
             &terrain,
@@ -108,8 +123,9 @@ fn temperature_gate_versus_era_mask() {
             };
             let substrate =
                 substrate_field_at(geo, &terrain, &climate, &hoisted.insolation, &adjust);
-            let caps =
-                per_species_capacity_at(geo, &terrain, &climate, &hoisted, &adjust, &biosphere);
+            let caps = per_species_capacity_at(
+                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm, &affinity,
+            );
 
             // Land at this era. Ocean is excluded by capacity already (proven in
             // `era_substrate.rs`), so counting it here would drown the signal.

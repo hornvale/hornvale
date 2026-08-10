@@ -2669,6 +2669,22 @@
       "rung": "settlements"
     },
     {
+      "buckets": [
+        0.0,
+        0.02,
+        0.06,
+        0.15,
+        0.3,
+        0.5
+      ],
+      "doc": "The share of this world's built settlement rooms that read `is_cold` (below `FURNISHING_COLD_C` at the frozen furnishing-reference day) — the fraction of the settled world where `interior_of` would compose a hearth (The Range). Replaces the cold-DOMINATION clause of `windows/lab/tests/hearth_population_calibration.rs`, which asked over 15 seeds whether ANY world exceeded 0.5 here; decision 0097 converts an existence claim sitting on a threshold into a census rate, because at n=15 the answer is decided by one world and at n=1000 it is a fraction with a sampling bound. A world's whole settled area can be temperate (0.0 is a real reading, not a broken fold); Absent only when the world has no built rooms at all.",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "cold-built-room-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -2678,7 +2694,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x7f32c268e6f106c0"
+    "fnv1a64": "0xcf398900c6e7bb44"
   },
   "schema_version": 1,
   "study": {

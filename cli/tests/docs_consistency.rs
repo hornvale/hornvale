@@ -907,7 +907,10 @@ fn the_history_page_prose_names_the_cell_it_renders() {
     assert_eq!(
         cited, rendered,
         "history-seed-42.md prose cites cell {cited} but renders cell {rendered} — \
-         the hand-authored half has gone stale against the generated half"
+         the framing prose in scripts/regenerate-artifacts.sh (the `history_site` \
+         block, ~lines 219-243) has gone stale against the rendered column. Fix \
+         the printf literals there, not this generated .md file — it is \
+         overwritten wholesale on the next `make rebaseline`."
     );
 
     assert!(
@@ -963,8 +966,10 @@ fn the_history_page_prose_names_the_cell_it_renders() {
             assert!(
                 block.to_lowercase().contains(people),
                 "history-seed-42.md prose names {people}s, but no {people} appears \
-                 in the rendered column — the hand-authored half has gone stale \
-                 against the generated half"
+                 in the rendered column — fix the framing prose in \
+                 scripts/regenerate-artifacts.sh (the `history_site` block, \
+                 ~lines 219-243), not this generated .md file, which is \
+                 overwritten wholesale on the next `make rebaseline`."
             );
         }
     }
@@ -977,8 +982,10 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         assert!(
             !year.is_empty() && block.contains(&format!("year {year}")),
             "history-seed-42.md prose cites the year {year}, which the rendered \
-             column never reports — the hand-authored half has gone stale against \
-             the generated half"
+             column never reports — fix the framing prose in \
+             scripts/regenerate-artifacts.sh (the `history_site` block, \
+             ~lines 219-243), not this generated .md file, which is \
+             overwritten wholesale on the next `make rebaseline`."
         );
     }
 }

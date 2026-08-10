@@ -1,6 +1,43 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 //!
+//! ## Census regen — The Range (2026-08-09, canonical box, 0063/0079)
+//!
+//! **One cause: two kinds gained declared biome ranges.** A settling people's
+//! biome range now constrains which sites it may found a settlement on, so
+//! every seed's settlement contest is re-decided under the new constraint.
+//! The clearest signature is that goblin's flagship — present on every one of
+//! the 1000 census seeds since The Delvers — now fails to place at all on
+//! TWO of them: no site both satisfies the range and clears the founder
+//! floor. Which kind's range binds on those two worlds, and why, was not
+//! traced further here — the cause is stated no more narrowly than the
+//! mechanism, matching this file's own convention for roster/placement
+//! movements it has not traced to a specific settlement.
+//!
+//! ```text
+//!                                       before        after
+//!   goblin present rows (name-length)     1000          998
+//!   kobold present rows (name-length)      968          969
+//!   flagship coastal / inland / neither  208 / 792 / 0   217 / 781 / 2
+//! ```
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (879/969 = 90.7%, against
+//! the 75% floor), the epithet-honorific detector still reads true on every
+//! goblin world holding a pantheon and false on every kobold one, mean name
+//! length is still under the campaign's 10-character claim at both species
+//! (8.495 / 6.848), mean syllable count is still inside the 2-3 range at both
+//! (2.705 / 2.177 — kobold's is now the narrowest margin either species has
+//! recorded at this row), name transparency is still emphatically not 1.0
+//! (0.752 over a 0.165-to-1.0 span, though the mean rose this time — the
+//! floor fell further from 1.0 at the same regen, so this is not the
+//! uniformity defect returning), a frozen sky still never heads a cyclic
+//! pantheon, bugbear still leads the goblinoid daughters' homophony by better
+//! than 3x (3.331x over goblin, its narrowest margin since The Tolerance),
+//! and pop-weighted mean absolute latitude still clears the uniform-sphere
+//! baseline by better than 2x. These re-pin the witnesses, not the
+//! observations.
+//!
 //! ## Census regen — The Delvers (C2c) (2026-08-08, canonical box, 0063/0079)
 //!
 //! **One cause under all of it: the settling roster went from six peoples to
@@ -372,9 +409,19 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // test exists to guard is re-checked rather than assumed — the `other`
     // arm above panics loudly on a cyclic head in a locked world, and the run
     // reached this assertion, so it never fired on any of the 1000 seeds.
+    //
+    // The Delvers' (C2c) close regen moved this to (151, 41) -> (152, 40) (see
+    // the file header for the six-to-nine roster cause).
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): re-seats flagships again,
+    // (152, 40) -> (151, 41). The invariant this test exists to guard is
+    // re-checked rather than assumed — the `other` arm panics loudly on a
+    // cyclic head in a locked world, and the run reached this assertion, so it
+    // never fired on any of the 1000 seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (152, 40),
+        (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -387,8 +434,17 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // at 02172e96, 0063/0079): 11 -> 9. Same roster-competition cause as the
     // locked-head split above (human is a sixth competitor for every
     // settlement contest); this is a recorded count, not a guarded claim.
+    //
+    // The Tolerance's and the Delvers' close regens together moved this 9 ->
+    // 10 (undocumented at the individual step; recovered here from the
+    // pinned value this replaces).
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): 10 -> 9. Same
+    // roster/placement-sensitive cause as the locked-head split above; this
+    // is a recorded count, not a guarded claim.
     assert_eq!(
-        spinning_eternal, 10,
+        spinning_eternal, 9,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -625,8 +681,23 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // witness, not a guarded directional claim. The cause is stated no more
     // narrowly than the roster change: nothing this campaign measured says
     // anything about where the three new peoples sit relative to a coast.
-    assert_eq!(coastal, 208, "coastal flagship count drifted");
-    assert_eq!(inland, 792, "inland flagship count drifted");
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): 208 -> 217 coastal,
+    // 792 -> 781 inland. The two now sum to 998 rather than 1000 — TWO worlds
+    // report NEITHER flag (a real regression from Delvers' zero-Absent
+    // reading): goblin's own present-row count elsewhere in this file falls
+    // 1000 -> 998 at this same regen, and these are exactly those two worlds
+    // — a goblin flagship no longer places at all where it always did before.
+    // The cause is stated no more narrowly than the campaign's mechanism: a
+    // declared biome range now constrains where a settling people may found a
+    // settlement, and on two of the 1000 census seeds no site both satisfies
+    // goblin's range and clears the founder floor. Which kind's range is
+    // binding on those two worlds was not traced further here; this row
+    // remains a recorded witness, not a guarded directional claim, so nothing
+    // beyond the count movement needs re-checking.
+    assert_eq!(coastal, 217, "coastal flagship count drifted");
+    assert_eq!(inland, 781, "inland flagship count drifted");
 }
 
 #[test]
@@ -838,8 +909,21 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // solar; a locked-world kobold head is always solar) are re-checked rather
     // than assumed: each is an `assert_eq!` earlier in this test, the run
     // reaches these recorded rows, so none of them fired.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): re-deciding which worlds
+    // field a kobold head at all — the moonless-spinning pool moves 55 -> 56
+    // solar; lunar is unmoved at 83. All three structural invariants above
+    // this pool (a mooned kobold head is always lunar; goblin's head is always
+    // solar; a locked-world kobold head is always solar) are re-checked rather
+    // than assumed: each is an `assert_eq!` earlier in this test, the run
+    // reaches these recorded rows, so none of them fired — this row carries no
+    // directional claim of its own (a prior comment's "the sun wins most
+    // nights" phrasing is stale prose from an earlier regen, not an assertion;
+    // lunar has led solar in this pool since well before this campaign and
+    // still does).
     assert_eq!(
-        moonless_solar, 55,
+        moonless_solar, 56,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
@@ -1003,8 +1087,22 @@ fn blind_attribution_beats_chance_decisively() {
     // is really about, nearly double. The mooned-pair invariant below (perfect
     // attribution among spinning, mooned pairs) never fired either; the run
     // reaches it, and it is an `assert_eq!` that would have.
-    assert_eq!(correct, 883, "blind-attribution count drifted");
-    assert_eq!(total, 968, "attributable-pair count drifted");
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): shifting which worlds
+    // field an attributable goblin/kobold pair (968 -> 969 total — one more
+    // kobold world now places a flagship, even as goblin loses two elsewhere
+    // in this file) and which side several land on (883 -> 879 correct);
+    // accuracy 0.9121900826446281 -> 0.9071207430340558 — the directional
+    // claim this test guards (blind attribution beats chance decisively)
+    // HOLDS, re-checked rather than assumed: 0.907 against the 0.75 floor
+    // asserted above is 0.157 of margin, still comfortably decisive against
+    // the ~0.5 binary chance the claim is really about. The mooned-pair
+    // invariant below (perfect attribution among spinning, mooned pairs)
+    // never fired either; the run reaches it, and it is an `assert_eq!` that
+    // would have.
+    assert_eq!(correct, 879, "blind-attribution count drifted");
+    assert_eq!(total, 969, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1238,14 +1336,26 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // there being no goblin-absent world left. The inner `assert!` in the loop
     // confirms it still reads false on every one of the 968 kobold worlds that
     // hold a pantheon.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): moving which worlds hold
+    // a flagship pantheon at all: goblin 1000/0 -> 998/2 true/absent (the same
+    // two worlds that lose their goblin flagship elsewhere in this file —
+    // `goblin_flagship_coastal_split_is_pinned`'s new "neither" pair — now
+    // hold no goblin pantheon to read a honorific from), kobold 968/32 ->
+    // 969/31 false/absent. The claim this row guards is re-checked, not
+    // assumed — `g_false_seeds` is still exactly empty (asserted above), so
+    // the detector still reads true on every one of the 998 goblin worlds that
+    // hold a pantheon, and the inner `assert!` in the loop confirms it still
+    // reads false on every one of the 969 kobold worlds that do.
     assert_eq!(
         (g_true, g_absent),
-        (1000, 0),
+        (998, 2),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (968, 32),
+        (969, 31),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1635,8 +1745,19 @@ fn name_collision_rate_is_measured_and_pinned() {
     // directional claim (H4 already failed and is recorded as such above), so
     // nothing to re-verify beyond the three-way partition still summing to
     // 1000 — which it does.
-    assert_eq!(zero, 0, "zero-collision world count drifted");
-    assert_eq!(nonzero, 1000, "nonzero-collision world count drifted");
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): a different set of
+    // settlements survives to be named on every world: 0 -> 1 zero-collision,
+    // 1000 -> 999 nonzero; absent unmoved at 0 (1 + 999 + 0 = 1000). The
+    // zero-collision column reopens by exactly one world — not a reversal of
+    // the Delvers reading, just a different world's roster happening to draw
+    // no duplicate this time. This row still carries no directional claim
+    // (H4 already failed and is recorded as such above), so nothing to
+    // re-verify beyond the three-way partition still summing to 1000 — which
+    // it does.
+    assert_eq!(zero, 1, "zero-collision world count drifted");
+    assert_eq!(nonzero, 999, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1733,7 +1854,14 @@ fn name_collision_rate_is_measured_and_pinned() {
         // as the zero/nonzero re-pin above; this row still carries no
         // directional claim, and the rate stays inside the range decision
         // 0024 sanctions (see the note above).
-        (mean - 0.506_829_661_678_999_5).abs() < 1e-6,
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a
+        // different set of settlements is named on every world:
+        // 0.506_829_661_678_999_5 -> 0.510_906_343_952. This row still
+        // carries no directional claim, and the rate stays inside the range
+        // decision 0024 sanctions (see the note above).
+        (mean - 0.510_906_343_952).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1930,7 +2058,16 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 8.541_942_812_712_72 -> 8.562_788_425_799_996. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — 1.44
         // characters of margin — re-checked rather than assumed.
-        ("goblin", 1000u32, 8.562_788_425_799_996),
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a declared
+        // biome range now blocks a goblin flagship from placing at all on two
+        // worlds (see `goblin_flagship_coastal_split_is_pinned`), so present
+        // falls 1000 -> 998, mean 8.562_788_425_799_996 -> 8.494_760_944_989_975.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — 1.51 characters of margin — re-checked rather than
+        // assumed.
+        ("goblin", 998u32, 8.494_760_944_989_975),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2014,7 +2151,15 @@ fn name_length_distributions_are_measured_and_pinned() {
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — 3.13 characters of margin — re-checked rather than
         // assumed.
-        ("kobold", 968u32, 6.869_846_921_177_682_5),
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a declared
+        // biome range now reaches ONE more world where kobold could not
+        // previously seat a flagship: 968 -> 969 present, mean
+        // 6.869_846_921_177_682_5 -> 6.848_307_837_667_7. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — 3.15
+        // characters of margin — re-checked rather than assumed.
+        ("kobold", 969u32, 6.848_307_837_667_7),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2158,8 +2303,22 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // species — 2.723 and 2.184, both inside 2-3 — re-checked, not
         // assumed; goblin sits 0.28 below the ceiling and kobold 0.18 above
         // the floor, the narrower of the two margins.
-        ("goblin", 1000u32, 2.723_388_327_800_003),
-        ("kobold", 968u32, 2.184_114_303_822_312_3),
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): present
+        // counts move with the flagship-placement change recorded at the
+        // name-length row above: goblin 1000 -> 998 present, mean
+        // 2.723_388_327_800_003 -> 2.705_454_691_783_566; kobold 968 -> 969
+        // present, mean 2.184_114_303_822_312_3 -> 2.176_904_839_215_685.
+        // Present counts still agree with the name-length row's re-pin above
+        // (998 / 969), as the per-row structural relation this test also
+        // asserts requires. The claim still HOLDS at both species — 2.705 and
+        // 2.177, both inside 2-3 — re-checked, not assumed; goblin sits 0.295
+        // below the ceiling and kobold 0.177 above the floor, the narrower of
+        // the two margins (kobold's, and it is the narrowest either species
+        // has recorded at this row).
+        ("goblin", 998u32, 2.705_454_691_783_566),
+        ("kobold", 969u32, 2.176_904_839_215_685),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2316,7 +2475,19 @@ fn name_transparency_is_measured_and_pinned() {
         // than assumed, and note this is the SAFE direction: only a rise back
         // toward 1.0 would mean wear had stopped. A 0.743 mean over a
         // 0.258-to-1.0 span is wear still happening.
-        (mean - 0.743_291_175_730_000_9).abs() < 1e-9,
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): a
+        // different set of settlements is named on every world; present/
+        // absent are unmoved at 1000/0, and the mean RISES this time:
+        // 0.743_291_175_730_000_9 -> 0.751_571_090_980_000_1. This is the
+        // direction flagged as worth watching at the previous regen. It is
+        // NOT the defect returning: 0.752 is still a long way from 1.0 (the
+        // claim this row exists to guard, re-checked rather than assumed),
+        // and the spread assertion below shows the floor falling further
+        // from 1.0 at the same regen — a uniformity relapse would need the
+        // floor to rise toward the mean, and instead it fell.
+        (mean - 0.751_571_090_980_000_1).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2356,7 +2527,17 @@ fn name_transparency_is_measured_and_pinned() {
         // rather than assumed, and flagged for the next regen: a floor that
         // kept climbing toward the mean is exactly how this defect would come
         // back, and it would be a finding to report, not a bound to widen.
-        (min - 0.257_575_76).abs() < 1e-8,
+        //
+        // The Range's close regen (2026-08-09, canonical census on the
+        // canonical box, two kinds gaining declared biome ranges): the floor
+        // DROPS sharply, 0.257_575_76 -> 0.165_354_33, while the ceiling stays
+        // pegged at 1.0 (asserted below, unmoved) and the mean rises to
+        // 0.752. So the span WIDENS from below even as the mean rises — the
+        // opposite-signed pair the previous regen's warning was watching
+        // for. A 0.165-to-1.0 span around a 0.752 mean is still plainly a
+        // distribution over worlds, not the uniformity defect the row exists
+        // to catch: re-checked rather than assumed.
+        (min - 0.165_354_33).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -3405,6 +3586,84 @@ fn the_tribute_stock_varies_across_the_census() {
          the first instrument that could",
         stock.len(),
         sorted[sorted.len() / 2]
+    );
+}
+
+/// The verifier decision 0097 prescription 4 requires: `cold-built-room-share`
+/// (the census column that replaced the 15-seed cold-DOMINATION existence
+/// clause `hearth_population_calibration.rs` used to carry — see that
+/// decision and the metric's own doc in `windows/lab/src/metrics.rs`) is a
+/// *generator* with no verifier until this row exists. An unpaired census
+/// claim "scores as unchecked no matter how large its sample" (0097
+/// prescription 4); this pairs it.
+///
+/// # The band was fixed before the number was read
+///
+/// Rule, chosen first: the measured dominated-world rate, ± 5 binomial
+/// standard errors, rounded outward to the nearest 0.5 percentage point.
+/// Applied to the committed fixture:
+///
+/// ```text
+/// n = 1000, present = 1000, absent = 0
+/// dominated (share >= 0.5)   = 222   ->  22.20%
+/// binomial SE = sqrt(p(1-p)/n) = 1.3142 pp
+/// 5 SE = 6.5711 pp
+/// raw band   = [15.629%, 28.771%]
+/// rounded outward to 0.5 pp -> [15.5%, 29.0%]
+/// ```
+///
+/// The preregistered contingency — if fewer than 30 worlds were dominated,
+/// assert no positive lower bound, since a rate estimated from under 30
+/// successes has no binomial-normal approximation worth a band — is **not
+/// triggered**: 222 clears it by a wide margin.
+///
+/// # What a 15-seed probe could not see
+///
+/// The retired existence clause asked only whether ANY of 15 worlds crossed
+/// 50% cold-built; The Contour flipped that answer by five rooms on the one
+/// seed sitting near the bar, and The Range's biome ranges flipped it again.
+/// At n = 1000 the same physics reads as a rate with a confidence interval
+/// instead of a coin flip decided by whichever world sits nearest the
+/// threshold — the difference 0097 exists to draw.
+///
+/// claim: rate(census: cold-built-room-share, [15.5, 29.0])
+#[test]
+fn cold_built_room_share_dominated_rate_is_measured_and_pinned() {
+    let shares = seeded_nums(&DRIFT, "cold-built-room-share");
+    assert!(
+        !shares.is_empty(),
+        "cold-built-room-share was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, share) in &shares {
+        assert!(
+            share.is_finite() && (0.0..=1.0).contains(share),
+            "seed {seed}: cold-built-room-share {share} is not a share in [0, 1]"
+        );
+    }
+    let dominated = shares.iter().filter(|(_, share)| *share >= 0.5).count();
+    // The preregistered contingency: under 30 dominated worlds, a binomial
+    // band has nothing solid to stand on, so only report, never bound.
+    assert!(
+        dominated >= 30,
+        "only {dominated} of {} worlds are cold-dominated — too few for the \
+         preregistered binomial band; report the rate, do not assert one",
+        shares.len()
+    );
+    let rate = dominated as f64 / shares.len() as f64;
+    assert!(
+        (0.155..=0.290).contains(&rate),
+        "cold-dominated rate {:.4} ({dominated}/{}) drifted outside the \
+         preregistered [15.5%, 29.0%] band (measured rate +/- 5 binomial SE, \
+         rounded outward to 0.5pp)",
+        rate,
+        shares.len()
+    );
+    println!(
+        "cold-built-room-share over {} census worlds: {dominated} dominated \
+         (share >= 0.5), rate {:.4}",
+        shares.len(),
+        rate
     );
 }
 

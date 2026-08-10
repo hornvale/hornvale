@@ -524,6 +524,79 @@ waits on the underworld being declared as **places** — biomes, the way the sea
 depth layers already are — rather than as a coordinate pushed through a
 tolerance curve.
 
+*Re-scored twice by [The Range](./chronicle/the-range.md) (2026-08-08), once
+against a claim this chapter already makes and once against The Delvers'
+result. The two moves are independent and are kept apart deliberately.*
+
+**First, and this is a confidence-lowering event about how a claim got here:
+the realm sentence above was asserted before it was true.** *"An authored realm
+selects, absolutely"* was a true statement about a **readout** and a false one
+about the **world**. The gate reached `per_species_suitability`, whose only
+production caller is a demography report — its own comment says the figure is
+never serialized and never identity — while the function that decides where
+settlements actually go took no realm parameter and applied no realm gate at
+all. Declaring a peopled kind `Subterranean` moves that readout from 99.49% to
+5.62% of land and moves the committed seed-42 world by **zero bytes**: the same
+hash, the same 7,764 facts, the same flagship village, with three positive
+controls run before the null was believed. The Range repaired the identity
+path, so the sentence is true now, and nothing about the twenty-five-world
+exclusion measurement was wrong — it measured a quantity no world reads.
+
+What should lose confidence is the *procedure that produced the sentence*. The
+measurement behind it is the one the peoples programme mandates, and it scored
+the top rung of the programme's own probe-validity ladder, whose fourth and
+highest rung reads "the readout differentiates the axis". A mechanism can be
+authorable, read, correctly coupled and demonstrably differentiating, and still
+never touch a world; until this campaign the programme had no rung in which
+that sentence could be said. There is now a fifth — **reaches world identity**,
+scored by perturbing the axis and asking whether the committed world changed.
+Rung four remains necessary. It had simply been reading as sufficient.
+
+**Second, and this sharpens The Delvers rather than reversing it: a preference
+applied *outside* the limiting product both binds and differentiates.** The
+Range added a biome affinity — a per-kind, per-biome multiplier applied beside
+the realm mask rather than folded in as a fifth tolerance axis — and froze two
+predictions before the rows existed. Both were confirmed. The arid share of
+gnoll's settlements rose from 0.000 to 0.500, against a baseline captured by
+running the test red on an empty registry, so a downward-only mask **relocates**
+rather than merely thinning. And mean pairwise Pearson correlation between
+gnoll's capacity field and the other peopled kinds' **fell on all three seeds a
+previous campaign published** — 0.851 → 0.795, 0.790 → 0.706, 0.857 → 0.806,
+with all twenty-four individual pairs down, the instrument cross-checked
+against a previously published pair value to six places.
+
+The honest reading is not that The Delvers was wrong. It is that the two
+campaigns applied a preference at **different points in the same pipeline**.
+The Delvers' climate niche sits *inside* the Liebig minimum, where it competes
+with an elevation axis passed a literal zero rather than the sovereignty floor,
+and a factor the minimum discards cannot separate anything. The Range's biome
+affinity multiplies the product from outside, where it cannot be discarded. So
+the candidate this chapter now holds is that **where in the pipeline a
+preference is applied decides whether it can differentiate, not merely whether
+it binds** — a structural property, not a fact about niches.
+
+It is held as a candidate and not as a law, on two grounds. It rests on one
+mechanism and two authored occupants. And the alternative reading survives the
+evidence: the falls are real but modest, gnoll still correlating at 0.71–0.93
+with most peoples afterwards, so the peoples may be so alike in their surviving
+tolerances that no factor of this kind could pull them far apart. Pearson is
+scale-invariant besides, so this measures how the fields **sort** cells, not how
+large they are — the same scope limit The Delvers' own supply-factor correlation
+carries.
+
+**A third thing was measured and is deliberately left without a cause.** One
+authored row redistributed the entire placement. On seed 7 the total moved 274
+→ 287 while gnoll — the kind whose affinity was declared — stayed at 4 and
+bugbear went 49 → 153. The attribution is proven rather than argued: the
+campaign's second occupant is fauna, chosen so that exactly one *peopled* kind's
+placement could move, and a test rebuilds three seeds with and without its row
+and asserts the complete list of (people, cell) placements is identical. So
+every movement is gnoll's row alone. **Why one row moves everyone is not
+established, and no mechanism is narrated here.** What the chapter should carry
+is the magnitude: authoring an ecological preference for one kind is not a local
+edit to that kind, and a future occupant should expect to move every people's
+numbers.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -1028,6 +1101,52 @@ over-admission, which a mutation demonstrated and only a separate,
 opposite-facing test caught. So the row now reads: parity is mechanized in both
 the plan and the prose, in one direction, and the second direction is held by
 regression tests rather than by a rule.
+
+**Re-scored by [The Quire](./chronicle/the-quire.md) (2026-08-09): the seam
+gets its first consumer that structurally *cannot* cheat, and its first
+finding of incompleteness rather than of error.** Every earlier test of this
+bet was in-tree. Both browser panes are compiled beside the sim; the wasm shim
+links it. Their discipline was real and it was a discipline. The Quire's render
+crate is outside the cargo workspace and has **no dependency on the simulation
+at all**, so the methods a client must not reach — whether a creature would
+turn hostile, its grievance against you, the knowledge store — are not
+discouraged but absent: there is no symbol to reach. The same move applies one
+level down, where the client's hand-written mirror of the schema simply does
+not declare the channel the schema itself warns is world truth, so the
+forbidden pane cannot be built rather than must not be. This is the first time
+the redaction boundary has been enforced by what was *not written down*, and it
+is a stronger form of the claim than any prior test produced.
+
+What that strength bought was a negative result, which is the news. A client
+that renders only the emitted contract is standing evidence that the contract
+is renderable — and this one found a place where it is not. The session's
+spatial channel splits `walk` from `chamber`, where `walk` means *not inside a
+built structure*; being submerged and being underground both fold into it.
+Underground, a pane drawing the exits from the document drew the surface's
+exits, while the prose in the same document said *out*. Nothing on the wire
+distinguishes the two states except the literal word inside the prose, which no
+consumer may parse. So the ledger above gains an entry of a kind it did not
+have: not the drawn thing failing to match the thing, but the **document
+correctly describing less than a consumer needs, with no defect anywhere to
+point at**. Its resolution is instructive too — the pane was deleted, because
+the client never needed the exits: command parsing lives in the sim, the key
+mapping sends its verb unconditionally, and an invalid move is answered with a
+sentence. A consumer's requirement for a channel should be checked before the
+channel is designed.
+
+One older row recurs and one instrument for it becomes mechanizable. The
+recurrence: the outdoor chart was geometrically wrong — the sim's own render of
+the identical thirty-one cells is five dense rows and the client drew nine
+sparse sheared ones — under seventeen green tests and four mutation proofs,
+which is The Purview's leaning parallelogram a second time in a different
+codebase. Twice is a structural property of picture-versus-property, not an
+anecdote. The instrument: the repair pinned the client's projection against the
+sim's own ASCII rendering of the same document, byte for byte, and the indoor
+plate was pinned the same way pre-emptively and passed. Where the repository
+already contains a second, independent renderer of a document, "does the
+picture state the document's geometry" stops being taste and becomes a
+comparison — which is the first time a row on this ledger has been converted by
+something other than a human remembering to look.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than

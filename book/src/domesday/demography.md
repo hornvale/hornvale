@@ -14,27 +14,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 2 | 10 | 92 | 1924 | 113.526 |
+| 0 | 0 | 9 | 106 | 1992 | 114.273 |
 
 ### `goblin-flagship-population`
 
 The goblin flagship settlement's committed population; Absent if goblins placed no settlement
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 998 present, 2 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 34 | 40 | 41 | 43 | 35.295 |
+| 2 | 35 | 40 | 41 | 43 | 35.563126 |
 
 ### `kobold-flagship-population`
 
 The kobold flagship settlement's committed population; Absent if kobolds placed no settlement
 
-n = 968 present, 32 absent (of 1000 worlds)
+n = 969 present, 31 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 28 | 46 | 54 | 70 | 40.235537 |
+| 2 | 28 | 46 | 53 | 70 | 40.315789 |
 
 ### `mean-population`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5.3214286 | 24.850174 | 30.405836 | 33.448276 | 47.392857 | 28.419819 |
+| 6.2142857 | 24.88172 | 30.886624 | 34.162651 | 48.266667 | 28.828648 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5 | 9 | 9 | 9 | 9 | 8.956 |
+| 5 | 9 | 9 | 9 | 9 | 8.916 |
 
 ### `peoples-placed`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5 | 9 | 9 | 9 | 9 | 8.956 |
+| 5 | 9 | 9 | 9 | 9 | 8.916 |
 
 ### `total-population`
 
@@ -74,13 +74,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 166 | 3890 | 6218 | 8221 | 18300 | 6128.73 |
+| 134 | 3586 | 5676 | 7715 | 15969 | 5649.716 |
 
 ## Weaknesses found here
-
-### `climate-displacement-events`
-
-- **D3**: p25..p75 spans 90 (4.68% of the 1924 min..max range), under the 5% bar
 
 ### `peoples-alive-at-bake-end`
 
