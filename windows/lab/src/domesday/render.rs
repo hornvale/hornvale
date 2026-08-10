@@ -21,11 +21,11 @@
 //! reused by an index-level rollup if one is ever added.
 
 use crate::domesday::census::{Census, Column};
-use crate::domesday::detect::Finding;
+use crate::domesday::detect::{DECLARED_DETECTORS, Finding};
 use crate::domesday::stats::{categorical, numeric};
 use crate::metrics::Domain;
 use hornvale_kernel::quantize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The header every generated Domesday page opens with, matching the
 /// project's existing generated-page convention (`book/src/reference/`,
@@ -542,19 +542,27 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
         "Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by \
          construction (a frozen metric's median trivially equals its min and max), and \
          D3 and D4 also overlap. Each domain page groups its own findings by metric so \
-         no reader counts the same metric twice.\n\n",
+         no reader counts the same metric twice. A detector that found nothing still \
+         gets a row, reading `0`: silence here would mean both *this detector does not \
+         exist* and *this detector ran and every claim it checks held*, and those two \
+         must not share a channel.\n\n",
     );
     out.push_str("| detector | findings |\n|---|---|\n");
-    // Derived from the findings themselves, not a hardcoded roster: a
-    // detector that fires nothing has no row, which is correct (an empty
-    // row would assert a measurement that was never taken), and a detector
-    // whose name changes (as D5 split into "D5 direction"/"D5 strength")
-    // cannot silently vanish from a frozen literal this table forgot to
-    // update. This is the fourth frozen roster this programme has found —
-    // close the class, not the instance.
-    let mut detectors: Vec<&str> = findings.iter().map(|f| f.detector).collect();
-    detectors.sort_unstable();
-    detectors.dedup();
+    // The UNION of the declared roster and the names actually observed, in
+    // ascending name order — the same order `detect` sorts findings in, so
+    // the table reads in the same sequence as everything downstream of it.
+    //
+    // Neither half alone is safe, and each failed in turn. A frozen
+    // `["D1".."D8"]` literal dropped a *renamed* detector's real count. Its
+    // repair — deriving the roster from the findings — dropped every
+    // detector that fired NOTHING, so `D7 | 0` disappeared and this
+    // campaign's `D5 direction | 0` null was never published at all, making
+    // an absent row mean either "does not exist" or "found nothing"
+    // (decision 0114 forbids exactly that sharing). The union degrades in
+    // the one safe direction: a stale [`DECLARED_DETECTORS`] can omit a
+    // ZERO row, never a real finding.
+    let mut detectors: BTreeSet<&str> = DECLARED_DETECTORS.iter().copied().collect();
+    detectors.extend(findings.iter().map(|f| f.detector));
     for detector in detectors {
         let n = findings.iter().filter(|f| f.detector == detector).count();
         out.push_str(&format!("| {detector} | {n} |\n"));
@@ -782,10 +790,11 @@ mod tests {
         // would fire, be counted by `detect()`, and then be silently
         // dropped from the published table -- an undercount in the
         // artifact whose whole claim is that it computes rather than
-        // restates. `render_index` must derive its roster from the
-        // findings themselves, so this passes against the fix and would
-        // fail against the old fixed-eight-detector loop (which would
-        // render no row at all for "D9 test").
+        // restates. The observed half of `render_index`'s union is what
+        // protects this: the roster it declares is a floor, never a
+        // filter, so a name it has never heard of still gets its true
+        // count. Fails against the old fixed-eight-detector loop, which
+        // would render no row at all for "D9 test".
         let c = census();
         let findings = vec![Finding {
             detector: "D9 test",
@@ -798,6 +807,40 @@ mod tests {
             "a novel detector name must get its own row in the findings-by-detector \
              table, not be silently absent: {index}"
         );
+    }
+
+    #[test]
+    fn a_detector_that_fired_nothing_still_gets_a_zero_row() {
+        // The other half of the union, and the defect the observed-only
+        // roster introduced: a detector that fires no finding must still
+        // appear, with a count of 0. Absence would otherwise carry two
+        // meanings at once -- "no such detector" and "this detector ran and
+        // found nothing" -- which is the conflation decision 0114 forbids.
+        // On the committed census this is not hypothetical: D7 fires
+        // nothing, and `D5 direction` -- the campaign's headline null --
+        // fires nothing either, so both vanished from the published index.
+        //
+        // The findings passed in are a single D1 hit rather than none at
+        // all, so the test also proves the two halves coexist: a detector
+        // that DID fire keeps its true count in the same table.
+        let c = census();
+        let findings = vec![Finding {
+            detector: "D1",
+            metric: "dominant-land-biome".to_string(),
+            detail: "a synthetic degeneracy".to_string(),
+        }];
+        let index = render_index(&c, &findings);
+        assert!(
+            index.contains("| D1 | 1 |"),
+            "a detector that fired must still show its true count: {index}"
+        );
+        for detector in DECLARED_DETECTORS.iter().filter(|d| **d != "D1") {
+            assert!(
+                index.contains(&format!("| {detector} | 0 |")),
+                "{detector} fired nothing and must be published as a zero row, not \
+                 omitted: {index}"
+            );
+        }
     }
 
     #[test]

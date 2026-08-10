@@ -159,6 +159,20 @@ better.**
   published lines. Task 4c noticed and deferred it; the close fixed it. Worth
   noting only because "match the surrounding style" and "the surrounding style
   is inconsistent" is a loop that terminates at the close or never.
+- **A repair that committed the mirror of the defect it removed.** The
+  whole-branch review, at the merge stop, found that replacing the renderer's
+  frozen `D1..D8` literal with a roster *derived from the findings* had deleted
+  every zero row: a detector that fires nothing has no finding to derive a name
+  from. `D7 | 0` left the published index and `D5 direction | 0` — this
+  campaign's headline null — never entered it, so absence in that table again
+  carried two meanings, the exact conflation the campaign's own decision
+  forbids. The fix is the union of a declared roster and the observed names.
+  Two lessons, both already in the project's ledger and both re-earned here:
+  swapping one half of a two-sided invariant for the other half is not a fix,
+  and **the repair of a defect deserves the same review as the defect** — this
+  one shipped through a task review and a whole-branch review before being
+  caught. A guard is what makes the difference: the zero-row test was required
+  to fail against the interim renderer before it was believed.
 
 ## What went right, briefly
 

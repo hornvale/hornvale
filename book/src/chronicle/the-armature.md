@@ -198,8 +198,9 @@ that survives the measurement is worth more than any amount of it afterwards.
 
 ## What the campaign actually caught
 
-It went looking for severed links in the world and found two could-not-fire
-defects in the instrument.
+It went looking for severed links in the world and found four could-not-fire
+defects in the instrument: two in the measurement path, one caught at plan time,
+and one committed by the repair of that third.
 
 The correlation function documented that it returns nothing when either column
 is constant, and guarded on the variance being at or below zero. The guard was
@@ -217,8 +218,21 @@ A third had been caught at plan time: the survey renderer carried a frozen
 roster of detector names, `D1` through `D8`, so a new detector would have been
 computed and then dropped before rendering.
 
+A fourth arrived inside the third one's repair, and is the cleanest miniature of
+the whole principle. Deriving the roster from the findings fixed the stale
+literal and introduced its mirror: a detector that fires nothing has no finding
+to derive a name from, so it lost its row altogether. Absence in that table then
+meant either *no such detector* or *this detector ran and every claim it checks
+held* — the two meanings decision 0114, this campaign's own, forbids sharing a
+channel.
+`D7 | 0` disappeared from the published index, and `D5 direction | 0`, the
+headline null, had never appeared in it at all. The renderer now publishes the
+union of a declared roster and the observed names, the one arrangement that can
+show a zero without ever hiding a count: a roster gone stale can drop a zero
+row, never a finding.
+
 The Domesday found four defects of this family inside this same module. That is
-now seven, in the one part of the codebase whose entire purpose is finding
+now eight, in the one part of the codebase whose entire purpose is finding
 weaknesses, found by two consecutive campaigns each of which knew about the
 family before it started. Knowing the failure mode confers no immunity to it,
 and an instrument built to see what does not fire is not thereby able to see

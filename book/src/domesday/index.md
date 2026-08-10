@@ -32,7 +32,7 @@ A `domains/` crate no census metric measures at all is a gap in the world, not a
 
 ## Findings by detector
 
-Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by construction (a frozen metric's median trivially equals its min and max), and D3 and D4 also overlap. Each domain page groups its own findings by metric so no reader counts the same metric twice.
+Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by construction (a frozen metric's median trivially equals its min and max), and D3 and D4 also overlap. Each domain page groups its own findings by metric so no reader counts the same metric twice. A detector that found nothing still gets a row, reading `0`: silence here would mean both *this detector does not exist* and *this detector ran and every claim it checks held*, and those two must not share a channel.
 
 | detector | findings |
 |---|---|
@@ -40,7 +40,9 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D2 | 31 |
 | D3 | 13 |
 | D4 | 39 |
+| D5 direction | 0 |
 | D5 strength | 19 |
 | D5 unmeasurable | 6 |
 | D6 | 1 |
+| D7 | 0 |
 | D8 | 2 |

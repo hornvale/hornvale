@@ -30,8 +30,11 @@ use std::collections::BTreeSet;
 /// `detector` names the detector that raised it. That name is an open set,
 /// not the closed D1-D8 roster: a detector may report under several names to
 /// distinguish outcomes it must not conflate, and D5 does exactly that with
-/// `"D5 strength"`, `"D5 direction"` and `"D5 unmeasurable"`. Readers must
-/// treat the field as an opaque label and never enumerate it. `metric` is the census column
+/// `"D5 strength"`, `"D5 direction"` and `"D5 unmeasurable"`. A reader must
+/// treat the field as an opaque label and must never *filter* on an
+/// enumeration of it — [`DECLARED_DETECTORS`] exists only so a renderer can
+/// show a zero for a detector that fired nothing, and is used as a union
+/// with the observed names, never as a whitelist. `metric` is the census column
 /// (or, for D8, the `domains/` crate) it concerns; `detail` is a
 /// human-readable explanation carrying the actual numbers involved — every
 /// number in it is read from the committed census at render time, never
@@ -46,6 +49,32 @@ pub struct Finding {
     /// A human-readable explanation, carrying the numbers that triggered it.
     pub detail: String,
 }
+
+/// Every detector name the functions in this module can emit — ten, because
+/// D5 reports under three.
+///
+/// It exists for exactly one purpose: so a renderer can publish a count of
+/// `0` for a detector that ran and found nothing, which decision 0114
+/// requires (an absent row would make "does not exist" and "found nothing"
+/// share one channel). It is **not** a closed set and must never be used to
+/// filter findings — a renderer takes `declared ∪ observed`, so a detector
+/// whose name is missing here still shows its true count, and a name here
+/// that nothing emits renders as a harmless zero row. `guard::
+/// every_emitted_detector_name_is_declared` scans this file for the names
+/// actually constructed and fails if one is missing from this list.
+/// type-audit: bare-ok(identifier-text)
+pub const DECLARED_DETECTORS: &[&str] = &[
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5 direction",
+    "D5 strength",
+    "D5 unmeasurable",
+    "D6",
+    "D7",
+    "D8",
+];
 
 /// Run all eight detectors over the committed census, in deterministic
 /// order (sorted by detector, then metric — never `HashMap` iteration
