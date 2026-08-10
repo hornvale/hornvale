@@ -342,6 +342,7 @@
 - [The Whetstone](./chronicle/the-whetstone.md)
 - [The Quire](./chronicle/the-quire.md)
 - [The Range](./chronicle/the-range.md)
+- [The Cairn](./chronicle/the-cairn.md)
 
 # Appendix: The Frontier
 
