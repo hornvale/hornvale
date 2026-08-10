@@ -110,6 +110,27 @@
 //! onto arid ground. Across all three seeds the arid share was **exactly zero
 //! before and strictly positive after**.
 //!
+//! ### These numbers no longer REPRODUCE, and both predictions still pass
+//!
+//! **The Radiation (C2d), 2026-08-10.** That campaign added six elves to the
+//! roster (task 2) and six affinity rows to the registry (task 3), and both
+//! moved the world these tables were measured in. The tables are kept as
+//! published — they are The Range's claim, not a fixture — but re-running this
+//! file now prints different figures, and the difference is not drift:
+//!
+//! - The `Absent` arm empties the WHOLE registry, so it now removes eight rows
+//!   rather than two. It is still "the world before an affinity existed"; it is
+//!   no longer "the world before *this campaign*".
+//! - Gnoll's seed-42 ABSENT count reads **13**, not 20 — six new peoples
+//!   contest the same ground. Its SHIPPED count is still 2 and its arid share
+//!   still 0.000 → 0.500, so P1″ passes on the same reading it was frozen on.
+//! - P2's mean is over **fourteen** peoples now, not eight, so the mean itself
+//!   is a different statistic. Seed 42 reads 0.818414 → 0.727692 (d −0.090722),
+//!   a larger fall than the published −0.055475, and every seed still falls.
+//! - The Delvers cross-check survives untouched: `gnoll vs kobold` on seed 42
+//!   still reads `0.291124` in the ABSENT arm, to six places. That is the
+//!   number that would have caught a mistake here, and it did not move.
+//!
 //! ## P2 — CONFIRMED on 3 of 3 seeds
 //!
 //! Gnoll's mean pairwise Pearson `r` against the other eight peopled kinds,
@@ -791,12 +812,19 @@ fn the_fauna_occupant_moves_no_settlement() {
 /// `elevation.devotion` could turn a row into a double count without touching
 /// the row, and nothing else in the workspace would notice.
 ///
-/// Measured 2026-08-09:
+/// Measured 2026-08-09, extended 2026-08-10 (The Radiation task 3 — six elves,
+/// each clearing the bar by ≥ 0.12):
 ///
 /// ```text
 ///   kind              mass kg   potency   floor      elev devotion
 ///   gnoll               136.1      0.00   0.495384        0.40
 ///   woolly-mammoth     6000.0      0.00   0.692367        0.50
+///   desert-elf           50.0      0.00   0.421703        0.30
+///   drow                 52.0      0.00   0.424802        0.30
+///   high-elf             55.0      0.00   0.429202        0.30
+///   sea-elf              58.0      0.00   0.433335        0.30
+///   snow-elf             60.0      0.00   0.435955        0.30
+///   wood-elf             55.0      0.00   0.429202        0.30
 /// ```
 #[test]
 fn every_occupant_has_climate_curves_the_minimum_currently_discards() {

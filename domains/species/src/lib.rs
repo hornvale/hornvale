@@ -2420,8 +2420,9 @@ impl BiomeAffinity {
 impl Component for BiomeAffinity {}
 
 /// The sparse biome-affinity component: **only** kinds with an authored,
-/// non-uniform affinity across biomes appear. Two occupants as of The Range
-/// task 4 — every other kind is unrestricted across every biome.
+/// non-uniform affinity across biomes appear. Eight occupants as of The
+/// Radiation task 3 — The Range's two (gnoll, woolly-mammoth) plus the six
+/// elves — and every other kind is unrestricted across every biome.
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has two
 /// consumers (genesis placement and `best_home`), each of which holds a
@@ -2451,34 +2452,82 @@ impl Component for BiomeAffinity {}
 ///
 /// the elevation term is below the other three at **every** cell of every
 /// world, the minimum is elevation everywhere, and the temperature, moisture
-/// and insolation curves contribute exactly nothing. Both occupants below clear
-/// that bar, so each affinity restores a preference the model was throwing
-/// away rather than duplicating one it already honours:
+/// and insolation curves contribute exactly nothing. Every occupant below
+/// clears that bar, so each affinity restores a preference the model was
+/// throwing away rather than duplicating one it already honours:
 ///
 /// ```text
 ///   kind              mass kg   potency   floor      elev devotion   below?
 ///   gnoll               136.1      0.00   0.495384        0.40        YES
 ///   woolly-mammoth     6000.0      0.00   0.692367        0.50        YES
+///   desert-elf           50.0      0.00   0.421703        0.30        YES
+///   drow                 52.0      0.00   0.424802        0.30        YES
+///   high-elf             55.0      0.00   0.429202        0.30        YES
+///   sea-elf              58.0      0.00   0.433335        0.30        YES
+///   snow-elf             60.0      0.00   0.435955        0.30        YES
+///   wood-elf             55.0      0.00   0.429202        0.30        YES
 /// ```
 ///
 /// `windows/worldgen/tests/range_readout.rs` asserts this inequality for every
 /// row in this registry, so a later edit to a mass or an elevation devotion
 /// cannot quietly turn one of these rows into a double count.
+/// `windows/worldgen/tests/radiation_admission.rs` asserts it a second time for
+/// the six elves specifically, as a task-1 precondition.
 ///
-/// # The ladder both rows are authored on
+/// # The ladder every row is authored on
 ///
-/// Four steps, so the two rows are read against one another rather than each
+/// Four steps, so the rows are read against one another rather than each
 /// tuned by eye. Level is gauge for placement (genesis and `best_home` rank
 /// cells in the kind's *own* units, so a constant factor reorders nothing) —
 /// only the shape matters, and the shape is:
 ///
 /// ```text
-///   1.00  stronghold  the biome `classify_land` returns for the kind's OWN
-///                     authored (temperature, moisture) reading
+///   1.00  stronghold  the biome the classifier returns for the kind's OWN
+///                     authored reading
 ///   0.70  near        one band out, still recognisably the kind's country
 ///   0.45  marginal    two bands out, or the right climate in the wrong form
-///   0.25  default     everything else, including all ten marine biomes
+///   0.25  default     everything else
 /// ```
+///
+/// **"Level is gauge" is true of RANKING and false of everything downstream of
+/// it — measured, The Radiation task 3.** Genesis and `best_home` rank cells in
+/// the kind's own units, so a constant factor reorders nothing *for that kind*,
+/// and the sentence above is correct as far as it goes. But the factor also
+/// multiplies the capacity that becomes the settlement's POPULATION, and the
+/// history bake's volume is a function of population. On seed 42, adding the
+/// six elf rows at this ladder's `0.25` default takes the tithe census from 552
+/// occupation records to **193** (alive at now 192 → 100, subordinations formed
+/// 232 → 41, tribute relations standing 83 → 17) and breaches four deliberate
+/// fidelity floors in `history_tithe.rs` and `history_sundering.rs`. Raising
+/// only this fourth step to `0.50`, with the `1.00 / 0.70 / 0.45` shape
+/// untouched, restores every one of them (495 / 172 / 166 / 58).
+///
+/// No single row causes it and the dose is not linear: wood+high+drow alone
+/// give 366 records, desert+sea+snow alone give 660, and all six together give
+/// 193. The ladder was calibrated on a store holding two of forty kinds — one
+/// of them fauna, so ONE settling people in nine. It now holds seven settling
+/// peoples of fifteen, and its fourth step is doing something at that density
+/// that it did not do at the density it was authored for. Treat the number as
+/// **open**, not settled, and do not read a green suite as evidence it is fine.
+///
+/// "The classifier" is `classify_land` for a terrestrial kind, read at its
+/// authored `(temperature.optimum, moisture.optimum)`. For the one marine
+/// occupant (sea-elf) it is `classify_marine`, read at its authored
+/// `(elevation.optimum, temperature.optimum)` — a different lookup, the same
+/// discipline: name the class the code returns, do not name the class the
+/// theme suggests.
+///
+/// **"One band out" is a step in the lookup TABLE, not a step in sigma.** The
+/// classifier is a grid of thermal bands crossed with moisture bands, and the
+/// ladder walks that grid. Which neighbour counts as *near* rather than
+/// *marginal* is then settled by the clause the step already carries — "still
+/// recognisably the kind's country" — read against whichever axis the kind's
+/// own curve is committed to, with its authored sigma as the evidence. Gnoll's
+/// row is the worked example: its moisture devotion (0.75) and its narrow
+/// moisture sigma (0.12) are what put the two *dry* temperate bands at `near`
+/// and the *wetter* savanna at `marginal`, even though savanna is the closer
+/// step in sigma. Desert-elf, two rows down, makes the opposite call from the
+/// same stronghold and says why.
 ///
 /// The ceiling is `1.00` deliberately: an affinity here is a **penalty
 /// relative to the unrestricted 1.0 every other kind carries**, never a boost,
@@ -2490,8 +2539,13 @@ impl Component for BiomeAffinity {}
 /// The floor is `0.25` and never `0.0`. Zero is a **hard exclusion**, not a
 /// strong preference — genesis filters its founding pool on
 /// `caps_now()[pidx].at(c) > 0.0` ("a proto-site a people cannot feed is not a
-/// founding, it is a death two epochs later"). Neither kind here means *never*:
-/// a gnoll war-band in a temperate forest is a rarity, not an impossibility.
+/// founding, it is a death two epochs later"). No kind here means *never*:
+/// a gnoll war-band in a temperate forest is a rarity, not an impossibility,
+/// and neither is a snow-elf outpost in a savanna. The deep ocean is the case
+/// that most tempts a zero — sea-elf has no business in the abyss — and it
+/// still takes `0.25`, because "no settlement has ever been founded there" is
+/// a result the placement layer should produce, not an input the registry
+/// should assert.
 pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
     [
         // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
@@ -2566,9 +2620,232 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
                 ],
             },
         ),
+        // ---------------------------------------------------------------
+        // THE RADIATION (C2d, task 3): the six elves.
+        //
+        // The family is authored on the affinity route rather than the
+        // condition-curve route, and the admission table above is why: every
+        // elf's elevation devotion is 0.30 against a sovereignty floor of
+        // 0.4217-0.4360, so the Liebig minimum is elevation on every cell of
+        // every world and each kind's temperature/moisture/insolation curves
+        // are computed and discarded. Those curves are still authored — they
+        // are true of the kind, and they are what the strongholds below are
+        // DERIVED from — but the row is what reaches the world.
+        //
+        // THREE OF THE SIX CARRY THE SAME ROW, deliberately. Wood is the
+        // ancestral reading; High is the family's MIND control and Drow its
+        // REALM control, and a control that also differs environmentally
+        // controls nothing. `radiation_affinity.rs` pins both equalities.
+        // ---------------------------------------------------------------
+        //
+        // Stronghold by derivation: `classify_land` at desert-elf's own
+        // authored reading (28.0 °C, moisture 0.14) returns `Desert` — hot
+        // band (>= 20 °C), moisture < 0.20.
+        //
+        // THIS ROW DISAGREES WITH GNOLL'S FROM THE SAME STRONGHOLD, and the
+        // disagreement is the ladder working rather than a slip. Gnoll holds
+        // savanna at `marginal` because its moisture curve is a spike —
+        // devotion 0.75, sigma 0.12, so its +1 sigma reading (0.24) is 16% of
+        // the way into savanna's 0.20-0.45 band. Desert-elf's moisture curve
+        // is devotion 0.35, sigma 0.18: its +1 sigma reading (0.32) is 48% of
+        // the way in, squarely inside. A people this much less committed to
+        // extreme aridity than a gnoll pack genuinely does hold the savanna
+        // margin, so savanna is `near` here and `marginal` there.
+        (
+            KindId("desert-elf"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — desert-elf's own authored climate,
+                    // classified.
+                    ("desert", 1.00),
+                    // Near: one moisture band wetter in the same hot tier,
+                    // reached at +1 sigma of this kind's own moisture curve.
+                    ("savanna", 0.70),
+                    // Near: one thermal band cooler at the same dryness,
+                    // reached at -1 sigma of its temperature curve (18.0 °C).
+                    // Right dryness, wrong thermal band — the same reading
+                    // gnoll's row makes of the same biome.
+                    ("temperate-grassland", 0.70),
+                    // Marginal: two bands out — cooler AND wetter. Scrub, not
+                    // sand.
+                    ("shrubland", 0.45),
+                ],
+            },
+        ),
+        // Drow: WOOD'S ROW, taken from the same helper the surface elves use.
+        //
+        // Its own authored reading would NOT produce this row. `classify_land`
+        // at (13.0 °C, moisture 0.85) returns `TemperateRainforest` — the
+        // near-saturated cave air The Warren measured underground, classified
+        // as the wettest temperate class. That class appears below at `near`,
+        // one moisture band off wood's stronghold, so the derivation and the
+        // authored row agree on direction and disagree on rank.
+        //
+        // The row is wood's anyway, because Drow is the family's REALM control
+        // (spec §3.5): its only authored separation from the surface elves is
+        // the `habitat_realm_registry` gate, so that P4's mutation — remove the
+        // realm row, watch the separation collapse — isolates the gate. A row
+        // derived from Drow's own cave-air reading would make that mutation
+        // measure the gate plus a biome difference, and P4 would have no clean
+        // reading. `radiation_affinity::drows_affinity_is_wood_elfs` pins it.
+        (KindId("drow"), wood_elf_biome_affinity()),
+        // High elf: WOOD'S ROW, and for the reason High exists at all. It is
+        // the MIND control (spec §3.6) — same mass, same potency, same
+        // resource vector, same curves, same affinity — so that Wood vs High
+        // isolates psyche. P3(a) predicts the two capacity fields are
+        // BIT-IDENTICAL, which is only possible if this row is wood's, not
+        // merely similar to it. Read from the same helper for the same reason
+        // `high_elf_condition_niche` delegates: an equality maintained by hand
+        // is an equality that eventually stops holding.
+        (KindId("high-elf"), wood_elf_biome_affinity()),
+        // Sea elf: the ONE marine occupant, and therefore the one row derived
+        // through `classify_marine` rather than `classify_land`.
+        //
+        // Stronghold by derivation: at this kind's own authored elevation
+        // optimum (-60 m, i.e. 60 m of water) and its authored SST optimum
+        // (16.0 °C), `classify_marine` falls THROUGH the reef arm (which wants
+        // > 20 °C) and through the kelp arm (which wants < 12 °C) — 12-20 °C is
+        // the documented gap in that precedence chain — and lands on
+        // `Upwelling` where the upwelling flag is set, `Epipelagic` where it is
+        // not. So upwelling is the stronghold and epipelagic is the same
+        // reading with the flag off.
+        //
+        // The rank is monotone with `marine_forage_supply_field`, which already
+        // grades the water Upwelling 1.0, reef/kelp 0.85, epipelagic 0.45,
+        // mesopelagic 0.15, bathypelagic 0.05. The affinity SHARPENS that
+        // ranking; it must not contradict it. Note what that costs: two rows
+        // that both derive and both sharpen an existing grading is the closest
+        // any row in this registry comes to the double-count the admission test
+        // exists to prevent — it is admissible only because the supply field is
+        // a RESOURCE axis and the affinity is a preference over classes, and
+        // because the admission table above shows this kind's climate curves
+        // discarded like every other occupant's.
+        //
+        // THE DEEP CLASSES ARE UNLISTED AND THEREFORE 0.25 — not zero.
+        // `radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band` pins
+        // both halves: the four shelf classes strictly above the default, the
+        // five deep ones at or below it. Authored to the whole ocean this kind
+        // would hold ~27,000 cells against wood's ~800; on the shelf band it
+        // holds ~1,425 (three-seed mean, 42/7/1234), which is the same order as
+        // the rest of the family.
+        (
+            KindId("sea-elf"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — sea-elf's own authored (depth, SST)
+                    // reading, classified, on an upwelling cell.
+                    ("upwelling", 1.00),
+                    // Near: the same 0-200 m shelf, one SST step either side of
+                    // the 12-20 °C gap this kind sits in — reef above, kelp
+                    // below. Both are the shelf's productive communities and
+                    // both grade 0.85 on the supply field.
+                    ("coral-reef", 0.70),
+                    ("kelp-forest", 0.70),
+                    // Marginal: the identical depth and temperature with no
+                    // upwelling — open shelf water. Right place, thin table.
+                    ("epipelagic", 0.45),
+                ],
+            },
+        ),
+        // Snow elf: TWO strongholds, for the woolly mammoth's reason exactly.
+        //
+        // `classify_land` at this kind's own authored reading (0.0 °C, moisture
+        // 0.38) returns `Taiga`: the 0-7 °C branch, moisture >= 0.30. Its
+        // authored moisture optimum sits **0.03** above the sub-freezing
+        // branch's tundra/taiga cut (0.35) and 0.08 above the 0-7 °C branch's
+        // (0.30), against a sigma of 0.30 — so -1 sigma (0.08) is deep in
+        // tundra and the optimum itself is barely inside taiga. The kind
+        // straddles the cut rather than sitting in a band, and splitting the
+        // pair would be an artifact of where the lookup cuts rather than a
+        // claim about the people.
+        //
+        // NOTE FOR ANYONE RE-READING THE CAMPAIGN BRIEF: this is taiga+tundra,
+        // not tundra+ice. Ice is `classify_land`'s < -20 °C class, which this
+        // kind reaches only at -1.43 sigma; "snow elf therefore ice" is theme,
+        // and the ladder's first line is the standing instruction against it.
+        (
+            KindId("snow-elf"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — the two cold classes its own authored
+                    // moisture curve straddles.
+                    ("taiga", 1.00),
+                    ("tundra", 1.00),
+                    // Near: one thermal band colder — the permanent ice, at
+                    // -1.43 sigma of its temperature curve. The margin this
+                    // people is named for, and not the ground it holds.
+                    ("ice", 0.70),
+                    // Marginal: cold reached by ALTITUDE rather than by
+                    // latitude, above the tree line. The right climate in the
+                    // wrong form — the same call the woolly mammoth's row
+                    // makes of the same biome, three rows up.
+                    ("alpine", 0.45),
+                ],
+            },
+        ),
+        // Wood elf: the family's ancestral row, and the row High and Drow are
+        // defined against. The values live in `wood_elf_biome_affinity` so that
+        // all three read one authored source; editing it moves three kinds,
+        // which is the intended coupling.
+        (KindId("wood-elf"), wood_elf_biome_affinity()),
     ]
     .into_iter()
     .collect()
+}
+
+/// Wood elf's biome affinity — **and high elf's and drow's, byte for byte.**
+///
+/// Factored out of [`biome_affinity_registry`] for the same reason
+/// [`high_elf_condition_niche`] delegates to [`wood_elf_condition_niche`]: P3(a)
+/// predicts wood's and high's capacity fields are *bit-identical*, and an
+/// equality a later editor has to maintain by hand is an equality that will
+/// eventually stop holding.
+///
+/// Stronghold by derivation: `classify_land` at wood-elf's own authored reading
+/// (12.0 °C, moisture 0.62) returns `TemperateForest` — the temperate band
+/// (7-20 °C), moisture 0.40-0.75.
+///
+/// The near/marginal split reads the "still recognisably the kind's country"
+/// clause against **closed canopy**, which is this kind's committed axis the way
+/// dryness is gnoll's. Four classes sit one band out from temperate forest, and
+/// they divide two and two:
+///
+/// ```text
+///   temperate-rainforest   one moisture band wetter   forest   -> near
+///   taiga                  one thermal band cooler    forest   -> near
+///   tropical-seasonal-fst  one thermal band warmer    forest   -> marginal
+///   shrubland              one moisture band drier    open     -> marginal
+/// ```
+///
+/// The two `near` classes keep both the canopy and the temperate reading. The
+/// two `marginal` ones each break exactly one of those: tropical seasonal
+/// forest is the right form in the wrong thermal band, shrubland the right
+/// thermal band in the wrong form. That is the ladder's own "two bands out, or
+/// the right climate in the wrong form" line, read on the second clause.
+///
+/// Wood's curves are wide (sigma 18.0 °C, 0.30 moisture) and would put all four
+/// within one sigma, which is exactly why the ladder walks the lookup table and
+/// not the sigma — a sigma reading of this kind would rank nothing.
+fn wood_elf_biome_affinity() -> BiomeAffinity {
+    BiomeAffinity {
+        default: 0.25,
+        by_biome: vec![
+            // Stronghold — wood-elf's own authored climate, classified.
+            ("temperate-forest", 1.00),
+            // Near: one moisture band wetter, still closed canopy.
+            ("temperate-rainforest", 0.70),
+            // Near: one thermal band cooler, still closed canopy — the boreal
+            // forest.
+            ("taiga", 0.70),
+            // Marginal: a forest in the wrong thermal band.
+            ("tropical-seasonal-forest", 0.45),
+            // Marginal: the right thermal band with the canopy gone.
+            ("shrubland", 0.45),
+        ],
+    }
 }
 
 /// The biosphere component: every entity has one. The packer and the

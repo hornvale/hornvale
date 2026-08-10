@@ -244,7 +244,8 @@ fn regenerate_occupancy_readout() {
 ///
 /// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
 /// gain at least one kind *centred* there. Measured against the committed
-/// readout, regenerated 2026-08-09 (The Range, fix wave — the regeneration that
+/// readout, regenerated 2026-08-10 (The Radiation task 3) and before that
+/// 2026-08-09 (The Range, fix wave — the regeneration that
 /// threaded the live `biome_affinity` store into this readout for the first
 /// time). **Every row in the table below is byte-identical to the 2026-08-08
 /// (The Assize) fixture**, checked rather than assumed: that regeneration moved
@@ -256,6 +257,16 @@ fn regenerate_occupancy_readout() {
 /// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **otyugh** (0.0470) — NOT met |
 /// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | **treant** (0.0822) — NOT met |
 /// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | **treant** (0.0545) — NOT met |
+///
+/// **Re-read against the 2026-08-10 regeneration (The Radiation task 3) and
+/// unchanged.** Six elves entered every region, and none of them displaced a
+/// top occupant or came close: in desert the best elf is drow at rank 14 of 35
+/// (0.006319) against otyugh's 0.047049; in savanna it is desert-elf at rank 17
+/// (0.014963) against treant's 0.082202; in taiga it is drow at rank 12
+/// (0.019443) against treant's 0.054489. The three verdicts above are
+/// re-derived from the fixture this test reads, not carried forward — the
+/// mistake the paragraph below this table records was made by carrying a number
+/// forward without re-ranking it.
 ///
 /// **EC6 is met in ZERO of three regions, not one — and it always was.** The
 /// previous version of this table claimed `giant-scorpion` (0.0177) topped
@@ -279,6 +290,48 @@ fn regenerate_occupancy_readout() {
 /// them against the fixture's other occupants, and so missed that desert's
 /// verdict was already NOT MET at the values it was quoting. This is the
 /// **third** under-checked attribution recorded against this one file.
+///
+/// **The 2026-08-10 regeneration (The Radiation task 3) is PURELY ADDITIVE,
+/// and that is the interesting part.** The row count went 386 → 466 and **not
+/// one of the 386 pre-existing rows changed a single byte** — the 80 new rows
+/// are the six elves and nothing else.
+///
+/// That is not luck, it is the shape of the mechanism, and it is worth stating
+/// because the obvious expectation is the opposite. Six new peoples *do*
+/// redistribute settlement placement violently (seed 42 goes 192 → 100
+/// settlements, gnoll 49 → 2), so one might expect this fixture to move
+/// everywhere. It does not, because this readout is not placement. It renders
+/// `per_species_suitability`, and a kind's suitability field is a function of
+/// **that kind's own** biosphere row, realm and affinity against the world's
+/// fields — no other kind appears in it. Competition enters at the bake, one
+/// layer down from here. So a new kind can only ADD rows to this file, and an
+/// affinity row can only move the kind that declares it.
+///
+/// Two internal consistencies confirm the store reached this path rather than
+/// being dropped, using the same discriminating check the 2026-08-09
+/// paragraph below relies on:
+///
+/// - **`high-elf` and `wood-elf` are identical in every numeric column of all
+///   twelve of their biome rows** (taiga `0.011374`, savanna `0.005763`,
+///   desert `0.001269`, …). They carry the same biosphere row and the same
+///   affinity row and differ only in psyche, society and language — none of
+///   which this path reads — so spec §3.6's MIND control is confirmed at the
+///   field level here, which is P3(a)'s primary arm.
+/// - **`drow` diverges from both on all twelve** (taiga `0.019443` against
+///   their `0.011374`). **Do not read that as the realm gate.** Its affinity
+///   row IS wood's, byte for byte, but three other inputs this path reads also
+///   differ: its mass (52.0 kg against 55.0, which moves the sovereignty floor
+///   0.424802 vs 0.429202), its resource vector (`DETRITUS`-dominant against
+///   wood's `PLANT_FORAGE`), and its `HabitatRealm`. This readout cannot
+///   apportion between the three, and nothing here should be quoted as the
+///   gate's magnitude — `warren_readout.rs` is the file that isolates the realm
+///   question, by holding every other input fixed and emptying one store.
+///
+/// What the divergence *does* establish is the discriminating half: had the six
+/// elf rows been silently dropped from this path, wood and drow would still
+/// differ (mass and niche alone would do it), so drow is not the check. The
+/// check is that all twelve elf rows appear at all, and that wood and high come
+/// out identical rather than merely close.
 ///
 /// **The 2026-08-09 regeneration (The Range, fix wave) has exactly one cause,
 /// and its blast radius is the arithmetic of the mechanism.** The row count did

@@ -1,45 +1,45 @@
 # The Peoples of Seed 42
 
-The land holds 266 settlement(s).
-The chief bugbear settlement, Googodoga, holds 69 souls amid tropical-seasonal-forest.
+The land holds 170 settlement(s).
+The chief bugbear settlement, Godogodo, holds 63 souls amid tropical-rainforest.
 The chief desert-dwarf settlement, Padgad, holds 64 souls amid savanna.
-The chief desert-elf settlement, Pvozhgoszkosh, holds 36 souls amid tropical-seasonal-forest.
-The chief drow settlement, Boasgoo, holds 32 souls amid ice.
-The chief gnoll settlement, Psapqsaaxdzaov, holds 27 souls amid desert.
+The chief desert-elf settlement, Zvozpkoos, holds 24 souls amid savanna.
+The chief drow settlement, Goshbopagozhga, holds 16 souls amid tropical-seasonal-forest.
+The chief gnoll settlement, Dshoxsmo, holds 18 souls amid savanna.
 The chief goblin settlement, Bootoe, holds 34 souls amid temperate-forest.
-The chief gully-dwarf settlement, Nobnngotngobbot, holds 36 souls amid savanna.
-The chief high-elf settlement, Boe, holds 36 souls amid tropical-seasonal-forest.
+The chief gully-dwarf settlement, Qatgoqnga, holds 36 souls amid tropical-seasonal-forest.
+The chief high-elf settlement, Gee, holds 33 souls amid temperate-forest.
 The chief hill-dwarf settlement, Batatqagba, holds 37 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Gootoenetea, holds 78 souls amid temperate-forest.
+The chief hobgoblin settlement, Geto, holds 79 souls amid tropical-seasonal-forest.
 The chief human settlement, Ngaatonga, holds 36 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Raoxo, holds 41 souls amid alpine.
-The chief sea-elf settlement, Dbeushnuzh, holds 39 souls amid coral-reef.
-The chief snow-elf settlement, Bbozbosbozngash, holds 34 souls amid tropical-seasonal-forest.
-The chief wood-elf settlement, Duazdxuungeustda, holds 36 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Roarora, holds 65 souls amid temperate-forest.
+The chief sea-elf settlement, Dbeushnuzh, holds 28 souls amid coral-reef.
+The chief snow-elf settlement, Bosbbosh, holds 27 souls amid taiga.
+The chief wood-elf settlement, Taungusdengeezgdue, holds 32 souls amid temperate-forest.
 
 ```text
                                                                         
-                       o o                             o                
-                          @    o            o  o                        
-                                o    o                                  
+                        oo o                                            
+                         ooo               o   o                        
+                                     o                                  
                                                                         
                                                                         
-                                  oo                o                   
-                                 oo                 o                   
+                                                    o                   
+                                                    o                   
                                                                         
-                                   o           o                        
-                                                o ooo                   
+                                   o           oo                       
                                                   ooo                   
-         o                                          oo                  
+                                                  oooo                  
+                                                   ooo                  
                                                                         
+                    o    o                                              
+                    oo                       o                          
+                  o                                                     
+                                                oo                      
+                    o o                                                 
+                   o@o    oo          oo                                
                     o                                                   
-                    oo                                                  
-                                                                        
-                                                 o                      
-                   oooo                         ooo                     
-                   ooo     o           o        ooo                     
-                    o  oo                             o                 
-                    ooooooo                                             
+                       oo                                               
                                                                         
                                                                         
 ```

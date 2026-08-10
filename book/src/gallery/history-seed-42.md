@@ -30,60 +30,22 @@ granary, and no ruin yet to read.
 The clearing at cell 5508
 =========================
 
-Ten lives have passed over this ground, one settling atop the ruins of the last.
+Two lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
-  Founded in the year 1100, it held for 0 years, until the year 1100.
+Every layer here is a bronze-working kobold steading, an ordinary place, neither famed nor forgotten.
+
+The whole lineage traces to one root: Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
+
+The deepest layer — at its height a mere six souls.
+  Founded in the year 375, it held for 25 years, until the year 400.
   They fled — put to flight by kobolds — and did not return.
 
-Above it — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 19 souls.
-  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
-  Founded in the year 1100, it held for 200 years, until the year 1300.
-  They fled — put to flight by kobolds — and did not return.
-
-Higher still — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 18 souls.
-  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
-  Founded in the year 1300, it held for 25 years, until the year 1325.
+The last of them — at its height some 12 souls.
+  Founded in the year 400, it held for 25 years, until the year 425.
   They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
-
-Above that again — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
-  Its founders fled the ice of the clearing at cell 21891, kobolds looking for kinder ground.
-  Founded in the year 1350, it held for 25 years, until the year 1375.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 26 souls.
-  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
-  Founded in the year 1375, it held for 325 years, until the year 1700.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at cell 21896, and carried the settlement onto the land they had taken.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
-  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
-  Founded in the year 1725, it held for 0 years, until the year 1725.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere nine souls.
-  Its founders fled the ice of the clearing at cell 21892, kobolds looking for kinder ground.
-  Founded in the year 1725, it held for 0 years, until the year 1725.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at cell 36874, kobolds looking for kinder ground.
-  Founded in the year 1725, it held for 0 years, until the year 1725.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at cell 36876, kobolds looking for kinder ground.
-  Founded in the year 1725, it held for 0 years, until the year 1725.
-  They fled — put to flight by kobolds — and did not return.
-
-The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 27 souls.
-  Its founders fled the ice of the clearing at cell 21897, kobolds looking for kinder ground.
-  Founded in the year 1725, it stands yet — 275 years and counting.
-  It has never ended; the people are there still.
 
 In the grass today
 ------------------
-At its height some 27 souls, the last kobolds here raised two huts and a granary.
-They are living there yet — there is no ruin to read, only smoke on the air.
+At its height some 12 souls, the last kobolds here raised a hut and a granary.
+The dwellings are long gone to grass, but the ground still keeps the shape of them: potsherds scattered where the huts once stood and the low turf-lines of the dwellings still ridging the grass.
 ```

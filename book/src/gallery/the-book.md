@@ -166,33 +166,6 @@ The Tetas are wood elfs — neighbors.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Beba teach it
-
-Xoaboa Bokuebu Zhaufbee. ("Xoaboa is the earth — as it is taught.")
-
-Xoaboa is the earth with two moons.
-The moons cross because Tobo strides the sky, slowly.
-The day returns, as all things return.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — ourselves.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-
-— though the folk say The moons cross because they are Tobo's kin.
-
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
-
 #### As the Bobash tell it
 
 The Booxo are bugbears — rivals.
@@ -452,7 +425,7 @@ The Tetas are wood elfs — neighbors.
 Xoaboa is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Qaxvavvox walks the sky, slowly.
-The day returns because Goovbata strides the sky, briskly.
+The day returns because Goovbat strides the sky, briskly.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -737,9 +710,6 @@ The next darkening, it teaches, comes on day 36531.
 The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Tngobpngap, the sky has darkened, now and again.
 Among the Beba, the sky has darkened, now and again.
-The priesthood of the Beba numbers the darkenings: 6472.
-The next darkening, it teaches, comes on day 36531.
-The Beba's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Bobash, the sky has darkened, now and again.
 The priesthood of the Bobash numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
@@ -784,7 +754,6 @@ The next darkening, it teaches, comes on day 36531.
 The Tetas's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Beba's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
@@ -961,33 +930,6 @@ The Keqnguq are wood elfs — neighbors.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Feqboq teach it
-
-Boaboo Fopbofep. ("Boaboo is the earth — as it is taught.")
-
-Boaboo is the earth with one moon.
-The moon crosses because it answers Fofo.
-The day returns because Bofe strides the sky, briskly.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — ourselves.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-
-— though the folk say The moon crosses because it is Fofo's kin.
-
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
 #### As the Kxoqboq tell it
 
 The Bobboo are bugbears — rivals.
@@ -1007,6 +949,32 @@ The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
 Boaboo is the earth with one moon.
 The moon crosses because it is Kxokxop's kin.
+
+*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+##### As the priesthood of the Kxoqboq teach it
+
+Boaboo Za Pop Kxopbo. ("Boaboo is the earth — as it is taught.")
+
+The Bobboo are bugbears — rivals.
+The Wazwo are desert dwarfs — rivals.
+The Feqboq are desert elfs — rivals.
+The Kxoqboq are drows — ourselves.
+The Loshjo are gnolls — rivals.
+The Mepmee are goblins — rivals.
+The Njanjo are gully dwarfs — rivals.
+The Xeqmoq are high elfs — rivals.
+The Wanwo are hill dwarfs — rivals.
+The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
+The Dngooqdngo are kobolds — rivals.
+The Xeqmu are sea elfs — rivals.
+The Kopnop are snow elfs — rivals.
+The Keqnguq are wood elfs — rivals.
+Boaboo is the earth with one moon.
+The moon crosses because Kxokxop strides the sky, slowly.
+
+— though the folk say The moon crosses because it is Kxokxop's kin.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -1152,33 +1120,6 @@ The Keqnguq are wood elfs — neighbors.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Xeqmoq teach it
-
-Boaboo Zazhxo Xokmo. ("Boaboo is the earth — as it is taught.")
-
-Boaboo is the earth with one moon.
-The moon crosses because Kokob walks the sky, slowly.
-The day returns because Kokob strides the sky, briskly.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — ourselves.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-
-— though the folk say The moon crosses because it answers Kokob.
-
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
 #### As the Wanwo tell it
 
 The Bobboo are bugbears — neighbors.
@@ -1248,6 +1189,32 @@ Boaboo is the earth.
 The day returns, as all things return.
 
 *In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+##### As the priesthood of the Webwee teach it
+
+Boaboo Woowoaweo Gwa. ("Boaboo is the earth — as it is taught.")
+
+The Bobboo are bugbears — rivals.
+The Wazwo are desert dwarfs — rivals.
+The Feqboq are desert elfs — rivals.
+The Kxoqboq are drows — rivals.
+The Loshjo are gnolls — rivals.
+The Mepmee are goblins — rivals.
+The Njanjo are gully dwarfs — rivals.
+The Xeqmoq are high elfs — rivals.
+The Wanwo are hill dwarfs — rivals.
+The Webwee are hobgoblins — ourselves.
+The Foetjee are humans — rivals.
+The Dngooqdngo are kobolds — rivals.
+The Xeqmu are sea elfs — rivals.
+The Kopnop are snow elfs — rivals.
+The Keqnguq are wood elfs — rivals.
+Boaboo is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because it is Woadngeq's kin.
+The day returns to keep the balance.
+
+*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Foetjee tell it
 
@@ -1391,33 +1358,6 @@ The day returns because the sky must be crossed.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Kopnop teach it
-
-Boaboo Kokno Daa. ("Boaboo is the earth — as it is taught.")
-
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — ourselves.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
-The moon crosses because Kokop walks the sky, slowly.
-The day returns to keep the balance.
-
-— though the folk say The moon crosses because it answers Kokop.
-
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
 #### As the Keqnguq tell it
 
 The Bobboo are bugbears — neighbors.
@@ -1480,10 +1420,10 @@ The next darkening, it teaches, comes on day 36337.
 The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wazwo, the sky has darkened, now and again.
 Among the Feqboq, the sky has darkened, now and again.
-The priesthood of the Feqboq numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Feqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Kxoqboq, the sky has darkened, now and again.
+The priesthood of the Kxoqboq numbers the darkenings: 81.
+The next darkening, it teaches, comes on day 36337.
+The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Loshjo, the sky has darkened, now and again.
 Among the Mepmee, the sky has darkened, now and again.
 The priesthood of the Mepmee numbers the darkenings: 49.
@@ -1494,14 +1434,14 @@ The priesthood of the Njanjo numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
 The Njanjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Xeqmoq, the sky has darkened, now and again.
-The priesthood of the Xeqmoq numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Xeqmoq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Wanwo, the sky has darkened, now and again.
 The priesthood of the Wanwo numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
 The Wanwo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Webwee, the sky has darkened, now and again.
+The priesthood of the Webwee numbers the darkenings: 49.
+The next darkening, it teaches, comes on day 36337.
+The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Foetjee, the sky has darkened, now and again.
 The priesthood of the Foetjee numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
@@ -1512,23 +1452,19 @@ The next darkening, it teaches, comes on day 36337.
 The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Xeqmu, the sky has darkened, now and again.
 Among the Kopnop, the sky has darkened, now and again.
-The priesthood of the Kopnop numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36337.
-The Kopnop's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Keqnguq, the sky has darkened, now and again.
 The priesthood of the Keqnguq numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
 The Keqnguq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Feqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Kopnop's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Keqnguq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
@@ -1698,33 +1634,6 @@ The Daaxdue are wood elfs — neighbors.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Maaxmue teach it
-
-Zao La Mu Muja Ma. ("Zao is the earth — as it is taught.")
-
-Zao is the earth with one moon.
-The moon crosses because it answers Juupmua.
-The day returns because Maupmu strides the sky, briskly.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — ourselves.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
-The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-
-— though the folk say The moon crosses because Juupmua walks the sky, slowly.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
 #### As the Fnaaxnoo tell it
 
 The Zooqsha are bugbears — rivals.
@@ -1743,7 +1652,7 @@ The Fzaakzue are sea elfs — rivals.
 The Pnaaknoo are snow elfs — rivals.
 The Daaxdue are wood elfs — rivals.
 Zao is the earth with one moon.
-The moon crosses because Zhoopno walks the sky, slowly.
+The moon crosses because Zhoopnoa walks the sky, slowly.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -1984,32 +1893,6 @@ The day returns because the sky must be crossed.
 
 *In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Zhooqsha teach it
-
-Zao Qjoo Shoezae. ("Zao is the earth — as it is taught.")
-
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
-The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — ourselves.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth.
-The moon is counted and known to the priesthood.
-The moon crosses because Zhjoozhjo strides the sky, slowly.
-The day returns to keep the balance.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
 #### As the Shoammoem tell it
 
 Zao is the earth.
@@ -2081,31 +1964,6 @@ The Daaxdue are wood elfs — rivals.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Jaojjao teach it
-
-Zao Xoadzhaoxoa. ("Zao is the earth — as it is taught.")
-
-Zao is the earth with one moon.
-The moon crosses because it answers Dsaa.
-The day returns because the sky must be crossed.
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
-The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — ourselves.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
 #### As the Fzaakzue tell it
 
 Zao is the earth with one moon.
@@ -2147,7 +2005,7 @@ The Fzaakzue are sea elfs — neighbors.
 The Pnaaknoo are snow elfs — ourselves.
 The Daaxdue are wood elfs — neighbors.
 Zao is the earth with one moon.
-The moon crosses because it is Boopnoa's kin.
+The moon crosses because it is Boopno's kin.
 The day returns because the sky must be crossed.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
@@ -2172,10 +2030,10 @@ The Fzaakzue are sea elfs — neighbors.
 The Pnaaknoo are snow elfs — ourselves.
 The Daaxdue are wood elfs — neighbors.
 Zao is the earth with one moon.
-The moon crosses because it answers Boopnoa.
+The moon crosses because it answers Boopno.
 The day returns, as all things return.
 
-— though the folk say The moon crosses because it is Boopnoa's kin.
+— though the folk say The moon crosses because it is Boopno's kin.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -2241,9 +2099,6 @@ The next darkening, it teaches, comes on day 36125.
 The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Baovoo, the sky has darkened, now and again.
 Among the Maaxmue, the sky has darkened, now and again.
-The priesthood of the Maaxmue numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Maaxmue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Fnaaxnoo, the sky has darkened, now and again.
 Among the Pjojpjoj, the sky has darkened, now and again.
 Among the Zhooqsa, the sky has darkened, now and again.
@@ -2263,17 +2118,11 @@ The priesthood of the Zozha numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
 The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Zhooqsha, the sky has darkened, now and again.
-The priesthood of the Zhooqsha numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36125.
-The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Shoammoem, the sky has darkened, now and again.
 The priesthood of the Shoammoem numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
 The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Jaojjao, the sky has darkened, now and again.
-The priesthood of the Jaojjao numbers the darkenings: 53.
-The next darkening, it teaches, comes on day 36125.
-The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Fzaakzue, the sky has darkened, now and again.
 Among the Pnaaknoo, the sky has darkened, now and again.
 The priesthood of the Pnaaknoo numbers the darkenings: 53.
@@ -2285,14 +2134,11 @@ The next darkening, it teaches, comes on day 36125.
 The Daaxdue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Maaxmue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Pnaaknoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Daaxdue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the darkenings of the first hundred years number 53.*
