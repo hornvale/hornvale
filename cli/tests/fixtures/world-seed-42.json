@@ -76530,7 +76530,7 @@
         "provenance": "the dominant people's word for the world"
       },
       {
-        "subject": 10759720900286939136,
+        "subject": 10759720900286939137,
         "predicate": "instance-of",
         "object": {
           "Text": "bugbear"
@@ -76540,7 +76540,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939136,
+        "subject": 10759720900286939137,
         "predicate": "name",
         "object": {
           "Text": "Dooda"
@@ -76550,7 +76550,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939137,
+        "subject": 10759720900286939139,
         "predicate": "instance-of",
         "object": {
           "Text": "desert-dwarf"
@@ -76560,7 +76560,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939137,
+        "subject": 10759720900286939139,
         "predicate": "name",
         "object": {
           "Text": "Qadad"
@@ -76570,7 +76570,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939138,
+        "subject": 10759720900286939149,
         "predicate": "instance-of",
         "object": {
           "Text": "gnoll"
@@ -76580,7 +76580,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939138,
+        "subject": 10759720900286939149,
         "predicate": "name",
         "object": {
           "Text": "Zmao"
@@ -76590,7 +76590,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939139,
+        "subject": 10759720900286939150,
         "predicate": "instance-of",
         "object": {
           "Text": "goblin"
@@ -76600,7 +76600,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939139,
+        "subject": 10759720900286939150,
         "predicate": "name",
         "object": {
           "Text": "Neoda"
@@ -76610,7 +76610,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939140,
+        "subject": 10759720900286939151,
         "predicate": "instance-of",
         "object": {
           "Text": "gully-dwarf"
@@ -76620,7 +76620,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939140,
+        "subject": 10759720900286939151,
         "predicate": "name",
         "object": {
           "Text": "Qabat"
@@ -76630,7 +76630,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939141,
+        "subject": 10759720900286939152,
         "predicate": "instance-of",
         "object": {
           "Text": "hill-dwarf"
@@ -76640,7 +76640,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939141,
+        "subject": 10759720900286939152,
         "predicate": "name",
         "object": {
           "Text": "Shosha"
@@ -76650,7 +76650,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939142,
+        "subject": 10759720900286939153,
         "predicate": "instance-of",
         "object": {
           "Text": "hobgoblin"
@@ -76660,7 +76660,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939142,
+        "subject": 10759720900286939153,
         "predicate": "name",
         "object": {
           "Text": "Neoba"
@@ -76670,7 +76670,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939143,
+        "subject": 10759720900286939154,
         "predicate": "instance-of",
         "object": {
           "Text": "human"
@@ -76680,7 +76680,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939143,
+        "subject": 10759720900286939154,
         "predicate": "name",
         "object": {
           "Text": "Ngae"
@@ -76690,7 +76690,7 @@
         "provenance": "the people's own word for 'person'"
       },
       {
-        "subject": 10759720900286939144,
+        "subject": 10759720900286939156,
         "predicate": "instance-of",
         "object": {
           "Text": "kobold"
@@ -76700,7 +76700,7 @@
         "provenance": "the people as a roster kind"
       },
       {
-        "subject": 10759720900286939144,
+        "subject": 10759720900286939156,
         "predicate": "name",
         "object": {
           "Text": "Raora"

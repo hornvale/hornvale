@@ -7270,17 +7270,50 @@ fn build_to(
         // bugbear, yields to it).
         let mut used_collective_names: std::collections::BTreeSet<String> =
             std::collections::BTreeSet::new();
-        for (i, kind) in placed_peoples(&world).into_iter().enumerate() {
+        for kind in placed_peoples(&world) {
             // A people-as-a-whole belongs to the world rather than to another
-            // entity, so it is a root; `placed_peoples` is registry-ordered
-            // (alphabetical), which is what makes the ordinal reproducible.
+            // entity, so it is a root.
+            //
+            // The ordinal is its position in `wc.biosphere.ids()` — the FULL
+            // roster — exactly as `species_genesis` ordinals its species
+            // entities, and deliberately NOT its index in `placed_peoples`.
+            // `placed_peoples` is that same roster filtered by `flagship_of`,
+            // so an index into it is an index into the PLACED SUBSET: if a
+            // later campaign changes settlement survival and bugbear stops
+            // placing, hobgoblin's collective slides 1 -> 0 and every fact
+            // keyed to it re-keys, though nothing about hobgoblin changed.
+            // That is the churn class this campaign exists to remove, and
+            // unlike a settlement's or an occupation's ordinal (spec P4: no
+            // stable key exists for those) a world-independent one is right
+            // here in hand. It also makes a people's collective share its
+            // species entity's ordinal, which is legible rather than
+            // coincidental — the two differ by role, so they cannot collide.
+            let ordinal = wc
+                .biosphere
+                .ids()
+                .position(|k| k.0 == kind.0)
+                .ok_or_else(|| {
+                    // A people placed in this world whose kind has no body in
+                    // this world's own roster is a referential-integrity
+                    // failure, not a routine case — `kinds()`'s doc calls the
+                    // biosphere store "the canonical entity set", and a people
+                    // settles, so it has a body. Fail loudly rather than
+                    // defaulting to 0, which would silently collide the
+                    // unroostered people with whichever kind is genuinely
+                    // first.
+                    BuildError::MalformedKind(format!(
+                        "people {:?} placed a settlement but has no biosphere row, \
+                         so its collective has no stable roster ordinal",
+                        kind.0
+                    ))
+                })? as u16;
             let collective = mint_instance_of_kind(
                 &mut world,
                 wc,
                 Lineage {
                     parent: None,
                     role: "people",
-                    ordinal: i as u16,
+                    ordinal,
                 },
                 kind.0,
                 None,
