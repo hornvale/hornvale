@@ -343,6 +343,7 @@
 - [The Quire](./chronicle/the-quire.md)
 - [The Range](./chronicle/the-range.md)
 - [The Signet](./chronicle/the-signet.md)
+- [The Cairn](./chronicle/the-cairn.md)
 
 # Appendix: The Frontier
 
