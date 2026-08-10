@@ -265,6 +265,51 @@ where the glyph is drawing that ground and withheld from water, from marks,
 and from the observer's own cell — with three counts that partition the
 chart, so a reader can check the sentence against the picture.
 
+## Resolution: what a uniform field is telling you
+
+A chart at walking depth sits six refinement levels below the canonical
+grid — the coarse mesh over which climate and terrain are actually solved.
+Each level quarters a cell, so a walking-depth neighbourhood of up to 109
+cells (`radius: 8`) can sit entirely inside **one** grid cell: `4^6 = 4096`
+rooms share its reading. Some of this document's fields are decided at that
+grid resolution and are therefore exactly constant across such a
+neighbourhood; others are blended per room and genuinely vary room to room.
+Without a way to tell the two apart, a uniform `biome` and `water` across a
+whole radius-8 view reads as the chart contradicting the room's own varied
+prose, rather than as what it actually is: a field reported at coarser grain
+than the view.
+
+`resolution` states which is which, the same disclosure discipline `sight`
+already applies to colour (see above):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `grid_level` | integer | The canonical grid's own refinement level. |
+| `depth_below_grid` | integer | How many levels below `grid_level` this chart's cells sit (`depth - grid_level`). `4^depth_below_grid` rooms share one grid cell. |
+| `grid_resolution_fields` | array of string | The names of this document's fields decided at grid resolution, in stable order: `["biome", "color", "water"]`. |
+
+`biome` and `water` are both read from a room's **dominant corner** — the
+canonical-grid cell with the greatest blend weight at that room's centroid,
+tie-broken to the lowest cell id — never a blend, because both are
+categorical: averaging "granite" and "basalt" would name a rock that is not
+there. `color` reads that same dominant corner's rock class, so all three
+move together and never contradict each other. **`relief` is deliberately
+absent from the list**: it is banded from `height_asl_m`, a three-corner
+*blend*, so it genuinely varies below grid resolution — that is real signal,
+not noise to be disclosed away. **`micro` is absent for a different reason**:
+it is per-room address noise, the finest-grained field the document carries,
+never grid-resolution in the first place.
+
+A consumer reading a flat `biome`/`water`/`color` across a wide view should
+caption the resolution (*"grid resolution — every room here reads one
+coarse cell"*) rather than infer a defect. A campaign attempted to refine
+`water` below grid resolution instead of disclosing it — thresholding a
+blend of a categorical field's underlay — and reverted it: the change split
+`biome`/`water`/`color`'s documented agreement on one cell, and shrank a
+calibrated coarse statistic (fresh water at walking depth) by 29%, halving
+thirst-driven fauna movement in the process. Sub-cell water belongs to a
+hydrology model with an actual flow graph, not to a resolution disclosure.
+
 ## The document
 
 Every `scene/surrounds/v2` document is one JSON object with these fields,
@@ -286,6 +331,7 @@ in this order (field order **is** the JSON key order and is contract):
 | `cells` | array of object | The neighbourhood, ascending by packed `room` id — see the cell table below. |
 | `legend` | array of object | The chart's noun catalog, ascending by `noun` — see the `LegendEntry` table below. |
 | `sight` | object, **key omitted when absent** | The eye this chart was coloured for and what its projection preserves — see "Colour, and the eye that computed it" above. Present only on a document built through the colouring path. |
+| `resolution` | object | Which fields are decided at canonical-grid resolution and are therefore constant below it — see "Resolution: what a uniform field is telling you" above. Always present. |
 
 `observer` is itself an object, in this field order:
 

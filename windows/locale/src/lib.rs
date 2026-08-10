@@ -1244,6 +1244,71 @@ mod tests {
         assert!(KNOWN_BIOMES.contains(&loc.biome.as_str()));
     }
 
+    /// H4 (The Grain, Task 2): `dominant_corner`'s own doc claims every
+    /// categorical field a room reports -- biome, water kind, substrate, and
+    /// the rock the colour layer reads -- names the same cell. Nothing
+    /// checked that before this test, and a reverted campaign (`dd523ab2`,
+    /// reverted at `76068e6a`) split it silently: it stayed green through
+    /// 3350 tests while water alone moved to a non-dominant reading.
+    ///
+    /// Sampled over many addresses (the same directional-spread idiom
+    /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42` uses)
+    /// rather than one fixed address: a single room's three corner weights
+    /// can coincidentally agree across categories even when the underlying
+    /// wiring has split, so one address is not enough to trust a pass.
+    #[test]
+    fn describe_and_reflectance_agree_on_one_dominant_cell() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let geo = ctx.climate.geosphere();
+        let mut checked = 0;
+        for i in 0..200u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, 6);
+            let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
+                continue;
+            };
+            let expected_cell = dominant_corner(&weights).0;
+            let locale = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+
+            assert_eq!(
+                locale.biome_kind,
+                ctx.climate.biome_at(expected_cell),
+                "biome must name the dominant corner at {addr:?}"
+            );
+            assert_eq!(
+                locale.fields.water,
+                *ctx.terrain.globe().water_kind.get(expected_cell),
+                "water kind must name the dominant corner at {addr:?}"
+            );
+            assert_eq!(
+                locale.regime.negations.substrate,
+                crate::substrate::substrate_at(&ctx.climate, &ctx.terrain, expected_cell),
+                "substrate must name the dominant corner at {addr:?}"
+            );
+
+            let reflectance = ctx.reflectance_at(&addr).unwrap();
+            let buffer = ctx.terrain.material_at(expected_cell);
+            let rock = ctx.terrain.rock_at(expected_cell);
+            let expected_reflectance =
+                hornvale_terrain::lithology::reflectance(&buffer, rock).integrate();
+            assert_eq!(
+                reflectance, expected_reflectance,
+                "the colour layer's rock must name the dominant corner at {addr:?}"
+            );
+            checked += 1;
+        }
+        assert!(
+            checked > 50,
+            "too few addresses resolved on the grid to trust this test"
+        );
+    }
+
     #[test]
     fn regime_is_deterministic_and_siblings_differ() {
         let world = land_world();

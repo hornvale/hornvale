@@ -663,3 +663,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-10T14:34:48Z | rebaseline | 128.926 | 160.771 | 11.007 | 1.33 | 0 | 147dab73 | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-10T14:46:29Z | gate | 511.306 | 2143.033 | 120.630 | 4.43 | 0 | 9bf32382 | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-10T16:01:59Z | gate | 268.627 | 2070.073 | 103.159 | 8.09 | 0 | 4a8123bd | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T22:50:41Z | rebaseline | 132.896 | 156.361 | 10.299 | 1.25 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T22:51:44Z | gate | 5.565 | 4.144 | 1.010 | 0.93 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T23:15:10Z | gate | 572.319 | 2409.113 | 202.108 | 4.56 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |

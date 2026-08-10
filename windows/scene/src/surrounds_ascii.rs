@@ -231,7 +231,7 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Mark, SurroundsCell, SurroundsObserver, SurroundsScene};
+    use crate::{Mark, Resolution, SurroundsCell, SurroundsObserver, SurroundsScene};
 
     fn cell(u: i64, v: i64, w: i64, up: bool, state: &str, relief: u32) -> SurroundsCell {
         SurroundsCell {
@@ -286,6 +286,14 @@ mod tests {
             cells,
             legend: vec![],
             sight: None,
+            resolution: Resolution {
+                grid_level: 6,
+                depth_below_grid: 6,
+                grid_resolution_fields: ["biome", "color", "water"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            },
         }
     }
 

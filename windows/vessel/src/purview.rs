@@ -272,7 +272,11 @@ mod tests {
     #[allow(clippy::field_reassign_with_default)]
     fn eyes_off_restores_a_byte_identical_uncoloured_chart() {
         // The negative control — WITH its positive control, because a
-        // suppress-everything path passes green against nothing.
+        // suppress-everything path passes green against nothing. Checked as a
+        // KEY (`"color":`), not a bare substring: `resolution.
+        // grid_resolution_fields` (The Grain) legitimately carries the string
+        // "color" as an array element, which a bare `"\"color\""` search
+        // would also match regardless of whether the per-cell key is present.
         let w = world();
         let mut off = PossessOpts::default();
         off.eyes = crate::eyes::Eyes::Off;
@@ -280,7 +284,7 @@ mod tests {
         let s = a.purview(0).unwrap();
         let json = hornvale_scene::surrounds_json(&s);
         assert!(
-            !json.contains("\"color\""),
+            !json.contains("\"color\":"),
             "declining the observer step emits no colour"
         );
         assert!(!json.contains("\"sight\""), "and no declaration either");
@@ -288,7 +292,7 @@ mod tests {
         let (b, _) = Session::start(&w, &PossessOpts::default()).unwrap();
         let lit = hornvale_scene::surrounds_json(&b.purview(0).unwrap());
         assert!(
-            lit.contains("\"color\""),
+            lit.contains("\"color\":"),
             "the DEFAULT path must colour, or the test above proves nothing"
         );
     }

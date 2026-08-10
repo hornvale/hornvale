@@ -230,12 +230,43 @@ pub struct Sight {
     pub sun_altitude_deg: f64,
 }
 
+/// What resolution this chart's fields are decided at.
+///
+/// **Why a document says this at all.** A chart at walk depth sits six
+/// refinement levels below the canonical grid, so a field decided per grid cell
+/// is necessarily constant across the whole view — 4^6 rooms share one cell.
+/// Read without this block, that flatness looks like the chart contradicting the
+/// room's own prose ("open water" against "buttressed canopy, shaded, in a
+/// hollow"); read with it, the flatness is the field's resolution stated out
+/// loud. This is the same discipline [`Sight`] applies to colour, where
+/// `preserves` names what the projection does *not* carry.
+///
+/// Declaring a resolution is deliberately NOT refining it. A campaign attempted
+/// the refinement for `water` and reverted it: thresholding a blend of a
+/// *nominal* field's underlay deletes categories and broke a calibrated coarse
+/// statistic, where banding a blend of an *ordinal* field's underlay (which is
+/// what `relief` does) moves a value at most one band. Sub-cell water belongs to
+/// a hydrology model, not to this document.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: depth_below_grid), bare-ok(identifier-text: grid_resolution_fields)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Resolution {
+    /// The canonical grid's refinement level.
+    pub grid_level: u32,
+    /// How many levels below `grid_level` this chart's cells sit. Each level
+    /// quarters a cell, so `4^depth_below_grid` rooms share one grid cell.
+    pub depth_below_grid: u32,
+    /// The names of this document's fields that are decided at grid resolution
+    /// and therefore cannot vary below it, in stable order.
+    pub grid_resolution_fields: Vec<String>,
+}
+
 /// One `scene/surrounds/v2` document. Field order is the JSON key order and
-/// is contract — never reorder. `sight` is the one exception to "never
-/// reorder" in letter only: it was appended after `legend` rather than
-/// inserted, so every document built before the colour declaration existed
-/// is still byte-identical, and `#[serde(skip_serializing_if)]` means an
-/// uncoloured document emits no `sight` key at all.
+/// is contract — never reorder. `sight` and `resolution` are the exceptions
+/// to "never reorder" in letter only: each was appended after the previous
+/// last field rather than inserted, so every document built before it existed
+/// is still byte-identical. `#[serde(skip_serializing_if)]` means an
+/// uncoloured document emits no `sight` key at all; `resolution` carries no
+/// such gate and is always present.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsScene {
@@ -279,6 +310,10 @@ pub struct SurroundsScene {
     /// unchanged by this field's existence.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sight: Option<Sight>,
+    /// Which of this document's fields are decided at canonical-grid
+    /// resolution and are therefore constant below it. Appended after
+    /// `sight` so the change is additive to the wire.
+    pub resolution: Resolution,
 }
 
 /// Build the `scene/surrounds/v2` document for `room` at `radius` rings,
@@ -419,6 +454,14 @@ pub fn surrounds_scene_in(
         cells,
         legend,
         sight: None,
+        resolution: Resolution {
+            grid_level: ctx.globe_level(),
+            depth_below_grid: room.depth() - ctx.globe_level(),
+            grid_resolution_fields: ["biome", "color", "water"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+        },
     })
 }
 
@@ -870,12 +913,15 @@ mod tests {
     #[test]
     fn the_uncolored_json_emits_no_color_key() {
         // serde skip_serializing_if means an absent colour emits no key at
-        // all, so the committed gallery JSON cannot move.
+        // all, so the committed gallery JSON cannot move. Checked as a KEY
+        // (`"color":`), not a bare substring: `resolution.grid_resolution_fields`
+        // legitimately carries the string "color" as an array element, which
+        // a bare `"\"color\""` search would also match.
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
         let json = crate::surrounds_json(&s);
         assert!(
-            !json.contains("\"color\""),
+            !json.contains("\"color\":"),
             "an absent colour still emitted a key"
         );
     }
@@ -1204,7 +1250,11 @@ mod tests {
     fn an_uncoloured_document_is_byte_identical_to_one_built_before_sight_existed() {
         // `sight` and `color` are both skipped when absent, so the uncoloured
         // path must emit not one extra byte. This is what protects the three
-        // committed gallery charts and the gallery scene JSON.
+        // committed gallery charts and the gallery scene JSON. `color` is
+        // checked as a KEY (`"color":`), not a bare substring: `resolution.
+        // grid_resolution_fields` legitimately carries the string "color" as
+        // an array element, which a bare `"\"color\""` search would also
+        // match.
         let (w, ctx, room) = fixture_world();
         let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime { day: 0.0 }).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1213,7 +1263,7 @@ mod tests {
             "uncoloured documents carry no sight block"
         );
         assert!(
-            !json.contains("\"color\""),
+            !json.contains("\"color\":"),
             "uncoloured documents carry no colour"
         );
     }
@@ -1374,6 +1424,46 @@ mod tests {
         assert!(
             moved > 0,
             "dimming the illuminant must darken at least one cell"
+        );
+    }
+
+    /// The chart declares which of its fields are decided at canonical-grid
+    /// resolution and are therefore constant below it.
+    ///
+    /// This exists because the chart's flatness at walk depth was read as a
+    /// contradiction with the room's own prose, and the document gave a reader no
+    /// way to tell "this area is uniform" from "this field does not resolve here".
+    /// Same disclosure discipline `Sight::preserves` already applies to colour.
+    #[test]
+    fn the_chart_declares_which_fields_are_grid_resolution() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        assert_eq!(s.resolution.grid_level, ctx.globe_level());
+        assert_eq!(
+            s.resolution.depth_below_grid,
+            here.depth() - ctx.globe_level()
+        );
+        assert!(
+            s.resolution
+                .grid_resolution_fields
+                .contains(&"water".to_string()),
+            "water is decided at the dominant corner, so it must be declared"
+        );
+        assert!(
+            s.resolution
+                .grid_resolution_fields
+                .contains(&"biome".to_string()),
+            "biome is decided at the dominant corner, so it must be declared"
+        );
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"relief".to_string()),
+            "relief is banded from the blend and DOES vary below the grid"
         );
     }
 }
