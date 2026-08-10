@@ -32,7 +32,7 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo seems content.
 > wait 5
-Time passes; the world keeps its shape.
+Time passes. You sense movement nearby (2 stirred).
 > look
 [room 750518284, day 5]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -40,7 +40,7 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (23 stirred).
+Time passes. You sense movement nearby (21 stirred).
 > look
 [room 750518284, day 6]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (26 stirred).
+Time passes. You sense movement nearby (15 stirred).
 > look
 [room 750518284, day 7]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -62,7 +62,7 @@ hobgoblin of Nenagabo:
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (359 stirred).
+Time passes. You sense movement nearby (366 stirred).
 > look
 [room 750518284, day 97]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The sky is a low grey rain-deck.
