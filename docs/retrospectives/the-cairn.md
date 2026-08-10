@@ -215,17 +215,33 @@ would have returned a confident GO derived from a two-campaign-old picture.
 ## 10. A red run entered the cost ledger as a cheap green one
 
 `scripts/timed.sh` appends a row to `docs/timings.md` whether the command passed
-or failed, and the ledger has no `rc` column. So the gate that fail-fasted at
-test 44 of 3283 landed as `| gate | 24.238 | … |` — indistinguishable from a real
-409 s gate, in the file CLAUDE.md calls the archaeology of how the suite's cost
-moved, and which `make ci`'s baseline reasoning depends on. A red run entering as
-a cheap green one makes the gate look **faster** than it is, which is the
+or failed. So the gate that fail-fasted at test 44 of 3283 landed as
+`| gate | 24.238 | … |`, in the file CLAUDE.md calls the archaeology of how the
+suite's cost moved and which `make ci`'s baseline reasoning depends on. A red run
+entering as a cheap one makes the gate look **faster** than it is, which is the
 dangerous direction.
 
-The row was relabelled by hand rather than deleted (deleting rewrites a real
-measurement). A hand fix is not a mechanism, so this is followup F18. The
-asymmetry that makes it worth fixing: `ci-record` already refuses to write its
-baseline on a red run; `timed.sh` has no such discipline.
+**This lesson was itself written wrong the first time, which is the sharper half.**
+The original text asserted the ledger "has no `rc` column". Checking at close:
+`timed.sh` does capture `rc`, and every row carries it — so the obvious remedy was
+already in place and the finding as filed would have sent a future campaign to
+implement something that exists. What is actually broken is subtler and survived
+the miscount: the summary's column map is **stale relative to the row format**. Its
+comment and its awk both read `$8` as the commit and `$10` as the host, but `rc`
+now occupies `$8` — so `make timings` prints rc where it means commit and branch
+where it means host. And the median does not filter on `rc`, so a failed run's wall
+time is folded into the baseline a later run is judged against.
+
+Two things worth carrying. A row was relabelled by hand rather than deleted, since
+deleting rewrites a real measurement — but a hand fix is not a mechanism, hence
+followup F18. And a finding written from a plausible inference rather than from the
+script was wrong in the direction that matters: it named a remedy already shipped
+while missing the live defect underneath. That is this campaign's own
+verify-don't-assume rule, failing on the campaign's own retrospective, at the last
+possible moment to catch it.
+
+The asymmetry that makes the underlying defect worth fixing: `ci-record` already
+refuses to write its baseline on a red run; `timed.sh` has no such discipline.
 
 ## 11. An external implementation shipped mid-campaign, and the answer was narrowing
 
@@ -383,10 +399,19 @@ preventing expensive rediscovery nearly lost eight of its own findings this way.
   `store.rs`'s `TipSnapshot` doc comment first. A preflight-time reap is tempting
   and wrong — preflight runs at integration, when other sessions are most likely
   to be posting.
-- **F18 — `scripts/timed.sh` writes a row whether the command passed or failed.**
-  *Trigger:* lesson 10, found the hard way. Either add and record an `rc` column,
-  or give `timed.sh` the discipline `ci-record` already has and refuse to write on
-  failure.
+- **F18 — the timing ledger's summary reads the wrong columns, and its median
+  counts failed runs.** *Trigger:* lesson 10, found the hard way — then **corrected
+  at close, because the finding as first written was wrong.** `timed.sh` *does*
+  capture `rc` and the rows *do* carry it, so "add an `rc` column" was already
+  done. Two real defects survive that correction. First, the summary's column map
+  is stale: its comment and its awk both read `$8` as the commit and `$10` as the
+  host, but `rc` now occupies `$8`, so `make timings` prints **rc where it means
+  commit and branch where it means host**. Second, the median does not filter on
+  `rc`, so a failed run's wall time is folded into the baseline a later run is
+  judged against — which is how a red 24 s gate made the gate look faster. The
+  asymmetry that makes it worth fixing: `ci-record` already refuses to write its
+  baseline on a red run; `timed.sh` has no such discipline. Not fixed here — it is
+  pre-existing shared tooling, and the merge point is the wrong moment to touch it.
 - **F19 — Settle whether an async `SessionStart` hook's stdout reaches context.**
   *Trigger:* the hooks documentation says session-start stdout becomes context and
   separately that `async: true` runs in the background, and is silent on the
