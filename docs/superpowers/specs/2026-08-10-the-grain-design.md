@@ -81,10 +81,20 @@ adjacent lines:
 corner cells)", :199 "the corner cell a room's *categorical* readings come from:
 the greatest blend weight" — but the split is not categorical-vs-continuous.
 **`relief` is categorical too**, six ordered bands, and it is banded from the
-blend rather than inherited. That is the model. Water is a banding of a
-continuous underlay in the same sense, and it is on the wrong side of the line.
+blend rather than inherited. That is the model.
 
-Biome is genuinely different and stays inherited: averaging *desert* and
+> **THE THESIS SURVIVES ONLY FOR ORDINAL FIELDS — §5 records why.** This
+> section's first draft concluded "water is a banding of a continuous underlay
+> in the same sense, and it is on the wrong side of the line." That inference was
+> built, measured, and reverted. The reason the table above cannot show it:
+> `relief` is **ordinal**, so banding a blend of its underlay moves a value at
+> most one band and conserves the distribution's shape; `water` is **nominal**,
+> so thresholding a blend of its underlay silently *deletes a category*. The
+> real line is neither categorical-vs-continuous nor banded-vs-inherited — it is
+> **whether the field's values are ordered.** Ordinal fields may band from a
+> blend; nominal ones must take a partition.
+
+Biome stays inherited for a related but distinct reason: averaging *desert* and
 *tundra* yields no biome, and the classification is a lookup, not a ramp.
 
 ## 4. Change A — emit `regime.micro` per cell
@@ -114,67 +124,84 @@ until a consumer wants them at a zoom where they vary; `elevation_m` and
 `height_asl_m` are judged the same way and left alone, since `relief` already
 carries the height signal a consumer needs.
 
-## 5. Change B — band water from the blend, as relief already is
+## 5. Change B — attempted twice, reverted, replaced by disclosure
 
-Replace `water: locale.fields.water.index()` with a room-level water kind banded
-from the blended/micro wetness, mirroring `relief_band`'s shape.
+> **BUILT, MEASURED, AND REVERTED.** This section has been wrong twice and is
+> now a record of both attempts, because the reasoning is the deliverable.
+>
+> **Attempt 1** banded water from `regime.micro.wetness`. Rejected before
+> implementation: `micro_field` draws four sub-streams of `LOCALE_MICRO` from
+> the room's *address noise* with no coupling to terrain, and the evidence for
+> it was circular — `descriptor_noun` is rendered *from* `micro`, so wetness
+> "predicting" a stream gully is a definition.
+>
+> **Attempt 2** banded water from blended `Globe::drainage`, reusing
+> `hornvale_terrain::water::classify` and introducing no new constant. It was
+> implemented (`dd523ab2`), passed H1 and H2, passed the gate at 3350 tests —
+> and was reverted (`76068e6a`). Three reasons, and the third is the one that
+> generalizes.
 
-> **CORRECTED AT PLAN TIME.** The first version of this section banded water
-> from `micro.wetness`, on the evidence that `wetness > 0` separates the sim's
-> own `descriptor_noun` 3/3 and 5/5 over eight sampled rooms. **That evidence
-> was circular and the mechanism was wrong.** `micro_field`
-> (`windows/locale/src/micro.rs`) draws four sub-streams of `LOCALE_MICRO` from
-> the room's *address noise* — its module doc says so: "grounded per-room
-> continuous axes drawn from the room's address noise, so a walk through
-> homogeneous biome still varies room-to-room". It has no coupling to terrain.
-> And `descriptor_noun` is *rendered from* `micro`
-> (`grammar::render(negations, micro, expr, …)`), so wetness predicting "stream
-> gully" is a definition, not a correlation. Banding water from it would scatter
-> river rooms as salt-and-pepper noise through a canonical cell — spatially
-> incoherent, and exactly the plausible-and-wrong shape this project guards
-> against. What follows is the corrected mechanism.
+**1. It splits a documented coupling invariant.** `dominant_corner`'s own doc:
+"every categorical field a room reports — biome, water kind, substrate, and …
+the rock whose reflectance the colour layer reads — names the same cell.
+Splitting this would let a room be described as granite lowland and drawn in
+basalt grey." Banding water from a blend while the other three still take the
+dominant corner *is* that split. The ten flagship rooms the change "fixed" went
+from `(river, shelf)` to `(ocean, tropical-rainforest)`: the contradiction moved
+onto the documented invariant rather than being removed. **This invariant has no
+test** — the change broke it and 3350 tests stayed green.
 
-**Blend the physical underlay, then apply the existing threshold** — the same
-two steps `relief` takes. `WaterKind` is already a pure function of continuous
-inputs: `hornvale_terrain::water::classify(elevation_m, sea_level_m, drainage,
-endorheic, is_terminal_sink)`, "pure and total", `pub`. `Globe` carries
-`drainage: CellMap<f64>` and `endorheic: CellMap<bool>`.
+**2. It breaks a calibrated coarse statistic.** `RIVER_MIN_DRAINAGE`'s doc
+records that 15.0 "keeps rivers the minority landform (~6.7% of seed-42's
+land)". Measured: fresh water shrinks **29%** at walk depth (River 66→47 over a
+4000-point sweep), thirst-driven fauna movement halves
+(`possession-seed-42.md`, `766 stirred` → `389 stirred`), and 102 lines of
+committed affect trace move. The constitution's `coarse constrains fine` says
+higher fidelity refines, never contradicts, lower — so a refinement that shrinks
+a calibrated coarse quantity is disallowed regardless of how good its local
+behaviour looks.
 
-So in `LocaleContext::describe`, where the `blend` closure and the blended
-`elevation_m` / quantized `sea_level_m` already exist:
+**3. The bias was structural, predictable, and predicted.** A threshold is
+maximally nonlinear, so `classify(blend(drainage))` is not the area-weighted
+vote of `classify(drainage)` over corners. **Nearest-corner assignment is a
+partition and therefore conserves area by construction; threshold-of-a-blend
+does not, and it loses exactly the thin channels.** The measured loss landed
+where theory says: concentrated in drainage `[15, 20)`, where 267 of seed 42's
+700 river cells sit. A measurement confirming a predicted systematic bias is the
+strongest form of this argument, and it is why no amount of retuning rescues the
+mechanism.
 
-- **blend `drainage`** across the three corner cells, as elevation already is;
-- reuse the already-blended `elevation_m` and `sea_level_m`;
-- take `endorheic` and `is_terminal_sink` from the **dominant corner** — they are
-  flags, not ramps, and a flag has no meaningful weighted mean;
-- call `classify` on that.
+**What the existing code was actually doing.** `dominant_corner` is evaluated
+**per room**, over that room's own three corner weights — so water is *categorical
+nearest-neighbour interpolation*, not "inheritance from a cell 4096× too big".
+That is the correct method for a categorical field. Its apparent flatness at
+radius 4 is what nearest-neighbour interpolation looks like when the view is
+smaller than the interpolation stencil, which is a fact about the view, not a
+defect in the field.
 
-**Two things this buys over the version it replaces.** It is spatially coherent:
-blended drainage falls off with distance from the river-carrying corner, so river
-rooms form a gradient rather than static. And **no new constant is introduced** —
-`RIVER_MIN_DRAINAGE = 15.0` is already tuned with a documented rationale
-("keeps rivers the minority landform, ~6.7% of seed-42's land"), so there is no
-threshold to fit and §8's preregistration gets simpler, not harder.
+### What replaces it: disclose the resolution
 
-**The honest open question.** Drainage accumulation is a flow-network quantity,
-not a smooth field — it jumps by orders of magnitude along a channel. An
-area-weighted blend of a corner at drainage 200 may leave *every* room in the
-cell above 15, reproducing the defect, or may threshold somewhere arbitrary.
-**This is unmeasured**, it is what H1 tests, and a null is a real result: it
-would say sub-cell water needs actual hydrology — `MAP-64`'s flow graph — rather
-than a blend of a network statistic.
+The chart's uniformity was never the defect. It correctly reports that water is
+defined at grid resolution while the view is finer than the water model. The
+honest fix is at the layer that owns the confusion — the document should say what
+resolution it speaks at, exactly as the `sight` block already declares what the
+colour projection does *not* carry ("the red-green axis is not carried").
 
-**What the coarse fact still means.** A canonical river cell genuinely is river
-country; the defect is claiming every room in it is standing water. The coarse
-kind remains available to any consumer that wants it via the corner weights, so
-this change narrows a claim rather than deleting one.
+So `scene/surrounds/v2` gains a resolution disclosure: which of its fields are
+decided at canonical-grid resolution and are therefore constant below it. A
+consumer can then caption the difference instead of inferring a contradiction,
+and a future reader does not repeat this campaign's diagnosis.
 
-**Consumers, enumerated** (`grep` over `fields.water` / `is_fresh()`): exactly
-two live call sites — `surrounds.rs:312` (the chart) and
-`windows/vessel/src/liveness.rs:704` (`is_fresh()`, drinkability). Both are
-things this change *should* affect: a dry canopy room should not be drinkable,
-and today it is. That behaviour change is the point, not a side effect, and it
-wants its own test.
+**Sub-cell water goes to `MAP-64`'s vector flow graph**, which is the only
+mechanism that can put a stream *somewhere in particular* inside a cell. Naming
+it here closes the question rather than leaving it open.
+
+### The coupling invariant gets the test it never had
+
+Independent of everything above: assert that a room's `biome`, `water`,
+`substrate` and rock all resolve to the same cell. That is the invariant
+`dominant_corner` documents and nothing checks, and attempt 2 is the proof it is
+breakable in silence.
 
 ## 6. Change C — caves on the surrounds wire
 
@@ -212,30 +239,34 @@ cannot distinguish "no caves here" from "caves are not emitted".
 Frozen before the code that would move it, per decision 0016. The freeze lives
 here because a study JSON has no hypothesis field.
 
-**H1.** With Change B in place, the number of distinct `water` values in a
-seed-42 radius-4 walk-depth neighbourhood is > 1.
-*Falsifiable, and a null is publishable*: if wetness does not vary enough at
-walk depth to cross any threshold, Change B is the wrong mechanism and the
-finding is that the local water answer needs something the sim does not yet
-compute.
+**H1 and H2 are retired, having served.** They were stated over the reverted
+water mechanism, both passed, and passing them is what exposed the mechanism as
+illegal — the hypotheses were about local behaviour and the failure was about a
+global conservation property they did not ask about. **That is the lesson worth
+keeping: a hypothesis about local variation cannot detect a violated global
+invariant.** Recorded rather than quietly deleted.
 
-**H2.** The banded room water kind is **spatially coherent**, not static: within
-a neighbourhood, rooms sharing a water kind are adjacent more often than a
-random relabelling of the same multiset would give. This is the hypothesis the
-corrected §5 mechanism earns and the rejected `micro.wetness` version could not
-have passed — noise fails it by construction, which is what makes it the
-discriminating test rather than a decoration.
+**H3 stands and is now the campaign's only quantitative claim.**
+Change A's `micro.openness` spans more than half of `[-1, 1]` within a single
+walk-band neighbourhood, on a seed sample. The n=8 probe in §2 suggests it spans
+nearly all of it; H3 is the version allowed to fail.
 
-**H3.** Change A's `micro.openness` spans more than half of [-1, +1] within a
-single walk-band neighbourhood, on a seed sample. §2's n=8 suggests it spans
-nearly all of it; H3 is the version that is allowed to fail.
+**H4 (new).** The coupling invariant holds: for any room, `biome`, `water`,
+`substrate` and the rock the colour layer reads all resolve to the same cell.
+Not a discovery claim — a regression guard on a property the code already has
+and never checked. It fails against `dd523ab2`, which is what makes it worth
+writing.
 
-**No threshold is fitted.** `RIVER_MIN_DRAINAGE = 15.0` is reused as-is. If H1
-nulls, the response is **not** to retune that constant — it is tuned against a
-documented canonical-level distribution and moving it would change every world's
-rivers to fix a sub-cell rendering problem. The response is to record the null
-and hand sub-cell water to `MAP-64`. Stating that here, before the measurement,
-is the point of preregistering it.
+**H5 (new, and it is a conservation criterion, not a preference).** Aggregating
+room-level water back over a canonical cell reproduces that cell's own water
+kind. Nearest-corner assignment satisfies this by construction; any future
+sub-cell water mechanism — including `MAP-64`'s flow graph — must satisfy it too.
+**This is the test attempt 2 would have failed before it was ever built**, and
+writing it down is this campaign's most durable output.
+
+**No threshold is fitted, and `RIVER_MIN_DRAINAGE` is not touched.** It is
+calibrated against a documented canonical-level distribution; moving it to
+change a sub-cell rendering would be the tail wagging the dog.
 
 ## 9. The deferred client campaign
 
