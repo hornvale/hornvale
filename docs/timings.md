@@ -600,6 +600,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T16:04:25Z | census | 775.777 | 21482.605 | 338.046 | 28.13 | 0 | 4c2156a4 |  | lefford | 40 |
 | 2026-08-09T16:14:37Z | gate | 458.530 | 2197.705 | 174.988 | 5.17 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T16:16:29Z | rebaseline | 111.946 | 145.349 | 10.084 | 1.39 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
+| 2026-08-09T23:39:41Z | gate | 409.207 | 2236.787 | 161.801 | 5.86 | 0 | 3a8c88f6 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T01:02:24Z | gate (RED, aborted at test 44/3283 — not a gate cost) | 24.238 | 42.983 | 7.331 | 2.08 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T01:10:45Z | gate | 409.351 | 2222.986 | 159.006 | 5.82 | 0 | e092781f | campaign/the-cairn | ambrose | 12 |
 | 2026-08-09T19:24:28Z | rebaseline | 211.979 | 155.238 | 7.988 | 0.77 | 0 | 58fcbecc | the-quire | MacBookPro | 10 |
 | 2026-08-09T19:37:58Z | gate | 398.608 | 2656.919 | 143.351 | 7.03 | 0 | 58fcbecc | the-quire | MacBookPro | 10 |
 | 2026-08-09T19:53:22Z | rebaseline | 120.383 | 157.567 | 7.035 | 1.37 | 0 | f466f316 | the-quire | MacBookPro | 10 |
@@ -612,3 +615,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-09T22:23:31Z | rebaseline | 136.973 | 153.062 | 7.758 | 1.17 | 0 | c19b61f7 | the-quire | MacBookPro | 10 |
 | 2026-08-09T22:39:04Z | gate | 563.267 | 2443.566 | 142.836 | 4.59 | 0 | b16005b7 | the-quire | MacBookPro | 10 |
 | 2026-08-09T23:06:44Z | gate | 633.696 | 2408.448 | 141.599 | 4.02 | 0 | 94f1a58e | the-radiation | MacBookPro | 10 |
+| 2026-08-10T02:01:15Z | rebaseline | 126.519 | 153.323 | 10.027 | 1.29 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
+| 2026-08-10T02:12:01Z | gate | 623.565 | 2967.549 | 239.978 | 5.14 | 0 | 1931a904 | campaign/the-cairn | ambrose | 12 |
