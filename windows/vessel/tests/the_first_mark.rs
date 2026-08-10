@@ -237,9 +237,18 @@ fn into_played_world_never_mutates_the_input_world() {
 /// persisted `turned-hostile` consequence must NOT double-fire. It holds by
 /// two independent mechanisms: `register_predicate` is idempotent on an
 /// identical def (re-registering the persisted predicates does not panic),
-/// and `next_entity` is serialized, so the re-derived NPCs mint fresh, higher
-/// ids and carry grievance 0 (their `disposition-shift` facts point at the old
-/// ids), leaving the persisted consequence the only one.
+/// and the consequence loop is guarded on the entity's own ledger state —
+/// `self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()` in
+/// `session.rs`, which refuses to fire for an NPC that already carries the
+/// fact. Since The Signet the re-derived NPC is the *same* entity as the one
+/// the persisted facts name (its id derives from its settlement and role, not
+/// from mint order), so it reloads carrying both its grievance and its
+/// `turned-hostile` fact, and that guard sees the fact and declines. This is
+/// the stronger of the two possible mechanisms: it would still hold if the
+/// grievance did not persist, whereas the pre-Signet behaviour — re-derived
+/// NPCs minting fresh, higher ids whose grievance therefore read 0 — held only
+/// by the accident that the reloaded NPC was a different entity from the one
+/// the facts described.
 #[test]
 fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
     let w = world();

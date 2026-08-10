@@ -72,10 +72,19 @@ pub struct World {
     /// reload after an epoch can say WHAT moved rather than silently
     /// rearranging someone's memory of a place (Rose Window Amendment 1
     /// §1a.5, which asked for that consequence to be stated rather than
-    /// discovered). It commits no fact and mints no entity — deliberately:
-    /// entity ids are minted sequentially, so a stamp entity at genesis would
-    /// shift every id after it and move every artifact in the project that
-    /// names one, for the sake of metadata.
+    /// discovered). It commits no fact and mints no entity.
+    ///
+    /// **The reason it did not is gone; it has not been replaced.** The
+    /// original rationale was that ids were minted sequentially, so a stamp
+    /// entity at genesis would shift every id after it and move every artifact
+    /// in the project that names one, for the sake of metadata. Since The
+    /// Signet an id derives from its lineage rather than from mint order, so
+    /// minting an entity no longer moves any other entity's id. All that a
+    /// stamp entity would now disturb is `Ledger`'s serialized accession
+    /// count, which would move fixture bytes without moving an identity.
+    /// A future campaign that wants the stamp to be an entity and its labels
+    /// to be facts is therefore free to do it; nothing here forbids it, and
+    /// this map's current shape is inertia rather than a constraint.
     ///
     /// The keys drop the `/vN` segment so that a bump is a *value* change on a
     /// stable key, which is what lets a diff name the label that moved instead

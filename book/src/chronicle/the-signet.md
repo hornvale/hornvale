@@ -125,6 +125,31 @@ not as a softer mint — the strict form still panics, and a unit test proves th
 reusing a lineage leaves the collision visible to it. Re-derivation on load is
 now a fixed point rather than an accumulation.
 
+## A creature now remembers across a reload
+
+That fixed point changed something a player can feel, and the campaign did not
+set out to build it.
+
+A settlement's creature accumulates a **grievance** when the player provokes it,
+and the grievance is not stored on the creature — it is read back out of the
+ledger, from the facts whose subject is that creature's id. Under the counter, a
+reload gave the re-derived creature a *different* id from the one the facts
+named. The provocations were still in the ledger, still true, and no longer
+attached to anyone present: they pointed at an entity that the new session had
+quietly replaced. Every creature woke up on a reload with a grievance of zero.
+
+Under lineage-derived ids the re-derived creature **is** the same entity, because
+its id is a function of its settlement and its role rather than of when it was
+made. The facts about it therefore still find it, and a provocation survives
+saving and loading the world.
+
+This is a consequence, not a feature. It follows from making identity stable and
+would have been very difficult to avoid while keeping that stability: an
+identity that persists is precisely one that its history can still be addressed
+to. It is recorded here because it is the campaign's one change a player can
+observe without reading a diff — a creature that used to forget what you did to
+it now does not.
+
 ## An id that a player was expected to type
 
 The vessel printed each derived creature's raw id beside its label, and that

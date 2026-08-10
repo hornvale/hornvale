@@ -177,11 +177,18 @@ Scaffold and The Salt both recorded before it.
 **Two present-tense sentences were corrected** in that chapter (lines 777 and
 796), which spoke of `vessel/session/v1` as the live schema. Chronicles were
 left alone: they are history and were accurate when written. The same stale
-present tense remains a live hazard wherever a version number appears in prose —
-`windows/vessel/src/snapshot.rs` and the root `CLAUDE.md` were fixed during Task
-5's own review, and `clients/game/core/src/cell.rs:74` was retroactively
-falsified by the mechanical v1→v2 swap (it describes work that happened against
-v1) and is listed below.
+present tense remains a live hazard wherever a version number appears in prose.
+`windows/vessel/src/snapshot.rs` was fixed during Task 5's own review, and
+`scripts/CLAUDE.md` and `windows/CLAUDE.md` were fixed with it. The **root**
+`CLAUDE.md` carries the same sentence and was *missed* — this retrospective
+originally claimed it had been fixed, which `git log main..HEAD -- CLAUDE.md`
+disproves (the branch never touched the file); the close's fix wave corrected
+both the file and this sentence. The near miss is the lesson, not the typo: a
+sweep that fixes three of four instances of a sentence reads, in the write-up,
+exactly like a sweep that fixed all four, and nothing checks the write-up.
+Separately, `clients/game/core/src/cell.rs:74` was retroactively falsified by
+the mechanical v1→v2 swap (it describes work that happened against v1) and is
+listed below.
 
 ## Deferred, and promoted here because the campaign's scratch dies with it
 
@@ -196,8 +203,14 @@ else:
    distinguish "same lineage" from "different lineage, same hash".
 2. **`ensure_index` rebuilds `minted` from `Fact::subject` only, not
    `Fact::place`.** An entity appearing exclusively as a place is invisible to
-   the rebuild, so its lineage re-mints silently after a load. Latent today
-   because every entity in the corpus is also a subject somewhere.
+   the rebuild. Note what this does *not* cost: no identity moves, because
+   `derive_entity_id` is a pure function of `(parent, role, ordinal)`, so
+   re-deriving that lineage yields the identical id it had before. What is lost
+   is the *guard* — `mint_entity`'s collision assert is defeated for that entity
+   across a save/load, so the campaign's loud-failure guarantee quietly weakens
+   after a reload — and the serialized `next_entity` accession count inflates by
+   one each time. Latent today because every entity in the corpus is also a
+   subject somewhere.
 3. **`pub fn test_lineage` ships a deliberately-wrong lineage** (`parent: None`,
    role `"test"`) in the kernel's public API, kept out of production by a doc
    comment alone. It is `pub` because the tests needing it live in other crates.
@@ -210,10 +223,16 @@ else:
    keeping the old ones around" — the counter is exactly that, and passes it.
    Same overstatement class the file's header corrects elsewhere.
 6. **Only two of the pipeline's minting stages are perturbed** by the acceptance
-   test. A domain reintroducing positional identity in *lineage construction*
-   (`ordinal: ledger.entity_count()`, say) is a different property and is
-   uncovered. If a future campaign adds a legitimate optional pipeline stage,
-   that stage becomes a free third arm.
+   test — `emit_history` (root lineages) and `derive_npcs` (child lineages).
+   This note first claimed that positional identity reintroduced in *lineage
+   construction* (`ordinal: ledger.entity_count()`, say) was a different
+   property and therefore uncovered. The close's review disproved that by
+   mutation: at both perturbed seams such an ordinal does move ids outside its
+   own lineage, and the test reddens. The gap is narrower than stated — it is
+   about *stages*, not about which kind of positional identity is reintroduced.
+   A stage the test does not perturb is unguarded either way, and if a future
+   campaign adds a legitimate optional pipeline stage, that stage becomes a free
+   third arm.
 7. **The anti-vacuity floors are loose** (50 of ~400 occupations, 10 of ~143
    NPCs) and would not notice a 90% roster collapse. Seed 42's occupation count
    has already halved once under an unrelated campaign.

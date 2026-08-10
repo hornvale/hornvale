@@ -252,7 +252,7 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/di
 # scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
 # registry/manifest dumps, lab studies, the type-audit report, the digest's
 # decision index and delta report, the Domesday survey, the committed
-# vessel/session/v1 client fixtures); `make rebaseline` and CI both call it,
+# vessel/session/v2 client fixtures); `make rebaseline` and CI both call it,
 # so they cannot silently diverge:
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
