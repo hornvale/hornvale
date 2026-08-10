@@ -447,9 +447,146 @@ impl Ledger {
     }
 }
 
+/// Where an entity comes from — the whole input to its derived identity.
+/// An id is a function of this and nothing else; deliberately NOT of any
+/// material fact, so two materially identical entities still differ.
+/// type-audit: bare-ok(identifier-text: role), bare-ok(count: ordinal)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Lineage<'a> {
+    /// The parent entity, or `None` for a root.
+    pub parent: Option<EntityId>,
+    /// The role this entity fills for its parent. A save-format contract:
+    /// changing a role label renumbers that whole lineage.
+    pub role: &'a str,
+    /// Which sibling this is among that parent's children in that role.
+    pub ordinal: u16,
+}
+
+/// The fixed root every parentless entity derives from. Not the world seed:
+/// ids are a pure function of structure, exactly as today's 1, 2, 3... are.
+const ENTITY_ROOT: u64 = 0x5369_676E_6574_0001;
+
+/// Derive an entity's identity from its lineage: a 48-bit path hash over
+/// (parent, role) in the high bits, the sibling ordinal in the low 16.
+/// Siblings therefore share their high bits, which makes a lineage legible
+/// in a hex dump.
+/// type-audit: bare-ok(constructor-edge: return)
+pub fn derive_entity_id(lineage: Lineage<'_>) -> EntityId {
+    let base = crate::seed::Seed(lineage.parent.map_or(ENTITY_ROOT, EntityId::get));
+    let hashed = base
+        .derive(crate::seed::StreamLabel::dynamic(lineage.role))
+        .0;
+    let raw = ((hashed >> 16) << 16) | u64::from(lineage.ordinal);
+    // `raw` is zero only when the top 48 bits AND the ordinal are all zero
+    // (p = 2^-48). Map that one case to 1 rather than panicking: 1 is a
+    // legal id and the collision assert in Task 2 catches any clash it causes.
+    EntityId::new(raw).unwrap_or(EntityId::MIN)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_inserted_mint_does_not_move_an_unrelated_id() {
+        // Today's API, no new types. The star is minted first in one ledger and
+        // second in the other; under a counter its id moves, which is the whole
+        // defect this campaign removes.
+        let mut before = Ledger::default();
+        let star_first = before.mint_entity();
+
+        let mut after = Ledger::default();
+        let _interloper = after.mint_entity();
+        let star_second = after.mint_entity();
+
+        assert_eq!(
+            star_first, star_second,
+            "minting an unrelated entity first must not move the star's id"
+        );
+    }
+
+    #[test]
+    fn an_id_is_a_function_of_lineage_not_of_call_order() {
+        let parent = EntityId::new(7).expect("nonzero");
+        let a = derive_entity_id(Lineage {
+            parent: Some(parent),
+            role: "occupation",
+            ordinal: 0,
+        });
+        let b = derive_entity_id(Lineage {
+            parent: Some(parent),
+            role: "occupation",
+            ordinal: 0,
+        });
+        assert_eq!(a, b, "the same lineage must always yield the same id");
+    }
+
+    #[test]
+    fn siblings_differ_only_in_the_low_sixteen_bits() {
+        let parent = EntityId::new(7).expect("nonzero");
+        let a = derive_entity_id(Lineage {
+            parent: Some(parent),
+            role: "occupation",
+            ordinal: 0,
+        });
+        let b = derive_entity_id(Lineage {
+            parent: Some(parent),
+            role: "occupation",
+            ordinal: 1,
+        });
+        assert_ne!(a, b, "distinct siblings must not collide");
+        assert_eq!(
+            a.get() >> 16,
+            b.get() >> 16,
+            "siblings share their path hash, so a lineage is legible in a hex dump"
+        );
+        assert_eq!(a.get() & 0xFFFF, 0);
+        assert_eq!(b.get() & 0xFFFF, 1);
+    }
+
+    #[test]
+    fn a_different_parent_or_role_moves_the_path_hash() {
+        let p7 = EntityId::new(7).expect("nonzero");
+        let p8 = EntityId::new(8).expect("nonzero");
+        let base = derive_entity_id(Lineage {
+            parent: Some(p7),
+            role: "occupation",
+            ordinal: 0,
+        });
+        let other_parent = derive_entity_id(Lineage {
+            parent: Some(p8),
+            role: "occupation",
+            ordinal: 0,
+        });
+        let other_role = derive_entity_id(Lineage {
+            parent: Some(p7),
+            role: "person",
+            ordinal: 0,
+        });
+        assert_ne!(base.get() >> 16, other_parent.get() >> 16);
+        assert_ne!(base.get() >> 16, other_role.get() >> 16);
+    }
+
+    #[test]
+    fn a_root_needs_no_parent_and_no_world_seed() {
+        let a = derive_entity_id(Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        });
+        let b = derive_entity_id(Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        });
+        assert_eq!(a, b);
+        let other = derive_entity_id(Lineage {
+            parent: None,
+            role: "plate",
+            ordinal: 0,
+        });
+        assert_ne!(a.get() >> 16, other.get() >> 16);
+    }
 
     fn registry() -> ConceptRegistry {
         let mut r = ConceptRegistry::default();

@@ -69,6 +69,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `room/face` | room base face |
 | `room/child` | room child descent |
+| `entity/identity/v1` | entity identity derivation leg |
 
 ### hornvale-language
 
