@@ -638,3 +638,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-10T09:59:10Z | gate | 346.491 | 2077.436 | 113.068 | 6.32 | 0 | 9e196cf7 | campaign/the-signet | MacBookPro | 10 |
 | 2026-08-10T10:01:26Z | rebaseline | 122.330 | 156.725 | 11.028 | 1.37 | 0 | 9e196cf7 | campaign/the-signet | MacBookPro | 10 |
 | 2026-08-10T13:53:05Z | gate | 246.286 | 597.441 | 56.589 | 2.66 | 0 | 43b91fc0 | the-armature | MacBookPro | 10 |
+| 2026-08-10T14:04:42Z | gate | 596.929 | 2067.602 | 109.774 | 3.65 | 0 | d51e13a3 | the-armature | MacBookPro | 10 |
