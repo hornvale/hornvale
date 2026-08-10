@@ -40,6 +40,7 @@
 | `is-belief` | yes | subject is a belief |
 | `is-neighbor` | yes | a minted entity is a notable neighbor star |
 | `is-occupation` | yes | subject is an occupation record |
+| `is-person` | yes | this entity is an individual person |
 | `is-place` | yes | subject is a traversable place |
 | `is-ruin` | yes | subject is a ruin (a dead occupation) |
 | `is-settlement` | yes | subject is a settlement |
@@ -82,6 +83,9 @@
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
+| `person-born` | yes | the day this person was born; negative if before the history record began |
+| `person-died` | yes | the day this person died |
+| `person-founded` | yes | the community whose occupation this person founded |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `pole-star-north` | yes | a bright star stands within 10 degrees of the north celestial pole at genesis (epoch-scoped: precession retires pole stars) |
 | `pole-star-south` | yes | a bright star stands within 10 degrees of the south celestial pole at genesis (epoch-scoped: precession retires pole stars) |
