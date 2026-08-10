@@ -336,6 +336,14 @@ mod tests {
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
+                // The Signet: the leg every entity id derives through
+                // (`derive(parent, entity/identity/v1)` then the role
+                // label). A NEW label, additive at v1 — it perturbs no
+                // existing stream — but versioned from birth because it IS
+                // the save-format contract for identity: bump it and every
+                // entity in every world renumbers. See
+                // `kernel/src/streams.rs`'s `ENTITY_IDENTITY`.
+                "entity/identity v1",
                 "history/bake v2",
                 // The Salt re-keys the flesh seed from the occupation's
                 // entity id onto its material core, so residue and

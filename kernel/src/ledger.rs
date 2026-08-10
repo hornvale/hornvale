@@ -4,6 +4,7 @@
 
 use crate::registry::ConceptRegistry;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
 /// Opaque entity handle. Minted by the ledger, never reused. `NonZeroU64`:
@@ -138,23 +139,89 @@ pub struct Ledger {
     /// after load, maintained incrementally on commit. Absent-or-complete.
     #[serde(skip)]
     index: Option<crate::fact_index::FactIndex>,
+    /// Every id minted so far — the collision guard's memory. Rebuilt from
+    /// the facts on load, so it is `#[serde(skip)]` and never widens the
+    /// save format.
+    #[serde(skip)]
+    minted: BTreeSet<EntityId>,
 }
 
 impl Ledger {
-    /// Mint a fresh entity id. Ids start at 1; 0 is reserved as "never valid".
-    pub fn mint_entity(&mut self) -> EntityId {
+    /// Mint an entity whose identity derives from `lineage`.
+    ///
+    /// # Panics
+    ///
+    /// If `lineage` derives an id already minted in this ledger. That means
+    /// either the same lineage was minted twice — a caller bug — or a
+    /// 48-bit path-hash collision (p ~ 1.8e-9 per world at this entity
+    /// population). Failing loudly turns silent identity corruption into a
+    /// reproducible panic; never suppress this.
+    pub fn mint_entity(&mut self, lineage: Lineage<'_>) -> EntityId {
+        // Repopulate `minted` from the facts if this is the first mint since
+        // a load: without this, a freshly-deserialized ledger's `minted` is
+        // empty (it is `#[serde(skip)]`) and a mint could silently hand out
+        // an id that collides with one already referenced by a loaded fact.
+        self.ensure_index();
+        let id = derive_entity_id(lineage);
+        assert!(
+            self.minted.insert(id),
+            "entity id {:#x} already minted — lineage (parent {:?}, role {:?}, \
+             ordinal {}) collides. Same lineage minted twice, or a path-hash \
+             collision. Do not suppress: widen the lineage instead.",
+            id.get(),
+            lineage.parent,
+            lineage.role,
+            lineage.ordinal
+        );
         self.next_entity += 1;
-        EntityId(
-            NonZeroU64::new(self.next_entity).expect("next_entity starts at 0 and only increments"),
-        )
+        id
+    }
+
+    /// The entity `lineage` derives to — minted if this ledger has never seen
+    /// it, returned unchanged if it has.
+    ///
+    /// **This is not a softer [`Ledger::mint_entity`].** That one panics on a
+    /// repeated lineage because a genesis path that mints one lineage twice
+    /// has produced two entities wearing one identity. This is for the other
+    /// case: a derivation that is legitimately RE-RUN over a ledger that may
+    /// already hold its output, where the same input must yield the same
+    /// entity rather than a second one. The live example is a possession
+    /// session re-deriving the NPCs of a world it has already played and
+    /// saved: the herder of a settlement is the same herder in every session,
+    /// so re-deriving must find it. Under the counter that case could not even
+    /// be expressed — the re-derivation silently minted a duplicate NPC on
+    /// every reload — which is a defect deriving ids from lineage exposes.
+    ///
+    /// Reach for it only where re-derivation is genuinely idempotent. A
+    /// genesis path minting a fresh entity wants `mint_entity` and its guard.
+    pub fn reuse_or_mint_entity(&mut self, lineage: Lineage<'_>) -> EntityId {
+        self.ensure_index();
+        let id = derive_entity_id(lineage);
+        if self.minted.insert(id) {
+            self.next_entity += 1;
+        }
+        id
+    }
+
+    /// How many entities this ledger has minted — an accession count, never
+    /// an identity. Ids are derived (see [`derive_entity_id`]); this only
+    /// answers "how many".
+    /// type-audit: bare-ok(count: return)
+    pub fn entity_count(&self) -> u64 {
+        self.next_entity
     }
 
     /// Ensure the derived index exists and is current (rebuild-if-absent).
+    /// Also the sole place `minted` is repopulated after a load: `index` and
+    /// `minted` are both `#[serde(skip)]`, both absent until this first
+    /// rebuild, and rebuilt together from the same `facts` scan so the two
+    /// stay in lockstep.
     fn ensure_index(&mut self) {
         if self.index.is_none() {
             let mut idx = crate::fact_index::FactIndex::default();
             idx.rebuild(&self.facts);
             self.index = Some(idx);
+            self.minted = self.facts.iter().map(|f| f.subject).collect();
         }
     }
 
@@ -333,31 +400,6 @@ impl Ledger {
         self.facts.is_empty()
     }
 
-    /// The maximum entity id referenced by any fact (subjects, `Value::Entity`
-    /// objects, and `place` fields), or 0 if the ledger is empty.
-    /// type-audit: pending(wave-1)
-    pub fn max_entity_id(&self) -> u64 {
-        self.facts
-            .iter()
-            .flat_map(|f| {
-                let object_id = match f.object {
-                    Value::Entity(e) => Some(e.get()),
-                    _ => None,
-                };
-                [Some(f.subject.get()), object_id, f.place.map(|p| p.get())]
-            })
-            .flatten()
-            .max()
-            .unwrap_or(0)
-    }
-
-    /// Valid when no future mint can collide with an entity id already
-    /// referenced in a fact.
-    /// type-audit: bare-ok(flag)
-    pub fn minting_is_valid(&self) -> bool {
-        self.next_entity >= self.max_entity_id()
-    }
-
     /// Iterate over every committed fact, in commit order.
     pub fn iter(&self) -> impl Iterator<Item = &Fact> {
         self.facts.iter()
@@ -370,12 +412,13 @@ impl Ledger {
     /// type-audit: bare-ok(identifier-text: kind_label), waiver(decision-0014: day), bare-ok(prose: provenance)
     pub fn mint_instance(
         &mut self,
+        lineage: Lineage<'_>,
         kind_label: &str,
         day: Option<f64>,
         provenance: &str,
         registry: &ConceptRegistry,
     ) -> Result<EntityId, LedgerError> {
-        let e = self.mint_entity();
+        let e = self.mint_entity(lineage);
         self.commit(
             Fact {
                 subject: e,
@@ -486,26 +529,121 @@ pub fn derive_entity_id(lineage: Lineage<'_>) -> EntityId {
     EntityId::new(raw).unwrap_or(EntityId::MIN)
 }
 
+/// A distinct throwaway lineage for a test that only needs "some entity".
+///
+/// **Test support, never production.** Every real mint states the parent it
+/// belongs to and the role it fills (see [`Lineage`]); passing `parent: None,
+/// role: "test"` in world-building code would mis-key every fact about that
+/// entity. It is `pub` rather than `#[cfg(test)]` only because the tests that
+/// need it live in other crates, which cannot see a `#[cfg(test)]` item.
+///
+/// `n` distinguishes siblings: two calls with the same `n` derive the same id,
+/// so two mints on ONE ledger need two different `n` — the collision assert in
+/// [`Ledger::mint_entity`] is what tells you when they do not.
+/// type-audit: bare-ok(count: n)
+pub fn test_lineage(n: u16) -> Lineage<'static> {
+    Lineage {
+        parent: None,
+        role: "test",
+        ordinal: n,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "the-signet Task 2: goes green once minting takes a lineage"]
     fn an_inserted_mint_does_not_move_an_unrelated_id() {
-        // Today's API, no new types. The star is minted first in one ledger and
-        // second in the other; under a counter its id moves, which is the whole
-        // defect this campaign removes.
+        // The campaign's whole point, at kernel scale: the star is minted first
+        // in one ledger and second in the other. Under the old counter its id
+        // moved; under lineage-derived ids it must not.
         let mut before = Ledger::default();
-        let star_first = before.mint_entity();
+        let star_first = before.mint_entity(Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        });
 
         let mut after = Ledger::default();
-        let _interloper = after.mint_entity();
-        let star_second = after.mint_entity();
+        let _interloper = after.mint_entity(Lineage {
+            parent: None,
+            role: "interloper",
+            ordinal: 0,
+        });
+        let star_second = after.mint_entity(Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        });
 
         assert_eq!(
             star_first, star_second,
             "minting an unrelated entity first must not move the star's id"
+        );
+    }
+
+    #[test]
+    fn minting_the_same_lineage_twice_is_a_hard_error() {
+        let mut l = Ledger::default();
+        let lin = Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        };
+        let _first = l.mint_entity(lin);
+        let again = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| l.mint_entity(lin)));
+        assert!(
+            again.is_err(),
+            "minting one lineage twice must panic rather than hand out a duplicate identity"
+        );
+    }
+
+    #[test]
+    fn re_deriving_one_lineage_finds_the_same_entity_instead_of_minting_a_second() {
+        let mut l = Ledger::default();
+        let lin = Lineage {
+            parent: None,
+            role: "npc",
+            ordinal: 0,
+        };
+        let first = l.reuse_or_mint_entity(lin);
+        let again = l.reuse_or_mint_entity(lin);
+        assert_eq!(
+            first, again,
+            "an idempotent re-derivation must return the entity it already made"
+        );
+        assert_eq!(
+            l.entity_count(),
+            1,
+            "and must not book a second accession for it"
+        );
+        // It is still a real mint the collision guard knows about: the strict
+        // form must now refuse the same lineage.
+        let strict = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| l.mint_entity(lin)));
+        assert!(
+            strict.is_err(),
+            "reuse must register the id, so `mint_entity` still sees the collision"
+        );
+    }
+
+    #[test]
+    fn the_accession_count_still_counts() {
+        let mut l = Ledger::default();
+        l.mint_entity(Lineage {
+            parent: None,
+            role: "star",
+            ordinal: 0,
+        });
+        l.mint_entity(Lineage {
+            parent: None,
+            role: "plate",
+            ordinal: 0,
+        });
+        assert_eq!(
+            l.entity_count(),
+            2,
+            "next_entity survives as an accession count"
         );
     }
 
@@ -602,7 +740,15 @@ mod tests {
     }
 
     fn named(ledger: &mut Ledger, name: &str) -> Fact {
-        let e = ledger.mint_entity();
+        // `entity_count()` before the mint gives each successive call on the
+        // same ledger a fresh ordinal, so repeated `named()` calls never
+        // collide (same role, distinct siblings).
+        let ordinal = ledger.entity_count() as u16;
+        let e = ledger.mint_entity(Lineage {
+            parent: None,
+            role: "named-test-subject",
+            ordinal,
+        });
         Fact {
             subject: e,
             predicate: "name".to_string(),
@@ -616,7 +762,17 @@ mod tests {
     #[test]
     fn mint_entity_yields_distinct_ids() {
         let mut l = Ledger::default();
-        assert_ne!(l.mint_entity(), l.mint_entity());
+        let a = l.mint_entity(Lineage {
+            parent: None,
+            role: "a",
+            ordinal: 0,
+        });
+        let b = l.mint_entity(Lineage {
+            parent: None,
+            role: "b",
+            ordinal: 0,
+        });
+        assert_ne!(a, b);
     }
 
     #[test]
@@ -656,7 +812,11 @@ mod tests {
     fn unknown_predicate_is_rejected() {
         let r = registry();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "unknown-predicate-subject",
+            ordinal: 0,
+        });
         let f = Fact {
             subject: e,
             predicate: "unregistered".to_string(),
@@ -706,9 +866,21 @@ mod tests {
     fn non_functional_predicate_allows_multiple_objects() {
         let r = registry();
         let mut l = Ledger::default();
-        let village = l.mint_entity();
-        let vale = l.mint_entity();
-        let forest = l.mint_entity();
+        let village = l.mint_entity(Lineage {
+            parent: None,
+            role: "village",
+            ordinal: 0,
+        });
+        let vale = l.mint_entity(Lineage {
+            parent: None,
+            role: "vale",
+            ordinal: 0,
+        });
+        let forest = l.mint_entity(Lineage {
+            parent: None,
+            role: "forest",
+            ordinal: 0,
+        });
         for container in [vale, forest] {
             l.commit(
                 Fact {
@@ -730,7 +902,11 @@ mod tests {
     fn non_finite_number_object_is_rejected() {
         let r = registry();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "non-finite-number-subject",
+            ordinal: 0,
+        });
         let f = Fact {
             subject: e,
             predicate: "name".to_string(),
@@ -749,7 +925,11 @@ mod tests {
     fn non_finite_day_is_rejected() {
         let r = registry();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "non-finite-day-subject",
+            ordinal: 0,
+        });
         let f = Fact {
             subject: e,
             predicate: "name".to_string(),
@@ -769,7 +949,11 @@ mod tests {
         use crate::quantize::quantize;
         let r = registry();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "quantize-subject",
+            ordinal: 0,
+        });
         let raw = 210.2242156495795_f64;
         l.commit(
             Fact {
@@ -797,7 +981,11 @@ mod tests {
     fn finite_numbers_still_commit() {
         let r = registry();
         let mut l = Ledger::default();
-        let e = l.mint_entity();
+        let e = l.mint_entity(Lineage {
+            parent: None,
+            role: "finite-number-subject",
+            ordinal: 0,
+        });
         let f = Fact {
             subject: e,
             predicate: "name".to_string(),
@@ -813,15 +1001,44 @@ mod tests {
     fn ledger_serializes_roundtrip_including_minting_state() {
         let r = registry();
         let mut l = Ledger::default();
-        let f = named(&mut l, "Zaggrak");
-        l.commit(f, &r).unwrap();
+        let lineage = Lineage {
+            parent: None,
+            role: "roundtrip-subject",
+            ordinal: 0,
+        };
+        let e = l.mint_entity(lineage);
+        l.commit(
+            Fact {
+                subject: e,
+                predicate: "name".to_string(),
+                object: Value::Text("Zaggrak".to_string()),
+                place: None,
+                day: None,
+                provenance: "test".to_string(),
+            },
+            &r,
+        )
+        .unwrap();
         let json = serde_json::to_string(&l).unwrap();
         let mut l2: Ledger = serde_json::from_str(&json).unwrap();
         assert_eq!(l2.len(), 1);
-        // Minting must resume without colliding with existing entities.
-        let fresh = l2.mint_entity();
-        assert!(l2.facts_about(fresh).count() == 0);
-        assert!(fresh.get() > 1);
+        // `minted` is `#[serde(skip)]`, so this only holds if it is rebuilt
+        // from the loaded facts before the first post-reload mint: re-minting
+        // the SAME lineage that produced `e` must still collide.
+        let again =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| l2.mint_entity(lineage)));
+        assert!(
+            again.is_err(),
+            "a lineage already present in the loaded facts must still collide after reload"
+        );
+        // An unrelated lineage mints cleanly and does not collide.
+        let fresh = l2.mint_entity(Lineage {
+            parent: None,
+            role: "post-reload-subject",
+            ordinal: 0,
+        });
+        assert_eq!(l2.facts_about(fresh).count(), 0);
+        assert_ne!(fresh, e);
     }
 
     #[test]
@@ -898,9 +1115,29 @@ mod tests {
         // fails if positions_for_subject's sort is dropped.
         let r = registry();
         let mut l = Ledger::default();
-        let s = l.mint_entity();
-        let low = l.mint_entity(); // id 2
-        let high = l.mint_entity(); // id 3, so ObjKey(Entity(low)) < ObjKey(Entity(high))
+        let s = l.mint_entity(Lineage {
+            parent: None,
+            role: "commit-order-subject",
+            ordinal: 0,
+        });
+        let e1 = l.mint_entity(Lineage {
+            parent: None,
+            role: "commit-order-target",
+            ordinal: 0,
+        });
+        let e2 = l.mint_entity(Lineage {
+            parent: None,
+            role: "commit-order-target",
+            ordinal: 1,
+        });
+        // Ids are lineage-derived, not sequential, so which of the two sorts
+        // lower is not knowable from mint order — sort by value instead of
+        // assuming it, so ObjKey(Entity(low)) < ObjKey(Entity(high)) holds.
+        let (low, high) = if e1.get() < e2.get() {
+            (e1, e2)
+        } else {
+            (e2, e1)
+        };
         let commit = |l: &mut Ledger, pred: &str, obj: Value| {
             l.commit(
                 Fact {
@@ -943,7 +1180,15 @@ mod tests {
     fn random_ledger(seed: u64, n: usize) -> (Ledger, ConceptRegistry, Vec<EntityId>) {
         let r = registry(); // predicates: "name" (functional), "located-in" (non-functional)
         let mut l = Ledger::default();
-        let subjects: Vec<EntityId> = (0..8).map(|_| l.mint_entity()).collect();
+        let subjects: Vec<EntityId> = (0..8u16)
+            .map(|ordinal| {
+                l.mint_entity(Lineage {
+                    parent: None,
+                    role: "random-ledger-subject",
+                    ordinal,
+                })
+            })
+            .collect();
         let mut st = seed.wrapping_add(1);
         for _ in 0..n {
             let s = subjects[(splitmix(&mut st) as usize) % subjects.len()];
@@ -1063,7 +1308,11 @@ mod tests {
         // INDEX == SCAN total over numeric objects.
         let r = registry();
         let mut l = Ledger::default();
-        let s = l.mint_entity();
+        let s = l.mint_entity(Lineage {
+            parent: None,
+            role: "signed-zero-subject",
+            ordinal: 0,
+        });
         for obj in [Value::Number(0.0), Value::Number(-0.0), Value::Number(1.5)] {
             l.commit(
                 Fact {
@@ -1101,8 +1350,16 @@ mod tests {
     fn query_by_object_finds_committed_facts() {
         let r = registry();
         let mut l = Ledger::default();
-        let a = l.mint_entity();
-        let hub = l.mint_entity();
+        let a = l.mint_entity(Lineage {
+            parent: None,
+            role: "query-by-object-subject",
+            ordinal: 0,
+        });
+        let hub = l.mint_entity(Lineage {
+            parent: None,
+            role: "query-by-object-hub",
+            ordinal: 0,
+        });
         l.commit(
             Fact {
                 subject: a,
@@ -1151,7 +1408,17 @@ mod tests {
         let mut w = crate::World::new(crate::Seed(1));
         let e = w
             .ledger
-            .mint_instance("owlbear", Some(0.0), "test", &w.registry)
+            .mint_instance(
+                Lineage {
+                    parent: None,
+                    role: "owlbear-instance",
+                    ordinal: 0,
+                },
+                "owlbear",
+                Some(0.0),
+                "test",
+                &w.registry,
+            )
             .unwrap();
         assert_eq!(w.ledger.kind_of(e), Some("owlbear"));
         assert_eq!(w.ledger.find(crate::INSTANCE_OF).count(), 1);
@@ -1162,7 +1429,17 @@ mod tests {
         let mut w = crate::World::new(crate::Seed(1));
         let e = w
             .ledger
-            .mint_instance("owlbear", Some(0.0), "test", &w.registry)
+            .mint_instance(
+                Lineage {
+                    parent: None,
+                    role: "owlbear-instance",
+                    ordinal: 0,
+                },
+                "owlbear",
+                Some(0.0),
+                "test",
+                &w.registry,
+            )
             .unwrap();
         w.ledger
             .change_kind(
@@ -1197,7 +1474,17 @@ mod tests {
         let mut w = crate::World::new(crate::Seed(1));
         let e = w
             .ledger
-            .mint_instance("owlbear", None, "test", &w.registry)
+            .mint_instance(
+                Lineage {
+                    parent: None,
+                    role: "owlbear-instance",
+                    ordinal: 0,
+                },
+                "owlbear",
+                None,
+                "test",
+                &w.registry,
+            )
             .unwrap();
         w.ledger
             .change_kind(e, "corpse", None, "test", &w.registry)
@@ -1214,7 +1501,17 @@ mod tests {
         let mut w = crate::World::new(crate::Seed(1));
         let e = w
             .ledger
-            .mint_instance("granite", None, "test", &w.registry)
+            .mint_instance(
+                Lineage {
+                    parent: None,
+                    role: "granite-instance",
+                    ordinal: 0,
+                },
+                "granite",
+                None,
+                "test",
+                &w.registry,
+            )
             .unwrap();
         let json = serde_json::to_string(&w.ledger).unwrap();
         let l2: Ledger = serde_json::from_str(&json).unwrap();
@@ -1243,10 +1540,18 @@ mod tests {
         for n in [1_000usize, 5_000, 20_000] {
             // AFTER: index-backed commit (each commit maintains the index).
             let mut l = Ledger::default();
-            let subj = l.mint_entity();
+            let subj = l.mint_entity(Lineage {
+                parent: None,
+                role: "bench-subject",
+                ordinal: 0,
+            });
             let start = Instant::now();
             for i in 0..n {
-                let target = l.mint_entity();
+                let target = l.mint_entity(Lineage {
+                    parent: None,
+                    role: "bench-target",
+                    ordinal: i as u16,
+                });
                 let _ = black_box(l.commit(
                     Fact {
                         subject: subj,

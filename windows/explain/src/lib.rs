@@ -134,12 +134,15 @@ mod tests {
     use hornvale_astronomy::register_concepts;
     use hornvale_astronomy::system::generate;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::test_lineage;
 
     fn world_with_sky(seed: u64) -> World {
         let mut w = World::new(Seed(seed));
         register_concepts(&mut w.registry).unwrap();
         let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-        let subject = w.ledger.mint_entity();
+        let subject = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         facts::genesis(&mut w, subject, &outcome).unwrap();
         w
     }

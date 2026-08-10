@@ -3,6 +3,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_history::descent::Kinship;
 use hornvale_kernel::Seed;
+use hornvale_kernel::test_lineage;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, clan_root_of,
@@ -172,8 +173,12 @@ fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
     let mut w = World::new(Seed(42));
     hornvale_history::register_concepts(&mut w.registry).expect("registers cleanly");
 
-    let mother = w.ledger.mint_entity();
-    let child = w.ledger.mint_entity();
+    let mother = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
+    let child = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
 
     commit(
         &mut w,
@@ -392,7 +397,9 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
     hornvale_worldgen::register_all(&mut world.registry).expect("registry registers");
 
     let found = |world: &mut World, cell: f64, day: f64| -> EntityId {
-        let id = world.ledger.mint_entity();
+        let id = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         for (predicate, object) in [
             (
                 hornvale_history::OCC_PEOPLE,

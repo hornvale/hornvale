@@ -3,7 +3,7 @@
 //! population. The first entry is the flagship. Replaces the tier-0 single
 //! hand-fed village.
 
-use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
+use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World};
 
 /// The fully-resolved per-cell data the composition root hands to genesis
 /// (placement geometry plus the name/biome/population the root drew or read).
@@ -43,8 +43,16 @@ pub fn genesis(
     settlements: &[PlacedSettlement],
 ) -> Result<Vec<EntityId>, LedgerError> {
     let mut ids = Vec::with_capacity(settlements.len());
-    for s in settlements {
-        let id = world.ledger.mint_entity();
+    for (i, s) in settlements.iter().enumerate() {
+        // A settlement belongs to the world, not to another entity, so it is a
+        // root; its ordinal is its position in the scatter the composition
+        // root placed (spec P4: reordering the scatter still moves these ids,
+        // which is the lineage's own churn and correct).
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: "settlement",
+            ordinal: i as u16,
+        });
         world.ledger.commit(
             fact(id, hornvale_kernel::NAME, Value::Text(s.name.clone())),
             &world.registry,

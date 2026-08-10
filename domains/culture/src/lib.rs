@@ -142,12 +142,15 @@ pub fn subsistence_of(world: &World, settlement: EntityId) -> Option<String> {
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::test_lineage;
 
     #[test]
     fn genesis_commits_the_emergent_structure_and_subsistence() {
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
-        let s = w.ledger.mint_entity();
+        let s = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         let env = EnvSummary {
             subsistence: Subsistence::Farming,
             surplus: 0.8,
@@ -165,7 +168,9 @@ mod tests {
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
 
-        let lean = w.ledger.mint_entity();
+        let lean = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         let lean_env = EnvSummary {
             subsistence: Subsistence::Foraging,
             surplus: 0.1,
@@ -175,7 +180,9 @@ mod tests {
         let psych = PsychSummary::default();
         genesis(&mut w, lean, &lean_env, &psych).unwrap();
 
-        let rich = w.ledger.mint_entity();
+        let rich = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         let rich_env = EnvSummary {
             subsistence: Subsistence::Farming,
             surplus: 0.8,
@@ -196,7 +203,9 @@ mod tests {
     fn other_entities_have_no_castes() {
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
-        let s = w.ledger.mint_entity();
+        let s = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         let env = EnvSummary {
             subsistence: Subsistence::Farming,
             surplus: 0.8,
@@ -205,7 +214,9 @@ mod tests {
         };
         let psych = PsychSummary::default();
         genesis(&mut w, s, &env, &psych).unwrap();
-        let other = w.ledger.mint_entity();
+        let other = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
         assert!(castes_of(&w, other).is_empty());
         assert_eq!(subsistence_of(&w, other), None);
     }

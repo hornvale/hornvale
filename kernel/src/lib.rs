@@ -43,7 +43,9 @@ pub use ecology::{
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
-pub use ledger::{EntityId, Fact, KindId, Ledger, LedgerError, Value};
+pub use ledger::{
+    EntityId, Fact, KindId, Ledger, LedgerError, Lineage, Value, derive_entity_id, test_lineage,
+};
 pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{

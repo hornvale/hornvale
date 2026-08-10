@@ -19,9 +19,9 @@ use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Correspondent, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId,
-    LedgerError, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, SeaLevelHeight, Seed, Temperature, Value, Visibility, Void, World, WorldContext,
-    WorldTime, observe,
+    LedgerError, Lineage, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon,
+    ReferenceElevation, RegistryError, SeaLevelHeight, Seed, Temperature, Value, Visibility, Void,
+    World, WorldContext, WorldTime, observe,
 };
 use hornvale_language::CommonVocabulary;
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
@@ -6455,7 +6455,15 @@ fn build_to(
         .single_writer_check(&world.registry, hornvale_kernel::KERNEL_CORE_PREDICATES)
         .map_err(BuildError::Schedule)?;
 
-    let world_entity = world.ledger.mint_entity();
+    // The world entity is the root fact-holder: it belongs to nothing, and
+    // there is exactly one, so it is the canonical `parent: None, ordinal: 0`.
+    // Its id is therefore the same constant in every world, which is the
+    // spec's "ids are a pure function of structure" property, not an accident.
+    let world_entity = world.ledger.mint_entity(Lineage {
+        parent: None,
+        role: "world",
+        ordinal: 0,
+    });
     let choice_text = match sky {
         SkyChoice::Constant => "constant",
         SkyChoice::Generated => "generated",
@@ -7262,9 +7270,22 @@ fn build_to(
         // bugbear, yields to it).
         let mut used_collective_names: std::collections::BTreeSet<String> =
             std::collections::BTreeSet::new();
-        for kind in placed_peoples(&world) {
-            let collective =
-                mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
+        for (i, kind) in placed_peoples(&world).into_iter().enumerate() {
+            // A people-as-a-whole belongs to the world rather than to another
+            // entity, so it is a root; `placed_peoples` is registry-ordered
+            // (alphabetical), which is what makes the ordinal reproducible.
+            let collective = mint_instance_of_kind(
+                &mut world,
+                wc,
+                Lineage {
+                    parent: None,
+                    role: "people",
+                    ordinal: i as u16,
+                },
+                kind.0,
+                None,
+                "the people as a roster kind",
+            )?;
             let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
                 .entry("person")
                 .and_then(|entry| match entry {
@@ -7387,9 +7408,17 @@ fn species_genesis(
 
     let mut ids = std::collections::BTreeMap::new();
     // Ascending KindId — the biosphere store is the canonical entity set.
-    for kind in wc.biosphere.ids() {
+    for (i, kind) in wc.biosphere.ids().enumerate() {
         let name = kind.0;
-        let id = world.ledger.mint_entity();
+        // A species is a top-level kind: it belongs to the world, not to
+        // another entity, so it roots. The ordinal is its ascending-`KindId`
+        // position, the same order that already makes this loop
+        // byte-identity-critical.
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: "species",
+            ordinal: i as u16,
+        });
         world.ledger.commit(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
@@ -7569,10 +7598,14 @@ pub fn build_world(
 /// Mint an instance of a known kind: the composition root's validated entry
 /// to `Ledger::mint_instance` (the kernel is roster-blind; spec §4.2). Fails
 /// loudly when the label is not in the union kind roster.
+///
+/// `lineage` is the caller's, not this function's, to choose: only the caller
+/// knows what the instance belongs to and which sibling it is (spec §2).
 /// type-audit: bare-ok(identifier-text: kind), waiver(decision-0014: day), bare-ok(prose: provenance)
 pub fn mint_instance_of_kind(
     world: &mut World,
     wc: &WorldComponents,
+    lineage: Lineage<'_>,
     kind: &str,
     day: Option<f64>,
     provenance: &str,
@@ -7584,7 +7617,7 @@ pub fn mint_instance_of_kind(
     }
     world
         .ledger
-        .mint_instance(kind, day, provenance, &world.registry)
+        .mint_instance(lineage, kind, day, provenance, &world.registry)
         .map_err(BuildError::Ledger)
 }
 
@@ -8575,6 +8608,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
+    use hornvale_kernel::test_lineage;
 
     /// claim: invariant — the hoisted dot product equals the looked-up one.
     ///
@@ -9710,7 +9744,9 @@ mod tests {
         hornvale_species::register_concepts(&mut world.registry)
             .expect("species concepts register on a fresh registry");
         for (kind, population) in placements {
-            let id = world.ledger.mint_entity();
+            let id = world
+                .ledger
+                .mint_entity(test_lineage(world.ledger.entity_count() as u16));
             world
                 .ledger
                 .commit(
@@ -10679,7 +10715,9 @@ mod tests {
         // exist. sky_of must error, never panic.
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         world
             .ledger
             .commit(
@@ -10700,7 +10738,9 @@ mod tests {
         // must error, never panic.
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         world
             .ledger
             .commit(
@@ -10764,7 +10804,9 @@ mod tests {
         // accessor that used to `.expect()` on sky_of. None may panic.
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
-        let subject = world.ledger.mint_entity();
+        let subject = world
+            .ledger
+            .mint_entity(test_lineage(world.ledger.entity_count() as u16));
         world
             .ledger
             .commit(

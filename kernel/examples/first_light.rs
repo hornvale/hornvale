@@ -11,8 +11,8 @@
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Referent, Seed, Value,
-    Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
+    EntityId, Fact, Ledger, Lineage, ObserverContext, PhenomenaSource, Phenomenon, Referent, Seed,
+    Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 use std::io::Write as _;
 use std::path::Path;
@@ -85,8 +85,17 @@ fn render_world_document() -> String {
         .register_phenomenon_kind("celestial-body", "a body visible in the sky")
         .expect("fresh registry");
 
-    let vale = world.ledger.mint_entity();
-    let village = world.ledger.mint_entity();
+    // The vale is a place of the world itself; the village sits in the vale.
+    let vale = world.ledger.mint_entity(Lineage {
+        parent: None,
+        role: "vale",
+        ordinal: 0,
+    });
+    let village = world.ledger.mint_entity(Lineage {
+        parent: Some(vale),
+        role: "village",
+        ordinal: 0,
+    });
 
     let candidates = ["Zaggrak", "Bolnar", "Mokru", "Ishtor"];
     let mut stream = SEED

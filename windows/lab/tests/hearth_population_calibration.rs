@@ -153,6 +153,7 @@
 //! registers a hearth effect at all.
 
 use hornvale_kernel::ecology::ConditionResponse;
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{
     ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, PLANT_FORAGE, ResourceVector, RoomAddr,
     WorldTime,
@@ -472,7 +473,7 @@ fn plant_population() -> PlantedPopulation {
     let mut temps = BTreeMap::new();
 
     for (i, room) in cold_rooms.iter().enumerate() {
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         ledger
             .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
             .expect("place cold-built creature");
@@ -498,7 +499,7 @@ fn plant_population() -> PlantedPopulation {
         }
     }
     for (i, room) in warm_rooms.iter().enumerate() {
-        let e = ledger.mint_entity();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         ledger
             .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
             .expect("place warm-built creature");
@@ -683,7 +684,7 @@ fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
     let room = RoomAddr::containing([0.0, 0.0, -1.0], 6);
     let mut ledger = Ledger::default();
     let registry = planted_registry();
-    let e = ledger.mint_entity();
+    let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
     ledger
         .commit(place_agent(e, &room, WorldTime { day: 0.0 }), &registry)
         .expect("place mutation creature");

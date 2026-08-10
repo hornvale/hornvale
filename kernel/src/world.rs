@@ -134,15 +134,26 @@ impl World {
     }
 
     /// Deserialize a world from JSON.
+    ///
+    /// There is no load-time identity check here. An entity id is derived
+    /// from its `Lineage` (parent, role, ordinal), and lineage is not
+    /// persisted — `Ledger::minted` is `#[serde(skip)]` deliberately, so the
+    /// save format never widens to carry it. That leaves nothing independent
+    /// in a save to verify a fact's subject against: a loaded ledger's
+    /// `minted` set is rebuilt FROM the very facts a validity check would
+    /// compare it to, which makes such a check trivially true for any
+    /// well-formed JSON (an earlier version of this function had exactly
+    /// that vacuous check; it was deleted with the-signet Task 2's review
+    /// round because a guard that cannot fail reads as protection it does
+    /// not provide). The real guard is at mint time, not load time:
+    /// `Ledger::mint_entity` panics on a lineage collision, and that guard
+    /// demonstrably survives a save/load round trip (see
+    /// `Ledger`'s `ledger_serializes_roundtrip_including_minting_state`
+    /// test) because `ensure_index` repopulates `minted` from the loaded
+    /// facts before the first post-load mint.
     /// type-audit: bare-ok(artifact)
     pub fn from_json(json: &str) -> Result<World, serde_json::Error> {
-        use serde::de::Error as _;
         let world: World = serde_json::from_str(json)?;
-        if !world.ledger.minting_is_valid() {
-            return Err(serde_json::Error::custom(
-                "corrupt world: next_entity is behind entity ids referenced in facts",
-            ));
-        }
         Ok(world)
     }
 
@@ -161,7 +172,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::{Fact, Value};
+    use crate::ledger::{Fact, Lineage, Value};
 
     #[test]
     fn new_world_registers_core_concepts() {
@@ -178,7 +189,11 @@ mod tests {
     #[test]
     fn world_json_roundtrips() {
         let mut w = World::new(Seed(42));
-        let e = w.ledger.mint_entity();
+        let e = w.ledger.mint_entity(Lineage {
+            parent: None,
+            role: "world-roundtrip-subject",
+            ordinal: 0,
+        });
         w.ledger
             .commit(
                 Fact {
@@ -207,9 +222,24 @@ mod tests {
     }
 
     #[test]
-    fn from_json_rejects_corrupt_minting_state() {
+    fn next_entity_corruption_no_longer_invalidates_a_world() {
+        // The campaign's whole point again, seen from the save-format side:
+        // `next_entity` used to be the load-time corruption oracle (a fact
+        // referencing an id past the counter meant a forged save). Ids are
+        // now lineage-derived rather than counter positions, so `next_entity`
+        // is a bare accession count. `World::from_json` no longer runs ANY
+        // identity check (there is nothing left in the save to check it
+        // against — see the doc comment on `from_json`), so mangling
+        // `next_entity` must not stop a world from loading, and the real
+        // guard — the mint-time collision panic — must still fire correctly
+        // afterward.
         let mut w = World::new(Seed(42));
-        let e = w.ledger.mint_entity();
+        let lineage = Lineage {
+            parent: None,
+            role: "corruption-probe-subject",
+            ordinal: 0,
+        };
+        let e = w.ledger.mint_entity(lineage);
         w.ledger
             .commit(
                 Fact {
@@ -224,14 +254,32 @@ mod tests {
             )
             .unwrap();
         let json = w.to_json();
-        // Corrupt the minting state so it no longer covers the referenced entity id.
+        // `next_entity` is now a bare accession count (1, after one mint) —
+        // NOT the entity id, which is lineage-derived and huge. Mangle the
+        // count itself, not `e`'s value.
         let corrupt = json.replacen(
-            &format!("\"next_entity\": {}", e.0),
-            "\"next_entity\": 0",
+            &format!("\"next_entity\": {}", w.ledger.entity_count()),
+            "\"next_entity\": 999",
             1,
         );
-        assert_ne!(json, corrupt, "test setup must actually corrupt the json");
-        assert!(World::from_json(&corrupt).is_err());
+        assert_ne!(json, corrupt, "test setup must actually mangle the json");
+        let loaded = World::from_json(&corrupt);
+        assert!(
+            loaded.is_ok(),
+            "a mangled next_entity must not invalidate a world: {loaded:?}"
+        );
+        let mut loaded = loaded.unwrap();
+        // And minting still guards correctly after such a load: re-minting the
+        // lineage that produced `e` must still collide, proving `minted` was
+        // repopulated from the loaded facts rather than trusting the mangled
+        // counter.
+        let again = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            loaded.ledger.mint_entity(lineage)
+        }));
+        assert!(
+            again.is_err(),
+            "a lineage already present in the loaded facts must still collide"
+        );
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //! A mini-genesis run twice from the same seed must be byte-identical.
 
 use hornvale_kernel::seed::StreamLabel;
+use hornvale_kernel::test_lineage;
 use hornvale_kernel::{
     ConstantField, EntityId, Fact, Field, ObserverContext, PhenomenaSource, Phenomenon, Position,
     Referent, Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
@@ -34,7 +35,9 @@ fn mini_genesis(seed: Seed) -> String {
         .unwrap();
 
     // Terrain-ish: a place with a field-derived character.
-    let vale = world.ledger.mint_entity();
+    let vale = world
+        .ledger
+        .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     let roughness = fbm_2d(seed.derive(StreamLabel::dynamic("terrain")), 0.5, 0.5, 3);
     let biome = ConstantField("temperate forest".to_string())
         .sample(Position { x: 0.0, y: 0.0 }, WorldTime { day: 0.0 });
@@ -42,7 +45,9 @@ fn mini_genesis(seed: Seed) -> String {
     assert_eq!(biome, "temperate forest");
 
     // Settlement-ish: a named village, name refined against the ledger.
-    let village = world.ledger.mint_entity();
+    let village = world
+        .ledger
+        .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     let candidates = ["Zaggrak", "Bolnar", "Mokru", "Ishtor"];
     let mut stream = seed
         .derive(StreamLabel::dynamic("settlement"))
@@ -126,7 +131,9 @@ fn saved_world_reloads_identically() {
 fn entity_ids_are_never_reused_after_reload() {
     let json = mini_genesis(Seed(7));
     let mut world = World::from_json(&json).unwrap();
-    let fresh = world.ledger.mint_entity();
+    let fresh = world
+        .ledger
+        .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     // vale = 1, village = 2 in mini_genesis; fresh must not collide.
     assert!(fresh != EntityId::new(1).unwrap() && fresh != EntityId::new(2).unwrap());
 }
