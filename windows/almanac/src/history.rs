@@ -462,9 +462,10 @@ fn depth_phrase(index: usize, total: usize) -> &'static str {
 }
 
 /// The founding sentence, following the ★ `founded_from` thread: raised from
-/// nothing, or settled by people fleeing a failing home.
+/// nothing, or settled by people fleeing a failing home. When this community
+/// remembers who founded it (The Particular), a second sentence names them.
 fn founding_sentence(world: &World, r: &OccupationRecord) -> String {
-    match r.founded_from {
+    let mut sentence = match r.founded_from {
         Founding::Genesis(_) => {
             "They raised it from nothing on open ground — the first to break this soil.".to_string()
         }
@@ -476,7 +477,36 @@ fn founding_sentence(world: &World, r: &OccupationRecord) -> String {
                 format!("It was settled by {who} sent out from {whence}.")
             }
         }
+    };
+    if let Some(name) = remembered_founder(world, r) {
+        sentence.push_str(&format!(" It was founded by {name}."));
     }
+    sentence
+}
+
+/// The name of the founder this community remembers, if it remembers one.
+///
+/// Silence is the correct rendering of a founder nobody remembers. A
+/// placeholder phrase would reproduce the defect where every settlement in
+/// every world narrated the same sentence.
+fn remembered_founder(world: &World, r: &OccupationRecord) -> Option<String> {
+    // Promotion commits `person-founded` only for the selected cast, so its
+    // absence is the answer to "is a founder remembered here?". Queried by
+    // object first, mirroring `conquest_victim`'s idiom just below in this
+    // file: the occupation is the object of the fact, not its subject.
+    let person = world
+        .ledger
+        .query_by_object(&Value::Entity(r.id))
+        .find(|f| f.predicate == hornvale_person::PERSON_FOUNDED)?
+        .subject;
+    // The name is committed, so read it — the same lookup
+    // `hornvale_settlement::all_settlements` uses for a settlement's name
+    // (`text_of(id, hornvale_kernel::NAME)`). No language machinery in a
+    // window.
+    world
+        .ledger
+        .text_of(person, hornvale_kernel::NAME)
+        .map(str::to_string)
 }
 
 /// Describe a predecessor occupation an entity id refers to: `(who, whence,
@@ -979,5 +1009,117 @@ fn capitalize(s: String) -> String {
     match chars.next() {
         Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
         None => s,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::Fact;
+
+    /// A minimal occupation core: only `site` varies between the two
+    /// fixtures below, and neither `founding_sentence` nor
+    /// `remembered_founder` reads anything else about it.
+    fn core(site: CellId) -> Occupation {
+        Occupation {
+            people: KindId("goblin"),
+            site,
+            founded: 100.0,
+            ended: None,
+            peak_population: 40,
+            tech: TechHorizon::Neolithic,
+            function: Function::Agrarian,
+            deity: None,
+            tongue: None,
+            cause: None,
+            notability: Notability::Common,
+        }
+    }
+
+    fn record(id: EntityId, site: CellId) -> OccupationRecord {
+        OccupationRecord {
+            core: core(site),
+            id,
+            founded_from: Founding::Genesis(site),
+            ended_by: Ended::Nature,
+        }
+    }
+
+    fn commit(
+        world: &mut World,
+        subject: EntityId,
+        predicate: &str,
+        object: Value,
+        place: EntityId,
+        day: f64,
+    ) {
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject,
+                    predicate: predicate.to_string(),
+                    object,
+                    place: Some(place),
+                    day: Some(day),
+                    provenance: "test-fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .expect("fixture fact must be committable");
+    }
+
+    #[test]
+    fn a_remembered_founder_is_named_and_an_unremembered_one_is_silent() {
+        let mut world = World::new(Seed(42));
+        hornvale_person::register_concepts(&mut world.registry).expect("register person concepts");
+
+        let remembered = EntityId::new(10).expect("nonzero");
+        let unremembered = EntityId::new(20).expect("nonzero");
+        let founder = EntityId::new(11).expect("nonzero");
+
+        // Promotion's four always-committed facts (Task 1/3), trimmed to the
+        // two `remembered_founder` actually reads plus `is-person` for
+        // realism — `person-died` is irrelevant here.
+        commit(
+            &mut world,
+            founder,
+            hornvale_person::IS_PERSON,
+            Value::Flag(true),
+            remembered,
+            90.0,
+        );
+        commit(
+            &mut world,
+            founder,
+            hornvale_kernel::NAME,
+            Value::Text("Borga".to_string()),
+            remembered,
+            90.0,
+        );
+        commit(
+            &mut world,
+            founder,
+            hornvale_person::PERSON_FOUNDED,
+            Value::Entity(remembered),
+            remembered,
+            100.0,
+        );
+
+        let named = founding_sentence(&world, &record(remembered, CellId(1)));
+        let silent = founding_sentence(&world, &record(unremembered, CellId(2)));
+
+        assert!(
+            named.contains(" was founded by Borga"),
+            "expected a founder clause, got: {named}"
+        );
+        assert!(
+            !silent.contains(" was founded by "),
+            "no founder was committed for this occupation, but got: {silent}"
+        );
+        assert!(
+            !silent.contains("unremembered"),
+            "silence, not a placeholder, is the rendering for no remembered founder: {silent}"
+        );
     }
 }
