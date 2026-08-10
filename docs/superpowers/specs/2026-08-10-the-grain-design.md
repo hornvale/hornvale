@@ -119,16 +119,50 @@ carries the height signal a consumer needs.
 Replace `water: locale.fields.water.index()` with a room-level water kind banded
 from the blended/micro wetness, mirroring `relief_band`'s shape.
 
-**Evidence, and its limits.** Over the eight sampled rooms, `wetness > 0`
-separates the sim's own `descriptor_noun` perfectly — 3 of 3 "stream gully"
-rooms are positive, 5 of 5 canopy rooms negative — while `micro.relief` does not
-discriminate (a "stream gully" at +0.880 and a "liana tangle" at +0.949). This
-overturned the drafting session's own hypothesis that water runs in hollows.
+> **CORRECTED AT PLAN TIME.** The first version of this section banded water
+> from `micro.wetness`, on the evidence that `wetness > 0` separates the sim's
+> own `descriptor_noun` 3/3 and 5/5 over eight sampled rooms. **That evidence
+> was circular and the mechanism was wrong.** `micro_field`
+> (`windows/locale/src/micro.rs`) draws four sub-streams of `LOCALE_MICRO` from
+> the room's *address noise* — its module doc says so: "grounded per-room
+> continuous axes drawn from the room's address noise, so a walk through
+> homogeneous biome still varies room-to-room". It has no coupling to terrain.
+> And `descriptor_noun` is *rendered from* `micro`
+> (`grammar::render(negations, micro, expr, …)`), so wetness predicting "stream
+> gully" is a definition, not a correlation. Banding water from it would scatter
+> river rooms as salt-and-pepper noise through a canonical cell — spatially
+> incoherent, and exactly the plausible-and-wrong shape this project guards
+> against. What follows is the corrected mechanism.
 
-**n = 8, one neighbourhood, one biome, one seed.** That is enough to reject
-`micro.relief` as a discriminator and to motivate the change. It is *not* enough
-to fit a threshold. Per decision 0016 the threshold is preregistered before it
-is fitted — see §8.
+**Blend the physical underlay, then apply the existing threshold** — the same
+two steps `relief` takes. `WaterKind` is already a pure function of continuous
+inputs: `hornvale_terrain::water::classify(elevation_m, sea_level_m, drainage,
+endorheic, is_terminal_sink)`, "pure and total", `pub`. `Globe` carries
+`drainage: CellMap<f64>` and `endorheic: CellMap<bool>`.
+
+So in `LocaleContext::describe`, where the `blend` closure and the blended
+`elevation_m` / quantized `sea_level_m` already exist:
+
+- **blend `drainage`** across the three corner cells, as elevation already is;
+- reuse the already-blended `elevation_m` and `sea_level_m`;
+- take `endorheic` and `is_terminal_sink` from the **dominant corner** — they are
+  flags, not ramps, and a flag has no meaningful weighted mean;
+- call `classify` on that.
+
+**Two things this buys over the version it replaces.** It is spatially coherent:
+blended drainage falls off with distance from the river-carrying corner, so river
+rooms form a gradient rather than static. And **no new constant is introduced** —
+`RIVER_MIN_DRAINAGE = 15.0` is already tuned with a documented rationale
+("keeps rivers the minority landform, ~6.7% of seed-42's land"), so there is no
+threshold to fit and §8's preregistration gets simpler, not harder.
+
+**The honest open question.** Drainage accumulation is a flow-network quantity,
+not a smooth field — it jumps by orders of magnitude along a channel. An
+area-weighted blend of a corner at drainage 200 may leave *every* room in the
+cell above 15, reproducing the defect, or may threshold somewhere arbitrary.
+**This is unmeasured**, it is what H1 tests, and a null is a real result: it
+would say sub-cell water needs actual hydrology — `MAP-64`'s flow graph — rather
+than a blend of a network statistic.
 
 **What the coarse fact still means.** A canonical river cell genuinely is river
 country; the defect is claiming every room in it is standing water. The coarse
@@ -185,18 +219,23 @@ walk depth to cross any threshold, Change B is the wrong mechanism and the
 finding is that the local water answer needs something the sim does not yet
 compute.
 
-**H2.** The banded room water kind agrees with the sim's own
-`regime.descriptor_noun` — rooms the descriptor calls a stream/gully band wet,
-rooms it calls canopy band dry — at a rate materially above chance, measured
-over a real seed sample rather than the eight rooms in §5.
+**H2.** The banded room water kind is **spatially coherent**, not static: within
+a neighbourhood, rooms sharing a water kind are adjacent more often than a
+random relabelling of the same multiset would give. This is the hypothesis the
+corrected §5 mechanism earns and the rejected `micro.wetness` version could not
+have passed — noise fails it by construction, which is what makes it the
+discriminating test rather than a decoration.
 
 **H3.** Change A's `micro.openness` spans more than half of [-1, +1] within a
 single walk-band neighbourhood, on a seed sample. §2's n=8 suggests it spans
 nearly all of it; H3 is the version that is allowed to fail.
 
-**The threshold is fitted after H2's sample exists, not before**, and the fitted
-value goes in the chronicle with the sample it came from. Retuning it to rescue
-a prediction after unblinding is disclosed if it happens.
+**No threshold is fitted.** `RIVER_MIN_DRAINAGE = 15.0` is reused as-is. If H1
+nulls, the response is **not** to retune that constant — it is tuned against a
+documented canonical-level distribution and moving it would change every world's
+rivers to fix a sub-cell rendering problem. The response is to record the null
+and hand sub-cell water to `MAP-64`. Stating that here, before the measurement,
+is the point of preregistering it.
 
 ## 9. The deferred client campaign
 
