@@ -377,28 +377,64 @@ fn regenerate_occupancy_readout() {
 ///   vector (`DETRITUS`-dominant against wood's `PLANT_FORAGE`) and its
 ///   `HabitatRealm`. Its mass differs too (52.0 kg against 55.0), and an earlier
 ///   version of this bullet named that as a third cause "which moves the
-///   sovereignty floor 0.424802 vs 0.429202". **That mechanism is false here,
-///   and it is false by measurement rather than by argument.** Setting drow's
-///   mass to 500.0 kg and re-running `occupancy_readout_is_current` against the
-///   fixture this commit writes leaves it **GREEN** — the readout is
-///   byte-identical under a tenfold mass change. The reason is the inequality
-///   that admitted these kinds in the first place: within
-///   `per_species_suitability`, `bio.mass` reaches nothing but
+///   sovereignty floor 0.424802 vs 0.429202". **`drow`'s OWN mass is not a cause
+///   here** — but the reason is narrow, and a first attempt at this correction
+///   got it inverted. Three arms, each run against the fixture at HEAD and then
+///   reverted:
+///
+///   ```text
+///     drow        52 →  500 kg   GREEN — readout byte-identical
+///     desert-elf  50 →  500 kg   RED   — 12 rows move, all its own
+///     wood-elf    55 →  550 kg   RED   — 36 rows move: wood 12, high 12, DROW 12
+///   ```
+///
+///   **The drow arm is green because drow's affinity row is `wood.clone()`**, so
+///   drow's affinity *level* is a function of wood-elf's mass and never of its
+///   own — not because a mass cannot reach this readout. It plainly can. The
+///   correction this bullet first carried said mass "reaches nothing but
 ///   `sovereignty_floor`, that floor reaches nothing but `tolerance_liebig`'s
-///   temperature/moisture/insolation terms, and every occupant of this registry
-///   has `elevation.devotion` below its floor — so the unfloored elevation term
-///   is the minimum at every cell and the floor is computed and discarded. The
-///   apportionment is therefore two-way, not three-way, and this readout still
-///   cannot perform it; nothing here should be quoted as the gate's magnitude.
-///   `warren_readout.rs` is the file that isolates the realm question, by
-///   holding every other input fixed and emptying one store.
+///   floored axes … so the floor is computed and discarded", and generalised
+///   that to mass as such. Half of it is right and the half that is wrong is the
+///   consequential one:
+///
+///   - **True.** The floor computed *inside* `per_species_suitability` is
+///     discarded. Every occupant of this registry has `elevation.devotion` below
+///     its floor, so the unfloored elevation term is `tolerance_liebig`'s
+///     minimum at every cell and the floor never enters the product.
+///   - **False as a statement about mass.** The same `sovereignty_floor` sets
+///     each affinity row's LEVEL — `biome_affinity_registry` builds every row as
+///     `BiomeAffinity::from_preferences(floor_of(kind), …)` — and the affinity
+///     multiplies **outside** that minimum. So mass reaches this field through
+///     the affinity for every kind whose row is self-derived: six of the eight
+///     occupants. Drow and high-elf are exempt only because they take wood's row
+///     entire. The desert-elf arm above is the positive control the first
+///     attempt never ran, and it fires.
+///
+///   The desert-elf arm also shows the signature cleanly: its **stronghold** row
+///   (`desert`) keeps `mean_k`, `p50_k` and `p95_k` to the byte under a tenfold
+///   mass change — a stronghold maps to exactly `1.00` for any floor — while its
+///   `share_of_kind_k` and all eleven other biomes move.
+///
+///   One thing the drow arm did **not** hold fixed, and which the first
+///   correction reported as a clean null: it is not world-neutral. `hornvale new
+///   --seed 42` under drow at 500 kg differs from the unmutated world in exactly
+///   **one fact of 12,797** — the world's own name, because `dominant_people_in`
+///   weights candidates by `flagship.population × bio.mass.kilograms()`. Counts
+///   are unmoved (230 settlements, 474 ruins, gnoll's 40), so *placement* is
+///   untouched; "byte-identical" is a claim about this readout only.
+///
+///   The apportionment is therefore two-way, not three-way, and this readout
+///   still cannot perform it; nothing here should be quoted as the gate's
+///   magnitude. `warren_readout.rs` is the file that isolates the realm
+///   question, by holding every other input fixed and emptying one store.
 ///
 /// What the divergence *does* establish is the discriminating half: had the six
 /// elf rows been silently dropped from this path, wood and drow would still
 /// differ (their resource vectors and realms alone would do it — *not* their
-/// masses, per the mutation above), so drow is not the check. The check is that
-/// all twelve elf rows appear at all, and that wood and high come out identical
-/// rather than merely close.
+/// masses, since drow takes wood's row and its own mass therefore reaches
+/// nothing here), so drow is not the check. The check is that all twelve elf
+/// rows appear at all, and that wood and high come out identical rather than
+/// merely close.
 ///
 /// **The 2026-08-09 regeneration (The Range, fix wave) has exactly one cause,
 /// and its blast radius is the arithmetic of the mechanism.** *This paragraph
@@ -515,7 +551,11 @@ fn regenerate_occupancy_readout() {
 ///   viability floor is far below every factor in play. Declaring its affinity
 ///   lifted desert's share of its world total K from **0.0052262188** (the
 ///   pre-affinity fixture, `d7719e27`) to **0.0097462358** in the live file, a
-///   1.87× rise. It is still not dominance: desert is gnoll's
+///   1.86× rise (1.8648733; the paragraph read "1.87×" until this fix round
+///   divided it out — every other figure in this bullet is exact to the digit,
+///   which is what made the one rounded-the-wrong-way ratio worth catching. All
+///   of them were re-divided here, not just the one reported: the companion
+///   3.38× below is 3.3830030 and stands). It is still not dominance: desert is gnoll's
 ///   **second-smallest share of the twelve biomes it reaches** (only `ice`, at
 ///   0.0070751272, is lower), and the region's top occupant by `mean_k` is
 ///   `otyugh` (0.04704871), then `carrion-crawler` and `shrieker`, with gnoll at

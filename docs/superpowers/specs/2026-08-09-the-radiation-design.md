@@ -214,26 +214,82 @@ The Warren's `availability`. Two properties of it are load-bearing here:
 >   contested", and P2's **pre-committed diagnosis** (The Range's P1‴,
 >   suppression-without-relocation, repaired by an affinity above 1.0) was
 >   calibrated on the abandoned level. Do not reach for it without re-deriving it.
-> - **P3(a)** — its escape clause, "if their biosphere rows differ in mass or
->   potency, which moves the sovereignty floor", names a mechanism that
->   `per_species_suitability` **discards**. Within that function `bio.mass`
->   reaches only `sovereignty_floor`, which reaches only `tolerance_liebig`'s
->   floored axes, and every affinity occupant has `elevation.devotion` below its
->   floor, so the unfloored elevation term is the minimum at every cell.
->   Mutation-proven: setting drow's mass to 500.0 kg leaves the occupancy readout
->   byte-identical. Wood and High share mass (55.0 kg) regardless, and their
->   twelve occupancy rows are already **identical in every column**, so P3(a) is
->   known *in advance* to resolve to the branch the spec itself calls "a wiring
->   check with no information in it". The information is in P3(b).
-> - **P4** — the level is no longer a confound (Drow takes Wood's row entire,
->   floor included), and mass never was one. But Drow still differs from Wood in
->   its **resource vector** (`DETRITUS`-dominant against `PLANT_FORAGE`), which
->   this path does read, and the occupancy fixture shows Drow diverging from Wood
->   on all twelve shared biome rows. P4's second falsifier — "still separated
->   without the realm row, so something other than the gate is doing the work" —
->   is therefore likely to fire, and the honest attribution is the niche, not a
->   defect in the gate. Hold the niche fixed in the mutation arm, or report the
->   split.
+> - **P3(a)** — **this bullet was itself wrong, and is corrected here on
+>   2026-08-10 (second pass).** What it first said: the escape clause ("if their
+>   biosphere rows differ in mass or potency, which moves the sovereignty floor")
+>   "names a mechanism that `per_species_suitability` **discards**", the whole
+>   evidence being that setting drow's mass to 500.0 kg leaves the occupancy
+>   readout byte-identical. **That is the inverse of the truth**, written by
+>   generalising one true measurement on the single occupant for which it holds,
+>   with no positive control run to establish that the readout can see a mass
+>   change at all. What is true has two halves, and only the first was measured:
+>
+>   1. **The floor `per_species_suitability` computes internally is discarded.**
+>      Inside that function `bio.mass` reaches only `sovereignty_floor`, which
+>      reaches only `tolerance_liebig`'s floored temperature/moisture/insolation
+>      axes; every affinity occupant has `elevation.devotion` below its floor, so
+>      the unfloored elevation term is the minimum at every cell and that floor
+>      never enters the product. This half stands.
+>   2. **The same `sovereignty_floor` also sets each affinity row's LEVEL**, and
+>      the affinity multiplies **outside** the minimum. Since `cda3e3c4`,
+>      `biome_affinity_registry` builds every row as
+>      `BiomeAffinity::from_preferences(floor_of(kind), …)`. So *mass → floor →
+>      the row's level → the field* is a live path — and it is the one **this
+>      campaign created**. The escape clause names it correctly.
+>
+>   Measured on this tree against the fixture at HEAD
+>   (`occupancy_readout_is_current`, one arm per line, each mutation reverted):
+>
+>   ```
+>   desert-elf  50 → 500 kg   RED. 12 rows move, all desert-elf's own. Its
+>                             STRONGHOLD row (desert) keeps mean_k/p50_k/p95_k
+>                             to the byte — a stronghold is exactly 1.00 for any
+>                             floor — while its share and all eleven other
+>                             biomes move.  ← THE POSITIVE CONTROL
+>   wood-elf    55 → 550 kg   RED. 36 rows move: wood-elf 12, high-elf 12,
+>                             DROW 12. Drow's rows move under a change to
+>                             SOMEONE ELSE'S mass.
+>   drow        52 → 500 kg   GREEN — but not because the minimum discards the
+>                             floor. Drow's row is `wood.clone()`, so drow's
+>                             level is a function of WOOD-ELF's mass, never its
+>                             own. It is the one arm the first pass ran.
+>   ```
+>
+>   **The rule to carry forward:** mass reaches the field through the affinity
+>   for every kind whose row is **self-derived** — six of the eight occupants.
+>   Drow and High are exempt only because they take Wood's row entire, level
+>   included. Applied to any other occupant, the discarded-floor argument
+>   predicts green and gets red.
+>
+>   That drow arm is also **not world-neutral**, which the first pass reported as
+>   a clean null on the strength of the readout alone. `cargo run -p hornvale --
+>   new --seed 42` under drow at 500 kg differs from the unmutated world in
+>   **exactly one fact of 12,797** — the world's own name, because
+>   `dominant_people_in` weights candidates by `flagship.population ×
+>   bio.mass.kilograms()` (`windows/worldgen/src/lib.rs`). Settlement count
+>   (230), ruin count (474) and gnoll's placement (40) are unmoved. So
+>   "*placement* is untouched" holds; "byte-identical" does not.
+>
+>   **P3(a)'s resolution is unchanged by any of this.** Wood and High share mass
+>   (55.0 kg) *and* High clones Wood's row, so the escape clause is moot for that
+>   pair, their twelve occupancy rows are already **identical in every column**,
+>   and P3(a) is known *in advance* to resolve to the branch the spec itself
+>   calls "a wiring check with no information in it". The information is in
+>   P3(b). What the correction changes is the **diagnosis** to reach for if
+>   P3(a) or P4 ever does diverge: mass through the floor is now the *first*
+>   explanation, not an excluded one.
+> - **P4** — the level is no longer a confound, and neither is mass, but both
+>   for the *same* reason and not for two: Drow takes Wood's row entire, floor
+>   included, so Drow's affinity level is a function of **Wood's** mass. (Change
+>   Wood's mass and Drow's twelve rows move with it — the arm above. Change
+>   Drow's own and nothing in this readout moves.) Drow still differs from Wood
+>   in its **resource vector** (`DETRITUS`-dominant against `PLANT_FORAGE`),
+>   which this path does read, and the occupancy fixture shows Drow diverging
+>   from Wood on all twelve shared biome rows. P4's second falsifier — "still
+>   separated without the realm row, so something other than the gate is doing
+>   the work" — is therefore likely to fire, and the honest attribution is the
+>   niche, not a defect in the gate. Hold the niche fixed in the mutation arm, or
+>   report the split.
 >
 > P1, P1′, P5 and N1 are untouched by this: none reads the affinity's level.
 

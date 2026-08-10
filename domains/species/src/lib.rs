@@ -2600,7 +2600,23 @@ impl Component for BiomeAffinity {}
 /// the **unfloored** elevation term at every cell of every world and the floor
 /// never reaches the product at all. The quantity is computed and discarded for
 /// exactly the kinds this registry admits — which is the same sentence that
-/// admitted them. That stays true by enforcement rather than by memory:
+/// admitted them.
+///
+/// **Read "computed and discarded" narrowly, because a fix round of The
+/// Radiation did not.** What is discarded is the floor computed *inside*
+/// `hornvale_worldgen`'s `per_species_suitability`. The floor computed *here*,
+/// to set a row's LEVEL, is applied **outside** `tolerance_liebig`'s minimum and
+/// is not discarded at all — that is the entire point of the derivation above.
+/// Collapsing the two produced the claim "mass does not reach this path's
+/// output", which reached the campaign spec as a general rule and is refuted by
+/// mutation: `desert-elf` at 500 kg instead of 50 reddens
+/// `occupancy_readout_is_current` on twelve of its own rows, and `wood-elf` at
+/// 550 kg instead of 55 moves thirty-six — its own twelve plus `drow`'s and
+/// `high-elf`'s, which clone its row. **Mass reaches the field through the
+/// affinity level for every kind whose row is self-derived**; only the two
+/// clone-takers are exempt, and they are exempt because the row is not theirs.
+///
+/// That stays true by enforcement rather than by memory:
 /// `range_readout.rs::every_occupant_has_climate_curves_the_minimum_currently_discards`
 /// reddens the moment an edit to a mass, a potency or an elevation devotion
 /// would let the floor bind, and that is precisely the edit that would turn
