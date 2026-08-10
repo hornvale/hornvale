@@ -100,6 +100,35 @@ impl Post {
         self.extra.get(key)?.as_u64()
     }
 
+    /// Convention fields the read path only honours when they are JSON
+    /// numbers: a decay check reads each one through
+    /// [`u64_field`](Self::u64_field), which returns `None` for anything else.
+    pub const NUMERIC_CONVENTION_FIELDS: [&'static str; 2] = ["ttl_s", "pid"];
+    /// Which [`NUMERIC_CONVENTION_FIELDS`](Self::NUMERIC_CONVENTION_FIELDS)
+    /// this post carries as something other than a number.
+    ///
+    /// A typo'd `ttl_s=900s` becomes the JSON *string* `"900s"`, `u64_field`
+    /// returns `None`, and the TTL check is skipped entirely — producing an
+    /// immortal claim that no reap will ever drop. That is decision 0080's
+    /// stuck alarm, arrived at by typo, and it is the exact failure this
+    /// board's claims exist to avoid.
+    ///
+    /// Deliberately a *report*, not a rejection: D12 says the tool requires
+    /// only `kind` and `by` and must not validate the convention set, so a
+    /// post with a malformed `ttl_s` is still a legal post. What it must not
+    /// be is silent — callers warn on both the write and the read path, so a
+    /// typo announces itself when it is made and again every time its
+    /// consequence is drawn.
+    pub fn non_numeric_convention_fields(&self) -> Vec<&'static str> {
+        Self::NUMERIC_CONVENTION_FIELDS
+            .into_iter()
+            .filter(|name| match self.extra.get(*name) {
+                Some(v) => v.as_u64().is_none(),
+                None => false,
+            })
+            .collect()
+    }
+
     /// The `paths` convention field, or empty.
     pub fn paths(&self) -> Vec<String> {
         match self.extra.get("paths").and_then(|v| v.as_array()) {
@@ -290,6 +319,42 @@ mod tests {
             });
             assert_eq!(post, reparsed, "round trip must be exact for {post:?}");
         }
+    }
+
+    #[test]
+    fn a_non_numeric_ttl_or_pid_is_reported_rather_than_silently_ignored() {
+        // I8 / decision 0080's stuck alarm, by typo. `ttl_s=900s` parses as
+        // the JSON string "900s", `u64_field` returns None, the TTL check is
+        // SKIPPED, and the claim becomes immortal -- exactly what the spec set
+        // out to avoid. The tool still accepts the post (D12: it validates
+        // nothing beyond `kind` and `by`); what it must not do is stay quiet.
+        let p = Post::new("claim", "campaign/x")
+            .with("ttl_s", json!("900s"))
+            .with("pid", json!("abc"));
+        assert_eq!(p.non_numeric_convention_fields(), vec!["ttl_s", "pid"]);
+        assert_eq!(
+            p.u64_field("ttl_s"),
+            None,
+            "sanity: this really is the value the read path cannot use"
+        );
+    }
+
+    #[test]
+    fn a_numeric_or_absent_ttl_reports_nothing() {
+        let good = Post::new("claim", "campaign/x").with("ttl_s", json!(900));
+        assert!(good.non_numeric_convention_fields().is_empty());
+        let absent = Post::new("claim", "campaign/x");
+        assert!(
+            absent.non_numeric_convention_fields().is_empty(),
+            "an ABSENT ttl_s is a legitimate open-ended claim, not a typo"
+        );
+        let negative = Post::new("claim", "campaign/x").with("ttl_s", json!(-5));
+        assert_eq!(
+            negative.non_numeric_convention_fields(),
+            vec!["ttl_s"],
+            "a negative ttl_s is not a u64 either, so the check is skipped and \
+             the reader must be told"
+        );
     }
 
     #[test]

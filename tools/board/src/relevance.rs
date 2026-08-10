@@ -14,10 +14,18 @@ pub fn changed_paths(repo: &Repo) -> Result<Vec<String>, BoardError> {
     // same-named tag would otherwise win git's ref-disambiguation order
     // (`refs/<name>`, then `refs/tags/<name>`, then `refs/heads/<name>`) and
     // silently change what this range means (the same hazard `live.rs`'s
-    // `resolve_branch_ref` closes for `by`). `unwrap_or_default()` is
-    // deliberate, not sloppy: a fresh branch sitting at `main`'s tip
-    // legitimately has no changed paths, and a reader with no changed paths
-    // should still receive broadcasts.
+    // `resolve_branch_ref` closes for `by`).
+    //
+    // `unwrap_or_default()` is safe here, but NOT for the reason the ledger
+    // originally recorded ("fewer path filters ⇒ more posts reach the
+    // reader"). That direction is backwards: `changed` is the reader's TOPIC
+    // SET, not a filter list, so fewer entries mean fewer matches, and an
+    // empty one used to mean "broadcasts only". What makes the fallback safe
+    // is [`is_relevant`]'s treatment of the empty case — an empty `changed`
+    // means "no routing information about this session", and the fail-open
+    // reading of not-knowing is to show the post. The direction of a fallback
+    // cannot be judged at this function's boundary; it is decided at the call
+    // site that consumes the value.
     let out = repo
         .git(&["diff", "--name-only", "refs/heads/main...HEAD"])
         .unwrap_or_default();
@@ -26,11 +34,29 @@ pub fn changed_paths(repo: &Repo) -> Result<Vec<String>, BoardError> {
 
 /// Does this post concern work the reader is doing?
 ///
-/// A post naming no paths is a broadcast and reaches everyone; anything else
-/// matches when one of its paths prefixes one of the reader's changed files.
+/// Three cases, and the third is the one that decides whether this board
+/// works at the moment it fires:
+///
+/// - A post naming **no paths** is a broadcast and reaches everyone.
+/// - A post naming paths matches when one of them prefixes one of the
+///   reader's changed files.
+/// - A reader with an **empty `changed` set** receives everything. An empty
+///   set means "I do not know what this session is working on", never "this
+///   session is working on nothing" — and the ambient render fires at
+///   `SessionStart`, which is exactly when a fresh campaign branch sitting at
+///   `main`'s tip has changed nothing yet, and when a session mid-edit-
+///   before-commit still shows nothing in `main...HEAD`. Treating that as
+///   "broadcasts only" filtered every path-scoped `hold-off` out of the one
+///   render that had a chance to arrive in time: the session about to start
+///   editing `domains/terrain/` was precisely the session not shown the
+///   `domains/terrain/` hold-off. Fail open on not-knowing, as the rest of
+///   this crate does.
 pub fn is_relevant(post: &Post, changed: &[String]) -> bool {
     let paths = post.paths();
     if paths.is_empty() {
+        return true;
+    }
+    if changed.is_empty() {
         return true;
     }
     paths
@@ -79,7 +105,17 @@ impl Displayed {
         self.0.iter().map(|s| s.id.clone()).collect()
     }
 
-    /// Shrink to at most `max_posts`, reporting how many were dropped.
+    /// Shrink to at most `max_posts` by dropping the **oldest**, reporting
+    /// how many were dropped.
+    ///
+    /// `filter` preserves the oldest-first order
+    /// [`Board::posts_at_tip`](crate::store::Board::posts_at_tip) supplies,
+    /// so keeping the newest means keeping the *tail*. Truncating the tail
+    /// instead — the obvious reading of "cap" — deferred the freshest posts
+    /// and showed the twelve stalest, which is backwards for a channel whose
+    /// entire value is timeliness: the newest post is the one most likely to
+    /// be a still-live `hold-off`. Nothing is lost either way (an elided post
+    /// stays unseen), but the priority was inverted.
     ///
     /// This does **not** weaken `Displayed`'s guarantee: `cap` can only ever
     /// shrink a `Displayed` that [`filter`](Self::filter) already built, so
@@ -89,14 +125,18 @@ impl Displayed {
     /// [`Cursor::record`]'s notion of "shown" can never disagree: the value
     /// this returns is the exact value a render draws its text from, so
     /// recording it (rather than the pre-cap `Displayed`) is what keeps a
-    /// post that a line budget elided from ever being marked seen. Order is
-    /// preserved from `filter`; posts past `max_posts` are the ones dropped.
+    /// post that a line budget elided from ever being marked seen. That
+    /// property is unaffected by *which* end is dropped — both the text and
+    /// the recorded ids come from this one value.
+    ///
+    /// Relative order among the survivors is preserved, so the render still
+    /// reads chronologically, oldest of the survivors first.
     pub fn cap(mut self, max_posts: usize) -> (Self, usize) {
         if self.0.len() <= max_posts {
             return (self, 0);
         }
         let elided = self.0.len() - max_posts;
-        self.0.truncate(max_posts);
+        self.0.drain(..elided);
         (self, elided)
     }
 }
@@ -227,6 +267,55 @@ mod tests {
     fn a_notice_whose_paths_miss_everything_is_not_relevant() {
         let p = Post::new("notice", "b").with("paths", json!(["domains/terrain/"]));
         assert!(!is_relevant(&p, &["kernel/src/seed.rs".to_string()]));
+    }
+
+    #[test]
+    fn a_path_scoped_post_is_relevant_when_the_reader_has_no_changed_paths() {
+        // I3. An empty `changed` set means "no routing information about this
+        // session", never "this session is working on nothing" -- and the
+        // ambient render fires at SessionStart, which is exactly when a fresh
+        // campaign branch sitting at main's tip has changed nothing. Treating
+        // that as "broadcasts only" filtered every path-scoped hold-off out
+        // of the one render that could have arrived in time. There was no
+        // test pinning this in EITHER direction before, which is how the
+        // ledger came to record the direction backwards.
+        let p = Post::new("notice", "b")
+            .with("paths", json!(["domains/terrain/"]))
+            .with("polarity", json!("hold-off"));
+        assert!(
+            is_relevant(&p, &[]),
+            "with nothing known about the reader, fail OPEN and show the post"
+        );
+        // And the fallback `changed_paths` actually takes -- an empty Vec --
+        // is the same value, so the two agree.
+        let empty: Vec<String> = Vec::new();
+        assert!(is_relevant(&p, &empty));
+    }
+
+    #[test]
+    fn a_displayed_shows_a_path_scoped_hold_off_to_a_reader_with_no_changed_paths() {
+        // I3 at the layer that decides what a session actually sees: the
+        // fresh-branch case, end to end through `Displayed::filter`.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/empty-changed");
+        let cursor = Cursor::open(&repo).expect("cursor");
+        let id = board
+            .append(
+                &Post::new("notice", "b")
+                    .with("paths", json!(["domains/terrain/"]))
+                    .with("polarity", json!("hold-off")),
+            )
+            .expect("scoped hold-off");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let unseen_ids = unseen(&board, &cursor).expect("unseen");
+        let displayed = Displayed::filter(&posts, &unseen_ids, &[]);
+        assert!(
+            displayed.ids().contains(&id),
+            "a fresh branch with no changed paths must still be shown a \
+             path-scoped hold-off: {:?}",
+            displayed.ids()
+        );
     }
 
     #[test]
@@ -484,6 +573,98 @@ mod tests {
             "one over budget must elide exactly one, not off by one"
         );
         assert_eq!(capped.posts().len(), 3);
+    }
+
+    #[test]
+    fn cap_keeps_the_newest_posts_and_elides_the_oldest() {
+        // I1. `posts_at_tip` sorts oldest-first, so a `truncate` kept the
+        // twelve STALEST posts and deferred the freshest -- backwards for a
+        // channel whose whole value is timeliness, since the newest post is
+        // the one most likely to be a still-live hold-off. Order among the
+        // survivors must still read chronologically.
+        //
+        // Built by hand rather than through a board: six real appends land in
+        // the same wall-clock second, and `posts_at_tip`'s sort key is
+        // `(committed_at, id)`, so append order is NOT recoverable from them.
+        // Distinct `committed_at` values are what make "oldest" and "newest"
+        // mean anything here.
+        let posts: Vec<StoredPost> = (0..6)
+            .map(|i| StoredPost {
+                id: format!("id{i}"),
+                post: Post::new("notice", "b").with("i", json!(i)),
+                committed_at: 1_000 + i,
+            })
+            .collect();
+        let all: BTreeSet<String> = posts.iter().map(|sp| sp.id.clone()).collect();
+        let (shown, elided) = Displayed::filter(&posts, &all, &[]).cap(2);
+        assert_eq!(elided, 4);
+        let kept: Vec<&str> = shown.posts().iter().map(|sp| sp.id.as_str()).collect();
+        assert_eq!(
+            kept,
+            vec!["id4", "id5"],
+            "the two NEWEST must survive, in chronological order: {kept:?}"
+        );
+    }
+
+    #[test]
+    fn what_the_cap_keeps_is_exactly_what_gets_recorded_as_shown() {
+        // The property that has broken twice, re-checked against I1's change
+        // of which end `cap` drops: `render` draws its text from the capped
+        // value and `Cursor::record` is handed the same capped value, so
+        // "recorded" and "rendered" are the same set by construction, and the
+        // elided OLDEST posts stay unseen rather than being marked seen.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cap-newest-record");
+        let cursor = Cursor::open(&repo).expect("cursor");
+        let ids: Vec<String> = (0..5)
+            .map(|i| {
+                board
+                    .append(&Post::new("notice", "b").with("note", json!(format!("n{i}"))))
+                    .expect("append")
+            })
+            .collect();
+
+        let posts = board.posts_at_tip().expect("posts");
+        let unseen_ids = unseen(&board, &cursor).expect("unseen");
+        let (shown, elided) = Displayed::filter(&posts, &unseen_ids, &[]).cap(2);
+        assert_eq!(elided, 3);
+        let out = crate::render::render(
+            shown.posts(),
+            elided,
+            &crate::render::RenderOptions::session_start(),
+        );
+        cursor.record(&board, &shown).expect("record");
+
+        // The survivors are the tail of the order `filter` was given -- which
+        // is `posts_at_tip`'s `(committed_at, id)` order, not append order,
+        // since five appends land in the same second.
+        let expected: BTreeSet<String> = posts[posts.len() - 2..]
+            .iter()
+            .map(|sp| sp.id.clone())
+            .collect();
+        assert_eq!(shown.ids(), expected, "the cap keeps the tail");
+
+        let still_unseen = unseen(&board, &cursor).expect("unseen after");
+        for id in &ids {
+            let note = posts
+                .iter()
+                .find(|sp| &sp.id == id)
+                .and_then(|sp| sp.post.str_field("note").map(str::to_string))
+                .expect("note");
+            let rendered = out.contains(&format!("note={note}"));
+            assert_eq!(
+                rendered,
+                !still_unseen.contains(id),
+                "post {note}: rendered={rendered} but seen={} -- recorded and \
+                 rendered must be the same set:\n{out}",
+                !still_unseen.contains(id)
+            );
+        }
+        assert_eq!(
+            still_unseen.len(),
+            3,
+            "the three elided (oldest) posts must remain unseen: {still_unseen:?}"
+        );
     }
 
     #[test]

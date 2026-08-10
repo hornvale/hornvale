@@ -152,3 +152,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0110](0110-the-census-is-the-suites-shared-world-building-pass.md) | The census is the suite's shared world-building pass | Accepted |
 | [0111](0111-a-census-resident-check-needs-a-live-tripwire.md) | A census-resident check requires a live tripwire in the gate | Accepted |
 | [0112](0112-the-synthetic-route-requires-committed-facts.md) | The synthetic route requires that the behaviour read committed facts | Accepted |
+| [0118](0118-the-board-is-an-orphan-ref-of-immutable-posts-never-rerooted.md) | The board is an orphan ref of immutable posts, never rerooted | Accepted |

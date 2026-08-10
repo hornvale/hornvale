@@ -50,6 +50,89 @@ pub struct StoredPost {
     pub committed_at: u64,
 }
 
+/// One atomic read of the board: the tip commit, and exactly the posts
+/// present in that commit's tree.
+///
+/// This type exists because `reap` is the one operation with *permanent*
+/// consequences, and it needs three things to agree: the post set the
+/// liveness probe was taken over, the post set the reap predicate is
+/// evaluated against, and the tip the compare-and-swap is baselined on.
+/// Reading the tip twice — once in a caller, once inside `reap` — silently
+/// broke that agreement: a `claim` appended between the two reads was never
+/// `ps`-probed, so it read as pid-dead and was dropped from the tip tree
+/// with the CAS succeeding. That is a permanent loss of a live claim, the
+/// exact double-start the board exists to prevent.
+///
+/// A `TipSnapshot` bundles the tip and its posts into one value read once,
+/// so the reap set and the CAS baseline cannot be two different readings of
+/// the board. [`ReapPlan`] closes the third: it is the only way to reach
+/// [`Board::reap`], and its only constructor probes the very snapshot it is
+/// handed.
+#[derive(Debug, Clone)]
+pub struct TipSnapshot {
+    tip: String,
+    posts: Vec<StoredPost>,
+}
+
+impl TipSnapshot {
+    /// The tip commit this snapshot was read from — the only legitimate CAS
+    /// baseline for a write derived from it.
+    pub fn tip(&self) -> &str {
+        &self.tip
+    }
+
+    /// The posts present in that tip's tree, oldest first.
+    pub fn posts(&self) -> &[StoredPost] {
+        &self.posts
+    }
+}
+
+/// A reap's authorization: a tip snapshot plus the liveness probe taken over
+/// **exactly that snapshot's posts**.
+///
+/// [`Board::reap`] takes one of these and nothing else, and the only way to
+/// build one is [`ReapPlan::probe`], which probes the snapshot it is given.
+/// So the probe set, the reap set, and the CAS baseline are the same three
+/// things by construction — there is no signature through which a caller can
+/// hand `reap` a context probed over a different, earlier reading of the
+/// board. That is the same move [`crate::relevance::Displayed`] made for
+/// `Cursor::record`: make the desynchronised state unrepresentable rather
+/// than merely absent today.
+#[derive(Debug)]
+pub struct ReapPlan<'a> {
+    snapshot: &'a TipSnapshot,
+    ctx: crate::live::LiveContext,
+}
+
+impl<'a> ReapPlan<'a> {
+    /// Probe the world over `snapshot`'s posts, and only those.
+    pub fn probe(repo: &Repo, snapshot: &'a TipSnapshot) -> Result<Self, BoardError> {
+        let ctx = crate::live::LiveContext::probe(repo, snapshot.posts())?;
+        Ok(Self { snapshot, ctx })
+    }
+
+    /// The snapshot this plan was probed over.
+    pub fn snapshot(&self) -> &TipSnapshot {
+        self.snapshot
+    }
+
+    /// The liveness context, for inspection.
+    pub fn context(&self) -> &crate::live::LiveContext {
+        &self.ctx
+    }
+
+    /// Move the probed clock forward by `secs`.
+    ///
+    /// The one deliberate seam for exercising the TTL and grace-period
+    /// boundaries without waiting real days. Deliberately *only* the clock:
+    /// a general `&mut LiveContext` accessor would let a caller substitute a
+    /// context probed over some other post set, which is precisely what this
+    /// type exists to make impossible.
+    pub fn advance_clock(&mut self, secs: u64) {
+        self.ctx.now_unix = self.ctx.now_unix.saturating_add(secs);
+    }
+}
+
 /// One board, on one ref, in one repository.
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -159,12 +242,29 @@ impl Board {
         })
     }
 
+    /// The tip and its posts, read once — see [`TipSnapshot`] for why the
+    /// pair has to be one value. `None` means the board does not exist yet.
+    pub fn snapshot(&self) -> Result<Option<TipSnapshot>, BoardError> {
+        let Some(tip) = self.tip()? else {
+            return Ok(None);
+        };
+        let posts = self.posts_in(&tip)?;
+        Ok(Some(TipSnapshot { tip, posts }))
+    }
+
     /// Post ids present in the tip tree, sorted.
     pub fn post_ids_at_tip(&self) -> Result<Vec<String>, BoardError> {
         let Some(tip) = self.tip()? else {
             return Ok(Vec::new());
         };
-        let listed = self.repo.git(&["ls-tree", "-r", "--name-only", &tip])?;
+        self.post_ids_in(&tip)
+    }
+
+    /// Post ids present in `tip`'s tree, sorted. Takes the tip rather than
+    /// re-reading it, so a caller holding a [`TipSnapshot`] can ask about
+    /// exactly the commit it read.
+    fn post_ids_in(&self, tip: &str) -> Result<Vec<String>, BoardError> {
+        let listed = self.repo.git(&["ls-tree", "-r", "--name-only", tip])?;
         let mut ids: Vec<String> = listed
             .lines()
             .filter_map(|l| l.strip_prefix("posts/"))
@@ -183,7 +283,15 @@ impl Board {
         let Some(tip) = self.tip()? else {
             return Ok(Vec::new());
         };
-        let ids = self.post_ids_at_tip()?;
+        self.posts_in(&tip)
+    }
+
+    /// [`posts_at_tip`](Self::posts_at_tip)'s body, against a tip the caller
+    /// already read. Private, and the single implementation both
+    /// `posts_at_tip` and [`snapshot`](Self::snapshot) go through — so there
+    /// is no second copy of this walk that could drift from it.
+    fn posts_in(&self, tip: &str) -> Result<Vec<StoredPost>, BoardError> {
+        let ids = self.post_ids_in(tip)?;
         let mut when: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
         // One `git log` over the ref, mapping each added post file to the
         // commit time that added it — cheaper than a call per post.
@@ -193,7 +301,7 @@ impl Board {
             "--diff-filter=A",
             "--name-only",
             "--reverse",
-            &tip,
+            tip,
         ])?;
         let mut current = 0u64;
         for line in log.lines() {
@@ -350,13 +458,21 @@ impl Board {
     /// ref to anything other than a descendant of the tip it read. Returns
     /// how many posts were dropped; a reap with nothing dead is a no-op (no
     /// empty commit).
-    pub fn reap(&self, ctx: &crate::live::LiveContext) -> Result<usize, BoardError> {
+    ///
+    /// **Reads nothing.** Every input — the post set to judge, the liveness
+    /// context to judge it with, and the tip to compare-and-swap against —
+    /// comes out of the single [`ReapPlan`] handed in, which is itself built
+    /// from one [`TipSnapshot`]. This method deliberately does not call
+    /// `tip()` or `posts_at_tip()`: doing so was the fourth instance of this
+    /// campaign's silent-permanent-loss class (see [`TipSnapshot`]), and the
+    /// signature is what keeps it closed rather than a comment asking
+    /// future edits not to.
+    pub fn reap(&self, plan: &ReapPlan<'_>) -> Result<usize, BoardError> {
         use crate::live::is_reapable;
 
-        let Some(old) = self.tip()? else {
-            return Ok(0);
-        };
-        let posts = self.posts_at_tip()?;
+        let ctx = plan.context();
+        let posts = plan.snapshot().posts();
+        let old = plan.snapshot().tip().to_string();
         let keep: Vec<&StoredPost> = posts.iter().filter(|s| !is_reapable(s, ctx)).collect();
         let dropped = posts.len() - keep.len();
         if dropped == 0 {
@@ -428,11 +544,16 @@ impl Board {
             &format!("board: reap {dropped}"),
         ])?;
 
-        // If someone posted while we were reaping, `cas` reports a lost
-        // race, not an error. Reaping is idempotent and cheap: rather than
-        // retry against a moving target here, let the next run catch it,
-        // and report nothing dropped THIS call since the tree we built no
-        // longer reflects the current tip.
+        // `old` is the tip the SNAPSHOT was read from, not a tip re-read
+        // after the probe -- so a post appended at any point after that read
+        // makes this swap lose, and the reap becomes a no-op rather than
+        // silently dropping a post the probe never saw. That is the half of
+        // the fix the CAS carries; `ReapPlan` carries the other half.
+        //
+        // A lost race is control flow, not an error: reaping is idempotent
+        // and cheap, so rather than retry against a moving target, let the
+        // next run catch it and report nothing dropped THIS call, since the
+        // tree we built no longer reflects the current tip.
         if self.cas(&new, Some(&old))?.is_some() {
             return Ok(0);
         }
@@ -889,9 +1010,9 @@ mod tests {
             .expect("technique");
         let root_before = board.root().expect("root");
 
-        let posts = board.posts_at_tip().expect("posts");
-        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        let dropped = board.reap(&ctx).expect("reap");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        let dropped = board.reap(&plan).expect("reap");
 
         assert_eq!(
             dropped, 1,
@@ -934,11 +1055,11 @@ mod tests {
             .expect("technique");
         let before = board.tip().expect("tip");
 
-        let posts = board.posts_at_tip().expect("posts");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
         // Fresh probe: the notice's age relative to `now_unix` is ~0,
         // nowhere near `NOTICE_GRACE_PERIOD_S`.
-        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        let dropped = board.reap(&ctx).expect("reap");
+        let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        let dropped = board.reap(&plan).expect("reap");
 
         assert_eq!(
             dropped, 0,
@@ -971,10 +1092,10 @@ mod tests {
             .expect("technique");
         let root_before = board.root().expect("root");
 
-        let posts = board.posts_at_tip().expect("posts");
-        let mut ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        ctx.now_unix += crate::live::NOTICE_GRACE_PERIOD_S + 1;
-        let dropped = board.reap(&ctx).expect("reap");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let mut plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        plan.advance_clock(crate::live::NOTICE_GRACE_PERIOD_S + 1);
+        let dropped = board.reap(&plan).expect("reap");
 
         assert_eq!(dropped, 1, "past the grace period, the notice is reapable");
         let ids = board.post_ids_at_tip().expect("ids");
@@ -1007,11 +1128,11 @@ mod tests {
             .append(&Post::new("technique", "campaign/x"))
             .expect("technique");
 
-        let posts = board.posts_at_tip().expect("posts");
-        let mut ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        ctx.now_unix += 60; // well past the 1s ttl
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let mut plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        plan.advance_clock(60); // well past the 1s ttl
 
-        let dropped = board.reap(&ctx).expect("reap");
+        let dropped = board.reap(&plan).expect("reap");
         assert_eq!(dropped, 1, "a claim past its ttl is unambiguous");
         let ids = board.post_ids_at_tip().expect("ids");
         assert!(!ids.contains(&dead));
@@ -1026,9 +1147,9 @@ mod tests {
             .append(&Post::new("technique", "campaign/x"))
             .expect("post");
         let before = board.tip().expect("tip");
-        let posts = board.posts_at_tip().expect("posts");
-        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        assert_eq!(board.reap(&ctx).expect("reap"), 0);
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        assert_eq!(board.reap(&plan).expect("reap"), 0);
         assert_eq!(board.tip().expect("tip"), before, "no empty commit");
     }
 
@@ -1043,14 +1164,211 @@ mod tests {
         board
             .append(&Post::new("technique", "campaign/x"))
             .expect("technique");
-        let posts = board.posts_at_tip().expect("posts");
-        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        let dropped = board.reap(&ctx).expect("reap");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+        let dropped = board.reap(&plan).expect("reap");
         assert_eq!(dropped, 1, "sanity: this reap must actually do something");
         let dirty = repo.git(&["status", "--porcelain"]).expect("status");
         assert!(
             dirty.is_empty(),
             "a reap must not dirty the checkout: {dirty:?}"
+        );
+    }
+
+    #[test]
+    fn a_post_appended_after_the_snapshot_loses_the_reap_cas_and_is_not_dropped() {
+        // C2, THE FOURTH SILENT-LOSS REGRESSION. `reap` used to read the
+        // board itself, so a post appended between the caller's read (which
+        // the `ps` probe ran over) and `reap`'s own read was present in the
+        // reap set but absent from `ctx.live_pids` -- it read as pid-dead,
+        // was dropped from the tip tree, and the CAS still succeeded because
+        // `reap` captured `old` AFTER the probe. A live claim announcing "I
+        // am using this box" vanished permanently: the exact double-start
+        // this board exists to prevent.
+        //
+        // Reproduced here by appending inside that window, deterministically:
+        // snapshot, probe, THEN append. The claim names this host and this
+        // very process's pid, so it is genuinely, verifiably live -- there is
+        // no reading of the world under which dropping it is correct.
+        let (_d, repo) = temp_repo();
+        merge_branch_into_main(&repo, "campaign/merged");
+        let board = Board::new(repo.clone());
+        let dead = board
+            .append(&Post::new("notice", "campaign/merged").with("note", serde_json::json!("old")))
+            .expect("a genuinely reapable post, so the reap is not a no-op for another reason");
+
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
+
+        // The window: another session posts after the probe.
+        let host = std::process::Command::new("hostname")
+            .arg("-s")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .expect("hostname");
+        let latecomer = board
+            .append(
+                &Post::new("claim", "campaign/other")
+                    .with("host", serde_json::json!(host))
+                    .with("pid", serde_json::json!(std::process::id()))
+                    .with("ttl_s", serde_json::json!(3_600)),
+            )
+            .expect("the latecomer claim");
+
+        let dropped = board.reap(&plan).expect("reap");
+        assert_eq!(
+            dropped, 0,
+            "the tip moved after the snapshot, so the CAS must lose and the reap \
+             must be a no-op -- not a partial compaction against a stale picture"
+        );
+        let ids = board.post_ids_at_tip().expect("ids");
+        assert!(
+            ids.contains(&latecomer),
+            "a live claim appended inside the probe window must NOT be dropped: {ids:?}"
+        );
+        assert!(
+            ids.contains(&dead),
+            "and nothing else may be dropped either, since the whole reap lost the race: {ids:?}"
+        );
+    }
+
+    #[test]
+    fn a_snapshot_is_a_frozen_reading_the_reap_cannot_widen() {
+        // The structural half of C2's fix, stated as a property rather than
+        // trusted from the signature: a `TipSnapshot` taken before an append
+        // reports the tip and the posts as they were AT THAT MOMENT, and
+        // stays that way. `reap` takes only this value, so it cannot see the
+        // later post at all -- there is no post set it could reap that the
+        // probe did not see.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let first = board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("a");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let second = board
+            .append(&Post::new("technique", "campaign/y"))
+            .expect("b");
+
+        let ids: Vec<&str> = snapshot.posts().iter().map(|sp| sp.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec![first.as_str()],
+            "the snapshot must not have grown to include a later append"
+        );
+        assert_ne!(
+            snapshot.tip(),
+            board.tip().expect("tip").expect("some"),
+            "and its tip must be the one it read, not the current one"
+        );
+        assert!(!second.is_empty());
+    }
+
+    /// Splice raw `bytes` into the tip tree as a post file, forward-only,
+    /// bypassing `append`.
+    ///
+    /// Deliberately not expressible through the crate's own write path:
+    /// `canonical_bytes` gates every post this tool writes, so a corrupt post
+    /// can only arrive from outside — a clone, an older version of the tool,
+    /// or a hand write — which is exactly why the skip-and-warn arms exist
+    /// and exactly why testing them needs this.
+    fn splice_raw_post(board: &Board, repo: &Repo, bytes: &[u8]) -> String {
+        let blob = repo.hash_object(bytes).expect("hash-object");
+        let old = board.tip().expect("tip").expect("some");
+        let call_id = CALL_DISCRIMINANT.fetch_add(1, Ordering::SeqCst);
+        let index = repo
+            .git_path(&format!("hv-board-splice-{}-{call_id}", std::process::id()))
+            .expect("index path");
+        let _ = std::fs::remove_file(&index);
+        repo.git_with_index(&index, &["read-tree", &old])
+            .expect("read-tree");
+        repo.git_with_index(
+            &index,
+            &[
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                &format!("100644,{blob},posts/{blob}.json"),
+            ],
+        )
+        .expect("update-index");
+        let tree = repo
+            .git_with_index(&index, &["write-tree"])
+            .expect("write-tree");
+        let _ = std::fs::remove_file(&index);
+        let new = repo
+            .git(&["commit-tree", &tree, "-p", &old, "-m", "a corrupt post"])
+            .expect("commit-tree");
+        repo.git(&["update-ref", board.refname(), &new, &old])
+            .expect("update-ref");
+        blob
+    }
+
+    #[test]
+    fn one_unparseable_post_does_not_hide_the_rest_of_the_board() {
+        // Spec test-plan item 9, and D7's promise that "one corrupt post must
+        // never break a session's render". The skip-and-warn arm in
+        // `posts_in` was entirely unexercised: replacing it with `?` kept the
+        // whole suite green, which would have made D7 false with nothing to
+        // say so (see the mutation check in the fix-wave report).
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let good = board
+            .append(
+                &Post::new("technique", "campaign/x").with("note", serde_json::json!("keep me")),
+            )
+            .expect("good post");
+        let bad = splice_raw_post(&board, &repo, b"this is not json at all\n");
+
+        let posts = board
+            .posts_at_tip()
+            .expect("a corrupt post must be SKIPPED, never turned into an Err");
+        let ids: Vec<&str> = posts.iter().map(|sp| sp.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec![good.as_str()],
+            "the good post must survive and the corrupt one must be skipped: {ids:?}"
+        );
+        assert!(
+            board.post_ids_at_tip().expect("ids").contains(&bad),
+            "sanity: the corrupt file really is at the tip, so this test is \
+             exercising the skip arm rather than an empty tree"
+        );
+    }
+
+    #[test]
+    fn a_post_that_parses_but_fails_the_attribution_guard_is_also_skipped_not_fatal() {
+        // The other half of the same arm: well-formed JSON that `from_json`
+        // rejects on its own guards (D7c -- a blank `by` is not attribution).
+        // `canonical_bytes` cannot emit this, so it can only arrive from
+        // outside, which is the case the arm is for.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let good = board
+            .append(&Post::new("notice", "campaign/x"))
+            .expect("good post");
+        splice_raw_post(&board, &repo, br#"{"kind":"notice","by":"   "}"#);
+
+        let posts = board.posts_at_tip().expect("must skip, not error");
+        let ids: Vec<&str> = posts.iter().map(|sp| sp.id.as_str()).collect();
+        assert_eq!(ids, vec![good.as_str()], "only the good post: {ids:?}");
+    }
+
+    #[test]
+    fn a_git_failure_is_an_error_not_an_empty_board() {
+        // The distinction the whole read path rests on: "could not read the
+        // board" must never be indistinguishable from "the board is empty".
+        // Injected rather than reasoned about -- a repo root that is not a
+        // repository at all.
+        let repo = Repo::new("/nonexistent-hornvale-board-path");
+        let board = Board::new(repo);
+        assert!(
+            board.posts_at_tip().is_err(),
+            "a git failure must surface as Err, never as Ok(vec![])"
+        );
+        assert!(
+            board.snapshot().is_err(),
+            "and the snapshot a reap is built from must fail loudly too"
         );
     }
 }

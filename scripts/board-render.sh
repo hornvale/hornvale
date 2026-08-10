@@ -14,22 +14,53 @@
 # keeps that safe.
 #
 # THE TIMEOUT IS DELIBERATELY TIGHT (2s), not generous. Measured cost: ~0.57s
-# for `board render` with only two posts on the board (five runs), and it
-# grows with post count -- the render spawns a subprocess per distinct
-# author plus `hostname`, `ps`, and a diff. A board that has grown slow must
-# not silently slow every session start; 2s is comfortable headroom today
-# and a real ceiling once the board has more history. On timeout, print a
-# one-line notice rather than nothing -- the failure this guards against is
-# not "the render is slow" (bounded, fine) but "the render is slow AND
-# nobody is told," which degrades to no board, silently: the exact failure
-# mode this whole campaign exists to close.
+# for `board render` with only two posts on the board (five runs). The cost is
+# subprocess spawns, ~30-38 ms each on this box, and it grows on BOTH axes --
+# the earlier claims that it grows "with post count" (a subprocess per author)
+# and, in the spec, "with authors, not posts" were each half right and each
+# wrong about the mechanism. What the code actually does, per render:
+#
+#   * one `git cat-file` per post at the tip                     (per POST)
+#   * one `ps` per claim naming this host                        (per CLAIM)
+#   * two `git rev-parse` per post whose author's branch does
+#     NOT resolve -- `LiveContext::probe` memoises an author only
+#     by inserting it into live_branches or merged_branches, so an
+#     unresolved author is never cached and is re-probed on every
+#     render, forever                                     (per UNRESOLVED POST)
+#   * plus a fixed ~10: hostname, the tip resolve, ls-tree, the log
+#     walk, the changed-paths diff, and the cursor read
+#
+# So it is ~38 ms/post at best and ~115 ms/post once authors stop resolving --
+# and `technique` posts are durable by design while their branches are torn
+# down, so the unresolved term grows toward the post count. Against a 2 s
+# ceiling with ~0.4 s fixed cost, the render starts timing out somewhere
+# between 15 and 40 posts. A board that has grown slow must not silently slow
+# every session start; 2s is comfortable headroom today and a real ceiling
+# once the board has more history. On timeout, print a one-line notice rather
+# than nothing -- the failure this guards against is not "the render is slow"
+# (bounded, fine) but "the render is slow AND nobody is told," which degrades
+# to no board, silently: the exact failure mode this whole campaign exists to
+# close.
 #
 # Depends on GNU `timeout` (present via Homebrew coreutils on this box; not
 # part of stock macOS). This degrades SAFELY, not silently-dangerously, when
-# absent: bash's "command not found" (exit 127) is swallowed by the `2>/dev/
-# null` on that exact line plus the trailing `|| true`, so the render simply
-# never fires -- no hang. Only the feature goes inert; the safety property
-# holds either way.
+# absent. The mechanism, stated exactly, because an earlier version of this
+# comment credited a trailing `|| true` that no longer exists on that line --
+# and a comment naming a safety mechanism that is not there invites deleting
+# the one that is:
+#
+#   * this script sets `-uo pipefail` and NOT `-e`, so a failing command does
+#     not abort it;
+#   * the `2>/dev/null` on the `timeout` line suppresses bash's own "command
+#     not found" message;
+#   * a missing `timeout` yields rc 127, which is not 124, so no notice prints;
+#   * and the explicit `exit 0` at the end is what guarantees the hook sees
+#     success. It is NOT redundant -- without it the script's status is that
+#     of the last command, i.e. the render's.
+#
+# (There is a surviving `|| true`, but it is in `.claude/settings.json`'s hook
+# command, wrapping the call to this script -- belt and braces, not this
+# script's own mechanism.)
 set -uo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}" || exit 0

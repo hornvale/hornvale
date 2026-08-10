@@ -212,6 +212,17 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
+	# The Cairn's binary, without which THREE of its four read seams are
+	# silently inert in a fresh worktree: `scripts/board-render.sh` (the
+	# SessionStart hook), `doctor`, and `preflight` all require a prebuilt
+	# binary and all deliberately refuse to compile one. `tools/board/target/`
+	# is gitignored and per-worktree, so nothing else in the repo ever
+	# produces it — a new campaign therefore started with the board dead and
+	# no signal anywhere, which is this tool's own failure mode aimed at
+	# itself. Release, so the hook prefers it and the per-post cost is lower.
+	# `-` prefixed: prewarm is a convenience, and a board that will not build
+	# must not fail the target that warms the workspace.
+	-cargo build --release --manifest-path tools/board/Cargo.toml
 
 rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh

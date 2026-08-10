@@ -175,6 +175,26 @@ pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
     }
     match stored.post.kind.as_str() {
         "claim" => {
+            // A convention-numeric field that is not a number silently
+            // SKIPS its decay check -- an unparseable `ttl_s` is an immortal
+            // claim, decision 0080's stuck alarm by typo. The tool does not
+            // reject the post (D12: it validates nothing beyond `kind` and
+            // `by`), but it must not draw the wrong conclusion quietly: say
+            // so every time the conclusion is drawn.
+            for field in stored.post.non_numeric_convention_fields() {
+                eprintln!(
+                    "board: claim {} has a non-numeric `{field}` ({}); its {} check is being \
+                     SKIPPED, so this claim may never decay -- repost it with a numeric value",
+                    stored.id,
+                    stored
+                        .post
+                        .extra
+                        .get(field)
+                        .map(std::string::ToString::to_string)
+                        .unwrap_or_default(),
+                    if field == "ttl_s" { "ttl" } else { "process" },
+                );
+            }
             if let Some(ttl) = stored.post.u64_field("ttl_s") {
                 let age = ctx.now_unix.saturating_sub(stored.committed_at);
                 if age > ttl {
@@ -326,6 +346,34 @@ mod tests {
             Liveness::Expired(why) => assert!(why.contains("pid"), "reason names the cause: {why}"),
             other => panic!("expected expired, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_claim_with_a_non_numeric_ttl_stays_live_and_is_reported_as_the_hazard_it_is() {
+        // I8. This pins the HAZARD, not a fix: a non-numeric `ttl_s` skips the
+        // TTL check, so this claim is immortal by that route. Changing the
+        // behaviour to expire it would be a silent loss of a possibly-live
+        // claim -- the class this campaign fought four times -- so the answer
+        // is to keep the conservative reading and make the typo loud
+        // (`liveness` warns on stderr, and `board post` warns at write time).
+        // If this assertion ever flips, the change needs its own decision.
+        let p = Post::new("claim", "campaign/live")
+            .with("host", json!("ambrose"))
+            .with("pid", json!(42))
+            .with("ttl_s", json!("60s")); // the typo
+        assert!(
+            matches!(liveness(&stored(p.clone(), "a", 0), &ctx()), Liveness::Live),
+            "a claim whose ttl_s cannot be read has no TTL to be past"
+        );
+        assert_eq!(
+            p.non_numeric_convention_fields(),
+            vec!["ttl_s"],
+            "and the reader must be told why it will never decay"
+        );
+        assert!(
+            !is_reapable(&stored(p, "a", 0), &ctx()),
+            "so a reap must not drop it either -- it never reads as Expired"
+        );
     }
 
     #[test]

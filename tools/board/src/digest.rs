@@ -175,16 +175,16 @@ mod tests {
         board
             .append(&Post::new("notice", "campaign/never-existed").with("note", json!("ephemeral")))
             .expect("post");
-        let posts = board.posts_at_tip().expect("posts");
-        let mut ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let mut plan = crate::store::ReapPlan::probe(&repo, &snapshot).expect("probe");
         // A notice whose branch does not resolve at all is ambiguous
         // (live.rs's `is_reapable`: it could be a transient race), so it is
         // only reaped once it has sat unresolved past
         // `NOTICE_GRACE_PERIOD_S` -- the exact technique store.rs's own
         // grace-period tests use. Without this, this reap is a no-op and the
         // property below is never exercised.
-        ctx.now_unix += crate::live::NOTICE_GRACE_PERIOD_S + 1;
-        board.reap(&ctx).expect("reap");
+        plan.advance_clock(crate::live::NOTICE_GRACE_PERIOD_S + 1);
+        board.reap(&plan).expect("reap");
         assert!(
             board.post_ids_at_tip().expect("ids").is_empty(),
             "gone from the tip"
@@ -195,9 +195,71 @@ mod tests {
         // cutoff is `now - since_days`, so a "now" set decades ahead of the
         // post's real commit time would push the cutoff past it and exclude
         // it even though it is well within any sane retention window.
-        let seen = history(&board, 3_650, ctx.now_unix).expect("history");
+        let seen = history(&board, 3_650, plan.context().now_unix).expect("history");
         assert_eq!(seen.len(), 1, "history still has it");
         assert_eq!(seen[0].post.str_field("note"), Some("ephemeral"));
+    }
+
+    #[test]
+    fn one_unparseable_post_in_history_does_not_hide_the_digest() {
+        // Spec test-plan item 9, for the digest's own copy of the
+        // skip-and-warn arm. `history` reads blobs by object id, so a corrupt
+        // post that arrived from a clone or a hand write reaches this parse
+        // exactly as it reaches `posts_in`'s -- and the digest is the human's
+        // only read seam, so one bad post silencing it is the worst outcome
+        // available. Replacing this arm with `?` keeps every other test green
+        // (see the mutation check in the fix-wave report).
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        board
+            .append(&Post::new("technique", "campaign/x").with("note", json!("keep me")))
+            .expect("good post");
+
+        // Splice raw bytes into the tip tree, bypassing `append` --
+        // `canonical_bytes` cannot emit something `from_json` rejects, which
+        // is why this arm can only be reached from outside the tool.
+        let blob = repo.hash_object(b"} not json {\n").expect("hash-object");
+        let old = board.tip().expect("tip").expect("some");
+        let index = repo
+            .git_path(&format!("hv-digest-splice-{}", std::process::id()))
+            .expect("index path");
+        let _ = std::fs::remove_file(&index);
+        repo.git_with_index(&index, &["read-tree", &old])
+            .expect("read-tree");
+        repo.git_with_index(
+            &index,
+            &[
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                &format!("100644,{blob},posts/{blob}.json"),
+            ],
+        )
+        .expect("update-index");
+        let tree = repo
+            .git_with_index(&index, &["write-tree"])
+            .expect("write-tree");
+        let _ = std::fs::remove_file(&index);
+        let new = repo
+            .git(&["commit-tree", &tree, "-p", &old, "-m", "a corrupt post"])
+            .expect("commit-tree");
+        repo.git(&["update-ref", board.refname(), &new, &old])
+            .expect("update-ref");
+
+        let now = repo
+            .git(&["log", "-1", "--format=%ct", &new])
+            .expect("commit time")
+            .parse::<u64>()
+            .expect("timestamp");
+        let seen = history(&board, 3_650, now)
+            .expect("a corrupt post must be SKIPPED, never turned into an Err");
+        assert_eq!(seen.len(), 1, "only the good post survives: {seen:?}");
+        assert_eq!(seen[0].post.str_field("note"), Some("keep me"));
+        let out = digest(&seen);
+        assert!(
+            out.contains("keep me"),
+            "the digest must still render the good post's body: {out}"
+        );
     }
 
     #[test]
@@ -385,9 +447,9 @@ mod tests {
         board
             .append(&Post::new("retract", "campaign/x").with("post", json!(id)))
             .expect("retract");
-        let posts = board.posts_at_tip().expect("posts");
-        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        let dropped = board.reap(&ctx).expect("reap");
+        let snapshot = board.snapshot().expect("snapshot").expect("some");
+        let plan = crate::store::ReapPlan::probe(&repo, &snapshot).expect("probe");
+        let dropped = board.reap(&plan).expect("reap");
         assert_eq!(
             dropped, 1,
             "the retracted technique should be the only thing reaped"
@@ -395,7 +457,7 @@ mod tests {
 
         board.append(&post).expect("repost identical content");
 
-        let seen = history(&board, 3_650, ctx.now_unix + 1).expect("history");
+        let seen = history(&board, 3_650, plan.context().now_unix + 1).expect("history");
         let techniques: Vec<&StoredPost> = seen
             .iter()
             .filter(|sp| sp.post.kind == "technique")

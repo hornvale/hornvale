@@ -5,7 +5,7 @@ use board::live::LiveContext;
 use board::post::Post;
 use board::relevance::{Cursor, Displayed, changed_paths, unseen};
 use board::render::{RenderOptions, live_posts, render};
-use board::store::Board;
+use board::store::{Board, ReapPlan};
 use std::collections::BTreeSet;
 
 fn main() {
@@ -31,6 +31,19 @@ fn main() {
                 let value = serde_json::from_str(v)
                     .unwrap_or_else(|_| serde_json::Value::String(v.to_string()));
                 post = post.with(k, value);
+            }
+            // A convention-numeric field that did not parse as a number is
+            // still a legal post (D12: the tool validates only `kind` and
+            // `by`), but its decay check will be skipped at read time --
+            // `ttl_s=900s` is an immortal claim. Warn at the moment the typo
+            // is made, which is the only moment anyone can cheaply fix it;
+            // `live.rs` warns again each time the consequence is drawn.
+            for field in post.non_numeric_convention_fields() {
+                eprintln!(
+                    "board: WARNING `{field}` is not a number, so its decay check will be \
+                     skipped on every read -- a claim with a non-numeric ttl_s never expires. \
+                     Numbers must be bare (ttl_s=900, not ttl_s=900s)."
+                );
             }
             match board.append(&post) {
                 Ok(id) => println!("{id}"),
@@ -117,12 +130,35 @@ fn main() {
             }
         }
         // board reap — compact away posts no longer live from the tip tree.
-        // Conservative by construction: `LiveContext::probe` is asked for
-        // fresh once, and a probe failure aborts the reap outright rather
-        // than compacting against a partial picture of the world.
+        //
+        // The one operation with PERMANENT consequences, so it is the one
+        // that refuses to guess. Two properties, both structural rather than
+        // conventional:
+        //
+        //  1. It reads the board ONCE, into a `TipSnapshot`, and `ReapPlan`
+        //     probes that snapshot. So the post set the probe ran over, the
+        //     post set the predicate judges, and the tip the CAS is
+        //     baselined on are the same three things — there is no window in
+        //     which a `claim` appended after the probe can be judged
+        //     pid-dead (it was never `ps`-probed) and dropped forever.
+        //  2. It FAILS LOUD on the read. An `unwrap_or_default()` here would
+        //     turn a git failure into an empty post set, which probes as
+        //     "nothing is live" — the maximally destructive reading, in the
+        //     only operation that cannot be undone by running again. Refuse
+        //     to reap instead.
         Some("reap") => {
-            let posts = board.posts_at_tip().unwrap_or_default();
-            match LiveContext::probe(&repo, &posts).and_then(|ctx| board.reap(&ctx)) {
+            let snapshot = match board.snapshot() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("board: refusing to reap, cannot read the board: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let Some(snapshot) = snapshot else {
+                println!("reaped 0"); // no board yet; nothing to compact
+                return;
+            };
+            match ReapPlan::probe(&repo, &snapshot).and_then(|plan| board.reap(&plan)) {
                 Ok(n) => println!("reaped {n}"),
                 Err(e) => {
                     eprintln!("board: {e}");

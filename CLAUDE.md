@@ -430,7 +430,7 @@ changed the same idea in incompatible ways. The Tumult and The Waterline
 collided semantically with a clean GO. Read the other branches' chronicles,
 not just their diffs.
 
-**The board is the other half** (The Cairn, decision 0114). `refs/hornvale/board`
+**The board is the other half** (The Cairn, decision 0118). `refs/hornvale/board`
 carries what the substrate cannot: intent before the write, and technique after
 it. Post when you are about to consume the box (`claim`), when you are about to
 change or need unchanged a shared meaning (`notice`, `polarity=hold-off` if you

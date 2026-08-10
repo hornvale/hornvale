@@ -26,6 +26,12 @@ section "Live state"
 echo "  branch: $(git branch --show-current)   dirty files: $(git status --porcelain | wc -l | tr -d ' ')"
 git worktree list | sed 's/^/  /'
 
+# The Cairn. `tools/board/target/` is gitignored and per-worktree, so a fresh
+# worktree has no binary until `make prewarm` builds one — and the ambient
+# SessionStart render deliberately stays silent when it is missing (it may
+# never compile or slow a session). Silence there is correct; silence HERE is
+# not. This command is human-invoked orientation, so a missing binary gets a
+# line saying so rather than nothing at all: prefer the failure you can see.
 board_bin=""
 for candidate in tools/board/target/release/board tools/board/target/debug/board; do
   [ -x "${candidate}" ] && board_bin="${candidate}" && break
@@ -33,9 +39,14 @@ done
 if [ -n "${board_bin}" ]; then
   board_out="$("${board_bin}" read 2>/dev/null || true)"
   if [ -n "${board_out}" ]; then
-    printf '\n== The board\n'
+    section "The board"
     printf '%s\n' "${board_out}" | sed 's/^/  /'
   fi
+else
+  section "The board"
+  echo "  the board binary is not built, so the session-start render, this"
+  echo "  block, and preflight's hold-off advisory are all inert — run"
+  echo "  \`make prewarm\` (or \`make board\`) to build it"
 fi
 
 section "Decisions never cited in sources or docs (informational, not a gate)"

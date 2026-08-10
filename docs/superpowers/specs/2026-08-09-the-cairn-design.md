@@ -406,8 +406,16 @@ digest already depends on `serde`, `serde_json`, and `hornvale-kernel`.
   that sessions may replace without code changes (D12, §9 A2).
 - **Not operationally cross-host in v1** — but merge-ready by construction, so
   going multi-box is configuration plus a push/fetch, not a migration (D8, D11).
-- **Not a replacement for 0081's `/tmp` census claim.** v1 *reads*
-  `hornvale_lab::census_claim::current_holder()` and renders it.
+- **Not a replacement for 0081's `/tmp` census claim** — and, as shipped, not
+  a *reader* of it either. This bullet originally promised that v1 reads
+  `hornvale_lab::census_claim::current_holder()` and renders it. **Nothing
+  does, and the promise is deferred rather than quietly dropped** (fix wave,
+  2026-08-09), because it is not a small omission but an unanswered
+  architectural question: the board is a tool *outside* the cargo workspace,
+  so it cannot call that function without either taking a workspace crate as
+  a dependency or duplicating the claim file's format. Which of those is
+  acceptable is a decision, not a patch. Recorded as a followup (F15) with the
+  dependency question named as the thing to settle first.
 - **Not pushed to `origin`** by default. Publishing is externally visible and
   is Nathan's to authorize — and it is the gate on multi-box, since a clone
   shares no refs without it.
@@ -428,12 +436,31 @@ digest already depends on `serde`, `serde_json`, and `hornvale-kernel`.
    is fire-and-forget, and while `SessionStart` stdout is added to context, the
    documentation is silent on whether an *async* hook's stdout still is — so async
    would probably kill this read seam with no signal, which is a worse failure
-   than a slow start. The cost is dominated by subprocess spawns, not by the board
-   being large: `LiveContext::probe` runs a resolve and a `merge-base` per distinct
-   author, plus `hostname` and a `ps` per local claim. It therefore grows with
-   **authors**, not posts. Two consequences: the render carries a tight visible
-   budget (2 s, and a skipped render says so rather than rendering nothing), and
-   batching those probes is a named followup rather than a vague "optimise later".
+   than a slow start. The cost is dominated by subprocess spawns — ~30–38 ms each
+   on this box — rather than by any single call being slow.
+
+   **Corrected at the fix wave (2026-08-09): it grows on BOTH axes, and the
+   original "authors, not posts" was wrong about the direction.** Per render the
+   subprocess count is roughly `10 + N + C + 2·U`, where `N` is posts at the tip
+   (one `git cat-file` each), `C` is claims naming this host (one `ps` each), and
+   `U` is posts whose author's branch does **not** resolve. That last term is the
+   sting: `LiveContext::probe` memoises an author only by inserting it into
+   `live_branches` or `merged_branches`, so an author that fails to resolve is
+   never cached and costs two `rev-parse` calls *on every render, forever*.
+   `technique` posts are durable by design and accumulate from branches that are
+   later deleted, so `U` grows toward `N`. Net: ~38 ms/post at best, ~115 ms/post
+   once authors stop resolving, against a 2 s ceiling with ~0.4 s of fixed cost —
+   **the ambient render starts timing out somewhere between 15 and 40 posts.**
+   Three consequences: the render carries a tight visible budget (2 s, and a
+   skipped render says so rather than rendering nothing); batching those probes is
+   a named followup (F14) rather than a vague "optimise later"; and the two cheap
+   mitigations that would restore the originally-claimed scaling — a negative
+   cache for unresolved authors, and resolving branches only for `notice` authors,
+   since nothing else consults a branch for liveness — are named in F14 with the
+   measurement above rather than left to be rediscovered. **This also puts the
+   durable half (§1b, technique) and the ambient half (D6) in direct tension:
+   durable posts are exactly what drives the render past its latency budget, and
+   nothing currently arbitrates it.**
 2. **CAS retry stays sufficient at realistic concurrency.** Verified at 8
    writers on one box; unmeasured beyond. The failure mode is loud.
 3. **Relevance-by-changed-paths matches the collisions we care about.** The
@@ -535,7 +562,7 @@ tools/board/Cargo.toml`, the `tools/digest/` pattern):
 - A session-facing instruction on *when to post* (assumption 4) — CLAUDE.md's
   Process section plus the `dispatching-hornvale-subagents` skill.
 - Chronicle entry and `docs/retrospectives/the-cairn.md` (decision 0020).
-- Decision record for the substrate and merge-shape choices (next free: **0114**).
+- Decision record for the substrate and merge-shape choices. Landed as **0118**, not the 0114 predicted here: `origin/main` had already taken 0114-0117 from two campaigns that closed while this one ran.
 - Book freshness sweep; Confidence Gradient re-score if any bet moved.
 - Idea-registry rows for the deferred halves.
 
