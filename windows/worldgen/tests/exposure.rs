@@ -417,6 +417,34 @@ fn river_exposure_tracks_real_proximity() {
 /// direction from the last two re-measures, which is worth recording because
 /// "suppressing a people shrinks the world's vocabulary" is the obvious story
 /// and it has now gone both ways.
+///
+/// **THE RADIATION re-measure (C2d, 2026-08-10).** Six elves join the contest
+/// and the four tables become:
+///
+/// ```text
+///                  before (9 peoples)      after (15 peoples)
+///   spring   0 root, 9 gap             0 root, 15 gap
+///   hill     0 root, 9 gap             0 root, 15 gap
+///   valley   2 root, 7 gap             2 root, 13 gap
+///   marsh    6 root, 3 gap             6 root,  9 gap
+/// ```
+///
+/// The rooter COUNTS are unchanged on all four concepts while the roster grew
+/// by two thirds — six new peoples won exactly zero net new roots. The
+/// membership turned over inside those counts (goblin lost `valley` and
+/// `marsh`, bugbear lost `marsh`, gnoll regained `marsh`; sea-elf gained
+/// `valley` and drow gained `marsh`) so this is redistribution, not
+/// saturation. Total gaps are 52 on 15 peoples (3.47 per people) against 28 on
+/// 9 (3.11): exposure per people fell slightly again.
+///
+/// **AND THE PHONOLOGY RETURNED BYTE-IDENTICAL FOR THE THIRD ROSTER EPOCH
+/// RUNNING.** kobold's `valley` is `Raxoroo` and its `marsh` is `Rorora`;
+/// hobgoblin's `marsh` is `Qaneo`, hill-dwarf's is `Tag`, human's is
+/// `Meashngeo` — every string these peoples carried before The Delvers, before
+/// The Range and before this campaign. Six kinds and one appended accession
+/// cohort moved which entries EXIST; they moved no word that already existed.
+/// That is the accession discipline's additivity claim, measured on the
+/// rendered product rather than argued from the cohort rule.
 #[test]
 fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
@@ -439,13 +467,19 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
         vec![
             "bugbear",
             "desert-dwarf",
+            "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
+            "high-elf",
             "hill-dwarf",
             "hobgoblin",
             "human",
-            "kobold"
+            "kobold",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
@@ -535,13 +569,19 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
         vec![
             "bugbear",
             "desert-dwarf",
+            "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
+            "high-elf",
             "hill-dwarf",
             "hobgoblin",
             "human",
-            "kobold"
+            "kobold",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
@@ -617,24 +657,31 @@ fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
         vec![
             "bugbear",
             "desert-dwarf",
+            "desert-elf",
+            "drow",
             "gnoll",
+            "goblin",
             "gully-dwarf",
+            "high-elf",
             "hill-dwarf",
             "hobgoblin",
-            "human"
+            "human",
+            "snow-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("goblin", "Konoa".to_string()),
             ("kobold", "Raxoroo".to_string()),
+            ("sea-elf", "Nadbbeus".to_string()),
         ],
-        "at seed 42 two peoples root 'valley'; kobold's `Raxoroo` is still \
-         byte-identical to the word it carried before The Delvers, and gnoll — \
-         a rooter under the pre-Range roster — now gaps it, which is its own \
-         affinity re-placing it"
+        "at seed 42 two peoples root 'valley'; kobold's `Raxoroo` is STILL \
+         byte-identical to the word it carried before The Delvers and before \
+         The Radiation — three roster epochs and the string has not moved — \
+         while goblin, a rooter until this campaign, now gaps it and sea-elf, \
+         a kind that did not exist before it, roots it with a new word"
     );
 }
 
@@ -733,22 +780,35 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_including_one_dwarf() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["desert-dwarf", "gnoll", "gully-dwarf"],
+        vec![
+            "bugbear",
+            "desert-dwarf",
+            "desert-elf",
+            "goblin",
+            "gully-dwarf",
+            "high-elf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
+        ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("bugbear", "Qadoo".to_string()),
-            ("goblin", "Taneo".to_string()),
+            ("drow", "Goo".to_string()),
+            ("gnoll", "Gshoovzngaov".to_string()),
             ("hill-dwarf", "Tag".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 six of nine placed peoples root 'marsh' — bugbear and \
-         human regained it with byte-identical words; gnoll, the kind this \
-         campaign moved on purpose, lost it"
+        "at seed 42 six of FIFTEEN placed peoples root 'marsh' — still six, \
+         and still exactly one dwarf, though the membership turned over: \
+         bugbear and goblin lost it, gnoll regained it, drow (a kind that did \
+         not exist last campaign) gained it. hill-dwarf's `Tag`, hobgoblin's \
+         `Qaneo`, human's `Meashngeo` and kobold's `Rorora` are all \
+         byte-identical to the words they carried before"
     );
 }
 

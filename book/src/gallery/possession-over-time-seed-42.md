@@ -23,7 +23,7 @@ Ways on: NE, NW, S.
 > npcs
 7 NPC(s) derived this session:
   [1] bugbear of Googo
-  [2] hobgoblin of Nenagabo
+  [2] hobgoblin of Toa
   [3] hobgoblin of Toa
   [4] a wild rust-monster
   [5] a wild otyugh
@@ -40,7 +40,7 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (21 stirred).
+Time passes. You sense movement nearby (25 stirred).
 > look
 [room 750518284, day 6]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (15 stirred).
+Time passes. You sense movement nearby (24 stirred).
 > look
 [room 750518284, day 7]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
@@ -56,13 +56,13 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo grows restless.
 > why hobgoblin
-hobgoblin of Nenagabo:
-- canonical name of an entity: hobgoblin of Nenagabo (asserted by the-quickening)
+hobgoblin of Toa:
+- canonical name of an entity: hobgoblin of Toa (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (366 stirred).
+Time passes. You sense movement nearby (414 stirred).
 > look
 [room 750518284, day 97]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The sky is a low grey rain-deck.

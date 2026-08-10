@@ -125,6 +125,10 @@ fn mineral_supply_tracks_prospectivity_spatially() {
 /// and this test fails on them by name; dropping the sea mask
 /// (`marine_forage_supply_field`'s `is_ocean` guard) re-admits marine
 /// carrying capacity on land for the five T8 kinds and fails on THEM.
+///
+/// THE RADIATION (C2d): sea-elf is a SIXTH occupant of the marine axis and the
+/// first people on it, mixed rather than pure — so the amphibious arm below is
+/// a set now, not a constant.
 #[test]
 fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     // The four PURELY marine T8 kinds: their niche weights only
@@ -135,10 +139,21 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
         ["giant-octopus", "giant-squid", "killer-whale", "reef-shark"]
             .into_iter()
             .collect();
-    // The amphibious proof case (spec §3.4): weights BOTH a terrestrial axis
-    // and `MARINE_FORAGE`, so its K must be nonzero in BOTH media — the
-    // observable signature of the sparse-uptake, no-special-case design.
-    const AMPHIBIOUS: &str = "giant-crocodile";
+    // The amphibious proof cases (spec §3.4): a kind weighting BOTH a
+    // terrestrial axis and `MARINE_FORAGE`, so its K must be nonzero in BOTH
+    // media — the observable signature of the sparse-uptake, no-special-case
+    // design.
+    //
+    // THE RADIATION (C2d) makes this a SET rather than a constant. Sea-elf is
+    // the second occupant and the first PEOPLE here: 0.75 `MARINE_FORAGE`
+    // plus 0.25 across two terrestrial axes, because a settled shore people
+    // does not live entirely in the water. It arrived at this branch as a
+    // FAILURE of the `else` arm ("sea-elf draws 140.02 of its 147.84 total
+    // carrying capacity from submerged cells"), which is the guard working:
+    // the test had no way to express a second mixed kind, and a `const` was
+    // the reason.
+    let amphibious: std::collections::BTreeSet<&str> =
+        ["giant-crocodile", "sea-elf"].into_iter().collect();
 
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let world = world_42();
@@ -215,10 +230,10 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
                 "{kind} draws {dry} of its {total} total carrying capacity from LAND cells — \
                  a purely marine kind's terrestrial supply axes must be 0"
             );
-        } else if kind == AMPHIBIOUS {
+        } else if amphibious.contains(kind) {
             assert!(
                 wet > 0.0 && dry > 0.0,
-                "{kind} is the amphibious proof case: it must draw nonzero K from BOTH \
+                "{kind} is an amphibious proof case: it must draw nonzero K from BOTH \
                  media, got wet={wet} dry={dry}"
             );
         } else {
@@ -355,8 +370,13 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// seed 42 to also place a settlement — re-pinned 5 -> 6. The Delvers (C2c)
 /// adds three dwarves, measured at seed 42 to place settlements for all three
 /// — re-pinned 6 -> 9. (It briefly read 11 while the campaign carried five
-/// dwarves; spec §11 withdrew Mountain and Duergar.)
-const BASELINE_PEOPLED_KINDS_42: usize = 9;
+/// dwarves; spec §11 withdrew Mountain and Duergar.) The Radiation (C2d) adds
+/// six elves, measured at seed 42 to place settlements for all six — re-pinned
+/// 9 -> 15. Every people the roster holds is a peopled-by kind at this seed,
+/// which is a property of the deep-history bake (it seeds every Settled people
+/// its own proto-communities, which persist by lineage rather than by winning
+/// local dominance), not a claim that six new peoples all found good ground.
+const BASELINE_PEOPLED_KINDS_42: usize = 15;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -502,13 +522,46 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // peopled roster is unchanged, T2's dot product still differentiates more
     // dominants than the baseline, and the union clears the preregistered
     // floor. What is withdrawn is the per-kind prediction, for the second time.
+    //
+    // ---- AND IT IS BACK (The Radiation, C2d, 2026-08-10). ----
+    //
+    // The assertion above ended with an instruction: "rust-monster was ONE
+    // settlement short; if it is back, re-read the comment above and establish
+    // which productivity model is in play before flipping this." It is back,
+    // at exactly 2 dominant cells — the ruler's floor — so the instruction is
+    // discharged here rather than the assertion quietly bumped.
+    //
+    // WHICH PRODUCTIVITY MODEL: unchanged. This campaign's diff touches
+    // `domains/species`, `domains/language` and roster-facing test pins; it
+    // does not touch `npp_temperature`, `mineral_supply_field`,
+    // `axis_supply` or any part of The Tense's model. So the margin did not
+    // move because the physics moved.
+    //
+    // WHAT DID MOVE: the competition. Six elves entered the contest for
+    // attractors, and one of them (sea-elf) is the roster's first marine
+    // PEOPLE, holding 34 dominant cells of its own. Rust-monster regained
+    // its one missing settlement out of that re-contest. The honest reading
+    // is that this quantity has now been 1 -> 2 across a roster change with
+    // no mechanism change, which makes it a **margin-of-one witness**: the
+    // Demesne prediction it was written for is not confirmed by its return
+    // any more than it was refuted by its absence. A campaign that needs
+    // this claim should widen the seed sweep rather than read one seed's
+    // ruler.
+    //
+    // Asserted in the positive direction now, so the next movement is caught
+    // in whichever direction it comes.
     assert!(
-        !material_dominants.contains("xorn") && !material_dominants.contains("rust-monster"),
-        "a pure-MINERAL specialist cleared the dominance ruler again ({dominant_counts:?}) — \
-         both The Demesne's prediction and The Deep Realm's repair of it were falsified \
-         under The Tense's productivity model, and this records that. rust-monster was ONE \
-         settlement short; if it is back, re-read the comment above and establish which \
-         productivity model is in play before flipping this."
+        material_dominants.contains("rust-monster"),
+        "the pure-MINERAL specialist stopped clearing the dominance ruler again \
+         ({dominant_counts:?}). This has now flipped twice on roster changes with no \
+         mechanism change (1 -> 2 dominant cells at C2d); read this test's comment before \
+         flipping it a third time, and establish which productivity model is in play."
+    );
+    assert!(
+        !material_dominants.contains("xorn"),
+        "xorn cleared the dominance ruler ({dominant_counts:?}) — it has held none since \
+         The Deep Realm sharpened rust-monster's curves and left xorn's flat; if this \
+         fires, that re-authoring is what to re-read."
     );
 }
 
@@ -686,9 +739,31 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // Recorded, not rescued: living underground is not the same axis as
     // tolerating polar cold. The degeneracy this assertion documents is
     // unchanged, and the ratio is still exactly 100 * trop_mean.
+    //
+    // THE RADIATION RE-PIN (C2d, 2026-08-10): 35.8831 -> 36.3288, and the
+    // MECHANISM is again the roster and only the roster — the settling
+    // population went from nine to fifteen, so six more tolerance curves
+    // entered the mean. Nothing latitudinal moved.
+    //
+    // AND THE PREDICTION FAILS A THIRD TIME, WHICH IS THE PART WORTH READING.
+    // This campaign ships a genuinely COLD-ADAPTED people (snow-elf, authored
+    // at a 0.0 C temperature optimum, below the settleable p5 of 3.27) and a
+    // SUBTERRANEAN one (drow) — exactly the two kinds the paragraph above
+    // says would lift the poles off the floor. Measured: raw_pole_mean
+    // 0.004574 -> 0.004589, still an order of magnitude under
+    // POLE_FLOOR = 0.01, and `pole floored: true`. The reason is this
+    // campaign's own authoring strategy rather than the prediction being
+    // wrong about the model: every elf sits BELOW its sovereignty floor on
+    // elevation devotion, so the Liebig minimum discards its temperature
+    // curve on every cell (spec §3.1, and see the C2d block comment in
+    // `domains/species/src/lib.rs`). Snow-elf's cold tolerance is authored,
+    // honest, and never read. **A people can be cold-adapted in the registry
+    // and not cold-adapted in the field**, and this line is the measurement
+    // that says so. The prediction remains untested rather than refuted, and
+    // the campaign that tests it must author a cold people ABOVE its floor.
     assert!(
-        (ratio - 35.8831).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~35.8831). NOTE this is \
+        (ratio - 36.3288).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~36.3288). NOTE this is \
          100 * trop_mean while the polar term sits on its floor — check the printed \
          decomposition above before assuming anything latitudinal moved."
     );

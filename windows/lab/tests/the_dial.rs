@@ -221,10 +221,22 @@ fn the_dial_separates_the_poles() {
             // entries went with them. Re-dumped rather than subtracted: the
             // remaining eight `instance-of` rows are all still Kept and the
             // three lost entries are the same three.)
+            //
+            // THE RADIATION adds SIX peoples (the elves) as new placed
+            // neighbors: kobold's account gains six more `instance-of`
+            // entries, every one of them Kept. DUMPED AND CONFIRMED LIVE, not
+            // inferred from the fraction — 19 entries, of which 15 are
+            // `instance-of`/Kept, `is-a` is Substituted, `star-class` is
+            // Lost, `day-length-std` reads `Explained { underlying: Lost }`
+            // and `moon-count` still reads `Explained { underlying: Kept }`.
+            // So the entry count grows 13 -> 19, moving loss_fraction
+            // 3/13 -> 3/19; the count of LOST entries is still 3, and the
+            // naive `!= Kept` miscount this row exists to forbid would read
+            // 4/19.
             if seed == 2 && voice.kind == "kobold" {
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 13.0,
+                    3.0 / 19.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

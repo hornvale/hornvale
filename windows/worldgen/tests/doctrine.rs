@@ -488,8 +488,14 @@ fn the_high_god_takes_the_day_where_compatible() {
             // name once more: Voovoo -> Vooboo. At every step the belief,
             // its period and the day-match are unchanged, and
             // `underlying`, `schema`, `lexeme` and `manner` compare
-            // byte-identical — only `agent` moved.
-            agent: Some("Vooboo".to_string()),
+            // byte-identical — only `agent` moved. THE RADIATION (C2d):
+            // Vooboo -> Voobo, once more for the same reason and with the
+            // same invariants intact — six new peoples redecide seed 1's
+            // settlement placement, which redraws the name this belief's
+            // deity carries. `underlying`, `schema`, `lexeme` and `manner`
+            // are again byte-identical; the belief, its period and the
+            // day-match are unchanged.
+            agent: Some("Voobo".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Brisk,
         }
@@ -505,7 +511,7 @@ fn the_high_god_takes_the_day_where_compatible() {
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
         .expect("a day-matched cyclic belief must exist at seed 1 goblin");
     assert_eq!(
-        folk_bound.0.deity, "Vooboo",
+        folk_bound.0.deity, "Voobo",
         "doctrine's binding must be the SAME belief folk's own period-match rule finds"
     );
 }

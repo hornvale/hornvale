@@ -383,12 +383,20 @@ mod tests {
     /// An unregistered family must fail with the admissible set, never
     /// render a page. Before this guard `proto_phonology_of` panicked
     /// instead — loud, but not a CLI error a caller can print.
+    ///
+    /// THE RADIATION (C2d): the probe was `"elf"`, which this campaign made
+    /// into a real family — a stale negative example is a test that quietly
+    /// starts asserting the opposite of what it was written for. `"orc"` is
+    /// the replacement, and it is a label no registry has ever carried. When
+    /// a campaign authors orcs, move this probe again rather than deleting
+    /// the guard; the admissible-set assertion below is the part with value.
     #[test]
     fn an_unknown_family_is_refused_with_the_admissible_set() {
-        let err = render_proto("elf").unwrap_err();
-        assert!(err.contains("unknown family 'elf'"), "{err}");
+        let err = render_proto("orc").unwrap_err();
+        assert!(err.contains("unknown family 'orc'"), "{err}");
         assert!(err.contains("goblinoid"), "{err}");
         assert!(err.contains("dwarf"), "{err}");
+        assert!(err.contains("elf"), "{err}");
     }
 
     /// A family label that carries a proto vector but no speaking daughter

@@ -8469,9 +8469,14 @@ mod tests {
         // named-goblin-settlement denominator moved again — the same
         // placement reshuffle every entry above records, and the naming
         // machinery is untouched. Still inside the 2-3 target, the row's claim.
+        // The Radiation re-pin (C2d, 2026-08-10): 2.218_75 -> 2.416_666_666_666_666_5.
+        // Six elves enter the contest and re-place seed 42 once more, so the
+        // named-goblin-settlement denominator moves again — the same placement
+        // reshuffle every entry above records, with the naming machinery
+        // untouched. Still inside the 2-3 target, the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.218_75)
+            MetricValue::Number(2.416_666_666_666_666_5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -8574,9 +8579,17 @@ mod tests {
         // (21 -> 12), which is the competitive cascade a suppressed people
         // leaves behind. Both still inside the 2-3 target and kobold still
         // live rather than Absent — the whole of the row's claim.
+        //
+        // The Radiation re-pin (C2d, 2026-08-10): 2.868_852_459_016_393_3 ->
+        // 2.734_693_877_551_020_3. Kobold falls 0.134 while goblin RISES 0.198
+        // — opposed again, and again by different magnitudes, which is this
+        // row's stated signature of a placement reshuffle rather than a drift
+        // in the naming machinery (nothing in this campaign touches phonology,
+        // wear or the namer). Both still inside the 2-3 target and kobold
+        // still live rather than Absent — the whole of the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.868_852_459_016_393_3)
+            MetricValue::Number(2.734_693_877_551_020_3)
         );
     }
 
@@ -8705,10 +8718,12 @@ mod tests {
         // biome-affinity row re-places seed 42, the same settlement-survival
         // shift every re-pin above records. Still strictly between 0 and 1, so
         // the distribution claim — asserted separately above — holds.
-        assert_eq!(
-            share, 0.636_363_636_363_636_4,
-            "seed 42 transparency drifted"
-        );
+        // The Radiation re-pin (C2d, 2026-08-10): 0.636_363_636_363_636_4 ->
+        // 0.546_875. Six elves re-place seed 42, the same settlement-survival
+        // shift every re-pin above records. Still strictly between 0 and 1, so
+        // the distribution claim — asserted separately above — holds. The
+        // denominator is still not reachable here, so no fraction is invented.
+        assert_eq!(share, 0.546_875, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -9417,14 +9432,36 @@ mod tests {
         //
         // No same-seed second species at seed 2, so this witness is
         // load-bearing alone.
-        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        //
+        // THE RADIATION re-witness (C2d, 2026-08-10): seed 2's bugbears no
+        // longer root both concepts — the FIFTH time this witness has been
+        // lost, and again to a roster change rather than to a change in
+        // either terrain gate.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people (read dynamically off `FullView::components().perception`,
+        // so the six elves entered the sweep automatically) and took the
+        // earliest pair rooting AND steeping BOTH concepts. That is
+        // **(7, bugbear)**. FOURTEEN pairs qualify (7/bugbear, 24/human,
+        // 34/hobgoblin, 36/drow, 37/drow, 38/bugbear, 38/goblin, 46/bugbear,
+        // 47/human, 54/desert-dwarf, 59/bugbear, 59/desert-elf,
+        // 59/hobgoblin, 59/snow-elf) — against twenty-one, twenty-six,
+        // twenty-three and twenty-one before it, so the population THINNED
+        // for the first time in this test's history even though the roster
+        // grew by two thirds. Four of the fourteen are elves, so the new
+        // peoples do qualify; the loss is among the old ones, which is the
+        // competitive cascade rather than anything about the gates.
+        //
+        // No same-seed second species at seed 7, so this witness is
+        // load-bearing alone.
+        let view = FullView::build(Seed(7), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
+        let lexicon = lex(&view, "bugbear").expect("seed 7 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 2 bugbears must root {concept} for this test to bite"
+                "seed 7 bugbears must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -9858,10 +9895,18 @@ mod tests {
         // measures directly (seed 7: gnoll unchanged at 4 settlements while
         // bugbear goes 49 -> 153). `flagship-subsistence` is STILL "farming"
         // through all five, which remains the stable fact.
-        assert_eq!(
-            m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
-        );
+        //
+        // Fifth pass (The Radiation, C2d, 2026-08-10): temperate-forest ->
+        // taiga, oscillating between the same two biomes a SIXTH time. Cause:
+        // six elves enter the contest, so the world-wide competitive landscape
+        // settlement genesis resolves moves again and goblin's flagship wins a
+        // different cell. `flagship-subsistence` is STILL "farming" through all
+        // six, and `flagship-coastal` is still false. Six oscillations between
+        // exactly two farmable biomes is now enough history to say plainly what
+        // this list has been circling: **`flagship-biome` at seed 42 is a
+        // world-byte tripwire, not a claim about goblins**, and it should not
+        // be cited as one.
+        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -11001,9 +11046,37 @@ mod tests {
         // move (a fourth pass in a row at seed 5) and the species moves
         // bugbear -> desert-dwarf. There is no same-seed second species, so
         // this witness is load-bearing alone again.
+        //
+        // FIFTH PASS (The Radiation, C2d, 2026-08-10): seed 5's desert-dwarf
+        // lost a staple band. Re-swept 0..150 by the identical method (peoples
+        // read dynamically off `FullView::components().perception`, so the six
+        // elves entered the sweep without an edit here).
+        //
+        // **THE THINNING REVERSED, HARD.** FIFTEEN qualifying pairs —
+        // (5, bugbear), (5, hobgoblin), (16, bugbear), (66, hobgoblin),
+        // (71, hobgoblin), (75, hobgoblin), (90, bugbear), (90, hill-dwarf),
+        // (90, hobgoblin), (102, bugbear), (108, hobgoblin), (115, hobgoblin),
+        // (125, kobold), (130, hobgoblin), (139, kobold) — against THREE
+        // before it, and eleven, seven, four and three before that. The
+        // previous pass warned that "one more campaign of the same size could
+        // leave none"; the opposite happened. Read carefully, this does NOT
+        // vindicate "more peoples means more bands", which the third pass
+        // already ruled out: **not one of the fifteen is an elf.** Six new
+        // competitors re-placed the OLD peoples onto ground that spans more
+        // farmable biomes, and none of the new ones spans enough itself. The
+        // count has now gone 3 -> 4 -> 7 -> 11 -> 3 -> 15 across six roster
+        // changes, which is the honest summary: this population is not
+        // monotone in anything, and each pass must re-sweep rather than
+        // extrapolate.
+        //
+        // Witness is **(5, bugbear)** — the earliest qualifying pair by the
+        // same selection-free rule. The SEED does not move (a fifth pass in a
+        // row at seed 5) and the species returns to bugbear, which carried it
+        // two passes ago. Same-seed corroboration is back: (5, hobgoblin)
+        // qualifies too, so this witness is not load-bearing alone.
         let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
-        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
-            .expect("desert-dwarf is placed at seed 5");
+        let steeped =
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

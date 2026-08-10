@@ -1,39 +1,45 @@
 # The Peoples of Seed 42
 
-The land holds 124 settlement(s).
-The chief bugbear settlement, Godogodo, holds 63 souls amid tropical-rainforest.
+The land holds 266 settlement(s).
+The chief bugbear settlement, Googodoga, holds 69 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Padgad, holds 64 souls amid savanna.
-The chief gnoll settlement, Gshoovznga, holds 21 souls amid desert.
+The chief desert-elf settlement, Pvozhgoszkosh, holds 36 souls amid tropical-seasonal-forest.
+The chief drow settlement, Boasgoo, holds 32 souls amid ice.
+The chief gnoll settlement, Psapqsaaxdzaov, holds 27 souls amid desert.
 The chief goblin settlement, Bootoe, holds 34 souls amid temperate-forest.
-The chief gully-dwarf settlement, Qatgoqnga, holds 36 souls amid tropical-seasonal-forest.
-The chief hill-dwarf settlement, Qagba, holds 33 souls amid temperate-forest.
-The chief hobgoblin settlement, Toa, holds 72 souls amid tropical-seasonal-forest.
-The chief human settlement, Ngezmongato, holds 31 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Roarora, holds 65 souls amid temperate-forest.
+The chief gully-dwarf settlement, Nobnngotngobbot, holds 36 souls amid savanna.
+The chief high-elf settlement, Boe, holds 36 souls amid tropical-seasonal-forest.
+The chief hill-dwarf settlement, Batatqagba, holds 37 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Gootoenetea, holds 78 souls amid temperate-forest.
+The chief human settlement, Ngaatonga, holds 36 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Raoxo, holds 41 souls amid alpine.
+The chief sea-elf settlement, Dbeushnuzh, holds 39 souls amid coral-reef.
+The chief snow-elf settlement, Bbozbosbozngash, holds 34 souls amid tropical-seasonal-forest.
+The chief wood-elf settlement, Duazdxuungeustda, holds 36 souls amid tropical-seasonal-forest.
 
 ```text
                                                                         
-                         o o                                            
-                          oo                o  o                        
+                       o o                             o                
+                          @    o            o  o                        
+                                o    o                                  
                                                                         
                                                                         
+                                  oo                o                   
+                                 oo                 o                   
                                                                         
-                                                    o                   
-                                  o                 o                   
-                                                                        
-                                               o                        
+                                   o           o                        
+                                                o ooo                   
                                                   ooo                   
-                                                  oooo                  
-                                                   ooo                  
+         o                                          oo                  
                                                                         
                     o                                                   
-                    o                                                   
+                    oo                                                  
                                                                         
-                                                                        
-                    o                                                   
-                    @oo    o           o                                
-                                                                        
-                       o                                                
+                                                 o                      
+                   oooo                         ooo                     
+                   ooo     o           o        ooo                     
+                    o  oo                             o                 
+                    ooooooo                                             
                                                                         
                                                                         
 ```

@@ -468,6 +468,123 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
+            // THE RADIATION (C2d): six daughters of one proto — the roster's
+            // largest family, six against goblinoid's three and dwarf's three.
+            // Each row below DIVERGES from `family_proto`'s `KindId("elf")`
+            // vector (labiality 0.45, vowel_space 0.70, voicing 0.55,
+            // sibilance 0.45, voice_loudness 0.35) on at least three
+            // dimensions — the divergence is precisely what the sound-change
+            // cascade consumes, so six identical daughters would be six names
+            // for one tongue and P5's divergence clause would correctly read
+            // false.
+            //
+            // The proto reading is a wide-vowelled, quiet, unremarkable-
+            // consonant tongue: an expanded vowel space, moderate labiality
+            // and sibilance, and the lowest `voice_loudness` of any proto in
+            // the registry.
+            //
+            // **No row below is argued from its kind's environment, and none
+            // may be.** The same hand authors the articulation and the niche,
+            // so any correlation between them measures the authoring
+            // convention and nothing else (spec §6). The rationales are
+            // INSTITUTIONAL — who holds the tongue, and how tightly — which is
+            // the same axis the goblinoid and dwarf rows already use.
+            (
+                KindId("desert-elf"),
+                ArticulationVector {
+                    // held by nobody in particular and spoken across
+                    // distance: the family's loudest daughter, with the
+                    // sibilance a carrying register buys.
+                    labiality: 0.35,
+                    vowel_space: 0.70,
+                    voicing: 0.50,
+                    sibilance: 0.65,
+                    voice_loudness: 0.70,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("drow"),
+                ArticulationVector {
+                    // a rank-ordered society holds its tongue to a standard,
+                    // and a standard compresses: the narrowest vowel space in
+                    // the family and the only innovated exotic manner.
+                    labiality: 0.30,
+                    vowel_space: 0.35,
+                    voicing: 0.40,
+                    sibilance: 0.75,
+                    voice_loudness: 0.30,
+                    tonality: 0.0,
+                    exotic: ExoticManner::Ejective,
+                },
+            ),
+            (
+                KindId("high-elf"),
+                ArticulationVector {
+                    // LANGUAGE IS HIGH'S THIRD IDENTITY CHANNEL, and the only
+                    // one of the three that reaches a rendered product. A
+                    // people whose institutions outlive its members keeps its
+                    // tongue: this is the family's most conservative daughter,
+                    // nearest the proto on every dimension, and deliberately
+                    // NOT identical to it — a daughter that had not moved at
+                    // all would be a proto with a second name.
+                    labiality: 0.45,
+                    vowel_space: 0.65,
+                    voicing: 0.60,
+                    sibilance: 0.40,
+                    voice_loudness: 0.40,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("sea-elf"),
+                ArticulationVector {
+                    // a consensus people with no caste of speakers: full
+                    // voicing, rounded, and the family's second-loudest.
+                    labiality: 0.70,
+                    vowel_space: 0.75,
+                    voicing: 0.75,
+                    sibilance: 0.30,
+                    voice_loudness: 0.60,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("snow-elf"),
+                ArticulationVector {
+                    // the family's quietest and least voiced, and the ROSTER'S
+                    // FIRST `Click` — the one `ExoticManner` variant no kind
+                    // had ever carried, so this row is what gives that arm of
+                    // `exotic_seg_of` its first live witness. A small band
+                    // that mostly speaks to people already beside it.
+                    labiality: 0.55,
+                    vowel_space: 0.45,
+                    voicing: 0.35,
+                    sibilance: 0.25,
+                    voice_loudness: 0.25,
+                    tonality: 0.0,
+                    exotic: ExoticManner::Click,
+                },
+            ),
+            (
+                KindId("wood-elf"),
+                ArticulationVector {
+                    // custom without bureaucracy: nothing holds this tongue to
+                    // a standard, so it has drifted furthest from the proto on
+                    // labiality and sibilance while keeping the proto's wide
+                    // vowels.
+                    labiality: 0.20,
+                    vowel_space: 0.80,
+                    voicing: 0.65,
+                    sibilance: 0.15,
+                    voice_loudness: 0.45,
+                    tonality: 0.0,
+                    exotic: ExoticManner::Trill,
+                },
+            ),
         ]
         .into_iter()
         .collect()
@@ -629,13 +746,100 @@ pub mod speech {
                     top: "thane",
                 },
             ),
+            // THE RADIATION (C2d): the elf family's six vocabularies, in the
+            // same order and with the same six keys as `articulation_registry`
+            // above — `check_integrity` requires the two stores to share ONE
+            // key-set, so a row added to either without the other fails the
+            // whole workspace at load.
+            //
+            // Each kind's `top` rung names what its `SocietyVector.status_basis`
+            // says earns standing, as the dwarf block does: `Knowledge` reads
+            // as lore, `Generosity` as what the holder sets out, `Rank` as
+            // position held.
+            (
+                KindId("desert-elf"),
+                Lexicon {
+                    noun: "wellcamp",
+                    worker_override: Some("waterfinder"),
+                    warrior: "outrider",
+                    artisan: "glassblower",
+                    shaman: "skyreader",
+                    // Knowledge: the route and the season are this people's
+                    // capital, and whoever holds them holds standing.
+                    top: "pathkeeper",
+                },
+            ),
+            (
+                KindId("drow"),
+                Lexicon {
+                    noun: "hold",
+                    worker_override: Some("delver"),
+                    warrior: "blademaster",
+                    artisan: "webwright",
+                    shaman: "dark-speaker",
+                    // Rank: position held, and nothing else.
+                    top: "matron",
+                },
+            ),
+            (
+                KindId("high-elf"),
+                Lexicon {
+                    noun: "citadel",
+                    worker_override: Some("steward"),
+                    warrior: "bladesinger",
+                    artisan: "artificer",
+                    shaman: "loresinger",
+                    // Knowledge, held by an institution rather than a person —
+                    // the rung word names the archive, not the archivist.
+                    top: "archivist",
+                },
+            ),
+            (
+                KindId("sea-elf"),
+                Lexicon {
+                    noun: "haven",
+                    worker_override: Some("netter"),
+                    warrior: "wavewarden",
+                    artisan: "hullwright",
+                    shaman: "tidereader",
+                    // Generosity: whoever fed the others through the lean
+                    // season.
+                    top: "provider",
+                },
+            ),
+            (
+                KindId("snow-elf"),
+                Lexicon {
+                    noun: "wintering",
+                    worker_override: Some("herder"),
+                    warrior: "iceguard",
+                    artisan: "boneworker",
+                    shaman: "frostspeaker",
+                    // Generosity, the winter reading: the one who keeps the
+                    // store and opens it.
+                    top: "hearthkeeper",
+                },
+            ),
+            (
+                KindId("wood-elf"),
+                Lexicon {
+                    noun: "grove",
+                    worker_override: Some("gatherer"),
+                    warrior: "ranger",
+                    artisan: "bowyer",
+                    shaman: "greenspeaker",
+                    // Generosity in a people with no hall: the word names what
+                    // is given, not who governs.
+                    top: "boughgiver",
+                },
+            ),
         ]
         .into_iter()
         .collect()
     }
 
     /// Proto ancestral articulation vectors keyed by family (goblinoid/
-    /// draconic/plant/dwarf) — moved here from species (ECS c3).
+    /// draconic/plant/dwarf/elf) — moved here from species (ECS c3).
     ///
     /// Keyed by the FAMILY LABEL `hornvale_species::family_of` carries, not
     /// by a kind. `check_integrity` (`windows/worldgen/src/components.rs`)
@@ -697,6 +901,42 @@ pub mod speech {
                     voicing: 0.60,
                     sibilance: 0.35,
                     voice_loudness: 0.60,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            // THE RADIATION (C2d): proto-Elvish, ancestor of all six daughters
+            // in `articulation_registry` — the roster's largest family, six
+            // against goblinoid's three and dwarf's three. Mandatory the moment
+            // the label is carried twice: `check_integrity` requires a proto for
+            // every family label held by >= 2 kinds, and this one is held by six,
+            // so this row lands in the same commit as the `family_of` rows
+            // because it must.
+            //
+            // The reading is the dwarf proto's opposite on the two dimensions
+            // where the two families are most legibly distinct: an expanded
+            // vowel space (0.70 against 0.35) and the quietest voice of any
+            // proto (0.35 against 0.60). `exotic: None`, as every proto is —
+            // the daughters innovate a manner away from the ancestor rather
+            // than losing an inherited one, which is what makes drow's
+            // `Ejective`, snow's `Click` and wood's `Trill` three independent
+            // innovations rather than three survivals.
+            //
+            // **A STAR, NOT A TREE** (spec §8, LANG-53). With no time-since-
+            // split, all six daughters are equidistant from this vector. The
+            // model can say six tongues descend from proto-Elvish; it cannot say
+            // Drow split before Snow, and there is no field in which that
+            // sentence could be written. The tree stays blocked on
+            // LANG-split-time-from-history, with this family as its motivating
+            // case.
+            (
+                KindId("elf"),
+                ArticulationVector {
+                    labiality: 0.45,
+                    vowel_space: 0.70,
+                    voicing: 0.55,
+                    sibilance: 0.45,
+                    voice_loudness: 0.35,
                     tonality: 0.0,
                     exotic: ExoticManner::None,
                 },

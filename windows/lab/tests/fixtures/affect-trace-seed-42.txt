@@ -40,7 +40,7 @@ creature 0 species=bugbear
   tick 38: label=Content arousal=0.641308 valence=1.0 object=None
   tick 39: label=Eager arousal=0.741308 valence=1.0 object=Some(Fatigue)
 creature 1 species=hobgoblin
-  tick 0: label=Content arousal=0.1307038 valence=1.0 object=None
+  tick 0: label=Content arousal=0.13271975 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
   tick 2: label=Content arousal=0.3525 valence=1.0 object=None
   tick 3: label=Content arousal=0.5025 valence=1.0 object=None
@@ -81,7 +81,89 @@ creature 1 species=hobgoblin
   tick 38: label=Content arousal=0.63195 valence=1.0 object=None
   tick 39: label=Content arousal=0.73195 valence=1.0 object=None
 creature 2 species=hobgoblin
-  tick 0: label=Content arousal=0.13573299 valence=1.0 object=None
+  tick 0: label=Content arousal=0.13574016 valence=1.0 object=None
+  tick 1: label=Content arousal=0.2025 valence=1.0 object=None
+  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
+  tick 3: label=Content arousal=0.5025 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.704541 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Searching arousal=0.95251135 valence=0.0 object=Some(Thirst)
+  tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 10: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 11: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 12: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 13: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 14: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 15: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 16: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 17: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 18: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 19: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 20: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 21: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 22: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 23: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 24: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 25: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 26: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 27: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 28: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 29: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 30: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 31: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 32: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 33: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 34: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 35: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 36: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 37: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+creature 3 species=hobgoblin
+  tick 0: label=Content arousal=0.11065988 valence=1.0 object=None
+  tick 1: label=Content arousal=0.20720421 valence=1.0 object=None
+  tick 2: label=Content arousal=0.36068881 valence=1.0 object=None
+  tick 3: label=Content arousal=0.51417341 valence=1.0 object=None
+  tick 4: label=Eager arousal=0.704541 valence=1.0 object=Some(Fatigue)
+  tick 5: label=Eager arousal=0.82027729 valence=1.0 object=Some(Fatigue)
+  tick 6: label=Searching arousal=0.97168232 valence=0.0 object=Some(Thirst)
+  tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 10: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 11: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 12: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 13: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 14: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 15: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 16: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 17: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 18: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 19: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 20: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 21: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 22: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 23: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 24: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 25: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 26: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 27: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 28: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 29: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 30: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 31: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 32: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 33: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 34: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 35: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
+  tick 36: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 37: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+  tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
+creature 4 species=hobgoblin
+  tick 0: label=Content arousal=0.12155523 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
   tick 2: label=Content arousal=0.3525 valence=1.0 object=None
   tick 3: label=Content arousal=0.5025 valence=1.0 object=None
@@ -121,96 +203,14 @@ creature 2 species=hobgoblin
   tick 37: label=Content arousal=0.53195 valence=1.0 object=None
   tick 38: label=Content arousal=0.63195 valence=1.0 object=None
   tick 39: label=Content arousal=0.73195 valence=1.0 object=None
-creature 3 species=hobgoblin
-  tick 0: label=Content arousal=0.15556776 valence=1.0 object=None
-  tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.5025 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.704541 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Searching arousal=0.9525 valence=0.0 object=Some(Thirst)
-  tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 10: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 11: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 12: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 13: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 14: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 15: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 16: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 17: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 18: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 19: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 20: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 21: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 22: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 23: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 24: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 25: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 26: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 27: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 28: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 29: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 30: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 31: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 32: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 33: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 34: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 35: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 36: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 37: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-creature 4 species=hobgoblin
-  tick 0: label=Content arousal=0.14390336 valence=1.0 object=None
-  tick 1: label=Content arousal=0.2025 valence=1.0 object=None
-  tick 2: label=Content arousal=0.3525 valence=1.0 object=None
-  tick 3: label=Content arousal=0.5025 valence=1.0 object=None
-  tick 4: label=Eager arousal=0.704541 valence=1.0 object=Some(Fatigue)
-  tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Searching arousal=0.9525 valence=0.0 object=Some(Thirst)
-  tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 10: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 11: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 12: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 13: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 14: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 15: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 16: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 17: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 18: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 19: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 20: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 21: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 22: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 23: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 24: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 25: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 26: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 27: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 28: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 29: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 30: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 31: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 32: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 33: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 34: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 35: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
-  tick 36: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 37: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
-  tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
 creature 5 species=hobgoblin
-  tick 0: label=Content arousal=0.15580079 valence=1.0 object=None
+  tick 0: label=Content arousal=0.1123609 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
   tick 2: label=Content arousal=0.3525 valence=1.0 object=None
   tick 3: label=Content arousal=0.5025 valence=1.0 object=None
   tick 4: label=Eager arousal=0.704541 valence=1.0 object=Some(Fatigue)
   tick 5: label=Eager arousal=0.8025 valence=1.0 object=Some(Fatigue)
-  tick 6: label=Searching arousal=0.9525 valence=0.0 object=Some(Thirst)
+  tick 6: label=Searching arousal=0.95279275 valence=0.0 object=Some(Thirst)
   tick 7: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 8: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
   tick 9: label=Searching arousal=1.0 valence=0.0 object=Some(Thirst)
@@ -245,8 +245,8 @@ creature 5 species=hobgoblin
   tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
   tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
 creature 6 species=rust-monster
-  tick 0: label=Searching arousal=0.38007676 valence=0.0 object=Some(Danger)
-  tick 1: label=Searching arousal=0.37900475 valence=0.0 object=Some(Danger)
+  tick 0: label=Searching arousal=0.3888918 valence=0.0 object=Some(Danger)
+  tick 1: label=Searching arousal=0.38786414 valence=0.0 object=Some(Danger)
   tick 2: label=Searching arousal=0.4 valence=0.0 object=Some(Danger)
   tick 3: label=Searching arousal=0.45151297 valence=0.0 object=Some(Danger)
   tick 4: label=Eager arousal=0.55911276 valence=1.0 object=Some(Fatigue)
@@ -286,7 +286,7 @@ creature 6 species=rust-monster
   tick 38: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
   tick 39: label=Helpless arousal=1.0 valence=-1.0 object=Some(Thirst)
 creature 7 species=otyugh
-  tick 0: label=Content arousal=0.14251777 valence=1.0 object=None
+  tick 0: label=Content arousal=0.14417588 valence=1.0 object=None
   tick 1: label=Content arousal=0.2025 valence=1.0 object=None
   tick 2: label=Content arousal=0.3525 valence=1.0 object=None
   tick 3: label=Content arousal=0.5025 valence=1.0 object=None

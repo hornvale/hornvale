@@ -12,25 +12,29 @@ use hornvale_worldgen::components::WorldComponents;
 #[test]
 fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
-    // biosphere = the canonical entity set (all 33 kinds today — The Vacancy
+    // biosphere = the canonical entity set (all 39 kinds today — The Vacancy
     // T7 added seven, T8 added five (four marine plus the amphibious giant
     // crocodile), T9 added the gnoll, The Generalist added the human, The
-    // Delvers added the three dwarves).
-    assert_eq!(wc.biosphere.len(), 33);
+    // Delvers added the three dwarves, The Radiation added the six elves).
+    assert_eq!(wc.biosphere.len(), 39);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
-    // twelve; the subset assertion is kept (not replaced by equality)
+    // eighteen; the subset assertion is kept (not replaced by equality)
     // because a future non-speaking perceiver — an owl with eyes and no
     // words — must stay expressible.
     for k in wc.perception.ids() {
         assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
     }
-    assert_eq!(wc.psyche.len(), 12, "nine peoples + three minded dragons");
+    assert_eq!(
+        wc.psyche.len(),
+        18,
+        "fifteen peoples + three minded dragons"
+    );
     assert_eq!(
         wc.perception.len(),
-        12,
-        "the nine peoples + the three dragons perceive (The Vigil)"
+        18,
+        "the fifteen peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(
@@ -47,8 +51,8 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let lex = hornvale_language::lexicon_registry();
     // The Solitary Tongue gave the three chromatic dragons a frozen Draconic
     // tongue; The Vigil gave them eyes. Articulation and lexicon are keyed to
-    // exactly the MINDED kinds — the psyche key-set (nine peoples + three
-    // dragons, 12), since The Delvers added the three dwarves — and
+    // exactly the MINDED kinds — the psyche key-set (fifteen peoples + three
+    // dragons, 18), since The Radiation added the six elves — and
     // perception now coincides with them.
     let minded: Vec<_> = wc.psyche.ids().collect();
     assert_eq!(
@@ -77,15 +81,21 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         "black-dragon",
         "bugbear",
         "desert-dwarf",
+        "desert-elf",
+        "drow",
         "gnoll",
         "goblin",
         "gully-dwarf",
+        "high-elf",
         "hill-dwarf",
         "hobgoblin",
         "human",
         "kobold",
         "red-dragon",
+        "sea-elf",
+        "snow-elf",
         "white-dragon",
+        "wood-elf",
     ]
     .into_iter()
     .map(hornvale_kernel::KindId)
@@ -93,7 +103,7 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let perceivers: Vec<_> = wc.perception.ids().copied().collect();
     assert_eq!(
         perceivers, named_roster,
-        "perception must key exactly the nine peoples + three dragons, by name (The Vigil)"
+        "perception must key exactly the fifteen peoples + three dragons, by name (The Vigil)"
     );
     assert_eq!(
         art.ids().copied().collect::<Vec<_>>(),

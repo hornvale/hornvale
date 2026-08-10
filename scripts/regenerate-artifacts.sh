@@ -246,6 +246,17 @@ rm -f "$possess_ot_tmp"
 # other kobolds and four more end because the occupants won ground elsewhere
 # and carried the settlement onto it. All counts below are re-read off the live
 # block, per the rule above.
+# The Radiation (C2d) RE-COUNTED this block rather than repointing it: six new
+# settling peoples re-decide placement on every seed, and 5508 went from eleven
+# layers to TEN -- still deep, still all-kobold, still a genuine fit for the
+# page's title, so the camera stays where The Delvers put it and only the
+# numbers move. Re-read off the live block: ten layers from the year 1100, nine
+# completed (seven put to flight by other kobolds, two leaving because they
+# took better ground), five of the ten lasting under a year, founding parties
+# arriving from five distinct neighbouring clearings, and the standing tenth
+# founded in the year 1725. No layer ends in ice, as before. The deepest column
+# on this seed has now gone 16 -> 11 -> 10 across three roster changes; that is
+# a reported number and this script asserts NO mechanism for it.
 history_site=5508
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
@@ -257,22 +268,22 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and ten\n' "$history_site"
     printf 'kobold steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 625 down to the present. Every one of the eleven\n'
+    printf 'last, from the year 1100 down to the present. Every one of the nine\n'
     printf 'completed layers ended at the hands of other kobolds: seven fell to a\n'
-    printf 'rival band, and four were not evictions at all — the occupants had\n'
+    printf 'rival band, and two were not evictions at all — the occupants had\n'
     printf 'just taken better ground from a neighbour and carried the settlement\n'
     printf 'there, so the layer closes on a departure rather than a defeat. This\n'
     printf 'is a people with only itself to fight, contesting one rise in a\n'
     printf 'neighbourhood it had already filled.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
     printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
-    printf 'driven off one of four neighbouring clearings. Four of the twelve\n'
+    printf 'driven off one of five neighbouring clearings. Five of the ten\n'
     printf 'layers did not last a single year — founded and put to flight in the\n'
     printf 'same year they began, which is what the record looks like when refuge\n'
-    printf 'and contest are the same ground. The twelfth was founded in 1950 and\n'
-    printf 'stands yet, fifty years on: some thirteen souls, two huts and a\n'
+    printf 'and contest are the same ground. The tenth was founded in the year\n'
+    printf '1725 and stands yet, 275 years on: some 27 souls, two huts and a\n'
     printf 'granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
