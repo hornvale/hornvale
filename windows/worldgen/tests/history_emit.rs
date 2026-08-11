@@ -755,6 +755,39 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// key, and a campaign that needs either should widen the seed sweep — three
 /// seeds have now produced five different readings between them.
 ///
+/// **THE RADIATION, TASK 6 (C2d, 2026-08-10): the witness is BACK — 0/0/0 ->
+/// 1/0/1**, byte-identical to the vector The Range measured, after this
+/// campaign moved settlement placement twice more (the task-3 affinity relevel
+/// and the founder-collision cut).
+///
+/// This re-pin was flagged during the campaign's post-census sweep as a
+/// **candidate falsification** — "a null that went from *never moves* to
+/// *moves on two of three seeds*" — and that reading is **rejected here, with
+/// the reason stated rather than the number quietly bumped**, because it
+/// mistakes the previous measured value for the claim.
+///
+/// - The claim this test is named and frozen for is "*the material fourth key
+///   BARELY moves the stratigraphy*". Two restacking sites across three worlds
+///   of ~19k land cells each is "barely" by any reading, and the claim is if
+///   anything better served at 1/0/1 than at 0/0/0.
+/// - "Never moves" was never asserted. The paragraphs above record this
+///   quantity reading 0/0/1, 0/1/0, 0/0/0, 1/0/1 and 0/0/0 across five prior
+///   measurements — it has been 0, 1 and 2 in total, and this is the sixth
+///   reading and the third distinct value. A quantity that has oscillated
+///   through the same small range six times is not a null that stopped being
+///   null.
+/// - The DEGENERATE direction here is downward, not upward. This file already
+///   records 0/0/0 as the reading that "cannot tell the material fourth key
+///   from a dead one". Going 0 -> 2 restores the measurement's ability to
+///   discriminate; it does not remove it.
+///
+/// So this is a re-pin of a WITNESS, and the claim it witnesses is unmoved.
+/// What the six readings do say, and it is worth naming: a three-seed count
+/// that lands on 0, 1 or 2 is an existence claim near a threshold in the sense
+/// ratified decision 0097 describes, and any campaign that needs this quantity
+/// as evidence should widen the sweep rather than read three worlds — which is
+/// what the sibling paragraph above has been saying since The Range.
+///
 /// The loop now COLLECTS all three counts and asserts the vector, instead of
 /// asserting per seed inside it. The old shape stopped at the first difference,
 /// so a re-pin touching two seeds cost two full runs at ~5 s a world to
@@ -804,7 +837,7 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     }
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 0), (1000, 0)],
+        vec![(42u64, 1usize), (7, 0), (1000, 1)],
         "the per-seed order-change counts moved"
     );
 }

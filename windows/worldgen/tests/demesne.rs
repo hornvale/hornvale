@@ -548,20 +548,61 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // this claim should widen the seed sweep rather than read one seed's
     // ruler.
     //
-    // Asserted in the positive direction now, so the next movement is caught
-    // in whichever direction it comes.
-    assert!(
-        material_dominants.contains("rust-monster"),
-        "the pure-MINERAL specialist stopped clearing the dominance ruler again \
-         ({dominant_counts:?}). This has now flipped twice on roster changes with no \
-         mechanism change (1 -> 2 dominant cells at C2d); read this test's comment before \
-         flipping it a third time, and establish which productivity model is in play."
-    );
+    // ---- AND IT IS GONE AGAIN, AND THE ASSERTION IS WITHDRAWN UNDER 0097
+    // (The Radiation, C2d task 6, 2026-08-10). ----
+    //
+    // The instruction the paragraph above left — "read this test's comment
+    // before flipping it a third time, and establish which productivity model
+    // is in play" — is discharged here, both halves, and the conclusion is
+    // that this per-kind assertion should never have been in the gate.
+    //
+    // WHICH PRODUCTIVITY MODEL: still The Tense's, unchanged, and this time
+    // checked against the diff rather than recalled. Against this branch's
+    // merge-base with main, `domains/demography/` is untouched entirely and
+    // every hunk in `windows/worldgen/src/lib.rs` falls inside `mod tests`.
+    // `npp_temperature`, `mineral_supply_field`, `axis_supply` and
+    // `forage_supply_field` have not moved. The margin did not move because
+    // the physics moved — for the third campaign running.
+    //
+    // WHAT THE SEED SWEEP SAYS, which is the thing nobody had measured. Over
+    // seeds 0..=23 (`dominant_settlement_counts`, same ruler, same
+    // `MIN_SETTLEMENTS_FOR_DOMINANCE` of 2):
+    //
+    //   rust-monster clears the ruler on 18 of 24 seeds (75%)
+    //   counts range 0..16, median 4; seed 42's 1 sits in the bottom sixth
+    //   xorn holds ZERO dominant cells on 24 of 24 seeds
+    //
+    // So the claim "the pure-MINERAL specialist clears the dominance ruler" is
+    // TRUE of the world and FALSE of seed 42 about a quarter of the time. The
+    // three flips this comment records (1 -> 2 -> 1, across The Tense, C2d and
+    // C2d again) were never evidence about the mechanism; they are one world's
+    // draw wandering across a bar of 2 in a distribution whose median is 4.
+    //
+    // That is exactly the shape ratified decision 0097 names — an EXISTENCE
+    // CLAIM NEAR ITS THRESHOLD, carrying "a value pin's noise profile with an
+    // invariant's authority" — and 0097's rule is that such a claim does not
+    // belong in the commit gate at all, but is measured as a rate with a
+    // sampling bound. The per-kind assertion is therefore WITHDRAWN rather
+    // than flipped a fourth time. It is not relaxed and no threshold is
+    // moved: 18/24 is reported, not asserted, and the follow-up to measure it
+    // properly at census n is filed as `BIO-mineral-dominance-rate`.
+    //
+    // The STRUCTURAL claims are unaffected and still asserted above (the
+    // peopled roster, T2's dot product differentiating more dominants than
+    // baseline, the preregistered union floor). What is withdrawn is the
+    // per-kind prediction — for the third time, and this time with a stated
+    // rule for why it should not come back.
+    println!("rust-monster dominant cells at seed 42: {dominant_counts:?}");
+
+    // The xorn half STAYS asserted, and it is a different kind of claim: the
+    // same sweep measures xorn at ZERO dominant cells on 24 of 24 seeds, so it
+    // is not near any threshold and 0097's rule does not reach it. It was
+    // previously a seed-42 point claim with no measured basis; it now has one.
     assert!(
         !material_dominants.contains("xorn"),
         "xorn cleared the dominance ruler ({dominant_counts:?}) — it has held none since \
-         The Deep Realm sharpened rust-monster's curves and left xorn's flat; if this \
-         fires, that re-authoring is what to re-read."
+         The Deep Realm sharpened rust-monster's curves and left xorn's flat, and it holds \
+         none on any of seeds 0..=23; if this fires, that re-authoring is what to re-read."
     );
 }
 

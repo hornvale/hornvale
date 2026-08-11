@@ -4214,10 +4214,12 @@ mod tests {
     /// emic carries the `RevealedClaim` exoteric formula for the moons (folk
     /// capability loses `moon-count`, doctrine's boosted capability clears
     /// the threshold and keeps it) and a day explanation whose bound agent
-    /// is the doctrine's own measured deity, Voobo (re-pinned at Task 8b, The
+    /// is the doctrine's own measured deity, Vooboo (re-pinned at Task 8b, The
     /// Witness, as `Vooboo`; The Radiation re-places seed 1 and the same
-    /// belief's deity name redraws once more to `Voobo` — the belief, its
-    /// period and the day-match are unchanged, as at every prior redraw;
+    /// belief's deity name redrew to `Voobo` mid-campaign and back to
+    /// `Vooboo` at its close, one syllable each way as the draws moved under
+    /// two further placement changes — the belief, its period and the
+    /// day-match are unchanged, as at every prior redraw;
     /// The Witness; folk's own day explanation is agentless `PathJourney`,
     /// so this is genuinely a doctrine-only causal story, not an echo of
     /// folk's).
@@ -4266,11 +4268,24 @@ mod tests {
         // Corroborated independently by `worldgen::diachronic`'s LADDER_TABLE,
         // which measures all three at `Counted` with no prediction at this
         // seed — a culture with no organized cult cannot exceed Counted.
+        //
+        // The Radiation SECOND re-pin (C2d task 6, 2026-08-10): ELEVEN
+        // organized of the same fifteen placed. `desert-elf` joins the
+        // folk-only set, making it four: desert-dwarf, desert-elf, gnoll,
+        // sea-elf. This is the campaign's own later placement movement (the
+        // task-3 affinity relevel and the founder-collision cut, both after
+        // the re-pin above), not a new mechanism — the placed COUNT is
+        // unmoved at fifteen and only the organized/folk-only boundary shifted
+        // by one people. The same three corroborating readings move with it:
+        // `the_reckoning_renders_the_epoch_pair` loses the Beba's four
+        // priesthood lines, `reckoning_at_...` loses its one, and
+        // `diachronic::the_ladder_and_prophecy_laws` reads seed 1's
+        // desert-elf at `Counted` instead of `Predictive`. Four independent
+        // surfaces, one fact.
         assert_eq!(
             organized,
             vec![
                 "bugbear",
-                "desert-elf",
                 "drow",
                 "goblin",
                 "gully-dwarf",
@@ -4282,13 +4297,13 @@ mod tests {
                 "snow-elf",
                 "wood-elf",
             ],
-            "seed-1: twelve of the fifteen placed peoples are organized; \
-             desert-dwarf, gnoll and sea-elf are folk-only"
+            "seed-1: eleven of the fifteen placed peoples are organized; \
+             desert-dwarf, desert-elf, gnoll and sea-elf are folk-only"
         );
         assert_eq!(
             peoples.len(),
             15,
-            "seed-1: fifteen peoples are placed, twelve of them organized"
+            "seed-1: fifteen peoples are placed, eleven of them organized"
         );
 
         let goblin = vol
@@ -4311,8 +4326,8 @@ mod tests {
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Voobo strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Voobo: {:?}",
+                .contains(&"The day returns because Vooboo strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Vooboo: {:?}",
             doctrine.emic
         );
     }
@@ -5198,6 +5213,18 @@ mod tests {
         // pre-existing people's autonym, count and day is BYTE-IDENTICAL, so
         // the movement is confined to the six new arms plus sea-elf's missing
         // priesthood run.
+        //
+        // The Radiation SECOND re-pin (C2d task 6, 2026-08-10): ELEVEN
+        // organized of the same fifteen placed. Desert-elf (Beba) joins the
+        // folk-only set — its "Among the Beba" line stays and its three
+        // priesthood lines and its one crisis-margin line go, exactly the
+        // shape gnoll's loss took at The Range. Every other people's autonym,
+        // count and day is BYTE-IDENTICAL and the two group counts (6472
+        // lunar-witnessing, 4010 solar-only) do not move at all, so the whole
+        // diff is desert-elf's missing priesthood run: the reckoning
+        // ARITHMETIC did not move, only who has a priesthood to report it.
+        // The cause is this campaign's own later placement movement, not a new
+        // mechanism.
         let seed1 = render_volume(&generated(1));
         assert_eq!(
             seed1.reckoning[1].lines,
@@ -5208,9 +5235,6 @@ mod tests {
                 "The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Tngobpngap, the sky has darkened, now and again.".to_string(),
                 "Among the Beba, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Beba numbers the darkenings: 6472.".to_string(),
-                "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Beba's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Bobash, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Bobash numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
@@ -5254,15 +5278,14 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
                 "The Tetas's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
-            "seed 1: seven organized priesthoods of nine placed peoples (desert-dwarf and \
-             gnoll are folk-only); the lunar-witnessing group numbers 6472, the solar-only \
-             group 4010"
+            "seed 1: eleven organized priesthoods of fifteen placed peoples (desert-dwarf, \
+             desert-elf, gnoll and sea-elf are folk-only); the lunar-witnessing group \
+             numbers 6472, the solar-only group 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
                 "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Beba's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
@@ -5299,6 +5322,16 @@ mod tests {
         // line, exactly as it does at seed 1 — the biome-affinity row is the
         // cause at both seeds, and no other people's autonym, count or day
         // moved.
+        //
+        // The Radiation, task 6 (C2d, 2026-08-10): FIFTEEN placed, NINE
+        // organized — desert-dwarf, desert-elf, gnoll, high-elf, sea-elf and
+        // snow-elf are folk-only, matching `LADDER_TABLE`'s six seed-2
+        // `Counted` rows exactly. Unlike seeds 1 and 3, seed 2 moves in BOTH
+        // directions: drow and hobgoblin GAIN priesthood runs here while three
+        // elves lose theirs. Both witnessed counts (81 lunar-witnessing, 49
+        // solar-only) and the taught day are unchanged, so nothing about the
+        // reckoning arithmetic moved — only which flagships cleared the caste
+        // threshold. Re-measured wholesale from the live volume.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5309,10 +5342,10 @@ mod tests {
                 "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Wazwo, the sky has darkened, now and again.".to_string(),
                 "Among the Feqboq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Feqboq numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Feqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Kxoqboq, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kxoqboq numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Loshjo, the sky has darkened, now and again.".to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
@@ -5323,14 +5356,14 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
                 "The Njanjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Xeqmoq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Xeqmoq numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Xeqmoq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Wanwo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Wanwo numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
                 "The Wanwo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Webwee, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Webwee numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Foetjee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Foetjee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -5341,9 +5374,6 @@ mod tests {
                 "The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Xeqmu, the sky has darkened, now and again.".to_string(),
                 "Among the Kopnop, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kopnop numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kopnop's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Keqnguq, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Keqnguq numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -5354,14 +5384,13 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Feqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Kopnop's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Keqnguq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
             ]
@@ -5416,6 +5445,17 @@ mod tests {
         // same cascade on seed 7, where gnoll's own count does not move at all
         // and bugbear triples). Every autonym, day number and count here is
         // otherwise unchanged.
+        //
+        // The Radiation, task 6 (C2d, 2026-08-10): FIFTEEN placed, NINE
+        // organized — desert-dwarf, desert-elf, gnoll, hobgoblin, kobold and
+        // sea-elf are folk-only, matching `LADDER_TABLE`'s six seed-3
+        // `Counted` rows exactly. Hobgoblin appears in that list for the
+        // second time in three re-pins and kobold for the first since The
+        // Delvers, which is the "moves both ways" reading this file and
+        // `diachronic.rs` have both carried since The Tense — the caste
+        // threshold is crossed in both directions by a placement change, and
+        // it is not monotone in roster size. Both counts (53/32) and the
+        // taught day are unchanged again.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
@@ -5426,10 +5466,10 @@ mod tests {
                 "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Baovoo, the sky has darkened, now and again.".to_string(),
                 "Among the Maaxmue, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Maaxmue numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Maaxmue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Fnaaxnoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Fnaaxnoo numbers the darkenings: 53.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Fnaaxnoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Pjojpjoj, the sky has darkened, now and again.".to_string(),
                 "Among the Zhooqsa, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Zhooqsa numbers the darkenings: 32.".to_string(),
@@ -5448,17 +5488,11 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zhooqsha numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jaojjao numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Fzaakzue, the sky has darkened, now and again.".to_string(),
                 "Among the Pnaaknoo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Pnaaknoo numbers the darkenings: 53.".to_string(),
@@ -5469,22 +5503,20 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Daaxdue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
-            "seed 3: five organized priesthoods of nine placed peoples (desert-dwarf, \
-             gnoll, hobgoblin and kobold are folk-only); the lunar-witnessing group \
-             numbers 53, the solar-only group 32"
+            "seed 3: nine organized priesthoods of fifteen placed peoples (desert-dwarf, \
+             desert-elf, gnoll, hobgoblin, kobold and sea-elf are folk-only); the \
+             lunar-witnessing group numbers 53, the solar-only group 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
                 "In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Maaxmue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Fnaaxnoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Pnaaknoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Daaxdue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
@@ -5539,7 +5571,6 @@ mod tests {
             day100.margin,
             vec![
                 "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Beba's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
@@ -5781,7 +5812,13 @@ mod tests {
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 "The moons cross because Tleavese strides the sky, slowly.".to_string(),
-                "The day returns because Voobo strides the sky, briskly.".to_string(),
+                // The Radiation, task 6: `Voobo` -> `Vooboo`. One syllable on
+                // a generated deity name, redrawn because the campaign's later
+                // placement movement moved the draws; the belief, its period
+                // and the day-match are unchanged. Pinned in two places (here
+                // and `worldgen::doctrine::the_high_god_takes_the_day_where_
+                // compatible`) — move both together.
+                "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());

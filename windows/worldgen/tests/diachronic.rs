@@ -292,6 +292,52 @@ type Row = (
 // competitors redistribute scale, and flagships land on either side of the
 // caste threshold. Nothing here was chosen; the table is the printed output
 // of a scaffold run against the live worlds.
+//
+// THE RADIATION, TASK 6 re-measure (C2d, 2026-08-10). The row COUNT is
+// unchanged at 75 — no people was added or removed — and SEVENTEEN of the 75
+// rows moved, because the campaign moved settlement placement twice more
+// after the re-measure above (the task-3 affinity relevel and the
+// founder-collision cut). Re-measured wholesale by the same scaffold, not
+// hand-edited.
+//
+//   seed 1 desert-elf    Predictive -> Counted    (6472 witnessed, unchanged)
+//   seed 2 desert-elf    Predictive -> Counted    (81)
+//   seed 2 high-elf      Predictive -> Counted    (81)
+//   seed 2 snow-elf      Predictive -> Counted    (81)
+//   seed 2 drow          Counted    -> Predictive (81)
+//   seed 2 hobgoblin     Counted    -> Predictive (49)
+//   seed 3 desert-elf    Predictive -> Counted    (53)
+//   seed 3 hobgoblin     Predictive -> Counted    (32)
+//   seed 3 kobold        Predictive -> Counted    (53)
+//   seed 3 drow          Counted    -> Predictive (53)
+//   seed 4 desert-dwarf  Predictive -> Counted    (3785)
+//   seed 4 desert-elf    Predictive -> Counted    (3785)
+//   seed 4 gully-dwarf   Predictive -> Counted    (2067)
+//   seed 4 snow-elf      Predictive -> Counted    (3785)
+//   seed 5 desert-elf    Predictive -> Counted    (500)
+//   seed 5 snow-elf      Predictive -> Counted    (500)
+//   seed 5 drow          Counted    -> Predictive (500)
+//
+// **Every witnessed COUNT held, for the sixth re-measure running.** Thirteen
+// losses and four gains: two-way again, so the threshold reading stands. Two
+// things worth naming rather than leaving implicit. (1) The movement is
+// concentrated in the peoples this campaign ADDED — eleven of the seventeen
+// are elves — which is what a roster's newest and smallest flagship
+// communities sitting nearest the caste threshold looks like; they are the
+// rows most easily pushed across it by a placement change, in either
+// direction. (2) `desert-elf` loses its priesthood on ALL FIVE seeds, the
+// same all-seed shape gnoll showed at The Range, and it is the same kind
+// whose stronghold-concentration prediction this campaign carries as a
+// preregistered miss. That is a coincidence of subject, not a measurement:
+// nothing here decomposes WHY desert-elf's flagships are small, and this
+// table asserts no mechanism for it.
+//
+// The seed-1 row is independently corroborated on three other surfaces —
+// `book::seed_1_doctrine_sections_render` (organized 12 -> 11),
+// `book::the_reckoning_renders_the_epoch_pair` (the Beba's priesthood run
+// disappears) and `book::reckoning_at_...` (its one crisis-margin line goes).
+// Four surfaces, one fact: a culture with no organized cult cannot exceed
+// Counted, which is this test's own structural law.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -313,9 +359,9 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "desert-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
     ),
     (
         1,
@@ -433,17 +479,17 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "desert-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         81,
-        None,
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -473,9 +519,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -489,9 +535,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         49,
-        None,
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -521,9 +567,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -553,17 +599,17 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "desert-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         53,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -609,9 +655,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         32,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -625,9 +671,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -665,17 +711,17 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "desert-dwarf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
         "desert-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -705,9 +751,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "gully-dwarf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         2067,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -761,9 +807,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -793,17 +839,17 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "desert-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -881,9 +927,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,

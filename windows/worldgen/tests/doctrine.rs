@@ -494,8 +494,15 @@ fn the_high_god_takes_the_day_where_compatible() {
             // settlement placement, which redraws the name this belief's
             // deity carries. `underlying`, `schema`, `lexeme` and `manner`
             // are again byte-identical; the belief, its period and the
-            // day-match are unchanged.
-            agent: Some("Voobo".to_string()),
+            // day-match are unchanged. THE RADIATION, TASK 6: Voobo ->
+            // Vooboo, back to the string The Witness pinned, because the
+            // campaign moved placement twice more after the re-pin above
+            // (the task-3 affinity relevel and the founder-collision cut).
+            // A name returning to a value it held two redraws ago is a
+            // COINCIDENCE of a short generated string, not evidence that
+            // anything reverted: the world between the two readings is not
+            // the same world (seed 1's placement moved twice in between).
+            agent: Some("Vooboo".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Brisk,
         }
@@ -511,7 +518,7 @@ fn the_high_god_takes_the_day_where_compatible() {
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
         .expect("a day-matched cyclic belief must exist at seed 1 goblin");
     assert_eq!(
-        folk_bound.0.deity, "Voobo",
+        folk_bound.0.deity, "Vooboo",
         "doctrine's binding must be the SAME belief folk's own period-match rule finds"
     );
 }

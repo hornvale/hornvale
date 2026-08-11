@@ -543,8 +543,25 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
 /// `spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it` for why a
 /// quantity that has moved four times under changes that never touched
 /// kobold's own niche is a threshold being crossed rather than a trend.
+///
+/// The Radiation re-pin (C2d task 6, 2026-08-10), and it is a RENAME as well
+/// as a re-pin: `hill` splits 3/15 Root, 12/15 Gap — gnoll (`Pzoav`), kobold
+/// (`Roxoro`) and wood-elf (`Nguznguu`). The previous pin, taken earlier in
+/// this same campaign, read 0/15 Root, and the test name asserted that shape
+/// in words; three rooters contradict it outright, so the name moves with the
+/// value rather than being left to say something false. **Kobold keeps the
+/// BYTE-IDENTICAL `Roxoro`** it has carried since The Generalist, across
+/// three roster epochs and four placement changes — the entry set moved, the
+/// phonology did not, which is the same separation `valley` records for the
+/// same word.
+///
+/// Read alongside the paragraph above: this concept has now moved SIX times
+/// under changes that never touched kobold's own niche, and it has held every
+/// shape from 0 rooters to 3. That is a threshold sitting near the middle of
+/// the roster's elevation spread, not a trend in anybody's niche, and this
+/// test asserts no mechanism for it.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
+fn hill_is_a_root_at_seed_42_for_gnoll_kobold_and_wood_elf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -571,27 +588,31 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
             "desert-dwarf",
             "desert-elf",
             "drow",
-            "gnoll",
             "goblin",
             "gully-dwarf",
             "high-elf",
             "hill-dwarf",
             "hobgoblin",
             "human",
-            "kobold",
             "sea-elf",
             "snow-elf",
-            "wood-elf",
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 NO placed people roots 'hill' — kobold, the authored highland \
-         specialist and its sole rooter before The Range, lost the exposure \
-         when the competitive cascade re-placed it (it GAINED settlements, 34 \
-         -> 43, and still lost this one)"
+        vec![
+            ("gnoll", "Pzoav".to_string()),
+            ("kobold", "Roxoro".to_string()),
+            ("wood-elf", "Nguznguu".to_string()),
+        ],
+        "at seed 42 three placed peoples root 'hill': kobold, the authored \
+         highland specialist, is back with the byte-identical `Roxoro` it \
+         carried before The Range took it away; gnoll and wood-elf are new \
+         rooters with new words. The partition is asserted EXACTLY, in both \
+         directions and by name, for the reason F11 gave — the exception is \
+         not noise to route around, it is what the elevation-maximum gate is \
+         FOR"
     );
 }
 
@@ -635,8 +656,18 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
 /// keeps the BYTE-IDENTICAL `Raxoroo` it carried before The Delvers — the
 /// entry set moved, the phonology did not. See the file-level note on
 /// `spring_is_a_gap_at_seed_42_except_for_goblin_which_roots_it`.
+///
+/// The Radiation re-pin (C2d task 6, 2026-08-10), a RENAME as well as a
+/// re-pin: `valley` is back to the 1-rooter shape it has carried through most
+/// of its history, and the sole rooter is SEA-ELF (`Nadbbeus`). Kobold loses
+/// it — the mirror of `hill`, where kobold regains a root at the same regen,
+/// and the two concepts have now swapped shapes in opposite directions twice.
+/// The previous name said "for goblin and kobold" and the previous pin
+/// already said neither of those alone; neither survives, so the name moves
+/// with the value. Sea-elf's `Nadbbeus` is BYTE-IDENTICAL to the word it
+/// carried at the previous pin.
 #[test]
-fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
+fn valley_is_a_root_at_seed_42_for_sea_elf_alone() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -666,6 +697,7 @@ fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
             "hill-dwarf",
             "hobgoblin",
             "human",
+            "kobold",
             "snow-elf",
             "wood-elf",
         ],
@@ -673,15 +705,13 @@ fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
     );
     assert_eq!(
         rooted,
-        vec![
-            ("kobold", "Raxoroo".to_string()),
-            ("sea-elf", "Nadbbeus".to_string()),
-        ],
-        "at seed 42 two peoples root 'valley'; kobold's `Raxoroo` is STILL \
-         byte-identical to the word it carried before The Delvers and before \
-         The Radiation — three roster epochs and the string has not moved — \
-         while goblin, a rooter until this campaign, now gaps it and sea-elf, \
-         a kind that did not exist before it, roots it with a new word"
+        vec![("sea-elf", "Nadbbeus".to_string())],
+        "at seed 42 exactly one people roots 'valley': sea-elf, with the \
+         BYTE-IDENTICAL `Nadbbeus` it took at the previous pin. Kobold, which \
+         held `Raxoroo` here unchanged across three roster epochs, now gaps \
+         `valley` and roots `hill` instead — the two concepts trade, which is \
+         what a flagship crossing between a local elevation minimum and a \
+         local maximum looks like from the lexicon's side"
     );
 }
 
@@ -761,8 +791,23 @@ fn valley_is_a_root_at_seed_42_for_goblin_and_kobold() {
 /// `Qaneo`, `Rorora`), and the two that regained it did so with the exact
 /// strings they carried when they last held it. A romanization has still
 /// never moved for a reason other than its own cohort changing.
+///
+/// The Radiation re-pin (C2d task 6, 2026-08-10): `marsh` splits 7/15 Root,
+/// 8/15 Gap — wider still, and the name moves from "six peoples" to "seven".
+/// It is STILL exactly one dwarf, but not the same one: hill-dwarf loses it
+/// and DESERT-dwarf gains it as `Dag`. Human loses it; snow-elf (`Boosh`) and
+/// wood-elf (`Gee`) gain it.
+///
+/// **Case (2) a fourth time, verified rather than assumed.** Every people that
+/// rooted `marsh` at the previous pin and still does kept a BYTE-IDENTICAL
+/// root — gnoll's `Gshoovzngaov`, hobgoblin's `Qaneo`, kobold's `Rorora`,
+/// drow's `Goo`. A romanization has still never moved for a reason other than
+/// its own cohort changing; entries appear and disappear where exposure does.
+/// Note desert-dwarf's `Dag` against hill-dwarf's departed `Tag`: two words in
+/// the same family's cohort, one letter apart and independently drawn — near
+/// neighbours, not a renamed pin.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_six_peoples_including_one_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -782,32 +827,32 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_including_one_dwarf() {
         gapped,
         vec![
             "bugbear",
-            "desert-dwarf",
             "desert-elf",
             "goblin",
             "gully-dwarf",
             "high-elf",
+            "hill-dwarf",
+            "human",
             "sea-elf",
-            "snow-elf",
-            "wood-elf",
         ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
+            ("desert-dwarf", "Dag".to_string()),
             ("drow", "Goo".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
-            ("hill-dwarf", "Tag".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
-            ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
+            ("snow-elf", "Boosh".to_string()),
+            ("wood-elf", "Gee".to_string()),
         ],
-        "at seed 42 six of FIFTEEN placed peoples root 'marsh' — still six, \
-         and still exactly one dwarf, though the membership turned over: \
-         bugbear and goblin lost it, gnoll regained it, drow (a kind that did \
-         not exist last campaign) gained it. hill-dwarf's `Tag`, hobgoblin's \
-         `Qaneo`, human's `Meashngeo` and kobold's `Rorora` are all \
+        "at seed 42 seven of FIFTEEN placed peoples root 'marsh' — one more \
+         than the last pin, and still exactly one dwarf, but a DIFFERENT one: \
+         hill-dwarf lost it and desert-dwarf gained it as `Dag`. Human lost \
+         it; snow-elf and wood-elf gained it. gnoll's `Gshoovzngaov`, \
+         hobgoblin's `Qaneo`, kobold's `Rorora` and drow's `Goo` are all \
          byte-identical to the words they carried before"
     );
 }

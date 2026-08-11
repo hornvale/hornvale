@@ -9095,7 +9095,17 @@ mod tests {
         // 6 x 8 - a peopled pantheon's size is a function of what that people
         // observes from where it ends up living, so it varies by kind; the
         // guard is the direction, not an arity.
-        assert_eq!(count("name-gloss"), 317);
+        //
+        // THE RADIATION, TASK 6 (C2d, 2026-08-10): 317 -> 355, and the three
+        // counts above are UNCHANGED at 145. The roster did not move again —
+        // placement did, twice (the task-3 affinity relevel and the
+        // founder-collision cut), which is exactly the split this file keeps
+        // on two lines: the pantheon is a function of the peopled ROSTER and
+        // the gloss count of settlement VOLUME, and only the second of those
+        // changed. Seed 42 now carries 230 settlements and 13,389 ledger
+        // facts. Same reading as The Range's, one campaign later and thirty-
+        // eight glosses larger.
+        assert_eq!(count("name-gloss"), 355);
     }
 
     #[test]
