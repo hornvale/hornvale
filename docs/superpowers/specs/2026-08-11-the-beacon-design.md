@@ -41,11 +41,8 @@ Nathan's authorization because publishing to a public repository is
 irreversible. The repository became **private** on 2026-08-11, and Nathan
 authorized GitHub as the transport in this campaign's G1.
 
-Decision **0125** (GitHub Actions is retired) records the same visibility change
-from the CI side and is *in flight rather than landed*: at the time this spec was
-written its record existed only as staged, uncommitted work in `main`'s checkout,
-so it is deliberately cited without a link and gets one at the first absorption.
-Two of its consequences bear on this campaign. It **removes CI from the argument
+Decision [0125](../../decisions/0125-github-actions-is-retired.md) (GitHub Actions is retired) records the same visibility change
+from the CI side. Two of its consequences bear on this campaign. It **removes CI from the argument
 for `origin`** — D12c's "reach across accounts and to CI" loses its second half,
 leaving cross-account reach as the whole case. And it makes the local gate the
 only gate, which raises rather than lowers the value of a medium that carries
