@@ -525,6 +525,15 @@ impl ChannelNetwork {
     /// ordinary neighbouring river if it is not; only this can tell them
     /// apart. Strict `<` keeps the first (lowest-index) line on an exact tie,
     /// which is the whole of the tie-break contract.
+    ///
+    /// That tie-break is the one place where build order still reaches the
+    /// **sign**: on an exact `|d|` tie between two lines the lowest index
+    /// wins, and the winner's downstream direction is what
+    /// [`ChannelNetwork::bank_signed_distance`] then reports. The set of
+    /// positions equidistant from two lines has measure zero and this is
+    /// correct as it stands — but the campaign's rule is that the line index
+    /// is never serialized while the sign it selects will be, so it is worth
+    /// knowing the two are not entirely independent.
     /// type-audit: pending(wave-1: position), pending(wave-1: return)
     pub fn nearest_line(&self, position: [f64; 3]) -> Option<(usize, f64)> {
         let mut best = f64::INFINITY;
@@ -565,6 +574,46 @@ impl ChannelNetwork {
     /// `channel_properties.rs::the_polyline_vertex_order_is_downstream_order`
     /// asserts it on a real world. A change that collected a run upstream
     /// would swap every bank in the world and break nothing else.
+    ///
+    /// # WHERE THE SIGN MEANS ANYTHING
+    ///
+    /// **Only within the banded neighbourhood of the winning segment.** This
+    /// is a signed distance to the nearest of many *open arcs*, and such a
+    /// field changes sign on surfaces that have nothing to do with water:
+    /// beyond a line's endpoint, and along the bisector between two arcs that
+    /// meet. A sign change out there is a fact about the polyline soup, not
+    /// about a river. **Read the sign only where `|d|` is small — inside the
+    /// [`band_edges`] of the reading, or equivalently where
+    /// [`ChannelNetwork::transverse_at`] does not answer `Dry`.** A consumer
+    /// that treats *any* sign change as a crossing (a ford, say) will report
+    /// one on dry ground at every river source and every river mouth.
+    ///
+    /// Measured on seed 42 at `Geosphere::new(5)` — 13 lines, 46 vertices, 26
+    /// endpoints, 1 confluence, terrace edge (the outermost band) 2.0e-4 rad
+    /// at its narrowest, 3.5e-3 median, **6.9e-3 at its widest**:
+    ///
+    /// - A 720-point circle of radius **1.0e-2 rad** about each endpoint gives
+    ///   54 sign changes. 29 are real crossings, inside the bands. **25 sit at
+    ///   `|d|` = 1.0e-2 — the circle's own radius** — one for each of the 25
+    ///   true endpoints (the 26th is a confluence mouth). That is farther from
+    ///   water than any band edge in the world.
+    /// - The locus is a *ray*, not a place: probing at radius 5.0e-3 finds the
+    ///   same 54 flips with `|d|` ≤ 5.0e-3. It extends outward without bound,
+    ///   so **no fixed distance threshold makes it go away** — only asking
+    ///   whether the reading is inside its own bands does.
+    /// - The confluence gives 4 flips at radius 1.0e-2: three real ones at
+    ///   `|d|` ≈ 3e-5, and **one on the bisector between two branches at
+    ///   `|d|` = 4.8e-3** (2.4e-3 at radius 5.0e-3 — it too scales with the
+    ///   probe). Note that 4.8e-3 is *inside* the widest terrace edge, so a
+    ///   band test only excludes it if the band is a narrow one. Gate a
+    ///   crossing on `Channel`/`Bank`, not on the terrace.
+    ///
+    /// None of this is introduced here — it is inherent to the quantity, and
+    /// [`ChannelNetwork::transverse_at`] has always had it. It is written down
+    /// here because this is the method whose *name* promises the sign means
+    /// something, and stage 2 stores that sign in a document.
+    ///
+    /// # Implementation note
     ///
     /// Delegating to `nearest_line` rather than re-deriving the sign from the
     /// winning segment is deliberate: the tie-break between equidistant

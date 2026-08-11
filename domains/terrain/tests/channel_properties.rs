@@ -135,6 +135,12 @@ fn provider_transverse_at_agrees_with_the_network() {
 /// whether the offset is what put you against it.
 const MIRROR_OFFSET: f64 = 2.0e-3;
 
+/// The seeds `the_polyline_vertex_order_is_downstream_order` sweeps. 42, 7 and
+/// 1234 are the campaign's usual trio; 99 and 2024 widen it to five so the
+/// downstream-order claim is a property rather than one world's anecdote. All
+/// five build in ~0.2 s each at level 5.
+const SWEEP_SEEDS: [u64; 5] = [42, 7, 1234, 99, 2024];
+
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
@@ -246,20 +252,58 @@ fn sample_positions_near_channels(net: &ChannelNetwork, wanted: usize) -> Vec<[f
 /// collecting a run upstream, and the only symptom would be every bank in the
 /// world silently swapping sides.
 ///
-/// **This test is the ONLY one that sees that mutation, and it was measured.**
-/// Inserting `run.reverse()` before the `run.len() >= 2` check in
-/// `ChannelNetwork::build` — which reverses every river in every world — leaves
+/// **It is the only one of the three bank-convention tests that sees that
+/// mutation, and it was measured.** Inserting `run.reverse()` before the
+/// `run.len() >= 2` check in `ChannelNetwork::build` — which reverses every
+/// river in every world — leaves
 /// `the_bank_sign_is_left_of_downstream_and_mirrors_exactly` **green**, because
 /// that test reads its own travel direction off `points[j] -> points[j + 1]`
 /// and the reversal flips both sides of the comparison together. It leaves
 /// `the_bank_sign_is_identical_across_two_builds` green too, since both builds
-/// reverse alike. Only this assertion reddens. A test that derives its
-/// reference from the thing under test cannot detect that thing being
-/// reoriented; the reference has to come from outside, and here it comes from
-/// `TectonicGlobe.downhill`.
+/// reverse alike. A test that derives its reference from the thing under test
+/// cannot detect that thing being reoriented; the reference has to come from
+/// outside, and here it comes from `TectonicGlobe.downhill`.
+///
+/// **This is not, however, the only guard in the suite that reddens on it** —
+/// do not read the paragraph above as licence to delete the others. At
+/// whole-suite scope the same mutation also reddens
+/// `channel.rs::a_built_network_is_well_formed_and_deterministic` (which
+/// asserts the downhill chain as part of well-formedness),
+/// `channel.rs::a_tributary_mouth_sits_exactly_on_the_trunk_vertex_it_joins`
+/// (the confluence repair reads run order) and
+/// `channel_golden.rs::the_channel_network_is_pinned`. What this test adds is
+/// the *statement of intent*: those three redden because a reversed run breaks
+/// something else they happened to depend on, whereas this one names vertex
+/// order as the referent the bank sign is defined against.
+///
+/// **Swept across five seeds, not one.** This is the only test whose reference
+/// comes from outside the object under test, so it carries the durability
+/// guarantee by itself, and one seed makes that an anecdote about one world's
+/// drainage rather than a property of `build`. The five together contribute
+/// **347** segments (seed 42: 33, seed 7: 104, seed 1234: 50, seed 99: 88,
+/// seed 2024: 72), which is also the answer to "would this notice if a seed
+/// stopped producing rivers" — the per-seed floor below is what notices.
 #[test]
 fn the_polyline_vertex_order_is_downstream_order() {
-    let terrain = build_seed_42_terrain();
+    let mut total = 0usize;
+    for seed in SWEEP_SEEDS {
+        let geo = Geosphere::new(TEST_LEVEL);
+        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo, outcome);
+        total += downstream_segments_of(&terrain, seed);
+    }
+    assert!(
+        total >= 300,
+        "only {total} channel segments across {} seeds (measured 347) — the assertion ran on \
+         far less than the population it was calibrated against",
+        SWEEP_SEEDS.len()
+    );
+}
+
+/// Assert every segment of one world's network is a downhill step, and return
+/// how many there were. Split out so the sweep's per-seed floor and its total
+/// are both stated where they are checked.
+fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     let net = terrain.channels();
     let globe = terrain.globe();
     let mut edges = 0usize;
@@ -267,25 +311,29 @@ fn the_polyline_vertex_order_is_downstream_order() {
         assert_eq!(
             cells.len(),
             net.polylines[i].points.len(),
-            "run cells are not parallel to polyline points"
+            "seed {seed}: run cells are not parallel to polyline points"
         );
         for pair in cells.windows(2) {
             assert_eq!(
                 *globe.downhill.get(pair[0]),
                 Some(pair[1]),
-                "line {i}: {:?} -> {:?} is not a downhill step, so vertex order is not \
-                 downstream order and the bank sign has no meaning",
+                "seed {seed}, line {i}: {:?} -> {:?} is not a downhill step, so vertex order \
+                 is not downstream order and the bank sign has no meaning",
                 pair[0],
                 pair[1]
             );
             edges += 1;
         }
     }
+    // Per-seed, so a single world going riverless is visible rather than being
+    // absorbed by the other four in the total. The measured minimum across the
+    // sweep is seed 42's 33.
     assert!(
-        edges >= 20,
-        "only {edges} channel segments on seed 42 at level {TEST_LEVEL} — too few for this \
+        edges >= 25,
+        "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} — too few for this \
          assertion to have run on anything"
     );
+    edges
 }
 
 /// The sign means left-of-downstream, and two points mirrored across a
