@@ -1,0 +1,7 @@
+{
+  "name": "the-ford-probe",
+  "description": "The Ford (spec §10): the preregistered readout of the channel network's three axes — H1 channel-land-fraction (interval [0.005%, 0.5%] of land AREA), H2 channel-connectivity (floor 0.95), H4 channel-band-monotonicity (floor 0.99). A probe, not a census: 64 consecutive worlds (seeds 0-63) under default pins, read on the three channel metrics only, so the hypotheses are scored against a population rather than against the single world CHANNEL_WIDTH_COEFF was calibrated on. Seed 42 — the calibration world named in the spec — is inside the window, and so is seed 7, the second world Task 4's probes measured. Deliberately named outside the census convention; nothing it writes is committed.",
+  "seeds": { "from": 0, "count": 64 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": ["channel-land-fraction", "channel-connectivity", "channel-band-monotonicity"]
+}

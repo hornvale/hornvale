@@ -94,18 +94,29 @@ impl Transverse {
 /// type-audit: bare-ok(ratio)
 pub const CHANNEL_WIDTH_EXPONENT: f64 = 0.5;
 
-/// The `a` of `w = a·Q^b`, as a fraction of the local cell spacing —
-/// **a placeholder, calibrated in Task 6 against a preregistered interval,
-/// not here.**
+/// The `a` of `w = a·Q^b`, as a fraction of the local cell spacing.
 ///
-/// Its provenance is an Earth analogy rather than a measurement: the
-/// canonical level-6 cell spans ~120 km, a large terrestrial river is ~1 km
-/// wide, and the largest drainages this world produces are of order a few
-/// hundred, so `a ≈ 5e-4` puts a mainstem at roughly 0.7% of a cell edge.
-/// Deliberately not tuned against any number measured in Task 4 — a single
-/// calibration in the open beats several quiet ones.
+/// **Calibrated once, in the open** (spec §10, H1): fitted so the widest
+/// channel seed 42 actually produces on the canonical `Geosphere::new(6)` is
+/// **1/100 of a canonical cell edge** across. That world's largest drainage
+/// is 146, and at the pre-fit placeholder `5.0e-4` its widest channel was
+/// 1.1127e-4 rad — 1/169.7 of the 0.018886-rad canonical edge. Scaling to hit
+/// 1/100 exactly wants 8.4864e-4; `8.5e-4` is that rounded to two figures and
+/// lands the widest channel at 1/99.8 of an edge, which is inside the width
+/// law's own precision.
+///
+/// The cell edge very nearly cancels out of the fit (`w = a·edge·√Q` against
+/// a target of `edge/100` gives `a ≈ 1/(100·√Q_max)` = 8.276e-4); the 2.5%
+/// residual is the local spacing at the widest vertex differing from the
+/// world-mean edge. So this coefficient is essentially a statement about the
+/// largest discharge the terrain produces, not about the grid.
+///
+/// **The exponent, not this, is the dynamic-range lever.** Real drainage
+/// spans 15 to ~180, so `√Q` spans only ~3.5× across the whole
+/// headwater-to-mainstem range; widening the range by moving `a` is not
+/// possible — it scales every channel equally.
 /// type-audit: bare-ok(ratio)
-pub const CHANNEL_WIDTH_COEFF: f64 = 5.0e-4;
+pub const CHANNEL_WIDTH_COEFF: f64 = 8.5e-4;
 
 /// The `k` of the bank border `w/2 + k·w`: the wetted margin either side of
 /// the water is half a channel width.
@@ -281,6 +292,18 @@ pub struct ChannelNetwork {
     /// vertex's discharge, gradient and cell spacing. Parallel to
     /// `polylines`: `band_edges[i].len() == polylines[i].points.len()`.
     pub band_edges: Vec<Vec<[f64; 4]>>,
+    /// Per polyline, per vertex, the cell that vertex was placed from — the
+    /// downhill run the polyline is a rendering of. Parallel to `polylines`:
+    /// `run_cells[i].len() == polylines[i].points.len()`.
+    ///
+    /// Published because a polyline's *geometry* alone cannot say where two
+    /// lines meet: a tributary's mouth vertex is anchored at its cell's base
+    /// position while the trunk's vertex for **that same cell** is meander-
+    /// displaced, so the two lines are joined in the graph and separated in
+    /// space. Without the cell correspondence a consumer can only guess at
+    /// that join from proximity, and a longitudinal-connectivity measurement
+    /// would be measuring its own guess.
+    pub run_cells: Vec<Vec<CellId>>,
     /// The meander displacement field. Derived once and reused for every
     /// vertex (the `Fbm` derive-once pattern), and — the point of it being a
     /// field at all — **continuous in position**, so a walker crosses a band
@@ -398,6 +421,7 @@ impl ChannelNetwork {
         ChannelNetwork {
             polylines,
             band_edges: all_edges,
+            run_cells: runs,
             meander,
         }
     }
@@ -415,17 +439,7 @@ impl ChannelNetwork {
     /// and gradient do.
     /// type-audit: pending(wave-1: position), pending(wave-1: return)
     pub fn transverse_at(&self, position: [f64; 3]) -> (Transverse, f64) {
-        let mut best = f64::INFINITY;
-        let mut best_line: Option<usize> = None;
-        for (i, line) in self.polylines.iter().enumerate() {
-            let d = line.signed_distance(position);
-            // Strict `<` keeps the FIRST (lowest-index) line on an exact tie.
-            if d.abs() < best.abs() {
-                best = d;
-                best_line = Some(i);
-            }
-        }
-        let Some(line_index) = best_line else {
+        let Some((line_index, best)) = self.nearest_line(position) else {
             return (Transverse::Dry, f64::INFINITY);
         };
         let points = &self.polylines[line_index].points;
@@ -440,6 +454,31 @@ impl ChannelNetwork {
         }
         let edges = self.band_edges[line_index][nearest];
         (Transverse::from_band(band(best, &edges)), best)
+    }
+
+    /// The polyline [`ChannelNetwork::transverse_at`] would answer from at
+    /// `position`, and the **signed** distance to it — `None` on an empty
+    /// network.
+    ///
+    /// Published because *which* channel a reading came from is not
+    /// recoverable from `(Transverse, f64)` alone, and a consumer that
+    /// re-derives it re-derives the tie-break too. A transverse profile that
+    /// re-enters `Channel` is a defect if it is the SAME channel and an
+    /// ordinary neighbouring river if it is not; only this can tell them
+    /// apart. Strict `<` keeps the first (lowest-index) line on an exact tie,
+    /// which is the whole of the tie-break contract.
+    /// type-audit: pending(wave-1: position), pending(wave-1: return)
+    pub fn nearest_line(&self, position: [f64; 3]) -> Option<(usize, f64)> {
+        let mut best = f64::INFINITY;
+        let mut best_line: Option<usize> = None;
+        for (i, line) in self.polylines.iter().enumerate() {
+            let d = line.signed_distance(position);
+            if d.abs() < best.abs() {
+                best = d;
+                best_line = Some(i);
+            }
+        }
+        best_line.map(|i| (i, best))
     }
 
     /// The widest channel half-width anywhere in the network, radians
@@ -505,11 +544,13 @@ mod tests {
 
     /// A hand-built two-segment polyline on the equator, with band edges from
     /// the REAL laws at a deliberately coarse synthetic cell (spacing 1.0
-    /// rad). The coarseness is the point: it puts every band wider than the
-    /// 0.0005-rad step the monotone sweep walks, so the sweep can actually
-    /// observe all five. Drainage 36 is an ordinary river on the canonical
-    /// grid (p50 ≈ 23, p90 ≈ 55) and slope 0 is a flat, fully unconfined
-    /// reach. Resulting edges: [0.0015, 0.003, 0.063, 0.0945] rad.
+    /// rad). The coarseness is the point: it puts every band wide enough for
+    /// the monotone sweep to resolve. Drainage 36 is an ordinary river on the
+    /// canonical grid (p50 ≈ 23, p90 ≈ 55) and slope 0 is a flat, fully
+    /// unconfined reach. Resulting edges at the calibrated coefficient:
+    /// [0.00255, 0.00765, 0.10965, 0.164475] rad — 1.7x the pre-calibration
+    /// figures, which is why the sweep below takes its reach from
+    /// [`band_edges`] rather than from a fixed step count.
     fn test_network() -> ChannelNetwork {
         let points = vec![
             unit(1.0, 0.0, 0.0),
@@ -519,6 +560,7 @@ mod tests {
         let edges = band_edges(36.0, 0.0, 1.0);
         ChannelNetwork {
             band_edges: vec![vec![edges; points.len()]],
+            run_cells: vec![(0..points.len() as u32).map(CellId).collect()],
             polylines: vec![SphericalPolyline { points }],
             meander: SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
@@ -558,10 +600,14 @@ mod tests {
     /// The campaign's whole claim, as an assertion: the largest river the
     /// canonical grid ACTUALLY PRODUCES is a small FRACTION of a cell edge,
     /// not a cell. Stated over the measured discharge ceiling (~180), not a
-    /// hypothetical one — at the placeholder coefficient the widest real
-    /// channel is 1.27e-4 rad against a bound of 1.89e-3, i.e. ~14.9x of
-    /// headroom, so Task 6's calibration has room to move without reddening
-    /// this for a reason it is not about.
+    /// hypothetical one. Task 6's calibration moved the coefficient 1.70x
+    /// (5.0e-4 -> 8.5e-4) and this test stayed green with room to spare: the
+    /// widest channel at the ceiling discharge is now 2.154e-4 rad against a
+    /// bound of 1.889e-3, i.e. ~8.8x of headroom, down from ~14.9x. The
+    /// campaign's claim is a bound, not the calibration target — the target
+    /// (1/100 of an edge, at seed 42's REAL max discharge of 146) sits an
+    /// order of magnitude inside it, which is why fitting one did not
+    /// threaten the other.
     #[test]
     fn the_widest_channel_is_far_narrower_than_a_cell() {
         let cell_edge = CANONICAL_CELL_EDGE;
@@ -599,13 +645,25 @@ mod tests {
     /// Bands are ordered outward and exhaustive: walking away from the
     /// centreline you pass every band in order and never re-enter one.
     /// This is H4 (spec 10) as a unit test on the band function alone.
+    ///
+    /// The sweep's REACH is derived from the outermost band edge rather than
+    /// hardcoded. It used to be 200 fixed 0.0005-rad steps, and Task 6's
+    /// calibration (`CHANNEL_WIDTH_COEFF` 5.0e-4 -> 8.5e-4) scaled the bands
+    /// past the end of it — the sweep stopped inside the floodplain and the
+    /// anti-vacuity assertion below caught it. Deriving the reach fixes that
+    /// for the right reason: the claim being tested is about ORDER, not about
+    /// any particular width, so the sweep should follow the widths wherever
+    /// calibration puts them instead of having to be re-tuned alongside.
     #[test]
     fn bands_are_monotone_outward() {
         let net = test_network();
         let start = net.polylines[0].points[0];
+        let steps = 400;
+        // Past the terrace, so `Dry` is reachable at any calibration.
+        let reach = net.band_edges[0][0][3] * 1.2;
         let mut seen = Vec::new();
-        for i in 0..200 {
-            let off = f64::from(i) * 0.0005;
+        for i in 0..=steps {
+            let off = reach * f64::from(i) / f64::from(steps);
             let p = offset_perpendicular(&net.polylines[0], start, off);
             let (t, _) = net.transverse_at(p);
             if seen.last() != Some(&t) {
@@ -780,6 +838,7 @@ mod tests {
                 band_edges(200.0, 0.0, 1.0),
                 band_edges(4_000.0, 0.0, 1.0),
             ]],
+            run_cells: vec![(0..points.len() as u32).map(CellId).collect()],
             polylines: vec![SphericalPolyline { points }],
             meander: SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
@@ -834,6 +893,24 @@ mod tests {
             !net.polylines.is_empty(),
             "no channels on a level-5 seed 42"
         );
+        assert_eq!(net.run_cells.len(), net.polylines.len());
+        for (line, cells) in net.polylines.iter().zip(&net.run_cells) {
+            assert_eq!(
+                line.points.len(),
+                cells.len(),
+                "run cells parallel to points"
+            );
+            // A run follows `downhill`, so consecutive cells are adjacent and
+            // strictly descending — the property that makes a polyline a
+            // rendering OF that run rather than an unrelated line beside it.
+            for pair in cells.windows(2) {
+                assert_eq!(
+                    *outcome.globe.downhill.get(pair[0]),
+                    Some(pair[1]),
+                    "run cells are not a downhill chain"
+                );
+            }
+        }
         for (line, edges) in net.polylines.iter().zip(&net.band_edges) {
             assert!(line.points.len() >= 2, "a one-point polyline is not a line");
             assert_eq!(line.points.len(), edges.len(), "edges parallel to points");
