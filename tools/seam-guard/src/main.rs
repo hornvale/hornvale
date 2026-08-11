@@ -9,8 +9,13 @@ usage: seam-guard <command>
 
   list    Print every registered seam and its call sites. Cheap; no build.
   report  Write the roster as markdown to stdout (a committed artifact).
-  run     Neutralise each call site, run its scoped tests, report verdicts.
-          Requires a clean working tree.
+  run [SEAM] [FILE]
+          Neutralise each call site, run its scoped tests, report verdicts.
+          Requires a clean working tree. SEAM narrows to one seam by name and
+          FILE to call sites whose path contains that substring — a full run
+          costs one scoped test run PER SITE, so iterating on a single seam
+          without the filter is expensive. `list` shows the site count before
+          you pay for it.
 
 `run` exits non-zero on UNGUARDED (a survivor nobody declared), STALE-DECL
 (a declared survivor a test now catches — delete the declaration) and
@@ -42,9 +47,32 @@ fn main() {
                 std::process::exit(2);
             }
 
-            let total: usize = registered.iter().map(|r| r.sites.len()).sum();
+            // Optional narrowing, so iterating on one seam does not cost a
+            // scoped test run for every site in the roster.
+            let seam_filter = args.get(1).map(String::as_str);
+            let file_filter = args.get(2).map(String::as_str);
+            let registered: Vec<_> = registered
+                .iter()
+                .filter(|r| seam_filter.is_none_or(|f| r.seam.name.contains(f)))
+                .map(|r| {
+                    let sites = r
+                        .sites
+                        .iter()
+                        .filter(|s| {
+                            file_filter.is_none_or(|f| s.file.display().to_string().contains(f))
+                        })
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    (r.seam.clone(), sites)
+                })
+                .collect();
+
+            let total: usize = registered.iter().map(|r| r.1.len()).sum();
             if total == 0 {
-                println!("seam-guard: no registered seams with call sites — nothing to probe.");
+                println!(
+                    "seam-guard: nothing to probe (no registered seams with call sites, \
+                     or the filters matched none)."
+                );
                 return;
             }
             eprintln!("seam-guard: probing {total} call site(s); each runs a scoped test set.");
@@ -52,10 +80,10 @@ fn main() {
             let mut reds = Vec::new();
             let mut greens = 0usize;
 
-            for r in &registered {
-                for site in &r.sites {
-                    let report = probe(&r.seam, site);
-                    let verdict = verdict_of(&r.seam, &report.outcome);
+            for (seam, sites) in &registered {
+                for site in sites {
+                    let report = probe(seam, site);
+                    let verdict = verdict_of(seam, &report.outcome);
                     let detail = match &verdict {
                         Verdict::KnownUnguarded(why) => format!("  ({why})"),
                         Verdict::DeclarationStale(why) => format!("  (declared: {why})"),
