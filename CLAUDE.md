@@ -251,16 +251,40 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs in
 # **gate-full, not the commit gate** — each call site costs a full scoped
-# test run. A mutation that fails to COMPILE reports INVALID, never a kill:
-# a red from a compile error says nothing about whether an assertion would
-# have caught the behaviour.
+# test run, so `list` (which shows the site count without building) is worth
+# reading first: an experimental tag on `quantize` listed 36 sites, and a
+# broadly-called function makes a poor seam.
+#
+# THE VERDICT IS THREE-VALUED, and the reason matters. A gate that failed on
+# the mere EXISTENCE of an unguarded seam would go red on day one and stay
+# red, training everyone to ignore it; a report-only check that never fails
+# is ignored just as fast. So it fails on NOVELTY instead — the same ratchet
+# `tropes check`, the timings baseline and type-audit's `waiver(...)` use.
+# A seam may declare itself unguarded, WITH A REASON (reasonless is a parse
+# error), by adding to the tag paragraph:
+#     ///             expect(survives: <why it is not fixed yet>)
+#   UNGUARDED   survivor nobody declared             -> RED
+#   KNOWN       declared survivor, still surviving   -> green, printed loudly
+#   STALE-DECL  declared survivor a test now CATCHES -> RED, delete the clause
+#   INVALID     mutation did not compile             -> RED (never a kill: a
+#               red from a compile error says nothing about whether an
+#               assertion would have caught the behaviour)
+# STALE-DECL is what keeps a declaration honest — a one-directional
+# acknowledgement can only ever be satisfied, so it rots; this one fails the
+# moment someone adds the missing assertion.
+#
+# THE TAG IS ONE PARAGRAPH, ending at the first blank `///` line. Prose below
+# it is not parsed — learned the hard way: a sentence saying "delete the
+# `expect(survives: …)` clause" silently replaced the real reason with an
+# ellipsis, and the roster still looked plausible.
 make seam-guard-list   # the roster and its call sites (cheap, no build)
-make seam-guard        # neutralise each site, run scoped tests, report survivors
-# EXPECTED RED TODAY: `conquest_victim` SURVIVES at both call sites — the
-# finding the tool was built to make. It decides whether a settlement's
-# ending reads as conquest or climate migration, and its only guard is the
-# gallery drift ritual `make gate` never runs. Closing it means adding an
-# almanac assertion, not silencing the tool.
+make seam-guard        # neutralise each site, run scoped tests, report verdicts
+cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # narrow
+# `conquest_victim` is currently DECLARED unguarded (only the gallery drift
+# check pins it, and `make gate` never runs that). gate-full is green; the
+# finding stays visible in docs/audits/seam-guard-roster.md, a committed,
+# drift-checked artifact whose job is to keep declarations under review
+# pressure rather than buried in a doc comment.
 
 # The digest — the project's own fact ledger, also OUTSIDE the workspace (The
 # Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
