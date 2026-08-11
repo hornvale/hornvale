@@ -328,20 +328,29 @@ pub struct ChannelNetwork {
 /// [`ChannelNetwork::bank_reading`] selected, all of it, from a single
 /// vertex selection.
 ///
-/// The three fields travel together because they are *one* answer to "which
+/// The four fields travel together because they are *one* answer to "which
 /// reach applies here". Splitting them across separate queries is the defect
 /// this type exists to prevent: each query would re-run the winning-line
 /// tie-break and the nearest-vertex scan, and would then agree with the
 /// others only by luck.
 ///
-/// **`cell` is an in-process handle, not a document field.** It names the
-/// canonical grid cell the winning vertex was placed from, so a caller can
-/// read that reach's discharge (`GeneratedTerrain::drainage_at`) without
-/// searching for the vertex a second time. Like the polyline index — which
-/// this deliberately does *not* carry — it is build-order-adjacent identity
-/// and has no business in a serialized document; the durable things here are
-/// the signed distance and the edges.
-/// type-audit: pending(wave-1: signed_distance), pending(wave-1: band_edges)
+/// **`cell` and `line` are in-process handles, not document fields.** `cell`
+/// names the canonical grid cell the winning vertex was placed from, so a
+/// caller can read that reach's discharge (`GeneratedTerrain::drainage_at`)
+/// without searching for the vertex a second time; `line` names the polyline
+/// the reading is *about*, so a caller holding two readings can tell whether
+/// they concern the same channel. Both are build-order-adjacent identity and
+/// **neither may ever be serialized**; the durable things here are the signed
+/// distance and the edges.
+///
+/// An earlier draft carried `cell` and withheld `line`, on the grounds that
+/// the polyline index is build order. So is `cell`, and the argument for
+/// publishing one is the argument for publishing the other — the rule the
+/// campaign actually holds is *never serialize either*, which omission does
+/// not enforce. What omission did instead was push a consumer comparing two
+/// readings into re-running [`ChannelNetwork::nearest_line`] itself, which is
+/// the duplicate-selection defect this type exists to prevent.
+/// type-audit: pending(wave-1: signed_distance), pending(wave-1: band_edges), bare-ok(index: line)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BankReading {
     /// Angular distance to the nearest channel in radians, **positive on the
@@ -356,6 +365,11 @@ pub struct BankReading {
     /// The canonical grid cell that vertex was placed from — the reach whose
     /// discharge and gradient produced `band_edges`.
     pub cell: CellId,
+    /// The winning polyline's index in [`ChannelNetwork::polylines`] — the
+    /// same index [`ChannelNetwork::nearest_line`] reports. An in-process
+    /// handle, **never serialized**: two readings are about the same channel
+    /// only if this agrees, and nothing else in the reading can say so.
+    pub line: usize,
 }
 
 impl ChannelNetwork {
@@ -569,7 +583,11 @@ impl ChannelNetwork {
     /// consumer asking whether a channel can be forded needs that reach's
     /// **discharge** as well as its width, and a second nearest-vertex search
     /// to find it would be a second chance to answer about a different reach
-    /// than the bands describe.
+    /// than the bands describe. [`BankReading::line`] is here for the same
+    /// reason once more: a consumer comparing *two* readings — the shape every
+    /// crossing query has — must be able to ask whether they are about the
+    /// same channel, and a second `nearest_line` call to find out would be the
+    /// duplicate selection this method exists to remove.
     /// type-audit: pending(wave-1: position)
     pub fn bank_reading(&self, position: [f64; 3]) -> Option<BankReading> {
         let (line_index, signed) = self.nearest_line(position)?;
@@ -587,6 +605,7 @@ impl ChannelNetwork {
             signed_distance: signed,
             band_edges: self.band_edges[line_index][nearest],
             cell: self.run_cells[line_index][nearest],
+            line: line_index,
         })
     }
 

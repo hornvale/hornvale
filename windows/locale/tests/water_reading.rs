@@ -154,6 +154,78 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     );
 }
 
+/// Spec §5.2's deliverable: **the ordinal is a function over a room**, and it
+/// is callable. `windows/locale` publishes it as
+/// `LocaleContext::transverse_of`, which is what makes "the ordinal is
+/// recovered by a function anyone can call" a statement about the shipped
+/// surface rather than about the terrain domain's `transverse_at`, a method
+/// over a *position* on a *different* crate.
+///
+/// **The reference lives outside the function: the serialized document.** For
+/// every room in the committed fixture, banding the document's own
+/// `channel_distance` against its own `channel_bands` must give what
+/// `transverse_of` returns, and `transverse_of`'s distance must quantize to
+/// the one the document carries.
+///
+/// Checking against the engine's `transverse_at` instead would prove nothing:
+/// both go through the single `bank_reading` selection, which is precisely the
+/// property §5.2's function is *required* to have, so they agree by
+/// construction. The document is reached by a different call (`describe`) and
+/// emitted at eight significant digits rather than full precision, and it is
+/// what a consumer actually holds — so agreement there is the claim worth
+/// making.
+#[test]
+fn the_ordinal_is_recoverable_as_a_function_over_a_room() {
+    let world = world();
+    let ctx = LocaleContext::build(&world).unwrap();
+    let mut checked = 0usize;
+    let mut seen: Vec<Transverse> = Vec::new();
+    for line in FIXTURE.lines() {
+        let room = room_of(line);
+        let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+        let doc: Value = serde_json::from_str(&serde_json::to_string(&loc).unwrap()).unwrap();
+        let (Some(d), Some(edges)) = (
+            doc["channel_distance"].as_f64(),
+            doc["channel_bands"].as_array().map(|a| {
+                a.iter()
+                    .map(|x| x.as_f64().expect("band edge is a number"))
+                    .collect::<Vec<f64>>()
+            }),
+        ) else {
+            continue;
+        };
+        let from_document = Transverse::from_band(hornvale_kernel::band(d, &edges));
+        let (from_function, distance) = ctx
+            .transverse_of(&room)
+            .expect("seed 42's channel network is not empty");
+        assert_eq!(
+            from_function, from_document,
+            "room {room:?}: the function says {from_function:?} but the document's own numbers \
+             (d={d:?}, edges={edges:?}) band to {from_document:?}"
+        );
+        assert_eq!(
+            hornvale_kernel::quantize(distance),
+            d,
+            "room {room:?}: the function's distance {distance:?} is not the one the document \
+             emits, so it is not the same reading"
+        );
+        if !seen.contains(&from_function) {
+            seen.push(from_function);
+        }
+        checked += 1;
+    }
+    assert!(
+        checked >= 100,
+        "only {checked} rooms carried a reading; sweep too thin"
+    );
+    // Anti-vacuity: a function that returned one band everywhere would agree
+    // with a document that did the same. The committed fixture spans all five.
+    assert!(
+        seen.len() >= 3,
+        "the sweep reached only {seen:?}; it no longer exercises the banding"
+    );
+}
+
 /// The pair is one reading, not two. The distance and the edges must come from
 /// the same query — if a room's edges were selected independently of the line
 /// its distance was measured to, this is where it shows.
@@ -613,16 +685,35 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   positive control that exercises it at a depth where it does bind.
 /// - **The conjunction is not the fraction.** The clauses hold on 95.0% of
 ///   transects (324 of 341) while 33.7% are Fordable and only 123 transects
-///   have any crossing at all; the gap is the crossing gate itself — the sign
-///   change and §5.3's requirement that a room stand inside its own bank edge —
-///   not §8's criterion. Where the channel is wider than every step available,
-///   both rooms sit on one bank and the verdict is `NotACrossing` rather than
-///   `Impassable`: the geometry refuses before the criterion is consulted.
+///   have any crossing at all; the gap is the crossing gate itself — the
+///   same-channel clause, the sign change, and §5.3's requirement that a room
+///   stand inside its own bank edge — not §8's criterion. Where the channel is
+///   wider than every step available, both rooms sit on one bank and the
+///   verdict is `NotACrossing` rather than `Impassable`: the geometry refuses
+///   before the criterion is consulted.
+/// - **Two different rivers are a small but real part of the population.** Of
+///   the 171 step pairs whose signs differ at walk depth, **5 are cross-line**
+///   — the two readings were selected against different polylines, so the two
+///   signs are in different frames and nothing has been crossed — and **all 5
+///   also stand inside a bank edge**, i.e. every one of them was admitted as a
+///   crossing before `crossing_between` gained its same-channel clause. The
+///   printed counts above are read from the network, not from the gate.
 /// - **Measured, at walk depth: 115 Fordable, 8 Impassable, 218 NotACrossing of
-///   341 — a fraction of 0.3372.** The step sweep: 0.2229 one level up (a
+///   341 — a fraction of 0.3372.** The step sweep: 0.2170 one level up (a
 ///   longer step reaches further but puts the walker's rooms outside the bank
-///   band), 0.3372 at walk depth, 0.3959 one level down, 0.1026 two, 0.0000
+///   band), 0.3372 at walk depth, 0.3900 one level down, 0.1026 two, 0.0000
 ///   three — by then no step spans the water.
+///
+///   **The same-channel clause moved the sweep and not the headline.** Adding
+///   it left walk depth exactly where it was (115/8/218, 0.3372) because none
+///   of the 5 cross-line pairs was the *deciding* step for its transect — each
+///   of those transects reached the same verdict through a same-line step
+///   anyway. One level up it moved 0.2229 → **0.2170** (76 → 74 Fordable) and
+///   one level down 0.3959 → **0.3900** (135 → 133); depths two and three
+///   below were unchanged. This is a **correction, not a tuning**: it *adds* a
+///   constraint (the two readings must be of the same river), which is the
+///   test that separates a correction from a rescue, and it was adopted before
+///   its effect on the fraction was known.
 ///
 /// # H2-4 IS NOT RESOLVED, AND THE ASSERTION BELOW IS NOT A CONFIRMATION
 ///
@@ -640,6 +731,14 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///    [0.10, 0.70]**, i.e. a *falsifying* reading, not merely a thin one;
 /// 3. the transect was rebuilt around three mesh steps per vertex — **adopted
 ///    directly after that falsifying reading** — giving the **0.3372** above.
+///
+/// A fourth change landed in the pre-merge fix wave, and it is deliberately not
+/// in that list: `crossing_between` gained its same-channel clause. That is a
+/// repair to the **subject** — the gate was calling two different rivers one
+/// crossing — not a re-cut of the **instrument**, it *adds* a constraint rather
+/// than removing one, and it was adopted before its effect on the fraction was
+/// known. Its measured effect is in the attribution above (walk depth
+/// unchanged; the sweep moved at two depths).
 ///
 /// Every change was forced by a defect in the previous instrument rather than by
 /// the number it produced, each is disclosed, and the quantifier and expected
@@ -659,12 +758,16 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let ctx = LocaleContext::build(&world).unwrap();
     let (transects, drops, sampled) = network_transects(&ctx, 400);
 
+    let net = ctx.terrain().channels();
     let mut fordable = 0usize;
     let mut impassable = 0usize;
     let mut not_a_crossing = 0usize;
     let mut width_clause = 0usize;
     let mut drainage_clause = 0usize;
     let mut both_clauses = 0usize;
+    let mut sign_flip_pairs = 0usize;
+    let mut cross_line_pairs = 0usize;
+    let mut cross_line_admitted = 0usize;
     for t in &transects {
         let verdict = t.verdict(&ctx);
         // Symmetry, asserted here rather than in its own test so it is checked
@@ -676,6 +779,31 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
                 "crossing_between is not symmetric at {:?}/{step:?}",
                 t.home
             );
+            // How much of this population is TWO DIFFERENT RIVERS. Read from
+            // the network rather than from the gate, so the number is a
+            // reference the gate cannot influence: a pair whose signs differ
+            // but whose winning lines differ is not a crossing of anything —
+            // each sign is in its own river's frame — and `crossing_between`'s
+            // same-channel clause refuses it. The second count is the sharp
+            // one: cross-line pairs that ALSO clear the bank-edge clause are
+            // the pairs the gate would have called a crossing before that
+            // clause existed. Printed rather than asserted; these attribute
+            // the fraction, they do not define it.
+            if let (Some(ra), Some(rb)) = (
+                net.bank_reading(t.home.centroid()),
+                net.bank_reading(step.centroid()),
+            ) && ((ra.signed_distance > 0.0 && rb.signed_distance < 0.0)
+                || (ra.signed_distance < 0.0 && rb.signed_distance > 0.0))
+            {
+                sign_flip_pairs += 1;
+                if ra.line != rb.line {
+                    cross_line_pairs += 1;
+                    let interpretable = |r: &hornvale_terrain::channel::BankReading| {
+                        r.signed_distance.abs() < r.band_edges[1]
+                    };
+                    cross_line_admitted += usize::from(interpretable(&ra) || interpretable(&rb));
+                }
+            }
         }
         match verdict {
             Crossing::Fordable => fordable += 1,
@@ -707,7 +835,10 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
          fordable fraction         = {frac:.4}  (of |V'|)\n  \
          width clause  (2*b0<step) = {width_clause} ({:.4})\n  \
          drainage clause (Q<{WATERFALL_MIN_DRAINAGE}) = {drainage_clause} ({:.4})\n  \
-         conjunction               = {both_clauses} ({:.4})",
+         conjunction               = {both_clauses} ({:.4})\n  \
+         sign-flip step pairs      = {sign_flip_pairs}\n  \
+         of which CROSS-LINE       = {cross_line_pairs} ({cross_line_admitted} also inside a \
+         bank edge, i.e. admitted before the same-channel clause)",
         ctx.globe_level(),
         walk_depth(&ctx),
         room_edge(&transects[0].home),

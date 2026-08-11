@@ -19,9 +19,10 @@ use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{
-    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
+    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, band, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
+pub use hornvale_terrain::channel::Transverse;
 pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
@@ -863,20 +864,33 @@ impl LocaleContext {
     ///
     /// # What makes a crossing
     ///
-    /// **Both clauses, or it is not a crossing at all.**
+    /// **All three clauses, or it is not a crossing at all.**
     ///
-    /// 1. The two rooms' signed channel distances have **opposite signs** —
-    ///    one on the left bank facing downstream, one on the right.
-    /// 2. At least one of them stands **inside its own bank edge**
+    /// 1. The two rooms' readings are **of the same channel** — the same
+    ///    polyline won [`hornvale_terrain::channel::ChannelNetwork::nearest_line`]
+    ///    for both.
+    /// 2. Their signed channel distances have **opposite signs** — one on the
+    ///    left bank facing downstream, one on the right.
+    /// 3. At least one of them stands **inside its own bank edge**
     ///    (`|d| < channel_bands[1]`, i.e. reads `Channel` or `Bank`).
     ///
-    /// Clause 2 is not belt-and-braces, and dropping it was a real draft of
+    /// Clause 1 exists because the two readings are selected *independently*:
+    /// a room nearest river X and a room nearest river Y each get a sign in
+    /// that river's own frame, and the two frames have nothing to do with each
+    /// other. Left-of-X beside right-of-Y satisfies clause 2 while nothing has
+    /// been crossed, and [`hornvale_terrain::channel::BankReading`] would then
+    /// price the step against whichever reach happened to win. Confluences are
+    /// where such pairs concentrate. The line index is the only thing that can
+    /// tell them apart — which is why the reading carries it, as an in-process
+    /// handle that is **never serialized**.
+    ///
+    /// Clause 3 is not belt-and-braces, and dropping it was a real draft of
     /// this design. The signed distance is measured against many *open arcs*,
     /// so its sign also flips beyond every river's source and mouth and along
     /// the bisector between two arcs that meet — on dry ground, about the
     /// polyline soup rather than about water. On seed 42 at level 5 that is
     /// **25 spurious flips against 3 real crossings**. Two measured properties
-    /// of that locus decide the shape of clause 2:
+    /// of that locus decide the shape of clause 3:
     ///
     /// - **It is a ray, not a place.** Probing at radii 1.0e-2, 5.0e-3 and
     ///   3.1e-3 rad finds the same flips each time, at whatever `|d|` the probe
@@ -889,7 +903,7 @@ impl LocaleContext {
     ///
     /// # What makes it fordable (spec §8, a late freeze)
     ///
-    /// Of the readings that clause 2 made interpretable — the ones inside
+    /// Of the readings that clause 3 made interpretable — the ones inside
     /// their own bank edge — **every** one must satisfy both:
     ///
     /// - its channel's **full** width, twice `channel_bands[0]` (which is the
@@ -916,6 +930,13 @@ impl LocaleContext {
         ) else {
             return Crossing::NotACrossing;
         };
+        // Clause 1. The two readings were selected independently, so they may
+        // be about different rivers — in which case their signs live in
+        // different frames and comparing them is meaningless. Asked first
+        // because everything below reads the pair as one channel's geometry.
+        if ra.line != rb.line {
+            return Crossing::NotACrossing;
+        }
         // Written as two explicit comparisons rather than a product, so a
         // reading of exactly 0.0 (a room centroid on the centreline) is neither
         // side rather than silently taking the sign of a signed zero.
@@ -940,6 +961,44 @@ impl LocaleContext {
         } else {
             Crossing::Impassable
         }
+    }
+
+    /// The room's transverse ordinal and its signed channel distance — the
+    /// **function** half of this stage's keystone.
+    ///
+    /// The document stores the measured quantity (`channel_distance`) and the
+    /// legend for reading it (`channel_bands`); it deliberately does not store
+    /// a band, because a band is one consumer's classification. This is the
+    /// convenience that recovers the classification anyway, so that "the
+    /// ordinal is a function, not a field" names something callable rather
+    /// than something merely describable.
+    ///
+    /// It is a *convenience*, not a second opinion. The reading comes from the
+    /// same single [`hornvale_terrain::channel::ChannelNetwork::bank_reading`]
+    /// selection [`describe`](Self::describe) emits and
+    /// [`crossing_between`](Self::crossing_between) gates on, and the banding
+    /// is [`hornvale_kernel::band`] over that reading's own edges — the same
+    /// pair a consumer recomputes from the serialized document. A second
+    /// derivation here would be the duplicate-selection defect this stage
+    /// spent its review closing.
+    ///
+    /// Full precision, not quantized: this is a compute-path read, never a
+    /// serialization boundary. A consumer banding the *document* works from
+    /// eight significant digits and may therefore disagree with this within
+    /// quantization of a band edge — which is a fact about the emit boundary,
+    /// and `the_band_recomputes_from_the_stored_distance_and_edges` is where
+    /// it is checked.
+    ///
+    /// `None` only on a world whose channel network is empty — there is no
+    /// bank to be on, and `Dry` would be an answer about water rather than the
+    /// absence of any.
+    /// type-audit: pending(wave-1: return)
+    pub fn transverse_of(&self, addr: &RoomAddr) -> Option<(Transverse, f64)> {
+        let reading = self.terrain.channels().bank_reading(addr.centroid())?;
+        Some((
+            Transverse::from_band(band(reading.signed_distance, &reading.band_edges)),
+            reading.signed_distance,
+        ))
     }
 
     /// The room's PER-DAY temperature at `at`, °C — the diurnal+seasonal
