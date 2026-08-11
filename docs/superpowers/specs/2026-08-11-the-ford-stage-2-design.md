@@ -109,6 +109,25 @@ Fordability is a property of a **path**, never of a place — a ford is a sign
 change, which needs two positions. It lands as a function on `windows/locale`
 taking two rooms, not as a field on either.
 
+**A sign change alone is not a crossing, and an earlier draft of this section
+said it was.** Measured at Task 1's close: the sign flips on **dry land**
+wherever the nearest-arc field has a discontinuity that is not water. Sampling
+a 720-point circle of radius `1e-2` rad around each of seed 42 / level 5's 26
+polyline endpoints produced **26 spurious sign changes at `|d| ≈ 1.0e-2` rad**
+— maximally far from any water, since the terrace edge is `3.1e-3` — and the
+single confluence produced 3 real crossings at `|d| ≈ 0` plus **one spurious
+flip at `|d| = 4.8e-3`**. This is inherent to signed distance against several
+open arcs, not a defect introduced by the bank convention.
+
+Taken literally, the earlier wording would have reported a ford across dry
+ground at **every river source, every river mouth, and every confluence
+bisector**.
+
+**So a crossing requires both**: the sign differs **and** at least one of the
+two rooms is within the channel band (`|d|` inside `channel_bands[0]`). The
+sign is only interpretable inside the banded neighbourhood of the winning
+segment; outside it, a flip carries no hydrological meaning.
+
 ### 5.4 What this stage does not do
 
 - **No drinkability answer.** "Within a walk" is inexpressible: no length scale
@@ -133,9 +152,31 @@ taking two rooms, not as a field on either.
 
 Frozen before the code (decision 0016). Each states a floor and a ceiling.
 
-- **H2-1 — the sign is stable across builds.** Two builds of the same seed
-  agree on the left/right sign for **100%** of sampled rooms near a channel.
-  Anything below 100% means the referent is still build-ordered.
+- **H2-1 — the sign is a pure function of the seed.** Two builds of the same
+  seed agree on the left/right sign for **100%** of sampled rooms near a
+  channel.
+
+  **Correction, recorded at Task 1's close: an earlier draft of this clause
+  read "the sign is stable across builds… anything below 100% means the
+  referent is still build-ordered." That claim is not entailed by the test and
+  the hypothesis is blind to the failure §3 exists to prevent.** Both arms
+  build the same seed at the same commit, and `build` is already asserted
+  deterministic, so the two networks are structurally identical and *any* pure
+  function of them agrees bit-for-bit — there is no way for build order to
+  differ between the arms. Mutation confirms it: reversing every run in the
+  world (`run.reverse()` in `build`) leaves H2-1 **green**. What H2-1 actually
+  establishes is purity — no global state, no wall-clock, no iteration-order
+  nondeterminism — which is worth having and is not durability.
+
+  **The durability guarantee is carried instead by
+  `the_polyline_vertex_order_is_downstream_order`**, the only assertion whose
+  reference comes from outside the object under test (`TectonicGlobe.downhill`)
+  and the only one that reddens under the reversal mutation. Note what that
+  means structurally: the referent is guaranteed by **assertion rather than by
+  construction** — nothing prevents a future change to run construction from
+  reversing a run; a test catches it. That is the right engineering call (no
+  runtime cost, no duplicated geometry) but it should be stated plainly rather
+  than assumed away.
 - **H2-2 — appending is byte-clean.** A `locale/room` document is byte-identical
   to its pre-stage-2 form up to the first new key, on **100%** of sampled rooms.
   This is the no-epoch claim, asserted rather than assumed.
