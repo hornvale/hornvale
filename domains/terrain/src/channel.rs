@@ -297,12 +297,14 @@ pub struct ChannelNetwork {
     /// `run_cells[i].len() == polylines[i].points.len()`.
     ///
     /// Published because a polyline's *geometry* alone cannot say where two
-    /// lines meet: a tributary's mouth vertex is anchored at its cell's base
-    /// position while the trunk's vertex for **that same cell** is meander-
-    /// displaced, so the two lines are joined in the graph and separated in
-    /// space. Without the cell correspondence a consumer can only guess at
-    /// that join from proximity, and a longitudinal-connectivity measurement
-    /// would be measuring its own guess.
+    /// lines meet. Since the confluence repair a tributary's mouth vertex is
+    /// placed **exactly** on the trunk's vertex for the shared cell, so a
+    /// consumer could in principle recover the join by looking for coincident
+    /// points — but that is an inference from a float equality, and it cannot
+    /// tell a confluence from two lines that merely pass through the same
+    /// place. The cell correspondence states the topology outright, which is
+    /// what a longitudinal-connectivity measurement needs if it is not to be
+    /// measuring its own guess.
     pub run_cells: Vec<Vec<CellId>>,
     /// The meander displacement field. Derived once and reused for every
     /// vertex (the `Fbm` derive-once pattern), and — the point of it being a
@@ -319,6 +321,10 @@ impl ChannelNetwork {
     /// and following `downhill` to the sea, a terminal sink, or an
     /// already-claimed trunk. Runs of a single cell are dropped: one isolated
     /// river cell has no direction, and a one-point polyline is not a line.
+    ///
+    /// A final pass moves every **confluence mouth** onto the trunk vertex it
+    /// joins, so runs that meet in the drainage graph also meet in space; see
+    /// the comment on that pass for the measurement that made it necessary.
     ///
     /// `meander_seed` must already be the derived `streams::CHANNEL_MEANDER`
     /// leg (a caller holding the terrain-root seed derives it itself, the
@@ -391,7 +397,9 @@ impl ChannelNetwork {
                 edges.push(band_edges(*globe.drainage.get(c), slope, spacing));
                 if i == 0 || i + 1 == base.len() {
                     // A source and a mouth are anchored: the head must stay in
-                    // its own cell and the mouth must stay on the coast.
+                    // its own cell and the mouth must stay on the coast. A
+                    // mouth that is a CONFLUENCE rather than a coast is moved
+                    // onto its trunk by the pass below.
                     points.push(base[i]);
                     continue;
                 }
@@ -416,6 +424,45 @@ impl ChannelNetwork {
             }
             polylines.push(SphericalPolyline { points });
             all_edges.push(edges);
+        }
+
+        // THE CONFLUENCE REPAIR. A tributary's mouth sits on a cell the TRUNK
+        // carries as an interior vertex, so the anchoring rule above would
+        // leave the tributary's copy at the cell's undisplaced position while
+        // the trunk's copy is meander-displaced. The two runs are then joined
+        // in the drainage graph and separated in space — measured at a median
+        // 4.5 channel half-widths on seed 42, which put a walker out of the
+        // water at 12 of 15 joins and is what falsified the campaign's
+        // longitudinal-connectivity prediction (spec 10, H2). Placing the
+        // mouth on the trunk's own vertex makes the two lines meet exactly.
+        //
+        // `owner[c]` is the (line, vertex) of the run that CLAIMED `c` and
+        // continued past it, never one that merely terminates on it. That
+        // distinction is the whole of confluence topology, and it makes the
+        // map unambiguous: once a cell is claimed only the claiming run walks
+        // on, so a cell is a non-final vertex of at most one run. A mouth
+        // whose cell no run continues from is a REAL mouth — the sea or a
+        // terminal sink — and stays anchored where it is.
+        //
+        // Order-independent by construction: only final vertices are moved and
+        // only non-final vertices are read, so no relocation can be the source
+        // of another.
+        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+        for (i, run) in runs.iter().enumerate() {
+            for (j, &c) in run.iter().enumerate() {
+                if j + 1 < run.len() {
+                    owner[c.0 as usize] = Some((i, j));
+                }
+            }
+        }
+        for i in 0..polylines.len() {
+            let last = polylines[i].points.len() - 1;
+            let Some((trunk, vertex)) = owner[runs[i][last].0 as usize] else {
+                continue;
+            };
+            if trunk != i {
+                polylines[i].points[last] = polylines[trunk].points[vertex];
+            }
         }
 
         ChannelNetwork {
@@ -868,6 +915,56 @@ mod tests {
             net.transverse_at(at_head).0,
             Transverse::Channel,
             "the head read the mainstem's width — geometry is not per-vertex"
+        );
+    }
+
+    /// THE CONFLUENCE REPAIR, as a property. Where a run ends on a cell some
+    /// other run continues past, the two polylines must meet **exactly** —
+    /// not merely nearby. Before the repair the tributary's mouth sat at the
+    /// cell's undisplaced position and the trunk's copy was meander-displaced,
+    /// a median 4.5 channel half-widths apart, which is what falsified H2.
+    ///
+    /// Exact equality is the right assertion because the repair is an
+    /// assignment, not an approximation: a tolerance would pass for a network
+    /// that merely brought the two ends close, which is the state this repair
+    /// replaces. The count assertion is the anti-vacuity half — a world with
+    /// no confluences would satisfy the loop by having nothing to check, and
+    /// so would a build that stopped emitting tributaries.
+    #[test]
+    fn a_tributary_mouth_sits_exactly_on_the_trunk_vertex_it_joins() {
+        let geo = Geosphere::new(5);
+        let outcome =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        let net = ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
+        // The same owner map `build` uses, rebuilt from the published
+        // `run_cells` rather than from anything private.
+        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+        for (i, run) in net.run_cells.iter().enumerate() {
+            for (j, &c) in run.iter().enumerate() {
+                if j + 1 < run.len() {
+                    owner[c.0 as usize] = Some((i, j));
+                }
+            }
+        }
+        let mut joins = 0usize;
+        for (i, cells) in net.run_cells.iter().enumerate() {
+            let last = cells.len() - 1;
+            let Some((trunk, vertex)) = owner[cells[last].0 as usize] else {
+                continue;
+            };
+            if trunk == i {
+                continue;
+            }
+            joins += 1;
+            assert_eq!(
+                net.polylines[i].points[last], net.polylines[trunk].points[vertex],
+                "tributary {i} does not meet trunk {trunk} at cell {:?}",
+                cells[last]
+            );
+        }
+        assert!(
+            joins > 0,
+            "no confluences on this world — the assertion above is vacuous"
         );
     }
 

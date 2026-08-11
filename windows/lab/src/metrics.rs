@@ -3295,11 +3295,17 @@ pub fn registry() -> Vec<Metric> {
                   that reach the sea or a terminal sink without ever leaving \
                   the `channel` band. Preregistered floor 0.95: a river you \
                   fall out of is not a river. Travelling along a run is \
-                  in-channel by construction, so this measures the JOINS, \
-                  where a tributary's anchored mouth and the trunk's \
-                  meander-displaced vertex for the same cell are separated in \
-                  space though joined in the drainage graph. Absent on a \
-                  world with no channels",
+                  in-channel by construction, so this measures the JOINS. It \
+                  first read 0.862-0.953 (falsified; 4 of 64 probe worlds \
+                  cleared the floor), which diagnosed an anchoring asymmetry: \
+                  a tributary's mouth sat at its cell's undisplaced position \
+                  while the trunk's vertex for that same cell was \
+                  meander-displaced. Since the confluence repair the two \
+                  coincide exactly, so a join is a zero-length crossing and \
+                  this column reads 1.0 BY CONSTRUCTION — what still \
+                  discriminates is only whether a walk falls out of the \
+                  network at a run no polyline owns. Absent on a world with \
+                  no channels",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
             },
@@ -3342,13 +3348,15 @@ pub fn registry() -> Vec<Metric> {
                   nearest-line truncation switched off — the whole sweep \
                   scored, including the stretch where a different river has \
                   become the nearest and its band legitimately falls back to \
-                  `channel`. Published because the truncation rule is \
-                  load-bearing rather than cosmetic (most worlds read below \
-                  H4's 0.99 floor without it), and a rule that changes the \
-                  verdict must have the reading it changes on the record \
-                  beside it rather than in a campaign report. The gap between \
-                  the two columns is the world's count of transects that left \
-                  their own valley, NOT a count of band-edge speckle. Absent \
+                  `channel`. Published because a rule that changes a verdict \
+                  must have the reading it changes on the record beside it \
+                  rather than in a campaign report — and the record now runs \
+                  both ways. Before the confluence repair the truncation was \
+                  load-bearing (47 of 64 probe worlds read below H4's 0.99 \
+                  floor un-truncated, and none reached 1.0); with tributary \
+                  mouths placed on their trunks all 64 read 1.0 on BOTH \
+                  columns. That is the measured evidence that the gap was the \
+                  confluence separation and never band-edge speckle. Absent \
                   on a world with no channels",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
@@ -6857,12 +6865,23 @@ fn lab_run_owner(
 /// on an acyclic downhill graph). Travelling ALONG a polyline is in-channel
 /// by construction — every point of a segment is at distance zero from the
 /// line it belongs to — so the entire content of this measurement is at the
-/// **joins**, which is exactly where the design puts its risk: a tributary's
-/// mouth vertex is anchored at its cell's undisplaced position while the
-/// trunk's vertex for that same cell is meander-displaced, so two runs that
-/// are joined in the drainage graph are separated in space. The walk crosses
-/// that separation the only way a walker could, and reads the band along the
-/// way.
+/// **joins**, which is where the design put its risk: a tributary's mouth
+/// vertex was anchored at its cell's undisplaced position while the trunk's
+/// vertex for that same cell was meander-displaced, so two runs joined in the
+/// drainage graph were separated in space. The walk crosses that separation
+/// the only way a walker could, and reads the band along the way.
+///
+/// **Read this column knowing what the repair did to it.** The confluence
+/// repair (`ChannelNetwork::build`) places a tributary's mouth ON the trunk
+/// vertex it joins, so `from == to` exactly and the seven interpolated
+/// samples below all land on a point that is at distance zero from a
+/// polyline. The join check therefore cannot fail any more, and this metric's
+/// residual discriminating power is the `owner` lookup: a walk that reaches a
+/// river cell no polyline owns still falls out. Measured at level 6 after the
+/// repair: seed 42 has 15 joins across 144 walks and seed 7 has 52 across
+/// 295, all at exactly zero separation, and zero walks fall out on either. A
+/// column that reads 1.0 by construction is worth keeping as a regression
+/// tripwire on the repair, and worth no more than that.
 fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
     let net = terrain.channels();
     if net.polylines.is_empty() {
@@ -6968,8 +6987,17 @@ struct LabBandTransects {
 /// claim H4 actually asks about, derived rather than measured by hand, and it
 /// is what the readout observed on all 64 probe worlds.
 ///
-/// The truncation is load-bearing, not cosmetic, which is why the reading it
-/// changes ships as its own column instead of living in a campaign report.
+/// The truncation was load-bearing, not cosmetic, which is why the reading it
+/// changes ships as its own column instead of living in a campaign report —
+/// and that column is now the evidence for what the gap between the two
+/// actually was. Before the confluence repair, no probe world at all was
+/// clean un-truncated (min 0.9636, 47 of 64 below H4's floor); after it, all
+/// 64 read 1.0 on both columns. Two polylines that meet exactly cannot
+/// produce a takeover at which `|d|` falls, because the nearest-line switch
+/// happens where the two distances are equal; two polylines separated by 4.5
+/// channel half-widths can and did. So the violations the truncation was
+/// hiding were the SAME defect H2 measured, not the neighbouring rivers Task
+/// 6 attributed them to.
 fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option<LabBandTransects> {
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     if vertices == 0 {
