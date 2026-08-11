@@ -1064,3 +1064,91 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         );
     }
 }
+
+/// The numbered decision records in `docs/decisions/`, ascending.
+///
+/// Filenames are `NNNN-slug.md`; `README.md` and any other unnumbered file is
+/// skipped, using the same "numbered stem" shape as
+/// `decision_cites_in_sources_resolve`.
+fn decision_numbers() -> Vec<u32> {
+    let dir = repo_root().join("docs/decisions");
+    let mut numbers: Vec<u32> = fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("reading {}: {e}", dir.display()))
+        .map(|e| e.expect("dir entry").file_name())
+        .filter_map(|name| {
+            let name = name.to_string_lossy();
+            let stem = name.strip_suffix(".md")?;
+            // `NNNN-slug`: four digits, a hyphen, then a non-empty slug.
+            if stem.len() > 5 && stem.as_bytes()[4] == b'-' {
+                stem[..4].parse::<u32>().ok()
+            } else {
+                None
+            }
+        })
+        .collect();
+    numbers.sort_unstable();
+    numbers
+}
+
+/// The decision log's numbers form a **contiguous run starting at 0001** — no
+/// holes.
+///
+/// A gap is not merely untidy, it is evidence of a mistake. The log is
+/// append-only and a retired decision is *superseded* rather than deleted
+/// (`docs/decisions/README.md`), so no legitimate operation removes a number.
+/// A hole therefore means one of two things: a renumbering went wrong, or a
+/// record was lost. Both want catching in the gate rather than at the next
+/// person to read the log.
+///
+/// **Why this test exists.** The log held this property by convention for 124
+/// records and nothing checked it. Absorbing The Radiation into The Grain
+/// collided on `0120`, the unmerged records were renumbered to resolve it, and
+/// a mechanical shift moved them four places instead of one — opening
+/// `0121`-`0123`, the first discontinuity in the log's history. Every other
+/// check in the repo stayed green, because none of them was looking. That is
+/// the third unguarded invariant this campaign broke the same way (see
+/// `docs/retrospectives/the-grain.md`), and the argument that closed it is that
+/// a documented invariant with no test is a comment.
+///
+/// The **start** is asserted too, not just the density. Checking only for
+/// internal holes would accept a log beginning at `0002`, which is the same
+/// class of error — a lost first record — presenting as a smaller number of
+/// symptoms. Pinning both ends makes the run fully determined by its length.
+#[test]
+fn no_gaps_in_the_decision_log() {
+    let numbers = decision_numbers();
+    assert!(
+        !numbers.is_empty(),
+        "no numbered records found in docs/decisions/ — the decision log \
+         cannot be empty, so this is a broken path or a changed filename \
+         convention, not a real state"
+    );
+
+    let first = *numbers.first().expect("non-empty");
+    let last = *numbers.last().expect("non-empty");
+    let present: BTreeSet<u32> = numbers.iter().copied().collect();
+    let missing: Vec<String> = (1..=last)
+        .filter(|n| !present.contains(n))
+        .map(|n| format!("{n:04}"))
+        .collect();
+
+    assert_eq!(
+        first, 1,
+        "the decision log starts at {first:04}, not 0001 — record 0001 is \
+         missing. The log is append-only and records are superseded rather \
+         than deleted, so a missing first record means it was lost or \
+         misnamed, never retired."
+    );
+    assert!(
+        missing.is_empty(),
+        "gaps in the decision log: {} record(s) span 0001..{last:04} but {} \
+         number(s) are missing. Decisions are append-only and superseded \
+         rather than deleted, so there is no legitimate way for a hole to \
+         appear — either a renumbering went wrong (the usual cause: a \
+         collision with a number that arrived on main, resolved by shifting \
+         too far) or a record was lost. Missing:\n  {}",
+        numbers.len(),
+        missing.len(),
+        missing.join("\n  ")
+    );
+}
