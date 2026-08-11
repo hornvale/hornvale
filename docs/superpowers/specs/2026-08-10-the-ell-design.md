@@ -38,7 +38,8 @@ not already assert.
 
 **The type this needed already exists and the ledger does not use it.**
 `kernel/src/field.rs` defines `WorldTime { day: f64 }` — "fractional days
-since world genesis" — used **435 times** by fields, phenomena and observers.
+since world genesis" — used **445 times** by fields, phenomena and observers (re-measured on the
+absorbed tree 2026-08-11; it was 435 when this spec was drafted).
 The fact envelope is the one time-carrying surface in the kernel that opted
 out, and it opted out deliberately: decision **0014** ratified that `Fact.day`
 stays bare because wrapping it "buys no safety worth the churn."
@@ -81,11 +82,22 @@ is how a "just use `Years`" repair would fail.
 Surface measured: **94** write sites (`day: Some(...)` / `day: None`), **197**
 read sites.
 
-**Open design question, flagged for §7:** whether `WorldTime` is adopted as-is
-(a `pub day: f64` struct — self-documenting, but a year can still be stuffed
-in) or gains a private field with a validating constructor (enforcing, but
-touching all 435 existing uses). The first is a naming fix; only the second
-makes the defect class unrepresentable.
+**Resolved (Nathan, 2026-08-11): enforcing.** `WorldTime`'s field becomes
+private behind a validating constructor, so a year cannot be stuffed into a
+day-typed slot at all. The alternative — adopting the struct as-is with its
+`pub day: f64` — documents the unit without defending it, and this campaign
+exists precisely because a documented unit was not enough. The cost is
+accepted knowingly: the change reaches all **445** existing `WorldTime` uses
+rather than the 94 write sites alone, and that is the larger half of the work.
+
+Two consequences the plan must carry:
+
+- **The constructor's validation is about finiteness, not sign.** A day is a
+  point on an axis and goes negative legitimately; rejecting negatives here
+  would re-break The Particular's founders in a new way. `Years`'s
+  non-negative rule must NOT be copied.
+- **A private field means every read site needs an accessor**, so the 197
+  readers change shape too. That is mechanical, but it is not small.
 
 ## 3. What does not change
 
@@ -93,7 +105,7 @@ makes the defect class unrepresentable.
   in years and should. The unit boundary is the ledger, not the domain.
 - **Six domains that stamp `day: Some(0.0)`** are mechanically retyped and
   otherwise untouched; zero is zero in any unit.
-- **`WorldTime`'s 435 existing uses** keep their meaning — they were already
+- **`WorldTime`'s 445 existing uses** keep their meaning — they were already
   days. This campaign makes the ledger agree with them, not the reverse.
 
 ## 4. Repairing `person-died` is a consequence, not a step
@@ -144,15 +156,20 @@ Frozen before the code that would move it (decision 0016).
 ## 7. Flagged for the G3 stop
 
 - **This supersedes a ratified decision (0014).** It needs a new decision
-  record; next free number is **0119**.
+  record. The next free number is **0125** — *not* the 0119 this spec was
+  drafted against: main renumbered the log while this campaign sat at its
+  spec stop, and a `docs_consistency` guard now asserts the numbers form a
+  contiguous run from 0001, so the number must be re-derived at the moment
+  the record is written rather than carried from here.
 - **The `WorldTime` question in §2b** — self-documenting versus enforcing —
   is the one design call this spec deliberately leaves open, because it is the
-  difference between a 94-site change and a 435-site one.
-- **A live collision.** `the-radiation` is in flight and touches
-  `domains/species/src/lib.rs`, `windows/book/src/lib.rs` and the merge-hot
-  `windows/worldgen/src/lib.rs` — all fact-committing files this campaign
-  retypes. `the-docket` is spec-only and low risk. Sequencing is a judgement
-  this spec cannot make.
+  difference between a 94-site change and a 445-site one.
+- **The collision resolved itself.** `the-radiation` was in flight over three
+  fact-committing files this campaign retypes; it has since merged, and this
+  branch absorbed main (63 commits, The Radiation and The Grain) before
+  planning. `the-docket` remains spec-only and low risk. The general hazard
+  stands for the next in-flight campaign: this retype touches a field every
+  domain writes, so it collides with almost anything.
 - **`Fact.day` is a save-format contract.** The serialized shape must stay a
   bare JSON number, or the epoch is larger than §2a describes.
 
