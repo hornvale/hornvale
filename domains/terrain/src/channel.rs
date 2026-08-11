@@ -539,6 +539,44 @@ impl ChannelNetwork {
         best_line.map(|i| (i, best))
     }
 
+    /// Angular distance from `position` to the nearest channel in radians,
+    /// **positive on the left bank facing downstream** and negative on the
+    /// right. `None` on an empty network — there is no bank to be on.
+    ///
+    /// This is the name stage 2 stores a channel distance under, and the name
+    /// exists for the referent rather than the arithmetic. The number is the
+    /// one [`ChannelNetwork::nearest_line`] already reports; what this method
+    /// adds is a meaning for its **sign** that survives a rebuild.
+    ///
+    /// **Why "left of travel" is "left of downstream".** [`SphericalPolyline`]
+    /// documents its sign as left-positive relative to the winning segment's
+    /// direction of travel, and travel direction is vertex order. That alone
+    /// is not a durable referent: the polyline *index* is build order and must
+    /// never be serialized. But the vertex order within a line is not an
+    /// accident — [`ChannelNetwork::build`] starts every run at a head and
+    /// appends each `downhill` target in turn, so `run_cells[i]` and the
+    /// parallel `polylines[i].points` run downstream, from source toward the
+    /// sea. Left of travel is therefore left facing downstream: hydrology's
+    /// own convention, the term a person would use, and stable across builds
+    /// because it is a property of the flow graph rather than of the walk that
+    /// rendered it.
+    ///
+    /// That is a property of `build`'s loop, not of any type here, so
+    /// `channel_properties.rs::the_polyline_vertex_order_is_downstream_order`
+    /// asserts it on a real world. A change that collected a run upstream
+    /// would swap every bank in the world and break nothing else.
+    ///
+    /// Delegating to `nearest_line` rather than re-deriving the sign from the
+    /// winning segment is deliberate: the tie-break between equidistant
+    /// segments and the side a **degenerate** segment borrows from its
+    /// neighbour both live in the kernel, and meander displacement can
+    /// collapse adjacent vertices, so that second path is reachable. A second
+    /// implementation here would be a second chance to disagree with it.
+    /// type-audit: pending(wave-1: position), pending(wave-1: return)
+    pub fn bank_signed_distance(&self, position: [f64; 3]) -> Option<f64> {
+        self.nearest_line(position).map(|(_, signed)| signed)
+    }
+
     /// The widest channel half-width anywhere in the network, radians
     /// (`0.0` on an empty network). The max, over every vertex of every
     /// polyline, of [`band_edges`]'s first border — the whole-network
@@ -769,6 +807,43 @@ mod tests {
         let (_, left) = net.transverse_at(sample_left(&net));
         let (_, right) = net.transverse_at(sample_right(&net));
         assert!(left * right < 0.0, "sign lost: {left} and {right}");
+    }
+
+    /// An empty network has no bank to be on, and must say so rather than
+    /// answer a number. `transverse_at` can report `f64::INFINITY` because it
+    /// pairs it with `Dry`; a bare distance has no such companion, and `0.0`
+    /// would read to a consumer banding it as "in the water".
+    ///
+    /// Constructed here rather than in `channel_properties.rs` because the
+    /// `meander` field is private, so an empty network cannot be built from
+    /// outside the crate at all.
+    #[test]
+    fn an_empty_network_has_no_bank() {
+        let empty = ChannelNetwork {
+            polylines: Vec::new(),
+            band_edges: Vec::new(),
+            run_cells: Vec::new(),
+            meander: SphereFbm::new(
+                Seed(42).derive(streams::CHANNEL_MEANDER),
+                MEANDER_FREQUENCY,
+                MEANDER_OCTAVES,
+            ),
+        };
+        assert_eq!(empty.bank_signed_distance(unit(1.0, 0.0, 0.0)), None);
+    }
+
+    /// The bank distance is the same number `nearest_line` reports, so a
+    /// consumer that needs the line index and one that needs only the distance
+    /// can never disagree about which bank a point is on.
+    #[test]
+    fn the_bank_distance_agrees_with_the_nearest_line() {
+        let net = test_network();
+        for p in [sample_left(&net), sample_right(&net)] {
+            let (_, expected) = net.nearest_line(p).expect("the test network is non-empty");
+            assert_eq!(net.bank_signed_distance(p), Some(expected));
+        }
+        assert!(net.bank_signed_distance(sample_left(&net)).unwrap() > 0.0);
+        assert!(net.bank_signed_distance(sample_right(&net)).unwrap() < 0.0);
     }
 
     /// `Transverse`'s index/name/legend triple is a committed contract (a
