@@ -14,8 +14,8 @@ decisively; the null control says a people identical to the manikin does
 *not*. Only both together close the year's exit criterion.
 
 **A note on scale and provenance.** This study spans two committed
-populations, both CI-drift-checked in the "Artifacts are current"
-step of `.github/workflows/ci.yml`. The comparative suite (the ledger below)
+populations, both drift-checked against their regenerated output. The
+comparative suite (the ledger below)
 is asserted over **`the-census`** — the shipped `{goblin, kobold}`
 roster, 1,000 seeds (the census-as-data consolidation's rename and
 doubling of what this page still calls `census-lands-drift` below, since
