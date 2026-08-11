@@ -634,6 +634,13 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// Days compare with `f64::total_cmp` — both are the same `year` scalar
 /// through the same quantizing boundary, so they compare exactly, and bare
 /// float equality is banned.
+///
+/// seam-guard: returns(None) scope(hornvale-almanac)
+///
+/// This function decides whether a settlement's ending reads as conquest or
+/// as climate migration, and its only real guard is the gallery drift check
+/// — which `make gate` does not run. `tools/seam-guard` neutralises it here
+/// and reports whether the almanac's own tests notice. See that crate's docs.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
     if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;
