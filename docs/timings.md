@@ -672,3 +672,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-11T00:21:07Z | rebaseline | 112.138 | 159.709 | 11.029 | 1.52 | 0 | 208b1795 | campaign/the-grain | ambrose | 12 |
 | 2026-08-11T00:36:47Z | gate | 581.556 | 2378.197 | 211.451 | 4.45 | 0 | 208b1795 | campaign/the-grain | ambrose | 12 |
 | 2026-08-11T01:18:19Z | rebaseline | 125.800 | 157.022 | 10.345 | 1.33 | 0 | 582dfcb9 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T01:29:51Z | gate | 602.152 | 2428.010 | 215.761 | 4.39 | 0 | 0037ff40 | campaign/the-grain | ambrose | 12 |
