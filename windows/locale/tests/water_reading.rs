@@ -301,8 +301,9 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
 // Everything below asks about a PAIR of rooms. The references:
 //
 // - The transect population comes from the network's own vertices and the room
-//   mesh's own edge length, neither of which knows what `crossing_between`
-//   decides — so the denominator exists independently of the criterion. That is
+//   mesh's own neighbour relation, neither of which knows what
+//   `crossing_between` decides — so the denominator exists independently of the
+//   criterion. That is
 //   the whole point of H2-4's denominator (spec §7): a population of "adjacent
 //   pairs whose sign differs" would BE the ford set by construction and would
 //   read ~1.0 no matter what the world looked like.
@@ -325,6 +326,16 @@ const SAME_BANK_PAIRS_FLOOR: usize = 200;
 const DRY_FLIPS_FLOOR: usize = 60;
 /// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 127.
 const TERRACE_FLIPS_FLOOR: usize = 60;
+/// Transects where a crossing exists at all, at walk depth. Measured 123 of 341.
+const CROSSINGS_FLOOR: usize = 60;
+/// Crossings whose reach carries at least `WATERFALL_MIN_DRAINAGE`. Measured 8
+/// — the smallest population any assertion here runs on, and the reason the
+/// ordering claim rather than this count is the primary reference.
+const STRONG_CROSSINGS_FLOOR: usize = 4;
+/// Vertices that flip verdict on the step length alone. Measured 98 of 98
+/// examined — every pair that reaches the assertion flips, which is what a
+/// clause deciding something looks like.
+const WIDTH_FLIP_FLOOR: usize = 50;
 
 /// Walk depth: six refinement levels below the canonical grid.
 ///
@@ -377,14 +388,29 @@ fn offset_from(base: [f64; 3], dir: [f64; 3], off: f64) -> [f64; 3] {
     ]
 }
 
-/// One transect of the channel network: the two rooms a walker stands in
-/// either side of one channel vertex, one **step** apart, plus the reach that
-/// vertex belongs to.
+/// One transect of the channel network: the room the centreline runs through,
+/// and the **three mesh steps out of it**, plus the reach it belongs to.
+///
+/// The three steps are `RoomAddr::neighbors()`, so every pair this population
+/// asks about is a walker's step **by construction** rather than by filtering.
+/// That matters, and it is the second construction this test has had:
+///
+/// The first probed two points half a room edge either side of the vertex and
+/// checked only that they landed in different rooms. Counting the mesh-neighbour
+/// relation showed that **307 of 341 such pairs are not adjacent at all** —
+/// diagonal or two-apart — so the claim that the population measured *steps*
+/// was false for 90% of it, and filtering the survivors left 34 transects: an
+/// anecdote, and a 90% drop rate whose selection mechanism nobody had examined.
+/// Building the step instead of testing for it removes the drop entirely.
 struct Transect {
-    /// The room on the +normal side of the local travel direction.
-    left: RoomAddr,
-    /// The room on the -normal side.
-    right: RoomAddr,
+    /// The polyline and vertex this transect was taken at — the identity two
+    /// runs at different depths are matched on.
+    vertex: (usize, usize),
+    /// The room the centreline runs through: the transect's origin, and the
+    /// one room guaranteed to be inside its own bands.
+    home: RoomAddr,
+    /// The three mesh steps out of `home`.
+    steps: [RoomAddr; 3],
     /// The transected vertex's own band edges (channel/bank, bank/floodplain,
     /// floodplain/terrace, terrace/dry).
     edges: [f64; 4],
@@ -392,22 +418,47 @@ struct Transect {
     cell: CellId,
 }
 
+impl Transect {
+    /// What crossing the network the walker meets here: `Fordable` if any of
+    /// the three steps out of the channel room can be waded, `Impassable` if
+    /// some step crosses the channel but none can be waded, `NotACrossing` if
+    /// no step crosses it at all — the channel is wider than every step
+    /// available, or the walker is not in its bands.
+    fn verdict(&self, ctx: &LocaleContext) -> Crossing {
+        let mut crossed = false;
+        for step in &self.steps {
+            match ctx.crossing_between(&self.home, step) {
+                Crossing::Fordable => return Crossing::Fordable,
+                Crossing::Impassable => crossed = true,
+                Crossing::NotACrossing => {}
+            }
+        }
+        if crossed {
+            Crossing::Impassable
+        } else {
+            Crossing::NotACrossing
+        }
+    }
+}
+
 /// Why a sampled vertex yielded no usable transect. Counted and reported, never
 /// silently dropped: the vertices hardest to pair are the widest channels,
 /// which are exactly the ones §8's criterion calls Impassable, so a silent drop
 /// inflates the fordable fraction for a reason that has nothing to do with the
 /// world.
+///
+/// **The two drop causes the previous construction had are now structurally
+/// absent** — a room always has three distinct mesh neighbours, so neither
+/// "both probes in one room" (41 of 341 at half a room edge) nor "the pair is
+/// not a step" (307 of 341) can arise. That is the argument for building the
+/// step rather than probing for one: the drops it removes were the ones
+/// correlated with nothing anybody had checked.
 #[derive(Default, Debug)]
 struct Drops {
-    /// Coincident vertices: no local travel direction, so no transect normal.
-    /// Meander displacement can collapse adjacent vertices, so this is
-    /// reachable rather than theoretical.
-    degenerate: usize,
-    /// Both probes landed in the SAME room, so there is no pair to ask about.
-    /// This is a relation between the probe separation and the ROOM, not the
-    /// channel — which is why the separation is a room edge and not a fixed
-    /// angle. Measured: 0 at the shipped separation, 80 of 681 at half it.
-    same_room: usize,
+    /// The channel room reads no channel at all. Unreachable on a world with a
+    /// network — `bank_reading` is `None` only on an empty one — and counted
+    /// rather than assumed away.
+    no_reading: usize,
 }
 
 /// Transects of the network, one per sampled vertex, at most `wanted` of them.
@@ -417,28 +468,17 @@ struct Drops {
 /// `lab_band_transects` derives a stride from the same cap for exactly that
 /// reason, and this follows it. Deterministic in order and count; makes no
 /// draws.
-///
-/// **The pair straddles the vertex one room edge apart** — each probe half a
-/// room edge out, read off the mesh through [`room_edge`] at the room
-/// containing the vertex. One room edge is a walker's step, which is both
-/// §8's own unit and the only separation at which asking "does this STEP cross
-/// the channel" is a question about a step at all. The separation is
-/// mesh-derived rather than a fixed angle because a fixed angle is a length
-/// scale in disguise, and because the drop that actually bites — both probes in
-/// one room — is a relation between the separation and the room.
 fn network_transects(ctx: &LocaleContext, wanted: usize) -> (Vec<Transect>, Drops, usize) {
-    transects_at_separation(ctx, wanted, 1.0)
+    transects_at(ctx, wanted, walk_depth(ctx))
 }
 
-/// [`network_transects`] with the pair separation scaled by `room_edges` — the
-/// sensitivity handle, and the reason the H2-4 test prints a sweep of it.
-fn transects_at_separation(
-    ctx: &LocaleContext,
-    wanted: usize,
-    room_edges: f64,
-) -> (Vec<Transect>, Drops, usize) {
+/// [`network_transects`] at a chosen room depth — the sensitivity handle, and
+/// the whole of it. **The step length IS the room edge at `depth`**, so this
+/// parameter is the one H2-4's reading depends on: the H2-4 test sweeps it, and
+/// the width-clause positive control uses it to ask the same water a question
+/// at a shorter step.
+fn transects_at(ctx: &LocaleContext, wanted: usize, depth: u32) -> (Vec<Transect>, Drops, usize) {
     let net = ctx.terrain().channels();
-    let depth = walk_depth(ctx);
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     let stride = vertices.div_ceil(wanted.max(1)).max(1);
     let mut out = Vec::new();
@@ -453,32 +493,15 @@ fn transects_at_separation(
                 continue;
             }
             seen += 1;
-            let base = line.points[j];
-            // Any neighbouring vertex gives the local travel direction; at an
-            // end there is only one, and a transect does not care which way
-            // along the channel it points, only that it is perpendicular.
-            let along = if j + 1 < line.points.len() {
-                line.points[j + 1]
-            } else {
-                line.points[j - 1]
-            };
-            let travel = [along[0] - base[0], along[1] - base[1], along[2] - base[2]];
-            let side = cross(base, travel);
-            if norm(side) == 0.0 {
-                drops.degenerate += 1;
-                continue;
-            }
-            let side = normalize(side);
-            let half = 0.5 * room_edges * room_edge(&RoomAddr::containing(base, depth));
-            let left = RoomAddr::containing(offset_from(base, side, half), depth);
-            let right = RoomAddr::containing(offset_from(base, side, -half), depth);
-            if left == right {
-                drops.same_room += 1;
+            let home = RoomAddr::containing(line.points[j], depth);
+            if net.bank_reading(home.centroid()).is_none() {
+                drops.no_reading += 1;
                 continue;
             }
             out.push(Transect {
-                left,
-                right,
+                vertex: (i, j),
+                steps: home.neighbors(),
+                home,
                 edges: net.band_edges[i][j],
                 cell: net.run_cells[i][j],
             });
@@ -559,54 +582,52 @@ fn same_bank_neighbours_are_not_a_crossing() {
 
 /// H2-4 — fords exist and are not everywhere.
 ///
-/// The denominator is TRANSECTS OF THE NETWORK, deliberately: a population of
-/// "adjacent pairs whose sign differs" would BE the ford set by construction (a
-/// one-step sign change is only possible when the channel is narrower than one
-/// step, which is §8's criterion itself), and the fraction would read ~1.0 no
-/// matter what the world looked like.
+/// The denominator is TRANSECTS OF THE NETWORK — one per sampled vertex —
+/// deliberately: a population of "adjacent pairs whose sign differs" would BE
+/// the ford set by construction (a one-step sign change is only possible when
+/// the channel is narrower than one step, which is §8's criterion itself), and
+/// the fraction would read ~1.0 no matter what the world looked like. A vertex
+/// is in this population whether or not anything can be crossed there, so the
+/// fraction can take any value in [0, 1].
 ///
 /// `frac = |{v : Fordable(transect(v))}| / |V'|`, where `V` is the sampled
-/// vertices and `V'` the ones that yielded a usable pair. Every dropped vertex
-/// is counted with its reason and printed; §8's two clauses are reported
-/// separately, because a number near the interval's floor is unattributable
-/// without them.
+/// vertices and `V'` the ones that yielded a usable transect. A transect is
+/// `Fordable` when at least one of the three mesh steps out of the channel room
+/// can be waded (see [`Transect::verdict`]).
 ///
-/// # What the printed attribution says, measured on seed 42 at level 6
+/// # THE READING IS PARAMETER-DEPENDENT, AND THE PARAMETER IS THE STEP LENGTH
 ///
-/// - **The width clause never binds here.** The widest full channel in the
-///   world is 1.89e-4 rad against a room edge of 2.71e-4, so `2·b0 < step`
-///   holds at **every** vertex. All of §8's discrimination at walk depth is
-///   done by its discharge half (`Q < 80`, which 5.0% of sampled vertices
-///   fail — the network's discharge runs 15 to 146, median 24). A
-///   criterion whose first clause is inert on the world it was frozen for is
-///   worth knowing about; it is not inert in principle — a coarser walk depth
-///   or a wetter world engages it.
+/// A room edge at `depth` is the step, and §8's criterion measures the channel
+/// against exactly that. So the fraction is not a constant of the world; it is
+/// a reading of the world *at a stated step length*, and the sweep is printed
+/// beside it rather than left in a report. Halving the step (one level deeper)
+/// halves what a walker can cross.
+///
+/// # What the attribution says, measured on seed 42 at level 6
+///
+/// - **The width clause is inert at walk depth.** The widest full channel in
+///   the world is 1.89e-4 rad against a room edge of 2.71e-4, so `2·b0 < step`
+///   holds at every sampled vertex and all the discrimination is done by the
+///   discharge half (`Q < 80`; discharge runs 15 to 146, median 24). It is not
+///   inert in principle — `the_width_clause_binds_when_the_step_shrinks` is the
+///   positive control that exercises it at a depth where it does bind.
 /// - **The conjunction is not the fraction.** The clauses hold on 95.0% of
-///   transects while 21.7% are Fordable; the gap is the crossing gate itself —
-///   321 of 341 transects show a sign change and 237 of those have neither room
-///   inside its own bank edge — not the criterion.
-/// - **The reading is separation-dependent, and the sweep is printed so nobody
-///   has to rediscover that.** The bank edge is *sub-room* at walk depth —
-///   median `b1` = 7.8e-5 rad, 0.29 of a room edge — so whether a pair straddling
-///   a channel has either room inside its own bank band depends on how far apart
-///   the pair stands. Measured: 0.2133 at half a room edge (with 41 of 341
-///   pairs collapsing into one room), **0.2170 at one room edge**, 0.0469 at
-///   two, 0.0000 at four — by four both rooms are outside every bank in the
-///   world and the gate correctly refuses to call it a crossing.
-///   **H2-4 is therefore not a property of the world alone** — it is a property
-///   of the world at a stated step length, and the step length has to be the
-///   walker's or the number means nothing.
+///   transects (324 of 341) while 33.7% are Fordable and only 123 transects
+///   have any crossing at all; the gap is the crossing gate itself — the sign
+///   change and §5.3's requirement that a room stand inside its own bank edge —
+///   not §8's criterion. Where the channel is wider than every step available,
+///   both rooms sit on one bank and the verdict is `NotACrossing` rather than
+///   `Impassable`: the geometry refuses before the criterion is consulted.
+/// - **Measured, at walk depth: 115 Fordable, 8 Impassable, 218 NotACrossing of
+///   341 — a fraction of 0.3372.** The step sweep: 0.2229 one level up (a
+///   longer step reaches further but puts the walker's rooms outside the bank
+///   band), 0.3372 at walk depth, 0.3959 one level down, 0.1026 two, 0.0000
+///   three — by then no step spans the water.
 ///
-/// **Mutation-proved.** Widening the band gate to `Transverse != Dry` drives
-/// this fraction from 0.2170 to 0.8387 — the "near 1.0" reading that means the
-/// denominator has collapsed back into the criterion. Deleting the sign clause
-/// instead leaves it green, which is correct: every transect here straddles the
-/// channel, so the sign clause is not what this number measures.
-///
-/// **This is a late freeze, not a preregistration** (spec §8): the criterion was
-/// chosen with stage-1 measurements in hand, so the interval carries less
-/// evidential weight than a preregistered one. The number is reported as
-/// measured either way — nothing here is tuned to land inside.
+/// **This is a late freeze, not a preregistration** (spec §8), and the step
+/// length was fixed after unblinding (see the campaign report). Two discounts
+/// stack; read the verdict as *parameter-dependent* rather than confirmed
+/// outright.
 #[test]
 fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let world = world();
@@ -616,48 +637,31 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let mut fordable = 0usize;
     let mut impassable = 0usize;
     let mut not_a_crossing = 0usize;
-    let mut sign_change = 0usize;
-    let mut band_gated = 0usize;
     let mut width_clause = 0usize;
     let mut drainage_clause = 0usize;
     let mut both_clauses = 0usize;
     for t in &transects {
-        let crossing = ctx.crossing_between(&t.left, &t.right);
+        let verdict = t.verdict(&ctx);
         // Symmetry, asserted here rather than in its own test so it is checked
         // over the whole real population without paying for a second world.
-        assert_eq!(
-            crossing,
-            ctx.crossing_between(&t.right, &t.left),
-            "crossing_between is not symmetric at {:?}/{:?}",
-            t.left,
-            t.right
-        );
-        match crossing {
+        for step in &t.steps {
+            assert_eq!(
+                ctx.crossing_between(&t.home, step),
+                ctx.crossing_between(step, &t.home),
+                "crossing_between is not symmetric at {:?}/{step:?}",
+                t.home
+            );
+        }
+        match verdict {
             Crossing::Fordable => fordable += 1,
             Crossing::Impassable => impassable += 1,
             Crossing::NotACrossing => not_a_crossing += 1,
         }
-        // Where a NotACrossing came from: no sign change at all, or a sign
-        // change with neither room inside its own bank edge. Read off the
-        // rooms' own readings, not off the gate's internals.
-        let net = ctx.terrain().channels();
-        if let (Some(dl), Some(dr)) = (
-            net.bank_reading(t.left.centroid()),
-            net.bank_reading(t.right.centroid()),
-        ) && (dl.signed_distance > 0.0) != (dr.signed_distance > 0.0)
-        {
-            sign_change += 1;
-            if dl.signed_distance.abs() >= dl.band_edges[1]
-                && dr.signed_distance.abs() >= dr.band_edges[1]
-            {
-                band_gated += 1;
-            }
-        }
         // The two clauses of §8, evaluated on the reach BEING transected (the
-        // vertex's own edges and cell) rather than on whichever reading the
-        // rooms happened to win. Reported, never asserted on: these attribute
-        // the fraction above, they do not define it.
-        let step = room_edge(&t.left).min(room_edge(&t.right));
+        // vertex's own edges and cell) rather than on whichever reading a room
+        // happened to win. Reported, never asserted on: these attribute the
+        // fraction above, they do not define it.
+        let step = room_edge(&t.home);
         let narrow = 2.0 * t.edges[0] < step;
         let quiet = ctx.terrain().drainage_at(t.cell) < WATERFALL_MIN_DRAINAGE;
         width_clause += usize::from(narrow);
@@ -668,41 +672,40 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let usable = transects.len();
     let frac = fordable as f64 / usable as f64;
     println!(
-        "H2-4 (seed 42, level {}, walk depth {}):\n  \
+        "H2-4 (seed 42, level {}, walk depth {}, step = one room edge = {:e} rad):\n  \
          |V| sampled vertices      = {sampled}\n  \
          |V'| usable transects     = {usable}\n  \
-         dropped: same room        = {}\n  \
-         dropped: degenerate       = {}\n  \
+         drops                     = {drops:?}\n  \
          Fordable                  = {fordable}\n  \
          Impassable                = {impassable}\n  \
-         NotACrossing              = {not_a_crossing}  (of which {band_gated} had a sign \
-         change but no room inside its own bank edge; {sign_change} sign changes in all)\n  \
+         NotACrossing              = {not_a_crossing}\n  \
          fordable fraction         = {frac:.4}  (of |V'|)\n  \
          width clause  (2*b0<step) = {width_clause} ({:.4})\n  \
          drainage clause (Q<{WATERFALL_MIN_DRAINAGE}) = {drainage_clause} ({:.4})\n  \
          conjunction               = {both_clauses} ({:.4})",
         ctx.globe_level(),
         walk_depth(&ctx),
-        drops.same_room,
-        drops.degenerate,
+        room_edge(&transects[0].home),
         width_clause as f64 / usable as f64,
         drainage_clause as f64 / usable as f64,
         both_clauses as f64 / usable as f64,
     );
 
-    // The separation sensitivity, printed rather than asserted. The shipped
-    // instrument is the 1.0 row; the others are here so a reader can see that
-    // the fraction is a reading at a stated step length and not a constant of
-    // the world.
-    for room_edges in [0.5_f64, 1.0, 2.0, 4.0] {
-        let (ts, dr, seen) = transects_at_separation(&ctx, 400, room_edges);
+    // The step-length sensitivity, printed rather than asserted. The shipped
+    // instrument is the walk-depth row; the others are here so a reader can see
+    // that the fraction is a reading at a stated step length and not a constant
+    // of the world.
+    for delta in [-1i32, 0, 1, 2, 3] {
+        let depth = (walk_depth(&ctx) as i32 + delta) as u32;
+        let (ts, dr, seen) = transects_at(&ctx, 400, depth);
         let f = ts
             .iter()
-            .filter(|t| ctx.crossing_between(&t.left, &t.right) == Crossing::Fordable)
+            .filter(|t| t.verdict(&ctx) == Crossing::Fordable)
             .count();
         println!(
-            "  separation {room_edges:>4} room edges: fordable {f}/{} of {seen} sampled \
-             ({:.4}), drops {dr:?}",
+            "  depth {depth} (step {:e} rad): fordable {f}/{} of {seen} sampled ({:.4}), \
+             drops {dr:?}",
+            room_edge(&ts[0].home),
             ts.len(),
             f as f64 / ts.len() as f64
         );
@@ -710,7 +713,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 
     // Anti-vacuity: a fraction over a handful of transects is an anecdote, and
     // a denominator that collapsed would make any fraction reachable. Measured
-    // |V'| = 341 of 341 sampled (681 vertices, stride 2).
+    // |V'| = 341 of 341 sampled (681 vertices, stride 2), no drops.
     assert!(
         usable >= 200,
         "only {usable} usable transects of {sampled} sampled ({drops:?}); the fraction is an \
@@ -721,6 +724,178 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
         "fordable fraction {frac} outside the spec's [0.10, 0.70] \
          ({fordable} of {usable} usable transects, {sampled} sampled, drops {drops:?}; \
          width clause {width_clause}, drainage clause {drainage_clause}, both {both_clauses})"
+    );
+}
+
+/// §8's DISCHARGE CLAUSE, POSITIVE CONTROL. A crossing the walker can step
+/// across is still `Impassable` when the water is strong enough.
+///
+/// Without this the clause is unguarded: at walk depth the width half holds
+/// everywhere, so deleting `drainage_at(cell) < WATERFALL_MIN_DRAINAGE`
+/// promotes every `Impassable` transect to `Fordable` and moves H2-4's fraction
+/// by less than the interval's width — the suite stays green while half the
+/// task's named deliverable is gone.
+///
+/// **The reference is the world's own discharge ORDERING, not the criterion's
+/// threshold.** Among the transects where a crossing exists at all, the one
+/// carrying the most water must not be wadeable and the one carrying the least
+/// must be. That is a claim about the world (the biggest river in it is not a
+/// ford) scored against `GeneratedTerrain::drainage_at`, which knows nothing
+/// about `crossing_between`; it does not restate the threshold, and it holds
+/// for any threshold falling between the two extremes. The threshold-keyed
+/// count below is the anti-vacuity companion, not the claim.
+#[test]
+fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
+    let world = world();
+    let ctx = LocaleContext::build(&world).unwrap();
+    let (transects, _, _) = network_transects(&ctx, 400);
+
+    // Every transect where a crossing exists, paired with the discharge of the
+    // reach it transects. `total_cmp` with an index tie-break, so the extremes
+    // are deterministic.
+    let mut crossings: Vec<(f64, usize, Crossing)> = transects
+        .iter()
+        .enumerate()
+        .filter_map(|(k, t)| {
+            let verdict = t.verdict(&ctx);
+            (verdict != Crossing::NotACrossing)
+                .then(|| (ctx.terrain().drainage_at(t.cell), k, verdict))
+        })
+        .collect();
+    crossings.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    assert!(
+        crossings.len() >= CROSSINGS_FLOOR,
+        "only {} transects cross a channel at all; the extremes are not a population",
+        crossings.len()
+    );
+    let (weakest_q, _, weakest) = crossings[0];
+    let (strongest_q, _, strongest) = crossings[crossings.len() - 1];
+    println!(
+        "discharge ordering over {} crossings: weakest Q={weakest_q} -> {weakest:?}, \
+         strongest Q={strongest_q} -> {strongest:?}",
+        crossings.len()
+    );
+    assert_eq!(
+        strongest,
+        Crossing::Impassable,
+        "the strongest water in the world that a walker can reach ({strongest_q}) reads \
+         {strongest:?} — the discharge clause is not deciding anything"
+    );
+    assert_eq!(
+        weakest,
+        Crossing::Fordable,
+        "the weakest water in the world ({weakest_q}) reads {weakest:?}, so the verdict is not \
+         tracking discharge at all"
+    );
+    // Anti-vacuity for the ordering claim: the extremes must actually straddle
+    // the threshold, or "strongest is impassable" could hold for a reason that
+    // has nothing to do with discharge.
+    assert!(
+        weakest_q < WATERFALL_MIN_DRAINAGE && strongest_q >= WATERFALL_MIN_DRAINAGE,
+        "the crossings' discharge range [{weakest_q}, {strongest_q}] does not straddle \
+         {WATERFALL_MIN_DRAINAGE}, so the ordering claim is not about the discharge clause"
+    );
+    // And every crossing above the threshold, not merely the extreme one.
+    let mut strong = 0usize;
+    for t in &transects {
+        let verdict = t.verdict(&ctx);
+        if verdict != Crossing::NotACrossing
+            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+        {
+            assert_eq!(
+                verdict,
+                Crossing::Impassable,
+                "a crossing at Q={} reads Fordable",
+                ctx.terrain().drainage_at(t.cell)
+            );
+            strong += 1;
+        }
+    }
+    println!("crossings above the discharge threshold: {strong}");
+    assert!(
+        strong >= STRONG_CROSSINGS_FLOOR,
+        "only {strong} crossings carry enough water to be refused; the clause is barely exercised"
+    );
+}
+
+/// §8's WIDTH CLAUSE, POSITIVE CONTROL — at a depth where it binds.
+///
+/// At walk depth the clause is inert on seed 42: the widest full channel is
+/// 1.89e-4 rad against a 2.71e-4 room edge, so `2·b0 < step` holds at every
+/// vertex and deleting the clause changes nothing. That is a fact about this
+/// world at this depth, not about the criterion — and an unexercised clause is
+/// an unguarded one.
+///
+/// A room edge halves with each level, so three levels below walk depth the
+/// step is 3.4e-5 rad against a median full width of 7.8e-5 and the clause
+/// binds. The control is the pair: **the same vertex, the same water, the same
+/// discharge — Fordable at walk depth, Impassable three levels down.** Only the
+/// traversal unit changed, which is precisely what §8 claims to measure.
+///
+/// The references are outside `crossing_between`: the room edge at each depth
+/// comes from the mesh (`room_edge`), the channel width from the network's own
+/// `band_edges`, and every pair is required to be QUIET (`Q` below the
+/// discharge threshold) so the other clause cannot be what flipped the verdict.
+#[test]
+fn the_width_clause_binds_when_the_step_shrinks() {
+    let world = world();
+    let ctx = LocaleContext::build(&world).unwrap();
+    let shallow_depth = walk_depth(&ctx);
+    let deep_depth = shallow_depth + 3;
+    let (shallow, _, _) = transects_at(&ctx, 400, shallow_depth);
+    let (deep, _, _) = transects_at(&ctx, 400, deep_depth);
+
+    let mut flipped = 0usize;
+    let mut examined = 0usize;
+    for a in &shallow {
+        let Some(b) = deep.iter().find(|b| b.vertex == a.vertex) else {
+            continue;
+        };
+        // Same reach, so same discharge; require it QUIET, so the discharge
+        // clause is satisfied at both depths and cannot be the cause.
+        if ctx.terrain().drainage_at(a.cell) >= WATERFALL_MIN_DRAINAGE {
+            continue;
+        }
+        let wide = 2.0 * a.edges[0];
+        // The clause must actually flip between the two steps, or this pair has
+        // nothing to say about it.
+        if !(wide < room_edge(&a.home) && wide >= room_edge(&b.home)) {
+            continue;
+        }
+        let (near, far) = (a.verdict(&ctx), b.verdict(&ctx));
+        // Both must be crossings, or the GEOMETRY decided (a channel wider than
+        // every step available puts both rooms on one bank, which reads
+        // NotACrossing and says nothing about §8).
+        if near == Crossing::NotACrossing || far == Crossing::NotACrossing {
+            continue;
+        }
+        examined += 1;
+        assert_eq!(
+            near,
+            Crossing::Fordable,
+            "vertex {:?}: full width {wide:e} is below the {shallow_depth}-depth step {:e} and \
+             the water is quiet, yet the crossing is {near:?}",
+            a.vertex,
+            room_edge(&a.home)
+        );
+        assert_eq!(
+            far,
+            Crossing::Impassable,
+            "vertex {:?}: the SAME water, full width {wide:e}, is wider than the {deep_depth}-\
+             depth step {:e} — yet the crossing is {far:?}, so the width clause is not deciding \
+             anything",
+            a.vertex,
+            room_edge(&b.home)
+        );
+        flipped += 1;
+    }
+    println!(
+        "width-clause flips (Fordable at depth {shallow_depth}, Impassable at {deep_depth}): {flipped} of {examined} examined"
+    );
+    assert!(
+        flipped >= WIDTH_FLIP_FLOOR,
+        "only {flipped} vertices flip verdict on the step length alone; the width clause is not \
+         exercised anywhere in this suite"
     );
 }
 
