@@ -161,5 +161,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0119](0119-an-instruments-silence-means-the-claim-held.md) | An instrument's silence means the claim held, and nothing else | Accepted |
 | [0120](0120-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md) | An ordinal field may band a blend; a nominal field must take a partition | Accepted |
 | [0121](0121-an-emit-gate-is-not-a-grain-gate.md) | An emit gate is not a grain gate — a field's doc names the condition that makes it absent | Accepted |
-| [0122](0122-disclose-a-resolution-rather-than-refine-a-field.md) | Disclose a resolution rather than refine a field | Accepted |
+| [0122](0122-disclose-a-resolution-rather-than-refine-a-field.md) | When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail | Accepted |
 | [0123](0123-a-refinement-preregisters-a-conservation-criterion.md) | A refinement preregisters a conservation criterion, not only variation criteria | Accepted |

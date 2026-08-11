@@ -538,16 +538,27 @@ so no client outside this repository read the wrong values either.
 ## What has been appended since v2, and why none of it minted v3
 
 Four things have been added to this schema since it shipped, and every one is
-additive in the strict sense decision 0055 requires — a key appended after the
-previous last one, or a new value in an already-open vocabulary. No existing
-field changed meaning, and no existing document's bytes moved except by
-gaining a key at the end:
+additive in the strict sense decision 0055 requires: a new key in an
+already-open object, or a new value in an already-open vocabulary. No
+existing field changed meaning. Three of the four are also trailing appends —
+the new key gains a slot after the previous last one and no other key's bytes
+move. **`micro` is not**: `SurroundsCell` declares it *before* `marks`
+(`windows/scene/src/surrounds.rs`), which was already the struct's last field,
+so `micro` lands mid-object and every cell's bytes move — visible in
+`book/src/gallery/scene-surrounds-seed-42.json` as
+`…"height_asl_m":null,"micro":{…},"marks":[]`. Schema additivity for a
+key-based parser is unaffected either way (order-independent lookup does not
+care whether a key is second-to-last or last), and the page already notes
+`clients/world-wasm` exports no surrounds query, so no external consumer reads
+these bytes positionally. The distinction is still worth keeping rather than
+flattening: `sight` and `resolution` genuinely are trailing appends, `micro`
+is additive at the schema level but not at the byte level.
 
 | Addition | Shape | Why it is additive |
 |---|---|---|
-| `color` on a cell, `sight` on the document | both `skip_serializing_if` | an uncoloured document emits neither key and is byte-identical to what it was before the colour layer existed |
-| `micro` on a cell | always present, appended after `color` | a new key; nothing above it moved |
-| `resolution` on the document | always present, appended after `sight` | a new key; it *describes* existing fields rather than changing them |
+| `color` on a cell, `sight` on the document | both `skip_serializing_if`, trailing | an uncoloured document emits neither key and is byte-identical to what it was before the colour layer existed |
+| `micro` on a cell | always present, declared **before** `marks` — a mid-object insertion, not a trailing append | a new key; additive at the schema level, but every cell's bytes shift because `marks` (the prior last field) now serializes after it |
+| `resolution` on the document | always present, appended after `sight`, trailing | a new key; it *describes* existing fields rather than changing them |
 | `"cave"` as a mark `kind` | a new value in an open vocabulary | `kind` was never a closed enumeration, and no consumer needs a case for it |
 
 One near miss belongs in this list, because a reader of the diff history will

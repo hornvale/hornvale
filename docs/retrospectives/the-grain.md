@@ -238,11 +238,17 @@ regeneration exclusively, or it is written as a verification task from the start
 `.superpowers/sdd/` dies with the checkout, so these are the durable copy.
 
 - **F1 — Size and settle the `chamber_column_here` / `column_here` tie-break
-  divergence.** *Trigger:* it is a latent production inconsistency (§3). Both pick
-  the max-weight corner with `max_by_key` (last-max wins) against the
-  lowest-cell-id rule every categorical field uses, so on an exact integer-weight
-  tie `delve` and `dive` can resolve a different cell than biome/water/substrate/
-  colour name. First measure how often an exact three-way tie occurs at walk
+  divergence.** *Trigger:* it is no longer purely latent (§3) — this branch's own
+  cave mark is what changed that. The mark's `datum` reads "A {kind} cave opens
+  here — 'delve' descends into it.", sourced from `locale.cave`
+  (`LocaleContext::dominant_corner`), while `delve` resolves through
+  `chamber_column_here`'s `max_by_key` (last-max wins) against the
+  lowest-cell-id rule every categorical field uses. On an exact integer-weight
+  tie the mark now makes a promise `delve` can break: it can name a cave that
+  `delve` does not actually descend into. The source comment at the mark site
+  (`windows/scene/src/surrounds.rs`) already carries this caveat; this is that
+  same fact stated where the follow-up list can act on it. First measure how
+  often an exact three-way tie occurs at walk
   depth; then either bring both paths onto the shared rule (probably a one-line
   change plus an extension of the coupling test) or exempt them in writing with
   the rate as justification. Do **not** exempt without the rate.

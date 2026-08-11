@@ -332,6 +332,16 @@ design decisions are recorded so none of it is re-derived:
   external Orrery parses this schema. Additive-or-versioned holds for the shape;
   the value change is the one to call out in the release note.
 
+  > **REVERTED — THERE IS NO VALUE CHANGE TO CALL OUT.** Change B was built,
+  > measured, and reverted (§5); no world *reading*'s values moved in what
+  > merged. Everything cross-repo-visible this campaign actually ships is
+  > additive: the new `micro` field (A), the new `"cave"` mark kind (C), and
+  > the `resolution` disclosure block that replaced Change B (§5's "What
+  > replaces it"). A release note drafted from the sentence above would
+  > announce a water-value change that does not exist in the shipped schema —
+  > this is the hazardous inheritance from an otherwise-superseded paragraph,
+  > flagged here so nobody drafts the note from it.
+
 ## 11. Testing
 
 - Change A: a per-cell assertion that `micro` is present on **every** cell, not
@@ -342,6 +352,17 @@ design decisions are recorded so none of it is re-derived:
   H2 agreement check against `descriptor_noun`, plus a drinkability test at a
   room the descriptor calls dry — the behaviour change in §5, stated as a test
   rather than a note.
+
+  > **NONE OF THIS EXISTS. Change B was reverted (§5) and H1/H2 are retired
+  > (§8).** There is no water-from-drainage mechanism left for an H1
+  > distinctness assertion or an H2 `descriptor_noun` agreement check to run
+  > against, and no drinkability behaviour change to test — the drinkability
+  > test named here describes the reverted mechanism, not the shipped
+  > disclosure. What actually landed in Change B's place: `dominant_corner`'s
+  > coupling invariant (§5 "The coupling invariant gets the test it never
+  > had", H4) and the conservation criterion H5 (§8) — both regression guards
+  > on the disclosure replacement, neither a distinctness or agreement claim
+  > about sub-cell water.
 - Change C: a cave-bearing room emits a cave mark; a cave-free room emits none.
   The direction this enforces is *emitted ⊆ real*; it does not catch a cave the
   terrain has and the scene omits, and its doc comment says so.
@@ -359,3 +380,29 @@ Three candidates for `docs/decisions/`, subject to G3:
    condition makes it absent.
 3. Possibly: **a window may narrow a coarse world fact for its own grain
    without that being a save-format change**, since windows do not commit.
+
+> **SUPERSEDED BY WHAT ACTUALLY SHIPPED: four decisions, not three, and
+> proposal 1 as stated above is the exact claim the revert falsified.**
+>
+> - **0120 — an ordinal field may band a blend, a nominal field must take a
+>   partition.** This is the reformulation of proposal 1, not proposal 1
+>   itself: "a fine layer bands from the blend; it does not inherit a
+>   category" is precisely the claim Change B's attempt 2 built, measured, and
+>   falsified (§5) — `relief` (ordinal) may band safely, `water` (nominal) may
+>   not. Biome is not a deliberate exception to a banding rule; it is a
+>   nominal field like water, governed by the same line.
+> - **0121 — an emit gate is not a grain gate.** Shipped as proposal 2 above
+>   states it.
+> - **0122 — disclose a resolution rather than refine a field.** Not on the
+>   original shortlist. This is what replaced Change B once refining water was
+>   ruled out (§5's "What replaces it").
+> - **0123 — a refinement preregisters a conservation criterion.** Also not on
+>   the original shortlist. This is the H1/H2-passed-yet-illegal lesson (§8)
+>   made durable: a variation-only preregistration cannot detect a broken
+>   global invariant.
+>
+> **Proposal 3 (a window may narrow a coarse fact without a save-format
+> change) was dropped, not promoted.** No decision record exists for it; the
+> campaign's actual decisions were about *how* a refinement may vary
+> (ordinal-vs-nominal, disclosure-vs-invention, conservation-vs-variation),
+> not about the window/save-format boundary this proposal named.

@@ -249,6 +249,68 @@ fn registry_rows() -> Vec<RegistryRow> {
     ))
 }
 
+/// True when `cell` is a Markdown table separator segment — the `------` or
+/// `:---:` pieces of the rule line under a header row. These are built only
+/// from hyphens, colons, and spaces, which no real cell (ID or otherwise) is.
+fn looks_like_table_separator(cell: &str) -> bool {
+    !cell.is_empty() && cell.chars().all(|c| c == '-' || c == ':' || c == ' ')
+}
+
+/// **Property: every `| `-prefixed line in the idea registry is either a
+/// table header, a table separator, or a row `parse_registry` actually
+/// parses as an ID row. Direction enforced: a line that is data (not header,
+/// not separator) but whose first cell fails `looks_like_registry_id` is a
+/// failure here, not a silent skip.**
+///
+/// `parse_registry` treats "first cell doesn't look like an ID" as "not a
+/// data row" and moves on — the right call for a header or separator line,
+/// and exactly the wrong one for a data row whose ID merely has an
+/// unanticipated shape. That gap is how `CLIENT-22-glyphs-rejected` evaded
+/// every other guard in this file (length cap, status vocabulary, five-column
+/// shape, Where-link validation): its post-hyphen segment started with a
+/// digit, `looks_like_registry_id` said no, and the row vanished rather than
+/// failing. This test closes the class rather than the instance — it does
+/// not touch `looks_like_registry_id`'s matching rules, so a future ID with a
+/// different unanticipated shape still gets caught here instead of vanishing
+/// again.
+#[test]
+fn every_registry_table_row_is_a_parseable_id_row() {
+    let text = read(&repo_root().join("book/src/frontier/idea-registry.md"));
+    let offenders: Vec<String> = text
+        .lines()
+        .enumerate()
+        .filter_map(|(idx, line)| {
+            if !line.starts_with("| ") {
+                return None;
+            }
+            let masked = line.replace("\\|", &ESCAPED_PIPE.to_string());
+            let pieces: Vec<String> = masked
+                .split('|')
+                .map(|p| p.replace(ESCAPED_PIPE, "\\|").trim().to_string())
+                .collect();
+            let id = pieces.get(1)?;
+            if id == "ID" || looks_like_table_separator(id) || looks_like_registry_id(id) {
+                return None;
+            }
+            Some(format!(
+                "{}: first cell {:?} did not parse as an ID",
+                idx + 1,
+                id
+            ))
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "idea-registry.md table rows that are neither a header, a separator, \
+         nor a parseable ID — every other check in this file (`registry_rows`) \
+         is BLIND to a row like this, because `parse_registry` silently drops \
+         it instead of failing. Rename the ID so `looks_like_registry_id` \
+         accepts it, or if the ID shape itself should widen, do that \
+         deliberately and explain why — do not leave the row unparsed:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
 #[test]
 fn an_escaped_pipe_is_not_a_column_separator() {
     // The trap this parser exists to avoid: a naive split on '|' counts the
