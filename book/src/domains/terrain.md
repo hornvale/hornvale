@@ -269,6 +269,30 @@ shoreline its crenulation gain — closed back inside its band (0.0841). See
 [Rift-and-Fit](../chronicle/rift-and-fit.md) and [The Census of Coasts
 IV](../laboratory/census-of-coasts-iv.md).
 
+**Rivers are no longer faces.** Every water class in `WaterKind` is a
+property of a *cell*, which is right for ocean, playa and lake and was a
+category mistake for rivers: a river was as wide as the canonical cell, about
+a hundred and ten kilometres, at every scale. [The Ford](../chronicle/the-ford.md)
+carries the river on the mesh element that matches its dimensionality — an
+**edge polyline** traced down the retained downhill graph, one vertex per
+cell, with an angular half-width `w/2 = a·√Q · edge/2` from downstream
+hydraulic geometry over the existing drainage field. A point's relation to
+that network is the **banding of a signed distance** to it: channel, bank,
+floodplain, terrace, dry, with the valley border carrying a measured
+confinement term so a gorge has no floodplain. The sign is kept because a
+crossing is a side change and a floodplain is often one-sided. Meander is
+sampled from a position-continuous spherical noise field —
+`terrain/channel-meander`, hash-noise only, no new draws — since
+address-hashed noise cannot form a connected watercourse. The primitive
+itself lives in the kernel and knows nothing about water: a coastline, a
+scarp and a treeline band the same scalar. **This is the producer only.** No
+consumer has moved yet: `WaterKind` keeps its cell semantics for every class
+including `River`, `river_proximity` keeps its meaning and its habitability
+consumers, and the map, the locale and the walk still answer the cell-scale
+question. Lakes stay faces deliberately — through-flow lakes still classify
+as `River`, and converting the class wholesale would have turned every lake
+into a line.
+
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a
 habitable cell a walk-around interior. The anti-repetition mandate from the

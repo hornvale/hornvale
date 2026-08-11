@@ -1508,6 +1508,29 @@ whose land itself never varies because it is permanently frozen.
   a line the phrase had left implicit: a plan's extent derives from chamber count
   alone and *spends no draw*, because a coarse constraint that consumes randomness
   is not a constraint, it is another generator.
+  **Re-scored by [The Ford](./chronicle/the-ford.md) (2026-08-11): the field/grid
+  dichotomy this row has been reasoning inside gains a third category, and the
+  ~110 km physics floor is no longer where sub-cell *information* stops.** Decision
+  0038 split terrain quantities into *pointwise* fields any grid may resample and
+  *mesh-bound* quantities computed once on the canonical grid, and everything since
+  has treated that split as exhaustive — which is why refining beneath the cell has
+  kept reading as cosmetic. A river is neither. It is **feature-bound**: carried on
+  a polyline with a discharge-derived width, evaluated as a function of position at
+  any depth, and *the same object* at 110 km and at 27 m rather than interpolated
+  between them. That is genuine information below the cell floor, on the producer
+  side, and it arrived **without** refining the mesh — the adaptive-refinement
+  route this row has been waiting on is not what delivered it. The reason
+  generalizes past water: the quantity did not need finer resolution, it needed to
+  stop being mesh-bound at all, and no amount of subdivision could have
+  substituted, since a linear interpolant on a simplex attains its extrema at its
+  vertices and so admits no sub-cell valley for a river to occupy. So the bet's
+  confidence rises in a direction it was not pointing — the floor is a property of
+  a quantity's *carrier*, not of the grid, and any quantity whose carrier matches
+  its dimensionality escapes it. What is unchanged is what the row was actually
+  tracking: the runtime active-region swap, its delta store, and adaptive-depth
+  refinement of the quantities that legitimately remain mesh-bound are all still
+  unbuilt. What is newly open is how many other quantities are miscarried the way
+  rivers were.
 
 ## Genuinely open — split by whether the world can grade itself
 
