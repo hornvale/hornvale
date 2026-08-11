@@ -635,7 +635,7 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// through the same quantizing boundary, so they compare exactly, and bare
 /// float equality is banned.
 ///
-/// seam-guard: returns(None) scope(hornvale-almanac)
+/// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
 ///
 /// This function decides whether a settlement's ending reads as conquest or
 /// as climate migration, and its only real guard is the gallery drift check
