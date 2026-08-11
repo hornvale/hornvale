@@ -17,7 +17,7 @@ use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
     ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, Ledger, LedgerError, MARINE_FORAGE,
     MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    Void, World,
+    Void, World, WorldTime,
 };
 // `perception_registry()` is keyed by `KindId`, so a caller resolving a
 // species by name (worldgen's `observer_named`, campaign "The Beholding")
@@ -4956,7 +4956,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "species".to_string(),
     }
 }
@@ -5255,7 +5255,7 @@ mod tests {
                     predicate: SPECIES_NAME.to_string(),
                     object: Value::Text("kobold".to_string()),
                     place: None,
-                    day: Some(0.0),
+                    day: Some(WorldTime::GENESIS),
                     provenance: "species".to_string(),
                 },
                 &w.registry,

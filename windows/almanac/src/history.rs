@@ -1061,7 +1061,10 @@ mod tests {
                     predicate: predicate.to_string(),
                     object,
                     place: Some(place),
-                    day: Some(day),
+                    // Every call site below passes a hardcoded literal.
+                    day: Some(
+                        hornvale_kernel::WorldTime::new(day).expect("test fixture day is finite"),
+                    ),
                     provenance: "test-fixture".to_string(),
                 },
                 &world.registry,

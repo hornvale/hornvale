@@ -79,13 +79,24 @@ pub struct PersonSeed {
 
 /// A person's day-stamped fact. `place` is the community, so a reader can find
 /// a founder from the settlement.
+///
+/// `day` is finite by construction: every caller passes `birth_day`,
+/// `founding_day`, or a `death_day` derived from them by plain addition or
+/// subtraction of an already-committed world-time value (`Founder::founded`,
+/// itself read back from a `Fact.day` this crate cannot see — decision 0002 —
+/// but which was validated as a `WorldTime` when it was first committed).
+/// `.expect()` is therefore sound here; it would not be if this ever grew a
+/// caller passing a parsed, divided, or `sqrt`-derived value directly.
 fn fact(subject: EntityId, predicate: &str, object: Value, community: EntityId, day: f64) -> Fact {
     Fact {
         subject,
         predicate: predicate.to_string(),
         object,
         place: Some(community),
-        day: Some(day),
+        day: Some(
+            hornvale_kernel::WorldTime::new(day)
+                .expect("a person's day derives from an already-committed world time"),
+        ),
         provenance: "person".to_string(),
     }
 }
@@ -234,7 +245,7 @@ mod tests {
             world.ledger.find(crate::PERSON_FOUNDED).collect();
         assert_eq!(founded.len(), 2, "every founder carries a founding fact");
         for f in &founded {
-            let day = f.day.expect("person-founded carries a day");
+            let day = f.day.expect("person-founded carries a day").day();
             assert_ne!(
                 day,
                 if f.subject == ids[0] { 10.0 } else { 20.0 },
@@ -270,6 +281,7 @@ mod tests {
                 .find(|f| f.predicate == p)
                 .and_then(|f| f.day)
                 .expect("every person fact carries a day")
+                .day()
         };
         assert_eq!(
             day_of(crate::PERSON_BORN),

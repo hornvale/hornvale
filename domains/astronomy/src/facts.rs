@@ -8,7 +8,7 @@
 use crate::anchor::Rotation;
 use crate::streams;
 use crate::system::GenesisOutcome;
-use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World};
+use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World, WorldTime};
 
 /// The host star's spectral class, committed as its registered concept id
 /// (e.g. `"yellow-dwarf"`), never as Morgan-Keenan prose — no creature in
@@ -231,7 +231,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "astronomy".to_string(),
     }
 }

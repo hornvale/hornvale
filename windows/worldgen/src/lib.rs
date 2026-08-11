@@ -385,7 +385,7 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "scenario".to_string(),
     }
 }
@@ -429,7 +429,7 @@ fn settlement_descriptor_facts(
         predicate: predicate.to_string(),
         object,
         place: Some(id),
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     };
     world.ledger.commit(
@@ -465,7 +465,7 @@ fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
         predicate: hornvale_kernel::NAME_GLOSS.to_string(),
         object: Value::Text(gloss.to_string()),
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "worldgen".to_string(),
     }
 }
@@ -7438,7 +7438,7 @@ pub fn planet_entity(world: &World) -> Option<EntityId> {
 /// order (`registry().into_values()` is `KindId`-ascending) and is single-
 /// element for Lab's synthetic rosters — so it reproduces `genesis_in`'s mint
 /// sequence in every real case. Every fact (predicate, value, order,
-/// `provenance="species"`, `day=Some(0.0)`) mirrors `genesis_in` exactly.
+/// `provenance="species"`, `day=Some(WorldTime::GENESIS)`) mirrors `genesis_in` exactly.
 /// type-audit: bare-ok(identifier-text)
 fn species_genesis(
     world: &mut World,
@@ -7452,7 +7452,7 @@ fn species_genesis(
             predicate: predicate.to_string(),
             object,
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: "species".to_string(),
         }
     }
@@ -7660,13 +7660,13 @@ pub fn build_world(
 ///
 /// `lineage` is the caller's, not this function's, to choose: only the caller
 /// knows what the instance belongs to and which sibling it is (spec §2).
-/// type-audit: bare-ok(identifier-text: kind), waiver(decision-0014: day), bare-ok(prose: provenance)
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: provenance)
 pub fn mint_instance_of_kind(
     world: &mut World,
     wc: &WorldComponents,
     lineage: Lineage<'_>,
     kind: &str,
-    day: Option<f64>,
+    day: Option<WorldTime>,
     provenance: &str,
 ) -> Result<EntityId, BuildError> {
     if !wc.kinds().iter().any(|k| k.0 == kind) {

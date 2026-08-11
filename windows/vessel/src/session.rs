@@ -2786,7 +2786,7 @@ impl<'w> Session<'w> {
                             predicate: TURNED_HOSTILE.to_string(),
                             object: Value::Entity(player),
                             place: None,
-                            day: Some(self.day.day()),
+                            day: Some(self.day),
                             provenance: "player-provoked".to_string(),
                         };
                         self.ledger
@@ -3339,7 +3339,7 @@ impl<'w> Session<'w> {
             predicate: DISPOSITION_SHIFT.to_string(),
             object: Value::Number(sign as f64),
             place: None,
-            day: Some(self.day.day()),
+            day: Some(self.day),
             provenance: format!("player: {verb}"),
         };
         let appended = self

@@ -17,7 +17,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World};
+use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World, WorldTime};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Build one fact about occupation entity `subject`, day-stamped at `day` —
@@ -27,13 +27,19 @@ use std::collections::{BTreeMap, BTreeSet};
 /// until it ends) — self-placed (an occupation is its own place, mirroring
 /// `hornvale_settlement::genesis`'s pattern), provenanced to the deep-history
 /// bake stream.
+///
+/// `day` is always `record.core.founded` or `record.core.ended` — deep-
+/// history bake output, not stdin/parsed text, so it is finite by
+/// construction of the bake it came from; `.expect()` is sound here. If the
+/// bake fix in Task 3 (The Ell) ever makes that untrue, this is where it
+/// would need to start routing the error instead.
 fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
     Fact {
         subject,
         predicate: predicate.to_string(),
         object,
         place: Some(subject),
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
 }
@@ -283,7 +289,7 @@ pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), Bu
             predicate: hornvale_history::HISTORY_NOW.to_string(),
             object: Value::Number(now),
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: hornvale_history::streams::BAKE.as_str().to_string(),
         },
         &world.registry,

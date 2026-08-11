@@ -51,7 +51,9 @@
 //! through the one shared `occupation_draw_key`, and the tests below pin that.
 
 use hornvale_kernel::test_lineage;
-use hornvale_kernel::{CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World};
+use hornvale_kernel::{
+    CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World, WorldTime,
+};
 use hornvale_species::{Dispersion, MindVector};
 use std::collections::BTreeMap;
 
@@ -111,7 +113,7 @@ fn synthetic_settlement(
                     predicate: predicate.to_string(),
                     object,
                     place: None,
-                    day: Some(founded),
+                    day: Some(WorldTime::new(founded).expect("test fixture day is finite")),
                     provenance: "tolerance-draw-test".to_string(),
                 },
                 &world.registry,

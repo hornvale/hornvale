@@ -20,8 +20,8 @@ fn render_value(value: &Value) -> String {
 /// Recount an entity from its committed facts: a lead line naming it (by its
 /// `name` fact if present), then one bullet per fact — the predicate's
 /// registry doc (falling back to the predicate key), the rendered value, the
-/// system that asserted it, and — when the fact carries one (decision 0014:
-/// `Fact.day` is a bare `Option<f64>`) — the sim day it was asserted on. The
+/// system that asserted it, and — when the fact carries one (`Fact.day` is a
+/// typed `Option<WorldTime>`) — the sim day it was asserted on. The
 /// day is what makes a recount of a *non-functional*, dated predicate (an
 /// NPC's `agent-at`, one fact per position change) legible: without it, every
 /// position an agent has ever held reads as an undated, unordered pile
@@ -48,9 +48,10 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
             .unwrap_or_else(|| f.predicate.clone());
         match f.day {
             Some(day) => out.push_str(&format!(
-                "- {label}: {} (asserted by {}, day {day})\n",
+                "- {label}: {} (asserted by {}, day {})\n",
                 render_value(&f.object),
-                f.provenance
+                f.provenance,
+                day.day()
             )),
             None => out.push_str(&format!(
                 "- {label}: {} (asserted by {})\n",
@@ -66,7 +67,7 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
 mod tests {
     use super::*;
     use hornvale_kernel::test_lineage;
-    use hornvale_kernel::{Fact, Seed};
+    use hornvale_kernel::{Fact, Seed, WorldTime};
 
     fn world() -> World {
         let mut w = World::new(Seed(42));
@@ -85,7 +86,7 @@ mod tests {
             predicate: predicate.to_string(),
             object,
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: provenance.to_string(),
         }
     }
@@ -154,7 +155,7 @@ mod tests {
         w.ledger
             .commit(
                 Fact {
-                    day: Some(5.0),
+                    day: Some(WorldTime::new(5.0).expect("finite")),
                     ..fact(
                         e,
                         "tenet",

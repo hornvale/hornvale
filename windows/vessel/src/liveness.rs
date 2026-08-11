@@ -123,7 +123,7 @@ fn latest_committed_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> Option
     ledger
         .find(AGENT_AT)
         .filter(|f| f.subject == npc.entity)
-        .filter(|f| f.day.map(|d| d <= t.day()).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| match &f.object {
             Value::Text(s) => Some(room_from_text(s)),
@@ -846,7 +846,7 @@ fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, Ro
         .find(AGENT_AT)
         .filter(|f| f.subject == entity)
         .filter_map(|f| {
-            let d = f.day?;
+            let d = f.day?.day();
             if d > upto {
                 return None;
             }
@@ -933,7 +933,7 @@ pub fn drive_at(
         .find(DRANK)
         .filter(|f| f.subject == entity)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, f64::max);
+        .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let sightings = agent_sightings(ledger, entity, t.day());
     integrate_thirst(&sightings, home, last_drank, t.day(), terrain, class, p)
 }
@@ -954,7 +954,7 @@ pub fn believed_water(
 ) -> Option<RoomAddr> {
     let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
     for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
-        let sighted = f.day.map(|d| d <= t.day()).unwrap_or(false);
+        let sighted = f.day.map(|d| d <= t).unwrap_or(false);
         if sighted && let Value::Text(s) = &f.object {
             let room = room_from_text(s);
             if is_water(&room, terrain) {
@@ -1039,7 +1039,7 @@ fn build_emitter_scan(
             .find(AGENT_AT)
             .filter(|f| f.subject == m.entity)
             .filter_map(|f| {
-                let d = f.day.filter(|d| *d <= t.day())?;
+                let d = f.day.filter(|d| *d <= t)?.day();
                 match &f.object {
                     Value::Text(s) => Some((d, room_from_text(s))),
                     _ => None,
@@ -1226,7 +1226,7 @@ pub fn hazard_memory_memo(
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
     let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
     for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
-        if let Some(fday) = f.day.filter(|d| *d <= t.day())
+        if let Some(fday) = f.day.filter(|d| *d <= t).map(WorldTime::day)
             && let Value::Text(s) = &f.object
         {
             latest
@@ -2248,7 +2248,7 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
         .find(RESTED)
         .filter(|f| f.subject == entity)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, f64::max);
+        .fold(0.0_f64, |acc, d| acc.max(d.day()));
     (FATIGUE_RISE * (t.day() - last_rested)).clamp(0.0, 1.0)
 }
 
@@ -2433,7 +2433,7 @@ pub fn hunger_at(
         .find(EATEN)
         .filter(|f| f.subject == entity)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, f64::max);
+        .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let sightings = agent_sightings(ledger, entity, t.day());
     integrate_thirst(&sightings, home, last_ate, t.day(), terrain, class, &HUNGER)
 }
@@ -3688,7 +3688,7 @@ pub fn affect_of_memo_occupied(
         .find(DRANK)
         .filter(|f| f.subject == npc.entity)
         .filter_map(|f| f.day)
-        .fold(0.0_f64, f64::max);
+        .fold(0.0_f64, |acc, d| acc.max(d.day()));
     let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
@@ -4036,7 +4036,7 @@ fn agent_at_fact(entity: EntityId, target: &RoomAddr, day: f64, provenance: &str
         predicate: AGENT_AT.to_string(),
         object: Value::Text(room_to_text(target)),
         place: None,
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4060,7 +4060,7 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
         predicate: DRANK.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4073,7 +4073,7 @@ fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
         predicate: RESTED.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4086,7 +4086,7 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
         predicate: EATEN.to_string(),
         object: Value::Flag(true),
         place: None,
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("simulated day is finite")),
         provenance: provenance.to_string(),
     }
 }
@@ -4131,9 +4131,10 @@ fn room_entry_day(ledger: &Ledger, npc: &Npc, t: WorldTime) -> f64 {
     ledger
         .find(AGENT_AT)
         .filter(|f| f.subject == npc.entity)
-        .filter(|f| f.day.map(|d| d <= t.day()).unwrap_or(false))
+        .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
         .last()
         .and_then(|f| f.day)
+        .map(WorldTime::day)
         .unwrap_or(0.0)
 }
 
@@ -4271,9 +4272,9 @@ fn decide_step(
             && f.predicate == AGENT_AT
             && let Value::Text(s) = &f.object
             && let Some(d) = f.day
-            && d <= day
+            && d.day() <= day
         {
-            sightings.push((d, room_from_text(s)));
+            sightings.push((d.day(), room_from_text(s)));
         }
     }
     sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
@@ -4407,6 +4408,7 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
         .find(predicate)
         .filter(|f| f.subject == entity)
         .filter_map(|f| f.day)
+        .map(WorldTime::day)
         .filter(|&d| d <= day)
         .fold(0.0_f64, f64::max)
 }
@@ -4885,21 +4887,21 @@ impl WalkState {
             .find(DRANK)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, f64::max);
+            .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Likewise the last rest day (The Slumber): fatigue is time since it,
         // reset when a `rested` fact is emitted.
         let last_rested = frozen
             .find(RESTED)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, f64::max);
+            .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Likewise the last meal day (The Provender): hunger is a path
         // integral since it, reset when an `eaten` fact is emitted.
         let last_ate = frozen
             .find(EATEN)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, f64::max);
+            .fold(0.0_f64, |acc, d| acc.max(d.day()));
         // Belief and exploration state, evolved locally across the walk (the
         // fold includes this tick's own emitted moves). Seed belief from the
         // pre-tick history; grow it whenever the agent stands in water.
@@ -7223,7 +7225,7 @@ mod tests {
                     role(f.subject),
                     f.predicate,
                     f.object,
-                    f.day.map(f64::to_bits),
+                    f.day.map(|d| d.day().to_bits()),
                     f.provenance
                 )
             })
@@ -7511,13 +7513,14 @@ mod tests {
             .filter(|f| f.predicate == AGENT_AT)
             .filter_map(|f| f.day)
             .filter(|d| *d <= drank_day)
+            .map(WorldTime::day)
             .fold(f64::NEG_INFINITY, f64::max);
         assert!(
             arrived.is_finite(),
             "it walked to the water before drinking"
         );
         assert!(
-            drank_day > arrived,
+            drank_day.day() > arrived,
             "the drink still happens in the same instant as the arrival ({arrived})"
         );
         let expected = crate::clock::days_of(
@@ -7526,9 +7529,9 @@ mod tests {
             None,
         );
         assert!(
-            (drank_day - arrived - expected).abs() < 1e-12,
+            (drank_day.day() - arrived - expected).abs() < 1e-12,
             "a drink should cost exactly {expected} days; the gap is {}",
-            drank_day - arrived
+            drank_day.day() - arrived
         );
         // The same property across the WHOLE walk: one creature, so every fact
         // it emits must be strictly later than the one before. That also pins
@@ -7536,7 +7539,7 @@ mod tests {
         // `4622963782494261520`) as gone — a meal and lying down cost time too.
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
-            let d = f.day.expect("every emitted fact is dated");
+            let d = f.day.expect("every emitted fact is dated").day();
             assert!(
                 d > prev,
                 "`{}` at {d} did not advance the clock past {prev}",
@@ -7594,7 +7597,13 @@ mod tests {
             };
             sys.step(&ledger)
                 .iter()
-                .map(|f| (f.subject, f.predicate.clone(), f.day.map(f64::to_bits)))
+                .map(|f| {
+                    (
+                        f.subject,
+                        f.predicate.clone(),
+                        f.day.map(|d| d.day().to_bits()),
+                    )
+                })
                 .collect::<Vec<_>>()
         };
         let forward = run(npcs.clone());
@@ -7655,7 +7664,7 @@ mod tests {
         let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
         let mut prev = f64::NEG_INFINITY;
         for f in &facts {
-            let d = f.day.expect("every emitted fact is dated");
+            let d = f.day.expect("every emitted fact is dated").day();
             assert!(
                 d >= prev - tick,
                 "`{}` at {d} went back more than a tick past {prev} — \
@@ -8210,7 +8219,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(5.0),
+                    day: Some(WorldTime::new(5.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8251,7 +8260,7 @@ mod tests {
                     predicate: DRANK.to_string(),
                     object: Value::Flag(true),
                     place: None,
-                    day: Some(1.0),
+                    day: Some(WorldTime::new(1.0).expect("finite")),
                     provenance: "t".into(),
                 },
                 &reg,
@@ -8358,7 +8367,7 @@ mod tests {
                         predicate: DRANK.to_string(),
                         object: Value::Flag(true),
                         place: None,
-                        day: Some(day),
+                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
                         provenance: "t".into(),
                     },
                     &reg,
@@ -9233,7 +9242,7 @@ mod tests {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d >= 1.0).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.day() >= 1.0).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9517,7 +9526,7 @@ mod tests {
             ledger
                 .find(AGENT_AT)
                 .filter(|f| f.subject == e)
-                .filter(|f| f.day.map(|d| d >= from_day).unwrap_or(false))
+                .filter(|f| f.day.map(|d| d.day() >= from_day).unwrap_or(false))
                 .filter_map(|f| match &f.object {
                     Value::Text(s) => Some(room_from_text(s)),
                     _ => None,
@@ -9741,7 +9750,7 @@ mod tests {
         let walked: Vec<RoomAddr> = next
             .find(AGENT_AT)
             .filter(|f| f.subject == a_e)
-            .filter(|f| f.day.map(|d| d >= now.day()).unwrap_or(false))
+            .filter(|f| f.day.map(|d| d >= now).unwrap_or(false))
             .filter_map(|f| match &f.object {
                 Value::Text(s) => Some(room_from_text(s)),
                 _ => None,
@@ -11353,7 +11362,7 @@ mod tests {
                         .filter(|g| g.subject == e)
                         .filter(|g| g.day.is_some_and(|gd| gd <= d))
                         .filter_map(|g| match &g.object {
-                            Value::Text(s) => Some((g.day.unwrap(), room_from_text(s))),
+                            Value::Text(s) => Some((g.day.unwrap().day(), room_from_text(s))),
                             _ => None,
                         })
                         .max_by(|a, b| a.0.total_cmp(&b.0))
@@ -14005,7 +14014,7 @@ mod tests {
             .find(DRANK)
             .filter(|f| f.subject == npc.entity)
             .filter_map(|f| f.day)
-            .fold(0.0_f64, f64::max);
+            .fold(0.0_f64, |acc, d| acc.max(d.day()));
         assert_eq!(
             buggy_last_drank, drank_day,
             "sanity check: the unfiltered fold finds the FUTURE drink"

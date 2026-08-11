@@ -21,7 +21,7 @@ use hornvale_history::{
     OCC_CAUSE, OCC_ENDED, OCC_FOUNDED, OCC_FOUNDED_FROM, OCC_FUNCTION, OCC_NOTABILITY, OCC_PEAK,
     OCC_PEOPLE, OCC_SITE, OCC_TECH,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Seed, Value, World};
+use hornvale_kernel::{CellId, EntityId, Fact, KindId, Seed, Value, World, WorldTime};
 
 /// The stable text label for a tech horizon (round-trippable via `OCC_TECH`;
 /// mirrors `windows/worldgen/src/history_emit.rs`'s private helper of the
@@ -86,7 +86,7 @@ fn commit_occupation(world: &mut World, id: EntityId, core: &Occupation) {
                     predicate: predicate.to_string(),
                     object,
                     place: Some(id),
-                    day: Some(day),
+                    day: Some(WorldTime::new(day).expect("test fixture day is finite")),
                     provenance: "test-fixture".to_string(),
                 },
                 &world.registry,

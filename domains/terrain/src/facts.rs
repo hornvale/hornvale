@@ -3,7 +3,7 @@
 
 use crate::globe::{GenesisOutcome, summarize};
 use crate::rift;
-use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
+use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World, WorldTime};
 
 /// Predicate: how many plates the globe has (functional, Number).
 /// type-audit: bare-ok(identifier-text)
@@ -49,7 +49,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "terrain".to_string(),
     }
 }

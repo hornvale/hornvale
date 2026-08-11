@@ -8,7 +8,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
+use hornvale_kernel::{CellId, EntityId, KindId, Seed, World, WorldTime};
 use hornvale_worldgen::{
     BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
     occupation_records, occupations_at, occupations_by_cell, ruins_of_people, territories,
@@ -205,7 +205,7 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
         .expect("the relation must be committed");
     assert_eq!(
         fact.day,
-        Some(120.0),
+        Some(WorldTime::new(120.0).expect("finite")),
         "dated by the day the relation was established, not by `now`"
     );
     assert!(
@@ -249,21 +249,21 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
         .facts_about(ruin_id)
         .find(|f| f.predicate == IS_RUIN)
         .expect("IS_RUIN must be committed for a dead occupation");
-    assert_eq!(is_ruin.day, Some(900.0));
+    assert_eq!(is_ruin.day, Some(WorldTime::new(900.0).expect("finite")));
 
     let occ_ended = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_ENDED)
         .expect("OCC_ENDED must be committed for a dead occupation");
-    assert_eq!(occ_ended.day, Some(900.0));
+    assert_eq!(occ_ended.day, Some(WorldTime::new(900.0).expect("finite")));
 
     let occ_cause = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_CAUSE)
         .expect("OCC_CAUSE must be committed for a dead occupation");
-    assert_eq!(occ_cause.day, Some(900.0));
+    assert_eq!(occ_cause.day, Some(WorldTime::new(900.0).expect("finite")));
 
     // Founding facts stay stamped at `founded` (100.0).
     let occ_founded = w
@@ -271,14 +271,17 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_FOUNDED)
         .expect("OCC_FOUNDED must be committed");
-    assert_eq!(occ_founded.day, Some(100.0));
+    assert_eq!(
+        occ_founded.day,
+        Some(WorldTime::new(100.0).expect("finite"))
+    );
 
     let occ_site = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_SITE)
         .expect("OCC_SITE must be committed");
-    assert_eq!(occ_site.day, Some(100.0));
+    assert_eq!(occ_site.day, Some(WorldTime::new(100.0).expect("finite")));
 }
 
 #[test]
