@@ -1540,6 +1540,14 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | false | 0 | 0.0% |
 | absent | 500 | 100.0% |
 
+### monophyly-elf — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
 ### clean-outgroup-kobold — goblin-solo
 
 | value | count | share |
@@ -3750,6 +3758,14 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | absent | 500 | 100.0% |
 
 ### monophyly-dwarf — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### monophyly-elf — goblin-twin-solo
 
 | value | count | share |
 |---|---|---|

@@ -99,6 +99,7 @@ run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-generated.md
 run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
+run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
 run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
 # The live-pane preamble is hand-authored framing (The Casement, decision
 # 0052): the possess dump replaces the whole file, so re-emit the preamble
@@ -246,7 +247,34 @@ rm -f "$possess_ot_tmp"
 # other kobolds and four more end because the occupants won ground elsewhere
 # and carried the settlement onto it. All counts below are re-read off the live
 # block, per the rule above.
-history_site=5508
+# The Radiation (C2d) RE-COUNTED this block once, mid-campaign, rather than
+# repointing it: 5508 went from eleven layers to TEN and stayed a fit. That
+# re-count is now SUPERSEDED. The campaign moved placement twice more after it
+# (the task-3 affinity relevel, and the founder-collision cut), and 5508 has
+# collapsed to TWO layers -- both founded in the year 1025, one of them
+# zero-tenure -- which is the same "no longer a showcase for stratigraphy at
+# all" state that made The Tolerance repoint away from cell 1400. So the camera
+# moves, under this block's standing rule.
+#
+# The rule, applied again: is the WORLD empty, or only this cell? The world is
+# not. Scanning occ-site over the live seed-42 sky world, cell 4604 carries
+# TWELVE layers, every one of them gnoll -- the deepest column on this seed and
+# the deepest any repointing of this page has ever pointed at. Repointing is
+# legitimate here for the same reason it was at The Tolerance and The Delvers,
+# and would NOT be if the world itself had gone shallow; the null result stays
+# reportable.
+#
+# Re-read off the live block for 4604: twelve layers from the year 525, eleven
+# completed (seven put to flight by other gnolls, four leaving because they had
+# taken better ground elsewhere and carried the settlement onto it), five of the
+# twelve lasting under a year, founding parties arriving from five distinct
+# neighbouring clearings, and the standing twelfth founded in the year 1775. No
+# layer ends in ice -- every founding party instead ARRIVED fleeing it, the
+# shape this page has carried at every cell it has ever pointed at. The deepest
+# column on this seed has now gone 16 -> 11 -> 10 -> 12 across four roster
+# changes; that is a reported number and this script asserts NO mechanism for
+# it, because a roster change moves several things at once.
+history_site=4604
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# The Contested Clearing of Seed 42\n\n'
@@ -258,9 +286,9 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'kobold steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 625 down to the present. Every one of the eleven\n'
-    printf 'completed layers ended at the hands of other kobolds: seven fell to a\n'
+    printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
+    printf 'last, from the year 525 down to the present. Every one of the eleven\n'
+    printf 'completed layers ended at the hands of other gnolls: seven fell to a\n'
     printf 'rival band, and four were not evictions at all — the occupants had\n'
     printf 'just taken better ground from a neighbour and carried the settlement\n'
     printf 'there, so the layer closes on a departure rather than a defeat. This\n'
@@ -268,11 +296,11 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'neighbourhood it had already filled.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
     printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
-    printf 'driven off one of four neighbouring clearings. Four of the twelve\n'
+    printf 'driven off one of five neighbouring clearings. Five of the twelve\n'
     printf 'layers did not last a single year — founded and put to flight in the\n'
     printf 'same year they began, which is what the record looks like when refuge\n'
-    printf 'and contest are the same ground. The twelfth was founded in 1950 and\n'
-    printf 'stands yet, fifty years on: some thirteen souls, two huts and a\n'
+    printf 'and contest are the same ground. The twelfth was founded in the year\n'
+    printf '1775 and stands yet, 225 years on: some 27 souls, a hut and a\n'
     printf 'granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"

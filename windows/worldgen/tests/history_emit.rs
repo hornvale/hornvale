@@ -620,11 +620,20 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // reading: this witness is a coincidence of one seed's occupation
     // chains, not a stable property, and a campaign that needs it should
     // widen the seed sweep rather than hope.
+    //
+    // THE RADIATION (C2d, 2026-08-10): 0 -> 1, and the witness is back for the
+    // third time. Six elves redecided deep-history settlement survival at all
+    // three seeds; measured 1 tying pair. The per-tie assertions in the loop
+    // above are load-bearing again, and again nothing was chosen to make that
+    // true. The reading in the paragraph above stands unchanged and is now
+    // better evidenced: 1 -> 0 -> 2 -> 0 -> 1 across five roster changes is a
+    // coincidence of particular occupation chains, not a property. This count
+    // should not be cited as evidence of anything about `layer_key`.
     assert_eq!(
-        ties, 0,
-        "measured 0 (seed 42) + 0 (seed 7) + 0 (seed 1000) = 0 tying pairs on the live \
-         corpus over {pairs} compared pairs; the per-tie assertions above are VACUOUS at \
-         this count — a different count means the key's tie conditions changed"
+        ties, 1,
+        "measured 1 tying pair on the live corpus over {pairs} compared pairs; the \
+         per-tie assertions above are VACUOUS at a count of 0 — a different count means \
+         the key's tie conditions changed"
     );
 }
 
@@ -728,6 +737,56 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// again, on two independent worlds rather than one. The CLAIM this test was
 /// frozen for is unchanged and still true: two restacking sites across three
 /// worlds of ~19k land cells each is "barely" by any reading.
+///
+/// **THE RADIATION (C2d, 2026-08-10): the witness is GONE AGAIN — 1/0/1 ->
+/// 0/0/0.** Six new settling peoples redecide settlement survival on all three
+/// seeds and both restacking sites disappear. This is the second time this
+/// quantity has hit zero and the fourth time it has moved on a roster change
+/// with no change to `layer_key` itself, so the honest summary is the one the
+/// Delvers note already reached: **at 0/0/0 this measurement cannot tell the
+/// material fourth key from a dead one**, and it is re-pinned at the measured
+/// zeros rather than rescued by choosing a witnessing seed. The mechanism
+/// stays separately and non-vacuously pinned by
+/// `same_day_layers_order_by_material_facts_not_mint_order`, which is green.
+///
+/// Read against its sibling: `distinct_layers_tie_only_on_genuine_material_
+/// matches` went the OTHER way in this same commit (0 -> 1 tying pairs). Ties
+/// came back; restacking went away. Those remain different properties of the
+/// key, and a campaign that needs either should widen the seed sweep — three
+/// seeds have now produced five different readings between them.
+///
+/// **THE RADIATION, TASK 6 (C2d, 2026-08-10): the witness is BACK — 0/0/0 ->
+/// 1/0/1**, byte-identical to the vector The Range measured, after this
+/// campaign moved settlement placement twice more (the task-3 affinity relevel
+/// and the founder-collision cut).
+///
+/// This re-pin was flagged during the campaign's post-census sweep as a
+/// **candidate falsification** — "a null that went from *never moves* to
+/// *moves on two of three seeds*" — and that reading is **rejected here, with
+/// the reason stated rather than the number quietly bumped**, because it
+/// mistakes the previous measured value for the claim.
+///
+/// - The claim this test is named and frozen for is "*the material fourth key
+///   BARELY moves the stratigraphy*". Two restacking sites across three worlds
+///   of ~19k land cells each is "barely" by any reading, and the claim is if
+///   anything better served at 1/0/1 than at 0/0/0.
+/// - "Never moves" was never asserted. The paragraphs above record this
+///   quantity reading 0/0/1, 0/1/0, 0/0/0, 1/0/1 and 0/0/0 across five prior
+///   measurements — it has been 0, 1 and 2 in total, and this is the sixth
+///   reading and the third distinct value. A quantity that has oscillated
+///   through the same small range six times is not a null that stopped being
+///   null.
+/// - The DEGENERATE direction here is downward, not upward. This file already
+///   records 0/0/0 as the reading that "cannot tell the material fourth key
+///   from a dead one". Going 0 -> 2 restores the measurement's ability to
+///   discriminate; it does not remove it.
+///
+/// So this is a re-pin of a WITNESS, and the claim it witnesses is unmoved.
+/// What the six readings do say, and it is worth naming: a three-seed count
+/// that lands on 0, 1 or 2 is an existence claim near a threshold in the sense
+/// ratified decision 0097 describes, and any campaign that needs this quantity
+/// as evidence should widen the sweep rather than read three worlds — which is
+/// what the sibling paragraph above has been saying since The Range.
 ///
 /// The loop now COLLECTS all three counts and asserts the vector, instead of
 /// asserting per seed inside it. The old shape stopped at the first difference,

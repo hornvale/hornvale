@@ -1,4 +1,4 @@
-# 0120. An ordinal field may band a blend; a nominal field must take a partition
+# 0124. An ordinal field may band a blend; a nominal field must take a partition
 
 **Status:** Accepted (2026-08-11) · **Decider:** Nathan · **Relates:**
 [0038](0038-identity-computes-on-the-canonical-grid.md),
@@ -16,7 +16,7 @@ its continuous underlay, and a *nominal* field must be assigned by a partition
 of space and never by thresholding a blend — accepting that a nominal field
 therefore stays exactly constant across any view narrower than its partition,
 and that the honest response to that flatness is to disclose it
-([0122](0122-disclose-a-resolution-rather-than-refine-a-field.md)) rather than
+([0126](0126-disclose-a-resolution-rather-than-refine-a-field.md)) rather than
 to invent detail.
 
 ## Why the obvious rule was wrong
@@ -100,7 +100,7 @@ reverted (`76068e6a`):
   "inherited" was in the source and misled the campaign that read it.
 - **A refinement's preregistration needs a conservation criterion**, because
   both of the hypotheses that passed here asked only about local variation. That
-  is [0123](0123-a-refinement-preregisters-a-conservation-criterion.md), and the
+  is [0127](0127-a-refinement-preregisters-a-conservation-criterion.md), and the
   conservation test it requires is in
   `windows/locale/src/lib.rs`'s `room_water_is_conserved_when_aggregated_over_a_canonical_cell`.
 - **`RIVER_MIN_DRAINAGE` was not touched, and must not be** to change a sub-cell

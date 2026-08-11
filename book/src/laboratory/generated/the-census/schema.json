@@ -1792,6 +1792,14 @@
       "rung": "full"
     },
     {
+      "doc": "Whether every elf daughter's (desert-elf, drow, high-elf, sea-elf, snow-elf, wood-elf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"elf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no elf daughter minted a Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "monophyly-elf",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
       "doc": "Whether kobold — the family with no siblings — never coincides with the goblinoid family: for every concept kobold holds as a Root, its recorded proto-root differs from an INDEPENDENT re-draw of the \"goblinoid\" family proto-root for that same concept (spec §3's clean outgroup); Absent if kobold minted no Root",
       "domain": "language",
       "kind": "flag",
@@ -2694,7 +2702,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xcf398900c6e7bb44"
+    "fnv1a64": "0x6a870c45993e5d0e"
   },
   "schema_version": 1,
   "study": {

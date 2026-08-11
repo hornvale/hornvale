@@ -1,11 +1,11 @@
-# 0123. A refinement preregisters a conservation criterion, not only variation criteria
+# 0127. A refinement preregisters a conservation criterion, not only variation criteria
 
 **Status:** Accepted (2026-08-11) · **Decider:** Nathan · **Relates:**
 [0016](0016-studies-preregister-hypotheses.md),
 [0039](0039-epochs-replace-tiers-refine.md),
 [0097](0097-assert-the-robust-half-measure-the-fragile-half.md),
 [0119](0119-an-instruments-silence-means-the-claim-held.md),
-[0120](0120-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md)
+[0124](0124-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md)
 
 In the context of *The Grain* shipping a sub-cell refinement that passed every
 hypothesis it had preregistered and was nonetheless illegal, facing the fact that

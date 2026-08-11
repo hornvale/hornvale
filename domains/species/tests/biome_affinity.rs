@@ -80,15 +80,30 @@ fn a_uniform_affinity_is_flat_across_every_biome() {
 /// `windows/worldgen/tests/range_readout.rs::every_occupant_has_climate_curves_the_minimum_currently_discards`
 /// — it needs the kernel's `sovereignty_floor` against the biosphere store, so
 /// it cannot live in this domain-local file.
+///
+/// **The Radiation (C2d) task 3 takes it from two to eight**, adding the six
+/// elves — the campaign that routes an entire family through this store rather
+/// than through condition curves. The list stays exhaustive and stays sorted by
+/// `KindId`, which is `ComponentStore`'s own iteration order.
 #[test]
 fn the_registry_ships_exactly_the_declared_occupants() {
     let registry = biome_affinity_registry();
     let occupants: Vec<&str> = registry.ids().map(|k| k.0).collect();
     assert_eq!(
         occupants,
-        vec!["gnoll", "woolly-mammoth"],
-        "The Range task 4 declares exactly two occupants: gnoll (Desert) and \
-         woolly-mammoth (Tundra/Ice). Adding or removing one moves every world, \
-         so it belongs in a commit that says so."
+        vec![
+            "desert-elf",
+            "drow",
+            "gnoll",
+            "high-elf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
+            "woolly-mammoth",
+        ],
+        "Eight occupants: The Range task 4's two — gnoll (Desert) and \
+         woolly-mammoth (Tundra/Ice) — plus The Radiation task 3's six elves. \
+         Adding or removing one moves every world, so it belongs in a commit \
+         that says so."
     );
 }

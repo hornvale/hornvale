@@ -34,6 +34,21 @@
 //!   silently paper over — so it prints loudly rather than failing quietly
 //!   or passing silently.
 //!
+//! # The tripwire now covers a PEOPLED kind (The Radiation, C2d)
+//!
+//! P1's assertion is deliberately inverted: it pins the ratio at exactly
+//! `1.000` and goes RED the day The Tense's two-tier gate/modifier tolerance
+//! stops being masked by the unfloored elevation axis. Until The Radiation its
+//! two subjects were both FAUNA — rust-monster and xorn — and a fauna kind
+//! places no settlement, so a red tripwire meant "a capacity field moved".
+//!
+//! Drow is `SocialForm::Settled`. Its cave-dark insolation authoring is
+//! dormant for the same measured reason, and it is now pinned here alongside
+//! the other two — so the day this test reddens, the consequence is no longer
+//! confined to a field: a people's SETTLEMENTS move, and every downstream
+//! reading of the elf family (spec §4's capacity comparisons, §5's P4
+//! companion null) was taken while this contributed nothing.
+//!
 //! Test fixture (decision 0092): calls the composition-root entry points
 //! directly to build its own world state, the sanctioned test-fixture
 //! posture reused throughout this crate's live-worldgen batteries.
@@ -97,6 +112,8 @@ struct SeedReadout {
     raw_seed: u64,
     rust_monster: KindSeedStats,
     xorn: KindSeedStats,
+    /// The Radiation (C2d): drow, the tripwire's first PEOPLED subject.
+    drow: KindSeedStats,
     /// `true` if the "before" (empty `habitat_realm` store) and "after"
     /// (real store) builds produced byte-identical committed world JSON.
     world_unchanged: bool,
@@ -145,10 +162,18 @@ fn measure_seed(
     let regime = climate.regime();
 
     // The Range: the `biome_affinity` registry is NOT empty. Since task 4 it
-    // carries `gnoll` and `woolly-mammoth`, and both are in the whole-biosphere
-    // roster this readout scores — so the all-`None` slice below is a deliberate
-    // CONTROL, not a restatement of the registry, and the earlier claim that it
-    // was "exact, not a stand-in" is false from task 4 onward.
+    // carries `gnoll` and `woolly-mammoth`, and since The Radiation's task 3
+    // the six elves as well — DROW AMONG THEM, which is this readout's own
+    // third subject. Every one of them is in the whole-biosphere roster this
+    // readout scores, so the all-`None` slice below is a deliberate CONTROL,
+    // not a restatement of the registry, and the earlier claim that it was
+    // "exact, not a stand-in" is false from task 4 onward.
+    //
+    // The control matters more now than it did. Drow carries wood-elf's
+    // affinity row, so scoring it with the live registry would fold a BIOME
+    // preference into a reading whose whole purpose is to isolate the REALM
+    // question — and the drow tripwire below would then pin a number that two
+    // separate mechanisms could move.
     //
     // Deliberate because this readout measures the REALM question — what the
     // habitat gate does to a kind's field — and its published numbers were
@@ -215,6 +240,11 @@ fn measure_seed(
 
     let rust_monster = stats_for("rust-monster");
     let xorn = stats_for("xorn");
+    // The Radiation (C2d): computed EXACTLY as the two fauna kinds above are —
+    // the only difference between the arms is `wc_before.habitat_realm =
+    // ComponentStore::new()`, so drow's number is comparable to theirs without
+    // qualification.
+    let drow = stats_for("drow");
 
     let json_after = world_after.to_json();
     let json_before = world_before.to_json();
@@ -222,6 +252,7 @@ fn measure_seed(
         raw_seed: seed.0,
         rust_monster,
         xorn,
+        drow,
         world_unchanged: json_after == json_before,
         fact_count_before: world_before.ledger.len(),
         fact_count_after: world_after.ledger.len(),
@@ -286,9 +317,13 @@ fn the_blast_radius_readout() {
     let mut xorn_before_total = 0.0;
     let mut xorn_after_total = 0.0;
     let mut xorn_cave_n_total = 0usize;
+    let mut drow_before_total = 0.0;
+    let mut drow_after_total = 0.0;
+    let mut drow_cave_n_total = 0usize;
     for r in &rows {
         let rm = &r.rust_monster;
         let xo = &r.xorn;
+        let dr = &r.drow;
         println!(
             "{:>6} | {:>12.6} | {:>12.6} | {:>12.6} | {:>12.6} | {:>8}",
             r.raw_seed,
@@ -304,9 +339,12 @@ fn the_blast_radius_readout() {
         xorn_before_total += xo.cave_sum_before;
         xorn_after_total += xo.cave_sum_after;
         xorn_cave_n_total += xo.cave_n;
+        drow_before_total += dr.cave_sum_before;
+        drow_after_total += dr.cave_sum_after;
+        drow_cave_n_total += dr.cave_n;
     }
     assert!(
-        rm_cave_n_total > 0 && xorn_cave_n_total > 0,
+        rm_cave_n_total > 0 && xorn_cave_n_total > 0 && drow_cave_n_total > 0,
         "the seed sweep must contain cave-bearing land cells"
     );
     let rm_mean_before = rm_before_total / rm_cave_n_total as f64;
@@ -315,6 +353,9 @@ fn the_blast_radius_readout() {
     let xorn_mean_before = xorn_before_total / xorn_cave_n_total as f64;
     let xorn_mean_after = xorn_after_total / xorn_cave_n_total as f64;
     let xorn_ratio = xorn_mean_after / xorn_mean_before;
+    let drow_mean_before = drow_before_total / drow_cave_n_total as f64;
+    let drow_mean_after = drow_after_total / drow_cave_n_total as f64;
+    let drow_ratio = drow_mean_after / drow_mean_before;
     println!(
         "\nrust-monster: pooled mean before={rm_mean_before:.6} after={rm_mean_after:.6} \
          ratio={rm_ratio:.3} over {rm_cave_n_total} cave-bearing land cells across {} seeds",
@@ -323,6 +364,11 @@ fn the_blast_radius_readout() {
     println!(
         "xorn:         pooled mean before={xorn_mean_before:.6} after={xorn_mean_after:.6} \
          ratio={xorn_ratio:.3} over {xorn_cave_n_total} cave-bearing land cells across {} seeds",
+        rows.len()
+    );
+    println!(
+        "drow:         pooled mean before={drow_mean_before:.6} after={drow_mean_after:.6} \
+         ratio={drow_ratio:.3} over {drow_cave_n_total} cave-bearing land cells across {} seeds",
         rows.len()
     );
     // --- P1 IS FALSIFIED, AND THIS ASSERTS THE FALSIFICATION -------------
@@ -373,6 +419,36 @@ fn the_blast_radius_readout() {
         (xorn_ratio - 1.0).abs() < 1e-9,
         "P1 (falsified, and pinned as such): xorn's ratio is expected to be EXACTLY 1.000 for \
          the same reason as rust-monster's. Got {xorn_ratio:.6}"
+    );
+    // --- THE RADIATION (C2d): drow's dark adaptation, authored and DORMANT ---
+    //
+    // Drow's `insolation` response is authored for cave-dark — optimum 0.02,
+    // sigma 0.10, devotion 0.55, the most devoted curve in the elf family — and
+    // it is preregistered as contributing EXACTLY NOTHING to placement today,
+    // for the mechanism the two assertions above already establish. Underground
+    // the insolation reading improves (.467 -> .840, The Warren's own probe) and
+    // the Liebig minimum never sees it, because drow's elevation devotion (0.30)
+    // sits below its sovereignty floor (0.424802) and the unfloored elevation
+    // axis is therefore the minimum on every cell. Generalised: a non-lethal
+    // preference cannot matter while an unfloored axis is scarcer.
+    //
+    // So The Radiation authored the dark half anyway — it is true of the kind —
+    // and pins it here rather than claiming it works.
+    //
+    // DO NOT RELAX THIS. A moved ratio does not mean the number drifted; it
+    // means The Tense's two-tier gate/modifier tolerance came out of shadow
+    // mode and drow's authored insolation preference started to bind. That is a
+    // FINDING, and it invalidates readings rather than merely aging them: the
+    // §4 capacity comparisons and §5's P4 companion null were both measured
+    // while this contributed nothing, and both need re-measuring before this
+    // assertion is rewritten.
+    assert!(
+        (drow_ratio - 1.0).abs() < 1e-9,
+        "The Radiation (C2d): drow's ratio is expected to be EXACTLY 1.000 — its cave-dark \
+         insolation authoring is DORMANT by measurement, masked by the unfloored elevation axis \
+         exactly as rust-monster's and xorn's substrate swap is. Got {drow_ratio:.6}. If this \
+         moved, the two-tier tolerance is binding and drow's dark adaptation just came alive: \
+         re-measure The Radiation's §4 and its §5 P4 companion null before touching this line"
     );
 
     // --- P2: range collapse, asserted per seed ---------------------------

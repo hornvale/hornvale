@@ -62,9 +62,11 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `day` | the light half of the day-night cycle | *Sna | /sna/ |
 | `desert` | a biome class | *Do | /do/ |
 | `desert-dwarf-kind` | a desert dwarf | *Zngot | /zŋot/ |
+| `desert-elf-kind` | a desert elf | *Gabqoq | /gabqoq/ |
 | `die` | to cease living | *To | /to/ |
 | `dire-wolf-kind` | a dire wolf | *Sngad | /sŋad/ |
 | `drink` | to swallow liquid | *Todzngat | /todzŋat/ |
+| `drow-kind` | a drow | *Zngabznot | /zŋabznot/ |
 | `earth` | the ground underfoot | *Znga | /zŋa/ |
 | `east` | the direction of increasing longitude | *Dadshnag | /dadʃnag/ |
 | `eat` | to consume food | *Snatzngad | /snatzŋad/ |
@@ -103,6 +105,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `hearth` | the fire at the center of a home | *Qa | /qa/ |
 | `heat` | felt, oppressive warmth | *Shngoznab | /ʃŋoznab/ |
 | `high` | far above the ground | *Dagsnog | /dagsnog/ |
+| `high-elf-kind` | a high elf | *Dogboq | /dogboq/ |
 | `hill` | ground that rises above what surrounds it | *Shngab | /ʃŋab/ |
 | `hill-dwarf-kind` | a hill dwarf | *Sngaqznog | /sŋaqznog/ |
 | `hobgoblin-kind` | a hobgoblin | *Znobshnad | /znobʃnad/ |
@@ -172,6 +175,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Datgog | /datgog/ |
 | `scoured-ice` | Ice swept bare and carved by wind. | *Zngobbaq | /zŋobbaq/ |
 | `sea` | a body of salt water | *Todsnad | /todsnad/ |
+| `sea-elf-kind` | a sea elf | *Gogsnob | /gogsnob/ |
 | `sea-ice` | a biome class | *Qoqsngat | /qoqsŋat/ |
 | `shadow` | cast dark, distinct from open gloom | *Bato | /bato/ |
 | `shrieker-kind` | a shrieker | *Dat | /dat/ |
@@ -180,6 +184,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `sleep` | to rest unconscious | *Qozngo | /qozŋo/ |
 | `smoker-field` | A field of hydrothermal chimneys. | *Dabzngad | /dabzŋad/ |
 | `snow` | frozen precipitation | *Sngabsno | /sŋabsno/ |
+| `snow-elf-kind` | a snow elf | *Sngot | /sŋot/ |
 | `snowfield` | An unbroken field of snow. | *Togqob | /togqob/ |
 | `south` | toward the pole of decreasing latitude | *Snadsnad | /snadsnad/ |
 | `south-east` | between south and east | *Zngod | /zŋod/ |
@@ -222,6 +227,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `white-dragon-kind` | a white dragon | *Qod | /qod/ |
 | `wind` | moving air | *Zngatad | /zŋatad/ |
 | `wind-scour` | Ground swept bare by wind. | *Dotshngob | /dotʃŋob/ |
+| `wood-elf-kind` | a wood elf | *Gaq | /gaq/ |
 | `wooded-grassland` | Grassland with scattered trees. | *Shnagzngod | /ʃnagzŋod/ |
 | `woolly-mammoth-kind` | a woolly mammoth | *Zngodznad | /zŋodznad/ |
 | `xorn-kind` | a xorn | *Sngog | /sŋog/ |

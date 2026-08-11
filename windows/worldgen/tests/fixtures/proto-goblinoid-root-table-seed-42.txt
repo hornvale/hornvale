@@ -26,9 +26,11 @@ dark: Tano /tano/
 day: Gaage /gaage/
 desert: Nadoa /nadoa/
 desert-dwarf-kind: Neoga /neoga/
+desert-elf-kind: Poenae /poenae/
 die: Toono /toono/
 dire-wolf-kind: Penae /penae/
 drink: Ganae /ganae/
+drow-kind: Geeke /geeke/
 earth: Geo /geo/
 east: Neepa /neepa/
 eat: Nao /nao/
@@ -67,6 +69,7 @@ hand: Qaagaa /qaagaa/
 hearth: Nope /nope/
 heat: Keqoo /keqoo/
 high: Geanea /geanea/
+high-elf-kind: Kaano /kaano/
 hill: Nootea /nootea/
 hill-dwarf-kind: Dapae /dapae/
 hobgoblin-kind: Qage /qage/
@@ -136,6 +139,7 @@ scattering-layer: Deaqae /deaqae/
 sclerophyll-scrub: Pone /pone/
 scoured-ice: Qepa /qepa/
 sea: Gaanaa /gaanaa/
+sea-elf-kind: Neapao /neapao/
 sea-ice: Qeka /qeka/
 shadow: Neetoe /neetoe/
 shrieker-kind: Da /da/
@@ -144,6 +148,7 @@ sibling: Poatea /poatea/
 sleep: Noegoa /noegoa/
 smoker-field: Qoge /qoge/
 snow: Noanee /noanee/
+snow-elf-kind: Naoqa /naoqa/
 snowfield: Qane /qane/
 south: Qaeneo /qaeneo/
 south-east: Napea /napea/
@@ -186,6 +191,7 @@ wheat: Netea /netea/
 white-dragon-kind: Qo /qo/
 wind: Neqoo /neqoo/
 wind-scour: Poa /poa/
+wood-elf-kind: Qeoko /qeoko/
 wooded-grassland: Neekae /neekae/
 woolly-mammoth-kind: Qae /qae/
 xorn-kind: Notee /notee/

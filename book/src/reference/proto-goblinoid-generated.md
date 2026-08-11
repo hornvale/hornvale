@@ -63,9 +63,11 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `day` | the light half of the day-night cycle | *Gaage | /gaage/ |
 | `desert` | a biome class | *Nadoa | /nadoa/ |
 | `desert-dwarf-kind` | a desert dwarf | *Neoga | /neoga/ |
+| `desert-elf-kind` | a desert elf | *Poenae | /poenae/ |
 | `die` | to cease living | *Toono | /toono/ |
 | `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
 | `drink` | to swallow liquid | *Ganae | /ganae/ |
+| `drow-kind` | a drow | *Geeke | /geeke/ |
 | `earth` | the ground underfoot | *Geo | /geo/ |
 | `east` | the direction of increasing longitude | *Neepa | /neepa/ |
 | `eat` | to consume food | *Nao | /nao/ |
@@ -104,6 +106,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `hearth` | the fire at the center of a home | *Nope | /nope/ |
 | `heat` | felt, oppressive warmth | *Keqoo | /keqoo/ |
 | `high` | far above the ground | *Geanea | /geanea/ |
+| `high-elf-kind` | a high elf | *Kaano | /kaano/ |
 | `hill` | ground that rises above what surrounds it | *Nootea | /nootea/ |
 | `hill-dwarf-kind` | a hill dwarf | *Dapae | /dapae/ |
 | `hobgoblin-kind` | a hobgoblin | *Qage | /qage/ |
@@ -173,6 +176,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Pone | /pone/ |
 | `scoured-ice` | Ice swept bare and carved by wind. | *Qepa | /qepa/ |
 | `sea` | a body of salt water | *Gaanaa | /gaanaa/ |
+| `sea-elf-kind` | a sea elf | *Neapao | /neapao/ |
 | `sea-ice` | a biome class | *Qeka | /qeka/ |
 | `shadow` | cast dark, distinct from open gloom | *Neetoe | /neetoe/ |
 | `shrieker-kind` | a shrieker | *Da | /da/ |
@@ -181,6 +185,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `sleep` | to rest unconscious | *Noegoa | /noegoa/ |
 | `smoker-field` | A field of hydrothermal chimneys. | *Qoge | /qoge/ |
 | `snow` | frozen precipitation | *Noanee | /noanee/ |
+| `snow-elf-kind` | a snow elf | *Naoqa | /naoqa/ |
 | `snowfield` | An unbroken field of snow. | *Qane | /qane/ |
 | `south` | toward the pole of decreasing latitude | *Qaeneo | /qaeneo/ |
 | `south-east` | between south and east | *Napea | /napea/ |
@@ -223,6 +228,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `white-dragon-kind` | a white dragon | *Qo | /qo/ |
 | `wind` | moving air | *Neqoo | /neqoo/ |
 | `wind-scour` | Ground swept bare by wind. | *Poa | /poa/ |
+| `wood-elf-kind` | a wood elf | *Qeoko | /qeoko/ |
 | `wooded-grassland` | Grassland with scattered trees. | *Neekae | /neekae/ |
 | `woolly-mammoth-kind` | a woolly mammoth | *Qae | /qae/ |
 | `xorn-kind` | a xorn | *Notee | /notee/ |

@@ -221,6 +221,31 @@ suite's cost moved and which `make ci`'s baseline reasoning depends on. A red ru
 entering as a cheap one makes the gate look **faster** than it is, which is the
 dangerous direction.
 
+> **CORRECTION (The Radiation, 2026-08-10).** The correction below is itself
+> half wrong, and the half that is right was right for the wrong reason. Checked
+> against `scripts/timed.sh` on the merged tree:
+>
+> - **`timed.sh` does NOT record `rc`.** Its append is a single `printf` with
+>   eleven `%s`, and the eleven values are date, label, real, user, sys, ratio,
+>   `HV_CENSUS_WAITED_S`, commit, branch, hostname, cores. `rc` is computed
+>   (`rc=$?`), returned, and echoed to **stderr** in the `(recorded) rc=$rc`
+>   line — never to the ledger. The header's eleven columns match the writer
+>   field for field. The original lesson was right.
+> - **The stale column map is real, and this correction found it** — but it is
+>   not `rc` occupying `$8`. It is **`waited_s`**, inserted after `ratio`, which
+>   shifted commit from `$8` to `$9` and was never reflected in the map. The
+>   summary printed `$10` (branch) where it meant host and `$8` (waited_s) where
+>   it meant commit: a row whose true `host@commit` is `ambrose@1931a904`
+>   displayed as `campaign/the-cairn@0`. Verified by running it, both before and
+>   after; fixed in the same commit as this note.
+>
+> So there were two independent defects in one file and each campaign found one.
+> The Cairn found the stale map and misattributed it; The Range found the
+> missing `rc` and missed the map. Both were reading an artifact rather than the
+> writer — the header in one case, the summary's own comment in the other. The
+> lesson this correction states is exactly right; it simply applies to the
+> correction too.
+
 **This lesson was itself written wrong the first time, which is the sharper half.**
 The original text asserted the ledger "has no `rc` column". Checking at close:
 `timed.sh` does capture `rc`, and every row carries it — so the obvious remedy was

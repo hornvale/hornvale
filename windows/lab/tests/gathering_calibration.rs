@@ -169,9 +169,26 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     //
     // The preregistered floor of 3 still clears decisively (6.3x), the claim
     // this row exists to guard, re-checked rather than assumed.
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): six new settling peoples — the
+    // six elves — take the settling roster from nine to fifteen, so every
+    // seed's settlement placement is re-decided and this capacity-by-latitude
+    // reading with it: 18.9423 -> 19.0939, a 0.8% rise. THE SAME MAGNITUDE
+    // AND SIGN THE DELVERS' THREE-PEOPLE ADDITION PRODUCED, from twice as
+    // many new peoples — which is a reason to keep stating the cause no more
+    // narrowly than "the roster changed". This campaign measured nothing
+    // about where the six elves sit by latitude; each elf carries an authored
+    // biome affinity, and an authored curve has already been mistaken for an
+    // emergent finding once in this file's history. Decision 0106's
+    // circularity rule applies on top of that — this is a drift tripwire,
+    // never evidence for the Earth-contingent gradient claim.
+    //
+    // The preregistered floor of 3 still clears decisively (6.4x), the claim
+    // this row exists to guard, re-checked rather than assumed.
     assert!(
-        (mean - 18.9423).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.9423)"
+        (mean - 19.0939).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~19.0939)"
     );
 }
 
@@ -297,9 +314,27 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // asserted above — below the uniform-sphere baseline of 32.7 — is
     // untouched and still clears the baseline by better than 2x (17.17
     // degrees of margin), re-checked rather than assumed.
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): six new settling peoples take
+    // the settling roster from nine to fifteen and settlement placement moves
+    // again, pulling population further poleward (15.5271 -> 16.2646). This
+    // is the LARGEST single movement this row has recorded (+0.74 degrees,
+    // +4.8%), and it continues the poleward drift The Range began. The cause
+    // is stated no more narrowly than the roster change: nothing this
+    // campaign measured says where the elves sit by latitude, and each of
+    // them carries an AUTHORED biome affinity, so "the snow-elf's taiga and
+    // tundra strongholds pull the mean poleward" is exactly the kind of
+    // authored-curve-read-as-finding this file has been caught on before. It
+    // is not asserted. The preregistered directional claim asserted above —
+    // below the uniform-sphere baseline of 32.7 — is untouched and still
+    // clears the baseline by better than 2x (16.44 degrees of margin),
+    // re-checked rather than assumed; note the margin is narrowing regen over
+    // regen (17.67 -> 17.17 -> 16.44) and this row would become a finding
+    // rather than a re-pin if it kept going.
     assert!(
-        (mean - 15.5271).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.5271)"
+        (mean - 16.2646).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~16.2646)"
     );
 }
 

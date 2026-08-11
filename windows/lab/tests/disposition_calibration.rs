@@ -243,6 +243,71 @@
 //! rescue it. `rho > 0` stays exactly as written, its epistemic status
 //! stated plainly rather than left implied by the other two assertions'
 //! strength.
+//!
+//! ## THE RADIATION'S FALSIFICATION OF THE PRIMARY CLAIM (C2d, 2026-08-10)
+//!
+//! **This battery is RED on the heavy tier and is deliberately left red.** The
+//! PRIMARY sign claim — `separation > 1.0`, the weakest raider re-seats more
+//! often than the strongest abstainer — is **FALSIFIED at the fifteen-people
+//! roster**. Measured on lefford's heavy-tier run at `581468bb`, seeds 1..=60,
+//! 261.6 s:
+//!
+//! ```text
+//! bugbear      0.483   desert-dwarf 0.200   desert-elf 0.224   drow      0.350
+//! gnoll        0.475   goblin       0.367   gully-dwarf 0.067  high-elf  0.317
+//! hill-dwarf   0.383   hobgoblin    0.783   human      0.367   kobold    0.593
+//! sea-elf      0.033   snow-elf     0.466   wood-elf   0.283
+//!
+//! weakest raider  high-elf   0.317
+//! strongest abstainer snow-elf 0.466
+//! separation 0.680        (was 1.30 at nine peoples, 2.55 pre-Tolerance)
+//! ```
+//!
+//! **Nothing was retuned, and nothing here is asserted differently.** The
+//! floor, the span guard, the partition threshold and the seed panel are
+//! exactly as they were; the assertion that fires still fires. What follows is
+//! the diagnosis, which is what a falsification is owed.
+//!
+//! **It is not a roster-size accident, and it is not a mechanism change.**
+//! Both new order statistics are elves — the peoples this campaign added — and
+//! restricting the SAME measurement to the pre-Radiation nine gives
+//! `0.383 / 0.367 = 1.045`, i.e. the claim was already inside 5% of failing
+//! before this campaign existed. It did not need six new peoples to break; it
+//! needed one people authored near the gate on either side, and the elves
+//! supplied both: high-elf sits at `threat_response` 0.60, EXACTLY
+//! `RAID_DISPOSITION_MIN`, and snow-elf at 0.50, one tenth below it.
+//!
+//! **The direction it was written to test SURVIVES, and survives better than
+//! before.** Spearman's rho of authored `threat_response` against re-seating
+//! rate, over the same table:
+//!
+//! ```text
+//! all fifteen peoples   rho = 0.840   (the SECONDARY claim's own statistic;
+//!                                      it read 0.831 over nine)
+//! the pre-Radiation nine rho = 0.844
+//! the six new elves alone rho = 0.829
+//! ```
+//!
+//! So the rate is still a monotone increasing function of the authored mean,
+//! on the new peoples as strongly as on the old. **What died is the min-versus-
+//! max statistic over a two-set partition, and this file's own doc predicted
+//! exactly that** — see "The Tolerance dissolved this file's partition": once
+//! `takes_the_initiative` compares a per-settlement DRAW around the authored
+//! mean, two peoples 0.10 apart in mean have overlapping behaviour by
+//! construction (P(draw clears 0.6) is 0.50 for high-elf against 0.31 for
+//! snow-elf), so a comparison of the two innermost order statistics is
+//! comparing draws from an overlap. Its survival at nine peoples was luck, not
+//! a reason: 1.045 is what luck looks like just before it runs out.
+//!
+//! **RECOMMENDED, NOT TAKEN HERE:** retire the PRIMARY assertion the way this
+//! file already retired `NONRAIDER_MAX` and `SEPARATION_FACTOR` — deleted, not
+//! moved, with the falsification recorded — and let the whole-roster rho carry
+//! the direction it was always a proxy for. That is a preregistered claim's
+//! disposition and belongs to review, not to a task closing out red tests, so
+//! the assertion is left standing and firing. Whoever takes it: the honest
+//! reading is that a two-set partition of a continuum stopped being a
+//! partition at The Tolerance and this is the delayed consequence, not that
+//! the disposition stopped ordering anything.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
@@ -409,7 +474,11 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
     println!(
         "separation {separation:.3} against the RETIRED preregistered factor \
          {SEPARATION_FACTOR} — reported, not asserted. Measured 2.55 at the pre-Tolerance \
-         roster (0.426 / 0.167); it is now 1.30 (0.433 / 0.333)."
+         roster (0.426 / 0.167), 1.30 at the nine-people roster (0.433 / 0.333), and 0.680 \
+         at the fifteen-people roster (0.317 / 0.466) — where the PRIMARY claim below is \
+         FALSIFIED. See this module's doc, 'The Radiation's falsification of the PRIMARY \
+         claim': the whole-roster rho is 0.840 and the direction survives; the min-vs-max \
+         statistic is what died, and it was at 1.045 on the pre-Radiation nine."
     );
 
     // Every raider clears the floor. This half of the original preregistration

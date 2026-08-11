@@ -38,27 +38,107 @@ pub struct Founder {
     pub founded: f64,
 }
 
+/// An occupation a people could **not** remember, because another selected
+/// occupation was indistinguishable from it.
+///
+/// This is the record of an authorized fidelity cut, not an error: see
+/// [`select_founders`] for why a drop is possible at all and what it costs.
+/// type-audit: bare-ok(index: occupation), bare-ok(index: kept)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UnrememberedFounder {
+    /// The handle this occupation shares with the one kept in its place.
+    pub handle: RoleHandle,
+    /// Index into the records slice of the occupation that was dropped.
+    pub occupation: usize,
+    /// Index into the records slice of the occupation kept in its place — the
+    /// one that ranked first under the promotion order.
+    pub kept: usize,
+    /// The people who could not remember it.
+    pub people: KindId,
+}
+
+/// What a world remembers of its founders, and what it could not.
+///
+/// The second half is deliberately part of the return value rather than a
+/// side effect: a fidelity cut that no caller can see is the thing this
+/// project refuses, and a test must be able to read the cut off one build.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FounderCast {
+    /// The founders the world remembers, in promotion order. Handles are
+    /// distinct across the whole cast.
+    pub remembered: Vec<Founder>,
+    /// The founders it could not remember — empty on all but roughly two
+    /// worlds in a thousand.
+    pub unremembered: Vec<UnrememberedFounder>,
+}
+
 /// The founders a world remembers: per people, the `MEMORY_DEPTH` occupations
 /// with the largest peak population.
 ///
 /// Ranking is `(peak_population DESC, site ASC, founded ASC, handle ASC)` — a
-/// total order: the first three keys alone can tie (an exact three-way
-/// match), so the handle breaks it. Iteration is over a `BTreeMap`, so the
-/// result does not depend on input order.
+/// total order over *distinguishable* records: the first three keys alone can
+/// tie (an exact three-way match), so the handle breaks it. Iteration is over
+/// a `BTreeMap`, so the result does not depend on input order.
+///
+/// # Indistinguishable occupations are dropped, not fatal
+///
+/// [`hornvale_history::flesh::founder_handle`] keys on
+/// `(people, site, founded, ended, peak_population)` and excludes the
+/// occupation's entity id (decision 0051), so two occupations agreeing on all
+/// five derive the **same handle by construction**. Every measured pair is one
+/// physical story: a same-day founding-and-flight cascade, `founded == ended`,
+/// one site, one people, one day. The four ranking keys tie for such a pair by
+/// the same construction, so the order alone cannot separate them.
+///
+/// This function used to `assert!` that no two cast members shared a handle,
+/// and a world that produced one **died**: seeds 283 and 705 both sit inside
+/// the census range 0–999, so the once-per-campaign census could not run. A
+/// generator that dies on a legal seed is a liveness bug whatever the key is,
+/// and the campaign's diagnosis measured that *no* candidate key is provably
+/// total — the best scored (parent **and** ender material keys) still leaves
+/// two whole-record twin pairs in 3000 worlds. So the guard could never have
+/// been discharged by widening alone.
+///
+/// What happens instead, by Nathan's ruling in The Radiation: the **first**
+/// member of a handle-equal group under the ranking above is promoted and the
+/// rest are dropped into [`FounderCast::unremembered`]. Nothing is backfilled,
+/// so that people ends one short of `MEMORY_DEPTH`: the world forgets a
+/// founder rather than remembering a different one, which is the smaller and
+/// more honest of the two shapes. The cost is real and bounded — measured over
+/// the census range, **2 worlds in 1000 lose exactly one founder each**; every
+/// other founder in every other world is untouched, because the drop can only
+/// fire where the handles were already equal.
+///
+/// Widening the key is the known correct fix and is **deferred as an epoch**
+/// (it changes every founder's name in every world): the idea registry's
+/// `MEM-founder-handle-epoch` row carries the scoring and the cost.
+///
+/// Determinism: the kept member follows from the existing ranking, and the
+/// scan below walks peoples in `BTreeMap` order and each people in ranked
+/// order, so `unremembered` is itself a deterministic sequence. Where a
+/// handle-equal pair ties the ranking outright — which is the whole of this
+/// case — the stable sort falls through to the records' own order, i.e. ledger
+/// commit order, the same fallback
+/// [`hornvale_history::record::layer_key`] already documents and relies on.
 ///
 /// # Panics
 ///
-/// If two selected founders share a handle. That would mean two occupations
-/// indistinguishable in every semantic field both reached the cast, and they
-/// would silently become one identity with one name. Failing loudly is the
-/// point: this is the campaign's determinism guard, not a formality.
-pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
+/// If the promoted cast still carries a duplicate handle. That is unreachable
+/// while the drop below stands; it is kept as a post-condition because
+/// `promote` turns a handle into a person's name, and two people sharing a
+/// name would be a silent merge of two identities.
+pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
     let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
     for (i, r) in records.iter().enumerate() {
         by_people.entry(r.core.people.0).or_default().push(i);
     }
 
-    let mut cast = Vec::new();
+    let mut remembered = Vec::new();
+    let mut unremembered = Vec::new();
+    // Handle -> the record index promoted under it. Global rather than
+    // per-people, so the cast-wide uniqueness the old assert claimed is what
+    // the drop restores, not a weaker per-people version of it.
+    let mut kept_by_handle: BTreeMap<u64, usize> = BTreeMap::new();
     for idxs in by_people.values_mut() {
         idxs.sort_by(|&a, &b| {
             let (x, y) = (&records[a], &records[b]);
@@ -67,16 +147,29 @@ pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
                 .cmp(&x.core.peak_population)
                 .then(x.core.site.0.cmp(&y.core.site.0))
                 .then(x.core.founded.total_cmp(&y.core.founded))
-                // Total order, so the doc's claim is structural rather than
-                // lucky. Two records reaching this leg with the same handle are
-                // precisely what the uniqueness assert below rejects, so this
-                // defers to the guard rather than hiding from it.
+                // The handle is the last ranking key, and two records reaching
+                // this leg with the same handle tie here too — which is exactly
+                // the case the drop below handles. Deliberately unchanged: a
+                // fifth key would reorder records that tie the first four
+                // *below* the MEMORY_DEPTH cut in worlds that never collide,
+                // moving worlds this repair must leave byte-identical.
                 .then(founder_handle(x).0.cmp(&founder_handle(y).0))
         });
         for &i in idxs.iter().take(MEMORY_DEPTH) {
             let r = &records[i];
-            cast.push(Founder {
-                handle: founder_handle(r),
+            let handle = founder_handle(r);
+            if let Some(&kept) = kept_by_handle.get(&handle.0) {
+                unremembered.push(UnrememberedFounder {
+                    handle,
+                    occupation: i,
+                    kept,
+                    people: r.core.people,
+                });
+                continue;
+            }
+            kept_by_handle.insert(handle.0, i);
+            remembered.push(Founder {
+                handle,
                 occupation: i,
                 people: r.core.people,
                 // The Scaffold deleted `OccupationRecord::community`; the field
@@ -93,17 +186,20 @@ pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
     }
 
     let mut seen = std::collections::BTreeSet::new();
-    for f in &cast {
+    for f in &remembered {
         assert!(
             seen.insert(f.handle.0),
-            "two selected founders share handle {:#x} — occupations \
-             indistinguishable in every semantic field both reached the cast, \
-             so they would become one person with one name. Widen the key in \
-             founder_handle rather than suppressing this.",
+            "two promoted founders share handle {:#x} — the drop above is the \
+             one thing standing between a handle collision and two people \
+             carrying one name, so reaching here means it was removed or \
+             bypassed, not that a new collision appeared.",
             f.handle.0
         );
     }
-    cast
+    FounderCast {
+        remembered,
+        unremembered,
+    }
 }
 
 /// Promote every remembered founder into a ledger person.
@@ -132,7 +228,18 @@ pub fn promote(
         .last()
         .unwrap_or(0.0);
 
-    let cast = select_founders(&records);
+    // The second half of the cast is the authorized fidelity cut, and it is
+    // bound rather than swallowed so that the one place it is discarded is
+    // visible. A dropped founder is simply not promoted — there is no fact for
+    // "a founder this people failed to remember", and inventing a predicate
+    // for a thing that fires in two worlds per thousand would put an
+    // essentially unreachable row in the registry (`person-died`, The
+    // Particular). The record lives in `select_founders`' return value, where
+    // `windows/worldgen/tests/founder_collision.rs` pins its size per seed.
+    let FounderCast {
+        remembered: cast,
+        unremembered: _,
+    } = select_founders(&records);
     let mut seeds = Vec::with_capacity(cast.len());
     for f in &cast {
         let life = wc
@@ -227,13 +334,25 @@ mod tests {
         }
         records.push(rec("kobold", 900, 0.0, 7));
         let cast = select_founders(&records);
-        let goblins = cast.iter().filter(|f| f.people.0 == "goblin").count();
-        let kobolds = cast.iter().filter(|f| f.people.0 == "kobold").count();
+        let goblins = cast
+            .remembered
+            .iter()
+            .filter(|f| f.people.0 == "goblin")
+            .count();
+        let kobolds = cast
+            .remembered
+            .iter()
+            .filter(|f| f.people.0 == "kobold")
+            .count();
         assert_eq!(
             goblins, MEMORY_DEPTH,
             "a populous people is capped at the depth"
         );
         assert_eq!(kobolds, 1, "a people with one occupation gets one founder");
+        assert!(
+            cast.unremembered.is_empty(),
+            "distinguishable occupations drop nobody"
+        );
     }
 
     #[test]
@@ -241,8 +360,8 @@ mod tests {
         let forward = vec![rec("goblin", 1, 0.0, 5), rec("goblin", 2, 0.0, 99)];
         let mut backward = forward.clone();
         backward.reverse();
-        let a = select_founders(&forward);
-        let b = select_founders(&backward);
+        let a = select_founders(&forward).remembered;
+        let b = select_founders(&backward).remembered;
         assert_eq!(a.len(), 2);
         assert_eq!(
             a.iter().map(|f| f.handle.0).collect::<Vec<_>>(),
@@ -261,8 +380,8 @@ mod tests {
         let mut b = rec("goblin", 3, 100.0, 42);
         b.core.ended = Some(900.0);
 
-        let forward = select_founders(&[a.clone(), b.clone()]);
-        let backward = select_founders(&[b, a]);
+        let forward = select_founders(&[a.clone(), b.clone()]).remembered;
+        let backward = select_founders(&[b, a]).remembered;
         let key = |c: &[Founder]| -> Vec<(u64, EntityId, f64)> {
             c.iter()
                 .map(|f| (f.handle.0, f.community, f.founded))
@@ -278,12 +397,60 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "share handle")]
-    fn indistinguishable_occupations_in_the_cast_are_a_hard_error() {
-        // Two records identical in every field the handle keys on. The live
-        // corpus must never produce this; the guard must fire when it does.
+    fn indistinguishable_occupations_promote_one_and_record_the_other() {
+        // Two records identical in every field the handle keys on. This used to
+        // abort the whole build; it now costs one remembered founder, and the
+        // loss is in the return value rather than nowhere.
         let a = rec("goblin", 7, 50.0, 60);
         let b = a.clone();
-        let _ = select_founders(&[a, b]);
+        let cast = select_founders(&[a, b]);
+        assert_eq!(
+            cast.remembered.len(),
+            1,
+            "one of two indistinguishable occupations is promoted"
+        );
+        assert_eq!(
+            cast.unremembered.len(),
+            1,
+            "and the other is recorded, not discarded silently"
+        );
+        assert_eq!(
+            cast.unremembered[0].handle, cast.remembered[0].handle,
+            "the drop is justified by the shared handle and nothing else"
+        );
+        assert_eq!(
+            (cast.unremembered[0].kept, cast.unremembered[0].occupation),
+            (0, 1),
+            "the earlier member of the ranking is kept; the later one is dropped"
+        );
+    }
+
+    #[test]
+    fn a_drop_costs_one_founder_and_is_not_backfilled() {
+        // A people with MEMORY_DEPTH + 1 occupations, two of which are
+        // indistinguishable. If the drop backfilled, the cast would still be
+        // MEMORY_DEPTH deep and the twin below the cut would be pulled up.
+        let mut records = Vec::new();
+        for i in 0..(MEMORY_DEPTH as u32 - 2) {
+            records.push(rec("goblin", i, f64::from(i), 100 - i));
+        }
+        let twin = rec("goblin", 500, 500.0, 50);
+        records.push(twin.clone());
+        records.push(twin);
+        // Ranks last, so it sits just below the cut and would be the backfill.
+        records.push(rec("goblin", 600, 600.0, 1));
+        let cast = select_founders(&records);
+        assert_eq!(
+            cast.remembered.len(),
+            MEMORY_DEPTH - 1,
+            "the world forgets a founder rather than remembering a different one"
+        );
+        assert_eq!(cast.unremembered.len(), 1);
+        assert!(
+            cast.remembered
+                .iter()
+                .all(|f| f.occupation != records.len() - 1),
+            "the occupation below the cut must stay below it"
+        );
     }
 }
