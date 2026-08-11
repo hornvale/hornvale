@@ -55,7 +55,17 @@ const LEVEL: u32 = 5;
 /// the great-circle angle, signed by which side of the channel's direction of
 /// travel it landed on. The sign is what distinguishes a meander field from
 /// its own negation.
-fn signed_displacement(base: [f64; 3], placed: [f64; 3], along: [f64; 3]) -> f64 {
+///
+/// `travel` is the direction of travel AT this vertex, as a vector rather
+/// than as the next cell's position. That distinction is a bug fix, not a
+/// style choice: the caller used to pass `cells[(j+1).min(len-1)]`, which at a
+/// run's final vertex is the vertex itself, making `cross(base, base)` the
+/// zero vector and rendering EVERY final vertex with a positive sign whatever
+/// side it actually landed on. That is the one place the confluence repair
+/// writes to, so the single row pinning the repair was pinning magnitude
+/// only, and a mutation placing the mouth at the trunk's mirror-image
+/// position would have rendered an identical fixture.
+fn signed_displacement(base: [f64; 3], placed: [f64; 3], travel: [f64; 3]) -> f64 {
     let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     let cross = |a: [f64; 3], b: [f64; 3]| {
         [
@@ -64,13 +74,32 @@ fn signed_displacement(base: [f64; 3], placed: [f64; 3], along: [f64; 3]) -> f64
             a[0] * b[1] - a[1] * b[0],
         ]
     };
+    // An ANCHORED vertex is the cell's own position, bit for bit, and has no
+    // side. Say that exactly instead of letting `acos(dot(p, p))` report the
+    // ~1.5e-8 rad of float residue it actually does: that residue is five
+    // orders of magnitude below a real displacement (~1e-4), its sign is
+    // arbitrary — it flipped on cell 824 purely from this function's change
+    // of travel vector — and it was silently counting anchored rows as
+    // "moved" in `the_pinned_displacements_are_not_all_zero`, inflating the
+    // very number that guards this fixture against vacuity.
+    if base == placed {
+        return 0.0;
+    }
     let magnitude = hornvale_kernel::math::acos(dot(base, placed).clamp(-1.0, 1.0));
+    if magnitude == 0.0 {
+        return 0.0;
+    }
     // `left` is the same left-positive convention `SphericalPolyline`'s
     // signed distance uses, so a reader comparing the two is not comparing
     // opposite sign conventions.
-    let left = cross(base, along);
+    let left = cross(base, travel);
     let side = dot(left, placed);
     if side < 0.0 { -magnitude } else { magnitude }
+}
+
+/// `a - b`, componentwise.
+fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
 fn render() -> String {
@@ -95,12 +124,22 @@ fn render() -> String {
         let cells = &net.run_cells[i];
         for (j, &placed) in line.points.iter().enumerate() {
             let base = geo.position(cells[j]);
-            let next = geo.position(cells[(j + 1).min(cells.len() - 1)]);
+            // The direction of travel: toward the next cell, or — at the last
+            // vertex, where there is no next — away from the previous one. A
+            // run always has at least two cells, so both arms are in range.
+            // `cross(base, ·)` annihilates any component along `base`, so
+            // passing the difference vector gives the identical left-normal
+            // the next cell's position did at interior vertices.
+            let travel = if j + 1 < cells.len() {
+                sub(geo.position(cells[j + 1]), base)
+            } else {
+                sub(base, geo.position(cells[j - 1]))
+            };
             let e = net.band_edges[i][j];
             out.push_str(&format!(
                 "{i} {j} {} {} {} {} {} {}\n",
                 cells[j].0,
-                quantize(signed_displacement(base, placed, next)),
+                quantize(signed_displacement(base, placed, travel)),
                 quantize(e[0]),
                 quantize(e[1]),
                 quantize(e[2]),
@@ -139,7 +178,14 @@ fn the_pinned_displacements_are_not_all_zero() {
     // EVERY row is counted, anchored heads and mouths included — they are not
     // filtered out, and the threshold is set knowing they are in the
     // denominator. A run has two anchored vertices out of a typical five, so a
-    // healthy network still clears a third comfortably.
+    // healthy network still clears a third comfortably: 21 of 46 rows carry a
+    // displacement.
+    //
+    // That reasoning only became true when `signed_displacement` started
+    // reporting an anchored vertex as exactly 0. Before it, `acos(dot(p, p))`
+    // gave anchored rows ~1.5e-8 rad of float residue, so 36 of 46 read as
+    // "moved" and a third of this guard was satisfied by noise — the opposite
+    // of what the paragraph above claimed about them.
     let mut rows = 0usize;
     let mut moved = 0usize;
     for row in rendered.lines().filter(|l| !l.starts_with('#')) {

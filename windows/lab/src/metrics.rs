@@ -3300,12 +3300,17 @@ pub fn registry() -> Vec<Metric> {
                   cleared the floor), which diagnosed an anchoring asymmetry: \
                   a tributary's mouth sat at its cell's undisplaced position \
                   while the trunk's vertex for that same cell was \
-                  meander-displaced. Since the confluence repair the two \
-                  coincide exactly, so a join is a zero-length crossing and \
-                  this column reads 1.0 BY CONSTRUCTION — what still \
-                  discriminates is only whether a walk falls out of the \
-                  network at a run no polyline owns. Absent on a world with \
-                  no channels",
+                  meander-displaced. **Since the confluence repair this \
+                  column is a CONSTANT: 1.0 on every world with a channel \
+                  network, Absent on every world without one.** Both of its \
+                  failure branches are unreachable — a join is now a \
+                  zero-length crossing, and the walk can no longer leave the \
+                  network because `build` pushes a cell onto its claiming run \
+                  BEFORE testing whether it was already claimed, so any cell \
+                  with a river downhill is necessarily a non-final vertex of \
+                  a kept run and always has an owner. Read a 1.0 here as a \
+                  tripwire that the repair is still in place, never as a \
+                  measurement of the world",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
             },
@@ -3356,8 +3361,12 @@ pub fn registry() -> Vec<Metric> {
                   floor un-truncated, and none reached 1.0); with tributary \
                   mouths placed on their trunks all 64 read 1.0 on BOTH \
                   columns. That is the measured evidence that the gap was the \
-                  confluence separation and never band-edge speckle. Absent \
-                  on a world with no channels",
+                  confluence separation and never band-edge speckle: two \
+                  lines meeting at a point share their distance minimum AT \
+                  that point, so a transect leaving a join recedes from both \
+                  at once and cannot descend into the partner, while two \
+                  lines held 4.5 half-widths apart have no shared minimum and \
+                  did. Absent on a world with no channels",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
             },
@@ -6871,17 +6880,28 @@ fn lab_run_owner(
 /// drainage graph were separated in space. The walk crosses that separation
 /// the only way a walker could, and reads the band along the way.
 ///
-/// **Read this column knowing what the repair did to it.** The confluence
-/// repair (`ChannelNetwork::build`) places a tributary's mouth ON the trunk
-/// vertex it joins, so `from == to` exactly and the seven interpolated
-/// samples below all land on a point that is at distance zero from a
-/// polyline. The join check therefore cannot fail any more, and this metric's
-/// residual discriminating power is the `owner` lookup: a walk that reaches a
-/// river cell no polyline owns still falls out. Measured at level 6 after the
-/// repair: seed 42 has 15 joins across 144 walks and seed 7 has 52 across
-/// 295, all at exactly zero separation, and zero walks fall out on either. A
-/// column that reads 1.0 by construction is worth keeping as a regression
-/// tripwire on the repair, and worth no more than that.
+/// **SINCE THE CONFLUENCE REPAIR THIS FUNCTION IS CONSTANT.** It returns
+/// `Some(1.0)` for every world with a non-empty network and `None` for every
+/// world without one — a function of "has channels", nothing more. Both ways
+/// it could return less than 1.0 are unreachable:
+///
+/// - *The join crossing.* The repair (`ChannelNetwork::build`) places a
+///   tributary's mouth ON the trunk vertex it joins, so `from == to` exactly
+///   and all seven interpolated samples land on a point at distance zero from
+///   a polyline. Measured at level 6: seed 42 has 15 joins across 144 walks,
+///   seed 7 has 52 across 295, every one at exactly zero separation.
+/// - *Falling out of the network.* This was never reachable, before the
+///   repair either. In `build` the claiming run does `run.push(target)`
+///   **before** testing `claimed.insert(target)`, so a cell with a river
+///   downhill is necessarily a non-final vertex of the run that first claimed
+///   it, that run necessarily has `len() >= 2` and is kept, and `owner[c]` is
+///   therefore always `Some`. Measured `continues_but_unowned == 0` on seed
+///   42 level 6, seed 7 level 6 and seed 42 level 5, in **both** arms.
+///
+/// So the column is a regression tripwire on the repair and nothing else —
+/// disabling the repair does drop seed 42 to 0.92361 — and it must not be
+/// read as evidence about a world. The walk is kept rather than deleted
+/// because it is the thing that fails if the repair is ever undone.
 fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
     let net = terrain.channels();
     if net.polylines.is_empty() {
@@ -6992,12 +7012,18 @@ struct LabBandTransects {
 /// and that column is now the evidence for what the gap between the two
 /// actually was. Before the confluence repair, no probe world at all was
 /// clean un-truncated (min 0.9636, 47 of 64 below H4's floor); after it, all
-/// 64 read 1.0 on both columns. Two polylines that meet exactly cannot
-/// produce a takeover at which `|d|` falls, because the nearest-line switch
-/// happens where the two distances are equal; two polylines separated by 4.5
-/// channel half-widths can and did. So the violations the truncation was
-/// hiding were the SAME defect H2 measured, not the neighbouring rivers Task
-/// 6 attributed them to.
+/// 64 read 1.0 on both columns. The geometry: two polylines that meet at a
+/// common point both attain their minimum distance to that point AT it, so a
+/// transect walking away from the join recedes from BOTH lines together and
+/// cannot descend into the partner. Two polylines separated by 4.5 channel
+/// half-widths have no such shared minimum — walking away from one is walking
+/// toward the other — and that is what produced a falling `|d|`. (The naive
+/// version of this argument, that continuity at the nearest-line switch
+/// forbids the reversal, is a non-sequitur: continuity at the switch says
+/// nothing about `|d|` after it, and in 11 of the 14 measured violations the
+/// winner had already changed several steps before the reversal.) So the
+/// violations the truncation was hiding were the SAME defect H2 measured, not
+/// the neighbouring rivers Task 6 attributed them to.
 fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option<LabBandTransects> {
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     if vertices == 0 {

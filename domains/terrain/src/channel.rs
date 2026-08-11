@@ -283,9 +283,20 @@ fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
 #[derive(Clone, Debug)]
 pub struct ChannelNetwork {
     /// One polyline per maximal downhill run of river cells, in build order
-    /// (ascending head `CellId`). A tributary's run ends *on* the confluence
-    /// vertex it joins, so the network is geometrically connected without any
-    /// confluence special case — distance is to the network, not to an edge.
+    /// (ascending head `CellId`). A tributary's run ends *on* the cell where
+    /// it joins its trunk, and `build`'s explicit **confluence repair** pass
+    /// then places that mouth vertex exactly on the trunk's own vertex for
+    /// that cell, so the network is geometrically connected.
+    ///
+    /// This doc previously said the shared cell alone made the network
+    /// connected "without any confluence special case". That was the false
+    /// inference — shared *cell* does not imply shared *point* — and it is
+    /// what produced the H2 defect: the tributary's mouth was anchored at the
+    /// cell's undisplaced position while the trunk's vertex for the same cell
+    /// was meander-displaced, leaving the two runs a median 4.5 channel
+    /// half-widths apart. The special case exists precisely because geometric
+    /// connectedness does not follow from graph connectedness, and a reader
+    /// who assumes it does will re-introduce the same defect.
     /// type-audit: pending(wave-1: polylines)
     pub polylines: Vec<SphericalPolyline>,
     /// Per polyline, per vertex, the four [`band_edges`] borders for that
@@ -588,6 +599,19 @@ mod tests {
     /// pinned to an unreachable discharge is a tripwire that reddens for
     /// reasons unrelated to what it claims.
     const CANONICAL_MAX_DRAINAGE: f64 = 180.0;
+
+    /// The **measured** number of confluences on seeds 42 and 7 at the
+    /// canonical level 6 (15 + 52) — the population the confluence-repair
+    /// test asserts over. A datum about the terrain, not a threshold anyone
+    /// chose.
+    ///
+    /// Level 6 rather than the level 5 the rest of this file uses, because
+    /// level 5 does not have the phenomenon: seeds 42, 7 and 1234 together
+    /// produce exactly **one** confluence there, so a test on that grid would
+    /// assert over a single join however many worlds it swept. The test does
+    /// not call `transverse_at`, so it pays only for genesis — measured at
+    /// 0.63 s for both worlds, in line with the rest of this suite.
+    const CONFLUENCES_AT_LEVEL_6: usize = 67;
 
     /// A hand-built two-segment polyline on the equator, with band edges from
     /// the REAL laws at a deliberately coarse synthetic cell (spacing 1.0
@@ -927,44 +951,61 @@ mod tests {
     /// Exact equality is the right assertion because the repair is an
     /// assignment, not an approximation: a tolerance would pass for a network
     /// that merely brought the two ends close, which is the state this repair
-    /// replaces. The count assertion is the anti-vacuity half — a world with
-    /// no confluences would satisfy the loop by having nothing to check, and
-    /// so would a build that stopped emitting tributaries.
+    /// replaces.
+    ///
+    /// **The floor is the anti-vacuity half, and it is a floor rather than
+    /// `> 0` for a measured reason.** Seed 42 at level 5 has exactly ONE
+    /// confluence — and so do seeds 42, 7 and 1234 *together* on that grid —
+    /// so a `joins > 0` assertion there would be satisfied by a single join
+    /// and would stay green through a regression that stopped emitting almost
+    /// every tributary. At level 6 the two campaign seeds carry
+    /// [`CONFLUENCES_AT_LEVEL_6`] of them.
+    ///
+    /// Requiring **at least half** rather than the exact count is deliberate:
+    /// the claim being guarded is "this assertion ran over a real population",
+    /// which an exact count would turn into an unrelated tripwire reddening
+    /// on any ordinary terrain drift.
     #[test]
     fn a_tributary_mouth_sits_exactly_on_the_trunk_vertex_it_joins() {
-        let geo = Geosphere::new(5);
-        let outcome =
-            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let net = ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
-        // The same owner map `build` uses, rebuilt from the published
-        // `run_cells` rather than from anything private.
-        let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
-        for (i, run) in net.run_cells.iter().enumerate() {
-            for (j, &c) in run.iter().enumerate() {
-                if j + 1 < run.len() {
-                    owner[c.0 as usize] = Some((i, j));
+        let geo = Geosphere::new(6);
+        let mut joins = 0usize;
+        for seed in [42u64, 7] {
+            let outcome =
+                crate::globe::generate(Seed(seed), &geo, &crate::pins::TerrainPins::default())
+                    .unwrap();
+            let net =
+                ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
+            // The same owner map `build` uses, rebuilt from the published
+            // `run_cells` rather than from anything private.
+            let mut owner: Vec<Option<(usize, usize)>> = vec![None; geo.cell_count()];
+            for (i, run) in net.run_cells.iter().enumerate() {
+                for (j, &c) in run.iter().enumerate() {
+                    if j + 1 < run.len() {
+                        owner[c.0 as usize] = Some((i, j));
+                    }
                 }
             }
-        }
-        let mut joins = 0usize;
-        for (i, cells) in net.run_cells.iter().enumerate() {
-            let last = cells.len() - 1;
-            let Some((trunk, vertex)) = owner[cells[last].0 as usize] else {
-                continue;
-            };
-            if trunk == i {
-                continue;
+            for (i, cells) in net.run_cells.iter().enumerate() {
+                let last = cells.len() - 1;
+                let Some((trunk, vertex)) = owner[cells[last].0 as usize] else {
+                    continue;
+                };
+                if trunk == i {
+                    continue;
+                }
+                joins += 1;
+                assert_eq!(
+                    net.polylines[i].points[last], net.polylines[trunk].points[vertex],
+                    "seed {seed}: tributary {i} does not meet trunk {trunk} at cell {:?}",
+                    cells[last]
+                );
             }
-            joins += 1;
-            assert_eq!(
-                net.polylines[i].points[last], net.polylines[trunk].points[vertex],
-                "tributary {i} does not meet trunk {trunk} at cell {:?}",
-                cells[last]
-            );
         }
         assert!(
-            joins > 0,
-            "no confluences on this world — the assertion above is vacuous"
+            joins * 2 >= CONFLUENCES_AT_LEVEL_6,
+            "only {joins} confluences across the two seeds (measured \
+             {CONFLUENCES_AT_LEVEL_6}) — the equality assertion above is running on almost \
+             nothing"
         );
     }
 
