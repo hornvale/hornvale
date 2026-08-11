@@ -1158,7 +1158,19 @@ fn the_digest_reports_that_a_redaction_happened_without_the_body() {
         .expect("id");
     board.redact("main", &id).expect("redact");
 
-    let text = digest(&history(&board, 14, 2_000_000_000).expect("history"));
+    // Clock: read the tip's REAL commit time rather than a hardcoded constant.
+    // `2_000_000_000` is 2033-05-18, so a 14-day window opens seven years AFTER
+    // these posts are committed and `history` correctly returns nothing --
+    // Task 4 hit exactly that. `SystemTime::now()` is not an option either:
+    // clippy's `disallowed_types` fires. This mirrors the sibling tests already
+    // in `digest.rs` (see ~line 460).
+    let tip = board.tip().expect("tip").expect("some");
+    let now_unix: u64 = repo
+        .git(&["log", "-1", "--format=%ct", &tip])
+        .expect("commit time")
+        .parse()
+        .expect("timestamp");
+    let text = digest(&history(&board, 14, now_unix).expect("history"));
     assert!(!text.contains("SENSITIVE-BODY-TEXT"), "the body survived the redaction");
     assert!(text.contains("redacted"), "the act must still be recorded; got {text}");
     assert!(text.contains("main"), "who redacted it must be recorded");
@@ -1326,7 +1338,19 @@ fn a_suggest_post_is_digest_only() {
     let ambient = render(&live_posts(&posts, &ctx), 0, &RenderOptions::session_start());
     assert!(!ambient.contains("sync age"), "a suggestion must not render ambiently");
 
-    let text = digest(&history(&board, 14, 2_000_000_000).expect("history"));
+    // Clock: read the tip's REAL commit time rather than a hardcoded constant.
+    // `2_000_000_000` is 2033-05-18, so a 14-day window opens seven years AFTER
+    // these posts are committed and `history` correctly returns nothing --
+    // Task 4 hit exactly that. `SystemTime::now()` is not an option either:
+    // clippy's `disallowed_types` fires. This mirrors the sibling tests already
+    // in `digest.rs` (see ~line 460).
+    let tip = board.tip().expect("tip").expect("some");
+    let now_unix: u64 = repo
+        .git(&["log", "-1", "--format=%ct", &tip])
+        .expect("commit time")
+        .parse()
+        .expect("timestamp");
+    let text = digest(&history(&board, 14, now_unix).expect("history"));
     assert!(text.contains("sync age"), "a suggestion must reach the digest");
 }
 
@@ -1357,7 +1381,19 @@ fn the_digest_tallies_corroboration_per_technique() {
     board.append(&Post::new("confirm", "campaign/x").with("post", json!(t.clone()))).expect("c1");
     board.append(&Post::new("confirm", "campaign/y").with("post", json!(t.clone()))).expect("c2");
 
-    let text = digest(&history(&board, 14, 2_000_000_000).expect("history"));
+    // Clock: read the tip's REAL commit time rather than a hardcoded constant.
+    // `2_000_000_000` is 2033-05-18, so a 14-day window opens seven years AFTER
+    // these posts are committed and `history` correctly returns nothing --
+    // Task 4 hit exactly that. `SystemTime::now()` is not an option either:
+    // clippy's `disallowed_types` fires. This mirrors the sibling tests already
+    // in `digest.rs` (see ~line 460).
+    let tip = board.tip().expect("tip").expect("some");
+    let now_unix: u64 = repo
+        .git(&["log", "-1", "--format=%ct", &tip])
+        .expect("commit time")
+        .parse()
+        .expect("timestamp");
+    let text = digest(&history(&board, 14, now_unix).expect("history"));
     assert!(text.contains('2'), "the corroboration count is the measurement; got {text}");
 }
 
