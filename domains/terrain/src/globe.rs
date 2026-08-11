@@ -156,6 +156,14 @@ pub struct TectonicGlobe {
     pub lithology_seed: Seed,
     /// Hash-noise seed for the subsurface-features point process (The Lode).
     pub features_seed: Seed,
+    /// Hash-noise seed for the channel network's meander displacement field
+    /// (The Ford, Task 4/5). Stores `terrain_seed` itself rather than an
+    /// already-derived leg-child (unlike `lithology_seed`/`features_seed`),
+    /// because `ChannelNetwork::build` performs its own
+    /// `.derive(streams::CHANNEL_MEANDER)` internally. Hash-noise only —
+    /// never consumed as a `Stream`, so it carries no draw-order/save-format
+    /// contract.
+    pub channel_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -173,6 +181,12 @@ impl TectonicGlobe {
     /// The hash-noise seed for the subsurface features point process.
     pub fn features_noise_seed(&self) -> Seed {
         self.features_seed
+    }
+
+    /// The hash-noise seed `ChannelNetwork::build` derives
+    /// `streams::CHANNEL_MEANDER` from.
+    pub fn channel_noise_seed(&self) -> Seed {
+        self.channel_seed
     }
 }
 
@@ -473,6 +487,11 @@ pub fn generate(
     // only (`streams::FEATURES`) — never consumed as a `Stream`, so this is
     // not a new draw-order contract.
     let features_seed = terrain_seed.derive(streams::FEATURES);
+    // The channel network's meander field (The Ford, spec §5.2). Stores
+    // `terrain_seed` itself, not a pre-derived leg-child: `ChannelNetwork::build`
+    // performs its own `.derive(streams::CHANNEL_MEANDER)` — see
+    // `channel_seed`'s doc. Hash-noise only, no new draw-order contract.
+    let channel_seed = terrain_seed;
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -519,6 +538,7 @@ pub fn generate(
         lithology: placeholder_lithology,
         lithology_seed,
         features_seed,
+        channel_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);

@@ -438,6 +438,20 @@ impl ChannelNetwork {
         (Transverse::from_band(band(best, &edges)), best)
     }
 
+    /// The widest channel half-width anywhere in the network, radians
+    /// (`0.0` on an empty network). The max, over every vertex of every
+    /// polyline, of [`band_edges`]'s first border — the whole-network
+    /// analogue of [`channel_half_width`] for a caller (Task 5's provider
+    /// property test) that wants one number rather than a per-vertex query.
+    /// type-audit: pending(wave-1: return)
+    pub fn widest_half_width(&self) -> f64 {
+        self.band_edges
+            .iter()
+            .flatten()
+            .map(|edges| edges[0])
+            .fold(0.0_f64, f64::max)
+    }
+
     /// The meander displacement field at `position`, in `[-1, 1]` — the
     /// signed lateral offset (as a fraction of the local amplitude) this
     /// network's channels wander by.
