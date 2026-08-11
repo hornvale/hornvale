@@ -95,6 +95,6 @@ hornvale_kernel::stream_labels! {
         /// that wanders a river within its cell. Hash-noise only, sampled by
         /// POSITION and never by room address: address-hashed noise cannot
         /// form a connected watercourse (see `windows/locale/src/micro.rs`).
-        CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field";
+        CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field (hash-noise only; no stream draws)";
     }
 }

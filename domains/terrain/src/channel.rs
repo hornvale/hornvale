@@ -942,6 +942,12 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: [42, 7]) — exact vertex coincidence at every
+    /// confluence of two fixed worlds, not a search across seeds for one that
+    /// exhibits it. The second seed is coverage, not a hunt: the assertion is
+    /// universal over every join in both worlds and the floor below asserts
+    /// the population it ran on.
+    ///
     /// THE CONFLUENCE REPAIR, as a property. Where a run ends on a cell some
     /// other run continues past, the two polylines must meet **exactly** —
     /// not merely nearby. Before the repair the tributary's mouth sat at the
