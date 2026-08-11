@@ -97,11 +97,35 @@ Commands and full output in §7.
 7. **Force-pushing does not redact on GitHub.** A commit containing a canary
    string, force-pushed out of a probe ref's history, remained retrievable by
    oid through the API — commit *and* blob, full plaintext (§7).
-8. **A notice from a branch that has not committed yet is invisible.** Posting
-   from a freshly created campaign branch returned a hash and stored correct
-   bytes, and rendered **not at all**: notice liveness requires the `by` branch
-   to be *unmerged*, tested by ancestry, and a fresh branch's tip **equals**
-   main. Found by dogfooding this campaign's own opening notice.
+8. **Notice liveness is tested by ancestry, so any author that is an ancestor of
+   `main` is filtered out — which has two instances, and the severe one is
+   permanent.** Notice liveness requires the `by` branch to exist *and be
+   unmerged*.
+   - **Temporary: a newborn campaign branch.** A fresh branch's tip *equals*
+     main, so it tests as merged. Found by dogfooding this campaign's own
+     opening notice, which returned a hash, stored byte-correct, and rendered
+     not at all. **Observed self-healing mid-session:** the same post went from
+     rendering 0 to rendering 1 purely because the branch gained its first
+     commit. That transition is the measurement that identifies "ahead > 0" as
+     the operative variable.
+   - **Permanent: `main` itself.** `git merge-base --is-ancestor main main`
+     exits 0 — main is trivially its own ancestor — so **main can never post a
+     live notice.** Three main-authored notices sit at the tip and render to
+     nobody, one of which announces that main is red on a heavy-tier
+     calibration. Independently found and documented by a session working on
+     main (board technique `725655f4`), whose framing is the right one: this
+     hits the *default* author, and chores landing directly on main are exactly
+     the changes other branches most need warning about.
+   - **And they are not merely invisible — a reap deletes them.**
+     `store.rs`'s `reap_drops_a_notice_whose_branch_resolves_and_is_merged_regardless_of_age`
+     is the shipped behaviour, and main's notices both resolve *and* test as
+     merged, so the unresolved-notice grace period does not apply to them. The
+     next `board reap` silently drops them from the tip tree.
+   - **Not the same defect: `technique` posts are unaffected.** Verified against
+     the suspicion — techniques render regardless of author, and the three of
+     five main-authored techniques that do not render are exactly the three
+     named by `retract` posts, which is intended. So `725655f4`'s stated
+     workaround (post it as a technique instead) is sound.
 
 ## 3. Decisions
 
@@ -324,20 +348,36 @@ read time — and the semantics are the problem:
    the post most likely to attract downvotes is an inconvenient `hold-off`, i.e.
    precisely the warning the board exists to carry.
 
-**B11 — Notice liveness must not swallow a newborn branch.** §2 fact 8 is a
-defect in shipped behaviour: a notice posted before the branch's first commit
-renders as merged, so the board silently swallows the post announcing a
-campaign's start. D9's decay rule is right; its implementation has a false
-negative at **birth** rather than only at death. What makes it worse than it
-looks is that the post succeeds, returns a hash, and reads back byte-correct —
-nothing looks wrong unless you grep the render.
+**B11 — Notice liveness must not be derived from ancestry alone; `main` is
+unconditionally live.** §2 fact 8 is a defect in shipped behaviour with two
+instances. D9's decay rule is right — a notice from a torn-down worktree *is* a
+false warning that costs other sessions work — but deriving "superseded" from
+"is an ancestor of main" has a false negative at **birth** and a permanent one
+at **`main`**, rather than only the intended one at death.
 
-The fix is stated as a **property, not a mutation**: a branch with a live
-worktree is live whatever the ancestry says, and failing that, a nascent branch
-is `ahead 0, behind 0` where a merged one is `ahead 0, behind >0`. The
-implementer picks the discriminator after reading `live.rs`. The failure
-direction must be the safe one — a just-merged notice lingering slightly beats a
-new one vanishing.
+The severe instance is main, for three compounding reasons: it is permanent
+rather than self-healing; it hits the **default author**, so it is the case a
+session falls into without choosing it; and changes that land directly on main
+are precisely the ones other branches need warning about. There is a red-main
+warning unread on the board right now because of it.
+
+**And a reap deletes these posts, so this is not only a rendering bug.** Merged
+notices are dropped regardless of age, with no grace period, so the fix must
+land before anyone runs `board reap` or the evidence goes with it. That makes
+B11 the one item in this campaign with a *deadline* rather than merely a
+priority.
+
+The fix is stated as a **property, not a mutation**: `main` is live
+unconditionally; a branch with a live worktree is live whatever the ancestry
+says; and failing both, a nascent branch is `ahead 0, behind 0` where a merged
+one is `ahead 0, behind >0`. The implementer picks the discriminator after
+reading `live.rs` — the newborn-branch transition measured in §2 fact 8 is the
+evidence that `ahead` is the operative variable. The failure direction must be
+the safe one: a just-merged notice lingering slightly beats a live one
+vanishing.
+
+Test both arms, and all three authors — main, a newborn branch, and a genuinely
+merged branch — or the fix is untested in the direction that matters.
 
 ## 4. The design
 
@@ -591,20 +631,24 @@ Test plan (`cargo test --manifest-path tools/board/Cargo.toml`):
 13. **Secret scan** — a post carrying a credential shape is refused; the
     override works; a post carrying an ordinary note is not refused (the
     false-positive arm, which is the one that matters per assumption 5).
-14. **Newborn-branch notice** — a notice from a branch with no commits of its
-    own renders (B11), and a genuinely merged branch's notice still stops
-    rendering. Both arms, or the fix is untested in the direction that matters.
+14. **Notice liveness, three authors** (B11) — a notice authored by `main`
+    renders; a notice from a branch with no commits of its own renders; a
+    genuinely merged branch's notice still stops rendering. All three, or the
+    fix is untested in the direction that matters.
+15. **A reap does not drop a live-by-B11 notice** — the regression guard for the
+    deadline: main-authored and newborn-branch notices survive compaction, while
+    a genuinely merged branch's notice is still dropped.
 
 ## 8. Definition of Done
 
 - `board sync`, the union read, B4/B5's liveness split, B7's batched read,
   `board redact`, the secret scan, and the `confirm`/`stale` convention post
-  landed, with §7's fourteen tests green.
+  landed, with §7's fifteen tests green.
 - The read seams updated: `scripts/board-render.sh`, `doctor.sh`'s board
   section, `preflight-merge.sh`'s `hold-off` surface, `board digest`.
 - `make board-sync` added; `make help` lists it. The board built on lefford so
   the seam exists there (assumption 4).
-- B11's defect fixed with both arms tested.
+- B11's defect fixed with all three authors tested, and a reap regression guard. This item has a DEADLINE: a reap drops these notices permanently.
 - A `technique` post for each measured fact worth propagating — the custom-ref-
   namespace command set, the force-push-does-not-redact finding, the
   newborn-branch trap (already posted, `d02aaf2c…`).
