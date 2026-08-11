@@ -3,21 +3,25 @@
 [Stage one](./the-ford.md) stopped rivers being a hundred and ten kilometres
 wide by changing what carries them: a river became a polyline with a
 discharge-derived width, evaluated as a function of position at any depth,
-instead of a cell painted with a water class. It moved no consumer. The finest
-room the address scheme reaches — twelve refinement levels below the canonical
-grid, twenty-seven metres across — still reported the water of a cell four
-thousand times its width, because nothing at room scale had been taught to ask
-the network anything.
+instead of a cell painted with a water class. It moved no consumer. A room at
+the useful floor of the room scale — twelve refinement levels below the
+canonical grid, twenty-seven metres across — still reported the water of a cell
+four thousand times its width, because nothing at room scale had been taught to
+ask the network anything.
 
 This stage teaches it to ask — and the interesting decision is what a room is
 allowed to *say back*.
 
 **Two room scales appear in what follows, and they are not the same room.**
-Twenty-seven metres is the deepest the addressing goes. The room a walker
-actually stands in sits **six** levels below the grid, not twelve: an edge of
-`2.71e-4` radians, about 1.7 kilometres, since each level halves an edge and
-six halvings take a hundred-and-ten-kilometre cell to that. Every measurement
-below is taken at that walking depth, including the one that matters most —
+Twenty-seven metres is the *useful floor of the room scale* — L18, twelve
+refinement levels below a level-6 grid — and not the floor of the addressing,
+which goes considerably deeper: `RoomAddr` packs a path of up to `MAX_DEPTH =
+29` digits, twenty-three levels below the grid, at which point an edge is
+measured in centimetres. The room a walker actually stands in sits **six**
+levels below the grid, not twelve: an edge of `2.71e-4` radians, about 1.7
+kilometres, since each level halves an edge and six halvings take a
+hundred-and-ten-kilometre cell to that. Every measurement below is taken at
+that walking depth, including the one that matters most —
 the crossability criterion's "one room edge" is a step of roughly 1.7 km, not
 of twenty-seven metres.
 
@@ -188,8 +192,9 @@ hand, and carrying less evidential weight than a prediction made before them.
 What happened next spent the remainder.
 
 Four instruments produced four readings — **0.0308**, **0.2170**, **0.7059**
-and **0.3372** — and three of the four instrument changes were made after
-seeing a number. The first reinterpreted the probe separation, after the
+and **0.3372** — and **all three instrument changes were made after seeing a
+number**. Four instruments have three transitions between them; none of them
+was clean. The first reinterpreted the probe separation, after the
 reading fell outside the interval, from one room edge per probe to one room
 edge between the pair. The second added a requirement that the pair actually
 be adjacent on the mesh, which exposed the largest defect of the stage:

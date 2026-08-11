@@ -149,10 +149,11 @@ Prose can hold an unnamed term indefinitely. Notation cannot.
 
 ## 7. H2-4: what an instrument rebuild costs a hypothesis
 
-Four readings exist — **0.0308, 0.2170, 0.7059, 0.3372** — and **three of the
-four instrument changes were made after seeing a number**. The criterion
-itself was already a *late freeze* (chosen with stage-1 data in hand), so two
-discounts stack.
+Four readings exist — **0.0308, 0.2170, 0.7059, 0.3372** — and **all three
+instrument changes were made after seeing a number**. Four instruments have
+three transitions between them, which is what the table below lists; there was
+no fourth, cleaner change. The criterion itself was already a *late freeze*
+(chosen with stage-1 data in hand), so two discounts stack.
 
 | # | instrument | reading | what forced the change |
 |---|---|---|---|
@@ -163,8 +164,9 @@ discounts stack.
 
 **"One room edge" throughout that table means the edge at *walk depth*** —
 six levels below the canonical grid, `2.71e-4` rad, about 1.7 km — not the
-twenty-seven-metre room at the bottom of the addressing, which is twelve
-levels down. The distinction is the whole meaning of the number: the criterion
+twenty-seven-metre room at the useful floor of the room scale (L18), which is
+twelve levels down. (Nor is L18 the floor of the addressing: `RoomAddr` packs
+up to `MAX_DEPTH = 29`, twenty-three levels below the grid.) The distinction is the whole meaning of the number: the criterion
 asks whether a channel is narrower than one step, and the step in question is
 kilometres wide.
 
@@ -195,6 +197,46 @@ claiming the interval "is robust across a factor of four in step length" when
 three of five sweep rows are inside it and two are not. Robustness is a
 property of the instrument, never evidence for the hypothesis.
 
+### 7a. A correction to the *subject* is not a fifth tuning of the instrument
+
+The pre-merge whole-branch review found that `crossing_between` could call
+**two different rivers one crossing**: the two rooms' readings are selected
+independently, so a room on river X's left bank beside a room on river Y's
+right bank has differing signs without anything having been crossed. The fix
+adds a same-channel clause, gated on the polyline index the reading now
+carries as an in-process handle.
+
+Fixing it *could* have moved H2-4's number, and the rule that decided how to
+frame that was fixed before the measurement: **a correction adds a constraint;
+a rescue only removes one.** This adds one — the two readings must be of the
+same river — so it is a correction whichever way the number moved, and it was
+adopted before its effect was known.
+
+What it actually did, measured with the clause switched off and on over the
+same population:
+
+| | walk depth (12) | one up (11) | one down (13) | two down (14) | three down (15) |
+|---|---|---|---|---|---|
+| before | **0.3372** | 0.2229 | 0.3959 | 0.1026 | 0.0000 |
+| after | **0.3372** | **0.2170** | **0.3900** | 0.1026 | 0.0000 |
+
+**The shipped witness did not move**, verdict-for-verdict: 115 Fordable, 8
+Impassable, 218 NotACrossing of 341, before and after. **Five of the 171
+sign-flip step pairs at walk depth are cross-line**, and all five also stand
+inside a bank edge — so all five *were* admitted as crossings by the old gate.
+None of them was the deciding step for its transect, which is why the headline
+is unchanged; each of those transects reached the same verdict through a
+same-line step anyway. The sensitivity sweep is where the defect was visible,
+at two of its five rows.
+
+Two lessons. **A null at the headline is not a null in the population** — the
+defect was real and admitted five bad pairs; had the sampling landed
+differently it would have moved the number, and the honest record is the
+count, not the unchanged fraction. And **the "zero production consumers"
+argument cuts the other way once a measurement leans on the API**: nothing in
+the shipped world called `crossing_between`, but H2-4's instrument did, over a
+population nobody had characterised.
+
 ## 8. A precedent cited in prose can contradict the same document's next sentence
 
 Task 2's brief described `Resolution` as "a small `Serialize` struct of
@@ -220,6 +262,29 @@ adjacency check, the recomputed mutation table, the timestamp verification.
 Re-reading found the two prose contradictions in §8 and §1; everything
 quantitative came from making the machine say it again.
 
+### 9a. A spec deliverable can go unbuilt while every document says it shipped
+
+Spec §5.2 asked for "the ordinal as a function over a room". No such function
+existed at pre-merge review. The tests reached the ordinal through
+`ctx.terrain().transverse_at(room.centroid())` — a **terrain domain** method
+over a **position** — and the chronicle nonetheless read "the ordinal is
+recovered by a function anyone can call". Every test passed; the sentence was
+true of *something*, just not of the surface this stage exists to publish.
+
+The gap survived a per-task review, an implementer's own check and the
+chronicle sweep, because each of them asked "does the ordinal come back?" and
+the answer was yes. What none asked was **"from where?"** A deliverable phrased
+as a capability ("the ordinal is a function") is satisfiable by any nearby
+call; a deliverable phrased as a **surface** ("`windows/locale` exposes …") is
+not, and §5.2 was in fact phrased the second way. The check that would have
+caught it is one grep of the crate the spec names — and the review that did
+catch it caught it exactly that way.
+
+The repair is `LocaleContext::transverse_of`, delegating to the same single
+`bank_reading` selection everything else uses, tested against the serialized
+document rather than against the engine call it would agree with by
+construction.
+
 ## 10. What did and did not have to be regenerated
 
 The close found **zero artifact drift**: `make rebaseline` produced no change
@@ -234,6 +299,14 @@ where every drifting commit paid its own bill.
 The drift check was confirmed non-vacuous rather than assumed: the new keys
 are present in the committed `book/src/reference/locale-seed-42.json`, so the
 paths have index entries and `git diff --exit-code` against them can fail.
+
+**The pre-merge fix wave then drifted exactly one path, as predicted.** It
+moved two `pub` boundaries — `BankReading::line` and
+`LocaleContext::transverse_of` — so `docs/audits/type-audit-report.md` moved
+(terrain +1 `bare-ok(index)`, locale +1 `pending(wave-1)`) and nothing else
+did. In particular `book/src/reference/locale-seed-42.json` did **not** move,
+which is the check that the same-channel clause and the new function changed no
+*emitted* value: the document is unchanged, only the queries over it are new.
 
 ## Follow-ups (promoted from the campaign's scratch, which dies with it)
 
@@ -316,4 +389,8 @@ the scratch:
 - The disclosure roster repeats per room: `session-seed-42.json` grew
   65,649 → 67,817 bytes (+3.3%), about 271 B per embedded room. Inherent to
   the mandated shape (scene emits one per document, locale one per room).
-  Recorded because nobody had the number.
+  Recorded because nobody had the number. **Promoted in the fix wave** into
+  `cli/tests/session_cost.rs`'s walk-band ledger, beside `WALK_BYTES_BUDGET`,
+  which is where a reader about to add a `Locale` field will actually look —
+  the same ledger's own punchline is that a per-cell (here, per-room) field
+  should be priced *before* it is added.

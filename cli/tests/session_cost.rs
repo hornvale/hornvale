@@ -315,6 +315,43 @@ const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 40.0;
 /// added on either side. A future reader should read this as the fixture
 /// tracking a moved world, not as a schema growing: a byte delta this small
 /// with no new field is the signature of a placement change upstream.
+///
+/// **Re-recorded, ceiling unchanged (The Ford, stage 2, 2026-08-11).** The
+/// walk band is now **17,209 bytes** and the ceiling stays at 24600, so
+/// headroom is `24600 / 17209 = 1.43x` — ample, and again deliberately not
+/// spent on restoring a round multiple. The whole `+542` landed in a single
+/// commit, and it is **per embedded room**:
+///
+/// ```text
+/// 16,667  the merged tree the table above ends on (fefdde7c)
+/// 17,209  +  542  `channel_distance`, `channel_bands` and the per-room
+///                 `resolution` disclosure, on each of the TWO locale
+///                 documents this band embeds (cb452ef9) — 271 B per room
+/// ```
+///
+/// **271 B per embedded room is the price to check the next locale field
+/// against.** It is measured, not estimated: the same change moved
+/// `session-seed-42.json` from 65,649 to 67,817 bytes (+3.3%, eight embedded
+/// rooms), and 542 over this band's two rooms gives the same 271. The shape is
+/// the mandated one — `windows/scene` emits its resolution block once per
+/// document, `windows/locale` emits one per room — so a field added to
+/// `Locale` is multiplied by however many rooms a document embeds, and that
+/// multiplier is the thing to look up first. The paragraph above says to price
+/// a per-cell field *before* adding it; this is that price for the per-room
+/// case, recorded **here** rather than only in the campaign retrospective,
+/// because the retrospective is not where a reader of `WALK_BYTES_BUDGET`
+/// looks.
+///
+/// **And the drift recurred a third time.** The paragraph above closes by
+/// observing that the basis was stale before The Grain touched it — "the same
+/// silent drift The Sighting's paragraph above was written to catch, recurring
+/// one campaign later". The Ford's stage 2 moved the band by 542 bytes and did
+/// not touch this file either; the pre-merge review is what caught it. Three
+/// campaigns, three misses. Nothing asserts this ledger is current — the
+/// budget assertion below only asserts the band is under the ceiling, which it
+/// comfortably is whether or not anyone has written down where the bytes went
+/// — so a reader should treat a row here as evidence that somebody looked,
+/// not as evidence that nothing has happened since.
 const WALK_BYTES_BUDGET: usize = 24600;
 
 /// The measured basis for `START_BUDGET_MS`: 3442.192 ms, the slowest of
