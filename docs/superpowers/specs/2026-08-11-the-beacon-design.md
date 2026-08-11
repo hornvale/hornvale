@@ -207,10 +207,17 @@ robust, at the cost of a human no longer being able to read
 `refs/hornvale/hosts/lefford` and know what it is. The loud-rejection path
 catches the collision anyway.
 
-**B4 — A foreign post is judged by time alone.** Liveness predicates decidable
-only at the authoring host — process liveness (`pid`) and branch liveness (`by`
-resolving to a live, unmerged branch) — are **not applied to a post from another
-host**. A foreign post is live while its TTL holds.
+**B4 — A foreign post is judged by time alone, and foreignness comes from the
+ref it was read from.** Liveness predicates decidable only at the authoring host
+— process liveness (`pid`) and branch liveness (`by` resolving to a live,
+unmerged branch) — are **not applied to a post from another host**. A foreign
+post is live while its TTL holds.
+
+A post is foreign iff it was gathered from a peer ref. **Not** iff its `host`
+field differs: zero of the 32 posts at the tip carry `host` at all (§4c), so a
+field-reading predicate would be inert, and a field can be omitted or mistyped
+where a ref name cannot. Structural provenance is the property B1's layout buys,
+and this is where it gets spent.
 
 This *generalizes an existing rule rather than inventing one*: `live.rs` already
 refuses to judge another host's `pid` against the local process table, with a
@@ -527,8 +534,28 @@ today. Invocation points, none of them a render path:
 
 ### 4c. Reads
 
-`live_posts` gains one branch: a post whose `host` differs from this host's is
-judged by TTL alone (B4) and rendered as unverifiable-here (B5). Nothing else
+`live_posts` gains one branch: a **foreign** post is judged by TTL alone (B4)
+and rendered as unverifiable-here (B5).
+
+**Foreignness is the ref a post was read from, not a field in the post.**
+Measured 2026-08-11: of the 32 posts at the tip, **zero** carry a `host` field —
+8 notices, 18 techniques, 4 retracts, a reply and a convention post, all
+`host=None`. `host` is a *claim* convention, and it is optional even there, so a
+predicate reading it would classify every peer post as local and B4 would be
+silently inert. Provenance instead comes from the read: a post gathered from
+`refs/hornvale/peers/<host>` is foreign, and one from `refs/hornvale/board` is
+local. This is strictly better than a field — the ref name cannot be forged,
+omitted, or mistyped by a posting session, which is the structural-provenance
+property B1's per-host layout was supposed to buy in the first place. `host`
+keeps its existing narrower job: naming which machine's process table can judge
+a claim's `pid`.
+
+Concretely, `StoredPost` gains an origin discriminant alongside `id`,
+`post` and `committed_at`, set by the reader from the ref it walked. **This is a
+struct-field addition, so it breaks every full-literal construction site**: 20 of
+them, across `store.rs`, `render.rs`, `relevance.rs`, `digest.rs` and `live.rs`.
+They are compile errors rather than silent breakage, but the count and the file
+list belong in the plan rather than being rediscovered. Nothing else
 about relevance, capping, or the cursor changes — the cursor is already a set of
 post ids, which are globally unique content hashes, so it works over a union
 unmodified. Its one required change is that `record`'s prune must retain ids
