@@ -425,7 +425,9 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
 /// [`layer_key`]'s ancestry tail needs. `FoundingCoords<'static>` because
 /// `Occupation::people` is a `KindId` wrapping a `&'static str`, so this map
 /// borrows nothing from `all` and outlives the scan that built it.
-fn founding_coords_by_id(all: &[OccupationRecord]) -> BTreeMap<EntityId, FoundingCoords<'static>> {
+pub(crate) fn founding_coords_by_id(
+    all: &[OccupationRecord],
+) -> BTreeMap<EntityId, FoundingCoords<'static>> {
     all.iter()
         .map(|o| (o.id, founding_coords(&o.core)))
         .collect()
@@ -433,7 +435,7 @@ fn founding_coords_by_id(all: &[OccupationRecord]) -> BTreeMap<EntityId, Foundin
 
 /// The founding coordinates of `r`'s predecessor, if it has one and it is
 /// present in `coords`.
-fn parent_coords(
+pub(crate) fn parent_coords(
     r: &OccupationRecord,
     coords: &BTreeMap<EntityId, FoundingCoords<'static>>,
 ) -> Option<FoundingCoords<'static>> {

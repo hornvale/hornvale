@@ -73,7 +73,7 @@ And later — an iron-working gnoll steading, an ordinary place, neither famed n
   They fled — put to flight by gnolls — and did not return.
 
 And later — a classical gnoll steading, an ordinary place, neither famed nor forgotten, at its height some 31 souls.
-  Its founders fled the ice of the clearing at cell 18311, gnolls looking for kinder ground. It was founded by Shmoogzhoxzmax.
+  Its founders fled the ice of the clearing at cell 18311, gnolls looking for kinder ground. It was founded by Pzhaazma.
   Founded in the year 1025, it held for 750 years, until the year 1775.
   They were not driven from this ground — they left it: in that same year they drove the gnolls off the clearing at cell 18329, and carried the settlement onto the land they had taken.
 
@@ -88,7 +88,7 @@ And later — a classical gnoll steading, an ordinary place, neither famed nor f
   They fled — put to flight by gnolls — and did not return.
 
 The last of them — a classical gnoll steading, an ordinary place, neither famed nor forgotten, at its height some 27 souls.
-  Its founders fled the ice of the clearing at cell 18311, gnolls looking for kinder ground. It was founded by Pzhaazhngaxgsov.
+  Its founders fled the ice of the clearing at cell 18311, gnolls looking for kinder ground. It was founded by Shmogso.
   Founded in the year 1775, it stands yet — 225 years and counting.
   It has never ended; the people are there still.
 

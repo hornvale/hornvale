@@ -342,7 +342,13 @@ pub fn founding_coords(c: &Occupation) -> FoundingCoords<'static> {
 /// A splitmix-style mix step. Mirrors [`crate::flesh::persona_of`]'s
 /// arithmetic so every derived handle in this crate is drawn from one space.
 /// Pure bit arithmetic — no transcendental, no `libm`, no platform dependence.
-fn mix(state: u64, x: u64) -> u64 {
+///
+/// `pub(crate)` since The Ell: [`crate::flesh::founder_handle`] folds its
+/// role discriminant into [`founding_key_from`]'s result and must do it with
+/// *this* step rather than a second copy of the same constants — a hand-rolled
+/// twin is how two derivations that are supposed to share a space drift out of
+/// one.
+pub(crate) fn mix(state: u64, x: u64) -> u64 {
     let mut z = state ^ x;
     z = z.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     z ^= z >> 29;
@@ -429,13 +435,32 @@ pub fn founding_key_from(own: FoundingCoords<'_>, parent: Option<FoundingCoords<
 /// A derived handle for the *founding* of an occupation, plus one hop of
 /// ancestry — where, when and from whom.
 ///
-/// Feeds the founder role handle behind every person name. Deliberately
-/// **excludes** everything after the founding (`ended`, `peak_population`,
-/// `cause`, `notability`): a founder's name must not be a function of how
-/// their community later died. The ancestry hop is what recovers the
-/// discrimination that exclusion costs — measured stem-collision rate
-/// 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% / 16.2%
-/// for the founding triple alone (spec D2, Nathan's ruling).
+/// Deliberately **excludes** everything after the founding (`ended`,
+/// `peak_population`, `cause`, `notability`): a founder's name must not be a
+/// function of how their community later died. The ancestry hop is what
+/// recovers the discrimination that exclusion costs — measured stem-collision
+/// rate 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% /
+/// 16.2% for the founding triple alone (spec D2, Nathan's ruling).
+///
+/// **Who reads it, stated precisely** (The Ell corrected this line; it used to
+/// read "feeds the founder role handle behind every person name", which was
+/// simply false — nothing but `windows/worldgen::descent` and a test called
+/// it):
+///
+/// - `windows/worldgen::descent::founder_of` folds it **whole**, salted by the
+///   world seed. That handle is the ledger-side founder identity the lab's
+///   name renderer reads.
+/// - [`crate::flesh::founder_handle`] folds it as the **founding-side base**
+///   of its own key, then adds the occupation's `ended` and `peak_population`.
+///   That handle is the one `windows/worldgen::person_promote` turns into a
+///   committed person's name. It is deliberately wider: read that function's
+///   doc for the three-arm measurement showing that this key alone collides in
+///   73% of worlds' promoted casts, because a raided founding and its same-year
+///   successor are identical in every founding-side field there is.
+///
+/// So the two are one key up to their tails, which is the property that keeps
+/// a founding's identity from meaning two different things on the two sides of
+/// the emit boundary — but they are **not** the same handle and never were.
 /// type-audit: bare-ok(identifier-text: return)
 pub fn founding_key(c: &Occupation, parent: Option<FoundingCoords<'_>>) -> u64 {
     founding_key_from(founding_coords(c), parent)
