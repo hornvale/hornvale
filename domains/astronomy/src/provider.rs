@@ -218,7 +218,7 @@ mod tests {
         let night = s.sky_at(WorldTime::new(10.01 * day_len).expect("a day value is finite"));
         assert_ne!(noon.description, night.description);
         assert_eq!(
-            s.sky_at(WorldTime::new(10.5 * day_len,).expect("a day value is finite"))
+            s.sky_at(WorldTime::new(10.5 * day_len).expect("a day value is finite"))
                 .description,
             noon.description
         );

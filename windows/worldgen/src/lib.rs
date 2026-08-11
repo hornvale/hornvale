@@ -3918,11 +3918,17 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     let position = place_coord(world, place);
     let boxed = phenomena_sources(world)?;
     let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    // `day` reaches here from the REPL's `phenomena` command, which parses it
+    // straight off stdin (`cli/src/repl.rs`) — unlike the sibling internal
+    // callers below, which always pass a literal. A non-finite value must
+    // fail through this function's existing `Result`, not panic (The Ell's
+    // Task 1 fix round: this used to be an `.expect()`).
+    let time = WorldTime::new(day).map_err(|e| BuildError::Pins(e.to_string()))?;
     Ok(observe(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime::new(day).expect("a day value is finite"),
+            time,
             lens: PerceptionLens::identity(),
             position,
         },

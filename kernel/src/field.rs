@@ -116,6 +116,7 @@ mod tests {
             "NaN is not a point on the time axis"
         );
         assert!(WorldTime::new(f64::INFINITY).is_err());
+        assert!(WorldTime::new(f64::NEG_INFINITY).is_err());
     }
 
     #[test]
@@ -174,5 +175,25 @@ mod tests {
         let p2: Position = serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
         let t2: WorldTime = serde_json::from_str(&serde_json::to_string(&t).unwrap()).unwrap();
         assert_eq!((p2.x, p2.y, t2.day), (p.x, p.y, t.day));
+    }
+
+    /// The direct wire-shape assertion `#[serde(transparent)]` exists for.
+    /// A round-trip test alone cannot tell "bare scalar" from "single-field
+    /// object" apart — both round-trip identically — and no `Serialize`-
+    /// deriving struct in this repo holds a `WorldTime` field yet, so no
+    /// committed artifact drift check can catch a lost attribute either.
+    /// Task 2 stores a `WorldTime` directly in `Fact`; losing this attribute
+    /// then would silently rewrite every world's save format from a bare
+    /// `12.25` to `{"day":12.25}`. Mutation-proved in the fix-round report:
+    /// deleting `#[serde(transparent)]` reddens this test.
+    #[test]
+    fn world_time_serializes_as_a_bare_scalar_not_an_object() {
+        let t = WorldTime::new(12.25).expect("a day value is finite");
+        let json = serde_json::to_string(&t).unwrap();
+        assert_eq!(
+            json, "12.25",
+            "WorldTime must serialize as the bare day scalar, not a \
+             {{\"day\":...}} object — #[serde(transparent)] is what keeps it that way"
+        );
     }
 }
