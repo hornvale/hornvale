@@ -145,7 +145,7 @@ information, and the level is gauge.
 > | uniform **1.00** | 12461 | 212 | 477 | 689 | 6261 | 29 |
 > | uniform **0.50** | 10758 | 194 | 374 | 568 | 5856 | 4 |
 >
-> A uniform `0.5` on **one** kind of thirty-five removes 1,703 facts — 13.7% of
+> A uniform `0.5` on **one** kind of thirty-nine removes 1,703 facts — 13.7% of
 > the world — takes it from 212 settlements to 194 and 689 occupation records to
 > 568, and takes gnoll itself from **29 settlements to 4**. Not inert; and not
 > inert *for placement*, which is this clause's own stated justification.
@@ -402,6 +402,16 @@ And the eight biomes taking the `0.25` default fall together by an identical
 factor of 0.846, holding their order to eight figures, which is the gauge
 property of a uniform mask visible in the artifact.
 
+> **Third correction, 2026-08-10 (The Radiation), and it is the same reading as
+> the first two.** *Order preserved to eight figures* is true and is all that was
+> measured. Calling it "the gauge property of a uniform mask" restates, two
+> hundred lines below the erratum that dismantles it, the claim that a uniform
+> factor is inert — and it does so with the superseded `0.25` as its subject. It
+> is gauge for the order of one kind's own cells, which is what the artifact
+> shows; it is not gauge for the magnitudes, and the magnitudes are what the
+> founding pool and the history bake read. Two measured arms are in the first
+> erratum above.
+
 ## What this leaves
 
 **The mask is a ratchet, and that is stated rather than solved.** A
@@ -417,6 +427,10 @@ the floor at zero had been guarded and the ceiling at one had not.
 **The elves are the point of all this and are not in it.** Six of them are
 waiting, and they will now be authored in a vocabulary the model computes rather
 than fitted as curves approximating it.
+
+> They landed in [The Radiation](./the-radiation.md), all six on that route and
+> on no other, taking the settling roster to fifteen. That campaign is also where
+> the level was derived and where the corrections above were measured.
 
 **One test proves less than its name suggests, and says so.** The check that an
 absent affinity is a no-op compares the absent branch against an explicit

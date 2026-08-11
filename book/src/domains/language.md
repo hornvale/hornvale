@@ -872,6 +872,36 @@ that can prove they share it. It does not yet have a history of change
 within any one line, a memory of contact between lines, or an ear capable
 of reconstructing either without being told.
 
+**Three families now, and a six-daughter one.** The section above describes the
+world as it stood with a single multi-member family; two more have been authored
+since, on the same mechanism and with no change to it.
+[The Delvers](../chronicle/the-delvers.md) added `dwarf` — three daughters, the
+first family whose members are all long-lived, and therefore the near-frozen
+contrast case a three-daughter goblinoid tree could not supply.
+[The Radiation](../chronicle/the-radiation.md) added `elf` — **six**, the largest
+the world holds. So the count is now three proto-languages with three, three and
+six daughters, plus kobold, still the outgroup and still a family of one.
+
+The six-daughter family is the first big enough for the topology question to be
+real rather than hypothetical, and its honest answer is a **star, not a tree**.
+There is no time-since-split anywhere in the model, so all six daughters are
+equidistant from the proto: the world can say that six tongues descend from
+proto-Elvish, and it cannot say that one of them split before another. A
+three-daughter family barely distinguishes a star from a tree. A six-daughter
+family makes the missing structure conspicuous, which is the useful thing about
+having built it. The tree waits on split time being *read* off the deep-history
+march — which already advances epochs — rather than authored, because a derived
+quantity with an invented factor reads as a measurement later.
+
+What six daughters did make measurable is descent itself, and by a wider margin
+than three. Every elf daughter's proto-root matches an **independent re-draw** of
+the shared proto — 469, 468 and 469 roots checked on three seeds, zero
+mismatches, and `true` on all thousand worlds of the census — while of the
+concepts rooted in *all six* daughters, **68 of 68** diverge into two or more
+present-day forms on every seed. Descent is proven by shared innovations, not by
+a shared ancestor alone, and a family of six silent aliases would have read
+false. Six draws have more room to differ than three, and they use all of it.
+
 **Phonotactics as a description, not a filter.** The family tree above
 exposed a fault that had been latent since the mouth was first drawn. A
 name is assembled from a species' **synchronic phonotactics** — its onset,

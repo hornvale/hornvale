@@ -3,7 +3,15 @@
 **Campaign:** C2d, The Radiation. The final campaign of the peoples programme
 (`2026-08-03-the-peoples-program-design.md` §4). Nine peoples become fifteen.
 
-**Status:** spec, awaiting G3.
+**Status:** COMPLETE — all six tasks executed and reviewed, 2026-08-10. Chronicle:
+[`book/src/chronicle/the-radiation.md`](../../../book/src/chronicle/the-radiation.md);
+retrospective: [`docs/retrospectives/the-radiation.md`](../../retrospectives/the-radiation.md).
+**Two predictions were falsified and are shipped as headlines** — P2 for
+desert-elf, where the mechanism relocated the kind completely and the frozen axis
+could not see it (§5, and the erratum there), and a merged disposition claim that
+was already within 5% of failing before this campaign began. Neither axis was
+widened. §3.2 and §3.7 carry dated errata; the affinity ladder's derived level is
+ratified as decision 0120.
 
 ---
 
@@ -390,12 +398,39 @@ Eight registries plus an appended accession cohort, and a validation in a ninth
   domains/species/src/lib.rs          biosphere, psyche, dispersion, society,
                                       perception, family_of, KIND_CONCEPTS,
                                       habitat_realm (sparse, Drow only),
-                                      biome_affinity (sparse, five of six),
+                                      biome_affinity (sparse, five of six),  [ERRATUM: six]
                                       + a condition-niche fn
   domains/language/src/lib.rs         articulation, lexicon, family_proto ("elf")
   domains/language/src/accession.rs   an APPENDED epoch cohort
   windows/worldgen/src/components.rs  check_integrity validates, authors nothing
 ```
+
+> ### ERRATUM, 2026-08-10 — "biome_affinity (sparse, five of six)" is wrong
+>
+> **Six rows shipped, not five**, and the sixth is required rather than
+> incidental. Marked in place in the block above in the idiom §3.2 already uses,
+> so the count a reader meets is the count that shipped.
+>
+> The omitted row is High's, and the reasoning that omitted it was that High
+> diverges from Wood in mind and society *only* (§3.6), so it needs no affinity
+> of its own. That conclusion does not follow. **P3(a) and P4 both require High
+> to carry a row**, and they require the same one:
+>
+> - P3(a) predicts Wood's and High's capacity fields are bit-identical. An
+>   *absent* row is not a uniform row — absence means unrestricted, so an elf with
+>   no affinity is scored on ground its sibling is masked off. The null control
+>   only controls if High takes **Wood's row entire**, which is how it shipped
+>   (`wood.clone()`).
+> - P4 uses High as the comparison body in its sufficiency arm, giving Wood the
+>   Subterranean gate and asking whether Wood separates from High. That arm is
+>   meaningless unless High is otherwise bitwise Wood.
+>
+> The plan caught this and corrected it before Task 3 authored anything; it is
+> recorded here because the spec is the document a later reader consults for the
+> authoring cost, and because *"the control needs no row"* is a plausible-sounding
+> error that would recur. **A control that differs in any authored value controls
+> nothing** — the same sentence Task 3 had to write again about Drow, which takes
+> Wood's row for the same reason and would otherwise have taken its own floor.
 
 Two of these have teeth:
 

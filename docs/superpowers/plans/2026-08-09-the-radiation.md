@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: COMPLETE** — all six tasks executed, reviewed and closed 2026-08-10;
+seven review passes, four fix rounds, one absorption of fifty-six commits, one
+canonical census, one authorized fidelity cut. Twenty-four defects were found in
+this plan, the spec and the task briefs; the count and its distribution are the
+subject of [the retrospective](../../retrospectives/the-radiation.md). Four of
+five preregistered predictions and the stated null confirmed; P2 falsified for
+desert-elf and carried in the preregistered-not-met idiom with its axis unwidened.
+The affinity ladder's level, which this plan assumed was gauge, was re-derived
+mid-execution and is ratified as decision 0120.
+
 **Goal:** Author six elves — Wood, High, Drow, Sea, Desert, Snow — onto the
 existing biome-affinity and realm-gate mechanisms, measure the five
 preregistered predictions and the stated null, and close the peoples programme
