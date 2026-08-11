@@ -467,6 +467,23 @@ mod tests {
         normalize([x, y, z])
     }
 
+    /// The **measured** mean angular separation between neighbouring cells on
+    /// the canonical `Geosphere::new(6)`, radians. Do not try to re-derive it
+    /// and conclude it is wrong: it is not `sqrt(4π/N)` (0.01752), not the
+    /// equal-area circle diameter (0.01976), and not a hexagon edge (0.0109).
+    /// It is the mean over every cell of the mean angle to its neighbours,
+    /// taken from the Task 4 probe — the same quantity `cell_spacing` computes
+    /// per cell at build time. (Level 5, for reference: 0.037769.)
+    const CANONICAL_CELL_EDGE: f64 = 0.018_886;
+
+    /// The largest drainage the canonical grid actually produces, from the
+    /// same probe: max 146 / 177 / 173 on seeds 42 / 7 / 1234, p99 ≈ 117–138,
+    /// p50 ≈ 23–25. Claims about "the widest river" are stated HERE rather
+    /// than at some round number the world never reaches — an assertion
+    /// pinned to an unreachable discharge is a tripwire that reddens for
+    /// reasons unrelated to what it claims.
+    const CANONICAL_MAX_DRAINAGE: f64 = 180.0;
+
     /// A hand-built two-segment polyline on the equator, with band edges from
     /// the REAL laws at a deliberately coarse synthetic cell (spacing 1.0
     /// rad). The coarseness is the point: it puts every band wider than the
@@ -519,12 +536,17 @@ mod tests {
         offset_perpendicular(line, line.points[0], -0.002)
     }
 
-    /// The campaign's whole claim, as an assertion: the largest river on the
-    /// canonical grid is a small FRACTION of a cell edge, not a cell.
+    /// The campaign's whole claim, as an assertion: the largest river the
+    /// canonical grid ACTUALLY PRODUCES is a small FRACTION of a cell edge,
+    /// not a cell. Stated over the measured discharge ceiling (~180), not a
+    /// hypothetical one — at the placeholder coefficient the widest real
+    /// channel is 1.27e-4 rad against a bound of 1.89e-3, i.e. ~14.9x of
+    /// headroom, so Task 6's calibration has room to move without reddening
+    /// this for a reason it is not about.
     #[test]
     fn the_widest_channel_is_far_narrower_than_a_cell() {
-        let cell_edge = 0.0276_f64; // canonical level-6 cell edge, radians
-        let widest = channel_half_width(10_000.0, cell_edge) * 2.0;
+        let cell_edge = CANONICAL_CELL_EDGE;
+        let widest = channel_half_width(CANONICAL_MAX_DRAINAGE, cell_edge) * 2.0;
         assert!(
             widest < cell_edge / 10.0,
             "widest channel {widest} rad is not << cell edge {cell_edge} rad"
@@ -535,16 +557,20 @@ mod tests {
     /// Width must be MONOTONE in discharge — a bigger river is never narrower.
     #[test]
     fn width_increases_with_discharge() {
-        let e = 0.0276_f64;
-        let small = channel_half_width(20.0, e);
-        let big = channel_half_width(2_000.0, e);
+        let e = CANONICAL_CELL_EDGE;
+        // Across the range the world actually spans: threshold to ceiling.
+        let small = channel_half_width(crate::water::RIVER_MIN_DRAINAGE, e);
+        let big = channel_half_width(CANONICAL_MAX_DRAINAGE, e);
         assert!(big > small, "big {big} not wider than small {small}");
+        // And beyond it, so the law itself is monotone rather than merely
+        // happening to be so over the sampled interval.
+        assert!(channel_half_width(2_000.0, e) > big);
     }
 
     /// A sub-threshold trickle is not a channel at all.
     #[test]
     fn drainage_below_the_river_threshold_has_zero_width() {
-        let e = 0.0276_f64;
+        let e = CANONICAL_CELL_EDGE;
         assert_eq!(
             channel_half_width(crate::water::RIVER_MIN_DRAINAGE - 1.0, e),
             0.0
@@ -630,7 +656,7 @@ mod tests {
     /// `Terrace`. A flat reach of the same river has a broad one.
     #[test]
     fn a_gorge_has_no_floodplain_and_a_flat_reach_has_a_broad_one() {
-        let spacing = 0.0189_f64; // measured canonical level-6 cell spacing
+        let spacing = CANONICAL_CELL_EDGE;
         let gorge = band_edges(100.0, GORGE_SLOPE, spacing);
         assert_eq!(
             gorge[1], gorge[2],
@@ -658,7 +684,7 @@ mod tests {
     fn band_edges_are_non_decreasing_at_every_gradient() {
         for step in 0..40 {
             let slope = f64::from(step) * 2_500.0;
-            let e = band_edges(60.0, slope, 0.0189);
+            let e = band_edges(60.0, slope, CANONICAL_CELL_EDGE);
             assert!(
                 e[0] <= e[1] && e[1] <= e[2] && e[2] <= e[3],
                 "edges out of order at slope {slope}: {e:?}"
