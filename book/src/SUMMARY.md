@@ -346,6 +346,7 @@
 - [The Signet](./chronicle/the-signet.md)
 - [The Cairn](./chronicle/the-cairn.md)
 - [The Particular](./chronicle/the-particular.md)
+- [The Grain](./chronicle/the-grain.md)
 
 # Appendix: The Frontier
 

@@ -90,7 +90,13 @@ from a room's own address noise, steady and quantized at emit like every
 other room-scale value. The descriptor grammar reads this field before
 anything else, so two adjacent rooms in the same forest cell differ by a
 damp north-facing hollow versus a sun-warmed open rise rather than by a
-random phrase pulled from a pool. This is the in-campaign lever for
+random phrase pulled from a pool. The descriptor grammar was its only reader
+for a long time, which made the field look like an internal detail of the
+locale layer; The Grain later put all four axes on the surrounds chart itself,
+where a renderer can key texture to them directly — and had to state in the
+schema that the wetness axis is address noise rather than hydrology, because
+the temptation to read it as water is strong and wrong. This is the
+in-campaign lever for
 within-biome interest, and it is explicitly not the last word on it — the
 deeper levers (a room's history, halos radiating from a placed exotic,
 successional change over time) stay named and deferred.

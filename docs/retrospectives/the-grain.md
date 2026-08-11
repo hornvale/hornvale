@@ -1,0 +1,300 @@
+# The Grain — retrospective
+
+Process lessons, not product. The product is in
+[the chronicle](../../book/src/chronicle/the-grain.md), and the settled positions
+are decisions [0120](../decisions/0120-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md),
+[0121](../decisions/0121-an-emit-gate-is-not-a-grain-gate.md),
+[0122](../decisions/0122-disclose-a-resolution-rather-than-refine-a-field.md) and
+[0123](../decisions/0123-a-refinement-preregisters-a-conservation-criterion.md).
+
+Five tasks. One of them was implemented, gated green, escalated, and reverted, and
+its replacement was a different feature. Most of what this campaign has to teach
+is about how that call got made and about the several tests that passed for
+reasons unrelated to what they claimed to measure.
+
+## 1. The carve-out was the finding, and the escalation is what caught it
+
+Task 2 shipped a working implementation and reported `DONE_WITH_CONCERNS`. It had
+passed both preregistered hypotheses and the whole commit gate. Its concerns were
+filed as a **fidelity carve-out**: fresh water shrank 29% at walking depth, fauna
+movement halved, a hundred lines of committed behaviour trace moved, and the
+practical payoff at the radius the game actually renders was banding in *one of
+fifty* river neighbourhoods.
+
+It was not sent to a task reviewer. It was escalated, and the ruling was revert.
+
+Three things about that sequence are worth keeping.
+
+**The implementer did the right thing by not resolving it.** It had been told
+explicitly not to retune the calibrated constant to rescue the hypothesis, and it
+did not — it reported the measurement and stopped. A subagent that had "fixed" the
+29% by moving the threshold would have produced a green campaign and a corrupted
+world model, and nothing in the loop would have caught it.
+
+**A carve-out is a finding wearing a concession's clothes.** The report's framing
+was *here is the cost of the thing you asked for*. Read as a measurement instead,
+the same paragraph says *this mechanism violates a conservation property*. The
+difference is entirely in who is expected to weigh it, and a subagent is not in a
+position to weigh a constitutional constraint against a local improvement.
+
+**The ruling needed an idea-generation pass, not more measurement.** All the
+numbers were already in hand and pointed at "small benefit, real cost", which is
+an argument for shipping it anyway as often as not. What changed the answer was a
+structured ideonomy pass over the periodic grid, which produced the three claims
+the revert actually rests on: that the grid had *predicted* the illegality and the
+measurement confirmed it at the predicted location; that the real distinction is
+ordinal versus nominal; and that the dominant corner is per-room, so the existing
+behaviour was already the correct method. That third one killed the premise of the
+whole change, and no amount of further measuring would have surfaced it.
+
+Worth recording as a correction the controller made against itself: the campaign
+had claimed the change "removes a contradiction". It did not — it **moved** one,
+from *(river, shelf)* onto *(ocean, tropical rainforest)*, which is the documented
+coupling invariant. Reading a diff as removal when it is relocation is easy when
+you want the change.
+
+## 2. Three tests passed for reasons unrelated to what they measured, from two causes
+
+This is the campaign's dominant defect class and every instance was caught by
+accident.
+
+**Cause one: a degenerate address.** `RoomAddr::containing(geo.position(cell),
+depth)` is degenerate. Rooms and cells subdivide the *same* icosphere, so a cell
+centre is an exact corner of the room lattice; the spherical point-in-triangle
+test straddles, the descent falls through to its middle-child fallback at every
+level, and the answer lands about **five degrees** from the point asked for with
+all three corner weights equal at 64/64/64 — so even the dominant corner is a coin
+toss. Two hypotheses **passed against the unfixed code** on such a room.
+
+The kernel's own `containing_round_trips_room_centroids` structurally cannot catch
+this, because it round-trips through the same fallback. A round-trip test proves
+consistency, never correctness.
+
+**Cause two: a tie-break that disagrees with production.** `max_by_key(|c|
+c.weight)` returns the **last** maximum; the production rule breaks to the lowest
+cell id. Three equal weights are common enough on this mesh that a test written
+with `max_by_key` compares against a cell production never chose. Same symptom,
+different door.
+
+The habits that came out of it: **pick discriminating inputs deliberately and
+assert the property you meant** — both offending tests now assert the dominant
+corner explicitly — and **sample a population rather than one address.** A single
+fixed address did not reliably discriminate a broken coupling invariant, so that
+test sweeps two hundred; the conservation test sweeps eighty cells.
+
+Two further instances of the same family arrived later, which is the reason this
+lesson is first rather than fourth:
+
+- **The `micro` axis whose evidence was a tautology.** Banding water from
+  `micro.wetness` looked confirmed because rooms with high wetness are described
+  as stream gullies — and the descriptor is *rendered from* the field. Caught one
+  step before implementation. When a prediction and its evidence share a
+  derivation, there is no measurement there at all.
+- **The conservation test's own tripwire arm found zero violations on first
+  draft** (see §6).
+
+## 3. A latent production defect, found and deliberately not fixed
+
+The tie-break divergence in §2 is not only a test hazard. It is in **production
+code**: `chamber_column_here` (which `delve` reads for a cave) and `column_here`
+(which `dive` reads for a water column) both pick the max-weight corner with
+`max_by_key`, while the rule every categorical field uses breaks to the lowest
+cell id. On an exact integer-weight tie, `delve` can resolve a **different cell**
+than biome, water, substrate and colour name.
+
+It predates this campaign, it was correctly left out of scope, and the new
+coupling-invariant test does **not** cover it — that test checks `describe` and
+the reflectance path, not the delve path. So the four-member invariant as
+documented is fully tested, and a fifth claim made only in a code comment is not.
+
+This is carried as follow-up **F1** and a registry row rather than as a decision,
+and the reason is worth stating: the campaign's own rule is that a documented
+invariant with no test is a comment, so *exempting* those two paths in writing
+without measuring how often an exact three-way tie actually occurs would be
+minting a policy to avoid doing arithmetic. It is a defect to size and fix, not a
+position to ratify.
+
+The source comment that asserted agreement now carries the caveat, so a reader of
+the file alone does not re-raise the question the comment exists to pre-empt.
+
+## 4. The controller's own text was the least-reviewed text in the loop, again
+
+Three of the plan's stated facts were wrong and the implementers corrected them:
+the type-audit tag prescribed for a *struct* field (the audit tags primitives), a
+proposed `#[ignore]` reason token that would have failed the heavy-tier guard's
+verbatim-match check, and a `lib.rs` export edit that was unnecessary because the
+crate re-exports with a glob.
+
+All three were corrected by the implementer reading the code rather than
+transcribing the brief, which is the behaviour the dispatch asked for explicitly —
+each was framed as "run this and report the real answer" rather than as an
+instruction. That framing is cheap and it worked three times.
+
+The same failure then hit the controller in a place no implementer could catch it:
+eleven registry rows added in a docs commit broke the 600-character Idea-cell cap,
+seven cells at 616–1027, with no waiver available because that list only ever
+shrinks. It blocked the gate for every later task. The operational lesson is
+narrow and real: **check every cell's length before writing the file, not
+row-by-row inside a loop.** Several turns went to discovering the rows one at a
+time.
+
+## 5. Task 4's report asserted a measurement it had not made
+
+The report stated that the workspace doctest step gave "every doc-test crate: 0
+passed; 0 failed". That is false — the kernel alone has an unannotated doctest and
+a `compile_fail` block, two passing plus two ignored workspace-wide — and it was
+caught by the controller running the step independently.
+
+The cause, which the implementer confirmed rather than merely accepted when
+challenged: it generalised from the **visible tail** of a very long gate output,
+which genuinely reads `running 0 tests` for the alphabetically-late crates. The
+controller had read the same tail and had the same impression.
+
+**A long command's tail is not its result.** The rule the project already has
+covers it, and the instructive part is that a correct-looking summary of a
+ten-minute command is the cheapest place in the whole loop to introduce a false
+fact, because nobody re-runs a green gate to check its prose.
+
+Recorded alongside it: a **deviation from process**, deliberately not hidden. The
+controller verdicted that fix ADDRESSED itself rather than dispatching a scoped
+re-review, because the fix landed in git-ignored scratch (a review package would
+have produced an empty diff) and the controller already held the ground truth from
+its own independent measurement. That is verification against independent
+evidence, not adjudication of a disputed point — but it is a shortcut, and it is
+worth seeing written down before it becomes a habit.
+
+## 6. A tripwire nobody has watched trip is indistinguishable from one that cannot
+
+The conservation criterion (H5) holds trivially under the current mechanism, which
+is exactly why it was worth writing as a guard for a future one. Written as a bare
+assertion it would have shipped as a guard that guarded nothing.
+
+So it carries a second arm: over the same rooms it reconstructs what the reverted
+mechanism would have assigned, and asserts that the criterion **rejects** it. The
+first draft sampled a radius-4 patch per cell and that arm found **0 violations of
+44 cells** — across one hundred and thirty-second of a cell the blend moves about
+2%, so the scan could not see the thing it existed to catch. Re-sampled as a fan
+across the whole cell, the criterion conserves on 80 of 80 cells and 2151 rooms
+while the reverted mechanism breaks the aggregate form on 11 cells and unanimity
+on 27.
+
+The generalizable part is the shape rather than the numbers. **A test for a
+property that holds by construction must contain a positive control**, because
+there is no other way to distinguish "the property holds" from "the sample is too
+small to see a violation". This is the campaign's own lesson about vacuous checks,
+arriving in the last task, in the test written to embody it.
+
+## 7. A field-name list on the wire breaks substring assertions about field presence
+
+A pleasing second-order consequence. Three tests asserted a chart carried no
+colour with `!json.contains("\"color\"")`. Once the resolution block shipped, the
+document legitimately contains the literal string `"color"` — as an *element of an
+array of field names* — and those assertions went red without anything being
+wrong.
+
+Tightened to match `"\"color\":"`, which cannot admit a false pass given this
+codebase's compact serde output while correctly excluding the array element. Worth
+carrying because the class is general: **the moment a schema carries its own field
+names as data, every textual assertion about field presence becomes ambiguous.**
+Any self-describing addition — a resolution disclosure, a capability list, a
+field manifest — has this effect on the tests around it.
+
+## 8. Two operational facts learned the hard way, both posted to the board
+
+- **`git worktree move` invalidates cached test binaries.** Cargo bakes absolute
+  paths in via `env!()`, so a renamed worktree's `target/` is stale in a way that
+  looks like a mysterious test failure. Caused by this campaign's own rename;
+  the implementer had to touch files to force rebuilds.
+- **`windows/vessel/tests/fixtures/*.json` is a `REBASELINE=1`-driven golden set
+  that `scripts/regenerate-artifacts.sh` and `make rebaseline` do not cover.**
+  `make gate` caught it by failing two tests; `make rebaseline-goldens` fixed it.
+  The root `CLAUDE.md`'s `git diff --exit-code` path list is therefore
+  **incomplete** — carried as **F3**.
+
+One more, not posted because it is not a technique: an implementer boxed an enum
+variant because clippy's `large_enum_variant` fired once the chart struct grew.
+The Box is clippy's own suggested remedy and is wire-identical here — the enum
+derives no `Deserialize`, so there is no asymmetry to introduce — but "a struct
+grew and a lint about a *different* type fired" is a coupling worth expecting when
+adding to an embedded schema.
+
+## 9. Sequencing: one implementer did another task's work, and it did not hurt
+
+Task 1's implementer rebaselined the committed artifacts, which the plan had
+assigned to Task 4. That was not wrong — the gate would have failed otherwise —
+but it meant Task 4's byte accounting was partly already done, and it had to be
+told not to double-count. Task 4 then verified that both `make rebaseline` and
+`make rebaseline-goldens` produced **zero** drift, which is a stronger result than
+the accounting it was asked for: the tree was already consistent across three
+implementers' independent regenerations.
+
+The lesson is about plan shape rather than about the implementer. **A task that
+"accounts for" artifact movement cannot be scheduled after tasks that must
+regenerate artifacts to be green.** Either the accounting task owns the
+regeneration exclusively, or it is written as a verification task from the start.
+
+## Follow-ups (promoted from the campaign's scratch register)
+
+`.superpowers/sdd/` dies with the checkout, so these are the durable copy.
+
+- **F1 — Size and settle the `chamber_column_here` / `column_here` tie-break
+  divergence.** *Trigger:* it is a latent production inconsistency (§3). Both pick
+  the max-weight corner with `max_by_key` (last-max wins) against the
+  lowest-cell-id rule every categorical field uses, so on an exact integer-weight
+  tie `delve` and `dive` can resolve a different cell than biome/water/substrate/
+  colour name. First measure how often an exact three-way tie occurs at walk
+  depth; then either bring both paths onto the shared rule (probably a one-line
+  change plus an extension of the coupling test) or exempt them in writing with
+  the rate as justification. Do **not** exempt without the rate.
+- **F2 — A timings row recorded a gate that did not run its tests.**
+  *Trigger:* found at Task 2. `docs/timings.md` row 667 reads `wall=5.565s, rc=0`
+  for a `gate` on `29b9cfcd`, where the real gate in the next row took 572.319 s
+  over 3348 tests. A gate cannot run 3348 tests in 5.5 seconds, so its test phase
+  did not happen — yet `rc=0` makes the row indistinguishable from a pass, in the
+  file `make ci`'s baseline reasoning depends on. Cause **not established** and
+  deliberately not debugged here; not caused by this campaign's source. Related to
+  but distinct from The Cairn's F18, which is about the summary's column map and
+  its unfiltered median: this is about a row that is *green and wrong* rather than
+  *red and counted*.
+- **F3 — The rebaseline path list in the root `CLAUDE.md` is incomplete.**
+  *Trigger:* §8. `windows/vessel/tests/fixtures/*.json` is a `REBASELINE=1` golden
+  set covered by neither `regenerate-artifacts.sh` nor `make rebaseline`, and it
+  is absent from the `git diff --exit-code` list that documents what a rendering
+  change can move. Either fold it into `regenerate-artifacts.sh` or add it to the
+  documented list with a note that it needs `make rebaseline-goldens`.
+- **F4 — There is no `locale/room/v2` reference page.** *Trigger:* this task's
+  plan named one to edit and it does not exist; the schema is described only in
+  code and in a committed example JSON. The new `cave` key is therefore documented
+  nowhere a consumer reads. `scene/surrounds/v2` has a full chapter; the schema a
+  possession actually walks on does not. Small, and it is the kind of gap that
+  only surfaces when someone is told to update the page.
+- **F5 — The measured span of `micro.openness` is prose-only.** *Trigger:*
+  inherent to a no-code measurement task. The test asserts `> 1.0`; the measured
+  1.976831 lives in the plan, this retrospective and the chronicle, so a future
+  drift from 1.98 to 1.05 passes silently. Either assert a tighter band or accept
+  that the assertion is a floor and stop quoting the figure as if it were pinned.
+- **F6 — The coupling test's liveness floor is a loose 25% bar.** *Trigger:*
+  deferred minor from Task 2's review. It requires that more than 50 of 200 sampled
+  addresses resolve on the grid. The per-address equality checks are strict; only
+  the floor is soft, so a change that made 60% of addresses unresolvable would
+  still pass. Worth tightening to what actually resolves today, with a comment
+  saying so.
+- **F7 — The subdivision design doc's open question is now closed by
+  measurement.** *Trigger:* the freshness sweep found it.
+  `docs/design/room-scale/p2-subdivision-design.md` still lists "max-weight vs
+  blend-then-reclassify" as "small, but a real choice". One of the two named
+  options is now known illegal for nominal fields (decision 0120), measured. The
+  doc is a design document rather than a published chapter, so it was left alone
+  here; it should either point at 0120 or be marked superseded.
+- **F8 — The snapshot channel still cannot zoom.** *Trigger:* named out of scope in
+  the spec and unchanged. The session builds its spatial channel at a hardcoded
+  zoom while the map verb honours the caller's. Additive and small; the campaign
+  removed the urgency rather than the gap. Carried in the registry.
+
+One finding that is not a follow-up because it is already the answer: **the
+project's word for what happened here is "a falsified prediction is a finding,
+not a failure", and this campaign is the strongest instance of it so far.** The
+headline change was built, measured, gated, and deleted, and the campaign's
+durable output is a rule about ordered versus unordered values that no amount of
+not-building-it would have produced. The cost was one task's implementation. That
+is a good trade and it should be treated as precedent rather than as an exception.

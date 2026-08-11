@@ -69,7 +69,12 @@ pub struct SurroundsObserver {
 pub struct Mark {
     /// The examinable noun.
     pub noun: String,
-    /// What kind of thing this is: `"settlement"` or `"agent"`.
+    /// What kind of thing this is. The engine emits two built-in kinds —
+    /// `"settlement"` and `"cave"` — and a session-owning consumer adds
+    /// `"agent"`. A consumer that does not recognize a kind should still
+    /// render the mark: `legend_of` catalogs kinds generically and
+    /// `render_surrounds_ascii` treats every non-`"agent"` kind alike, so a
+    /// future kind needs no special case anywhere to appear.
     pub kind: String,
     /// One line about it — the datum `examine` prints.
     pub datum: String,
@@ -390,9 +395,30 @@ pub fn surrounds_scene_in(
         // (`windows/vessel/src/session.rs::chamber_column_here`, which reads
         // the max-weight corner of the SAME fuzzy-resolved cell `describe`
         // uses — the dominant corner), so it already succeeds from any room
-        // in a cave-bearing cell. Contrast `water` (Task 2 of this
-        // campaign), which was inherited the same way and DID contradict
-        // the room's own prose — that one was a defect and this is not.
+        // in a cave-bearing cell.
+        //
+        // ONE CAVEAT, so a reader of this file alone does not re-raise the
+        // question: `chamber_column_here` breaks a weight TIE differently.
+        // It picks with `max_by_key(|c| c.weight)`, which returns the LAST
+        // maximum, where `LocaleContext::dominant_corner` breaks to the
+        // lowest `CellId`. On an exact integer-weight tie — common on this
+        // mesh, since a room sitting on a lattice point can weigh 64/64/64 —
+        // the two can name different cells, so a marked cave and the cave
+        // `delve` actually descends into can diverge. That divergence
+        // predates the cave mark, reaches `column_here` (`dive`) the same
+        // way, and is recorded rather than fixed here; it wants a ruling on
+        // whether those two paths join `dominant_corner`'s coupling
+        // invariant or are exempted in writing.
+        //
+        // Note also that `water` is NOT a counter-example to this pattern,
+        // though an earlier draft of this comment said it was. `water` takes
+        // the dominant corner of each ROOM's own three weights, which is
+        // categorical nearest-neighbour interpolation and the correct method
+        // for a nominal field; its flatness across a narrow view is the
+        // interpolation stencil being wider than the view, not a defect. A
+        // campaign refined it from a blend and reverted that (see the
+        // `Resolution` block's doc).
+        //
         // Salience 30 puts a cave mouth below both settlement ranks (10, 20)
         // in the legend, so a settlement outranks a cave mouth when both
         // stand on the same cell.

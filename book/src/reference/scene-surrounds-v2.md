@@ -116,8 +116,8 @@ knowledge is part of what is being described.
 
 | `state` | What it means | Layers carried |
 |---|---|---|
-| `here` | the observer's own room | everything: `biome`, `water`, `relief`, plus `regime`, `temperature_c`, `moisture`, `elevation_m` |
-| `sensed` | within the neighbourhood, seen from where the observer stands | the coarse triple only: `biome`, `water`, `relief`; the fine fields are `null` |
+| `here` | the observer's own room | everything: `biome`, `water`, `relief`, `micro`, plus `regime`, `temperature_c`, `moisture`, `elevation_m`, `height_asl_m` |
+| `sensed` | within the neighbourhood, seen from where the observer stands | `biome`, `water`, `relief`, `micro`; the five measured fields are `null` |
 | `remembered` | known from having been there, no longer in view | as recorded when it was visited |
 
 A producer with no session — today, only the CLI's `hornvale scene
@@ -135,18 +135,90 @@ surrounds query. A browser client that wants a session-owning `remembered`
 overlay would need a new wasm export; the schema's vocabulary is ready for
 that even though no producer offers it yet.)
 
-The coarse triple is deliberately what can be *seen across open ground*
-rather than what can be measured by standing on it. Reading a room's exact
-moisture from four rooms away would be a claim about perception that the
-model does not support.
+The five `null`-on-`sensed` fields are deliberately what cannot be *measured
+across open ground*. Reading a room's exact moisture from four rooms away
+would be a claim about perception that the model does not support; seeing
+that the ground over there is a shaded hollow under closed canopy is not.
+That is the line, and `micro` sits on the visible side of it.
+
+**That `null` is an emit gate, not a grain gate**, and the distinction has
+already cost a campaign. `regime`, `temperature_c`, `moisture`, `elevation_m`
+and `height_asl_m` are computed for *every* cell in the producer's build loop
+and then discarded on all but the observer's own; the values are absent, not
+unavailable. An earlier version of this schema's own doc comments said "fine
+grain, `null` when coarse", and a client campaign read that as *the
+simulation does not know these below grid resolution* and designed around a
+premise that was the opposite of true. A schema that says a field is missing
+owes the reader the condition that makes it missing.
+
+## `micro`: the finest layer the document carries
+
+Every cell carries `micro` — never `null`, on no state, at no radius. It is
+the sub-cell micro-field: four independent axes, each a `number` in `[-1, 1]`
+and quantized at the emit boundary.
+
+| Axis | `-1` | `+1` |
+|---|---|---|
+| `relief` | hollow | rise |
+| `aspect` | shaded | sunlit |
+| `wetness` | dry | wet |
+| `openness` | closed canopy | open |
+
+It is a pure function of a room's own address and the world seed, which is
+why it is not optional: every room has one, so an absent value could only
+mean *this producer chose not to say* — the exact ambiguity the `is_here`
+gate above created. It is also, at walking depth, the only field on the
+document that varies room to room across a narrow view: measured on seed 42's
+flagship neighbourhood, `openness` spans 1.977 of its available 2.0 within
+thirty-one adjacent rooms.
+
+**`wetness` is address noise, and it is not hydrology.** This is the one
+reading of `micro` the schema explicitly rules out. The axis does not know
+where the water is, it is not derived from drainage or elevation, and a
+consumer must not band a water kind from it: a room whose `wetness` reads
+`+0.9` is not a room with a stream in it. `water` is the field that answers
+that question, at the resolution `resolution` declares. The same holds one
+step weaker for the other three — they are a *texture*, coupled to nothing in
+the terrain model, and the honest way to consume them is as local variation
+within whatever the coarser fields already established.
+
+Nothing downstream of the document may recover its own detail from `micro`
+either. A consumer that computed, say, drinkable water from `wetness` would
+be inventing sub-cell hydrology the simulation does not have — and the
+producer tried the analogous refinement internally and reverted it (see
+"Resolution" below).
 
 ## Marks and the legend
 
-`marks` on a cell are the salience-ranked things standing there — a
-settlement today, and whatever a session-owning consumer adds. Each mark
+`marks` on a cell are the salience-ranked things standing there. Each mark
 carries a `noun`, a `kind`, a one-line `datum`, and a `salience` rank in
 which **lower is more salient**. Marks within a cell are ordered by
 `(salience, noun)`.
+
+The producer emits two built-in kinds, and a session-owning consumer adds a
+third:
+
+| `kind` | Emitted by | Salience | Resolution |
+|---|---|---|---|
+| `"settlement"` | the engine | 10 (flagship), 20 | per room — a settlement stands in one room |
+| `"cave"` | the engine | 30 | **grid** — a cave is a cell-level affordance, so every room of a cave-bearing cell carries the mark |
+| `"agent"` | a session-owning consumer | consumer's own | per room |
+
+The `kind` vocabulary is **open**, and a consumer needs no case analysis to
+handle a kind it has never heard of: `legend` catalogs every mark's noun
+generically, and the ASCII renderer distinguishes only `"agent"` from
+everything else. Adding a kind is therefore additive in the same sense
+adding a field is — it mints no new schema version.
+
+A `"cave"` mark is the one mark whose granularity differs from the rooms it
+appears on, and this is faithful rather than sloppy: a possession's `delve`
+resolves its cave from the cell it stands on, so the descent already succeeds
+from any room of that cell. Marking one arbitrary room would be the lie.
+`marks` is deliberately **absent** from `resolution`'s
+`grid_resolution_fields` for exactly this reason — the array names document
+field keys whose values are constant below grid resolution, and `marks` mixes
+one grid-resolution kind with two finer ones, so listing it would misstate
+both.
 
 `legend` is the document's noun catalog: `(noun, datum)` pairs covering
 every mark and every terrain class the document surfaced, ordered by `noun`.
@@ -363,14 +435,25 @@ Each element of `cells` is an object, in this field order:
 | `elevation_m` | number or null | Elevation, metres, quantized; `null` when the cell is not `"here"`. |
 | `height_asl_m` | number or null | Height above sea level, metres, quantized; signed, negative below; `null` when the cell is not `"here"`. `relief` is banded from this. |
 | `color` | array of 3 integers, **key omitted when absent** | The cell's bedrock as it appears to the document's declared eye under the document's declared light — `[r, g, b]`, each `0..=255`. Absent entirely on an uncoloured document. |
+| `micro` | object | The sub-cell micro-field at this room — **always present, on every cell and every state**. See the `Micro` table below and "`micro`: the finest layer the document carries" above. |
 | `marks` | array of object | Salience-ranked things standing here, ordered by `(salience, noun)` — see the `Mark` table below. |
+
+A cell's `micro` (`Micro`) is an object of four numbers, in this field order,
+each in `[-1, 1]` and quantized at the emit boundary:
+
+| Field | `-1` means | `+1` means |
+|---|---|---|
+| `relief` | a hollow | a rise |
+| `aspect` | shaded | sunlit |
+| `wetness` | dry | wet — **address noise, never hydrology**; do not band a water kind from it |
+| `openness` | closed canopy | open ground |
 
 Each element of a cell's `marks` (`Mark`) is an object, in this field order:
 
 | Field | Type | Meaning |
 |---|---|---|
 | `noun` | string | The examinable noun. |
-| `kind` | string | `"settlement"` or `"agent"`. |
+| `kind` | string | `"settlement"` or `"cave"` from the engine; `"agent"` from a session-owning consumer. An open vocabulary — see "Marks and the legend" above. |
 | `datum` | string | One line about it — what `examine` prints. |
 | `salience` | integer | Rank key; lower is more salient. |
 
@@ -451,3 +534,25 @@ rather than a silent correction (decision 0055's additive-or-versioned
 rule) — no producer in this repository emits the v1 document any longer,
 and `scene/surrounds/v1` was never part of `clients/world-wasm`'s catalog,
 so no client outside this repository read the wrong values either.
+
+## What has been appended since v2, and why none of it minted v3
+
+Four things have been added to this schema since it shipped, and every one is
+additive in the strict sense decision 0055 requires — a key appended after the
+previous last one, or a new value in an already-open vocabulary. No existing
+field changed meaning, and no existing document's bytes moved except by
+gaining a key at the end:
+
+| Addition | Shape | Why it is additive |
+|---|---|---|
+| `color` on a cell, `sight` on the document | both `skip_serializing_if` | an uncoloured document emits neither key and is byte-identical to what it was before the colour layer existed |
+| `micro` on a cell | always present, appended after `color` | a new key; nothing above it moved |
+| `resolution` on the document | always present, appended after `sight` | a new key; it *describes* existing fields rather than changing them |
+| `"cave"` as a mark `kind` | a new value in an open vocabulary | `kind` was never a closed enumeration, and no consumer needs a case for it |
+
+One near miss belongs in this list, because a reader of the diff history will
+find it and should not have to reconstruct why it is absent. A campaign
+refined `water` below grid resolution — the *values* of an existing field
+would have moved, which is exactly the change this table's discipline does not
+permit silently — and it was reverted rather than versioned. Had it shipped it
+would have been the second reason in this schema's life to mint a v3.
