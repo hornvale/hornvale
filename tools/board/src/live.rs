@@ -28,7 +28,16 @@ pub struct LiveContext {
     pub retracted: BTreeSet<String>,
     /// Live pids on this host.
     pub live_pids: BTreeSet<u32>,
-    /// Branches that exist and are not merged into `main`.
+    /// Branches that exist and are judged NOT merged into `main` — either
+    /// because a live worktree says so directly, or because they are
+    /// unresolved-into-merged by ahead/behind counts (which also covers a
+    /// branch that is merely IDENTICAL to `main`'s tip: `main` compared
+    /// with itself, or a campaign branch with no commits of its own yet —
+    /// neither has diverged, so neither is "merged" in any meaningful
+    /// sense; see `merged_branches`' doc and `probe`'s B11 comment). Not
+    /// literally "not merged" in the git sense — a genuinely merged branch
+    /// with a live worktree still checked out on it lands here too, by
+    /// design (D9's stated intent is a torn-down worktree, not a merge).
     pub live_branches: BTreeSet<String>,
     /// Branches that RESOLVE and ARE merged into `main` — an unambiguous,
     /// positive "definitely dead" signal that `is_reapable` treats
@@ -36,10 +45,11 @@ pub struct LiveContext {
     /// `is_reapable`'s doc comment for why the distinction matters). "Merged"
     /// here means genuinely absorbed and superseded (no commits of its own
     /// left outstanding, AND `main` has since moved past it) — not merely
-    /// identical to `main`'s tip. `main` compared with itself, and a
-    /// campaign branch that has not yet made its first commit, are both
-    /// identical-to-`main` rather than merged, and belong in
-    /// `live_branches` (B11).
+    /// identical to `main`'s tip, and not a branch with a live worktree
+    /// still checked out on it (that check runs first; see `probe`). `main`
+    /// compared with itself, and a campaign branch that has not yet made
+    /// its first commit, are both identical-to-`main` rather than merged,
+    /// and belong in `live_branches` (B11).
     pub merged_branches: BTreeSet<String>,
 }
 
@@ -92,6 +102,35 @@ fn resolve_branch_ref(repo: &Repo, by: &str) -> Result<Option<String>, BoardErro
     Ok(None)
 }
 
+/// Branches currently checked out in ANY worktree of this repository,
+/// including the primary checkout — a direct, unambiguous "this campaign is
+/// still active" signal that does not depend on ancestry at all.
+///
+/// This is B11's fix for the half ahead/behind counts cannot cover: once
+/// `main` advances past a branch that has made no commits of its own, that
+/// branch reads as `ahead == 0, behind > 0` — exactly the signature of a
+/// genuinely merged branch (see `probe`'s B11 comment). Ahead/behind alone
+/// therefore only protects a newborn branch for as long as `main` stands
+/// still; a worktree existing protects it unconditionally, for as long as
+/// the campaign is actually checked out somewhere. This also matches D9's
+/// STATED intent better than ancestry ever did: D9 names the notice that
+/// should decay as one whose authoring worktree was later torn down, not
+/// one that merely looks absorbed by a merge-base check — so a genuinely
+/// merged branch whose worktree is still checked out (an active campaign
+/// revisiting old work) is correctly still live, not a cost.
+fn live_worktree_branches(repo: &Repo) -> Result<BTreeSet<String>, BoardError> {
+    let out = repo.git(&["worktree", "list", "--porcelain"])?;
+    let mut branches = BTreeSet::new();
+    for line in out.lines() {
+        if let Some(rest) = line.strip_prefix("branch ")
+            && let Some(name) = rest.strip_prefix("refs/heads/")
+        {
+            branches.insert(name.to_string());
+        }
+    }
+    Ok(branches)
+}
+
 impl LiveContext {
     /// Probe the world once for a whole render.
     pub fn probe(repo: &Repo, posts: &[StoredPost]) -> Result<Self, BoardError> {
@@ -138,12 +177,24 @@ impl LiveContext {
 
         let mut live_branches = BTreeSet::new();
         let mut merged_branches = BTreeSet::new();
+        // One `git worktree list` for the whole probe, not per-post: see
+        // `live_worktree_branches`'s doc for why this check runs FIRST,
+        // ahead of the ahead/behind fallback below.
+        let worktree_branches = live_worktree_branches(repo)?;
         for s in posts.iter() {
             let by = s.post.by.clone();
             if live_branches.contains(&by) || merged_branches.contains(&by) {
                 continue;
             }
-            // Resolve once; reuse the resolved ref for the ancestry check
+            // B11 (the discriminator that actually closes the hazard): a
+            // branch with a live worktree is live no matter what ahead/behind
+            // says below. See `live_worktree_branches`'s doc for why this
+            // must run first rather than as a tiebreak.
+            if worktree_branches.contains(&by) {
+                live_branches.insert(by);
+                continue;
+            }
+            // Resolve once; reuse the resolved ref for the ahead/behind check
             // below (I1) rather than asking git a second, bare-name question
             // it could answer about a different ref entirely.
             let Some(resolved) = resolve_branch_ref(repo, &by)? else {
@@ -154,23 +205,29 @@ impl LiveContext {
             // ambiguity steal the answer just as easily as the left-hand
             // side did before I1's fix.
             //
-            // B11: a plain ancestor check (`merge-base --is-ancestor resolved
-            // main`) is trivially true whenever `resolved` and `main` are the
-            // SAME commit, not just when `resolved` is a strict ancestor --
-            // and that is exactly `by == "main"` comparing itself, or a
-            // freshly-branched campaign that has not yet made a commit of its
-            // own. Both were being classified `merged` and filtered from
-            // every render (and were one `reap` away from permanent
-            // deletion). Ahead/behind counts distinguish the two: "merged"
-            // means the branch's own commits are fully absorbed (ahead == 0)
-            // AND main has since moved past it (behind > 0); a branch that is
-            // merely IDENTICAL to main (ahead == 0, behind == 0) has not
-            // diverged at all and is not "merged" in any meaningful sense.
-            // On any failure to compute the counts (a `refs/heads/main` that
-            // itself does not resolve, say), this errs toward LIVE, not
-            // merged -- an uncertain classification must render, never
-            // silently vanish (the exact failure mode this predicate exists
-            // to close).
+            // B11 (fallback, for a branch with no worktree currently checked
+            // out): a plain ancestor check (`merge-base --is-ancestor
+            // resolved main`) is trivially true whenever `resolved` and
+            // `main` are the SAME commit, not just when `resolved` is a
+            // strict ancestor -- and that is exactly `by == "main"` comparing
+            // itself, or a freshly-branched campaign that has not yet made a
+            // commit of its own. Both were being classified `merged` and
+            // filtered from every render (and were one `reap` away from
+            // permanent deletion). Ahead/behind counts distinguish the two:
+            // "merged" means the branch's own commits are fully absorbed
+            // (ahead == 0) AND main has since moved past it (behind > 0); a
+            // branch that is merely IDENTICAL to main (ahead == 0, behind ==
+            // 0) has not diverged at all and is not "merged" in any
+            // meaningful sense. Note this fallback is INCOMPLETE on its own:
+            // once main advances past an as-yet-uncommitted branch, it reads
+            // ahead == 0, behind > 0 -- indistinguishable from a genuinely
+            // merged branch by counts alone. The worktree check above is what
+            // actually closes that gap; this is the second opinion for a
+            // branch with no worktree live right now. On any failure to
+            // compute the counts (a `refs/heads/main` that itself does not
+            // resolve, say), this errs toward LIVE, not merged -- an
+            // uncertain classification must render, never silently vanish
+            // (the exact failure mode this predicate exists to close).
             let merged = repo
                 .git(&[
                     "rev-list",
@@ -286,9 +343,11 @@ pub const NOTICE_GRACE_PERIOD_S: u64 = 7 * 24 * 60 * 60;
 ///   reporting a false negative. Reaped exactly when `liveness` would mark
 ///   it `Expired`.
 /// - A `notice` whose branch RESOLVES and IS merged into `main` is
-///   unambiguous: a resolved ref plus a successful ancestry check is a
-///   positive statement that no transient race can produce. Reaped
-///   immediately, regardless of age.
+///   unambiguous: no live worktree is checked out on it (see
+///   `live_worktree_branches`), AND its ahead/behind counts against `main`
+///   read as fully absorbed (`ahead == 0, behind > 0`) — a positive
+///   statement that no transient race can produce. Reaped immediately,
+///   regardless of age.
 /// - A `notice` whose branch DOES NOT RESOLVE at all is ambiguous — gone
 ///   for good, or a transient hiccup that will resolve normally moments
 ///   later. Reaped only once it has sat unresolved for longer than
@@ -631,6 +690,113 @@ mod tests {
         assert!(
             !matches!(liveness(&stored, &ctx), Liveness::Live),
             "a merged branch's notice must still decay, or D9 is gone"
+        );
+    }
+
+    #[test]
+    fn a_notice_from_a_diverged_unmerged_branch_is_live() {
+        // MUTATION COVERAGE (Important #1): `ahead == 0 && behind > 0` --
+        // dropping the `ahead == 0` half (mutating to `Some(behind > 0)`)
+        // still classifies THIS branch as merged, because a diverged-but-
+        // unmerged branch and a genuinely merged one both have
+        // `behind > 0`. Diverged-and-unmerged (ahead >= 1, behind >= 1) is
+        // the ORDINARY resting state of any active campaign that has not
+        // absorbed main recently -- most branches, most of the time -- so a
+        // mutant that drops `ahead == 0` reinstates B11 for the majority
+        // case. This is the arm that kills it (verified in the fix report).
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        commit_empty(&repo, "root");
+        repo.git(&["checkout", "-b", "campaign/diverged"])
+            .expect("branch");
+        commit_empty(&repo, "branch work"); // campaign/diverged is ahead of main
+        repo.git(&["checkout", "main"]).expect("back to main");
+        commit_empty(&repo, "main work"); // main is ALSO ahead of campaign/diverged
+        // Current checkout is `main`, not `campaign/diverged` -- deliberately,
+        // so the live-worktree check cannot be what rescues this notice; only
+        // ahead/behind can, which is what this arm exists to pin.
+        let post = Post::new("notice", "campaign/diverged").with("note", json!("still going"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            matches!(liveness(&stored, &ctx), Liveness::Live),
+            "ahead >= 1 must stay live regardless of behind"
+        );
+    }
+
+    #[test]
+    fn a_notice_from_a_squash_merged_branch_stays_live_by_design() {
+        // A safe error, not an accident (Important #1's second, cheap arm):
+        // a squash-merged branch's own commit never becomes an ancestor of
+        // `main` (the squash lands as a NEW commit with unrelated history),
+        // so it reads `ahead >= 1` forever and this predicate cannot tell it
+        // apart from an ordinary active branch. Pinned as documented
+        // behaviour: the notice lingers past the point the campaign is truly
+        // done, which is a cost (one extra render), never the silent-
+        // deletion hazard B11 exists to close.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        commit_empty(&repo, "root");
+        repo.git(&["checkout", "-b", "campaign/squashed"])
+            .expect("branch");
+        commit_empty(&repo, "branch work");
+        repo.git(&["checkout", "main"]).expect("back to main");
+        // `--squash` stages the branch's diff without recording it as a
+        // merge parent, so the resulting commit shares no ancestry with
+        // `campaign/squashed`'s tip -- confirmed empirically: `rev-list
+        // --left-right --count campaign/squashed...main` reads `1  1` after
+        // this, not `0  1`.
+        repo.git(&["merge", "--squash", "campaign/squashed"])
+            .expect("squash stage");
+        commit_empty(&repo, "squashed in"); // the squash commit itself
+        let post = Post::new("notice", "campaign/squashed").with("note", json!("done, allegedly"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            matches!(liveness(&stored, &ctx), Liveness::Live),
+            "a squash-merged branch's own commit is never an ancestor of main, \
+             so it cannot be told apart from an active branch by this predicate"
+        );
+    }
+
+    #[test]
+    fn a_notice_from_a_newborn_branch_with_a_live_worktree_stays_live_after_main_advances() {
+        // Important #2 regression: ahead/behind ALONE cannot tell a newborn
+        // branch from a merged one once `main` moves -- reproduces the exact
+        // signature the reviewer measured (`live_branches={}
+        // merged_branches={"campaign/newborn"}`, `liveness=Expired(...)`,
+        // `is_reapable=true`) and confirms the live-worktree check protects
+        // it where ahead/behind cannot.
+        let (dir, repo) = crate::git::test_support::temp_repo();
+        commit_empty(&repo, "root");
+        let worktree_path = dir.with_file_name(format!(
+            "{}-newborn-wt",
+            dir.file_name().expect("dir name").to_string_lossy()
+        ));
+        let _ = std::fs::remove_dir_all(&worktree_path);
+        repo.git(&[
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "campaign/newborn",
+            worktree_path.to_str().expect("utf8 path"),
+        ])
+        .expect("worktree add");
+        // main advances while campaign/newborn STILL has no commit of its
+        // own -- this is the window the reviewer found: ahead == 0,
+        // behind > 0, the same signature a genuinely merged branch has.
+        commit_empty(&repo, "main advances");
+        let post = Post::new("notice", "campaign/newborn").with("note", json!("starting"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            ctx.live_branches.contains("campaign/newborn"),
+            "a live worktree must protect a newborn branch regardless of main's \
+             progress: {:?}",
+            ctx.live_branches
+        );
+        assert!(
+            matches!(liveness(&stored, &ctx), Liveness::Live),
+            "and the notice must render"
         );
     }
 
