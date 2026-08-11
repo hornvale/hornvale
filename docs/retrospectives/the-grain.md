@@ -348,7 +348,24 @@ project's only heavy-tier history with it.
 Three habits follow: read `runs.tsv` for prior refs before concluding your branch
 broke a heavy test; **re-measure any red-main claim after absorbing** rather than
 carrying it forward as a known failure; and cite the SHA in any red-main claim
-you publish, because the claim expires the moment main moves. A red that predates your branch and a red you caused
+you publish, because the claim expires the moment main moves.
+
+**And a fourth, which is the cheapest of all: the heavy tier may have a
+documented expected red.** This campaign's closing heavy run on the merged tree
+read **67 passed, 1 failed** — and main's own `cfc028b8` ends with the sentence
+"Expected heavy-tier state at the campaign's close: 67 passed, 1 failed", naming
+that same test. The failure is a preregistered claim The Radiation measured
+*falsified* and deliberately left red: nothing retuned, no threshold moved, no
+assertion deleted or `#[ignore]`d, because
+`windows/lab/tests/preregistration_guard.rs` is a default-deny scan that exists
+precisely to stop a failing preregistered calibration being quieted. Retiring the
+assertion is explicitly a review decision, not taken.
+
+So a red heavy tier is not automatically a problem, and the commit that
+established the expectation is the cheapest place to find that out — cheaper than
+`runs.tsv`, and far cheaper than a scoped re-measurement. Between them, the two
+heavy-tier reds this campaign investigated cost one 38-second local run and one
+commit-message read, and neither was ours. Look there **first**. A red that predates your branch and a red you caused
 are indistinguishable from inside the branch, and the absorption is the cheapest
 experiment that separates them.
 
