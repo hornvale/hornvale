@@ -76,13 +76,64 @@ const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 /// the occupation entity would rename every founder in the world the first time
 /// an unrelated domain minted earlier in genesis.
 ///
-/// `(people, site, founded, ended, peak_population)` is unique across the
+/// ~~`(people, site, founded, ended, peak_population)` is unique across the
 /// selected cast on every measured seed (90/90, 82/82, 100/100 for seeds 42, 7
 /// and 1000) and collides on 3 colliding pairs in seed 42, 2 in seed 7, and 0
 /// in seed 1000 — records that are indistinguishable in every *non-entity*
 /// field (they differ only in `ended_by` and `founded_from`, both
 /// `EntityId`-valued fields decision 0051 already forbids keying on).
-/// `select_founders` asserts cast-uniqueness rather than trusting it.
+/// `select_founders` asserts cast-uniqueness rather than trusting it.~~
+///
+/// **CORRECTED 2026-08-10 (The Radiation).** Struck through rather than
+/// deleted: the wrong sentence above is the one that closed off the repair for
+/// a campaign and a half, and it is worth more visible than tidy.
+///
+/// **The reasoning was wrong in kind, not merely out of date.** "…`ended_by`
+/// and `founded_from`, both `EntityId`-valued fields decision 0051 already
+/// forbids keying on" reads *`EntityId`-valued field* as a synonym for
+/// *unkeyable*. That is not what 0051 says. 0051 forbids keying on an id **as a
+/// value** — a mint counter whose number shifts when some unrelated domain
+/// mints earlier in genesis. It says nothing against keying on the **referent's
+/// own material facts**, and this crate had already written exactly that
+/// resolution before the struck paragraph was: [`crate::record::FoundingCoords`],
+/// [`crate::record::founding_key_from`] and [`crate::record::layer_key`]'s
+/// ancestry tail each fold a *referenced* occupation by its own
+/// `(people, site, founded)` and never by its id — which `record.rs` calls "a
+/// material fact, not a compromise". The door reported shut has been open since
+/// The Salt.
+///
+/// **The counts were stale on both trees.** Re-measured on this tree
+/// (2026-08-10, `BuildDepth::Settlements`, default pins, seeds 42 / 7 / 1000):
+/// the promoted cast is **148 / 122 / 174** founders, all handles distinct at
+/// those three seeds; handle-sharing pairs across the *whole* record set are
+/// **2 / 1 / 1**, not 3 / 2 / 0. Seed 1000 is recorded above as having none and
+/// has one. These figures had not merely been overtaken by a widened species
+/// roster — they had stopped describing `main` as well.
+///
+/// **Cast-uniqueness is not structural, and is no longer asserted.** Two
+/// occupations agreeing on all five fields derive one handle *by construction*,
+/// and a sweep of seeds 0–2999 on this tree (`BuildDepth::Settlements`, default
+/// pins, 2026-08-10) finds 1904 such pairs across 958 worlds, of which **five
+/// reach the promoted cast: seeds 283, 705, 2403, 2634 and 2898** — the first
+/// two inside the census range 0–999. `select_founders` used to `assert!`
+/// cast-uniqueness and take the whole world down with it, which is why the
+/// once-per-campaign census could not run. Since The Radiation it **drops** the
+/// later member of a handle-equal pair and reports it, so roughly two worlds in
+/// a thousand remember one founder fewer. That is an authorized fidelity cut
+/// (Nathan's ruling), not a repair of this key.
+///
+/// **Widening this key is the known correct fix, and it is deferred as an
+/// epoch.** Folding the *material* keys of the `founded_from` and `ended_by`
+/// referents — never their ids — is what the correction above makes admissible;
+/// the campaign's founder-collision diagnosis scored it over 3000 worlds at 2
+/// residual whole-record pairs and 0 cast collisions, against this key's 5. It
+/// is deferred because it changes the handle of **every** occupation in every
+/// world, and therefore every founder's name: a `settlement/name/v2`-class
+/// epoch with a full artifact regeneration behind it, not a bug fix. The idea
+/// registry's `MEM-founder-handle-epoch` row carries the scoring, including
+/// the measured fact that the obvious one-hop widening — the parent alone, the
+/// hop this crate already implements — is **insufficient**: at seeds 2634 and
+/// 2898 the two parents are themselves twins.
 pub fn founder_handle(occ: &OccupationRecord) -> RoleHandle {
     let mut x: u64 = 0xA076_1D64_78BD_642F;
     let mix = |v: u64, x: &mut u64| {
