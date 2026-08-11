@@ -91,5 +91,10 @@ hornvale_kernel::stream_labels! {
         CRUST_SLICE_2 = "slice-2" => "third of three orthogonal crust noise slices (hash-noise only; no stream draws)";
         /// The rift's crenulation-noise sub-leg.
         RIFT_CRENULATION = "crenulation" => "rift crenulation-noise sub-leg (hash-noise only; no stream draws)";
+        /// Channel meander displacement — the position-continuous noise field
+        /// that wanders a river within its cell. Hash-noise only, sampled by
+        /// POSITION and never by room address: address-hashed noise cannot
+        /// form a connected watercourse (see `windows/locale/src/micro.rs`).
+        CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field";
     }
 }
