@@ -413,6 +413,52 @@ fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
     best
 }
 
+/// What a step from one room to another does to the water between them.
+///
+/// **Fordability is a property of a path, never of a place** — a ford is a
+/// sign change, and a sign needs two positions to change between. That is why
+/// this is the answer to a question about a *pair* and there is no `fordable`
+/// field on [`Locale`]: a room cannot be asked whether it can be crossed, only
+/// whether a particular step out of it crosses water.
+///
+/// **The reading is a snapshot at fixed discharge.** The band edges a crossing
+/// is judged against move with the flood, so `Fordable` is what is true of
+/// today's world and not a standing fact about a place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Crossing {
+    /// The step does not cross a channel: the two rooms are on the same bank,
+    /// either room reads nothing at all, or the sign does change but neither
+    /// room stands inside the channel or bank of its own reading — where the
+    /// sign is a fact about the polyline soup rather than about water.
+    NotACrossing,
+    /// The step crosses a channel narrow enough and quiet enough to wade:
+    /// full width below one room edge at the pair's depth, and discharge below
+    /// [`hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`].
+    Fordable,
+    /// The step crosses a channel, and that channel is too wide or too strong
+    /// to wade.
+    Impassable,
+}
+
+/// The shortest of a room's three edges, radians — the smallest step the mesh
+/// offers out of it, and the unit "narrower than one step" is measured in.
+///
+/// Derived from [`RoomAddr::corners`], so it is the mesh's own geometry at
+/// whatever depth the room sits at; there is no length scale anywhere in this
+/// project to state a width in, and inventing one would be a defect. The
+/// *shortest* edge rather than the mean or the longest because the criterion
+/// is a claim about crossability and the strictest of a room's steps is the
+/// one that has to clear the water.
+/// type-audit: pending(wave-1: return)
+pub fn room_edge(addr: &RoomAddr) -> f64 {
+    let [a, b, c] = addr.corners();
+    let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
+        let d: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+        hornvale_kernel::math::acos(d.clamp(-1.0, 1.0))
+    };
+    sep(a, b).min(sep(b, c)).min(sep(c, a))
+}
+
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
     /// The sanctioned entry point for any caller that has not already
@@ -793,8 +839,8 @@ impl LocaleContext {
             regime,                // strangeness overlay (§5-§7)
             exits: exits_of(addr), // base + vertical exits (§6)
             cave: self.terrain.cave_at(best.0).map(|c| c.kind),
-            channel_distance: reading.map(|(d, _)| d),
-            channel_bands: reading.map(|(_, edges)| edges),
+            channel_distance: reading.map(|r| r.signed_distance),
+            channel_bands: reading.map(|r| r.band_edges),
             resolution: Resolution {
                 grid_level: self.globe_level,
                 // Non-negative by construction: `corner_weights` returned
@@ -810,6 +856,90 @@ impl LocaleContext {
                     .collect(),
             },
         })
+    }
+
+    /// Whether the step from room `a` to room `b` crosses a channel, and if so
+    /// whether it can be waded.
+    ///
+    /// # What makes a crossing
+    ///
+    /// **Both clauses, or it is not a crossing at all.**
+    ///
+    /// 1. The two rooms' signed channel distances have **opposite signs** —
+    ///    one on the left bank facing downstream, one on the right.
+    /// 2. At least one of them stands **inside its own bank edge**
+    ///    (`|d| < channel_bands[1]`, i.e. reads `Channel` or `Bank`).
+    ///
+    /// Clause 2 is not belt-and-braces, and dropping it was a real draft of
+    /// this design. The signed distance is measured against many *open arcs*,
+    /// so its sign also flips beyond every river's source and mouth and along
+    /// the bisector between two arcs that meet — on dry ground, about the
+    /// polyline soup rather than about water. On seed 42 at level 5 that is
+    /// **25 spurious flips against 3 real crossings**. Two measured properties
+    /// of that locus decide the shape of clause 2:
+    ///
+    /// - **It is a ray, not a place.** Probing at radii 1.0e-2, 5.0e-3 and
+    ///   3.1e-3 rad finds the same flips each time, at whatever `|d|` the probe
+    ///   stands at. **No fixed distance threshold removes it** — only asking
+    ///   whether the reading is inside its *own* bands does, since those scale
+    ///   with the reach.
+    /// - **Not-`Dry` is too generous.** The confluence-bisector flip sits at
+    ///   `|d| = 4.7946e-3` against a widest terrace edge of 6.9e-3, so it is
+    ///   *inside* the terrace. The gate is `Channel`-or-`Bank`, deliberately.
+    ///
+    /// # What makes it fordable (spec §8, a late freeze)
+    ///
+    /// Of the readings that clause 2 made interpretable — the ones inside
+    /// their own bank edge — **every** one must satisfy both:
+    ///
+    /// - its channel's **full** width, twice `channel_bands[0]` (which is the
+    ///   *half*-width), is less than one room edge at the pair's depth
+    ///   ([`room_edge`], the smaller of the two rooms'); and
+    /// - that reach's discharge is below
+    ///   [`hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`].
+    ///
+    /// The unit is the traversal unit rather than the water: a room edge is the
+    /// granularity at which a person moves, so "narrower than one step" is what
+    /// crossing means to the thing doing the crossing — and it is expressible
+    /// without a length scale, which no quantity in this project has.
+    ///
+    /// Both the width and the discharge come from
+    /// [`hornvale_terrain::channel::BankReading`], so they describe the same
+    /// reach the distance was measured to and the same vertex the bands came
+    /// from. Symmetric in its arguments: swapping `a` and `b` swaps a pair of
+    /// symmetric tests and nothing else.
+    pub fn crossing_between(&self, a: &RoomAddr, b: &RoomAddr) -> Crossing {
+        let net = self.terrain.channels();
+        let (Some(ra), Some(rb)) = (
+            net.bank_reading(a.centroid()),
+            net.bank_reading(b.centroid()),
+        ) else {
+            return Crossing::NotACrossing;
+        };
+        // Written as two explicit comparisons rather than a product, so a
+        // reading of exactly 0.0 (a room centroid on the centreline) is neither
+        // side rather than silently taking the sign of a signed zero.
+        let sign_differs = (ra.signed_distance > 0.0 && rb.signed_distance < 0.0)
+            || (ra.signed_distance < 0.0 && rb.signed_distance > 0.0);
+        if !sign_differs {
+            return Crossing::NotACrossing;
+        }
+        let interpretable =
+            |r: &hornvale_terrain::channel::BankReading| r.signed_distance.abs() < r.band_edges[1];
+        if !interpretable(&ra) && !interpretable(&rb) {
+            return Crossing::NotACrossing;
+        }
+        let step = room_edge(a).min(room_edge(b));
+        let wadeable = |r: &hornvale_terrain::channel::BankReading| {
+            2.0 * r.band_edges[0] < step
+                && self.terrain.drainage_at(r.cell)
+                    < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+        };
+        if [ra, rb].iter().filter(|r| interpretable(r)).all(wadeable) {
+            Crossing::Fordable
+        } else {
+            Crossing::Impassable
+        }
     }
 
     /// The room's PER-DAY temperature at `at`, °C — the diurnal+seasonal

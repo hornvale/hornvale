@@ -324,6 +324,40 @@ pub struct ChannelNetwork {
     meander: SphereFbm,
 }
 
+/// One channel reading at one position: what
+/// [`ChannelNetwork::bank_reading`] selected, all of it, from a single
+/// vertex selection.
+///
+/// The three fields travel together because they are *one* answer to "which
+/// reach applies here". Splitting them across separate queries is the defect
+/// this type exists to prevent: each query would re-run the winning-line
+/// tie-break and the nearest-vertex scan, and would then agree with the
+/// others only by luck.
+///
+/// **`cell` is an in-process handle, not a document field.** It names the
+/// canonical grid cell the winning vertex was placed from, so a caller can
+/// read that reach's discharge (`GeneratedTerrain::drainage_at`) without
+/// searching for the vertex a second time. Like the polyline index — which
+/// this deliberately does *not* carry — it is build-order-adjacent identity
+/// and has no business in a serialized document; the durable things here are
+/// the signed distance and the edges.
+/// type-audit: pending(wave-1: signed_distance), pending(wave-1: band_edges)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BankReading {
+    /// Angular distance to the nearest channel in radians, **positive on the
+    /// left bank facing downstream** — the number
+    /// [`ChannelNetwork::bank_signed_distance`] reports, and meaningful in
+    /// its sign only inside `band_edges` (see that method's own doc).
+    pub signed_distance: f64,
+    /// The four [`band_edges`] borders of the nearest vertex of the winning
+    /// polyline: channel/bank, bank/floodplain, floodplain/terrace,
+    /// terrace/dry.
+    pub band_edges: [f64; 4],
+    /// The canonical grid cell that vertex was placed from — the reach whose
+    /// discharge and gradient produced `band_edges`.
+    pub cell: CellId,
+}
+
 impl ChannelNetwork {
     /// Build the network from a generated globe.
     ///
@@ -497,16 +531,20 @@ impl ChannelNetwork {
     /// and gradient do.
     /// type-audit: pending(wave-1: position), pending(wave-1: return)
     pub fn transverse_at(&self, position: [f64; 3]) -> (Transverse, f64) {
-        let Some((signed, edges)) = self.bank_reading(position) else {
+        let Some(reading) = self.bank_reading(position) else {
             return (Transverse::Dry, f64::INFINITY);
         };
-        (Transverse::from_band(band(signed, &edges)), signed)
+        (
+            Transverse::from_band(band(reading.signed_distance, &reading.band_edges)),
+            reading.signed_distance,
+        )
     }
 
     /// The whole reading at `position`: the **signed** distance
     /// [`ChannelNetwork::bank_signed_distance`] reports, paired with the four
     /// [`band_edges`] borders that apply *there* — those of the nearest vertex
-    /// of the winning polyline. `None` on an empty network.
+    /// of the winning polyline — and the cell that vertex was placed from.
+    /// `None` on an empty network.
     ///
     /// **This is the one implementation of "which vertex's edges apply here",
     /// and it exists so that there can only be one.**
@@ -526,8 +564,14 @@ impl ChannelNetwork {
     /// geometry is a per-vertex property (discharge, gradient, cell spacing),
     /// and the nearest vertex is the reach whose hydraulics a point actually
     /// sits in.
-    /// type-audit: pending(wave-1: position), pending(wave-1: return)
-    pub fn bank_reading(&self, position: [f64; 3]) -> Option<(f64, [f64; 4])> {
+    ///
+    /// [`BankReading::cell`] is here for the same reason the edges are: a
+    /// consumer asking whether a channel can be forded needs that reach's
+    /// **discharge** as well as its width, and a second nearest-vertex search
+    /// to find it would be a second chance to answer about a different reach
+    /// than the bands describe.
+    /// type-audit: pending(wave-1: position)
+    pub fn bank_reading(&self, position: [f64; 3]) -> Option<BankReading> {
         let (line_index, signed) = self.nearest_line(position)?;
         let points = &self.polylines[line_index].points;
         let mut nearest = 0usize;
@@ -539,7 +583,11 @@ impl ChannelNetwork {
                 nearest = j;
             }
         }
-        Some((signed, self.band_edges[line_index][nearest]))
+        Some(BankReading {
+            signed_distance: signed,
+            band_edges: self.band_edges[line_index][nearest],
+            cell: self.run_cells[line_index][nearest],
+        })
     }
 
     /// The polyline [`ChannelNetwork::transverse_at`] would answer from at
