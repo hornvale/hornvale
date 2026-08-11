@@ -137,11 +137,22 @@ It evaluates anywhere, needs no traversal, and is scale-free.
 
 ### 5.2 The network
 
-The polyline is *constructed to satisfy known flux*, not simulated. The
-post-carve downhill graph is already retained at
-`domains/terrain/src/globe.rs:421` and drainage is already per-cell, so each
-cell has a known entry, a known exit, and a known discharge `Q`. The channel
-routes between them.
+The polyline is *constructed to satisfy known flux*, not simulated. Drainage
+is already retained per cell (`TectonicGlobe.drainage`), so each cell has a
+known discharge `Q`.
+
+**The downhill graph, however, is not retained.** `globe.rs:421` computes
+`post_downhill` as a **local**, hands it to `water_field` and
+`rerouted_flow_fraction`, and drops it — it is not a `TectonicGlobe` field.
+An earlier draft of this spec said "already retained", which was wrong, and
+the correction is not free: **Task 1 owes the retention.** The adjacent
+comment (`globe.rs:415-419`) records that `downhill_targets` is cheap
+relative to `drainage_field`, so recomputing is a legitimate alternative;
+retention is preferred because the network wants the graph on every read.
+Either way it is a step, not an assumption.
+
+With drainage and downhill in hand each cell has a known entry, a known exit,
+and a known discharge. The channel routes between them.
 
 Meander is a deterministic displacement of that route, and **must be sampled
 from a position-continuous field** (the kernel's `Fbm`, derive-once per
@@ -161,6 +172,20 @@ already derivable from the elevation map.
  ------------------------------\|~~~~~~~~~|/--------------------------------
  |d| :   > V/2      < V/2    > w/2      0      < w/2    < V/2      > V/2
 ```
+
+**All widths are angular, not metric — there is no length scale to use.**
+`domains/terrain` works on the unit sphere: `shape.rs:33` computes
+`cell_area = 4π / cell_count`, a dimensionless solid angle, and **no planet
+radius exists anywhere in the codebase** (`radius_km` in
+`domains/astronomy/src/moons.rs` is for moons, and a domain may not depend on
+a sibling in any case). "Channel width in metres" therefore has no defined
+meaning here.
+
+This is not a gap to paper over: it is *better* expressed dimensionlessly,
+because the campaign's actual claim is about the **ratio of channel width to
+cell width**. Widths are fractions of the canonical cell edge; a window that
+wants metres may multiply by a reference radius it declares, and introducing
+a world radius is its own decision, not something to smuggle in here.
 
 | border | threshold on \|d\| | derived from |
 |---|---|---|
@@ -265,7 +290,9 @@ axis and states a floor *and* a ceiling; a result outside the interval is a
 finding, not a failure.
 
 - **H1 — channel area.** With `a`, `b` calibrated so seed-42's largest river
-  is ~1 km wide, the fraction of seed-42 **land area** classified `channel`
+  is **1/100 of a canonical cell edge** wide (dimensionless, per §5.3 — this
+  is the "not one cell wide" claim stated as a ratio), the fraction of
+  seed-42 **land area** classified `channel`
   falls in **[0.005%, 0.5%]**. Today ~6.7% of land classifies `River` at cell
   scale (`domains/terrain/src/water.rs:70-78`, The Freshet's tuning note —
   **re-measure rather than inherit**; a committed baseline is a claim with a
@@ -287,8 +314,9 @@ finding, not a failure.
   and the campaign's namesake is decorative.
 
   *Crossable* is defined here, before measurement, in terms of quantities that
-  exist: channel width `w` at or below a stated metre threshold **and**
-  discharge `Q` below `hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`.
+  exist: channel width `w` at or below a stated **cell-edge fraction**
+  (angular, per §5.3 — never metres) **and** discharge `Q` below
+  `hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`.
   Depth is **not** modelled by this campaign and must not enter the
   definition — the existing `lab_is_fordable_cell` uses the same discharge
   proxy for the same reason.
