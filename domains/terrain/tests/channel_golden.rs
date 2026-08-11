@@ -39,6 +39,31 @@
 //! deliberate: those are calibration constants, and a calibration should be a
 //! reviewed migration rather than a silent one.
 //!
+//! **The mutation to re-run if you want to know this fixture still sees the
+//! confluence repair's DIRECTION — and the trap in choosing one.** In
+//! `ChannelNetwork::build`'s confluence pass, replace the mouth assignment
+//! with a reflection of the trunk vertex `t` across the great circle through
+//! the mouth cell `b` and its predecessor `pv`:
+//!
+//! ```text
+//! let n = normalize(cross(b, pv));            // n is perpendicular to b
+//! let d2 = 2.0 * dot(t, n);
+//! [t[0] - d2*n[0], t[1] - d2*n[1], t[2] - d2*n[2]]
+//! ```
+//!
+//! Because `n` is perpendicular to `b`, this leaves `dot(b, t')` equal to
+//! `dot(b, t)`: the displacement's MAGNITUDE is preserved exactly and only
+//! its sign flips. That is the whole point — it is the mutation that isolates
+//! direction. Row `9 1 7700` goes `+0.00087797556` to `-0.00087797556`.
+//!
+//! Do **not** reach for `normalize(2b - t)`. It looks like a mirror and is
+//! not distance-preserving: it perturbs the magnitude in the eighth
+//! significant digit, so the fixture reddens on the magnitude change and
+//! tells you nothing about whether it can see a sign. Measured both ways —
+//! the pre-fix render, which really was blind to direction, reddened on
+//! `normalize(2b - t)` and stayed **green** on the reflection above. A
+//! mutation proves only what it perturbs.
+//!
 //! Regenerate deliberately: `REBASELINE=1 cargo test -p hornvale-terrain
 //! --test channel_golden` (or `make rebaseline-goldens`), then read the diff
 //! as a change to every river in every world.
@@ -183,9 +208,16 @@ fn the_pinned_displacements_are_not_all_zero() {
     //
     // That reasoning only became true when `signed_displacement` started
     // reporting an anchored vertex as exactly 0. Before it, `acos(dot(p, p))`
-    // gave anchored rows ~1.5e-8 rad of float residue, so 36 of 46 read as
-    // "moved" and a third of this guard was satisfied by noise — the opposite
-    // of what the paragraph above claimed about them.
+    // gave anchored rows ~1.5e-8 rad of float residue, so **31** of 46 read
+    // as "moved" against the 21 that carry a real displacement — 10 of the 31
+    // were noise, and about a third of this guard was satisfied by it, the
+    // opposite of what the paragraph above claimed about anchored rows.
+    //
+    // 31 and not 36: five of the anchored rows rendered the literal `-0`, and
+    // this loop parses to `f64`, where `-0.0 != 0.0` is FALSE. So the guard
+    // never counted those five, and a count taken by eye off the fixture
+    // disagrees with the count the code performs. Read the parse, not the
+    // column.
     let mut rows = 0usize;
     let mut moved = 0usize;
     for row in rendered.lines().filter(|l| !l.starts_with('#')) {
