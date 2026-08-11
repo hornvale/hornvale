@@ -233,9 +233,120 @@ The lesson is about plan shape rather than about the implementer. **A task that
 regenerate artifacts to be green.** Either the accounting task owns the
 regeneration exclusively, or it is written as a verification task from the start.
 
+## 10. Absorbing The Radiation: what the merge taught, and the third unguarded invariant
+
+The campaign finished 30 commits behind main. The absorption (`fefdde7c`, 219
+files) is worth a section because almost everything hard about it was hard for a
+reason that recurs.
+
+**Generated output must be regenerated, never hunk-merged.** Six committed
+fixtures conflicted — two `clients/game/core/tests/fixtures/session-seed-42-*`
+and four `windows/vessel/tests/fixtures/`. All six were resolved by taking one
+side to clear the conflict and then *regenerating*, because reconciling hunks
+produces a file that matches neither world. This is not hypothetical: main's own
+`2a7d77cc` records that "two artifacts git merged silently wrong". Regeneration
+needed **both** entry points — `make rebaseline` does not cover
+`windows/vessel/tests/fixtures/`, which is the `REBASELINE=1` golden set (§8,
+**F3**, now confirmed a second time from the other direction: F3 was found by a
+gate failure, and the absorption found it again as a merge hazard).
+
+**The world moved, so fixture *content* moved — and the byte delta was not
+ours.** The Radiation derived the affinity ladder's level, which relocated
+settlements. The walk-band snapshot grew 16,664 -> 16,667 bytes, and the
+temptation is to attribute +3 to this campaign's new per-cell fields. It is not
+ours: main's own walk band moved 13,598 -> 13,601 over the same merge base, and
+the first divergence is a neighbouring settlement renamed `Nenagabo` ->
+`Geoboge` with a shorter entity ID. **No key was added on either side.** The
+general rule now recorded at `WALK_BYTES_BUDGET`: a byte delta that small with
+no new field is the signature of a placement change upstream, not of a schema
+growing. Attribute a ceiling movement by diffing the *other* side against the
+merge base before charging it to your own diff.
+
+**The decision-log collision, and the third unguarded invariant.** Main ratified
+its own `0120` while this branch held `0120`-`0123`. Renumbering the unmerged
+records is correct — main's is merged and the log is append-only — but the first
+attempt shifted them *up by four*, to `0124`-`0127`, when the next free number
+was simply `0121`. That opened `0121`-`0123`: the first discontinuity in a log
+that had been perfectly contiguous for 124 records. Every check in the repo
+stayed green, because none was looking.
+
+That is the **third** invariant this campaign broke mechanically under a green
+gate, and the three together are the campaign's real methodological result:
+
+| Invariant | Documented in | Broken by | Tests green at the time |
+| --- | --- | --- | --- |
+| `dominant_corner`'s coupling rule | its own doc comment | attempt 2's water refinement | 3350 |
+| H5's conservation criterion | the spec's prose only | nothing — it was never checkable | n/a until Task 5 |
+| decision-log contiguity | `docs/decisions/README.md`'s append-only rule | the renumbering above | 3376 |
+
+All three were real invariants held by convention, and in all three cases the
+answer to "why did nothing catch this" was "because nobody wrote the assertion".
+So the guard was written rather than deferred:
+`cli/tests/docs_consistency.rs::no_gaps_in_the_decision_log` asserts the numbers
+form a contiguous run **from 0001**, printing the missing numbers and the span
+on failure. It was verified to bite by opening a real hole (renaming `0100`
+aside: the guard fails naming `0100`) and by removing `0001` (the start
+assertion fires with its own, more specific message). The start is asserted as
+well as the density, because a log beginning at `0002` is the same class of
+error — a lost record — with fewer symptoms.
+
+### Two near-misses in the renumbering, both transferable
+
+Any future renumbering will meet these, and both are obvious exactly once.
+
+- **Bare decision numbers are not safely greppable.** A `\b012[4-7]\b` sweep
+  also matches **`0.0126`** in `docs/retrospectives/the-hollow.md` — a standard
+  deviation, not a cite. A careless whole-tree substitution would have silently
+  corrupted another campaign's *measurement*, and nothing in the repo would have
+  caught it, because the number is prose. Key every rewrite on the **filename
+  stem** (`0121-ordinal-fields-may-band-…`), which names exactly one record, and
+  scope bare-number edits to named files.
+- **Renaming *down* overlaps source with target, so the sequence must run
+  ascending.** Going `0124->0121, 0125->0122, 0126->0123, 0127->0124`, the last
+  record's new number is another record's *old* number. Both the `git mv`
+  sequence and the `sed` rule list therefore have to be ordered ascending, so
+  each target is free before it is needed and no rule fires twice on one line.
+  Run descending and the `0127` record lands on `0124`, then a later rule drags
+  it on to `0121`. (Renaming *up* has the mirror-image hazard and wants
+  descending order.)
+
+### `render decisions` writes to stdout, not to the file
+
+`cargo run --manifest-path tools/digest/Cargo.toml -- render decisions` prints
+the regenerated index to **stdout**. Running it directly to refresh
+`docs/digest/decisions-in-force.md` looks like it worked — the correct new
+content scrolls past — while the committed artifact stays untouched, and the
+drift check then fails for a reason that appears to contradict what you just
+watched happen. `scripts/regenerate-artifacts.sh` owns the redirect, so `make
+rebaseline` is the way to refresh it. The same holds for every `render`
+subcommand in the root `CLAUDE.md`'s digest block: those lines show how to *see*
+a rendering, not how to *write* one.
+
+### A heavy-tier red that looked like ours and was not
+
+`history_tithe::the_strategy_family_is_various` failed at the old branch point
+and **passes on the merged tree** (exit 0, 58.44 s). The absorption fixed it —
+The Radiation did, specifically — and no change of ours was involved.
+
+The lesson is about attribution under a tiered suite. The test carries
+`heavy: live-worldgen battery (minutes)`, so `make gate` never runs it and it is
+absent from every `docs/timings/test-baseline-*.tsv` (those baselines cover the
+non-ignored suite only). A heavy-tier test therefore has **no** cheap local
+history to consult: its last known state lives in prior heavy-run records, not
+in the per-host baseline you would naturally reach for. Two habits follow:
+check for prior references to the test before concluding your branch broke it,
+and **re-measure any red-main claim after absorbing** rather than carrying it
+forward as a known failure. A red that predates your branch and a red you caused
+are indistinguishable from inside the branch, and the absorption is the cheapest
+experiment that separates them.
+
 ## Follow-ups (promoted from the campaign's scratch register)
 
 `.superpowers/sdd/` dies with the checkout, so these are the durable copy.
+
+The absorption's own findings are in §10 rather than here, because they shipped:
+the contiguity guard was written, not deferred, and the near-misses are technique
+rather than owed work.
 
 - **F1 — Size and settle the `chamber_column_here` / `column_here` tie-break
   divergence.** *Trigger:* it is no longer purely latent (§3) — this branch's own
