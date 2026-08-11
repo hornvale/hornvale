@@ -15,6 +15,46 @@ pub const BOARD_REF: &str = "refs/hornvale/board";
 /// How many times a contended write retries before failing loudly.
 const MAX_ATTEMPTS: u32 = 24;
 
+/// Ids per `git cat-file --batch` invocation, in [`Board::cat_file_batch`].
+///
+/// `Repo::git_stdin_bytes` writes the whole request before it reads any of
+/// the response. `cat-file --batch`'s OUTPUT grows with both id count and
+/// each object's size, so a big enough batch can fill git's stdout pipe
+/// before git has drained our stdin; git then blocks writing output nobody
+/// is draining yet, which stops it reading further input, which leaves our
+/// own write blocked on a pipe git will never come back to drain — a
+/// deadlock, not a slow path, with no timeout anywhere in the chain (fix
+/// round 1 on B7, 2026-08-11: reproduced at n=4000 against ~500-byte
+/// objects, and independently on real board posts; cost 42 minutes of wall
+/// clock before it was diagnosed).
+///
+/// The fix bounds only the INPUT side, which is what actually matters here:
+/// if one chunk's id-line list fits inside the smallest plausible pipe
+/// buffer, `write_all` for that chunk can never block, so the read that
+/// drains stdout is always reached — and once THAT read has started, the
+/// OUTPUT size stops mattering, because `wait_with_output` just keeps
+/// draining until git exits. Each id line is a 40-character hex oid plus a
+/// newline: 41 bytes. `256 * 41 = 10,496` bytes (~10.25 KiB), comfortably
+/// under even a conservative 16 KiB pipe buffer — so this number is not
+/// tuned to any particular OS's actual (usually larger) pipe capacity, it is
+/// deliberately far under the smallest one worth assuming.
+const CAT_FILE_BATCH_CHUNK: usize = 256;
+
+/// True if `id` is a full, unabbreviated git object id: exactly 40 lowercase
+/// hex characters (this project's objects are SHA-1).
+///
+/// [`Board::cat_file_batch`] requires this of every id it is given: git's
+/// `cat-file --batch` echoes the *resolved* id in its header line, not
+/// whatever the caller wrote, so an abbreviation or a ref name would key the
+/// result map under a different string than the caller's own — a silent
+/// miss, not an error, unless the caller is stopped from doing this at all.
+fn is_full_object_id(id: &str) -> bool {
+    id.len() == 40
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
 /// Text that appears in exactly one place a stderr can come from: CAS-loss
 /// exhaustion (the final `Err` in `append_with_attempts`). Shared by the
 /// message itself and by the test that checks a *permanent* failure is never
@@ -363,15 +403,24 @@ impl Board {
         Ok(out)
     }
 
-    /// Read many objects in ONE `git cat-file --batch`, by object id.
+    /// Read many objects in one or more `git cat-file --batch` calls, by
+    /// object id.
     ///
-    /// Replaces one subprocess per post with one per read. Measured on `main`
-    /// at 26 posts: 0.850 s for 26 individual `cat-file -p` calls against
-    /// 0.041 s batched, and the batched cost does not grow per post.
+    /// Replaces one subprocess per post with one per [`CAT_FILE_BATCH_CHUNK`]
+    /// ids. Measured on `main` at 26 posts: 0.850 s for 26 individual
+    /// `cat-file -p` calls against 0.041 s batched, and the batched cost does
+    /// not grow per post.
     ///
-    /// Ids are bare object ids, which works because a post's id IS its object
-    /// id (D11) — so this is tip-independent, and the same call serves a union
-    /// over several refs (B1).
+    /// Ids MUST be full, unabbreviated object ids, which works because a
+    /// post's id IS its object id (D11) — so this is tip-independent, and the
+    /// same call serves a union over several refs (B1). This is **enforced**,
+    /// not merely documented: `cat-file --batch` echoes the *resolved* id in
+    /// each header line, not whatever the caller wrote, so anything else
+    /// (an abbreviation, a ref name) would key the result map under a
+    /// different string than the caller's own id and silently miss on
+    /// lookup — see [`is_full_object_id`]. A caller passing anything else is
+    /// a programming error in that caller, reported loudly rather than let
+    /// through to fail quietly downstream.
     ///
     /// A missing or unreadable object is **omitted with a warning** rather than
     /// failing the read: one corrupt post must never break a session's render
@@ -380,10 +429,40 @@ impl Board {
         &self,
         ids: &[String],
     ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, BoardError> {
+        for id in ids {
+            if !is_full_object_id(id) {
+                return Err(BoardError::Io(format!(
+                    "cat_file_batch: {id:?} is not a full 40-character hex object id; \
+                     git's cat-file --batch echoes back the RESOLVED id, so anything \
+                     shorter or non-oid would key the result map differently from what \
+                     the caller asked for and silently miss on lookup"
+                )));
+            }
+        }
         let mut found: std::collections::BTreeMap<String, Vec<u8>> =
             std::collections::BTreeMap::new();
+        // Chunked, not one shot: see CAT_FILE_BATCH_CHUNK's doc comment for
+        // why an unbounded batch here is a deadlock hazard, not just a perf
+        // one.
+        for chunk in ids.chunks(CAT_FILE_BATCH_CHUNK) {
+            self.cat_file_batch_chunk(chunk, &mut found)?;
+        }
+        Ok(found)
+    }
+
+    /// One `git cat-file --batch` invocation over (at most
+    /// [`CAT_FILE_BATCH_CHUNK`]) `ids`, merging results into `found`.
+    ///
+    /// Split out of [`cat_file_batch`](Self::cat_file_batch) purely so that
+    /// function can call this once per chunk without duplicating the
+    /// header-framing parse; `ids` here is already validated by the caller.
+    fn cat_file_batch_chunk(
+        &self,
+        ids: &[String],
+        found: &mut std::collections::BTreeMap<String, Vec<u8>>,
+    ) -> Result<(), BoardError> {
         if ids.is_empty() {
-            return Ok(found);
+            return Ok(());
         }
         let mut input = Vec::new();
         for id in ids {
@@ -411,6 +490,14 @@ impl Board {
                     eprintln!("board: skipping unreadable post {name}: object missing");
                     continue;
                 }
+                // NOTE for Tasks 4/5, which reuse this function: with a full
+                // 40-hex oid (enforced by `cat_file_batch`'s guard above),
+                // `--batch` (unlike `--batch-check`) never emits any status
+                // token here besides the object's type or "missing" — but if
+                // that ever stops holding, an unrecognised token falls
+                // through to `Some(_)`, fails the size parse below, and
+                // `break`s, which drops every id still queued in THIS CHUNK,
+                // not just the one that produced the odd header.
                 Some(_) => {}
                 None => {
                     eprintln!("board: unparseable cat-file header {header:?}; stopping this batch");
@@ -421,14 +508,22 @@ impl Board {
                 eprintln!("board: unparseable cat-file header {header:?}; stopping this batch");
                 break;
             };
-            if pos + size > out.len() {
+            // `pos + size` would wrap silently in release on a desynced
+            // stream carrying a bogus, huge size, defeating the bounds check
+            // below and panicking on the slice instead — a panic on this
+            // path is exactly what D7 says a corrupt post must never cause.
+            let Some(end) = pos.checked_add(size) else {
+                eprintln!("board: cat-file size overflow for {name}; stopping this batch");
+                break;
+            };
+            if end > out.len() {
                 eprintln!("board: truncated cat-file output for {name}; stopping this batch");
                 break;
             }
-            found.insert(name, out[pos..pos + size].to_vec());
-            pos += size + 1; // contents, plus git's trailing newline
+            found.insert(name, out[pos..end].to_vec());
+            pos = end + 1; // contents, plus git's trailing newline
         }
-        Ok(found)
+        Ok(())
     }
 
     /// Build a tree equal to `base`'s tree plus one post file.
@@ -1487,5 +1582,63 @@ mod tests {
         assert_eq!(got.len(), 2);
         assert!(String::from_utf8_lossy(&got[&first]).contains("line two"));
         assert!(String::from_utf8_lossy(&got[&second]).contains("after"));
+    }
+
+    #[test]
+    fn cat_file_batch_does_not_deadlock_on_a_batch_large_enough_to_fill_both_pipes() {
+        // Regression test for fix round 1's Critical: `Repo::git_stdin_bytes`
+        // writes the whole request before it reads any of the response. Once
+        // the accumulated OUTPUT `cat-file --batch` would produce fills
+        // git's stdout pipe before git has drained our stdin, git blocks
+        // writing output nobody is reading yet, which stops it reading
+        // further input, which leaves OUR write blocked on a pipe git will
+        // never come back to drain -- a silent, timeout-free hang, not a
+        // slow path. It cost 42 minutes of wall clock before it was
+        // diagnosed; `cat_file_batch` now chunks requests (see
+        // CAT_FILE_BATCH_CHUNK) specifically so this cannot happen.
+        //
+        // Reproduced independently against the review's own numbers at
+        // n=4000 with ~500-byte objects (confirmed directly against the
+        // unchunked helper before this test was written -- see the fix-round
+        // report). This constructs an equivalent payload: the SAME 500-byte
+        // object requested 4000 times, since git still emits one full
+        // record per requested line regardless of whether the underlying
+        // object is the same each time -- 4000 distinct objects are not
+        // needed to fill both pipes.
+        //
+        // This crate runs under plain `cargo test`, which has NO per-test
+        // timeout, so a naive version of this test would itself be a hang
+        // generator on a regression, not a guard. Bounded instead: the call
+        // runs on its own thread, and the test waits on a channel with a
+        // timeout rather than joining that thread. If chunking ever
+        // regresses, this test FAILS after the timeout (and leaks the stuck
+        // thread, harmlessly, until the process exits) instead of hanging
+        // the run.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let id = repo
+            .hash_object(&vec![b'x'; 500])
+            .expect("hash-object a 500-byte blob");
+        let ids: Vec<String> = std::iter::repeat_n(id.clone(), 4_000).collect();
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let result = board.cat_file_batch(&ids);
+            // The receiver may already be gone if this races past the
+            // timeout below; nothing left to report to, which is fine.
+            let _ = tx.send(result);
+        });
+
+        let result = rx.recv_timeout(std::time::Duration::from_secs(10)).expect(
+            "cat_file_batch did not return within 10s -- this is the write-before-read \
+             pipe deadlock regressing, not a slow call",
+        );
+        let got = result.expect("batch");
+        assert_eq!(
+            got.len(),
+            1,
+            "4000 requests for the same id collapse to one entry"
+        );
+        assert_eq!(got[&id].len(), 500);
     }
 }
