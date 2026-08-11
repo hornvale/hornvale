@@ -42,7 +42,7 @@ in the world (`run.reverse()` in `build`) leaves H2-1 **green**.
 What H2-1 establishes is **purity** — no global state, no wall-clock, no
 iteration-order nondeterminism. Durability is carried by one different
 assertion, `the_polyline_vertex_order_is_downstream_order`
-(`domains/terrain/tests/channel_properties.rs:290`), which is the only one
+(`domains/terrain/tests/channel_properties.rs:291`), which is the only one
 whose reference comes from *outside* the object under test
 (`TectonicGlobe.downhill`) and the only one that reddens under the reversal.
 
@@ -160,6 +160,13 @@ discounts stack.
 | 2 | one room edge *between the pair* | 0.2170 | a review found nothing asserted the pair was a step |
 | 3 | pairs filtered to mesh-adjacent | **0.7059 — falsifying** | 307 of 341 pairs were not adjacent |
 | 4 | transect *constructed* from three mesh steps | **0.3372** | adjacency made structural; both drop causes impossible; \|V'\| = \|V\| = 341 |
+
+**"One room edge" throughout that table means the edge at *walk depth*** —
+six levels below the canonical grid, `2.71e-4` rad, about 1.7 km — not the
+twenty-seven-metre room at the bottom of the addressing, which is twelve
+levels down. The distinction is the whole meaning of the number: the criterion
+asks whether a channel is narrower than one step, and the step in question is
+kilometres wide.
 
 Change (1) is defensible as a **correction rather than a rescue** — it *adds*
 a constraint (the pair must be an actual step with the channel-bearing room

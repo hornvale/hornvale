@@ -3,13 +3,23 @@
 [Stage one](./the-ford.md) stopped rivers being a hundred and ten kilometres
 wide by changing what carries them: a river became a polyline with a
 discharge-derived width, evaluated as a function of position at any depth,
-instead of a cell painted with a water class. It moved no consumer. A room
-twenty-seven metres across still reported the water of a cell four thousand
-times its width, because nothing at room scale had been taught to ask the
-network anything.
+instead of a cell painted with a water class. It moved no consumer. The finest
+room the address scheme reaches — twelve refinement levels below the canonical
+grid, twenty-seven metres across — still reported the water of a cell four
+thousand times its width, because nothing at room scale had been taught to ask
+the network anything.
 
 This stage teaches it to ask — and the interesting decision is what a room is
 allowed to *say back*.
+
+**Two room scales appear in what follows, and they are not the same room.**
+Twenty-seven metres is the deepest the addressing goes. The room a walker
+actually stands in sits **six** levels below the grid, not twelve: an edge of
+`2.71e-4` radians, about 1.7 kilometres, since each level halves an edge and
+six halvings take a hundred-and-ten-kilometre cell to that. Every measurement
+below is taken at that walking depth, including the one that matters most —
+the crossability criterion's "one room edge" is a step of roughly 1.7 km, not
+of twenty-seven metres.
 
 ## The chart, not the verdict
 
@@ -83,7 +93,8 @@ that already existed moved by a byte.
 The third key is the least obvious and possibly the most useful. A room at
 walking depth sits six refinement levels below the canonical grid, so a field
 decided per grid cell is necessarily identical across all four thousand and
-ninety-six rooms in that cell. Now that the same document also carries a
+ninety-six rooms in that cell — and across some sixteen million of them at the
+twenty-seven-metre depth. Now that the same document also carries a
 channel reading, it holds fields at *three* different grains at once, and a
 reader who guesses which is which will invent a contradiction. So the document
 declares it: which fields were decided at grid resolution, which at channel
@@ -153,8 +164,9 @@ would agree by construction and prove nothing. The check therefore recomputes
 from the **serialized, quantized** document, which tests something that can
 genuinely fail: that the record is self-sufficient, and that rounding to eight
 significant digits at the emit boundary never moves a room across a band edge.
-It does not. The nearest room to an edge sits nine parts in ten thousand away
-in relative terms — five orders of magnitude clear of the perturbation — so
+It does not. The nearest room to an edge sits just under one part in a
+thousand away in relative terms (9.8e-4) — five orders of magnitude clear of
+the perturbation — so
 this is a comfortable margin rather than a near miss.
 
 ## The fourth prediction, and why its number is not a verdict
@@ -220,8 +232,10 @@ wider than every step available, both rooms sit on the same bank and the
 geometry refuses before crossability is ever consulted.
 
 The width clause, meanwhile, is **inert on this world** — it holds at 341 of
-341 vertices. The widest full channel is 1.89e-4 radians against a room edge
-of 2.71e-4, so a conjunction that reads like two independent tests is a
+341 vertices. The widest full channel is 1.89e-4 radians against a walk-depth
+room edge of 2.71e-4 — roughly 1.2 km of water against a 1.7 km step, which is
+why nothing is ever too wide here — so a conjunction that reads like two
+independent tests is a
 single-clause criterion wearing a conjunction's clothes, and the discharge half
 does all the discrimination. It is not inert in principle: three refinement
 levels below walking depth the step shrinks enough for the width clause to
