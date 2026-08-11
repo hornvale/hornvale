@@ -36,14 +36,17 @@ const MAX_ATTEMPTS: u32 = 24;
 /// draining until git exits. Each id line is a 40-character hex oid plus a
 /// newline: 41 bytes. `256 * 41 = 10,496` bytes (~10.25 KiB).
 ///
-/// What that actually relies on: POSIX itself guarantees only `PIPE_BUF` =
-/// 512 bytes, and only for write *atomicity*, not a minimum pipe buffer
-/// capacity — there is no POSIX guarantee this number is under. It relies
-/// instead on the real, non-guaranteed pipe buffer size every mainstream
-/// system provides in practice (Linux and macOS have both defaulted to
-/// considerably more than 512 B for decades). The more defensible floor to
-/// reason from is a single 4 KiB page, which 10,496 B is comfortably above,
-/// rather than any claim about "the smallest pipe buffer" in the abstract.
+/// **The argument requires this number to stay UNDER pipe capacity, not
+/// above any floor** — get the direction backwards and the comment reads as
+/// reassuring while licensing an unsafe increase (fix round 2 on B7 wrote a
+/// version of this comment that did exactly that, reasoning from a 4 KiB
+/// page as a "floor" the chunk size was "comfortably above" — which argues
+/// FOR raising this constant, the opposite of what keeps it safe). Measured
+/// directly on this host in fix round 3's review: an undrained pipe accepts
+/// 65,536 bytes before a writer blocks, matching Linux's own default pipe
+/// capacity. 10,496 B against a measured 65,536 B is roughly a 6x margin —
+/// state that margin, and check any future change against it, rather than
+/// reasoning from an unrelated lower bound.
 const CAT_FILE_BATCH_CHUNK: usize = 256;
 
 /// True if `id` is a full, unabbreviated git object id: exactly 40 lowercase
@@ -54,15 +57,53 @@ const CAT_FILE_BATCH_CHUNK: usize = 256;
 /// whatever was asked for, so an abbreviation or a ref name would key the
 /// result map under a different string than the original id — a silent
 /// miss, not an error. The requirement is enforced by filtering (warn and
-/// skip) at the point an id is first read out of repository data — see
+/// skip) **inside `cat_file_batch` itself** — the one point every consumer
+/// converges on, including `digest.rs`'s `history` walk, which harvests ids
+/// straight from its own `git log` and never passes through
 /// [`Board::post_ids_in`] — because an id that fails this check is untrusted
-/// input, not a caller bug; see that function's doc comment for why blanking
-/// the whole board on one bad filename is a worse outcome than skipping it.
+/// repository data, not a caller bug. `post_ids_in` also filters (it can
+/// name the tree path in its own warning, which `cat_file_batch` cannot),
+/// but `cat_file_batch` does not rely on it: see that function's doc
+/// comment for why fix round 3 moved the filter here after a debug-only
+/// assertion at this exact spot turned out to be reachable from
+/// `digest.rs`, and why blanking or panicking the whole board on one bad
+/// filename is a worse outcome than skipping it.
+///
+/// **Deliberately SHA-1-only (40 chars), not 40-or-64.** A SHA-256
+/// repository (`git init --object-format=sha256`) would fail every check
+/// here, including on ids this tool wrote itself, and fall back to warn-and-
+/// skip for every single post — not a crash, but a silently empty board on
+/// a format this project does not use anywhere (fix round 3's review
+/// verified the failure mode directly and confirmed it degrades gracefully
+/// rather than panicking). Left as a known, named gap rather than widened to
+/// accept 64 hex characters too: hornvale has no SHA-256 repository today,
+/// and every other id-shaped constant in this crate (`"0".repeat(40)` in
+/// tests, the `41` in `CAT_FILE_BATCH_CHUNK`'s arithmetic) already assumes
+/// 40, so widening only this one check would not have made the crate
+/// SHA-256-capable, only inconsistent about it.
 fn is_full_object_id(id: &str) -> bool {
     id.len() == 40
         && id
             .bytes()
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+thread_local! {
+    /// Malformed post filenames [`Board::post_ids_in`] has already warned
+    /// about, in THIS thread.
+    ///
+    /// `post_ids_in` runs three times in one ordinary `board render`/`read`
+    /// invocation (`posts_at_tip`, `relevance::unseen`, `Cursor::record`
+    /// each call it independently), so without this, one bad filename would
+    /// print the identical warning three times. Thread-local rather than a
+    /// `Board` field or a process-global `static`: the CLI this dedup
+    /// exists for is single-threaded per invocation, so thread-local already
+    /// gives exactly the scope wanted (once per `board` process, reset on
+    /// the next one) without widening `Board`'s shape — and it keeps
+    /// `cargo test`'s parallel test threads from sharing (and so masking)
+    /// each other's warnings, which a process-global would not.
+    static WARNED_MALFORMED_POST_FILENAMES: std::cell::RefCell<std::collections::BTreeSet<String>> =
+        const { std::cell::RefCell::new(std::collections::BTreeSet::new()) };
 }
 
 /// Text that appears in exactly one place a stderr can come from: CAS-loss
@@ -316,18 +357,28 @@ impl Board {
     ///
     /// A tree entry under `posts/` whose filename is not a full 40-hex
     /// object id is **skipped, with a warning** — not surfaced as an error.
-    /// This is the validation point for [`is_full_object_id`], deliberately
-    /// placed at the *source* (a raw `ls-tree` listing) rather than inside
-    /// [`cat_file_batch`](Self::cat_file_batch): a filename here is
-    /// repository data, exactly as untrusted as a post's bytes, and can
-    /// arrive malformed by the same routes bad bytes do — a clone, an older
-    /// version of this tool, or a hand write (`append` itself always names a
-    /// file by its own blob's id, so the tool's own writes are always valid,
-    /// same as it never emits corrupt post bytes). Fix round 2 on B7 found
-    /// that a hard `Err` here (or downstream) makes ONE bad filename blank
-    /// the ENTIRE board — every claim and hold-off, not just the one bad
-    /// post — which is worse than D7's ordinary corrupt-post case and the
-    /// opposite of what D7 requires.
+    /// This is a second validation point for [`is_full_object_id`], not the
+    /// only one: [`cat_file_batch`](Self::cat_file_batch) filters again,
+    /// independently, right before it invokes `git` — see that function's
+    /// doc comment for why neither point can rely on the other having run
+    /// first. This one exists anyway because it is strictly more
+    /// informative (it can name the full tree path in its warning; a bare
+    /// id reaching `cat_file_batch` cannot), and every caller of THIS
+    /// function already treats an id's absence from the returned list as
+    /// "already warned about". Fix round 2 on B7 found that a hard `Err`
+    /// here (or downstream) makes ONE bad filename blank the ENTIRE board —
+    /// every claim and hold-off, not just the one bad post — which is worse
+    /// than D7's ordinary corrupt-post case and the opposite of what D7
+    /// requires.
+    ///
+    /// The warning is deduplicated per process (see
+    /// `WARNED_MALFORMED_POST_FILENAMES`) because this function runs three
+    /// times in one ordinary `board render`/`read` invocation
+    /// (`posts_at_tip`, `relevance::unseen`, `Cursor::record` each call it
+    /// independently) — without the dedup, one bad filename would print the
+    /// same warning three times per invocation, which is noise `make board`
+    /// would see even though the corrupt-*content* warning in `posts_in`
+    /// below prints only once for the equivalent case.
     fn post_ids_in(&self, tip: &str) -> Result<Vec<String>, BoardError> {
         let listed = self.repo.git(&["ls-tree", "-r", "--name-only", tip])?;
         let mut ids: Vec<String> = Vec::new();
@@ -341,10 +392,14 @@ impl Board {
             if is_full_object_id(id) {
                 ids.push(id.to_string());
             } else {
-                eprintln!(
-                    "board: skipping malformed post filename {line:?}: not a full 40-hex \
-                     object id -- one corrupt filename must never blank the whole board (D7)"
-                );
+                let already_warned = WARNED_MALFORMED_POST_FILENAMES
+                    .with(|warned| !warned.borrow_mut().insert(line.to_string()));
+                if !already_warned {
+                    eprintln!(
+                        "board: skipping malformed post filename {line:?}: not a full 40-hex \
+                         object id -- one corrupt filename must never blank the whole board (D7)"
+                    );
+                }
             }
         }
         ids.sort();
@@ -450,46 +505,59 @@ impl Board {
     /// Ids MUST be full, unabbreviated object ids, which works because a
     /// post's id IS its object id (D11) — so this is tip-independent, and the
     /// same call serves a union over several refs (B1). `cat-file --batch`
-    /// echoes the *resolved* id in each header line, not whatever the caller
-    /// wrote, so anything else (an abbreviation, a ref name) would key the
-    /// result map under a different string than the caller's own id and
+    /// echoes the *resolved* id in each header line, not whatever was asked
+    /// for, so anything else (an abbreviation, a ref name) would key the
+    /// result map under a different string than the original id and
     /// silently miss on lookup — see [`is_full_object_id`].
     ///
-    /// This requirement is validated **upstream, at the source of every id
-    /// this function is ever called with** ([`post_ids_in`](Self::post_ids_in)
-    /// skips a malformed filename with a warning before it ever reaches
-    /// here), not by this function itself: an id passed to `cat_file_batch`
-    /// comes from repository data (a tree listing, a ref), never from a
-    /// caller-authored string, so a bad one is untrusted input arriving here
-    /// by the same routes a corrupt post's bytes do — not a programming
-    /// error in the caller of THIS function. Fix round 2 on B7 found that
-    /// treating it as a hard `Err` here made one malformed filename blank
-    /// the entire board (D7's exact failure mode, and worse than the
-    /// ordinary corrupt-post case: every post is lost, not one). The
-    /// `debug_assert!` below exists only to catch a genuine internal misuse
-    /// (a future call site that skips the upstream validation) loudly in
-    /// tests, without arming in release and without turning untrusted
-    /// repository data into a panic or an `Err` at runtime.
+    /// **This is filtered right here, warn-and-skip, before any `git`
+    /// invocation** — not merely documented, and not by a caller upstream.
+    /// Fix round 2 on B7 put the filter in [`post_ids_in`](Self::post_ids_in)
+    /// instead and asserted the requirement here with a debug-only
+    /// `debug_assert!`, reasoning that `post_ids_in` was the one place every
+    /// id converges. That reasoning was wrong on a fact fix round 3's review
+    /// caught by simulating Task 4: `digest.rs` harvests its own ids
+    /// straight from `git log --diff-filter=A --name-only` and calls this
+    /// function directly, **never through `post_ids_in`** — so the assert
+    /// was reachable with an ordinary malformed filename, and it fired as a
+    /// release-mode-only debug assertion: `board digest` (which
+    /// `make board-digest` always runs *without* `--release`) would panic —
+    /// exit 101, empty stdout — on exactly the input fix round 2 spent an
+    /// entire round teaching `read`/`render` to survive. A panic on
+    /// untrusted repository data is not better than fix round 1's hard
+    /// `Err`; it is the same failure with a louder exit code. `post_ids_in`
+    /// still filters too (kept — it can name the tree path in its warning,
+    /// which this function cannot), but this function no longer trusts any
+    /// caller, including its own siblings in this crate, to have done so
+    /// first.
     ///
     /// A missing or unreadable object is **omitted with a warning** rather than
     /// failing the read: one corrupt post must never break a session's render
-    /// (D7). The caller therefore treats absence as "already warned about".
+    /// (D7). The caller therefore treats absence as "already warned about" —
+    /// which now includes an id this function itself rejected, not only one
+    /// git reported missing.
     fn cat_file_batch(
         &self,
         ids: &[String],
     ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, BoardError> {
-        debug_assert!(
-            ids.iter().all(|id| is_full_object_id(id)),
-            "cat_file_batch called with a non-full-oid id -- this must be validated \
-             (warn-and-skip) at the SOURCE (see post_ids_in), not asserted against here: \
-             an id reaching this function is repository data, not a caller's own string"
-        );
         let mut found: std::collections::BTreeMap<String, Vec<u8>> =
             std::collections::BTreeMap::new();
+        let mut valid: Vec<String> = Vec::with_capacity(ids.len());
+        for id in ids {
+            if is_full_object_id(id) {
+                valid.push(id.clone());
+            } else {
+                eprintln!(
+                    "board: skipping {id:?}: not a full 40-hex object id -- cat-file --batch \
+                     echoes the resolved id, so anything else would key the result map \
+                     differently from what was asked for"
+                );
+            }
+        }
         // Chunked, not one shot: see CAT_FILE_BATCH_CHUNK's doc comment for
         // why an unbounded batch here is a deadlock hazard, not just a perf
         // one.
-        for chunk in ids.chunks(CAT_FILE_BATCH_CHUNK) {
+        for chunk in valid.chunks(CAT_FILE_BATCH_CHUNK) {
             self.cat_file_batch_chunk(chunk, &mut found)?;
         }
         Ok(found)
@@ -520,7 +588,9 @@ impl Board {
 
         let mut pos = 0usize;
         while pos < out.len() {
-            // Header line: "<oid> <type> <size>" or "<name> missing".
+            // Header line: "<oid> <type> <size>" or "<name> <status>", where
+            // <status> is "missing" or one of cat-file's other status-only
+            // words (see the match below).
             let Some(rel) = out[pos..].iter().position(|b| *b == b'\n') else {
                 eprintln!("board: unterminated cat-file header at byte {pos}; stopping this batch");
                 break;
@@ -531,19 +601,39 @@ impl Board {
             let mut parts = header.split(' ');
             let name = parts.next().unwrap_or_default().to_string();
             match parts.next() {
-                Some("missing") => {
-                    eprintln!("board: skipping unreadable post {name}: object missing");
+                // KNOWN STATUS-ONLY tokens: git's header line ends right
+                // here, with no third field and no body to skip past.
+                // `continue` — skip just this one id and keep parsing the
+                // rest of the chunk. "missing" is the ordinary case (object
+                // absent); "ambiguous"/"dangling"/"notdir" are `cat-file
+                // --batch`'s other documented statuses, demonstrated by fix
+                // round 3's review with an actually-ambiguous short input
+                // (`printf '5093\n<oid>\n' | git cat-file --batch` answers
+                // `5093 ambiguous` with no body). Every id `cat_file_batch`
+                // hands this function has already passed `is_full_object_id`
+                // upstream, which makes an ambiguity genuinely unreachable
+                // for a full 40-hex oid in practice — but the earlier
+                // version of this match fell through to the size parse on
+                // ANY unrecognised second token, `break`-ing the whole
+                // chunk (losing every id still queued behind the odd one,
+                // up to `CAT_FILE_BATCH_CHUNK - 1` of them) rather than
+                // losing just the one id that produced it. Handling these
+                // tokens explicitly is cheap insurance against that, not a
+                // response to a live hazard.
+                Some("missing" | "ambiguous" | "dangling" | "notdir") => {
+                    eprintln!("board: skipping {name:?}: cat-file reported {header:?}");
                     continue;
                 }
-                // NOTE for Tasks 4/5, which reuse this function: with a full
-                // 40-hex oid (enforced by `cat_file_batch`'s guard above),
-                // `--batch` (unlike `--batch-check`) never emits any status
-                // token here besides the object's type or "missing" — but if
-                // that ever stops holding, an unrecognised token falls
-                // through to `Some(_)`, fails the size parse below, and
-                // `break`s, which drops every id still queued in THIS CHUNK,
-                // not just the one that produced the odd header.
+                // A real object type (blob/tree/commit/tag): a third field
+                // (the byte size) and a body still follow, parsed below.
                 Some(_) => {}
+                // GENUINE FRAMING DESYNC, not a recognised status: a header
+                // with no second field at all. Unlike the tokens above, this
+                // means the byte stream itself cannot be trusted — there is
+                // no way to know whether a body follows or how long it is —
+                // so `break` (stop the whole chunk) is the only safe
+                // response here. `continue`-ing instead would risk reading
+                // some body's bytes as the next record's header.
                 None => {
                     eprintln!("board: unparseable cat-file header {header:?}; stopping this batch");
                     break;
@@ -1669,6 +1759,39 @@ mod tests {
     }
 
     #[test]
+    fn cat_file_batch_never_panics_on_a_non_full_oid_even_when_called_directly() {
+        // Regression test for fix round 3's item 1. `digest.rs`'s `history`
+        // walk harvests its own ids from `git log --diff-filter=A
+        // --name-only` and calls `cat_file_batch` directly -- Task 4 routes
+        // exactly that through this function, never through
+        // `post_ids_in`. Fix round 2 put the non-full-oid guard behind a
+        // `debug_assert!` here, reasoning `post_ids_in` was the one
+        // upstream choke point; fix round 3's review simulated Task 4 and
+        // found the assert IS reachable this way, and it fires as a
+        // debug-only panic -- exit 101, empty stdout -- on a build profile
+        // `make board-digest` always uses (`cargo run` with no `--release`).
+        // A panic on untrusted repository data is not an improvement on the
+        // hard `Err` fix round 2 replaced; it is the identical failure
+        // shape with a louder exit code and a narrower reproduction window
+        // (debug only). This calls `cat_file_batch` the same way a
+        // Task-4-shaped caller would -- directly, with an id that never
+        // passed through `post_ids_in` -- and must return `Ok` with the
+        // bad id simply absent, under a debug build, not panic.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let good = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("keep me")))
+            .expect("good post");
+
+        let got = board
+            .cat_file_batch(&[good.clone(), "deadbeef".to_string()])
+            .expect("a non-full-oid id must be skipped, never panic or Err, even in debug");
+
+        assert_eq!(got.len(), 1, "only the good post should come back: {got:?}");
+        assert!(got.contains_key(&good));
+    }
+
+    #[test]
     fn cat_file_batch_frames_by_byte_length_not_by_newlines() {
         // The regression guard for the reason this is a bytes API: a post whose
         // note contains a newline must not truncate the record, and the record
@@ -1692,6 +1815,74 @@ mod tests {
         assert_eq!(got.len(), 2);
         assert!(String::from_utf8_lossy(&got[&first]).contains("line two"));
         assert!(String::from_utf8_lossy(&got[&second]).contains("after"));
+    }
+
+    #[test]
+    fn an_ambiguous_status_token_costs_one_id_not_the_rest_of_the_chunk() {
+        // Regression test for fix round 3's item 2: a header whose status is
+        // a recognised token OTHER than "missing" (git's "ambiguous",
+        // "dangling", "notdir") must cost exactly the one id that produced
+        // it, not every id still queued behind it in the same chunk. Before
+        // this fix, any second-token value other than "missing" fell through
+        // to the size parse, found no third field, and `break`, silently
+        // dropping every subsequent id in the chunk -- demonstrated
+        // end-to-end in the fix-round report with walk order
+        // good1, deadbeef, 5093, good2: the unbatched read kept both good
+        // posts, the batched one silently lost the second.
+        //
+        // "x1006" and "x3205" are not meaningful content -- they are two
+        // magic strings, found once by an offline birthday search over
+        // ~4000 candidates, whose git blob object ids (a content-only hash,
+        // independent of which repository holds them) both start with the
+        // same 4-hex-char prefix:
+        //   cf6e7b5aa2d6cc5cb24323c224d9481d5afe3a5b  ("x1006")
+        //   cf6e33624013139ce10daeeb07ef4a512212cfcb  ("x3205")
+        // so asking `git cat-file --batch` for the bare prefix "cf6e"
+        // reproducibly answers `cf6e ambiguous`, with no body -- on real
+        // git, no mocking, the same status the review's own repro
+        // (`printf '5093\n<oid>\n' | git cat-file --batch` -> `5093
+        // ambiguous`) demonstrated.
+        //
+        // `is_full_object_id` makes this unreachable through the public
+        // `cat_file_batch`: a full 40-hex oid is never itself ambiguous, so
+        // every id that function accepts already can't trigger this. This
+        // test calls the lower-level `cat_file_batch_chunk` directly,
+        // bypassing that filter, specifically to exercise the header-parsing
+        // match arm on its own -- the defensive code fix round 3's review
+        // asked to keep even though the filter makes it unreachable in
+        // practice today.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let good1 = board
+            .append(
+                &Post::new("technique", "main").with("note", serde_json::json!("FIRSTGOODPOST")),
+            )
+            .expect("good1");
+        let good2 = board
+            .append(
+                &Post::new("technique", "main").with("note", serde_json::json!("LATERGOODPOST")),
+            )
+            .expect("good2");
+        repo.hash_object(b"x1006").expect("hash x1006");
+        repo.hash_object(b"x3205").expect("hash x3205");
+
+        let mut found = std::collections::BTreeMap::new();
+        board
+            .cat_file_batch_chunk(
+                &[good1.clone(), "cf6e".to_string(), good2.clone()],
+                &mut found,
+            )
+            .expect("chunk must not error on an ambiguous status token");
+
+        assert!(
+            found.contains_key(&good1),
+            "the good post BEFORE the ambiguous id must still be read: {found:?}"
+        );
+        assert!(
+            found.contains_key(&good2),
+            "the good post AFTER the ambiguous id must still be read -- this is exactly what \
+             an old `break` on any unrecognised token would have silently lost: {found:?}"
+        );
     }
 
     #[test]
