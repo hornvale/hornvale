@@ -290,11 +290,22 @@ constraint here — the epoch/census seam is.
 Five peoples become **seventeen** — twelve new kinds, of which eleven come
 after this program's first campaign.
 
+> **CORRECTED at the programme's close, 2026-08-10 (The Radiation).** The
+> shipped outcome is **fifteen peoples, not seventeen**, because The Delvers
+> shipped `dwarf ×3` rather than `×5`: Mountain-dwarf and Duergar were withdrawn
+> mid-campaign, having been authored with a *low elevation above sea level* to
+> mean *deep*, which is a different quantity and selected lowland marshes. Their
+> return condition is written into the code — *they return when the underworld
+> has biomes* — and the `Biome` enum has twenty-two variants, not one of them
+> subterranean. **They are owed to the campaign that makes the underworld a
+> place.** The row below is left as written, with the two withdrawn kinds struck,
+> so that the arithmetic of the original plan stays legible.
+
 ```
   family    kinds                                          realm
   --------  ---------------------------------------------  ----------------
   human     human                                          overworld
-  dwarf     hill, mountain, duergar, gully, desert         over + under
+  dwarf     hill, ~~mountain~~, ~~duergar~~, gully, desert over (under: owed)
   elf       wood, high, drow, sea, desert, snow            over + under + sea
   (extant)  goblin, kobold, hobgoblin, bugbear, gnoll      overworld
 ```

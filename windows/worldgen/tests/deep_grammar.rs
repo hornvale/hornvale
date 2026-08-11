@@ -202,34 +202,61 @@ fn depth_landscape_measured() {
     // mountain-dwarf deleted their six rows and left the other twenty-seven
     // byte-identical, which is the same per-people independence stated above,
     // now measured in the shrinking direction as well as the growing one.
+    // THE RADIATION re-pin (C2d, 2026-08-10): 27 -> 45 rows, six elves placed
+    // on each of seeds 1..=3. **Not one of the 27 pre-existing rows moved.**
+    // That is worth stating because it is not what the neighbouring re-pins in
+    // this suite did — the ladder table, the exposure sets and the toponymy
+    // all shifted for existing peoples when the roster grew. A tongue's
+    // morphology depth is drawn per SPECIES from its own labels, so it is
+    // insensitive to who else is in the world; settlement placement is not.
+    // The two behave differently under a roster change and this row-for-row
+    // equality is the cleanest evidence of it in the suite.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
         (1, "desert-dwarf", MorphDepth::None, MorphDepth::None),
+        (1, "desert-elf", MorphDepth::Affix, MorphDepth::Affix),
+        (1, "drow", MorphDepth::None, MorphDepth::None),
         (1, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "gully-dwarf", MorphDepth::None, MorphDepth::None),
+        (1, "high-elf", MorphDepth::None, MorphDepth::Particle),
         (1, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
         (1, "human", MorphDepth::Affix, MorphDepth::Affix),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
+        (1, "sea-elf", MorphDepth::None, MorphDepth::None),
+        (1, "snow-elf", MorphDepth::None, MorphDepth::None),
+        (1, "wood-elf", MorphDepth::Particle, MorphDepth::None),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
         (2, "desert-dwarf", MorphDepth::Particle, MorphDepth::None),
+        (2, "desert-elf", MorphDepth::None, MorphDepth::Affix),
+        (2, "drow", MorphDepth::None, MorphDepth::Particle),
         (2, "gnoll", MorphDepth::None, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
         (2, "gully-dwarf", MorphDepth::None, MorphDepth::Particle),
+        (2, "high-elf", MorphDepth::Affix, MorphDepth::None),
         (2, "hill-dwarf", MorphDepth::Particle, MorphDepth::Particle),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
         (2, "human", MorphDepth::None, MorphDepth::None),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
+        (2, "sea-elf", MorphDepth::None, MorphDepth::Affix),
+        (2, "snow-elf", MorphDepth::None, MorphDepth::None),
+        (2, "wood-elf", MorphDepth::None, MorphDepth::Affix),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
         (3, "desert-dwarf", MorphDepth::Affix, MorphDepth::None),
+        (3, "desert-elf", MorphDepth::Particle, MorphDepth::Particle),
+        (3, "drow", MorphDepth::Particle, MorphDepth::None),
         (3, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "gully-dwarf", MorphDepth::None, MorphDepth::None),
+        (3, "high-elf", MorphDepth::Particle, MorphDepth::Particle),
         (3, "hill-dwarf", MorphDepth::None, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
         (3, "human", MorphDepth::Particle, MorphDepth::None),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),
+        (3, "sea-elf", MorphDepth::Affix, MorphDepth::Particle),
+        (3, "snow-elf", MorphDepth::Particle, MorphDepth::None),
+        (3, "wood-elf", MorphDepth::None, MorphDepth::None),
     ];
     assert_eq!(
         measured, expect,

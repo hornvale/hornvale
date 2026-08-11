@@ -23,7 +23,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -198,6 +198,26 @@ board: ## The Cairn: read the board (full, unfiltered)
 
 board-digest: ## The Cairn: the human digest over the board's history (default 14 days)
 	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- digest $(DAYS)
+
+# BY defaults to the current branch: attribution is mandatory (decision 0118) and
+# a default that is always right beats one a session has to remember.
+#
+# NOTE and PATHS have their own variables rather than living in FIELDS, and both
+# reasons were found by using this target rather than by reading it:
+#   NOTE  contains spaces, and make would split it out of an unquoted FIELDS.
+#   PATHS must reach the tool as a JSON *array*. Passing FIELDS='paths=["a"]'
+#         loses the inner quotes to the shell, so the tool stores the STRING
+#         "[a]", `paths()` finds no array, and the post silently degrades from
+#         path-routed to broadcast — wrong in kind, invisible in effect. Building
+#         the JSON inside the recipe, where the quoting is ours, removes the trap.
+# FIELDS remains for single-token pairs (polarity=hold-off, ttl_s=900, host=…).
+board-post: ## The Cairn: post to the board (KIND=technique NOTE='...' [PATHS='a/ b/'] [FIELDS='polarity=hold-off'] [BY=])
+	@test -n "$(KIND)" || { echo "usage: make board-post KIND=<kind> NOTE='<text>' [PATHS='dir/ dir/'] [FIELDS='k=v k=v'] [BY=<branch>]" >&2; exit 2; }
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- post \
+		"$(KIND)" "$(if $(BY),$(BY),$(shell git branch --show-current))" \
+		$(if $(NOTE),note="$(NOTE)",) \
+		$(if $(PATHS),'paths=[$(shell printf '%s' '$(PATHS)' | tr -s ' ' '\n' | sed 's/.*/"&"/' | paste -sd, -)]',) \
+		$(FIELDS)
 
 test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
 	cargo nextest run --workspace

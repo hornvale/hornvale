@@ -88,13 +88,19 @@ fn metabolic_class_coverage_matches_the_table() {
                 // mass class. The metabolic cell they actually move is
                 // `LifeSchedule`, not this one — see the life-schedule table.
                 "desert-dwarf",
+                // C2d (The Radiation): six elves, all endotherms in the
+                // 50-60 kg band. Like the dwarves, the metabolic cell they
+                // move is `LifeSchedule`, not this one.
+                "desert-elf",
                 "dire-wolf",
+                "drow",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
+                "high-elf",
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
@@ -103,7 +109,10 @@ fn metabolic_class_coverage_matches_the_table() {
                 "owlbear",
                 "red-dragon",
                 "rhinoceros",
+                "sea-elf",
+                "snow-elf",
                 "white-dragon",
+                "wood-elf",
                 "woolly-mammoth",
             ],
         ),
@@ -150,7 +159,8 @@ fn status_basis_coverage_matches_the_table() {
         (
             StatusBasis::Rank,
             Rung::Witnessed,
-            &["bugbear", "goblin", "hobgoblin"],
+            // C2d: drow is the family's only `Rank` reading.
+            &["bugbear", "drow", "goblin", "hobgoblin"],
         ),
         // The Generalist (C2-0) gives Knowledge its SECOND witness. Human
         // standing rests on craft and lore rather than dominance, which is
@@ -160,10 +170,16 @@ fn status_basis_coverage_matches_the_table() {
         // C2c (The Delvers) adds the desert dwarf: the one dwarf authored to
         // survive on a climate niche rather than an elevation one, whose
         // standing rests on knowing where the water is.
+        //
+        // C2d (The Radiation) adds two more from two further directions:
+        // desert-elf, on the same route-and-season argument desert-dwarf
+        // reaches it by, and high-elf, whose lore is held by an institution
+        // rather than by a person — which is the whole of what separates it
+        // from wood-elf's `Generosity`.
         (
             StatusBasis::Knowledge,
             Rung::Witnessed,
-            &["desert-dwarf", "human", "kobold"],
+            &["desert-dwarf", "desert-elf", "high-elf", "human", "kobold"],
         ),
         // WITNESSED as of The Vacancy T9: the gnoll, the campaign's headline
         // promotion. Justified from the ecology (a scarce, high-variance
@@ -177,10 +193,21 @@ fn status_basis_coverage_matches_the_table() {
         // large to keep, gully-dwarf a find too small to fight over, and
         // hill-dwarf a settled surplus the hall sets out. One authored basis,
         // three unrelated ecologies.
+        //
+        // C2d adds three more, again unrelated: sea-elf provisions through a
+        // lean season, snow-elf through a winter, wood-elf has no hall to
+        // govern from and so names what is given rather than who governs.
         (
             StatusBasis::Generosity,
             Rung::Witnessed,
-            &["gnoll", "gully-dwarf", "hill-dwarf"],
+            &[
+                "gnoll",
+                "gully-dwarf",
+                "hill-dwarf",
+                "sea-elf",
+                "snow-elf",
+                "wood-elf",
+            ],
         ),
     ];
     for (basis, rung, witnesses) in expected {
@@ -204,12 +231,22 @@ fn activity_cycle_coverage_matches_the_table() {
             // C2c (The Delvers): hill-dwarf, a surface farmer keeping the
             // sun's hours. The family does NOT share a cycle — see
             // Crepuscular below.
-            &["goblin", "hill-dwarf", "hobgoblin", "human", "red-dragon"],
+            &[
+                "goblin",
+                "high-elf",
+                "hill-dwarf",
+                "hobgoblin",
+                "human",
+                "red-dragon",
+                "sea-elf",
+            ],
         ),
         (
             ActivityCycle::Nocturnal,
             Rung::Witnessed,
-            &["black-dragon", "bugbear", "kobold"],
+            // C2d (The Radiation): drow, the roster's least ambiguous
+            // nocturnal kind — there is no sun underground to keep hours by.
+            &["black-dragon", "bugbear", "drow", "kobold"],
         ),
         // Witnessed by a dragon since The Vigil; a mundane beast still cannot
         // carry an `ActivityCycle` at all (`perception_registry` is keyed to
@@ -227,7 +264,15 @@ fn activity_cycle_coverage_matches_the_table() {
         (
             ActivityCycle::Crepuscular,
             Rung::Witnessed,
-            &["desert-dwarf", "gnoll", "gully-dwarf", "white-dragon"],
+            &[
+                "desert-dwarf",
+                "desert-elf",
+                "gnoll",
+                "gully-dwarf",
+                "snow-elf",
+                "white-dragon",
+                "wood-elf",
+            ],
         ),
     ];
     for (cycle, rung, witnesses) in expected {
@@ -283,22 +328,29 @@ fn social_form_coverage_matches_the_table() {
                 "woolly-mammoth",
             ],
         ),
-        // C2c (The Delvers): the settling roster goes six to NINE. This list
-        // is the one the census population is drawn from, so its length is
-        // the quantity the campaign's regen moves.
+        // C2c (The Delvers): the settling roster goes six to NINE. C2d (The
+        // Radiation) takes it to FIFTEEN. This list is the one the census
+        // population is drawn from, so its length is the quantity the
+        // campaign's regen moves.
         (
             SocialForm::Settled,
             Rung::Witnessed,
             &[
                 "bugbear",
                 "desert-dwarf",
+                "desert-elf",
+                "drow",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
+                "high-elf",
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
                 "kobold",
+                "sea-elf",
+                "snow-elf",
+                "wood-elf",
             ],
         ),
     ];
@@ -336,6 +388,16 @@ fn life_schedule_coverage_matches_the_table() {
     // C2c (THE DELVERS) IS THAT CAMPAIGN. `Paced` moves `Declared` ->
     // `Witnessed` with three witnesses, all at factor 4.0: long life is a
     // dwarf FAMILY trait, not a trait of any one dwarf's habitat.
+    //
+    // C2d (THE RADIATION) adds six more, all at factor 5.0, and the same
+    // family reading holds: the elves are the roster's longest-lived people
+    // and every one of them carries the family's factor rather than a
+    // habitat-specific one. Note what the second family makes visible that
+    // the first could not — the variant now has TWO distinct factors, so a
+    // classifier that compared by value instead of by variant would split
+    // this cell in two. That is why `life_schedule_witnesses` classifies by
+    // variant, and why `only_the_dwarves_depart_from_pure_allometry` (now
+    // renamed) is the test that carries the factors.
     //
     // THE NON-OBVIOUS HALF, and why the `Allometric` row is spelled out. It
     // previously read `&every_kind` — the whole registry, computed from
@@ -387,7 +449,17 @@ fn life_schedule_coverage_matches_the_table() {
         (
             "Paced",
             Rung::Witnessed,
-            &["desert-dwarf", "gully-dwarf", "hill-dwarf"],
+            &[
+                "desert-dwarf",
+                "desert-elf",
+                "drow",
+                "gully-dwarf",
+                "high-elf",
+                "hill-dwarf",
+                "sea-elf",
+                "snow-elf",
+                "wood-elf",
+            ],
         ),
     ];
     for (variant, rung, witnesses) in expected {
@@ -513,7 +585,7 @@ fn dispersion_is_a_ratio_on_every_axis() {
 }
 
 #[test]
-fn only_the_dwarves_depart_from_pure_allometry() {
+fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
     // THE LONG AGE shipped this as `every_authored_kind_is_allometric_today`,
     // the auditable evidence that its channel had zero occupants, and named
     // C2c as the campaign that would have to widen it.
@@ -528,6 +600,12 @@ fn only_the_dwarves_depart_from_pure_allometry() {
     // Direction this enforces, stated because a set equality reads as total
     // and is not: it catches a kind added to the exception set and a kind
     // removed from it, in both directions.
+    //
+    // C2d (THE RADIATION) RENAMED IT AGAIN, on the same principle: the six
+    // elves are a second departing family, at factor 5.0, so "only the
+    // dwarves" had become the false half of the name. Two families with two
+    // factors is what the list below now records — and it is the only place
+    // in the workspace where 4.0 and 5.0 are pinned as VALUES.
     //
     // It also pins the FACTOR, which nothing else in the workspace did. The
     // schedule's *variant* was audited in three places and its *value* in
@@ -548,21 +626,28 @@ fn only_the_dwarves_depart_from_pure_allometry() {
         departures,
         vec![
             ("desert-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("desert-elf", LifeSchedule::Paced { factor: 5.0 }),
+            ("drow", LifeSchedule::Paced { factor: 5.0 }),
             ("gully-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("high-elf", LifeSchedule::Paced { factor: 5.0 }),
             ("hill-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("sea-elf", LifeSchedule::Paced { factor: 5.0 }),
+            ("snow-elf", LifeSchedule::Paced { factor: 5.0 }),
+            ("wood-elf", LifeSchedule::Paced { factor: 5.0 }),
         ],
-        "the dwarf family is the ONLY departure from pure allometry, and \
-         shares ONE factor: long life is a family trait, not a habitat one"
+        "the dwarf and elf families are the ONLY departures from pure \
+         allometry, and each shares ONE factor within itself (4.0, 5.0): long \
+         life is a family trait, not a habitat one"
     );
     assert_eq!(
         reg.len(),
-        33,
-        "30 before C2c, plus the dwarf family's three"
+        39,
+        "30 before C2c, plus the dwarf family's three and the elf family's six"
     );
 }
 
 #[test]
-fn the_subterranean_roster_is_exactly_the_two_rehomed_kinds() {
+fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
     // THE WARREN: C2a re-authored these two for true darkness and
     // SUBTERRANEAN_MOISTURE and nothing scored them there. This store is the
     // consumer half. It ships with exactly these two, and adding a row is a
@@ -577,20 +662,34 @@ fn the_subterranean_roster_is_exactly_the_two_rehomed_kinds() {
     // the toponymy reported lowland marshes, which was read as an emergent
     // finding until it was read as the authored value it was.
     //
-    // So this store stays at two, and the reason it does is worth more than
-    // the rows would have been: the realm gate places a kind at a cave MOUTH,
-    // because settlements are cell-keyed and a Subterranean kind lives on the
-    // surface of a cell that has a cave in it. The model has no vocabulary for
-    // the inside of the world — the sea got depth-named biomes and the rock
-    // got a graph. `BIO-kinds-declare-biomes` is the successor.
+    // So this store stayed at two through C2c, and the reason it did is worth
+    // more than the rows would have been: the realm gate places a kind at a
+    // cave MOUTH, because settlements are cell-keyed and a Subterranean kind
+    // lives on the surface of a cell that has a cave in it. The model has no
+    // vocabulary for the inside of the world — the sea got depth-named biomes
+    // and the rock got a graph. `BIO-kinds-declare-biomes` is the successor.
+    //
+    // C2d (THE RADIATION) ADDS EXACTLY ONE, and adds it under that constraint
+    // rather than in spite of it: the drow is the store's first PEOPLED
+    // occupant, and the realm gate is its ONLY authored separation from the
+    // surface elves. Its elevation curve is wood-elf's byte for byte, which is
+    // the withdrawn duergar lesson applied rather than restated —
+    // `windows/worldgen/tests/radiation_admission.rs::drows_elevation_curve_is_woods_and_says_nothing_about_depth`
+    // is the assertion that keeps it that way. One cave kind needs only to
+    // differ from the surface; distinguishing two cave kinds by DEPTH is what
+    // the model still cannot do.
     let reg = habitat_realm_registry();
     let sub: Vec<&str> = reg
         .iter()
         .filter(|(_, r)| **r == HabitatRealm::Subterranean)
         .map(|(k, _)| k.0)
         .collect();
-    assert_eq!(sub, vec!["rust-monster", "xorn"], "ascending by KindId");
-    assert_eq!(reg.len(), 2, "the store is sparse: absence means Surface");
+    assert_eq!(
+        sub,
+        vec!["drow", "rust-monster", "xorn"],
+        "ascending by KindId"
+    );
+    assert_eq!(reg.len(), 3, "the store is sparse: absence means Surface");
 }
 
 #[test]

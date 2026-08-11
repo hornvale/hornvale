@@ -172,22 +172,34 @@ use hornvale_worldgen::{
 /// three `LifeSchedule::Paced { factor: 4.0 }`.
 const DWARVES: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
 
-/// The nine settling peoples after this campaign — the six The Tilth and the
-/// bind audit measured, plus the dwarf family. This is the population every
-/// roster-wide claim below is scoped to; a claim about "the peoples" that did
-/// not name its population is exactly the error this campaign's own memory
-/// index warns about.
-const SETTLING_PEOPLES: [&str; 9] = [
-    "bugbear",
-    "desert-dwarf",
-    "gnoll",
-    "goblin",
-    "gully-dwarf",
-    "hill-dwarf",
-    "hobgoblin",
-    "human",
-    "kobold",
-];
+/// The settling peoples — the population every roster-wide claim below is
+/// scoped to. A claim about "the peoples" that did not name its population is
+/// exactly the error this campaign's own memory index warns about.
+///
+/// **DERIVED, not authored (The Radiation, C2d task 6).** This was a hand-
+/// written `[&str; 9]` naming The Delvers' roster, and it went stale in the
+/// safe-looking way the moment a later campaign added a settling kind: the six
+/// elves are `SocialForm::Settled` too, so `p6_seed_42s_committed_world_moved`
+/// compared the ledger's 15 peoples against a constant that still said 9 and
+/// failed claiming the WORLD had moved. It had not — every one of the fifteen
+/// holds ground on seed 42, which is the strongest this assertion has ever
+/// read. The constant was the stale part.
+///
+/// Deriving it off `WorldComponents` (the thing that executes) rather than
+/// restating it removes that failure mode entirely: a future roster change
+/// extends this list by construction, and the assertions below then measure
+/// the ledger against the live roster instead of against a memory of it.
+fn settling_peoples() -> Vec<&'static str> {
+    let wc = WorldComponents::assemble().expect("assemble the shipped component set");
+    let mut kinds: Vec<&'static str> = wc
+        .biosphere
+        .iter()
+        .filter(|(_, bio)| bio.social_form == hornvale_species::SocialForm::Settled)
+        .map(|(kind, _)| kind.0)
+        .collect();
+    kinds.sort_unstable();
+    kinds
+}
 
 /// The seeds every live-world claim here is measured over — the same three
 /// `delver_bind_audit.rs` used, so its recorded table and this one are
@@ -1450,7 +1462,7 @@ fn p5_the_cascade_regime_reads_the_paced_schedule() {
     let world = World::new(Seed(REFERENCE_SEED));
     let slow_max = hornvale_language::CascadeRegime::new(1, 2).max;
     let mut counts: Vec<(&str, u32)> = Vec::new();
-    for people in SETTLING_PEOPLES {
+    for people in settling_peoples() {
         let cascade = cascade_of(&world, people)
             .unwrap_or_else(|e| panic!("{people} draws a cascade: {e:?}"));
         counts.push((people, cascade.rules.len() as u32));
@@ -1537,6 +1549,25 @@ fn p5_the_cascade_regime_reads_the_paced_schedule() {
 /// draw, formula or stream label moved. The assertion below is the part that
 /// cannot be explained by anything but the roster: a pre-Delvers world cannot
 /// contain a `hill-dwarf` occupation.
+///
+/// **THE RADIATION (C2d task 6, 2026-08-10): re-read, and it is a RE-PIN of a
+/// stale CONSTANT, not a movement in the world.** This test went red on the
+/// heavy tier saying "every settling people should hold ground somewhere on
+/// seed 42; got [15 names]" with `left: 15, right: 9` — the 9 being
+/// `SETTLING_PEOPLES`, a hand-authored array naming The Delvers' roster. Six
+/// elves are `SocialForm::Settled` and every one of them holds ground here, so
+/// the property this test asserts held MORE strongly than at any prior
+/// reading; only the constant it was compared against was old. The roster is
+/// now derived from `WorldComponents` (see [`settling_peoples`]) and the
+/// comparison is a set rather than a count, so neither failure mode returns.
+///
+/// The reported numbers move with it: seed 42 now carries **230 settlements**
+/// and **13,389 ledger facts** against the pre-campaign almanac's 122, and all
+/// fifteen peoples hold occupations — gnoll 171, hobgoblin 283, kobold 139,
+/// snow-elf 43, desert-dwarf 18, bugbear 10, hill-dwarf 8, goblin 6, wood-elf
+/// 6, drow 5, human 5, desert-elf 3, sea-elf 3, gully-dwarf 2, high-elf 2.
+/// Reported, not asserted: the campaign predicted no magnitude, and the
+/// dwarves' small holdings are still reported rather than explained.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p6_seed_42s_committed_world_moved() {
@@ -1582,11 +1613,18 @@ fn p6_seed_42s_committed_world_moved() {
             per_people.keys().collect::<Vec<_>>()
         );
     }
+    // The SET, not the count. This compared `per_people.len()` against the
+    // roster's length until The Radiation's task 6, which is one level away
+    // from the claim in its own message: two rosters of the same size with
+    // different membership compare equal, so "every settling people holds
+    // ground" was never actually what was asserted. Comparing the sets makes
+    // the failure name the people that went missing.
+    let holding: Vec<&str> = per_people.keys().map(String::as_str).collect();
     assert_eq!(
-        per_people.len(),
-        SETTLING_PEOPLES.len(),
-        "every settling people should hold ground somewhere on seed 42; got {:?}",
-        per_people.keys().collect::<Vec<_>>()
+        holding,
+        settling_peoples(),
+        "every settling people should hold ground somewhere on seed 42, and only \
+         settling peoples should hold any"
     );
     // The pre-campaign committed almanac reports 122 settlements for this
     // seed. Asserting inequality rather than a new pinned number: the count is

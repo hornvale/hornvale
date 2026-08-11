@@ -3302,6 +3302,22 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| monophyly(v, "dwarf")),
         },
         Metric {
+            // THE RADIATION (C2d): the roster's third multi-member family and
+            // the first with six daughters — the family the language machinery
+            // has been waiting for. Same check, not a third implementation.
+            name: "monophyly-elf",
+            doc: "Whether every elf daughter's (desert-elf, drow, high-elf, sea-elf, \
+                   snow-elf, wood-elf) Root derivation.proto matches an INDEPENDENT \
+                   re-draw of the shared \"elf\" family proto-root for that concept \
+                   (spec §3: cognates share a proto ancestor) — never reading the \
+                   family proto back from a sibling's own recorded derivation; Absent \
+                   if no elf daughter minted a Root",
+            summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "elf")),
+        },
+        Metric {
             name: "clean-outgroup-kobold",
             doc: "Whether kobold — the family with no siblings — never coincides with the \
                    goblinoid family: for every concept kobold holds as a Root, its \
@@ -3409,7 +3425,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Flag,
             domain: Domain::Language,
             role: Role::Descriptor,
-            extract: Extractor::Full(divergence_real),
+            extract: Extractor::Full(|v: &FullView| divergence_real_for(v, "goblinoid")),
         },
         Metric {
             name: "homophony-count-goblin",
@@ -6916,6 +6932,30 @@ const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 /// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
 const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
 
+/// THE RADIATION (C2d): the elf family's six daughters — the roster's third
+/// and largest multi-member family, and `monophyly-elf`'s subject. Same shape,
+/// same rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`]: an
+/// authored MEMBERSHIP CLAIM, deliberately not derived from
+/// [`hornvale_worldgen::family_daughter_kinds`], because a derived list changes
+/// value on the Lab's synthetic rosters and moving a null control's value is a
+/// deliberate act rather than a refactor.
+const ELF_DAUGHTERS: [&str; 6] = [
+    "desert-elf",
+    "drow",
+    "high-elf",
+    "sea-elf",
+    "snow-elf",
+    "wood-elf",
+];
+
+/// Every family [`family_daughters_of`] answers for, and therefore every family
+/// `authored_daughter_lists_match_the_default_rosters_family_membership` drift-
+/// checks. Kept beside the lists rather than restated in the test so a fourth
+/// family cannot be added to the match arm and silently miss the guard — which
+/// is exactly what the elf family would have done had this stayed a literal in
+/// the test body.
+const AUTHORED_FAMILIES: [&str; 3] = ["goblinoid", "dwarf", "elf"];
+
 /// The authored daughter list for a family the family-level metrics below are
 /// registered over. Panics on any other family: a `monophyly-<family>` metric
 /// must never be registered without the membership claim it measures against.
@@ -6923,7 +6963,10 @@ fn family_daughters_of(family: &str) -> &'static [&'static str] {
     match family {
         "goblinoid" => &GOBLINOID_DAUGHTERS,
         "dwarf" => &DWARF_DAUGHTERS,
-        other => panic!("no authored daughter list for family '{other}'"),
+        "elf" => &ELF_DAUGHTERS,
+        other => {
+            panic!("no authored daughter list for family '{other}'; known: {AUTHORED_FAMILIES:?}")
+        }
     }
 }
 
@@ -7186,7 +7229,7 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Number(merged.len() as f64)
 }
 
-/// Whether some concept rooted in ALL THREE goblinoid daughters has \u{2265}2
+/// Whether some concept rooted in EVERY daughter of `family` has \u{2265}2
 /// distinct present-day forms (spec §3's divergence-reality guard,
 /// generalized from `windows/worldgen/src/lib.rs`'s test-only
 /// `goblinoid_daughters_actually_diverge` to every seed): stemmatics proves
@@ -7194,16 +7237,23 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
 /// degenerate family whose daughters are silent aliases of one another must
 /// read false here. Compares recorded `derivation.modern` segment
 /// sequences directly (not romanized views) to avoid any rendering-layer
-/// false negative. `Absent` if no concept is rooted in all three daughters.
-fn divergence_real(v: &FullView) -> MetricValue {
-    if !GOBLINOID_DAUGHTERS.iter().all(|s| in_roster(v, s)) {
+/// false negative. `Absent` if no concept is rooted in every daughter.
+///
+/// Parameterised by THE RADIATION (C2d), exactly as [`monophyly`] already was:
+/// divergence-reality is a property of a *family*, and this was hardcoded to
+/// `GOBLINOID_DAUGHTERS`. The `divergence-real` census metric keeps its name,
+/// its doc string and its goblinoid subject byte-identically — a metric's name
+/// and doc are a published contract — and the six-daughter reading is taken in
+/// `windows/worldgen/tests/radiation_language.rs`, where it costs no census
+/// column.
+fn divergence_real_for(v: &FullView, family: &str) -> MetricValue {
+    let daughters = family_daughters_of(family);
+    if !daughters.iter().all(|s| in_roster(v, s)) {
         return MetricValue::Absent;
     }
-    let lexes: Vec<hornvale_language::Lexicon> = GOBLINOID_DAUGHTERS
-        .iter()
-        .filter_map(|s| lex(v, s).ok())
-        .collect();
-    if lexes.len() < GOBLINOID_DAUGHTERS.len() {
+    let lexes: Vec<hornvale_language::Lexicon> =
+        daughters.iter().filter_map(|s| lex(v, s).ok()).collect();
+    if lexes.len() < daughters.len() {
         return MetricValue::Absent;
     }
     let Some((first, rest)) = lexes.split_first() else {
@@ -8214,7 +8264,20 @@ mod tests {
         // three surviving prevalence assertions are robust claims that stay
         // in the gate, and 0097 prescription 3 forbids the same claim living
         // in both instruments.
-        assert_eq!(registry().len(), 194);
+        //
+        // +1 for THE RADIATION (C2d Task 5: monophyly-elf — the roster's THIRD
+        // multi-member family, and the first with six daughters, measured by
+        // the SAME generalized check `monophyly-goblinoid` and
+        // `monophyly-dwarf` use). ONE column and not more, deliberately: the
+        // per-daughter `inventory-closure-*` / `homophony-count-*` /
+        // `confusable-homophony-*` families stay frozen at four kinds (goblin,
+        // hobgoblin, bugbear, kobold — the dwarves never got them either), and
+        // `divergence-real` stays goblinoid-scoped. Extending either to the
+        // elves would add 24+ columns to each of the nine `"metrics": "all"`
+        // studies and be paid on every census forever; both readings are taken
+        // instead in `windows/worldgen/tests/radiation_language.rs`, where they
+        // cost no column. See that file's header and the campaign chronicle.
+        assert_eq!(registry().len(), 195);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -8469,9 +8532,33 @@ mod tests {
         // named-goblin-settlement denominator moved again — the same
         // placement reshuffle every entry above records, and the naming
         // machinery is untouched. Still inside the 2-3 target, the row's claim.
+        // The Radiation re-pin (C2d, 2026-08-10): 2.218_75 -> 2.416_666_666_666_666_5.
+        // Six elves enter the contest and re-place seed 42 once more, so the
+        // named-goblin-settlement denominator moves again — the same placement
+        // reshuffle every entry above records, with the naming machinery
+        // untouched. Still inside the 2-3 target, the row's claim.
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 2.416_666_666_666_666_5 -> 2.375. WHAT MOVED IT IS NOT THE CENSUS.
+        // This row builds seed 42 live and reads no fixture, so the once-per-
+        // campaign census refresh cannot reach it. The mover is INSIDE this
+        // campaign: the value above was derived at `2bd26ff1` (the six elves),
+        // and the task-3 affinity relevel — `cda3e3c4` / `cbcf2935` /
+        // `8107faad`, which derive an affinity ladder's level instead of
+        // authoring it — re-placed every world afterwards. The campaign's
+        // standing rule was not to re-pin at task boundaries, so this row
+        // carried a known red from task 3 to here, which is why two Radiation
+        // paragraphs sit on one campaign.
+        //
+        // CORROBORATED, not merely re-run: the canonical 1000-world census
+        // authored on lefford at `07117d05` records `name-syllables-goblin`
+        // = 2.375 on its own seed-42 row. Two independent computations — a
+        // live `BuiltView` on this Mac and the census on the canonical box —
+        // land on the same value, which is stronger provenance than a green
+        // local re-run. Still inside the 2-3 target, the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.218_75)
+            MetricValue::Number(2.375)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -8574,9 +8661,39 @@ mod tests {
         // (21 -> 12), which is the competitive cascade a suppressed people
         // leaves behind. Both still inside the 2-3 target and kobold still
         // live rather than Absent — the whole of the row's claim.
+        //
+        // The Radiation re-pin (C2d, 2026-08-10): 2.868_852_459_016_393_3 ->
+        // 2.734_693_877_551_020_3. Kobold falls 0.134 while goblin RISES 0.198
+        // — opposed again, and again by different magnitudes, which is this
+        // row's stated signature of a placement reshuffle rather than a drift
+        // in the naming machinery (nothing in this campaign touches phonology,
+        // wear or the namer). Both still inside the 2-3 target and kobold
+        // still live rather than Absent — the whole of the row's claim.
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 2.734_693_877_551_020_3 -> 2.928_571_428_571_428_4. Same mover as
+        // the goblin row above and the same non-cause: this row builds seed
+        // 42 live and reads no fixture, so the census refresh cannot reach
+        // it; the task-3 affinity relevel (`cda3e3c4` / `cbcf2935` /
+        // `8107faad`) re-placed every world after the value above was derived
+        // at `2bd26ff1`. Kobold RISES 0.194 while goblin falls 0.042 —
+        // opposed once more, and by very different magnitudes, this row's
+        // stated signature of a placement reshuffle rather than a drift in
+        // the naming machinery (nothing in this campaign touches phonology,
+        // wear or the namer). Corroborated by the canonical census authored
+        // on lefford at `07117d05`, whose seed-42 row reads
+        // `name-syllables-kobold` = 2.9285714.
+        //
+        // **THE MARGIN IS NOW THIN AND SHOULD BE READ, NOT SKIMMED.** Both
+        // peoples are still inside the 2-3 target and kobold is still live
+        // rather than Absent — the whole of the row's claim — but kobold sits
+        // 0.071 below the ceiling, the narrowest this row has ever recorded,
+        // and it has risen at four of the last five passes. A pass that takes
+        // it above 3 falsifies the target and is a finding to report, not a
+        // bound to widen.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.868_852_459_016_393_3)
+            MetricValue::Number(2.928_571_428_571_428_4)
         );
     }
 
@@ -8705,10 +8822,37 @@ mod tests {
         // biome-affinity row re-places seed 42, the same settlement-survival
         // shift every re-pin above records. Still strictly between 0 and 1, so
         // the distribution claim — asserted separately above — holds.
-        assert_eq!(
-            share, 0.636_363_636_363_636_4,
-            "seed 42 transparency drifted"
-        );
+        // The Radiation re-pin (C2d, 2026-08-10): 0.636_363_636_363_636_4 ->
+        // 0.546_875. Six elves re-place seed 42, the same settlement-survival
+        // shift every re-pin above records. Still strictly between 0 and 1, so
+        // the distribution claim — asserted separately above — holds. The
+        // denominator is still not reachable here, so no fraction is invented.
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 0.546_875 -> 0.6 EXACTLY. Same story as the name-syllables row
+        // above and the same non-cause: this row builds seed 42 live and
+        // reads no fixture, so the census refresh cannot reach it; the mover
+        // is the task-3 affinity relevel (`cda3e3c4` / `cbcf2935` /
+        // `8107faad`) re-placing every world after the value above was
+        // derived at `2bd26ff1`.
+        //
+        // THE ROUND VALUE IS BACK, AND IT IS STILL A COINCIDENCE. 0.6 exactly
+        // is what this row read before The Range, and the paragraph above
+        // argued from its not surviving one campaign that it was no fixed
+        // point. It has now recurred at a completely different placement:
+        // seed 42's `settlement-count` in the census goes 143 -> 230 between
+        // the two readings that both give 0.6. A quantity that lands on the
+        // same round value at two placements 60% apart in size is telling you
+        // its denominator is SMALL, not that it is pinned to anything. Still
+        // strictly between 0 and 1, so the distribution claim — asserted
+        // separately above — holds, and the denominator is still not
+        // reachable here, so no fraction is invented.
+        //
+        // CORROBORATED: the canonical census authored on lefford at
+        // `07117d05` records `name-transparency` = 0.6 on its own seed-42
+        // row (and 0.63636364 on the census this replaces, matching The
+        // Range's pin above). Two independent computations agree.
+        assert_eq!(share, 0.6, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -9417,6 +9561,70 @@ mod tests {
         //
         // No same-seed second species at seed 2, so this witness is
         // load-bearing alone.
+        //
+        // THE RADIATION re-witness (C2d, 2026-08-10): seed 2's bugbears no
+        // longer root both concepts — the FIFTH time this witness has been
+        // lost, and again to a roster change rather than to a change in
+        // either terrain gate.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people (read dynamically off `FullView::components().perception`,
+        // so the six elves entered the sweep automatically) and took the
+        // earliest pair rooting AND steeping BOTH concepts. That is
+        // **(7, bugbear)**. FOURTEEN pairs qualify (7/bugbear, 24/human,
+        // 34/hobgoblin, 36/drow, 37/drow, 38/bugbear, 38/goblin, 46/bugbear,
+        // 47/human, 54/desert-dwarf, 59/bugbear, 59/desert-elf,
+        // 59/hobgoblin, 59/snow-elf) — against twenty-one, twenty-six,
+        // twenty-three and twenty-one before it, so the population THINNED
+        // for the first time in this test's history even though the roster
+        // grew by two thirds. Four of the fourteen are elves, so the new
+        // peoples do qualify; the loss is among the old ones, which is the
+        // competitive cascade rather than anything about the gates.
+        //
+        // No same-seed second species at seed 7, so this witness is
+        // load-bearing alone.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** The seed goes 2 -> 7 (the
+        // species stays bugbear), so nothing below is comparable, line for
+        // line, with what this test asserted at the previous commit: it is a
+        // different world. Read no continuity into the seed number. A witness
+        // is re-DERIVED by the sweep above, never bumped to whatever makes
+        // the old subject pass — that would turn a witness into a claim.
+        // SIXTH PASS (The Radiation, C2d, task 6 step 1, 2026-08-10). The
+        // fifth pass above was derived at `2bd26ff1`; the task-3 affinity
+        // relevel (`cda3e3c4` / `cbcf2935` / `8107faad`) then re-placed every
+        // world and seed 7's bugbears stopped rooting `island`. The
+        // precondition below caught it rather than letting the test pass on
+        // nothing — the sixth time it has done so, and the reason it is
+        // written as a precondition at all. (Its sibling test above did NOT
+        // have this line and consequently spent the same campaign reporting a
+        // stale duplicate that was not stale; that has now been repaired
+        // there by copying this shape.)
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people (read dynamically off `FullView::components().perception`)
+        // and took the earliest pair rooting AND steeping BOTH concepts. That
+        // is **(2, bugbear)**. NINETEEN pairs qualify (2/bugbear, 2/gnoll,
+        // 2/high-elf, 11/drow, 11/gully-dwarf, 14/high-elf, 15/snow-elf,
+        // 16/bugbear, 17/hobgoblin, 24/bugbear, 34/human, 38/bugbear,
+        // 46/high-elf, 46/hobgoblin, 47/hobgoblin, 51/bugbear, 54/bugbear,
+        // 58/gnoll, 59/desert-dwarf) — against fourteen, twenty-one,
+        // twenty-six, twenty-three and twenty-one before it, so the fifth
+        // pass's thinning REVERSED and this population is the second-largest
+        // this test has recorded. Four of the nineteen are elves.
+        //
+        // **THE ROOT AND STEEP SETS COINCIDE EXACTLY: 19 pairs root both
+        // concepts and all 19 also steep both.** The sweep counted them
+        // separately in order to be able to say so. The duplicate is
+        // therefore sound on this axis everywhere it can be checked, and this
+        // test passes on its merits rather than on a lenient subject.
+        //
+        // The seed returns 7 -> 2 and the species stays bugbear — back to the
+        // pair The Range chose. Read no continuity into that: it is the
+        // earliest qualifying pair under the same selection-free rule, in a
+        // world re-placed twice since. Same-seed corroboration is back and is
+        // DOUBLE this time: (2, gnoll) and (2, high-elf) both qualify in the
+        // same world, so this witness is not load-bearing alone.
         let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
@@ -9858,10 +10066,18 @@ mod tests {
         // measures directly (seed 7: gnoll unchanged at 4 settlements while
         // bugbear goes 49 -> 153). `flagship-subsistence` is STILL "farming"
         // through all five, which remains the stable fact.
-        assert_eq!(
-            m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
-        );
+        //
+        // Fifth pass (The Radiation, C2d, 2026-08-10): temperate-forest ->
+        // taiga, oscillating between the same two biomes a SIXTH time. Cause:
+        // six elves enter the contest, so the world-wide competitive landscape
+        // settlement genesis resolves moves again and goblin's flagship wins a
+        // different cell. `flagship-subsistence` is STILL "farming" through all
+        // six, and `flagship-coastal` is still false. Six oscillations between
+        // exactly two farmable biomes is now enough history to say plainly what
+        // this list has been circling: **`flagship-biome` at seed 42 is a
+        // world-byte tripwire, not a claim about goblins**, and it should not
+        // be cited as one.
+        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -10175,14 +10391,57 @@ mod tests {
         );
     }
 
+    /// THE RADIATION (C2d): the same property for the roster's third and
+    /// largest multi-member family. P5's first clause at the reference seed;
+    /// the seed-swept form is
+    /// `windows/worldgen/tests/radiation_language.rs::monophyly_elf_holds_over_the_seed_panel`.
+    #[test]
+    fn monophyly_elf_holds_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "monophyly-elf"),
+            MetricValue::Flag(true),
+            "every elf daughter's Root proto must match the family proto-root"
+        );
+    }
+
+    /// `divergence-real` still measures GOBLINOID after the parameterisation
+    /// — the metric's subject is as much a published contract as its name, and
+    /// a `family_daughters_of("elf")` slip in the extractor would be invisible
+    /// to `divergence_real_holds_at_seed_42` (both families diverge at seed
+    /// 42). Compares the registered extractor's value against the goblinoid
+    /// call directly, and asserts the elf call is a DIFFERENT computation by
+    /// checking it is reachable at all.
+    #[test]
+    fn divergence_real_the_census_column_still_reads_the_goblinoid_family() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "divergence-real"),
+            divergence_real_for(&view, "goblinoid"),
+            "the census column's subject must stay goblinoid"
+        );
+        assert_ne!(
+            divergence_real_for(&view, "elf"),
+            MetricValue::Absent,
+            "the elf family is rooted and rostered at seed 42, so the \
+             generalised function must reach a verdict there"
+        );
+    }
+
     /// The drift guard the authored daughter constants trade against being
     /// derived: on the CANONICAL roster each list must be exactly the set
     /// `family_daughter_kinds` computes from `family_of`. A future campaign
     /// that adds a fourth dwarf and forgets the constant reddens here.
+    ///
+    /// Ranges over [`AUTHORED_FAMILIES`] rather than over a literal list, so a
+    /// family added to `family_daughters_of` cannot be added without being
+    /// drift-checked. It was a literal `["goblinoid", "dwarf"]` until THE
+    /// RADIATION (C2d), which means the guard would have stayed green over an
+    /// `ELF_DAUGHTERS` that disagreed with `family_of` on every row.
     #[test]
     fn authored_daughter_lists_match_the_default_rosters_family_membership() {
         let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
-        for family in ["goblinoid", "dwarf"] {
+        for family in AUTHORED_FAMILIES {
             let mut derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, family)
                 .iter()
                 .map(|k| k.0)
@@ -10233,6 +10492,14 @@ mod tests {
     /// a list someone has to remember to extend. Pinned against the two kinds
     /// the retired constant had silently omitted since The Generalist and The
     /// Vacancy, and against the three The Delvers adds.
+    ///
+    /// THE RADIATION (C2d) adds the six elves, and they are here as EVIDENCE
+    /// rather than as bookkeeping. The campaign's spec asked for the elf family
+    /// to be "extended past `GOBLINOID_DAUGHTERS` / `ALL_DAUGHTERS`"; the
+    /// second of those was retired by The Delvers in favour of this derived
+    /// function, so `lexicon-regular-family` was claimed to cover the elves
+    /// already, with no edit at all. That claim is only worth as much as a run,
+    /// so it is asserted here instead of stated in a chronicle.
     #[test]
     fn all_daughters_is_the_rosters_own_lexicon_population() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -10247,6 +10514,12 @@ mod tests {
             "desert-dwarf",
             "gully-dwarf",
             "hill-dwarf",
+            "desert-elf",
+            "drow",
+            "high-elf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
         ] {
             assert!(
                 daughters.contains(&expected),
@@ -11001,10 +11274,119 @@ mod tests {
         // move (a fourth pass in a row at seed 5) and the species moves
         // bugbear -> desert-dwarf. There is no same-seed second species, so
         // this witness is load-bearing alone again.
-        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
-        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
-            .expect("desert-dwarf is placed at seed 5");
+        //
+        // FIFTH PASS (The Radiation, C2d, 2026-08-10): seed 5's desert-dwarf
+        // lost a staple band. Re-swept 0..150 by the identical method (peoples
+        // read dynamically off `FullView::components().perception`, so the six
+        // elves entered the sweep without an edit here).
+        //
+        // **THE THINNING REVERSED, HARD.** FIFTEEN qualifying pairs —
+        // (5, bugbear), (5, hobgoblin), (16, bugbear), (66, hobgoblin),
+        // (71, hobgoblin), (75, hobgoblin), (90, bugbear), (90, hill-dwarf),
+        // (90, hobgoblin), (102, bugbear), (108, hobgoblin), (115, hobgoblin),
+        // (125, kobold), (130, hobgoblin), (139, kobold) — against THREE
+        // before it, and eleven, seven, four and three before that. The
+        // previous pass warned that "one more campaign of the same size could
+        // leave none"; the opposite happened. Read carefully, this does NOT
+        // vindicate "more peoples means more bands", which the third pass
+        // already ruled out: **not one of the fifteen is an elf.** Six new
+        // competitors re-placed the OLD peoples onto ground that spans more
+        // farmable biomes, and none of the new ones spans enough itself. The
+        // count has now gone 3 -> 4 -> 7 -> 11 -> 3 -> 15 across six roster
+        // changes, which is the honest summary: this population is not
+        // monotone in anything, and each pass must re-sweep rather than
+        // extrapolate.
+        //
+        // Witness is **(5, bugbear)** — the earliest qualifying pair by the
+        // same selection-free rule. The SEED does not move (a fifth pass in a
+        // row at seed 5) and the species returns to bugbear, which carried it
+        // two passes ago. Same-seed corroboration is back: (5, hobgoblin)
+        // qualifies too, so this witness is not load-bearing alone.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** The species goes desert-dwarf ->
+        // bugbear, so the assertion below is about a different people than at
+        // the previous commit even though the seed is unchanged. A stable seed
+        // number is exactly what makes this easy to misread as continuity; it
+        // is not. The witness is re-DERIVED by the sweep above, never bumped
+        // to whatever keeps the old subject green.
+        // SIXTH PASS (The Radiation, C2d, task 6 step 1, 2026-08-10). The
+        // fifth pass above was derived at `2bd26ff1`; the task-3 affinity
+        // relevel (`cda3e3c4` / `cbcf2935` / `8107faad`) then re-placed every
+        // world and seed 5's bugbear lost its millet band. Re-swept 0..150 by
+        // the identical method (every placed people read dynamically off
+        // `FullView::components().perception`).
+        //
+        // **THE MESSAGE THIS TEST FAILED WITH WAS FALSE, AND THAT IS THE
+        // FINDING.** It read "the lab's independent reading does not steep
+        // millet, which worldgen does — the duplicate is stale again".
+        // Measured at the outgoing subject: seed 5's bugbear has `millet`
+        // rooted=FALSE in the committed lexicon and dup_steeped=FALSE in
+        // `independently_steeped_concepts`. The two AGREE. Worldgen stopped
+        // steeping millet there too; nothing about the duplicate went stale.
+        //
+        // The cause was structural, not accidental. The sweep's criterion is
+        // "worldgen roots all six staples", but that criterion lived only in
+        // this comment — the test body asserted the duplicate's side and
+        // nothing else, so it could not tell "the duplicate drifted" (the
+        // failure it is named for) from "the subject's world moved" (a stale
+        // witness). It has now reported the wrong one, which is exactly the
+        // shape this campaign is about: a check that still reads as though it
+        // guards something after drifting one level away from it.
+        //
+        // **REPAIRED, not re-pinned around:** the sweep's criterion is now
+        // asserted in the body as a precondition, the way this test's
+        // island/hill sibling has always done it. A moved witness now fails
+        // saying so, and only a genuine divergence can reach the second
+        // assertion. The sibling's phrasing is copied deliberately.
+        //
+        // NINE qualifying pairs — (14, high-elf), (16, bugbear),
+        // (66, hobgoblin), (84, hobgoblin), (85, hill-dwarf), (85, human),
+        // (94, hobgoblin), (108, hobgoblin), (148, hobgoblin) — against
+        // fifteen before it, and three, eleven, seven, four and three before
+        // that. The count now reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 across
+        // seven roster changes: still not monotone in anything, and still a
+        // re-sweep rather than an extrapolation every time.
+        //
+        // **THE DUPLICATE AGREES ON ALL NINE.** The sweep recorded, for each
+        // qualifying pair, whether `independently_steeped_concepts` steeps
+        // all six as well; 9 of 9 do. So the second opinion is currently
+        // sound on this axis everywhere it can be checked, and this test
+        // passes on its merits rather than because a lenient subject was
+        // chosen. (That is a claim about the STAPLE axis only. The known
+        // stale axis — whole-lexicon exposure soundness, where the duplicate
+        // has not learned The Watershed's rules — is a different one, is
+        // already diagnosed, and carries its own ignore at
+        // `calibration.rs::lexicon_is_exposure_sound_for_both_species`.)
+        //
+        // Witness is **(14, high-elf)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used. For the FIRST time
+        // in this test's history the witness is an ELF, i.e. one of the
+        // peoples this campaign added; the fifth pass observed that "not one
+        // of the fifteen is an elf", and one roster-wide replacement later a
+        // new people spans all six farmable bands and carries the row. No
+        // same-seed second species at 14, so this witness is load-bearing
+        // alone; (85, hill-dwarf) and (85, human) do corroborate each other,
+        // but selecting them over the earliest pair would be a choice, and
+        // this test does not make choices.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 5 -> 14 and bugbear ->
+        // high-elf: a different world AND a different people. Nothing below
+        // is comparable line-for-line with the previous commit.
+        let view = FullView::build(Seed(14), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "high-elf").expect("seed 14 high-elves hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "high-elf")
+            .expect("high-elf is placed at seed 14");
         for staple in STAPLE_CONCEPTS {
+            // The sweep's own criterion, asserted rather than assumed: this
+            // test bites only where WORLDGEN steeps the staple, and a lexicon
+            // `Root` is minted only from a `Steeped` classification. Without
+            // this line a moved witness is indistinguishable from a stale
+            // duplicate, and the test spent a whole campaign reporting the
+            // wrong one.
+            assert!(
+                matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
+                "seed 14 high-elves must root {staple} for this test to bite"
+            );
             assert!(
                 steeped.contains(staple),
                 "the lab's independent reading does not steep {staple}, which \

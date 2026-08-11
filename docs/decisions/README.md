@@ -159,3 +159,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0117](0117-the-client-re-derives-nothing-the-sim-emits.md) | The client re-derives nothing the simulation already decides | Accepted |
 | [0118](0118-the-board-is-an-orphan-ref-of-immutable-posts-never-rerooted.md) | The board is an orphan ref of immutable posts, never rerooted | Accepted |
 | [0119](0119-an-instruments-silence-means-the-claim-held.md) | An instrument's silence means the claim held, and nothing else | Accepted |
+| [0120](0120-the-affinity-ladders-level-is-derived-not-authored.md) | The affinity ladder's level is derived, not authored | Accepted |
+| [0121](0121-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md) | An ordinal field may band a blend; a nominal field must take a partition | Accepted |
+| [0122](0122-an-emit-gate-is-not-a-grain-gate.md) | An emit gate is not a grain gate — a field's doc names the condition that makes it absent | Accepted |
+| [0123](0123-disclose-a-resolution-rather-than-refine-a-field.md) | When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail | Accepted |
+| [0124](0124-a-refinement-preregisters-a-conservation-criterion.md) | A refinement preregisters a conservation criterion, not only variation criteria | Accepted |

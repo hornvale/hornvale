@@ -227,8 +227,12 @@ pub enum SpatialChannel {
     /// out of doors, **and** the two bands that fold into it (submerged,
     /// underground) — see the enum's own doc for why.
     Walk {
-        /// The chart, as `windows/scene` renders it structurally.
-        chart: hornvale_scene::SurroundsScene,
+        /// The chart, as `windows/scene` renders it structurally. Boxed
+        /// (The Grain) so `SpatialChannel`'s stack size stays close to
+        /// `Chamber`'s — `SurroundsScene` grew a `resolution` block and
+        /// tipped `clippy::large_enum_variant`; the box changes no byte on
+        /// the wire, since `Box<T>` serializes exactly as `T`.
+        chart: Box<hornvale_scene::SurroundsScene>,
     },
     /// Inside a building: the chamber-band floor plan.
     Chamber {

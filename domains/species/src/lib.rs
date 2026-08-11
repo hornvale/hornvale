@@ -1929,6 +1929,314 @@ fn hill_dwarf_condition_niche() -> ConditionNiche {
     }
 }
 
+// ---------------------------------------------------------------------------
+// THE RADIATION (C2d): the elf family — six kinds on ONE route.
+//
+// The theorem is The Delvers' and is restated here rather than cited, because
+// it is what decides every number below. `tolerance_liebig`
+// (`windows/worldgen/src/lib.rs`) floors temperature/moisture/insolation by
+// `sovereignty_floor(mass, potency)` and passes elevation a literal `0.0`,
+// while `hornvale_kernel::ConditionResponse::eval` is
+// `floor + (1 - floor) * devotion * exp(-z²/2)`. So elevation's value never
+// exceeds its own `devotion`, and the other three never fall below the floor:
+//
+//     elevation is the Liebig minimum on EVERY cell
+//         iff  devotion_elev < sovereignty_floor(mass, potency)
+//
+// **Every elf is authored BELOW its floor, and that is the whole strategy.**
+// The Delvers' roster used both modes; this one uses one, deliberately, because
+// a kind whose climate curves are discarded everywhere is the only kind that
+// may honestly carry a `BiomeAffinity` — an affinity on top of a binding
+// climate curve applies the same preference twice, and the campaign would
+// measure the sum while attributing it to the affinity (spec §3.1). The
+// climate-curve arm already exists in merged work (desert-dwarf, measured to
+// bind on 67-91% of land and to buy almost no separation); the control is on
+// the shelf, and authoring a people badly to manufacture another one is not
+// this campaign's business.
+//
+//   kind          mass   sov. floor   dev_el   mode     identity carried by
+//   desert-elf    50.0     0.421703     0.30   below    biome affinity
+//   drow          52.0     0.424802     0.30   below    the realm gate
+//   high-elf      55.0     0.429202     0.30   below    psyche/society/language
+//   sea-elf       58.0     0.433335     0.30   below    biome affinity (shelf)
+//   snow-elf      60.0     0.435955     0.30   below    biome affinity
+//   wood-elf      55.0     0.429202     0.30   below    biome affinity
+//
+// (Floors computed LIVE from `hornvale_kernel::sovereignty_floor(Mass, 0.0)`,
+// never copied from a plan — The Delvers' plan table was wrong in the fourth
+// decimal for two of three. The live per-elf check is
+// `windows/worldgen/tests/radiation_admission.rs`'s
+// `every_elf_clears_the_affinity_precondition`, which prints this table on a
+// green run and reddens on the value if a mass or a devotion ever flips the
+// inequality.)
+//
+// Consequently **every temperature, moisture and insolation curve below is
+// PREPARED**, in the organ-builder's sense the two below-floor dwarves already
+// use: engraved, installed, connected to no rank. Each says so on its own line.
+// Authoring an honest curve the model discards is the model; implying a
+// preference it will never read is not.
+//
+// Elevation optima are cited against the same settleable-land percentile table
+// every other people uses ([`ConditionNiche`]'s doc: p15=142, p25=621, p35=1004,
+// p50=1561, p65=2166, p75=2651, p85=3251, p95=4148 m above sea level).
+// ---------------------------------------------------------------------------
+
+/// Desert elf condition niche: the arid-margin kind.
+///
+/// **PREPARED climate, affinity-carried identity.** `devotion_elev` is `0.30`
+/// against a sovereignty floor of `0.421703` at 50.0 kg, so elevation is the
+/// Liebig minimum on every cell and the three curves below are never read. The
+/// aridity is stated here because it is true of the kind, and it is stated as
+/// PREPARED because the model will not act on it — the acting is the biome
+/// affinity's job (Task 3), which is the one channel outside the minimum.
+fn desert_elf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // hot, clear of the Desert tile's >= 20 C floor. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 28.0,
+            width: 10.0,
+            devotion: 0.35,
+        },
+        // inside the Desert tile's < 0.20 moisture band, well below the
+        // settleable median (0.49). PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.14,
+            width: 0.18,
+            devotion: 0.35,
+        },
+        // the upper end of the narrow settleable band (p5 0.19 / p95 0.31):
+        // the subtropical desert belt's latitude, read honestly rather than
+        // as a second aridity claim. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.28,
+            width: 0.30,
+            devotion: 0.25,
+        },
+        // THE axis that binds: basin and basin-margin country just above p25
+        // (621 m), wide, so elevation excludes almost nothing on its own and
+        // the affinity is what shapes the field.
+        elevation: ConditionResponse {
+            optimum: 700.0,
+            width: 2600.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Drow condition niche: **Wood's elevation curve, and a dark half that is
+/// dormant by measurement rather than by omission.**
+///
+/// **No depth is encoded here, and that is the point.** Depth below the surface
+/// and height above sea level are different quantities: a deep chamber under a
+/// mountain sits high above the sea, a shallow cave in a marsh sits low. The
+/// Delvers committed exactly that fake and caught it — duergar authored at a
+/// 300 m optimum to mean *deep* selected lowland marshes, and its toponymy came
+/// back as an emergent finding until one question dissolved it. The toponymy was
+/// reporting the authoring. So this kind's `elevation` **is** wood-elf's, taken
+/// from that function rather than retyped, and
+/// `radiation_admission.rs::drows_elevation_curve_is_woods_and_says_nothing_about_depth`
+/// pins the equality. Drow's only authored separation from the surface elves is
+/// the realm gate in [`habitat_realm_registry`].
+///
+/// **The insolation curve is authored for cave-dark and is DORMANT.** Not
+/// omitted — dormant, and known to be. The Warren measured that going
+/// underground improves a kind's moisture (.585 → .787) and insolation
+/// (.467 → .840) readings and that the Liebig minimum never sees the
+/// improvement, because the unfloored elevation axis is scarcer. Generalised: a
+/// non-lethal preference cannot matter while an unfloored axis is scarcer. So
+/// the dark preference below contributes nothing to placement today. It is
+/// authored anyway, because it is true of the kind, and the two-tier
+/// gate/modifier tolerance that would make it bind already exists in shadow
+/// mode — `windows/worldgen/tests/warren_readout.rs` carries the tripwire that
+/// reddens on purpose the day it starts to bind.
+fn drow_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // a cave is thermally stable and cool: narrow, but PREPARED — never
+        // binds.
+        temperature: ConditionResponse {
+            optimum: 13.0,
+            width: 12.0,
+            devotion: 0.30,
+        },
+        // near-saturated air, the reading The Warren measured underground.
+        // PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.85,
+            width: 0.25,
+            devotion: 0.35,
+        },
+        // CAVE-DARK, and the family's only authored-but-dormant trait: an
+        // optimum below the settleable-land p5 (0.19), narrow and the most
+        // devoted curve in the family. PREPARED like the rest — and dormant
+        // for the additional, measured reason in this function's doc comment,
+        // not merely because it sits under the floor.
+        insolation: ConditionResponse {
+            optimum: 0.02,
+            width: 0.10,
+            devotion: 0.55,
+        },
+        // WOOD'S CURVE, byte for byte. Read from the function rather than
+        // copied, so the two cannot drift apart in a later edit.
+        elevation: wood_elf_condition_niche().elevation,
+    }
+}
+
+/// High elf condition niche: **wood-elf's, unchanged and undecorated.**
+///
+/// High is the family's deliberate null control (spec §3.6). It diverges from
+/// Wood in mind, society and language and in **nothing else** — same mass, same
+/// potency, same resource vector, same curves — so that `Wood vs High` isolates
+/// MIND exactly as `Wood vs Drow` isolates REALM. A roster of six kinds each
+/// differing on several axes at once measures nothing.
+///
+/// Delegating to [`wood_elf_condition_niche`] rather than restating its numbers
+/// is deliberate: an equality a later editor has to maintain by hand is an
+/// equality that will eventually stop holding, and P3(a)'s primary arm is that
+/// Wood's and High's capacity fields are **bit-identical**.
+fn high_elf_condition_niche() -> ConditionNiche {
+    wood_elf_condition_niche()
+}
+
+/// Sea elf condition niche: the productive shallow band.
+///
+/// **The one elf whose elevation curve may honestly say "shallow".** In the
+/// ocean, depth *is* −(height above sea level), so the two quantities coincide
+/// and a negative optimum is a literal reading rather than a stand-in for a
+/// concept the axis cannot express — which is precisely what separates this
+/// kind from Drow's case. Killer whale (−40 m) and giant squid (~−1263 m) are
+/// the authoring precedent; this niche sits on the shelf with the former, not
+/// in the abyss with the latter, because a *settled* people needs shallow
+/// productive water. The affinity (Task 3) sharpens the ranking
+/// `marine_forage_supply_field` already grades off the biome class
+/// (`Upwelling => 1.0`, `CoralReef | KelpForest => 0.85`, `Epipelagic => 0.45`);
+/// it does not contradict it.
+///
+/// **PREPARED climate**, like every elf: `devotion_elev` `0.30` against a floor
+/// of `0.433335` at 58.0 kg.
+fn sea_elf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // the temperate-to-warm shelf, spanning the reef/kelp span the marine
+        // classifier splits at 20 C and 12 C. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 16.0,
+            width: 12.0,
+            devotion: 0.30,
+        },
+        // ocean moisture is the banded circulation model's base wetness plus a
+        // flat ocean-proximity bonus — a circulation-band artifact with no
+        // marine ecological meaning (see the block comment above
+        // `reef_shark_condition_niche`), so this is wide and barely devoted, as
+        // every other marine kind's is. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.40,
+            devotion: 0.20,
+        },
+        // insolation is a pure function of latitude and says nothing about
+        // depth-linked light in this model; centred on the settleable median
+        // and left wide. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.30,
+            devotion: 0.25,
+        },
+        // THE axis that binds, and the family's only negative optimum: the
+        // continental shelf. Narrow enough (300 m) that the abyss reads at the
+        // floor, wide enough that the whole shelf is available.
+        elevation: ConditionResponse {
+            optimum: -60.0,
+            width: 300.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Snow elf condition niche: the cold-margin kind.
+///
+/// **PREPARED climate, affinity-carried identity** — `devotion_elev` `0.30`
+/// against a floor of `0.435955` at 60.0 kg, the family's highest floor and
+/// therefore its widest margin. The cold below is authored and discarded; the
+/// tundra/ice preference is the affinity's to state (Task 3).
+fn snow_elf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // below the settleable-land p5 (3.27 C): the cold tail, and the coldest
+        // optimum any people carries. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 0.0,
+            width: 14.0,
+            devotion: 0.35,
+        },
+        // dry-cold rather than wet-cold: below the settleable median (0.49),
+        // because cold air holds little. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.38,
+            width: 0.30,
+            devotion: 0.30,
+        },
+        // the low end of the settleable band (p5 0.19) — insolation is a pure
+        // function of latitude, so this is the high-latitude reading and
+        // nothing more. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.19,
+            width: 0.25,
+            devotion: 0.25,
+        },
+        // THE axis that binds: low-to-middling ground between p15 (142 m) and
+        // p25 (621 m) — the polar coast and the tundra plain, not the peak.
+        elevation: ConditionResponse {
+            optimum: 400.0,
+            width: 2200.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Wood elf condition niche: **the family's ancestral reading, and the row
+/// three of the six are defined against.**
+///
+/// High elf takes this niche entire ([`high_elf_condition_niche`]); drow takes
+/// its `elevation` and nothing else ([`drow_condition_niche`]). Editing a number
+/// here therefore moves three kinds, which is the intended coupling and is why
+/// both of those read it from this function rather than restating it.
+///
+/// **PREPARED climate**: `devotion_elev` `0.30` against a floor of `0.429202`
+/// at 55.0 kg, so the three curves below are computed and discarded on every
+/// cell. Temperate forest is the affinity's claim to make (Task 3), not this
+/// function's.
+fn wood_elf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate, a little below the settleable median (14.59 C): the
+        // deciduous and mixed-forest band. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 12.0,
+            width: 18.0,
+            devotion: 0.35,
+        },
+        // wetter than the settleable median (0.49), which is what a closed
+        // canopy needs. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.62,
+            width: 0.30,
+            devotion: 0.35,
+        },
+        // at the settleable-land insolation median: this kind makes no claim
+        // about latitude. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.30,
+            devotion: 0.25,
+        },
+        // THE axis that binds: forested low country between p15 (142 m) and
+        // p25 (621 m), wide, because the affinity — not the elevation — is
+        // what is supposed to shape this kind's field.
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 2200.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -2062,6 +2370,17 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // withdrew them: a kind whose identity is DEPTH cannot be expressed
         // by an axis measured in metres above sea level (spec §11). They
         // return when the underworld has biomes.
+        //
+        // THE RADIATION (C2d): the drow — the store's first PEOPLED occupant,
+        // and the first row whose consumer is settlement placement rather than
+        // a readout (The Range carried the gate to `per_species_capacity_at`).
+        // This is Drow's ONLY authored separation from the surface elves, and
+        // it is deliberately its only one: the trap is not authoring a
+        // subterranean kind, it is distinguishing two kinds by DEPTH, which
+        // nothing in the model can say. One cave kind needs only to differ from
+        // the surface, and the gate does that measurably. Drow's `elevation`
+        // response is wood-elf's byte for byte, for exactly that reason.
+        (KindId("drow"), HabitatRealm::Subterranean),
     ]
     .into_iter()
     .collect()
@@ -2096,13 +2415,61 @@ impl BiomeAffinity {
             .map(|(_, factor)| *factor)
             .unwrap_or(self.default)
     }
+
+    /// Build a row from a **preference** ladder and the kind's sovereignty
+    /// floor, mapping each preference `p` in `[0, 1]` to the factor
+    /// `floor + (1 - floor) * p` and setting `default` to `floor` itself
+    /// (the `p == 0.0` case, which is why the elsewhere rung is never listed).
+    ///
+    /// This is the only constructor [`biome_affinity_registry`] uses, and the
+    /// separation it enforces is the point: a row's author states a *shape*
+    /// — [`AFFINITY_STRONGHOLD`] / [`AFFINITY_NEAR`] / [`AFFINITY_MARGINAL`],
+    /// derived from the classifier at the kind's own authored climate — and
+    /// never states a *level*. The level is
+    /// [`hornvale_kernel::sovereignty_floor`], the model's existing statement
+    /// of how much environmental unsuitability a creature's mass and potency
+    /// buy it off; the registry's doc carries the derivation and the
+    /// double-count argument in full.
+    ///
+    /// `floor` must be in `[0, 1)` — every value `sovereignty_floor` can
+    /// return, whose ceiling is `0.95`. Outside that the mapping is not
+    /// monotone and the caller has already lost the ladder, so this is a
+    /// caller's contract in the same style as
+    /// [`hornvale_kernel::ConditionResponse::eval`]'s, not a validated one.
+    /// type-audit: bare-ok(ratio: floor), bare-ok(ratio: preferences), waiver(constructor-return)
+    pub fn from_preferences(floor: f64, preferences: Vec<(&'static str, f64)>) -> Self {
+        Self {
+            default: floor,
+            by_biome: preferences
+                .into_iter()
+                .map(|(name, p)| (name, floor + (1.0 - floor) * p))
+                .collect(),
+        }
+    }
 }
+
+/// The affinity ladder's top rung, as a **preference** in `[0, 1]`: the biome
+/// the classifier returns for the kind's own authored reading. Maps to a factor
+/// of exactly `1.00` for every kind, whatever its sovereignty floor.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_STRONGHOLD: f64 = 1.00;
+
+/// The affinity ladder's second rung, as a **preference** in `[0, 1]`: one band
+/// out in the classifier's lookup table, still recognisably the kind's country.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_NEAR: f64 = 0.70;
+
+/// The affinity ladder's third rung, as a **preference** in `[0, 1]`: two bands
+/// out, or the right climate in the wrong form.
+/// type-audit: bare-ok(ratio)
+pub const AFFINITY_MARGINAL: f64 = 0.45;
 
 impl Component for BiomeAffinity {}
 
 /// The sparse biome-affinity component: **only** kinds with an authored,
-/// non-uniform affinity across biomes appear. Two occupants as of The Range
-/// task 4 — every other kind is unrestricted across every biome.
+/// non-uniform affinity across biomes appear. Eight occupants as of The
+/// Radiation task 3 — The Range's two (gnoll, woolly-mammoth) plus the six
+/// elves — and every other kind is unrestricted across every biome.
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has two
 /// consumers (genesis placement and `best_home`), each of which holds a
@@ -2132,34 +2499,173 @@ impl Component for BiomeAffinity {}
 ///
 /// the elevation term is below the other three at **every** cell of every
 /// world, the minimum is elevation everywhere, and the temperature, moisture
-/// and insolation curves contribute exactly nothing. Both occupants below clear
-/// that bar, so each affinity restores a preference the model was throwing
-/// away rather than duplicating one it already honours:
+/// and insolation curves contribute exactly nothing. Every occupant below
+/// clears that bar, so each affinity restores a preference the model was
+/// throwing away rather than duplicating one it already honours:
 ///
 /// ```text
 ///   kind              mass kg   potency   floor      elev devotion   below?
 ///   gnoll               136.1      0.00   0.495384        0.40        YES
 ///   woolly-mammoth     6000.0      0.00   0.692367        0.50        YES
+///   desert-elf           50.0      0.00   0.421703        0.30        YES
+///   drow                 52.0      0.00   0.424802        0.30        YES
+///   high-elf             55.0      0.00   0.429202        0.30        YES
+///   sea-elf              58.0      0.00   0.433335        0.30        YES
+///   snow-elf             60.0      0.00   0.435955        0.30        YES
+///   wood-elf             55.0      0.00   0.429202        0.30        YES
 /// ```
 ///
 /// `windows/worldgen/tests/range_readout.rs` asserts this inequality for every
 /// row in this registry, so a later edit to a mass or an elevation devotion
 /// cannot quietly turn one of these rows into a double count.
+/// `windows/worldgen/tests/radiation_admission.rs` asserts it a second time for
+/// the six elves specifically, as a task-1 precondition.
 ///
-/// # The ladder both rows are authored on
+/// # The ladder every row is authored on, and where its LEVEL comes from
 ///
-/// Four steps, so the two rows are read against one another rather than each
-/// tuned by eye. Level is gauge for placement (genesis and `best_home` rank
-/// cells in the kind's *own* units, so a constant factor reorders nothing) —
-/// only the shape matters, and the shape is:
+/// A row carries two separable things. Its **shape** says which biomes are the
+/// kind's country and how far out each one sits; that is derived per kind from
+/// the classifier read at the kind's own authored climate (see below, and every
+/// row says its own working). Its **level** says how much of a cell the kind
+/// still takes where the biome is not its country at all; that is derived from
+/// the model and is not authored at any row.
+///
+/// The four steps are a **preference in `[0, 1]`**, not a factor:
 ///
 /// ```text
-///   1.00  stronghold  the biome `classify_land` returns for the kind's OWN
-///                     authored (temperature, moisture) reading
+///   1.00  stronghold  the biome the classifier returns for the kind's OWN
+///                     authored reading
 ///   0.70  near        one band out, still recognisably the kind's country
 ///   0.45  marginal    two bands out, or the right climate in the wrong form
-///   0.25  default     everything else, including all ten marine biomes
+///   0.00  elsewhere   everything else
 /// ```
+///
+/// and the factor the world actually sees is that preference mapped through the
+/// kind's own **sovereignty floor**:
+///
+/// ```text
+///   factor(biome) = floor + (1 - floor) * preference(biome)
+///   floor         = hornvale_kernel::sovereignty_floor(mass, potency)
+/// ```
+///
+/// so [`BiomeAffinity::default`] is the floor exactly, a stronghold is exactly
+/// `1.00` for every kind however heavy, and the rows stay comparable rung for
+/// rung. [`BiomeAffinity::from_preferences`] is the only constructor these rows
+/// use, so the mapping cannot be bypassed by hand.
+///
+/// ## The derivation, and why this quantity
+///
+/// This is the model's own algebra rather than a new one.
+/// [`hornvale_kernel::ConditionResponse::eval`] is
+/// `floor + (1 - floor) * devotion * bump` — the same `sovereignty_floor`, in
+/// the same position, mapping a preference in `[0, 1]` into `[floor, 1]`. And
+/// `sovereignty_floor` is the model's single existing statement of *how much
+/// environmental unsuitability a creature's mass and potency buy it off*:
+/// "preference is the luxury of the unconstrained", a tiny material creature
+/// environment-placed and a dragon self-determined. A biome affinity asks that
+/// same question one level coarser — over classes rather than along an axis —
+/// so it takes the same answer instead of an unrelated second one.
+///
+/// The consequence reads correctly as biology: a woolly mammoth is far less
+/// diminished by being off its ground (`0.692`) than a wood elf is (`0.429`),
+/// which is what six tonnes of homeostatic buffering ought to buy.
+///
+/// That is a plausibility reading and it is offered as nothing more — a sanity
+/// check on the *sign and ordering* of the result, not evidence that the
+/// quantity is the right one. Nothing measured here distinguishes
+/// `sovereignty_floor` from any other function increasing in mass. An earlier
+/// version of this paragraph called it "the check that it is the right quantity
+/// and not merely an available one"; it is not a check at all, and the whole
+/// reason this ladder needed re-deriving is that a number nobody had checked
+/// looked settled. The argument for the quantity is the paragraph above: the
+/// model already answers this exact question in
+/// [`hornvale_kernel::ConditionResponse::eval`], and a second answer would be a
+/// second model.
+///
+/// ## Why a PREFERENCE remap, and not simply "default = floor"
+///
+/// Because replacing the fourth step alone inverts the ladder for the two
+/// heaviest occupants. Gnoll's floor is `0.495` and the mammoth's is `0.692`,
+/// both above the old `0.45` marginal step — so a biome listed as *marginal*
+/// would have scored **below** an unlisted one, and declaring a preference
+/// would have been a penalty for holding it. Expressing the steps as a
+/// preference and mapping the whole ladder keeps `stronghold > near > marginal
+/// > default` true by construction for any floor in `[0, 1)`.
+///
+/// ## Why this is not the double count the admission test forbids
+///
+/// For any kind *not* in this registry it would be. For these eight it is not,
+/// and the reason is the admission test above: every occupant has
+/// `elevation.devotion < sovereignty_floor`, so `tolerance_liebig`'s minimum is
+/// the **unfloored** elevation term at every cell of every world and the floor
+/// never reaches the product at all. The quantity is computed and discarded for
+/// exactly the kinds this registry admits — which is the same sentence that
+/// admitted them.
+///
+/// **Read "computed and discarded" narrowly, because a fix round of The
+/// Radiation did not.** What is discarded is the floor computed *inside*
+/// `hornvale_worldgen`'s `per_species_suitability`. The floor computed *here*,
+/// to set a row's LEVEL, is applied **outside** `tolerance_liebig`'s minimum and
+/// is not discarded at all — that is the entire point of the derivation above.
+/// Collapsing the two produced the claim "mass does not reach this path's
+/// output", which reached the campaign spec as a general rule and is refuted by
+/// mutation: `desert-elf` at 500 kg instead of 50 reddens
+/// `occupancy_readout_is_current` on twelve of its own rows, and `wood-elf` at
+/// 550 kg instead of 55 moves thirty-six — its own twelve plus `drow`'s and
+/// `high-elf`'s, which clone its row. **Mass reaches the field through the
+/// affinity level for every kind whose row is self-derived**; only the two
+/// clone-takers are exempt, and they are exempt because the row is not theirs.
+///
+/// That stays true by enforcement rather than by memory:
+/// `range_readout.rs::every_occupant_has_climate_curves_the_minimum_currently_discards`
+/// reddens the moment an edit to a mass, a potency or an elevation devotion
+/// would let the floor bind, and that is precisely the edit that would turn
+/// this reuse into a double count.
+///
+/// ## The number this replaced
+///
+/// The fourth step read `0.25` from The Range through The Radiation task 3, and
+/// **it was never derived**: it appears in The Range's plan only inside
+/// illustrative test-fixture code, its spec never names it, and it was then
+/// adopted as house style for six more kinds. What exposed it was a
+/// measurement, not a review — at `0.25` the six elf rows took seed 42's tithe
+/// census from 552 occupation records to **193** (alive at now 192 → 100,
+/// subordinations formed 232 → 41, tribute relations standing 83 → 17),
+/// breaching four deliberate fidelity floors in `history_tithe.rs` and
+/// `history_sundering.rs`. No single row caused it and the dose was not linear
+/// (wood+high+drow alone gave 366, desert+sea+snow alone gave 660, all six gave
+/// 193): the ladder had been calibrated on a store holding one settling people
+/// in nine, and it now holds seven of fifteen.
+///
+/// "Level is gauge" is what made a bare constant look safe, and it is true only
+/// of RANKING. Genesis and `best_home` rank cells in the kind's own units, so a
+/// constant factor reorders nothing *for that kind* — but the same factor
+/// multiplies the capacity that becomes a settlement's POPULATION, and the
+/// history bake's volume is a function of population. A level is gauge for one
+/// consumer and load-bearing for the next.
+///
+/// Note what the derivation is **not**: it is not `0.50`, the value measured to
+/// restore those floors. Restoring them was not the criterion, and whether the
+/// derived level restores them is a reading, not a requirement.
+///
+/// "The classifier" is `classify_land` for a terrestrial kind, read at its
+/// authored `(temperature.optimum, moisture.optimum)`. For the one marine
+/// occupant (sea-elf) it is `classify_marine`, read at its authored
+/// `(elevation.optimum, temperature.optimum)` — a different lookup, the same
+/// discipline: name the class the code returns, do not name the class the
+/// theme suggests.
+///
+/// **"One band out" is a step in the lookup TABLE, not a step in sigma.** The
+/// classifier is a grid of thermal bands crossed with moisture bands, and the
+/// ladder walks that grid. Which neighbour counts as *near* rather than
+/// *marginal* is then settled by the clause the step already carries — "still
+/// recognisably the kind's country" — read against whichever axis the kind's
+/// own curve is committed to, with its authored sigma as the evidence. Gnoll's
+/// row is the worked example: its moisture devotion (0.75) and its narrow
+/// moisture sigma (0.12) are what put the two *dry* temperate bands at `near`
+/// and the *wetter* savanna at `marginal`, even though savanna is the closer
+/// step in sigma. Desert-elf, two rows down, makes the opposite call from the
+/// same stronghold and says why.
 ///
 /// The ceiling is `1.00` deliberately: an affinity here is a **penalty
 /// relative to the unrestricted 1.0 every other kind carries**, never a boost,
@@ -2168,12 +2674,38 @@ impl Component for BiomeAffinity {}
 /// is not the shipped design, and taking it is a decision to record rather than
 /// a knob to turn.
 ///
-/// The floor is `0.25` and never `0.0`. Zero is a **hard exclusion**, not a
-/// strong preference — genesis filters its founding pool on
-/// `caps_now()[pidx].at(c) > 0.0` ("a proto-site a people cannot feed is not a
-/// founding, it is a death two epochs later"). Neither kind here means *never*:
-/// a gnoll war-band in a temperate forest is a rarity, not an impossibility.
+/// The floor is the kind's sovereignty floor and never `0.0` — and it cannot
+/// reach `0.0`, since `sovereignty_floor` is strictly positive for any mass
+/// above 1 kg. Zero is a **hard exclusion**, not a strong preference: genesis
+/// filters its founding pool on `caps_now()[pidx].at(c) > 0.0` ("a proto-site a
+/// people cannot feed is not a founding, it is a death two epochs later"). No
+/// kind here means *never*: a gnoll war-band in a temperate forest is a rarity,
+/// not an impossibility, and neither is a snow-elf outpost in a savanna. The
+/// deep ocean is the case that most tempts a zero — sea-elf has no business in
+/// the abyss — and it still takes the floor, because "no settlement has ever
+/// been founded there" is a result the placement layer should produce, not an
+/// input the registry should assert.
 pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
+    // Every row's LEVEL, read live from the same biosphere row the capacity
+    // path reads rather than transcribed as a literal. A kind's mass moving is
+    // therefore a kind's affinity default moving, in the same commit, with no
+    // second copy to forget — the failure mode the admission table's own
+    // "the inputs live three places apart" note describes.
+    let biosphere = biosphere_registry();
+    let floor_of = |kind: &'static str| -> f64 {
+        let bio = biosphere.get(&KindId(kind)).unwrap_or_else(|| {
+            panic!("{kind} carries a biome affinity but has no biosphere row to derive its floor")
+        });
+        hornvale_kernel::sovereignty_floor(bio.mass, bio.potency)
+    };
+    // Wood's row is built ONCE and cloned into Drow and High, which is stronger
+    // than three calls to one helper: the three are the same value, not three
+    // values a helper currently happens to agree on. See the two rows below for
+    // why each takes it, and note that this hands Drow WOOD's floor rather than
+    // its own (52.0 kg vs 55.0 kg, 0.424802 vs 0.429202) — deliberately. Drow
+    // is the REALM control; a control that differs environmentally, in level or
+    // in shape, controls nothing.
+    let wood = wood_elf_biome_affinity(floor_of("wood-elf"));
     [
         // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
         // DESERT authoring and — until this row — a people that selected no
@@ -2189,23 +2721,23 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // 0.12) returns `Desert` exactly (hot band, moisture < 0.20).
         (
             KindId("gnoll"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("gnoll"),
+                vec![
                     // Stronghold — gnoll's own authored climate, classified.
-                    ("desert", 1.00),
+                    ("desert", AFFINITY_STRONGHOLD),
                     // Near: the two temperate dry bands (moisture < 0.25 and
                     // 0.25-0.40). Right dryness, wrong thermal band — a gnoll
                     // steppe is a real place, a gnoll rainforest is not.
-                    ("temperate-grassland", 0.70),
-                    ("shrubland", 0.70),
+                    ("temperate-grassland", AFFINITY_NEAR),
+                    ("shrubland", AFFINITY_NEAR),
                     // Marginal: the hot band's next step out (moisture
                     // 0.20-0.45) — the ground the savanna-authored giant-hyena
                     // is documented onto, which a desert pack raids and does
                     // not hold.
-                    ("savanna", 0.45),
+                    ("savanna", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
         // THE RANGE (task 4), occupant two: the woolly mammoth — gnoll's defect
         // in the opposite climate. Temperature optimum **-25.0 °C at devotion
@@ -2230,26 +2762,278 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // of where the lookup cuts, not a claim about the animal.
         (
             KindId("woolly-mammoth"),
-            BiomeAffinity {
-                default: 0.25,
-                by_biome: vec![
+            BiomeAffinity::from_preferences(
+                floor_of("woolly-mammoth"),
+                vec![
                     // Stronghold — the two cold-dry classes its own authored
                     // curve covers.
-                    ("ice", 1.00),
-                    ("tundra", 1.00),
+                    ("ice", AFFINITY_STRONGHOLD),
+                    ("tundra", AFFINITY_STRONGHOLD),
                     // Near: the same cold band, wetter than its 0.30 optimum
                     // (moisture >= 0.35) — forest rather than open plain.
-                    ("taiga", 0.70),
+                    ("taiga", AFFINITY_NEAR),
                     // Marginal: cold, but reached by ALTITUDE rather than by
                     // latitude, and this is a 200 m lowland grazer. The right
                     // climate in the wrong form — the giant goat's country.
-                    ("alpine", 0.45),
+                    //
+                    // This is the row that forced the ladder to be expressed as
+                    // a preference: at 6000 kg the floor is 0.692367, so a
+                    // literal `0.45` here would have scored alpine BELOW the
+                    // eighteen biomes this row never mentions.
+                    ("alpine", AFFINITY_MARGINAL),
                 ],
-            },
+            ),
         ),
+        // ---------------------------------------------------------------
+        // THE RADIATION (C2d, task 3): the six elves.
+        //
+        // The family is authored on the affinity route rather than the
+        // condition-curve route, and the admission table above is why: every
+        // elf's elevation devotion is 0.30 against a sovereignty floor of
+        // 0.4217-0.4360, so the Liebig minimum is elevation on every cell of
+        // every world and each kind's temperature/moisture/insolation curves
+        // are computed and discarded. Those curves are still authored — they
+        // are true of the kind, and they are what the strongholds below are
+        // DERIVED from — but the row is what reaches the world.
+        //
+        // THREE OF THE SIX CARRY THE SAME ROW, deliberately. Wood is the
+        // ancestral reading; High is the family's MIND control and Drow its
+        // REALM control, and a control that also differs environmentally
+        // controls nothing. `radiation_affinity.rs` pins both equalities.
+        // ---------------------------------------------------------------
+        //
+        // Stronghold by derivation: `classify_land` at desert-elf's own
+        // authored reading (28.0 °C, moisture 0.14) returns `Desert` — hot
+        // band (>= 20 °C), moisture < 0.20.
+        //
+        // THIS ROW DISAGREES WITH GNOLL'S FROM THE SAME STRONGHOLD, and the
+        // disagreement is the ladder working rather than a slip. Gnoll holds
+        // savanna at `marginal` because its moisture curve is a spike —
+        // devotion 0.75, sigma 0.12, so its +1 sigma reading (0.24) is 16% of
+        // the way into savanna's 0.20-0.45 band. Desert-elf's moisture curve
+        // is devotion 0.35, sigma 0.18: its +1 sigma reading (0.32) is 48% of
+        // the way in, squarely inside. A people this much less committed to
+        // extreme aridity than a gnoll pack genuinely does hold the savanna
+        // margin, so savanna is `near` here and `marginal` there.
+        (
+            KindId("desert-elf"),
+            BiomeAffinity::from_preferences(
+                floor_of("desert-elf"),
+                vec![
+                    // Stronghold — desert-elf's own authored climate,
+                    // classified.
+                    ("desert", AFFINITY_STRONGHOLD),
+                    // Near: one moisture band wetter in the same hot tier,
+                    // reached at +1 sigma of this kind's own moisture curve.
+                    ("savanna", AFFINITY_NEAR),
+                    // Near: one thermal band cooler at the same dryness,
+                    // reached at -1 sigma of its temperature curve (18.0 °C).
+                    // Right dryness, wrong thermal band — the same reading
+                    // gnoll's row makes of the same biome.
+                    ("temperate-grassland", AFFINITY_NEAR),
+                    // Marginal: two bands out — cooler AND wetter. Scrub, not
+                    // sand.
+                    ("shrubland", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        // Drow: WOOD'S ROW — the same VALUE the surface elves carry, cloned,
+        // level and shape together.
+        //
+        // Its own authored reading would NOT produce this row. `classify_land`
+        // at (13.0 °C, moisture 0.85) returns `TemperateRainforest` — the
+        // near-saturated cave air The Warren measured underground, classified
+        // as the wettest temperate class. That class appears below at `near`,
+        // one moisture band off wood's stronghold, so the derivation and the
+        // authored row agree on direction and disagree on rank.
+        //
+        // The row is wood's anyway, because Drow is the family's REALM control
+        // (spec §3.5): its only authored separation from the surface elves is
+        // the `habitat_realm_registry` gate, so that P4's mutation — remove the
+        // realm row, watch the separation collapse — isolates the gate. A row
+        // derived from Drow's own cave-air reading would make that mutation
+        // measure the gate plus a biome difference, and P4 would have no clean
+        // reading. `radiation_affinity::drows_affinity_is_wood_elfs` pins it.
+        //
+        // Since The Radiation's derivation task the row's LEVEL is wood's too,
+        // not drow's — see `wood_elf_biome_affinity`'s `floor` parameter.
+        (KindId("drow"), wood.clone()),
+        // High elf: WOOD'S ROW, and for the reason High exists at all. It is
+        // the MIND control (spec §3.6) — same mass, same potency, same
+        // resource vector, same curves, same affinity — so that Wood vs High
+        // isolates psyche. P3(a) predicts the two capacity fields are
+        // BIT-IDENTICAL, which is only possible if this row is wood's, not
+        // merely similar to it. Cloned from one constructed value for the same
+        // reason `high_elf_condition_niche` delegates: an equality maintained by
+        // hand is an equality that eventually stops holding. (High and Wood are
+        // both 55.0 kg, so this row's level would have been wood's either way —
+        // drow's, one row up, would not.)
+        (KindId("high-elf"), wood.clone()),
+        // Sea elf: the ONE marine occupant, and therefore the one row derived
+        // through `classify_marine` rather than `classify_land`.
+        //
+        // Stronghold by derivation: at this kind's own authored elevation
+        // optimum (-60 m, i.e. 60 m of water) and its authored SST optimum
+        // (16.0 °C), `classify_marine` falls THROUGH the reef arm (which wants
+        // > 20 °C) and through the kelp arm (which wants < 12 °C) — 12-20 °C is
+        // the documented gap in that precedence chain — and lands on
+        // `Upwelling` where the upwelling flag is set, `Epipelagic` where it is
+        // not. So upwelling is the stronghold and epipelagic is the same
+        // reading with the flag off.
+        //
+        // The rank is monotone with `marine_forage_supply_field`, which already
+        // grades the water Upwelling 1.0, reef/kelp 0.85, epipelagic 0.45,
+        // mesopelagic 0.15, bathypelagic 0.05. The affinity SHARPENS that
+        // ranking; it must not contradict it. Note what that costs: two rows
+        // that both derive and both sharpen an existing grading is the closest
+        // any row in this registry comes to the double-count the admission test
+        // exists to prevent — it is admissible only because the supply field is
+        // a RESOURCE axis and the affinity is a preference over classes, and
+        // because the admission table above shows this kind's climate curves
+        // discarded like every other occupant's.
+        //
+        // THE MARINE SUPPLY FIELD'S OWN GRADING WAS THE ALTERNATIVE ANCHOR
+        // CONSIDERED FOR THE LADDER'S LEVEL, and this row is why it was
+        // rejected. It is a marine PRODUCTIVITY gradient — the water's yield,
+        // not a people's preference — it exists only for the ocean, so it can
+        // anchor nothing on land, and here it would be a literal squaring:
+        // sea-elf's resource axis already reads it, so grading the affinity by
+        // it too would apply the identical curve twice to the one kind the
+        // admission test flags as closest to a double count.
+        //
+        // THE DEEP CLASSES ARE UNLISTED AND THEREFORE AT THE DEFAULT — not
+        // zero, and since the derivation task that default is 0.433335, sea-
+        // elf's own sovereignty floor.
+        // `radiation_affinity::the_sea_elf_is_confined_to_the_shelf_band` pins
+        // both halves: the four shelf classes strictly above the default, the
+        // five deep ones at or below it. Authored to the whole ocean this kind
+        // would hold ~27,000 cells against wood's ~800; on the shelf band it
+        // holds ~1,425 (three-seed mean, 42/7/1234), which is the same order as
+        // the rest of the family.
+        (
+            KindId("sea-elf"),
+            BiomeAffinity::from_preferences(
+                floor_of("sea-elf"),
+                vec![
+                    // Stronghold — sea-elf's own authored (depth, SST)
+                    // reading, classified, on an upwelling cell.
+                    ("upwelling", AFFINITY_STRONGHOLD),
+                    // Near: the same 0-200 m shelf, one SST step either side of
+                    // the 12-20 °C gap this kind sits in — reef above, kelp
+                    // below. Both are the shelf's productive communities and
+                    // both grade 0.85 on the supply field.
+                    ("coral-reef", AFFINITY_NEAR),
+                    ("kelp-forest", AFFINITY_NEAR),
+                    // Marginal: the identical depth and temperature with no
+                    // upwelling — open shelf water. Right place, thin table.
+                    ("epipelagic", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        // Snow elf: TWO strongholds, for the woolly mammoth's reason exactly.
+        //
+        // `classify_land` at this kind's own authored reading (0.0 °C, moisture
+        // 0.38) returns `Taiga`: the 0-7 °C branch, moisture >= 0.30. Its
+        // authored moisture optimum sits **0.03** above the sub-freezing
+        // branch's tundra/taiga cut (0.35) and 0.08 above the 0-7 °C branch's
+        // (0.30), against a sigma of 0.30 — so -1 sigma (0.08) is deep in
+        // tundra and the optimum itself is barely inside taiga. The kind
+        // straddles the cut rather than sitting in a band, and splitting the
+        // pair would be an artifact of where the lookup cuts rather than a
+        // claim about the people.
+        //
+        // NOTE FOR ANYONE RE-READING THE CAMPAIGN BRIEF: this is taiga+tundra,
+        // not tundra+ice. Ice is `classify_land`'s < -20 °C class, which this
+        // kind reaches only at -1.43 sigma; "snow elf therefore ice" is theme,
+        // and the ladder's first line is the standing instruction against it.
+        (
+            KindId("snow-elf"),
+            BiomeAffinity::from_preferences(
+                floor_of("snow-elf"),
+                vec![
+                    // Stronghold — the two cold classes its own authored
+                    // moisture curve straddles.
+                    ("taiga", AFFINITY_STRONGHOLD),
+                    ("tundra", AFFINITY_STRONGHOLD),
+                    // Near: one thermal band colder — the permanent ice, at
+                    // -1.43 sigma of its temperature curve. The margin this
+                    // people is named for, and not the ground it holds.
+                    ("ice", AFFINITY_NEAR),
+                    // Marginal: cold reached by ALTITUDE rather than by
+                    // latitude, above the tree line. The right climate in the
+                    // wrong form — the same call the woolly mammoth's row
+                    // makes of the same biome, three rows up.
+                    ("alpine", AFFINITY_MARGINAL),
+                ],
+            ),
+        ),
+        // Wood elf: the family's ancestral row, and the row High and Drow are
+        // defined against. The values live in `wood_elf_biome_affinity` so that
+        // all three read one authored source; editing it moves three kinds,
+        // which is the intended coupling.
+        (KindId("wood-elf"), wood),
     ]
     .into_iter()
     .collect()
+}
+
+/// Wood elf's biome affinity — **and high elf's and drow's, byte for byte.**
+///
+/// Factored out of [`biome_affinity_registry`] for the same reason
+/// [`high_elf_condition_niche`] delegates to [`wood_elf_condition_niche`]: P3(a)
+/// predicts wood's and high's capacity fields are *bit-identical*, and an
+/// equality a later editor has to maintain by hand is an equality that will
+/// eventually stop holding.
+///
+/// Stronghold by derivation: `classify_land` at wood-elf's own authored reading
+/// (12.0 °C, moisture 0.62) returns `TemperateForest` — the temperate band
+/// (7-20 °C), moisture 0.40-0.75.
+///
+/// The near/marginal split reads the "still recognisably the kind's country"
+/// clause against **closed canopy**, which is this kind's committed axis the way
+/// dryness is gnoll's. Four classes sit one band out from temperate forest, and
+/// they divide two and two:
+///
+/// ```text
+///   temperate-rainforest   one moisture band wetter   forest   -> near
+///   taiga                  one thermal band cooler    forest   -> near
+///   tropical-seasonal-fst  one thermal band warmer    forest   -> marginal
+///   shrubland              one moisture band drier    open     -> marginal
+/// ```
+///
+/// The two `near` classes keep both the canopy and the temperate reading. The
+/// two `marginal` ones each break exactly one of those: tropical seasonal
+/// forest is the right form in the wrong thermal band, shrubland the right
+/// thermal band in the wrong form. That is the ladder's own "two bands out, or
+/// the right climate in the wrong form" line, read on the second clause.
+///
+/// Wood's curves are wide (sigma 18.0 °C, 0.30 moisture) and would put all four
+/// within one sigma, which is exactly why the ladder walks the lookup table and
+/// not the sigma — a sigma reading of this kind would rank nothing.
+///
+/// `floor` is **wood-elf's** sovereignty floor, and the caller hands it the same
+/// value for all three kinds. Drow's own mass (52.0 kg) would give 0.424802
+/// against wood's 0.429202; taking wood's is the same call the shape already
+/// makes, for the same reason — a REALM control that also differs in level is
+/// not a control. `radiation_affinity::drows_affinity_is_wood_elfs` pins the
+/// whole row, level included.
+fn wood_elf_biome_affinity(floor: f64) -> BiomeAffinity {
+    BiomeAffinity::from_preferences(
+        floor,
+        vec![
+            // Stronghold — wood-elf's own authored climate, classified.
+            ("temperate-forest", AFFINITY_STRONGHOLD),
+            // Near: one moisture band wetter, still closed canopy.
+            ("temperate-rainforest", AFFINITY_NEAR),
+            // Near: one thermal band cooler, still closed canopy — the boreal
+            // forest.
+            ("taiga", AFFINITY_NEAR),
+            // Marginal: a forest in the wrong thermal band.
+            ("tropical-seasonal-forest", AFFINITY_MARGINAL),
+            // Marginal: the right thermal band with the canopy gone.
+            ("shrubland", AFFINITY_MARGINAL),
+        ],
+    )
 }
 
 /// The biosphere component: every entity has one. The packer and the
@@ -2277,8 +3061,10 @@ pub struct BiosphereTraits {
     /// creatures buffer environmental constraint. Authored as the creature's
     /// 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
     /// supernatural set (dragon/plant/elemental — treant is 5E plant-typed);
-    /// mundane beasts and the four
-    /// peoples carry 0.
+    /// mundane beasts and the peoples carry 0 (count-free deliberately, like
+    /// [`biosphere_registry`]'s doc 35 lines below — this line read "the four
+    /// peoples" for four campaigns after there were nine, and was fixed only
+    /// when its sibling was).
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
     /// How this creature organizes socially (universal; every kind carries
@@ -2312,9 +3098,11 @@ impl Component for Dispersion {}
 /// utilization profile over the resource-axis basis; each kind's climate-tile
 /// rationale lives in its `*_condition_niche` helper above. Potency is the
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
-/// supernatural set (dragons, treant, xorn); mundane beasts and the six
-/// peoples carry 0. `social_form` is the universal social-organization axis
-/// (spec §3.1, The Eremite): `Settled` for the nine peoples, `Sessile` for
+/// supernatural set (dragons, treant, xorn); mundane beasts and the peoples
+/// carry 0 (count-free deliberately — it read "the six peoples" for three
+/// campaigns after there were nine). `social_form` is the universal
+/// social-organization axis
+/// (spec §3.1, The Eremite): `Settled` for the fifteen peoples, `Sessile` for
 /// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
@@ -2834,13 +3622,160 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 schedule: LifeSchedule::paced(4.0).unwrap(),
             },
         ),
+        // THE RADIATION (C2d): the six elves, the roster's largest family and
+        // the last of the peoples programme. Every row below is `Settled`,
+        // `Endotherm`, potency 0.0, and paced at 5.0 — the family's shared
+        // body reading, with the differences carried by the niche vector, the
+        // condition niche and (Task 3) the biome affinity.
+        //
+        // **Masses sit in the 45-70 kg band** the spec's floor table covers,
+        // and every one of them is deliberately lighter than the dwarves'
+        // 62-70: an elf is the roster's slight people. The band matters
+        // because mass sets `sovereignty_floor`, and the family's entire
+        // authoring strategy is to sit BELOW that floor on elevation devotion
+        // (see the C2d block comment above `desert_elf_condition_niche`).
+        //
+        // **`paced(5.0)`, harder than the dwarves' 4.0, and the consequence is
+        // asserted rather than assumed.** These are the longest-lived people
+        // in the roster. But `cascade_regime_of`
+        // (`windows/worldgen/src/lib.rs`) is BINARY at
+        // `LIFESPAN_THRESHOLD_YEARS = 120.0`, and the dwarves already clear it
+        // at 4.0 (268-276 y), so the extra pacing buys **nothing** in language
+        // drift. That is a stated null, not an oversight: N1 in
+        // `windows/worldgen/src/lib.rs`'s test module
+        // (`pacing_elves_harder_than_dwarves_changes_no_drift_regime`) asserts
+        // all three clauses — the elves are on the slow regime, doubling the
+        // factor moves nothing, and dropping to pure allometry DOES move it,
+        // which is what keeps the first two from being satisfied by a branch
+        // that never fires. `pace_of_life` and `reproductive_tempo` saturate
+        // at exactly 1.0 here as they do for a dwarf (`MAX_PACE_MULTIPLIER`);
+        // `lifespan`, `age_at_maturity` and `generation_length` stay linear,
+        // and that is where the longevity is legible.
+        (
+            KindId("desert-elf"),
+            BiosphereTraits {
+                mass: Mass::new(50.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // an arid-margin forager, near the roster's midpoint between
+                // plants and game — a sparse ground supports neither
+                // exclusively.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+                condition_niche: desert_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("drow"),
+            BiosphereTraits {
+                mass: Mass::new(52.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // `DETRITUS`-dominant: the fungus axis gully-dwarf, otyugh,
+                // carrion-crawler and shrieker share. This kind arrives at it
+                // from the direction the withdrawn cave dwarves would have —
+                // it farms in the dark rather than working refuse in the
+                // light — so it keeps the largest `DETRITUS` share of any
+                // people and the smallest `PLANT_FORAGE` one.
+                niche: ResourceVector::new(&[
+                    (DETRITUS, 0.50),
+                    (ANIMAL_PREY, 0.30),
+                    (PLANT_FORAGE, 0.20),
+                ])
+                .unwrap(),
+                condition_niche: drow_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("high-elf"),
+            BiosphereTraits {
+                // WOOD'S BODY, EXACTLY — mass, class, niche, curves, potency
+                // and schedule all identical. High is the family's null
+                // control (spec §3.6): it diverges in mind, society and
+                // language and in nothing else, so that `Wood vs High`
+                // isolates MIND the way `Wood vs Drow` isolates REALM. Mass
+                // sets the sovereignty floor and the resource vector sets
+                // supply; a difference in either would silently make P3(a) a
+                // two-variable comparison.
+                // `radiation_admission.rs::wood_and_high_differ_in_mind_and_not_in_body`
+                // asserts the equality in one direction and the psyche/society
+                // divergence in the other.
+                mass: Mass::new(55.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
+                condition_niche: high_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("sea-elf"),
+            BiosphereTraits {
+                mass: Mass::new(58.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // THE ONLY ELF ON `MARINE_FORAGE`, and it must be: that axis
+                // is what `marine_forage_supply_field` pays out on a water
+                // cell, so a sea people without a weight on it would draw zero
+                // supply everywhere it lives and its shelf affinity would
+                // multiply zero — authored, admitted and void. The small
+                // terrestrial residue is the shore: a settled coastal people
+                // does not live entirely in the water.
+                // `radiation_admission.rs::the_sea_elf_draws_on_the_marine_supply_axis`
+                // pins both halves — that this kind has the weight, and that
+                // no other elf does.
+                niche: ResourceVector::new(&[
+                    (MARINE_FORAGE, 0.75),
+                    (ANIMAL_PREY, 0.15),
+                    (PLANT_FORAGE, 0.10),
+                ])
+                .unwrap(),
+                condition_niche: sea_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("snow-elf"),
+            BiosphereTraits {
+                mass: Mass::new(60.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // the family's only `ANIMAL_PREY`-dominant row: a cold
+                // people's calories come from animals, because a tundra grows
+                // very little a person can eat.
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 0.65), (PLANT_FORAGE, 0.35)]).unwrap(),
+                condition_niche: snow_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
+        (
+            KindId("wood-elf"),
+            BiosphereTraits {
+                mass: Mass::new(55.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // `PLANT_FORAGE`-dominant, at human's temper rather than
+                // hill-dwarf's 0.70: a forest people gathers more than it
+                // farms, and hunts the rest. Shared with high-elf, exactly.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
+                condition_niche: wood_elf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(5.0).unwrap(),
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the nine settling peoples and the three solitary dragons).
+/// minded kind (the fifteen settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
@@ -2984,6 +3919,89 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.85,
             },
         ),
+        // THE RADIATION (C2d): the six elves. The family's shared reading is
+        // the roster's longest `time_horizon` — every one of them sits at or
+        // above the dwarves' 0.80-0.90 — and it is not decoration:
+        // `paced(5.0)` puts an elf past three centuries, so it genuinely plans
+        // past the span a dwarf can. As with the dwarves, the differences
+        // among the six are the ecology and the institution each lives in, not
+        // the family they belong to.
+        //
+        // **Wood's and High's rows must differ, and this is where §3.6's whole
+        // claim lives.** High shares Wood's body exactly; if it shared Wood's
+        // mind it would be a duplicate rather than a control, which
+        // `radiation_admission.rs::wood_and_high_differ_in_mind_and_not_in_body`
+        // asserts in both directions.
+        (
+            KindId("desert-elf"),
+            MindVector {
+                // patient, like every arid people in the roster: a sparse
+                // country cannot afford a fight it could walk away from.
+                threat_response: 0.4,
+                deliberation_latency: 0.7,
+                // route, well and season knowledge is a desert people's real
+                // capital, and a three-century memory of it is a large one.
+                time_horizon: 0.9,
+            },
+        ),
+        (
+            KindId("drow"),
+            MindVector {
+                // the family's most forward: a confined realm has nowhere to
+                // withdraw to, so a threat is met where it is found.
+                threat_response: 0.75,
+                // fast for an elf. Sightlines underground are short and a
+                // decision deferred is a decision made for you.
+                deliberation_latency: 0.55,
+                time_horizon: 0.85,
+            },
+        ),
+        (
+            KindId("high-elf"),
+            MindVector {
+                // MIND IS HALF OF HIGH'S ENTIRE IDENTITY (the other half is
+                // society and language). Every scalar here differs from
+                // wood-elf's below: more willing to stand, markedly slower to
+                // decide, and the longest horizon in the roster — the reading
+                // of a people whose institutions outlive its members and know
+                // it.
+                threat_response: 0.6,
+                deliberation_latency: 0.85,
+                time_horizon: 0.95,
+            },
+        ),
+        (
+            KindId("sea-elf"),
+            MindVector {
+                // a shore people reads weather and tide and gets off the water
+                // rather than arguing with it.
+                threat_response: 0.35,
+                deliberation_latency: 0.6,
+                time_horizon: 0.85,
+            },
+        ),
+        (
+            KindId("snow-elf"),
+            MindVector {
+                threat_response: 0.5,
+                // the family's fastest. A cold margin punishes deliberation:
+                // the weather does not wait, and neither does the herd.
+                deliberation_latency: 0.5,
+                // long even so — a people that must plan a whole winter in
+                // autumn plans in years by habit.
+                time_horizon: 0.88,
+            },
+        ),
+        (
+            KindId("wood-elf"),
+            MindVector {
+                // the family's ancestral reading and its middle: withdraws
+                // rather than meets, considers rather than reacts.
+                threat_response: 0.45,
+                deliberation_latency: 0.7,
+                time_horizon: 0.9,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -3120,13 +4138,76 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
                 perception: 0.10,
             },
         ),
+        // THE RADIATION (C2d): the six elves, ordered on the principle the
+        // goblinoid and dwarf rows already established — an institution that
+        // drills is an institution that narrows. High, whose identity IS its
+        // institutions, is the narrowest; drow, held by a caste order, is next;
+        // the three affinity-carried surface kinds sit in the middle; and the
+        // scattered desert people is the family's widest. **Human stays the
+        // widest overall on every axis** (0.35 / 0.30 / 0.20), which is its own
+        // campaign's claim and is not disturbed here.
+        (
+            KindId("desert-elf"),
+            Dispersion {
+                // the family's widest: scattered kin who meet rarely have
+                // nothing holding them to a common temperament.
+                mind: 0.24,
+                society: 0.20,
+                perception: 0.16,
+            },
+        ),
+        (
+            KindId("drow"),
+            Dispersion {
+                mind: 0.12,
+                society: 0.10,
+                perception: 0.09,
+            },
+        ),
+        (
+            KindId("high-elf"),
+            Dispersion {
+                // the roster's narrowest people, below hobgoblin's drilled
+                // 0.10 / 0.06 / 0.08 only on mind: a people whose institutions
+                // outlive its members reproduces those members' outlook.
+                mind: 0.09,
+                society: 0.07,
+                perception: 0.07,
+            },
+        ),
+        (
+            KindId("sea-elf"),
+            Dispersion {
+                mind: 0.18,
+                society: 0.15,
+                perception: 0.13,
+            },
+        ),
+        (
+            KindId("snow-elf"),
+            Dispersion {
+                mind: 0.20,
+                society: 0.17,
+                perception: 0.14,
+            },
+        ),
+        (
+            KindId("wood-elf"),
+            Dispersion {
+                // the family's middle, and the value High is read against: a
+                // dispersed forest people with custom but no bureaucracy.
+                mind: 0.18,
+                society: 0.16,
+                perception: 0.13,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The community-mind component — authored directly, present only for the
-/// nine settling peoples. A Solitary minded kind (a dragon) carries a
+/// fifteen settling peoples. A Solitary minded kind (a dragon) carries a
 /// MindVector but no SocietyVector; a mixed consumer resolves
 /// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
 /// same values — again authorship, not definition.
@@ -3258,13 +4339,92 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 in_group_radius: 0.6,
             },
         ),
+        // THE RADIATION (C2d): the six elves. Each row is argued from the
+        // kind's ECOLOGY, per decision 0021 — 5E supplies mass and CR and
+        // nothing else, so no moral canon rides along with the names, and in
+        // particular nothing here reads "drow" as wicked. The six deliberately
+        // do not share a social reading: a family is a shared descent and a
+        // shared tongue, not a shared constitution.
+        //
+        // **Wood's and High's rows differ, and must.** Society is the second
+        // of High's three identity channels (psyche, society, language); if
+        // this row matched Wood's, High would be a duplicate rather than the
+        // family's null control.
+        (
+            KindId("desert-elf"),
+            SocietyVector {
+                // consensus: a people separated for long stretches by the
+                // distance between water cannot enforce a standing authority
+                // and does not need one.
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Knowledge,
+                // wide — scattered kin who meet rarely must count distant
+                // relations as "us" or lose them entirely.
+                in_group_radius: 0.7,
+            },
+        ),
+        (
+            KindId("drow"),
+            SocietyVector {
+                // a confined realm rations space, water and light, and a
+                // society that must ration runs on ranked authority.
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                // the family's narrowest: the "us" of a single hold, because
+                // the next hold is a different country however near it is in
+                // metres.
+                in_group_radius: 0.35,
+            },
+        ),
+        (
+            KindId("high-elf"),
+            SocietyVector {
+                // HIGH'S SECOND IDENTITY CHANNEL. Every field here differs
+                // from wood-elf's below — ranked where Wood is consensual, and
+                // standing earned by lore rather than by what is given.
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("sea-elf"),
+            SocietyVector {
+                // a boat crew is not a court: consensus, and standing to
+                // whoever fed the others through the lean season.
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.6,
+            },
+        ),
+        (
+            KindId("snow-elf"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                // the risk-pooling reading gnoll and gully-dwarf already
+                // carry, arrived at from the cold: a winter is survived by
+                // what the band shares, not by what one member holds.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.55,
+            },
+        ),
+        (
+            KindId("wood-elf"),
+            SocietyVector {
+                // custom without bureaucracy: a dispersed forest people that
+                // decides in common and has no hall to decide in.
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.65,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the nine peoples and the three chromatic dragons (The
+/// SPEAKING kind: the fifteen peoples and the three chromatic dragons (The
 /// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
 /// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
 /// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
@@ -3433,6 +4593,95 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.5,
             },
         ),
+        // THE RADIATION (C2d): the six elves. `sky_attention` is CELESTIAL vs
+        // terrestrial attention, not aerialness (`perception_lens.ambient =
+        // 1.5 - sky_attention`), so a canopy people that never sees the sky is
+        // authored LOW on it and an open-country people high. Every elf
+        // carries a raised `night_vision`; the family reading is a long
+        // twilight eye.
+        //
+        // **Drow's cave adaptation is legible HERE and only here today.** Its
+        // `activity` and `night_vision` reach the perception consumers — the
+        // hue ladder in `pack_depths`, the exposure lens — even though the
+        // capacity model reads only mass, potency, the resource vector and the
+        // condition niche, and even though its authored cave-dark insolation
+        // curve is dormant (see `drow_condition_niche`'s doc comment).
+        (
+            KindId("desert-elf"),
+            PerceptionVector {
+                // the strategy gnoll and desert-dwarf already argue for on the
+                // same climate tile: shelter through the peak heat, move at
+                // the cooler margins.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.7,
+                // high, for the reason desert-dwarf's 0.75 is high: an open-
+                // country people crossing trackless ground at night navigates
+                // by the sky. Held just below desert-dwarf's so that the
+                // roster's maximum stays where its own campaign put it.
+                sky_attention: 0.7,
+            },
+        ),
+        (
+            KindId("drow"),
+            PerceptionVector {
+                // no sun to keep hours by. The roster's least ambiguous
+                // `Nocturnal`.
+                activity: ActivityCycle::Nocturnal,
+                // THE HIGHEST IN THE ROSTER, above kobold's 0.9: this people
+                // sees where there is nothing to see by.
+                night_vision: 0.95,
+                // THE LOWEST IN THE ROSTER, below black-dragon's 0.15: a kind
+                // that has never seen a sky does not attend to one. The
+                // consequence is a raised `perception_lens.ambient`, which is
+                // the correct reading for an eye adapted to the dark.
+                sky_attention: 0.05,
+            },
+        ),
+        (
+            KindId("high-elf"),
+            PerceptionVector {
+                // High's identity is mind, society and language — NOT
+                // perception. This row differs from wood-elf's only in
+                // `sky_attention`, and that one difference is a claim about
+                // where an institution points its attention (record, season,
+                // reckoning), not about the eye it points.
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.75,
+                sky_attention: 0.6,
+            },
+        ),
+        (
+            KindId("sea-elf"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.7,
+                // a coastal people navigates and keeps a tide-reckoning: the
+                // family's second-highest.
+                sky_attention: 0.65,
+            },
+        ),
+        (
+            KindId("snow-elf"),
+            PerceptionVector {
+                // a high-latitude people's day is not the sun's: it works the
+                // long margins, which at that latitude are most of the year.
+                activity: ActivityCycle::Crepuscular,
+                // the highest of the five surface elves — a polar winter is a
+                // months-long twilight.
+                night_vision: 0.8,
+                sky_attention: 0.55,
+            },
+        ),
+        (
+            KindId("wood-elf"),
+            PerceptionVector {
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.75,
+                // low: under a closed canopy there is no sky to read, and this
+                // people reads the ground and the trunks instead.
+                sky_attention: 0.25,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -3502,6 +4751,17 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("desert-dwarf"), "dwarf"),
         (KindId("gully-dwarf"), "dwarf"),
         (KindId("hill-dwarf"), "dwarf"),
+        // THE RADIATION (C2d): six kinds, ONE label — the roster's largest
+        // family, and the programme's last. `family_proto` in
+        // `hornvale_language` carries the matching `KindId("elf")` row in this
+        // same commit, because `check_integrity` requires one the moment a
+        // label is carried by >= 2 kinds.
+        (KindId("desert-elf"), "elf"),
+        (KindId("drow"), "elf"),
+        (KindId("high-elf"), "elf"),
+        (KindId("sea-elf"), "elf"),
+        (KindId("snow-elf"), "elf"),
+        (KindId("wood-elf"), "elf"),
     ]
     .into_iter()
     .collect()
@@ -3576,6 +4836,19 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("desert-dwarf-kind", "a desert dwarf"),
     ("gully-dwarf-kind", "a gully dwarf"),
     ("hill-dwarf-kind", "a hill dwarf"),
+    // THE RADIATION (C2d): the elf family's six — the roster's largest family,
+    // and the programme's last. These six ids are what
+    // `domains/language/src/accession.rs`'s epoch-10 cohort lists;
+    // `cli/tests/accession.rs` checks the two agree in BOTH directions, and
+    // commit `ee4e6a00` records that omitting the cohort also changes which
+    // proto-root each concept draws. Glosses are authored, not derived from
+    // the id, so `drow` reads as "a drow" and not as its own key.
+    ("desert-elf-kind", "a desert elf"),
+    ("drow-kind", "a drow"),
+    ("high-elf-kind", "a high elf"),
+    ("sea-elf-kind", "a sea elf"),
+    ("snow-elf-kind", "a snow elf"),
+    ("wood-elf-kind", "a wood elf"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -3771,7 +5044,7 @@ mod tests {
         // With the god-struct gone, the four registries author independently.
         // The cross-registry invariants the world relies on: biosphere and
         // family cover the SAME full kind set, and psyche/perception share
-        // exactly one key-set — the nine peoples plus the three minded
+        // exactly one key-set — the fifteen peoples plus the three minded
         // dragons — every one of which also carries a biosphere row.
         let bio = biosphere_registry();
         let fam = family_of();
@@ -3780,8 +5053,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            33,
-            "thirty-three kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves)"
+            39,
+            "thirty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the three dwarves, The Radiation added the six elves)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -3789,19 +5062,19 @@ mod tests {
 
         // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
         // psyche, and since The Vigil every minded SPEAKER also perceives, so
-        // the two stores again share one key-set — twelve kinds, not the
-        // nine peoples alone.
+        // the two stores again share one key-set — eighteen kinds, not the
+        // fifteen peoples alone.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 12, "nine peoples + three minded dragons");
+        assert_eq!(psy.len(), 18, "fifteen peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            12,
-            "perception is the nine peoples + the three dragons (The Vigil)"
+            18,
+            "perception is the fifteen peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -3894,10 +5167,13 @@ mod tests {
         // alongside the four peoples), then with The Vacancy's T7 (seven more
         // biosphere-only fauna), T8 (five more, four marine plus the
         // amphibious giant crocodile), T9 (the gnoll, the fifth people), The
-        // Generalist (the human, the sixth people), and The Delvers (the
-        // three dwarves, peoples seven through nine); ComponentStore key
-        // order is lexicographic, so the family scatters rather than
-        // clustering.
+        // Generalist (the human, the sixth people), The Delvers (the three
+        // dwarves, peoples seven through nine), and The Radiation (the six
+        // elves, peoples ten through fifteen); ComponentStore key order is
+        // lexicographic, so the family scatters rather than clustering — the
+        // elves land in six separate places, `high-elf` between `gully-dwarf`
+        // and `hill-dwarf`, `wood-elf` between `white-dragon` and
+        // `woolly-mammoth`.
         assert_eq!(
             names,
             vec![
@@ -3905,7 +5181,9 @@ mod tests {
                 "bugbear",
                 "carrion-crawler",
                 "desert-dwarf",
+                "desert-elf",
                 "dire-wolf",
+                "drow",
                 "giant-constrictor-snake",
                 "giant-crocodile",
                 "giant-elk",
@@ -3917,6 +5195,7 @@ mod tests {
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
+                "high-elf",
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
@@ -3928,10 +5207,13 @@ mod tests {
                 "reef-shark",
                 "rhinoceros",
                 "rust-monster",
+                "sea-elf",
                 "shrieker",
+                "snow-elf",
                 "treant",
                 "twig-blight",
                 "white-dragon",
+                "wood-elf",
                 "woolly-mammoth",
                 "xorn",
             ]
@@ -4299,13 +5581,19 @@ mod tests {
             vec![
                 "bugbear",
                 "desert-dwarf",
+                "desert-elf",
+                "drow",
                 "gnoll",
                 "goblin",
                 "gully-dwarf",
+                "high-elf",
                 "hill-dwarf",
                 "hobgoblin",
                 "human",
-                "kobold"
+                "kobold",
+                "sea-elf",
+                "snow-elf",
+                "wood-elf"
             ]
         );
         // dragons are minded (psyche) but not Settled — no society vector

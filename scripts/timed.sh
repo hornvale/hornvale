@@ -30,13 +30,24 @@ cmd_report() {
     echo "== timings for label '$filter' =="
     # Table rows are: | when | label | wall | user | sys | ratio | ... |
     # Columns after -F'|' (leading '|' makes $1 empty): $2 when, $3 label,
-    # $4 wall, $5 user, $6 sys, $7 ratio, $8 commit, $9 branch, $10 host,
-    # $11 cores. Median via insertion sort — BSD awk (macOS) has no asort.
+    # $4 wall, $5 user, $6 sys, $7 ratio, $8 waited_s, $9 commit, $10 branch,
+    # $11 host, $12 cores. Median via insertion sort — BSD awk (macOS) has no
+    # asort.
+    #
+    # THIS MAP WAS STALE BY ONE COLUMN and the printf below read it. `waited_s`
+    # was inserted after `ratio` and the map was never updated, so the summary
+    # printed $10 (branch) where it meant host and $8 (waited_s) where it meant
+    # commit: a row whose true host@commit is `ambrose@1931a904` displayed as
+    # `campaign/the-cairn@0`. Found by The Cairn, whose retrospective attributed
+    # it to an `rc` column occupying $8 — there is no rc column; `timed.sh`
+    # computes rc, returns it, and prints it to STDERR, but the eleven fields
+    # appended below do not include it. Two real defects in one file, each
+    # campaign finding one.
     awk -F'|' -v L="$filter" '
         function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
         trim($3)==L {
             n++; walls[n]=trim($4)+0; last=trim($4)+0
-            printf "  %s  wall=%ss  cpu_ratio=%s  %s@%s\n", trim($2), trim($4), trim($7), trim($10), trim($8)
+            printf "  %s  wall=%ss  cpu_ratio=%s  %s@%s\n", trim($2), trim($4), trim($7), trim($11), trim($9)
         }
         END{
             if(n==0){ print "  (no runs recorded)"; exit }

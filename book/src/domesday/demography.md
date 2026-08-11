@@ -14,17 +14,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 9 | 106 | 1992 | 114.273 |
+| 0 | 1 | 22 | 184 | 2513 | 180.268 |
 
 ### `goblin-flagship-population`
 
 The goblin flagship settlement's committed population; Absent if goblins placed no settlement
 
-n = 998 present, 2 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 35 | 40 | 41 | 43 | 35.563126 |
+| 2 | 34 | 40 | 41 | 43 | 35.006 |
 
 ### `kobold-flagship-population`
 
@@ -34,7 +34,7 @@ n = 969 present, 31 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 28 | 46 | 53 | 70 | 40.315789 |
+| 2 | 27 | 46 | 53 | 70 | 40.044376 |
 
 ### `mean-population`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 6.2142857 | 24.88172 | 30.886624 | 34.162651 | 48.266667 | 28.828648 |
+| 8.1234568 | 24.406667 | 29.503765 | 32.20178 | 40.567251 | 27.585659 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5 | 9 | 9 | 9 | 9 | 8.916 |
+| 8 | 15 | 15 | 15 | 15 | 14.854 |
 
 ### `peoples-placed`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 5 | 9 | 9 | 9 | 9 | 8.916 |
+| 8 | 15 | 15 | 15 | 15 | 14.854 |
 
 ### `total-population`
 
@@ -74,22 +74,26 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 134 | 3586 | 5676 | 7715 | 15969 | 5649.716 |
+| 400 | 4755 | 7125.5 | 9174 | 19182 | 6990.714 |
 
 ## Weaknesses found here
 
+### `climate-displacement-events`
+
+- **D5 strength**: declared moderate tracking habitable-fraction, but observed r = -0.278 (1000 pairs) is weak (negative)
+
 ### `peoples-alive-at-bake-end`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
-- **D4**: median 9 equals the max (5 .. 9)
+- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (8 .. 15)
 
 ### `peoples-placed`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
-- **D4**: median 9 equals the max (5 .. 9)
+- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (8 .. 15)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.227 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.288 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.256 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.329 (1000 pairs) is moderate (positive)
 

@@ -109,6 +109,7 @@
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [Proto-dwarf](./reference/proto-dwarf-generated.md)
+- [Proto-elf](./reference/proto-elf-generated.md)
 - [The Layering](./reference/layering.md)
 
 # Open Questions
@@ -346,6 +347,8 @@
 - [The Signet](./chronicle/the-signet.md)
 - [The Cairn](./chronicle/the-cairn.md)
 - [The Particular](./chronicle/the-particular.md)
+- [The Grain](./chronicle/the-grain.md)
+- [The Radiation](./chronicle/the-radiation.md)
 
 # Appendix: The Frontier
 
