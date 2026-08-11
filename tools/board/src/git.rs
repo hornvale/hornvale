@@ -73,6 +73,18 @@ impl Repo {
 
     /// Run git with bytes on stdin, returning trimmed stdout.
     pub fn git_stdin(&self, args: &[&str], input: &[u8]) -> Result<String, BoardError> {
+        let out = self.git_stdin_bytes(args, input)?;
+        Ok(String::from_utf8_lossy(&out).trim_end().to_string())
+    }
+
+    /// Run `git` with `input` on stdin, returning stdout as **bytes**.
+    ///
+    /// [`git_stdin`](Self::git_stdin) decodes lossily and trims trailing
+    /// whitespace, both of which corrupt a size-framed stream: lossy decoding
+    /// changes byte lengths (U+FFFD is three bytes) and trimming eats the last
+    /// record's terminator. `cat-file --batch` is size-framed, so it needs
+    /// this.
+    pub fn git_stdin_bytes(&self, args: &[&str], input: &[u8]) -> Result<Vec<u8>, BoardError> {
         use std::io::Write;
         use std::process::Stdio;
         let mut child = Command::new("git")
@@ -100,7 +112,7 @@ impl Repo {
                 stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
             });
         }
-        Ok(String::from_utf8_lossy(&out.stdout).trim_end().to_string())
+        Ok(out.stdout)
     }
 
     /// Resolve a ref, reporting absence as `None` rather than an error.
