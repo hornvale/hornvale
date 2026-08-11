@@ -3,8 +3,8 @@
 [Stage one](./the-ford.md) stopped rivers being a hundred and ten kilometres
 wide by changing what carries them: a river became a polyline with a
 discharge-derived width, evaluated as a function of position at any depth,
-instead of a cell painted with a water class. It moved no consumer. A room at
-the useful floor of the room scale — twelve refinement levels below the
+instead of a cell painted with a water class. It moved no consumer. A room in
+the middle of the useful room scale — twelve refinement levels below the
 canonical grid, twenty-seven metres across — still reported the water of a cell
 four thousand times its width, because nothing at room scale had been taught to
 ask the network anything.
@@ -13,16 +13,17 @@ This stage teaches it to ask — and the interesting decision is what a room is
 allowed to *say back*.
 
 **Two room scales appear in what follows, and they are not the same room.**
-Twenty-seven metres is the *useful floor of the room scale* — L18, twelve
-refinement levels below a level-6 grid — and not the floor of the addressing,
-which goes considerably deeper: `RoomAddr` packs a path of up to `MAX_DEPTH =
-29` digits, twenty-three levels below the grid, at which point an edge is
-measured in centimetres. The room a walker actually stands in sits **six**
-levels below the grid, not twelve: an edge of `2.71e-4` radians, about 1.7
-kilometres, since each level halves an edge and six halvings take a
-hundred-and-ten-kilometre cell to that. Every measurement below is taken at
-that walking depth, including the one that matters most —
-the crossability criterion's "one room edge" is a step of roughly 1.7 km, not
+Twenty-seven metres sits in the *middle of the useful room scale* — L18,
+against a useful range of about L16–20, and twelve refinement levels below a
+level-6 grid. It is not the floor of the addressing, which goes considerably
+deeper: `RoomAddr` packs a path of up to `MAX_DEPTH = 29` digits, twenty-three
+levels below the grid, at which point an edge is measured in centimetres. The
+room a walker actually stands in sits **six** levels below the grid, not
+twelve: an edge of `2.71e-4` radians, about 1.7 kilometres, since each level
+halves an edge and six halvings take a hundred-and-ten-kilometre cell to that.
+Every measurement below is taken at that walking depth, including the one that
+matters most — the crossability criterion's "one room edge" is a step of
+roughly 1.7 km, not
 of twenty-seven metres.
 
 ## The chart, not the verdict
@@ -140,6 +141,28 @@ terrace, so "not dry" does not exclude it either. A crossing therefore
 requires the sign to differ **and** at least one of the two rooms to stand
 inside its own channel or bank edge. A test now holds a dry-land sign change
 in place and asserts the gate excludes it.
+
+A third requirement joined those two at the pre-merge review, and it is the
+one a reader is least likely to anticipate: **the two rooms must be reading
+the same river.** Each room's distance is measured against whichever polyline
+is nearest to *it*, and the sign is expressed in that polyline's own frame —
+left of the trunk and right of the tributary are not opposite sides of
+anything. A pair straddling two different rivers therefore shows a sign change
+whose comparison is meaningless, and the gate would have gone on to price the
+step against whichever reach happened to win. On seed 42 at walking depth,
+five of the hundred and seventy-one sign-changing steps in the measurement's
+own population are such pairs, and every one of them was being counted as a
+crossing.
+
+The repair costs something, and the cost is worth stating: what the third
+clause establishes is that the two signs *cannot be compared*, not that no
+water lies between the rooms. At a confluence — precisely where these pairs
+gather — a real crossing whose two rooms happen to select the tributary and
+the trunk is now refused. That is a trade rather than a free correction. A
+confidently wrong verdict is the worse failure, and a reading knows only its
+own winning line, so it cannot tell the two cases apart; distinguishing them
+would take a query that reads the network's join topology rather than a
+looser gate.
 
 ## What was predicted, and what was measured
 

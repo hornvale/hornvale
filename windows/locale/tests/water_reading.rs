@@ -389,14 +389,16 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
 /// Anti-vacuity floors, each stated beside the value measured on seed 42 at
 /// level 6 so a future reader can tell a drifting world from an emptying test.
 ///
-/// Measured: 460 same-bank adjacent pairs with a room inside its own bank edge,
-/// 130 outright-dry constructed sign changes, 127 constructed inside a terrace
-/// band. The floors sit near half of each — terrain drift may move a river, but
+/// Measured: 440 same-bank, same-channel adjacent pairs with a room inside its
+/// own bank edge (460 before the same-line filter, 20 of which select two
+/// different polylines), 126 outright-dry constructed sign changes, 123
+/// constructed inside a terrace band — the last two also after their own
+/// same-line filter (130 and 127 before it). The floors sit near half of each — terrain drift may move a river, but
 /// it will not halve the network.
 const SAME_BANK_PAIRS_FLOOR: usize = 200;
-/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 130.
+/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 126.
 const DRY_FLIPS_FLOOR: usize = 60;
-/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 127.
+/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 123.
 const TERRACE_FLIPS_FLOOR: usize = 60;
 /// Transects where a crossing exists at all, at walk depth. Measured 123 of 341.
 const CROSSINGS_FLOOR: usize = 60;
@@ -596,13 +598,23 @@ fn transects_at(ctx: &LocaleContext, wanted: usize, depth: u32) -> (Vec<Transect
 ///
 /// So every pair here has **at least one room inside its own bank edge**
 /// (`|d| < channel_bands[1]`): the room the channel actually runs through, and
-/// one of its three mesh neighbours reading the same sign. The band clause is
-/// satisfied by construction, the two rooms are edge-adjacent — a real step —
-/// and the only thing left that can return `NotACrossing` is the sign. Deleting
-/// the sign clause reddens this test on all 460 pairs.
+/// one of its three mesh neighbours reading the same sign. **And both rooms'
+/// readings are of the same polyline**, so the gate's same-channel clause is
+/// satisfied by construction too. The band clause and the same-channel clause
+/// are both satisfied, the two rooms are edge-adjacent — a real step — and the
+/// only thing left that can return `NotACrossing` is the sign.
 ///
-/// The reference for "same bank" is the rooms' own signed distances from
-/// `bank_reading`, read before `crossing_between` is asked anything.
+/// **The same-line filter is not decoration, and it was added the day the
+/// same-channel clause shipped.** Without it the population is 460 pairs, of
+/// which **20 select two different polylines** — and deleting the sign clause
+/// reddens the test on only **440 of the 460**, because clause 1 refuses those
+/// 20 on its own. That is this test's own warning turned on itself: a guard
+/// whose subject is already excluded by another clause measures that other
+/// clause. Filtered, the population is 440 and **deleting the sign clause
+/// reddens the test on all 440**.
+///
+/// The reference for "same bank" — and for "same channel" — is the rooms' own
+/// `bank_reading`s, read before `crossing_between` is asked anything.
 #[test]
 fn same_bank_neighbours_are_not_a_crossing() {
     let world = world();
@@ -625,6 +637,12 @@ fn same_bank_neighbours_are_not_a_crossing() {
                 let Some(there) = net.bank_reading(neighbour.centroid()) else {
                     continue;
                 };
+                if there.line != here.line {
+                    // Two different rivers: clause 1 refuses this pair, so it
+                    // would pass whatever the sign clause did. Excluded so the
+                    // assertion below measures the sign and only the sign.
+                    continue;
+                }
                 if (there.signed_distance > 0.0) != (here.signed_distance > 0.0) {
                     continue; // opposite banks — that IS a crossing
                 }
@@ -694,10 +712,24 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// - **Two different rivers are a small but real part of the population.** Of
 ///   the 171 step pairs whose signs differ at walk depth, **5 are cross-line**
 ///   — the two readings were selected against different polylines, so the two
-///   signs are in different frames and nothing has been crossed — and **all 5
-///   also stand inside a bank edge**, i.e. every one of them was admitted as a
-///   crossing before `crossing_between` gained its same-channel clause. The
-///   printed counts above are read from the network, not from the gate.
+///   signs are expressed in **different frames** and the comparison between
+///   them is **uninterpretable** — and **all 5 also stand inside a bank edge**,
+///   i.e. every one of them was admitted as a crossing before
+///   `crossing_between` gained its same-channel clause. The printed counts
+///   above are read from the network, not from the gate.
+///
+///   **"Uninterpretable" is the exact claim, and it is weaker than "nothing is
+///   there".** A cross-line pair says the two signs cannot be compared; it does
+///   not say no water lies between the rooms. So the clause has a
+///   **false-negative side**: at a confluence — which is where cross-line pairs
+///   concentrate — a genuine crossing whose two rooms happen to select the
+///   tributary and the trunk is now refused. That trade is taken deliberately.
+///   Pricing an uncomparable pair is a wrong answer stated confidently, while
+///   refusing it is a missed crossing at a known locus; and nothing in the
+///   reading as it stands can distinguish the two cases, because a reading
+///   knows only its own winning line. Recovering those crossings would need a
+///   confluence-aware query (`run_cells` states the join topology outright,
+///   which is why it is published) — not a loosening of this clause.
 /// - **Measured, at walk depth: 115 Fordable, 8 Impassable, 218 NotACrossing of
 ///   341 — a fraction of 0.3372.** The step sweep: 0.2170 one level up (a
 ///   longer step reaches further but puts the walker's rooms outside the bank
@@ -782,9 +814,11 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
             // How much of this population is TWO DIFFERENT RIVERS. Read from
             // the network rather than from the gate, so the number is a
             // reference the gate cannot influence: a pair whose signs differ
-            // but whose winning lines differ is not a crossing of anything —
+            // but whose winning lines differ is an UNINTERPRETABLE comparison —
             // each sign is in its own river's frame — and `crossing_between`'s
-            // same-channel clause refuses it. The second count is the sharp
+            // same-channel clause refuses it. Refuses, not disproves: there may
+            // still be water between the rooms (see the doc above on the
+            // false-negative side of that trade). The second count is the sharp
             // one: cross-line pairs that ALSO clear the bank-edge clause are
             // the pairs the gate would have called a crossing before that
             // clause existed. Printed rather than asserted; these attribute
@@ -1077,12 +1111,20 @@ fn the_width_clause_binds_when_the_step_shrinks() {
 ///   measures at `|d| = 4.7946e-3` against a widest terrace edge of 6.9e-3.
 /// - **Beyond the terrace** (`r = 2·terrace edge`): a `Dry` flip outright.
 ///
-/// The exclusion is checked for the RIGHT REASON: the sign genuinely differs
-/// between the two rooms (so the gate's first clause passed and cannot be what
-/// excluded them), and neither room stands inside its own bank edge (so the
-/// second clause is what did). And the rooms are asserted distinct — two probes
-/// that collapsed into one room would return `NotACrossing` for no reason at
-/// all.
+/// The exclusion is checked for the RIGHT REASON: **both readings select the
+/// same polyline** (so the gate's first, same-channel clause passed and cannot
+/// be what excluded them), the sign genuinely differs between the two rooms (so
+/// the second clause passed too), and neither room stands inside its own bank
+/// edge — so the **third** clause is what did. And the rooms are asserted
+/// distinct: two probes that collapsed into one room would return
+/// `NotACrossing` for no reason at all.
+///
+/// The same-line filter is load-bearing, not tidiness. Without it a probe pair
+/// selecting two different polylines is refused by clause 1, and this test
+/// would credit that exclusion to the bank-edge clause it exists to
+/// witness — the exact failure it warns about at
+/// `same_bank_neighbours_are_not_a_crossing`: a guard whose subject is already
+/// excluded by another clause measures that other clause.
 ///
 /// No fixed distance threshold could do this job: the flip locus is a ray, and
 /// probing at 1.0e-2, 5.0e-3 and 3.1e-3 rad finds the same flips at whatever
@@ -1146,9 +1188,15 @@ fn a_dry_land_sign_change_exists_and_the_crossing_gate_excludes_it() {
                 ) else {
                     continue;
                 };
-                // Is this actually a sign change, and is it actually outside
-                // the bank? Both are properties of the rooms' own readings,
-                // established before the gate is asked.
+                // Is this one channel, is it actually a sign change, and is it
+                // actually outside the bank? All three are properties of the
+                // rooms' own readings, established before the gate is asked.
+                if dl.line != dr.line {
+                    // Two different polylines: clause 1 refuses this pair, so
+                    // the assertion below would pass whatever the bank-edge
+                    // clause did. Excluded so it measures that clause alone.
+                    continue;
+                }
                 if !(dl.signed_distance > 0.0 && dr.signed_distance < 0.0) {
                     continue;
                 }

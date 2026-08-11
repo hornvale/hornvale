@@ -164,9 +164,10 @@ no fourth, cleaner change. The criterion itself was already a *late freeze*
 
 **"One room edge" throughout that table means the edge at *walk depth*** —
 six levels below the canonical grid, `2.71e-4` rad, about 1.7 km — not the
-twenty-seven-metre room at the useful floor of the room scale (L18), which is
-twelve levels down. (Nor is L18 the floor of the addressing: `RoomAddr` packs
-up to `MAX_DEPTH = 29`, twenty-three levels below the grid.) The distinction is the whole meaning of the number: the criterion
+twenty-seven-metre room in the middle of the useful room scale (L18, against a
+useful range of ~L16–20), which is twelve levels down. (Nor is L18 any kind of
+floor of the addressing: `RoomAddr` packs up to `MAX_DEPTH = 29`, twenty-three
+levels below the grid.) The distinction is the whole meaning of the number: the criterion
 asks whether a channel is narrower than one step, and the step in question is
 kilometres wide.
 
@@ -202,9 +203,17 @@ property of the instrument, never evidence for the hypothesis.
 The pre-merge whole-branch review found that `crossing_between` could call
 **two different rivers one crossing**: the two rooms' readings are selected
 independently, so a room on river X's left bank beside a room on river Y's
-right bank has differing signs without anything having been crossed. The fix
-adds a same-channel clause, gated on the polyline index the reading now
-carries as an in-process handle.
+right bank has differing signs whose comparison is **uninterpretable** — each
+sign is in its own river's frame. The fix adds a same-channel clause, gated on
+the polyline index the reading now carries as an in-process handle.
+
+**Uninterpretable is the exact claim, and it is weaker than "nothing is
+there".** The clause therefore has a **false-negative side**, recorded here
+because it appeared nowhere when the fix landed: at a confluence — where
+cross-line pairs concentrate — a genuine crossing whose two rooms select the
+tributary and the trunk is now refused. The trade is deliberate (a confidently
+wrong price is worse than a missed crossing at a nameable locus, and a reading
+knows only its own winning line), but it is a cost, not a free repair.
 
 Fixing it *could* have moved H2-4's number, and the rule that decided how to
 frame that was fixed before the measurement: **a correction adds a constraint;

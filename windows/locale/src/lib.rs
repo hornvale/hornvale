@@ -877,12 +877,25 @@ impl LocaleContext {
     /// Clause 1 exists because the two readings are selected *independently*:
     /// a room nearest river X and a room nearest river Y each get a sign in
     /// that river's own frame, and the two frames have nothing to do with each
-    /// other. Left-of-X beside right-of-Y satisfies clause 2 while nothing has
-    /// been crossed, and [`hornvale_terrain::channel::BankReading`] would then
-    /// price the step against whichever reach happened to win. Confluences are
-    /// where such pairs concentrate. The line index is the only thing that can
-    /// tell them apart — which is why the reading carries it, as an in-process
-    /// handle that is **never serialized**.
+    /// other. Left-of-X beside right-of-Y satisfies clause 2 while the
+    /// comparison that produced it is **uninterpretable**, and
+    /// [`hornvale_terrain::channel::BankReading`] would then price the step
+    /// against whichever reach happened to win. Confluences are where such
+    /// pairs concentrate. The line index is the only thing that can tell them
+    /// apart — which is why the reading carries it, as an in-process handle
+    /// that is **never serialized**.
+    ///
+    /// **What clause 1 refuses, and what it costs.** It establishes that the
+    /// two signs cannot be compared — *not* that no water lies between the
+    /// rooms. So it has a false-negative side, at exactly the locus where
+    /// cross-line pairs concentrate: a real crossing whose two rooms happen to
+    /// select a tributary and its trunk is refused. The trade is taken
+    /// knowingly. Pricing an uncomparable pair is a wrong answer stated
+    /// confidently; refusing it is a missed crossing at a known and nameable
+    /// locus, and a reading cannot distinguish the two on its own, since it
+    /// knows only its own winning line. A confluence-aware query would need
+    /// `ChannelNetwork::run_cells`, which states the join topology outright —
+    /// loosening this clause is not the way to it.
     ///
     /// Clause 3 is not belt-and-braces, and dropping it was a real draft of
     /// this design. The signed distance is measured against many *open arcs*,
