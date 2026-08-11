@@ -622,6 +622,75 @@ unnecessary path is harmless — a *missing* one is not.)
 
 ---
 
+## PART A OUTCOME — recorded 2026-08-11, because the campaign parks here
+
+Tasks 1 and 2 are **complete and reviewed** (commits `9831539c..92e6b53a`;
+suite 3377/3377, artifacts clean, preflight GO). **Part B is HELD** for
+`campaign/the-ell`, which retypes `Fact.day` and moves the history bake from
+years to days — the units `founder_handle` keys on. Landing Part B first would
+rename every founder handle and let The Ell rename them all again.
+
+This section exists because the SDD scratch is git-ignored and dies with the
+worktree, and the pause is open-ended. Read it before starting Task 3 or Task 6.
+
+### What Part A established
+
+- **The guard was blind and now is not.** `peopled_components` passed
+  `ComponentStore::new()` for `biome_affinity` *and* `habitat_realm`; both are
+  live. `deity`/`culture`/`material` stay empty on a traced reason.
+- **A1 confirmed, and its subject corrected.** The two stores together move the
+  mean −0.2607 (11.0%), but **affinity's own contribution is −0.1710 (7.2%)**
+  and 32.2% of the headline is interaction. Size against 0.171, never 0.26.
+- **A2 is FALSIFIED as the spec stated it.** The verdict does not flip on the
+  roster counted, because the ceiling is *derived* from `psyche.len()` (18 in
+  both arms), so both rosters produce the identical band and only the floor can
+  separate them. The biosphere arm reads 1.5063, not the spec's 1.42–1.46,
+  clearing the floor by 0.0063 with **two of five seeds beneath it**.
+- **Level-only is a NULL at today's roster**, over its entire range: 2.3678 at
+  `d=0.00`, 2.1128 shipped, 2.0692 at the minimum, 2.9735 at level 0 — every arm
+  passes, the floor 0.569 below the minimum.
+- **The control that fires is an EXISTENCE PROOF, not evidence the band tracks
+  the level.** It needs a roster differentiated across space, and — the
+  inversion, reproduced bit-for-bit by two independent probes — **the collisions
+  in it are load-bearing**: `fired` 1.4155 RED, `repaired` (2 of 11 rows moved
+  off their collisions) 1.5222 PASS, `fully distinct` 1.8150 PASS and never
+  crossing out to `d=2.20`. The *most* differentiated arrangement is the one
+  that does not cross. Quote the Δ column and the three-arrangement table, never
+  the single red number.
+- **The guard is ONE-SIDED.** `OATMEAL_FRACTION × 18 = 13.5` exceeds the maximum
+  `strife` this world can produce — the mean claimed cell holds 6.44 of 18 kinds
+  — so it can only ever fail from below. `BIO-40`-adjacent; recorded, and
+  deliberately not acted on (spec non-goal 3). **This belongs in the chronicle.**
+- **The one exemption everyone believed is false.** "Only within-kind ranking is
+  level-invariant" was wrong, and it came from this plan's own step-4 text. A
+  level change is not a constant factor: `from_preferences` pins the stronghold
+  at 1.00 and pulls the lower rungs down, changing the ladder's **contrast**,
+  which reweights biome against conditions inside the per-cell product. Measured
+  on seed 42 at `d=1.00 → 1.40`: **7 of 7 row-carrying kinds reorder** and
+  **11 of 11 row-less kinds are bit-identical**; gnoll's argmax — what
+  `best_home` picks — moves from cell 30312 to 2276.
+  The distinction that survives: *a **uniform rescale** cannot reorder a kind's
+  own ranking* (true, and what The Radiation's chronicle says) versus *changing
+  the **level** preserves ranking* (false). **The level is load-bearing in all
+  four consumers, with no exemption.** The rule generalises: **when a quantity is
+  called gauge, name the transformation it is gauge under.**
+
+### Owed to Task 6, and nothing mechanical will catch these
+
+- `domains/species/src/lib.rs` cites `book/src/chronicle/the-muster.md`, which
+  does not exist yet. It is plain backticked text, not an intra-doc or mdbook
+  link, and `docs_consistency` never resolves source-cited paths — so **no check
+  will fail if the chronicle is never written under that name.**
+- Four deferred Minor findings from Part A, for the final whole-branch review to
+  triage: `beta_calibration_freeze.rs:253` says the clamp first binds at
+  `d = 1.60` while `:270` of the same file says `d ≈ 1.45` (measured: kobold
+  ≈ 1.445, goblin ≈ 1.503, so a re-runner places the onset 0.16 too deep); the
+  doc's "span ≥ 0.365" is really 0.3645; "distinct" survives at `:143-144`
+  describing a different, undocumented arm; and the fn doc at `:296-299`
+  overstates what the guard is shown to detect.
+
+---
+
 ## Task 3: The widened key, as a `/v2` epoch
 
 **Files:**
