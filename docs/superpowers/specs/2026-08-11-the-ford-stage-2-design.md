@@ -144,10 +144,29 @@ Frozen before the code (decision 0016). Each states a floor and a ceiling.
   function's own answer on **100%** of sampled rooms. If a consumer cannot
   reproduce the classification from what the document carries, the document is
   storing the wrong thing.
-- **H2-4 — fords exist and are not everywhere.** Over sampled adjacent room
-  pairs whose sign differs, the fraction that are crossable under §8's
-  criterion lies in **[0.10, 0.70]**. Near 0 the walk is walled; near 1
-  crossing carries no meaning.
+- **H2-4 — fords exist and are not everywhere.** Over **transects of the
+  channel network** — the same sweep H4 already strides, one per sampled vertex
+  — the fraction whose crossing is fordable under §8's criterion lies in
+  **[0.10, 0.70]**. Near 0 the walk is walled; near 1 crossing carries no
+  meaning.
+
+  **The denominator is stated this way deliberately, and an earlier draft had
+  it wrong in a way that would have made the hypothesis vacuous.** That draft
+  sampled *adjacent room pairs whose sign differs*. A state-machine of a walker
+  meeting a river shows why that is circular: the transition left-bank →
+  right-bank without an intervening channel room is *possible only when the
+  channel is narrower than one step*, which is §8's crossability criterion
+  itself. So "adjacent pairs whose sign differs" is not a population of
+  candidate crossings — it **is** the ford set, and the measured fraction would
+  have been ~1.0 by construction, exactly as `channel-connectivity` became a
+  constant in stage 1. Transects of the network are a population that exists
+  independently of the criterion, so the fraction can take any value in `[0,1]`
+  and the hypothesis can fail.
+
+  **The reading is a snapshot at fixed discharge.** Fordability is not a
+  durable property of a place: raising `Q` widens the channel and closes the
+  ford (stage 1 §5.4). H2-4 measures today's static world and must not be
+  quoted as a standing fact about a crossing.
 
 ## 8. H3's late freeze — stated, with its derivation
 
