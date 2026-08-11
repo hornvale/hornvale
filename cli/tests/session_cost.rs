@@ -265,6 +265,56 @@ const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 40.0;
 /// required deliberate act: the reason is restoring the intended ~2x
 /// margin against a basis that was already wrong, not a growth this
 /// campaign's chamber work caused in the walk band.
+///
+/// **Basis re-recorded, ceiling unchanged (The Grain), 2026-08-10.** The walk
+/// band is now **16,664 bytes** and the ceiling stays at 24600, so headroom is
+/// `24600 / 16664 = 1.48x` — no longer the ~2x the paragraph above restored.
+/// The ceiling is deliberately NOT raised: 1.48x is ample, and raising a
+/// ceiling to preserve a round multiple would spend the ratchet's whole point.
+/// What is recorded instead is where the bytes went, measured per commit
+/// against the committed fixture rather than estimated:
+///
+/// ```text
+/// 12,273  the basis the paragraph above recorded (The Sighting, 2026-08-06)
+/// 13,598  this branch's own starting point (00f90ec6) — ALREADY +1,325 STALE
+/// 16,536  +2,938  `micro`, four quantized axes on each of 31 cells (8ce9c887)
+/// 16,638  +  102  the `resolution` disclosure block, once per document (cc171e04)
+/// 16,664  +   26  `"cave": null` on the embedded locale (f800e3b5)
+/// ```
+///
+/// Two things worth a future reader's attention. **The basis was stale before
+/// this campaign touched it** — 12,273 to 13,598 happened in between and was
+/// never re-recorded, which is the same silent drift The Sighting's paragraph
+/// above was written to catch, recurring one campaign later. And **`micro`
+/// accounts for 96% of this branch's growth** because it is per-cell: a
+/// document-level block costs ~100 bytes and a per-cell block costs ~3,000 at
+/// radius 4, scaling with the neighbourhood. A future per-cell field should be
+/// priced that way before it is added, not after.
+///
+/// **Re-measured after absorbing main, ceiling unchanged (The Grain, 2026-08-11).**
+/// The walk band is now **16,667 bytes** and the ceiling stays at 24600, so
+/// headroom is `24600 / 16667 = 1.476x`. The `+3` is **not** this campaign's:
+/// absorbing The Radiation moved main's own walk band from 13,598 to 13,601
+/// bytes over the same merge base, and the 16,664 figure above rode on top of
+/// the pre-absorption 13,598. The attribution is therefore additive and
+/// unchanged — `micro`, `resolution` and `cave` still account for +3,066
+/// between them, and the absorption contributes the remaining +3:
+///
+/// ```text
+/// 13,598  the merge base (00f90ec6), the basis the table above starts from
+/// 13,601  +    3  origin/main after The Radiation, same base — no new fields
+/// 16,664         this branch's pre-absorption reading (table above)
+/// 16,667  +    3  the merged tree: the SAME +3, carried through
+/// ```
+///
+/// The three bytes are **content, not structure**. The Radiation derived the
+/// affinity ladder's level (decision 0120),
+/// which moved settlement placement, so the walk band's entity IDs and labels
+/// changed — the first divergence is a neighbouring settlement renamed
+/// `Nenagabo` -> `Geoboge` with a correspondingly shorter entity ID. No key was
+/// added on either side. A future reader should read this as the fixture
+/// tracking a moved world, not as a schema growing: a byte delta this small
+/// with no new field is the signature of a placement change upstream.
 const WALK_BYTES_BUDGET: usize = 24600;
 
 /// The measured basis for `START_BUDGET_MS`: 3442.192 ms, the slowest of

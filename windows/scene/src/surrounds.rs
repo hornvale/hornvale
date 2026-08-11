@@ -69,7 +69,12 @@ pub struct SurroundsObserver {
 pub struct Mark {
     /// The examinable noun.
     pub noun: String,
-    /// What kind of thing this is: `"settlement"` or `"agent"`.
+    /// What kind of thing this is. The engine emits two built-in kinds —
+    /// `"settlement"` and `"cave"` — and a session-owning consumer adds
+    /// `"agent"`. A consumer that does not recognize a kind should still
+    /// render the mark: `legend_of` catalogs kinds generically and
+    /// `render_surrounds_ascii` treats every non-`"agent"` kind alike, so a
+    /// future kind needs no special case anywhere to appear.
     pub kind: String,
     /// One line about it — the datum `examine` prints.
     pub datum: String,
@@ -90,9 +95,12 @@ pub struct LegendEntry {
 }
 
 /// One cell of the chart. Lattice coordinates are RELATIVE to the observer
-/// and absent on a seam cell. Fine-grain fields are `null` at coarse grain —
-/// a cell carries the detail its epistemic state warrants, which is what
-/// makes the chart and the prose one lens rather than two.
+/// and absent on a seam cell. Several fields below are `null` on every cell
+/// but the observer's own — that is an EMIT gate (`is_here`), not a grain
+/// gate: `ctx.describe` computes them for every cell in the build loop, and
+/// the value is discarded rather than absent. See [`SurroundsCell::regime`]
+/// for the full explanation. [`SurroundsCell::micro`] is the field that
+/// genuinely is emitted for every cell, sub-cell grain included.
 /// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(diagnostic-value: height_asl_m), bare-ok(artifact: color)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsCell {
@@ -118,18 +126,31 @@ pub struct SurroundsCell {
     pub water: u32,
     /// Index into `relief_legend`.
     pub relief: u32,
-    /// The strangeness overlay's descriptor — fine grain, `null` when coarse.
+    /// The strangeness overlay's descriptor — **emitted only for the
+    /// observer's own cell** (`state == "here"`), `null` on every other.
+    ///
+    /// This is an EMIT gate, not a grain gate. `ctx.describe` runs for every
+    /// cell in the build loop, so the value exists everywhere and is
+    /// discarded here. These comments previously read "fine grain, `null`
+    /// when coarse", which led a campaign to design around the premise that
+    /// the data did not exist at coarse grain. If you are looking for the
+    /// per-cell sub-cell signal, it is [`SurroundsCell::micro`], which is
+    /// emitted for every cell.
     pub regime: Option<String>,
-    /// Annual-mean temperature, °C — fine grain, `null` when coarse.
+    /// Annual-mean temperature, °C — emitted only for the observer's own
+    /// cell (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub temperature_c: Option<f64>,
-    /// Moisture — fine grain, `null` when coarse.
+    /// Moisture — emitted only for the observer's own cell (`is_here`),
+    /// `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub moisture: Option<f64>,
-    /// Elevation, metres — fine grain, `null` when coarse.
+    /// Elevation, metres — emitted only for the observer's own cell
+    /// (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub elevation_m: Option<f64>,
-    /// Height above sea level, metres — fine grain, `null` when coarse.
+    /// Height above sea level, metres — emitted only for the observer's own
+    /// cell (`is_here`), `null` on every other. See [`SurroundsCell::regime`].
     /// Signed: negative below. `relief` is banded from this.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub height_asl_m: Option<f64>,
@@ -139,8 +160,45 @@ pub struct SurroundsCell {
     /// it was before the colour layer existed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<[u8; 3]>,
+    /// The sub-cell micro-field at this room — always present, for every
+    /// cell. See [`Micro`].
+    pub micro: Micro,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
+}
+
+/// The sub-cell micro-field at a room: four independent axes in `[-1, 1]`,
+/// each drawn from the room's own address noise, so a walk through
+/// homogeneous biome still varies room to room.
+///
+/// A scene-side type rather than a re-export of `hornvale_locale::MicroField`,
+/// for the reason every other float on this schema is: the wire type carries
+/// the emit-boundary quantization (decision 0033) and the producer's type
+/// carries the compute-path value. Coupling the published schema to a
+/// window's internal struct would make a refactor there a cross-repo schema
+/// change here.
+///
+/// **Not `Option`.** Every room has a micro-field — it is a pure function of
+/// the room's address and the world seed — so an absent value would mean
+/// "this emitter chose not to say", which is the exact confusion the
+/// `is_here` gate on the fields above created. See this module's doc.
+/// type-audit: bare-ok(ratio: relief), bare-ok(ratio: aspect), bare-ok(ratio: wetness), bare-ok(ratio: openness)
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Micro {
+    /// Micro-relief, hollow (`-1`) to rise (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub relief: f64,
+    /// Slope aspect / insolation, shaded (`-1`) to sunlit (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub aspect: f64,
+    /// Local wetness, dry (`-1`) to wet (`+1`). **Address noise, not
+    /// hydrology** — it does not say where the water is, and a consumer must
+    /// not band a water kind from it. `water` is the field that answers that.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub wetness: f64,
+    /// Canopy openness, closed (`-1`) to open (`+1`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub openness: f64,
 }
 
 /// The eye a coloured chart was seen through, and what its projection to
@@ -177,12 +235,43 @@ pub struct Sight {
     pub sun_altitude_deg: f64,
 }
 
+/// What resolution this chart's fields are decided at.
+///
+/// **Why a document says this at all.** A chart at walk depth sits six
+/// refinement levels below the canonical grid, so a field decided per grid cell
+/// is necessarily constant across the whole view — 4^6 rooms share one cell.
+/// Read without this block, that flatness looks like the chart contradicting the
+/// room's own prose ("open water" against "buttressed canopy, shaded, in a
+/// hollow"); read with it, the flatness is the field's resolution stated out
+/// loud. This is the same discipline [`Sight`] applies to colour, where
+/// `preserves` names what the projection does *not* carry.
+///
+/// Declaring a resolution is deliberately NOT refining it. A campaign attempted
+/// the refinement for `water` and reverted it: thresholding a blend of a
+/// *nominal* field's underlay deletes categories and broke a calibrated coarse
+/// statistic, where banding a blend of an *ordinal* field's underlay (which is
+/// what `relief` does) moves a value at most one band. Sub-cell water belongs to
+/// a hydrology model, not to this document.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: depth_below_grid), bare-ok(identifier-text: grid_resolution_fields)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Resolution {
+    /// The canonical grid's refinement level.
+    pub grid_level: u32,
+    /// How many levels below `grid_level` this chart's cells sit. Each level
+    /// quarters a cell, so `4^depth_below_grid` rooms share one grid cell.
+    pub depth_below_grid: u32,
+    /// The names of this document's fields that are decided at grid resolution
+    /// and therefore cannot vary below it, in stable order.
+    pub grid_resolution_fields: Vec<String>,
+}
+
 /// One `scene/surrounds/v2` document. Field order is the JSON key order and
-/// is contract — never reorder. `sight` is the one exception to "never
-/// reorder" in letter only: it was appended after `legend` rather than
-/// inserted, so every document built before the colour declaration existed
-/// is still byte-identical, and `#[serde(skip_serializing_if)]` means an
-/// uncoloured document emits no `sight` key at all.
+/// is contract — never reorder. `sight` and `resolution` are the exceptions
+/// to "never reorder" in letter only: each was appended after the previous
+/// last field rather than inserted, so every document built before it existed
+/// is still byte-identical. `#[serde(skip_serializing_if)]` means an
+/// uncoloured document emits no `sight` key at all; `resolution` carries no
+/// such gate and is always present.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsScene {
@@ -226,6 +315,10 @@ pub struct SurroundsScene {
     /// unchanged by this field's existence.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sight: Option<Sight>,
+    /// Which of this document's fields are decided at canonical-grid
+    /// resolution and are therefore constant below it. Appended after
+    /// `sight` so the change is additive to the wire.
+    pub resolution: Resolution,
 }
 
 /// Build the `scene/surrounds/v2` document for `room` at `radius` rings,
@@ -296,6 +389,50 @@ pub fn surrounds_scene_in(
             .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?
             .0;
         let mut marks = marks_by_room.get(&key).cloned().unwrap_or_default();
+        // A cave is a CELL-level affordance, and marking every room of the
+        // cell is faithful rather than sloppy: `delve` resolves its cave
+        // from the cell the possession stands on
+        // (`windows/vessel/src/session.rs::chamber_column_here`, which reads
+        // the max-weight corner of the SAME fuzzy-resolved cell `describe`
+        // uses — the dominant corner), so it already succeeds from any room
+        // in a cave-bearing cell.
+        //
+        // ONE CAVEAT, so a reader of this file alone does not re-raise the
+        // question: `chamber_column_here` breaks a weight TIE differently.
+        // It picks with `max_by_key(|c| c.weight)`, which returns the LAST
+        // maximum, where `LocaleContext::dominant_corner` breaks to the
+        // lowest `CellId`. On an exact integer-weight tie — common on this
+        // mesh, since a room sitting on a lattice point can weigh 64/64/64 —
+        // the two can name different cells, so a marked cave and the cave
+        // `delve` actually descends into can diverge. That divergence
+        // predates the cave mark, reaches `column_here` (`dive`) the same
+        // way, and is recorded rather than fixed here; it wants a ruling on
+        // whether those two paths join `dominant_corner`'s coupling
+        // invariant or are exempted in writing.
+        //
+        // Note also that `water` is NOT a counter-example to this pattern,
+        // though an earlier draft of this comment said it was. `water` takes
+        // the dominant corner of each ROOM's own three weights, which is
+        // categorical nearest-neighbour interpolation and the correct method
+        // for a nominal field; its flatness across a narrow view is the
+        // interpolation stencil being wider than the view, not a defect. A
+        // campaign refined it from a blend and reverted that (see the
+        // `Resolution` block's doc).
+        //
+        // Salience 30 puts a cave mouth below both settlement ranks (10, 20)
+        // in the legend, so a settlement outranks a cave mouth when both
+        // stand on the same cell.
+        if let Some(kind) = locale.cave {
+            marks.push(Mark {
+                noun: format!("a {} cave", kind.name()),
+                kind: "cave".to_string(),
+                datum: format!(
+                    "A {} cave opens here — 'delve' descends into it.",
+                    kind.name()
+                ),
+                salience: 30,
+            });
+        }
         marks.sort_by(|a, b| a.salience.cmp(&b.salience).then(a.noun.cmp(&b.noun)));
         cells.push(SurroundsCell {
             room: key,
@@ -320,6 +457,12 @@ pub fn surrounds_scene_in(
             // is the only writer, which is what keeps every committed
             // artifact byte-identical.
             color: None,
+            micro: Micro {
+                relief: locale.regime.micro.relief,
+                aspect: locale.regime.micro.aspect,
+                wetness: locale.regime.micro.wetness,
+                openness: locale.regime.micro.openness,
+            },
             marks,
         });
     }
@@ -360,6 +503,27 @@ pub fn surrounds_scene_in(
         cells,
         legend,
         sight: None,
+        resolution: Resolution {
+            grid_level: ctx.globe_level(),
+            depth_below_grid: room.depth() - ctx.globe_level(),
+            // A cave mark is ALSO a dominant-corner fact (same `locale.cave`
+            // read `biome`/`water` share) and is deliberately NOT added here.
+            // This list names DOCUMENT FIELDS — actual `SurroundsCell` keys —
+            // and there is no `cave` key: a cave surfaces only as one
+            // possible `kind` inside `marks`, a field that ALSO carries
+            // settlement marks keyed by the walking-depth room a
+            // settlement's exact coordinates land in, which is finer than
+            // the grid and genuinely varies below it. Listing `"marks"`
+            // here would misstate that settlement half, and inventing a
+            // `"cave"` entry would name a field that does not exist on the
+            // wire. So the disclosure stays field-shaped and silent about
+            // marks; `the_chart_declares_which_fields_are_grid_resolution`
+            // pins this so a future change cannot add either by accident.
+            grid_resolution_fields: ["biome", "color", "water"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+        },
     })
 }
 
@@ -811,12 +975,15 @@ mod tests {
     #[test]
     fn the_uncolored_json_emits_no_color_key() {
         // serde skip_serializing_if means an absent colour emits no key at
-        // all, so the committed gallery JSON cannot move.
+        // all, so the committed gallery JSON cannot move. Checked as a KEY
+        // (`"color":`), not a bare substring: `resolution.grid_resolution_fields`
+        // legitimately carries the string "color" as an array element, which
+        // a bare `"\"color\""` search would also match.
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
         let json = crate::surrounds_json(&s);
         assert!(
-            !json.contains("\"color\""),
+            !json.contains("\"color\":"),
             "an absent colour still emitted a key"
         );
     }
@@ -1145,7 +1312,11 @@ mod tests {
     fn an_uncoloured_document_is_byte_identical_to_one_built_before_sight_existed() {
         // `sight` and `color` are both skipped when absent, so the uncoloured
         // path must emit not one extra byte. This is what protects the three
-        // committed gallery charts and the gallery scene JSON.
+        // committed gallery charts and the gallery scene JSON. `color` is
+        // checked as a KEY (`"color":`), not a bare substring: `resolution.
+        // grid_resolution_fields` legitimately carries the string "color" as
+        // an array element, which a bare `"\"color\""` search would also
+        // match.
         let (w, ctx, room) = fixture_world();
         let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime { day: 0.0 }).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1154,7 +1325,7 @@ mod tests {
             "uncoloured documents carry no sight block"
         );
         assert!(
-            !json.contains("\"color\""),
+            !json.contains("\"color\":"),
             "uncoloured documents carry no colour"
         );
     }
@@ -1203,6 +1374,81 @@ mod tests {
         assert_eq!(sight.sun_altitude_deg, 12.5);
     }
 
+    /// `micro` is emitted for EVERY cell, not just the observer's. The mutation
+    /// that reintroduces an `is_here` gate must fail this.
+    ///
+    /// Stated over the count of cells whose micro is non-default rather than
+    /// over a specific value, because the values are address noise and
+    /// pinning one would pin the noise function rather than the emit.
+    ///
+    /// Not `#[ignore]`: every other single-seed-42-world-build test in this
+    /// file (e.g. `a_radius_four_neighbourhood_holds_thirty_one_cells`) runs
+    /// in the ordinary gate; `cli/tests/heavy_tier.rs`'s `heavy:` token is
+    /// reserved for the one test in this file that sweeps multiple seeds
+    /// (`no_land_cell_bands_as_marine_relief_across_seeds`), and tagging a
+    /// single-world test with it would fail that guard's canonical-string
+    /// check anyway.
+    #[test]
+    fn every_cell_carries_its_own_micro_field() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        // Every cell, including the 30 that are not `here`.
+        assert_eq!(
+            s.cells.len(),
+            31,
+            "the fixture's premise moved: a radius-4 chart is no longer 31 cells"
+        );
+
+        // The four axes are independent sub-streams, so distinct rooms give
+        // distinct tuples. A single shared value would mean the field was read
+        // once and copied.
+        let distinct: std::collections::BTreeSet<String> = s
+            .cells
+            .iter()
+            .map(|c| {
+                format!(
+                    "{},{},{},{}",
+                    c.micro.relief, c.micro.aspect, c.micro.wetness, c.micro.openness
+                )
+            })
+            .collect();
+        assert!(
+            distinct.len() > 25,
+            "31 cells produced only {} distinct micro tuples; the field is being \
+             shared rather than derived per room",
+            distinct.len()
+        );
+    }
+
+    /// The spec's H3, as a test: `openness` spans more than half of [-1, 1]
+    /// within one neighbourhood. This is the property that makes the field worth
+    /// drawing, and it is allowed to fail.
+    #[test]
+    fn micro_openness_spans_more_than_half_its_range_in_one_neighbourhood() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for c in &s.cells {
+            lo = lo.min(c.micro.openness);
+            hi = hi.max(c.micro.openness);
+        }
+        assert!(
+            hi - lo > 1.0,
+            "openness spanned only {:.3} of its 2.0 range ({lo:.3}..{hi:.3}); a \
+             glyph keyed to it would barely vary",
+            hi - lo
+        );
+    }
+
     #[test]
     fn a_dimmer_light_yields_dimmer_colour() {
         // The caller-supplied illuminant must actually reach the pixels — the
@@ -1240,6 +1486,140 @@ mod tests {
         assert!(
             moved > 0,
             "dimming the illuminant must darken at least one cell"
+        );
+    }
+
+    /// The chart declares which of its fields are decided at canonical-grid
+    /// resolution and are therefore constant below it.
+    ///
+    /// This exists because the chart's flatness at walk depth was read as a
+    /// contradiction with the room's own prose, and the document gave a reader no
+    /// way to tell "this area is uniform" from "this field does not resolve here".
+    /// Same disclosure discipline `Sight::preserves` already applies to colour.
+    #[test]
+    fn the_chart_declares_which_fields_are_grid_resolution() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let here = observer(&w);
+        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
+            .expect("the chart builds");
+
+        assert_eq!(s.resolution.grid_level, ctx.globe_level());
+        assert_eq!(
+            s.resolution.depth_below_grid,
+            here.depth() - ctx.globe_level()
+        );
+        assert!(
+            s.resolution
+                .grid_resolution_fields
+                .contains(&"water".to_string()),
+            "water is decided at the dominant corner, so it must be declared"
+        );
+        assert!(
+            s.resolution
+                .grid_resolution_fields
+                .contains(&"biome".to_string()),
+            "biome is decided at the dominant corner, so it must be declared"
+        );
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"relief".to_string()),
+            "relief is banded from the blend and DOES vary below the grid"
+        );
+        // The Grain, Task 3: a cave is ALSO a dominant-corner fact, and it is
+        // deliberately NOT declared here — see the comment at this field's
+        // construction site. `"marks"` (the actual document field a cave
+        // surfaces through) ALSO carries settlement marks, which are keyed
+        // by the walking-depth room a settlement's exact coordinates land
+        // in and genuinely vary below the grid — so declaring `"marks"`
+        // would misstate that half, and `"cave"` names no field that exists
+        // on the wire at all. Pinned so a future change cannot add either by
+        // accident without someone reading why it isn't already here.
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"cave".to_string()),
+            "\"cave\" names no document field — it is a mark kind, not a key"
+        );
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"marks".to_string()),
+            "marks mixes a grid-resolution fact (cave) with a finer one \
+             (settlement), so declaring the whole field would misstate the \
+             settlement half"
+        );
+    }
+
+    /// The Grain, Task 3: a chart centred on a cave-bearing cell emits
+    /// exactly one `"cave"` mark, on the observer's own cell; a chart
+    /// centred elsewhere emits none.
+    ///
+    /// **Direction this proves, and the direction it does not.** This checks
+    /// *emitted ⊆ real*: every cave mark this test finds corresponds to a
+    /// real `locale.cave` reading. It does NOT check the converse (*real ⊆
+    /// emitted*) — it does not sweep every cave-bearing cell on the globe to
+    /// confirm each one gets a mark somewhere in some chart. A cave the
+    /// terrain has and the scene omits would not be caught by this test.
+    #[test]
+    fn a_cave_bearing_cell_emits_exactly_one_cave_mark_and_elsewhere_emits_none() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+
+        // Find a room address whose dominant corner the terrain places a
+        // cave at, the same directional-sweep idiom
+        // `windows/locale`'s `describe_reports_the_cave_at_its_dominant_corner_on_seed_42`
+        // uses (a direct aim at a cell's centroid does not reliably resolve
+        // to that cell as the dominant corner).
+        let mut cave_addr = None;
+        for i in 0..2000u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
+            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 })
+                && loc.cave.is_some()
+            {
+                cave_addr = Some(addr);
+                break;
+            }
+        }
+        let cave_addr = cave_addr.expect(
+            "seed 42 must have a reachable cave findable by this sweep — if this \
+             fails, that is a finding to report, not a test to weaken",
+        );
+
+        let s = surrounds_scene_in(&w, &ctx, &cave_addr, 0, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(s.cells.len(), 1, "radius 0 is just the observer's own cell");
+        let cave_marks: Vec<&Mark> = s.cells[0]
+            .marks
+            .iter()
+            .filter(|m| m.kind == "cave")
+            .collect();
+        assert_eq!(
+            cave_marks.len(),
+            1,
+            "exactly one cave mark must be emitted on a cave-bearing cell, got {cave_marks:?}"
+        );
+        assert_eq!(cave_marks[0].salience, 30);
+
+        // Elsewhere: a chart centred on the flagship settlement's own room
+        // (the module's ordinary `observer()` fixture) emits no cave mark,
+        // UNLESS that room happens to also sit on a cave-bearing cell.
+        let elsewhere = observer(&w);
+        let elsewhere_loc = ctx.describe(&elsewhere, WorldTime { day: 0.0 }).unwrap();
+        assert!(
+            elsewhere_loc.cave.is_none(),
+            "fixture must actually be cave-free, or the negative half below is vacuous"
+        );
+        let s2 = surrounds_scene_in(&w, &ctx, &elsewhere, 0, WorldTime { day: 0.0 }).unwrap();
+        assert!(
+            s2.cells[0].marks.iter().all(|m| m.kind != "cave"),
+            "a cave-free cell must emit no cave mark"
         );
     }
 }

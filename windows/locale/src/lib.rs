@@ -22,7 +22,7 @@ use hornvale_kernel::{
     CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
-pub use hornvale_terrain::WaterKind;
+pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
 
@@ -85,6 +85,14 @@ pub struct Locale {
     pub regime: Regime,
     /// Base + vertical exits.
     pub exits: Vec<Exit>,
+    /// The cave at the room's dominant corner (max-weight cell), if the
+    /// terrain places one there — categorical, inherited, never blended,
+    /// the same rule `fields.water` and `biome` follow (see
+    /// [`dominant_corner`]). Appended after `exits` rather than inserted, so
+    /// a document built before this field existed is still byte-identical up
+    /// to this new trailing key.
+    #[serde(serialize_with = "serialize_cave_kind")]
+    pub cave: Option<CaveKind>,
 }
 
 /// A canonical-grid corner cell and its integer blend weight.
@@ -115,8 +123,26 @@ pub struct LocaleFields {
     /// from (The Benchmark).
     #[serde(serialize_with = "serialize_height_asl")]
     pub height_asl_m: SeaLevelHeight,
-    /// Salt/fresh water at the room (max-weight cell — categorical, inherited,
-    /// never blended). `water.is_fresh()` is the drinkable query. `WaterKind`
+    /// Salt/fresh water at the room: the water kind of this room's own
+    /// dominant corner — categorical, never blended. `water.is_fresh()` is the
+    /// drinkable query.
+    ///
+    /// **"Inherited" is the wrong word for this, and using it cost a campaign.**
+    /// [`dominant_corner`] is evaluated per ROOM, over that room's own three
+    /// corner weights, so this is *categorical nearest-neighbour
+    /// interpolation* — the correct method for a nominal field — and not a
+    /// value copied down from one cell to all 4^6 rooms inside it. The field
+    /// does look flat across a narrow view, but that is the interpolation
+    /// stencil being wider than the view rather than a defect in the field.
+    ///
+    /// **Do not refine it by thresholding a blend.** That was built and
+    /// reverted: `WaterKind` is *nominal*, and a threshold is maximally
+    /// nonlinear, so `classify(blend(drainage))` is not the area-weighted vote
+    /// of `classify(drainage)` over the corners — it deletes the thin channels
+    /// and shrank seed 42's fresh water at walking depth by 29%. Contrast
+    /// `height_asl_m`'s relief bands, which may band a blend because relief is
+    /// *ordinal*: a blend moves an ordinal value at most one band. Sub-cell
+    /// water needs a flow graph, not a re-reading of this field. `WaterKind`
     /// lives in the terrain domain crate, which (decision 0002) depends on
     /// nothing but the kernel, so it cannot derive `Serialize` itself; this
     /// field serializes by its stable name instead (see `serialize_water_kind`).
@@ -151,6 +177,19 @@ fn water_kind_name(k: WaterKind) -> &'static str {
         WaterKind::SaltBasin => "salt-basin",
         WaterKind::River => "river",
         WaterKind::DryLand => "dry-land",
+    }
+}
+
+/// Serialize an `Option<CaveKind>` by its stable name, `null` when absent —
+/// the same shape [`serialize_water_kind`] uses for a kind that is always
+/// present, extended for a field that may not be.
+fn serialize_cave_kind<S>(kind: &Option<CaveKind>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match kind {
+        Some(k) => serializer.serialize_str(k.name()),
+        None => serializer.serialize_none(),
     }
 }
 
@@ -586,6 +625,7 @@ impl LocaleContext {
                 .collect(),
             regime,                // strangeness overlay (§5-§7)
             exits: exits_of(addr), // base + vertical exits (§6)
+            cave: self.terrain.cave_at(best.0).map(|c| c.kind),
         })
     }
 
@@ -1162,6 +1202,61 @@ mod tests {
         );
     }
 
+    /// The Grain, Task 3: a room's `cave` must name the same cell `biome`
+    /// and `water` do — the dominant corner, never a blend.
+    ///
+    /// A direct aim at a cave cell's own canonical-grid position does not
+    /// reliably land that cell as the resolved address's dominant corner
+    /// (the room mesh's nearest-cell resolution does not coincide with the
+    /// geosphere's own cell centroids closely enough to guarantee it), so
+    /// this uses the same directional-sweep idiom as
+    /// `describe_and_reflectance_agree_on_one_dominant_cell` and
+    /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42`:
+    /// scan a deterministic spread of directions, and for each resolved
+    /// address's ACTUAL dominant corner (not a guess), check whether the
+    /// terrain places a cave there. Seed 42 has 628 of 11 066 land cells
+    /// carrying a cave (~5.7%, confirmed by a throwaway probe), so a 2000-
+    /// direction sweep finds one reliably.
+    #[test]
+    fn describe_reports_the_cave_at_its_dominant_corner_on_seed_42() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let geo = ctx.climate.geosphere();
+        let terrain = ctx.terrain();
+
+        let mut found = false;
+        for i in 0..2000u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, ctx.globe_level());
+            let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
+                continue;
+            };
+            let dominant = dominant_corner(&weights).0;
+            let Some(cave) = terrain.cave_at(dominant) else {
+                continue;
+            };
+            let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            assert_eq!(
+                loc.cave,
+                Some(cave.kind),
+                "describe must report the dominant corner's cave at {addr:?}"
+            );
+            found = true;
+            break;
+        }
+        assert!(
+            found,
+            "seed 42 must have a reachable cave findable by this sweep — if this \
+             fails, that is a finding to report (no cave reachable), not a test \
+             to weaken"
+        );
+    }
+
     #[test]
     fn describe_over_deep_address_errors() {
         // A path deeper than MAX_DEPTH (29) has no packed id: fail fast with
@@ -1242,6 +1337,334 @@ mod tests {
             "abyssal",
         ];
         assert!(KNOWN_BIOMES.contains(&loc.biome.as_str()));
+    }
+
+    /// H4 (The Grain, Task 2): `dominant_corner`'s own doc claims every
+    /// categorical field a room reports -- biome, water kind, substrate, and
+    /// the rock the colour layer reads -- names the same cell. Nothing
+    /// checked that before this test, and a reverted campaign (`dd523ab2`,
+    /// reverted at `76068e6a`) split it silently: it stayed green through
+    /// 3350 tests while water alone moved to a non-dominant reading.
+    ///
+    /// Sampled over many addresses (the same directional-spread idiom
+    /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42` uses)
+    /// rather than one fixed address: a single room's three corner weights
+    /// can coincidentally agree across categories even when the underlying
+    /// wiring has split, so one address is not enough to trust a pass.
+    #[test]
+    fn describe_and_reflectance_agree_on_one_dominant_cell() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let geo = ctx.climate.geosphere();
+        let mut checked = 0;
+        for i in 0..200u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, 6);
+            let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
+                continue;
+            };
+            let expected_cell = dominant_corner(&weights).0;
+            let locale = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+
+            assert_eq!(
+                locale.biome_kind,
+                ctx.climate.biome_at(expected_cell),
+                "biome must name the dominant corner at {addr:?}"
+            );
+            assert_eq!(
+                locale.fields.water,
+                *ctx.terrain.globe().water_kind.get(expected_cell),
+                "water kind must name the dominant corner at {addr:?}"
+            );
+            assert_eq!(
+                locale.regime.negations.substrate,
+                crate::substrate::substrate_at(&ctx.climate, &ctx.terrain, expected_cell),
+                "substrate must name the dominant corner at {addr:?}"
+            );
+
+            let reflectance = ctx.reflectance_at(&addr).unwrap();
+            let buffer = ctx.terrain.material_at(expected_cell);
+            let rock = ctx.terrain.rock_at(expected_cell);
+            let expected_reflectance =
+                hornvale_terrain::lithology::reflectance(&buffer, rock).integrate();
+            assert_eq!(
+                reflectance, expected_reflectance,
+                "the colour layer's rock must name the dominant corner at {addr:?}"
+            );
+            checked += 1;
+        }
+        assert!(
+            checked > 50,
+            "too few addresses resolved on the grid to trust this test"
+        );
+    }
+
+    /// The room's dominant corner, read back off a rendered [`Locale`] through
+    /// the SAME rule `describe` used to pick it — [`dominant_corner`]: max
+    /// weight, tie-break lowest `CellId`.
+    ///
+    /// **Not `max_by_key(|c| c.weight)`**, which returns the LAST maximum on a
+    /// tie. Three equal weights are common enough on this mesh that the two
+    /// rules disagree in practice, and a test that used `max_by_key` compared
+    /// against a cell production never chose — passing for a reason unrelated
+    /// to what it claimed to measure. (Two paths in `windows/vessel` still
+    /// resolve a cell that way; that divergence is recorded and unfixed.)
+    fn dominant_of(loc: &Locale) -> CellId {
+        let w: [(CellId, u64); 3] = [
+            (CellId(loc.corners[0].cell), loc.corners[0].weight),
+            (CellId(loc.corners[1].cell), loc.corners[1].weight),
+            (CellId(loc.corners[2].cell), loc.corners[2].weight),
+        ];
+        dominant_corner(&w).0
+    }
+
+    /// Rooms spread across the WHOLE of `cell`'s dual region, at `depth` — one
+    /// fan of samples running from near the cell's centre out towards each of
+    /// its neighbours.
+    ///
+    /// **Not a contiguous BFS neighbourhood, and the difference is the whole
+    /// point.** A conservation claim is about a cell, and a radius-4 patch
+    /// covers about 1/132 of one; across a patch that small the three-corner
+    /// blend of a terrain statistic moves ~2%, so a patch cannot see the
+    /// variation that a cell-wide aggregate must account for. Fanning outward
+    /// instead sweeps the neighbour's blend weight from nearly 0 to nearly 1/3,
+    /// which is the range that actually exists inside the cell.
+    ///
+    /// **No sample is a cell centre, and none lies on the arc between two of
+    /// them.** Rooms and cells subdivide the *same* icosphere, so a level-6 cell
+    /// centre is also an exact corner of the level-12 room lattice, and the arc
+    /// between two adjacent centres is an exact edge path of it.
+    /// `RoomAddr::containing`'s spherical point-in-triangle test straddles on
+    /// both: the descent falls through to its middle-child fallback at every
+    /// level and converges on the centre of a base-face sub-triangle — measured
+    /// ~5° from the point asked for, with all three corner weights equal
+    /// (64/64/64), so even the dominant corner is a coin toss there. A water
+    /// test built on such a room **passed against code that did not yet do what
+    /// it claimed.** Hence `t` never reaches 0, and every sample carries a
+    /// small off-lattice third component (`SKEW`) to leave the arc. `containing`
+    /// is sound for ordinary points; it is lattice coincidences that degenerate.
+    fn rooms_across_cell(
+        geo: &hornvale_kernel::Geosphere,
+        cell: CellId,
+        depth: u32,
+    ) -> Vec<RoomAddr> {
+        /// Off-lattice third component. Small enough not to move which cell
+        /// owns the sample, large enough to leave the arc.
+        const SKEW: f64 = 0.031;
+        let a = geo.position(cell);
+        let ns = geo.neighbors(cell);
+        let mut out = Vec::new();
+        for i in 0..ns.len() {
+            let b = geo.position(ns[i]);
+            let c = geo.position(ns[(i + 1) % ns.len()]);
+            for t in [0.04, 0.11, 0.19, 0.26, 0.32] {
+                let w = 1.0 - t - SKEW;
+                let raw = [
+                    w * a[0] + t * b[0] + SKEW * c[0],
+                    w * a[1] + t * b[1] + SKEW * c[1],
+                    w * a[2] + t * b[2] + SKEW * c[2],
+                ];
+                let n = (raw[0] * raw[0] + raw[1] * raw[1] + raw[2] * raw[2]).sqrt();
+                out.push(RoomAddr::containing(
+                    [raw[0] / n, raw[1] / n, raw[2] / n],
+                    depth,
+                ));
+            }
+        }
+        out
+    }
+
+    /// The plurality water kind of a room set, tie-broken to the lowest
+    /// `WaterKind::index()` so the answer cannot vary between runs. This is the
+    /// "aggregate" in H5's sense: what a coarse observer would conclude the
+    /// cell's water is, told only what its rooms report.
+    fn plurality(kinds: &[WaterKind]) -> WaterKind {
+        let mut tally: std::collections::BTreeMap<u8, (usize, WaterKind)> = Default::default();
+        for k in kinds {
+            let e = tally.entry(k.index()).or_insert((0, *k));
+            e.0 += 1;
+        }
+        tally
+            .values()
+            .fold(None::<(usize, WaterKind)>, |acc, &(n, k)| match acc {
+                Some((bn, _)) if bn >= n => acc,
+                _ => Some((n, k)),
+            })
+            .expect("a non-empty room set has a plurality")
+            .1
+    }
+
+    /// How many canonical cells the conservation scan below covers, in each of
+    /// its two halves. Capped because the scan pays a `describe` per room.
+    ///
+    /// The scan takes two samples deliberately. A **stride** over `CellId`
+    /// order spans the globe, so conservation is asserted over ocean and dry
+    /// land as well as rivers. A **River prefix** targets the one category the
+    /// reverted mechanism actually deleted: a stride sample is ~94% ocean and
+    /// dry land, where a threshold on a blend agrees with the partition almost
+    /// everywhere, so a stride alone would leave the tripwire arm unable to
+    /// fire for a reason that has nothing to do with the criterion.
+    const CONSERVATION_CELLS: usize = 40;
+
+    /// **H5 (The Grain) — the conservation criterion, and the only test in this
+    /// file written for a mechanism that does not exist yet.**
+    ///
+    /// The claim: aggregating room-level water back over a canonical cell
+    /// reproduces that cell's own water kind. Nearest-corner assignment
+    /// satisfies it *by construction* — every room whose dominant corner is
+    /// cell `C` reports `C`'s water kind, so the aggregate is unanimous — which
+    /// is precisely why this test is cheap and precisely why it is worth
+    /// having. It is a **tripwire for a future mechanism** (`MAP-64`'s flow
+    /// graph, or anything else that tries to put water somewhere in particular
+    /// inside a cell), not a discovery about today's code.
+    ///
+    /// Why write down something that holds trivially: a campaign built a
+    /// sub-cell water mechanism that passed both of its preregistered
+    /// hypotheses and the whole 3350-test suite, and it was illegal — it
+    /// deleted 29% of seed 42's fresh water at walking depth. Both hypotheses
+    /// asked about *local variation*; the violated property was *global
+    /// conservation*, and no local hypothesis can detect that. This is the test
+    /// that mechanism would have failed before it was ever built.
+    ///
+    /// **It asserts the strong form (unanimity), not merely the aggregate.**
+    /// A plurality-only criterion would still permit deleting a category from a
+    /// minority of cells, which is exactly the 29% loss — a thin river is a
+    /// minority landform everywhere it exists. Unanimity implies the aggregate;
+    /// the aggregate does not imply unanimity.
+    ///
+    /// **Second arm: the check is proved discriminating rather than assumed
+    /// so.** Over the same rooms it also computes what the reverted mechanism
+    /// (`dd523ab2`) would have assigned — `water::classify` over the room's own
+    /// blended elevation and blended drainage, with the two flags still taken
+    /// from the dominant corner, which is that commit exactly — and asserts
+    /// that assignment *violates* conservation somewhere in the scan. Without
+    /// that arm this test could pass against a criterion too weak to catch
+    /// anything, which is the failure mode the campaign that wrote it spent
+    /// itself diagnosing.
+    ///
+    /// **Measured on seed 42** over 80 cells and 2151 rooms: the partition
+    /// conserves on every one, while the reverted mechanism breaks the aggregate
+    /// form on **11 of 80 cells** and unanimity on **27 of 80**. The first draft
+    /// of this test sampled a radius-4 BFS patch per cell and the tripwire arm
+    /// found **0 of 44** — across 1/132 of a cell the blend barely moves, so the
+    /// scan could not see what it was built to catch. That near miss is why the
+    /// sampling is a cell-wide fan and why the second arm exists at all: a
+    /// tripwire nobody has watched trip is a comment.
+    #[test]
+    fn room_water_is_conserved_when_aggregated_over_a_canonical_cell() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let geo = ctx.climate().geosphere();
+        let globe = ctx.terrain().globe();
+        let depth = ctx.globe_level() + 6;
+        let sea_level_m = quantize(globe.sea_level.get());
+
+        let all: Vec<CellId> = geo.cells().collect();
+        let stride = (all.len() / CONSERVATION_CELLS).max(1);
+        let mut scan: Vec<CellId> = all
+            .iter()
+            .copied()
+            .step_by(stride)
+            .take(CONSERVATION_CELLS)
+            .chain(
+                all.iter()
+                    .copied()
+                    .filter(|c| *globe.water_kind.get(*c) == WaterKind::River)
+                    .take(CONSERVATION_CELLS),
+            )
+            .collect();
+        scan.sort_by_key(|c| c.0);
+        scan.dedup();
+
+        let mut cells_checked = 0usize;
+        let mut rooms_checked = 0usize;
+        // Violations the REVERTED blended-threshold mechanism would cause,
+        // counted at both strengths so the failure message can say which.
+        let mut simulated_aggregate_violations = 0usize;
+        let mut simulated_unanimity_violations = 0usize;
+
+        for cell in scan {
+            let expected = *globe.water_kind.get(cell);
+
+            let mut simulated: Vec<WaterKind> = Vec::new();
+            let mut rooms_in_cell = 0usize;
+            for addr in rooms_across_cell(geo, cell, depth) {
+                let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) else {
+                    continue;
+                };
+                let dominant = dominant_of(&loc);
+                // Only the rooms this cell actually owns. A radius-4 patch can
+                // straddle a cell boundary, and a room on the other side of it
+                // is a different cell's business.
+                if dominant != cell {
+                    continue;
+                }
+                rooms_in_cell += 1;
+                rooms_checked += 1;
+
+                // THE CONSERVATION CLAIM, in its strong form.
+                assert_eq!(
+                    loc.fields.water, expected,
+                    "room {:?} is owned by cell {} but reports {:?} where the cell itself is \
+                     {:?}; sub-cell water has stopped conserving its cell's kind",
+                    addr, cell.0, loc.fields.water, expected
+                );
+
+                // The reverted mechanism, reconstructed: classify from the
+                // room's own blended elevation and blended drainage, with
+                // `endorheic` and terminal-sink status still read off the
+                // dominant corner because a flag has no weighted mean.
+                let denom: f64 = loc.corners.iter().map(|c| c.weight as f64).sum();
+                let drainage_blend: f64 = loc
+                    .corners
+                    .iter()
+                    .map(|c| c.weight as f64 * *globe.drainage.get(CellId(c.cell)))
+                    .sum::<f64>()
+                    / denom;
+                let is_terminal_sink =
+                    matches!(*globe.water_kind.get(dominant), WaterKind::SaltBasin);
+                simulated.push(hornvale_terrain::water::classify(
+                    loc.fields.elevation_m,
+                    sea_level_m,
+                    drainage_blend,
+                    *globe.endorheic.get(dominant),
+                    is_terminal_sink,
+                ));
+            }
+
+            if rooms_in_cell == 0 {
+                continue;
+            }
+            cells_checked += 1;
+            if plurality(&simulated) != expected {
+                simulated_aggregate_violations += 1;
+            }
+            if simulated.iter().any(|k| *k != expected) {
+                simulated_unanimity_violations += 1;
+            }
+        }
+
+        assert!(
+            cells_checked > 20 && rooms_checked > 200,
+            "only {cells_checked} cells / {rooms_checked} rooms resolved; the scan is too thin \
+             to trust either arm"
+        );
+
+        // THE TRIPWIRE ARM. If this fails, the criterion above is not
+        // discriminating and must not be trusted as a guard.
+        assert!(
+            simulated_aggregate_violations > 0,
+            "the reverted blended-threshold mechanism violated conservation on \
+             {simulated_aggregate_violations} of {cells_checked} cells by aggregate and \
+             {simulated_unanimity_violations} by unanimity — an aggregate count of zero means \
+             THIS TEST CANNOT DETECT the mechanism it was written to catch, and the criterion \
+             needs strengthening rather than the assertion relaxing"
+        );
     }
 
     #[test]

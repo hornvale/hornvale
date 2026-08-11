@@ -249,6 +249,68 @@ fn registry_rows() -> Vec<RegistryRow> {
     ))
 }
 
+/// True when `cell` is a Markdown table separator segment — the `------` or
+/// `:---:` pieces of the rule line under a header row. These are built only
+/// from hyphens, colons, and spaces, which no real cell (ID or otherwise) is.
+fn looks_like_table_separator(cell: &str) -> bool {
+    !cell.is_empty() && cell.chars().all(|c| c == '-' || c == ':' || c == ' ')
+}
+
+/// **Property: every `| `-prefixed line in the idea registry is either a
+/// table header, a table separator, or a row `parse_registry` actually
+/// parses as an ID row. Direction enforced: a line that is data (not header,
+/// not separator) but whose first cell fails `looks_like_registry_id` is a
+/// failure here, not a silent skip.**
+///
+/// `parse_registry` treats "first cell doesn't look like an ID" as "not a
+/// data row" and moves on — the right call for a header or separator line,
+/// and exactly the wrong one for a data row whose ID merely has an
+/// unanticipated shape. That gap is how `CLIENT-22-glyphs-rejected` evaded
+/// every other guard in this file (length cap, status vocabulary, five-column
+/// shape, Where-link validation): its post-hyphen segment started with a
+/// digit, `looks_like_registry_id` said no, and the row vanished rather than
+/// failing. This test closes the class rather than the instance — it does
+/// not touch `looks_like_registry_id`'s matching rules, so a future ID with a
+/// different unanticipated shape still gets caught here instead of vanishing
+/// again.
+#[test]
+fn every_registry_table_row_is_a_parseable_id_row() {
+    let text = read(&repo_root().join("book/src/frontier/idea-registry.md"));
+    let offenders: Vec<String> = text
+        .lines()
+        .enumerate()
+        .filter_map(|(idx, line)| {
+            if !line.starts_with("| ") {
+                return None;
+            }
+            let masked = line.replace("\\|", &ESCAPED_PIPE.to_string());
+            let pieces: Vec<String> = masked
+                .split('|')
+                .map(|p| p.replace(ESCAPED_PIPE, "\\|").trim().to_string())
+                .collect();
+            let id = pieces.get(1)?;
+            if id == "ID" || looks_like_table_separator(id) || looks_like_registry_id(id) {
+                return None;
+            }
+            Some(format!(
+                "{}: first cell {:?} did not parse as an ID",
+                idx + 1,
+                id
+            ))
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "idea-registry.md table rows that are neither a header, a separator, \
+         nor a parseable ID — every other check in this file (`registry_rows`) \
+         is BLIND to a row like this, because `parse_registry` silently drops \
+         it instead of failing. Rename the ID so `looks_like_registry_id` \
+         accepts it, or if the ID shape itself should widen, do that \
+         deliberately and explain why — do not leave the row unparsed:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
 #[test]
 fn an_escaped_pipe_is_not_a_column_separator() {
     // The trap this parser exists to avoid: a naive split on '|' counts the
@@ -1001,4 +1063,92 @@ fn the_history_page_prose_names_the_cell_it_renders() {
              overwritten wholesale on the next `make rebaseline`."
         );
     }
+}
+
+/// The numbered decision records in `docs/decisions/`, ascending.
+///
+/// Filenames are `NNNN-slug.md`; `README.md` and any other unnumbered file is
+/// skipped, using the same "numbered stem" shape as
+/// `decision_cites_in_sources_resolve`.
+fn decision_numbers() -> Vec<u32> {
+    let dir = repo_root().join("docs/decisions");
+    let mut numbers: Vec<u32> = fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("reading {}: {e}", dir.display()))
+        .map(|e| e.expect("dir entry").file_name())
+        .filter_map(|name| {
+            let name = name.to_string_lossy();
+            let stem = name.strip_suffix(".md")?;
+            // `NNNN-slug`: four digits, a hyphen, then a non-empty slug.
+            if stem.len() > 5 && stem.as_bytes()[4] == b'-' {
+                stem[..4].parse::<u32>().ok()
+            } else {
+                None
+            }
+        })
+        .collect();
+    numbers.sort_unstable();
+    numbers
+}
+
+/// The decision log's numbers form a **contiguous run starting at 0001** — no
+/// holes.
+///
+/// A gap is not merely untidy, it is evidence of a mistake. The log is
+/// append-only and a retired decision is *superseded* rather than deleted
+/// (`docs/decisions/README.md`), so no legitimate operation removes a number.
+/// A hole therefore means one of two things: a renumbering went wrong, or a
+/// record was lost. Both want catching in the gate rather than at the next
+/// person to read the log.
+///
+/// **Why this test exists.** The log held this property by convention for 124
+/// records and nothing checked it. Absorbing The Radiation into The Grain
+/// collided on `0120`, the unmerged records were renumbered to resolve it, and
+/// a mechanical shift moved them four places instead of one — opening
+/// `0121`-`0123`, the first discontinuity in the log's history. Every other
+/// check in the repo stayed green, because none of them was looking. That is
+/// the third unguarded invariant this campaign broke the same way (see
+/// `docs/retrospectives/the-grain.md`), and the argument that closed it is that
+/// a documented invariant with no test is a comment.
+///
+/// The **start** is asserted too, not just the density. Checking only for
+/// internal holes would accept a log beginning at `0002`, which is the same
+/// class of error — a lost first record — presenting as a smaller number of
+/// symptoms. Pinning both ends makes the run fully determined by its length.
+#[test]
+fn no_gaps_in_the_decision_log() {
+    let numbers = decision_numbers();
+    assert!(
+        !numbers.is_empty(),
+        "no numbered records found in docs/decisions/ — the decision log \
+         cannot be empty, so this is a broken path or a changed filename \
+         convention, not a real state"
+    );
+
+    let first = *numbers.first().expect("non-empty");
+    let last = *numbers.last().expect("non-empty");
+    let present: BTreeSet<u32> = numbers.iter().copied().collect();
+    let missing: Vec<String> = (1..=last)
+        .filter(|n| !present.contains(n))
+        .map(|n| format!("{n:04}"))
+        .collect();
+
+    assert_eq!(
+        first, 1,
+        "the decision log starts at {first:04}, not 0001 — record 0001 is \
+         missing. The log is append-only and records are superseded rather \
+         than deleted, so a missing first record means it was lost or \
+         misnamed, never retired."
+    );
+    assert!(
+        missing.is_empty(),
+        "gaps in the decision log: {} record(s) span 0001..{last:04} but {} \
+         number(s) are missing. Decisions are append-only and superseded \
+         rather than deleted, so there is no legitimate way for a hole to \
+         appear — either a renumbering went wrong (the usual cause: a \
+         collision with a number that arrived on main, resolved by shifting \
+         too far) or a record was lost. Missing:\n  {}",
+        numbers.len(),
+        missing.len(),
+        missing.join("\n  ")
+    );
 }

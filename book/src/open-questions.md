@@ -1508,6 +1508,40 @@ whose land itself never varies because it is permanently frozen.
   a line the phrase had left implicit: a plan's extent derives from chamber count
   alone and *spends no draw*, because a coarse constraint that consumes randomness
   is not a constraint, it is another generator.
+  **Re-scored by [The Grain](./chronicle/the-grain.md) (2026-08-11): the
+  principle now has *teeth*, measured — and this row had been reading it as a
+  permission when half of it is a prohibition.** Every re-score above asks what a
+  fine layer may *add*: agreement across grid levels, then residual degrees of
+  freedom. The Grain asked what a fine layer may *subtract*, and got a number. A
+  sub-cell refinement of one nominal field — a room's water kind, banded from a
+  three-corner blend of the drainage the cells already hold, fitting no new
+  constant and inventing no new physics — passed both of its preregistered local
+  hypotheses and the whole commit gate, and **destroyed 29% of the world's fresh
+  water at walking depth**, halving thirst-driven fauna movement. "Refines and
+  never contradicts" forbade it, and nothing in the suite noticed, because every
+  check the principle had was a check on *agreement* and this was a failure of
+  *conservation*. The general result is sharp enough to be a rule rather than an
+  anecdote: whether a field's values are **ordered** decides whether it may be
+  refined by banding a blend at all. An ordinal field (relief) may — a blend moves
+  it at most one band and conserves the distribution's shape. A nominal field
+  (water, biome) may not — a threshold is maximally nonlinear, so classifying a
+  blend is not the area-weighted vote of classifying the corners, and it deletes
+  whichever category sits in the thin tails. Nearest-corner assignment is a
+  *partition* and conserves area by construction, which is why the existing
+  mechanism was already correct, and why the campaign's founding diagnosis (a
+  suspiciously flat chart) turned out to describe the *view* rather than the
+  field. Two consequences for this row. First, the ~110 km floor it has drawn
+  three times is now known to be **asymmetrically** crossable: geometry may refine
+  beneath it cosmetically, *what is recorded* may refine beneath it as fidelity
+  (The Lintel), and a *category* may not be re-derived beneath it at all. Second,
+  the honest response to a view finer than a field's model is neither refinement
+  nor silence but **disclosure** — the chart now declares which of its fields are
+  decided at grid resolution and are therefore constant beneath it, exactly as its
+  colour block already declares what a projection does not carry. The bet's
+  confidence is unchanged; what moved is that the principle stopped being a design
+  intention with one positive measurement and became a constraint with a
+  documented violation, a rule that predicts such violations in advance, and a
+  conservation test in the gate.
   **Re-scored by [The Ford](./chronicle/the-ford.md) (2026-08-11): the field/grid
   dichotomy this row has been reasoning inside gains a third category, and the
   ~110 km physics floor is no longer where sub-cell *information* stops.** Decision
@@ -1531,6 +1565,30 @@ whose land itself never varies because it is permanently frozen.
   refinement of the quantities that legitimately remain mesh-bound are all still
   unbuilt. What is newly open is how many other quantities are miscarried the way
   rivers were.
+
+  **The two re-scores above landed on the same day from two campaigns that did
+  not see each other, and they must be read together.** The Grain's rule is a
+  prohibition on *mechanism*: a nominal field may not be re-derived beneath the
+  floor by thresholding a blend of corner values, because a threshold is
+  maximally nonlinear and deletes whatever category sits in the thin tails. The
+  Ford does not use that mechanism — it does not blend anything; it evaluates a
+  signed distance to an emitted polyline, so the question stops being "what
+  class does this interpolated value fall in" and becomes "where is this point
+  relative to a feature". On mechanism, therefore, they do not collide, and The
+  Grain's rule is arguably the sharpest available statement of *why* changing
+  the carrier was the right move rather than refining the field.
+  **What is genuinely open is conservation, and it is open in The Ford's
+  direction.** The Grain's measured harm was a loss of area — 29% of the world's
+  fresh water gone at walking depth. The Ford's channel occupies ~0.026% of land
+  where the cell-scale river class occupies ~6.3% of land cells, and 39 of 700
+  river cells carry no polyline at all. That is not a defect of The Ford's stage
+  1, which moved no consumer and left `river_proximity` and the toponymic gates
+  untouched by asserted invariant; it is the question its stage 2 inherits, now
+  under decision 0124's requirement that a refinement preregister a conservation
+  criterion — which The Ford's own spec, frozen before 0124 existed, did not do.
+  The bet's honest state: the floor is crossable in more ways than this row
+  once assumed, and each way owes a different proof.
+
 
 ## Genuinely open — split by whether the world can grade itself
 
