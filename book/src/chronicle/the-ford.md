@@ -143,10 +143,13 @@ already held.
 
 ## What was predicted, and what was measured
 
-Three of the campaign's five hypotheses could be measured at this stage; the
-other two need consumers this stage deliberately did not move. All were frozen
-in the specification before the code that could move them, each with a floor
-*and* a ceiling.
+Three of the campaign's five hypotheses were measured at this stage. All five
+were frozen in the specification before the code that could move them, each
+with a floor *and* a ceiling. The two that went unmeasured did so for
+different reasons, and only one of those reasons is the stage's: the
+conditioning null has nothing to score until riparian conditioning exists,
+while the ford prediction turned out not to be measurable *as written*, for a
+reason described below that has nothing to do with what this stage shipped.
 
 **Channel area — confirmed.** The fraction of seed 42's land area classified
 `channel` was predicted to fall in `[0.005%, 0.5%]`. It reads **0.025931%**,
@@ -170,8 +173,9 @@ across it, agreeing to within 3%.
 
 A consequence worth stating plainly: `water_kind == River` and
 `transverse_at == Channel` disagree for nearly half of river cells **by
-design**. On seed 42 only 364 of 700 river cells read `channel` at their own
-centre. A polyline runs *through* a cell, not *across* it.
+design**. On seed 42, of 700 river cells, 353 read `channel` at their own
+centre, 33 `bank`, 272 `floodplain`, 3 `terrace` and 39 `dry`. A polyline runs
+*through* a cell, not *across* it.
 
 **No speckle — confirmed.** A straight transect across a channel was predicted
 to yield a monotone band sequence, with no band re-entry, in at least 99% of
@@ -260,6 +264,53 @@ stranger from a relative.
 
 It surfaced only because a repair moved the number.
 
+## The prediction that could not be scored
+
+The campaign's namesake hypothesis was that a useful fraction of the network
+offers a crossable profile — between 15% and 60% of sampled transects, on the
+reasoning that near zero the walk is walled by impassable water and near one
+crossing carries no meaning. *Crossable* was defined before measurement, in
+terms of two quantities that exist: a channel width at or below some fraction
+of the cell edge, and a discharge below the threshold at which the terrain
+already calls a reach a waterfall.
+
+Both quantities shipped in this stage, and neither waits on a consumer. The
+width is the innermost band edge stored at every vertex; the discharge is the
+same committed field the width law reads, tested against the same constant the
+existing cell-scale ford predicate uses. The transect sweep that scored the
+no-speckle prediction already strides the network vertex by vertex, which is
+the same walk this prediction would be scored over.
+
+The hypothesis is nonetheless unscoreable as frozen, and the flaw is in the
+prediction rather than in the code. The width fraction was written as "a
+stated cell-edge fraction" and then never stated. That would be an omission
+rather than a defect if the two clauses were independent — but the width law
+is `w = a·edge·√Q` with a single calibrated `a`, so the cell edge cancels
+exactly and the width test is a test on discharge:
+
+```text
+w ≤ X·edge   ⟺   Q ≤ (X/a)²
+```
+
+Both halves of *crossable* are therefore conditions on the same variable, and
+the definition collapses to one threshold on it — `Q ≤ min((X/a)², Q_fall)` —
+with the unstated fraction `X` as its knob. Seed 42's rivers span `Q` from 15
+to 146 against `a = 8.5e-4` and a waterfall discharge of 80: below
+`X ≈ 3.3e-3` nothing is crossable at all, above `X ≈ 7.6e-3` the width clause
+does nothing and the waterfall threshold decides alone, and between those two
+ends the answer slides continuously — straight through the whole interval the
+hypothesis predicts. A fraction chosen afterwards, with the discharge
+distribution in hand, could land the result anywhere in that interval and be
+defensible either way.
+
+The freeze is therefore void rather than pending, and the honest consequence
+is that whatever a later stage measures here is a late reading and not a
+prediction. The fraction has to be derived from something that is not the
+discharge distribution it partitions — a stride against a channel width, a
+property of the walk — stated together with that derivation, and labelled for
+what it is. The interval stays exactly where it was frozen; it is not to be
+widened to fit whatever the fraction turns out to imply.
+
 ## Where this stops
 
 This is the first of several stages, and it moved no consumer. The room schema
@@ -272,9 +323,11 @@ Still ahead: the room reading its transverse position, and the epoch that
 implies; gallery forest conditioned on *bank* and *floodplain* rather than
 drawn two-in-seven by dice — and never on the channel, since a forest planted
 in the water is not a gallery forest; and the network reaching the scene
-schemas additively. Two hypotheses wait on those consumers: whether the ford
-actually exists at a useful rate, and whether riparian conditioning leaves the
-global formation fractions alone, as a sub-cell descriptor change should.
+schemas additively. One hypothesis genuinely waits on those consumers:
+whether riparian conditioning leaves the global formation fractions alone, as
+a sub-cell descriptor change should — there is nothing to score until the
+conditioning exists. The other, the ford itself, waits on nothing this stage
+withheld; it waits on a number the specification never wrote down.
 
 The lake is deliberately untouched. Through-flow lakes still classify as
 `River`, so the naive reading of this campaign — rivers become polylines,

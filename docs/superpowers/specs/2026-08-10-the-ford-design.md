@@ -253,7 +253,25 @@ functions as an argument rather than being baked into a stored per-cell width.
    `book/src/gallery/` moved → STOP, that is an unplanned epoch event;
    `book/src/domesday/` moved with no census change → expected, commit it.*
 
-**No census regen is authorized by this spec.** Nothing here requires one.
+4. **A census refresh is in the drift surface whenever a stage adds a lab
+   metric, and stage 1 did.** ~~No census regen is authorized by this spec.
+   Nothing here requires one.~~ **That sentence was false, and it is struck
+   rather than deleted because it was a prohibition and prohibitions are
+   obeyed.** A metric is a *column*, so adding one changes the census schema;
+   the tracked `schema.json` and every lab test that reads the committed
+   census then disagree with the tree, and no amount of local work turns the
+   gate green without a refresh. Stage 1 added three columns
+   (`channel-land-fraction`, `channel-connectivity`,
+   `channel-band-monotonicity`, later four with the un-truncated companion),
+   43 lab tests failed on that one cause, and the refresh was authorized as a
+   carve-out and ran on lefford against the merged tree. The corrected rule,
+   which governs stages 2–5: **a stage that adds or renames a lab metric
+   requires a canonical census refresh, and must budget one (~15 min on
+   lefford, sequenced after every metric-doc edit that would otherwise bake
+   stale prose into `schema.json`).** Stage 3 (riparian conditioning) and
+   stage 4 (scene emission) both plausibly add metrics and should assume they
+   will pay it. A stage that adds no metric still needs none — that half of
+   the original sentence was right, and is what made the wrong half plausible.
 
 ## 8. Registered debt (not fixed here)
 
@@ -320,6 +338,60 @@ finding, not a failure.
   Depth is **not** modelled by this campaign and must not enter the
   definition — the existing `lab_is_fordable_cell` uses the same discharge
   proxy for the same reason.
+
+  **Correction, recorded at stage 1's close: H3 as frozen above is not
+  measurable as stated, and the defect is in this freeze rather than in the
+  code.** The cell-edge fraction is never stated. "A stated cell-edge
+  fraction" names a free parameter — call it `X` — and no value for `X`
+  appears anywhere in this document. That would be a mere omission if the two
+  clauses were independent. They are not. With the width law calibrated
+  (`CHANNEL_WIDTH_COEFF = 8.5e-4`, `CHANNEL_WIDTH_EXPONENT = 0.5`, §5.3) the
+  width clause reads
+
+  ```text
+  w = 8.5e-4 · edge · √Q  ≤  X · edge   ⟺   Q ≤ (X / 8.5e-4)²
+  ```
+
+  and the local cell edge cancels *exactly*, because it is the same spacing
+  the width was built from. Both clauses of *crossable* are therefore
+  conditions on discharge alone, and the definition collapses to a single
+  threshold on a single variable: `Q ≤ min((X/8.5e-4)², 80)`, with `X` as its
+  knob. Seed 42's river cells carry `Q ∈ [15, 146]`
+  (`water::RIVER_MIN_DRAINAGE` to the largest drainage the terrain produces),
+  so `X` below `8.5e-4·√15 ≈ 3.3e-3` scores nothing crossable at all, `X`
+  above `8.5e-4·√80 ≈ 7.6e-3` makes the width clause vacuous and hands the
+  answer entirely to the waterfall threshold, and inside that window `X`
+  slides the measured fraction continuously between those two ends —
+  straight through the `[0.15, 0.60]` interval this hypothesis predicts.
+  Whoever measures H3 later would be choosing `X` with the data already in
+  hand, and any choice they made would be defensible after the fact. A
+  parameter that can place the result anywhere inside the interval it is
+  scored against is not a preregistration. **H3's freeze is void, not merely
+  incomplete**, and the interval above should be read as a target rather than
+  as a frozen prediction.
+
+  **What stage 2 owes, and what it may not claim.** `X` must be stated **with
+  its derivation**, and the derivation must come from something that is not
+  the outcome being scored — a wadeable width against a walker's stride, a
+  documented property of the walk, a ratio taken from the room schema — never
+  from the distribution of `Q` this criterion is about to partition. The
+  stage-2 spec must record, in the same breath, that stating `X` is a **late
+  freeze made with stage-1 data already in hand, not a preregistration**, and
+  any result scored against it inherits that weaker status. The `[0.15, 0.60]`
+  interval stays exactly as frozen here; it is not to be widened to
+  accommodate whatever `X` turns out to imply.
+
+  **H3 does not wait on a consumer.** Both of its quantities are
+  producer-side and both shipped in stage 1: the channel half-width is
+  `ChannelNetwork::band_edges[i][j][0]`, and the discharge clause is
+  `GeneratedTerrain::drainage_at` against `carve::WATERFALL_MIN_DRAINAGE`
+  (already `pub`, already read by `lab_is_ford_cell`). The sweep
+  `lab_band_transects` already strides the network vertex by vertex, which is
+  the walk an H3 estimator would score over — it needs the two quantities
+  above at each stride, nothing more.
+  H3 went unmeasured at stage 1 because of the free parameter above,
+  not for want of a consumer. H5 is the one that genuinely waits: it scores
+  the riparian conditioning stage 3 introduces.
 - **H4 — no speckle** (the position-continuous-noise guard, expressed as a
   measurement). A straight transect across the channel yields a **monotone**
   band sequence with no band re-entry in **≥99%** of sampled transects.

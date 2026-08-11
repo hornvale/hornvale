@@ -3267,7 +3267,16 @@ pub fn registry() -> Vec<Metric> {
                   are invisible at room scale, above it a river is still \
                   effectively as wide as the cell carrying it. NOT a per-cell \
                   reading: the polylines run THROUGH cell centres, so \
-                  sampling at them overstates this by ~127x",
+                  sampling at them overstates this by ~127x. ABSENT ONLY ON A \
+                  WORLD WITH NO LAND: unlike its four Ford siblings, which go \
+                  Absent whenever the network is empty, this column reads a \
+                  true Number(0.0) on a land-bearing world that happens to \
+                  have no channels. The asymmetry is deliberate — zero \
+                  channel area over positive land area is a measurement, \
+                  while a connectivity or monotonicity fraction over zero \
+                  transects has no denominator to divide by — but a consumer \
+                  reading the five columns together must not treat a 0.0 here \
+                  as the same state as an Absent there",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0e-5, 1.0e-4, 2.0e-4, 5.0e-4, 1.0e-3],
             },

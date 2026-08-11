@@ -10,8 +10,11 @@ out five stages; only the first has shipped. Stages 2 (`locale/room/v3`),
 3 (riparian conditioning) and 4 (scene emission) are separate plans, and
 `MAP-ford-subcell-water` stays `spec'd` until they land. Two of the five
 preregistered hypotheses — H3 (the ford exists) and H5 (the conditioning null)
-— were not measured here because they need consumers stage 1 deliberately did
-not move.
+— were not measured here, for two different reasons. **H5 waits on stage 3:**
+it scores riparian conditioning, which does not exist yet. **H3 does not wait
+on anything this stage withheld** — both of its quantities are producer-side
+and both shipped here — and the reason it went unmeasured is §7 below: its
+preregistration contains a free parameter that decides its own outcome.
 
 ## The readout, and the one repair that followed it
 
@@ -174,6 +177,15 @@ asserted the negative without checking it, and the assertion had teeth — it
 would have blocked the only action that could turn the gate green, had Task 6
 not escalated it as a carve-out rather than obeying it.
 
+**The spec governs stages 2–5, so the prohibition was struck rather than left
+to be re-discovered.** Spec §7 now carries the sentence struck through with
+the corrected rule beside it: a stage that adds or renames a lab metric adds a
+census *column*, changes the schema, and must budget a canonical refresh
+(~15 min on lefford, sequenced after every metric-doc edit). Stages 3 and 4
+both plausibly add metrics. A retrospective that records a false statement in
+a still-governing document, and does not amend that document, has recorded the
+defect and left it armed.
+
 The mitigation this campaign actually demonstrates is the one it used: **every
 one of these was found by an implementer or reviewer measuring the premise
 rather than executing on it.** The measured cell edge, the unfalsifiable test,
@@ -220,6 +232,61 @@ recorded in the ledger and followed; it is the kind of ordering constraint
 that is invisible to any check and costs a full 15-minute canonical run to get
 wrong.
 
+## 7. A preregistration can carry a free parameter that decides its own outcome
+
+Found at stage-1 close, in the campaign's namesake hypothesis. H3 predicted
+that the fraction of sampled transects offering a **crossable profile** falls
+in `[0.15, 0.60]`, and defined *crossable* before measurement — correctly, in
+terms of quantities that exist and with depth explicitly excluded — as channel
+width `w` at or below **"a stated cell-edge fraction"** *and* discharge `Q`
+below the waterfall threshold.
+
+The fraction is never stated. Nowhere in the spec is there a value for it.
+
+That alone would be an omission. What makes it a defect is that the two
+clauses are not independent. The calibrated width law is `w = a·edge·√Q` with
+a single `a` (`CHANNEL_WIDTH_COEFF = 8.5e-4`), so the local cell edge cancels
+exactly and the width clause is
+
+```text
+w ≤ X·edge   ⟺   Q ≤ (X/a)²
+```
+
+— a condition on discharge, which is what the *other* clause tests. *Crossable*
+therefore collapses to `Q ≤ min((X/a)², 80)`: one threshold, one variable, and
+the unstated fraction is its knob. Seed 42's rivers carry `Q ∈ [15, 146]`, so
+`X < 3.3e-3` scores nothing crossable, `X > 7.6e-3` makes the width clause
+vacuous, and in between the reading slides continuously across the whole
+`[0.15, 0.60]` interval it would be scored against. Whoever measured H3 later
+would be choosing `X` with the data in hand, and every choice would be
+defensible after the fact.
+
+**The lesson is not "state your constants".** It is that a preregistration has
+to be checked for *degrees of freedom left to the measurer*, and that the
+check is arithmetic, not proofreading. Each clause of H3 reads like an
+independent physical condition, and it takes one substitution to see they are
+the same condition twice. **That substitution was available at freeze time** —
+the collapse follows from the *form* `w = a·edge·Q^b` given in §5.3 of the
+same document, for any positive `a` and `b`; the calibration only fixed which
+numeric window of `X` is the live one. So this is not "a constant landed later
+and broke the freeze". The freeze was already circular when written, and
+passed every review it had — spec, plan, task briefs — because nobody
+substituted one section of the spec into another.
+
+It also sharpens what preregistration is *for*. The other four hypotheses each
+name a quantity the code computes and an interval it either lands in or does
+not; H1 goes further and deliberately puts the calibration and the prediction
+on different statistics so the confirmation cannot be self-fulfilling (spec
+§10, and it held — H1 would have confirmed at the pre-calibration coefficient
+too). H3 has the same surface form and none of that content. The distinction
+that matters is whether the person doing the measuring still has a choice left
+that moves the answer.
+
+The spec is amended in place at §10 rather than repaired: H3's freeze is
+recorded as **void, not pending**, the interval is left exactly as frozen, and
+stage 2 is required to state `X` with its derivation and to label doing so a
+**late freeze with stage-1 data in hand** rather than a preregistration.
+
 ## Follow-ups (promoted from the worktree scratch, which dies with it)
 
 - **Walk-scale reachability is a third predicate.** "Is there water within a
@@ -244,11 +311,29 @@ wrong.
   finding that falsified H2, now repaired at the vertex. The *bands* around a
   join are still built per-line; a point equidistant from two lines at a
   confluence takes the nearer line's bands rather than a merged profile.
-- **`water_kind == River` and `transverse_at == Channel` disagree for over
-  half of river centres, by design.** Measured L6 seed 42: 364/700 river cells
-  read `Channel` at their own centre, 39 read `Dry`, and 39 (5.6%) have no
-  polyline at all (dropped singletons). Any consumer that assumes the two
-  agree is wrong; this is H1's denominator and it is stated in the metric doc.
+- **`water_kind == River` and `transverse_at == Channel` disagree for just
+  under half of river centres, by design.** Re-measured on the merged tree, L6
+  seed 42, 700 river cells: **353 `Channel`, 33 `Bank`, 272 `Floodplain`,
+  3 `Terrace`, 39 `Dry`** — 347 of 700 (49.6%) disagree. Any consumer that
+  assumes the two agree is wrong; this is H1's denominator and it is stated in
+  the metric doc. **The 39 `Dry` cells and the 39 cells no polyline covers are
+  the same 39 cells, exactly** — measured as a set intersection, not inferred
+  from the counts matching: every river cell outside `run_cells` reads `Dry`,
+  and every river cell reading `Dry` is outside `run_cells`. They are the
+  dropped isolated singletons (a one-cell run has no direction, so it is not
+  rendered as a line), and with no polyline anywhere near them the band
+  predicate answers `Dry` at their own centres. So the two figures are one
+  population described twice, not two failure modes to be added: **the network
+  covers 661 of 700 river cells, and the band a covered cell reads at its
+  centre is a separate question from whether it is covered at all.** A stage-2
+  author taking a denominator wants 661, not 700 minus something. (An earlier
+  draft of this line read `364/700` and listed the two 39s as though they were
+  disjoint. 364 is the **pre-repair** reading — verified by disabling the
+  confluence relocation and re-running: `364 / 30 / 264 / 3 / 39` before,
+  `353 / 33 / 272 / 3 / 39` after, because moving a tributary's mouth onto the
+  trunk's displaced vertex moves it off its own cell centre. The 39/39/39
+  identity holds on both sides of the repair, so it is a property of dropped
+  singletons rather than of the anchoring.)
 - **`channel-land-fraction` returns `Number(0.0)` on a channel-free world**
   while its two siblings return `Absent`. Defensible but asymmetric; census
   consumers treat the two differently.
