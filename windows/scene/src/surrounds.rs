@@ -384,6 +384,29 @@ pub fn surrounds_scene_in(
             .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?
             .0;
         let mut marks = marks_by_room.get(&key).cloned().unwrap_or_default();
+        // A cave is a CELL-level affordance, and marking every room of the
+        // cell is faithful rather than sloppy: `delve` resolves its cave
+        // from the cell the possession stands on
+        // (`windows/vessel/src/session.rs::chamber_column_here`, which reads
+        // the max-weight corner of the SAME fuzzy-resolved cell `describe`
+        // uses — the dominant corner), so it already succeeds from any room
+        // in a cave-bearing cell. Contrast `water` (Task 2 of this
+        // campaign), which was inherited the same way and DID contradict
+        // the room's own prose — that one was a defect and this is not.
+        // Salience 30 puts a cave mouth below both settlement ranks (10, 20)
+        // in the legend, so a settlement outranks a cave mouth when both
+        // stand on the same cell.
+        if let Some(kind) = locale.cave {
+            marks.push(Mark {
+                noun: format!("a {} cave", kind.name()),
+                kind: "cave".to_string(),
+                datum: format!(
+                    "A {} cave opens here — 'delve' descends into it.",
+                    kind.name()
+                ),
+                salience: 30,
+            });
+        }
         marks.sort_by(|a, b| a.salience.cmp(&b.salience).then(a.noun.cmp(&b.noun)));
         cells.push(SurroundsCell {
             room: key,
@@ -457,6 +480,19 @@ pub fn surrounds_scene_in(
         resolution: Resolution {
             grid_level: ctx.globe_level(),
             depth_below_grid: room.depth() - ctx.globe_level(),
+            // A cave mark is ALSO a dominant-corner fact (same `locale.cave`
+            // read `biome`/`water` share) and is deliberately NOT added here.
+            // This list names DOCUMENT FIELDS — actual `SurroundsCell` keys —
+            // and there is no `cave` key: a cave surfaces only as one
+            // possible `kind` inside `marks`, a field that ALSO carries
+            // settlement marks keyed by the walking-depth room a
+            // settlement's exact coordinates land in, which is finer than
+            // the grid and genuinely varies below it. Listing `"marks"`
+            // here would misstate that settlement half, and inventing a
+            // `"cave"` entry would name a field that does not exist on the
+            // wire. So the disclosure stays field-shaped and silent about
+            // marks; `the_chart_declares_which_fields_are_grid_resolution`
+            // pins this so a future change cannot add either by accident.
             grid_resolution_fields: ["biome", "color", "water"]
                 .iter()
                 .map(|s| s.to_string())
@@ -1464,6 +1500,100 @@ mod tests {
                 .grid_resolution_fields
                 .contains(&"relief".to_string()),
             "relief is banded from the blend and DOES vary below the grid"
+        );
+        // The Grain, Task 3: a cave is ALSO a dominant-corner fact, and it is
+        // deliberately NOT declared here — see the comment at this field's
+        // construction site. `"marks"` (the actual document field a cave
+        // surfaces through) ALSO carries settlement marks, which are keyed
+        // by the walking-depth room a settlement's exact coordinates land
+        // in and genuinely vary below the grid — so declaring `"marks"`
+        // would misstate that half, and `"cave"` names no field that exists
+        // on the wire at all. Pinned so a future change cannot add either by
+        // accident without someone reading why it isn't already here.
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"cave".to_string()),
+            "\"cave\" names no document field — it is a mark kind, not a key"
+        );
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"marks".to_string()),
+            "marks mixes a grid-resolution fact (cave) with a finer one \
+             (settlement), so declaring the whole field would misstate the \
+             settlement half"
+        );
+    }
+
+    /// The Grain, Task 3: a chart centred on a cave-bearing cell emits
+    /// exactly one `"cave"` mark, on the observer's own cell; a chart
+    /// centred elsewhere emits none.
+    ///
+    /// **Direction this proves, and the direction it does not.** This checks
+    /// *emitted ⊆ real*: every cave mark this test finds corresponds to a
+    /// real `locale.cave` reading. It does NOT check the converse (*real ⊆
+    /// emitted*) — it does not sweep every cave-bearing cell on the globe to
+    /// confirm each one gets a mark somewhere in some chart. A cave the
+    /// terrain has and the scene omits would not be caught by this test.
+    #[test]
+    fn a_cave_bearing_cell_emits_exactly_one_cave_mark_and_elsewhere_emits_none() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+
+        // Find a room address whose dominant corner the terrain places a
+        // cave at, the same directional-sweep idiom
+        // `windows/locale`'s `describe_reports_the_cave_at_its_dominant_corner_on_seed_42`
+        // uses (a direct aim at a cell's centroid does not reliably resolve
+        // to that cell as the dominant corner).
+        let mut cave_addr = None;
+        for i in 0..2000u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
+            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 })
+                && loc.cave.is_some()
+            {
+                cave_addr = Some(addr);
+                break;
+            }
+        }
+        let cave_addr = cave_addr.expect(
+            "seed 42 must have a reachable cave findable by this sweep — if this \
+             fails, that is a finding to report, not a test to weaken",
+        );
+
+        let s = surrounds_scene_in(&w, &ctx, &cave_addr, 0, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(s.cells.len(), 1, "radius 0 is just the observer's own cell");
+        let cave_marks: Vec<&Mark> = s.cells[0]
+            .marks
+            .iter()
+            .filter(|m| m.kind == "cave")
+            .collect();
+        assert_eq!(
+            cave_marks.len(),
+            1,
+            "exactly one cave mark must be emitted on a cave-bearing cell, got {cave_marks:?}"
+        );
+        assert_eq!(cave_marks[0].salience, 30);
+
+        // Elsewhere: a chart centred on the flagship settlement's own room
+        // (the module's ordinary `observer()` fixture) emits no cave mark,
+        // UNLESS that room happens to also sit on a cave-bearing cell.
+        let elsewhere = observer(&w);
+        let elsewhere_loc = ctx.describe(&elsewhere, WorldTime { day: 0.0 }).unwrap();
+        assert!(
+            elsewhere_loc.cave.is_none(),
+            "fixture must actually be cave-free, or the negative half below is vacuous"
+        );
+        let s2 = surrounds_scene_in(&w, &ctx, &elsewhere, 0, WorldTime { day: 0.0 }).unwrap();
+        assert!(
+            s2.cells[0].marks.iter().all(|m| m.kind != "cave"),
+            "a cave-free cell must emit no cave mark"
         );
     }
 }

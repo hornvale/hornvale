@@ -22,7 +22,7 @@ use hornvale_kernel::{
     CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
-pub use hornvale_terrain::WaterKind;
+pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
 
@@ -85,6 +85,14 @@ pub struct Locale {
     pub regime: Regime,
     /// Base + vertical exits.
     pub exits: Vec<Exit>,
+    /// The cave at the room's dominant corner (max-weight cell), if the
+    /// terrain places one there — categorical, inherited, never blended,
+    /// the same rule `fields.water` and `biome` follow (see
+    /// [`dominant_corner`]). Appended after `exits` rather than inserted, so
+    /// a document built before this field existed is still byte-identical up
+    /// to this new trailing key.
+    #[serde(serialize_with = "serialize_cave_kind")]
+    pub cave: Option<CaveKind>,
 }
 
 /// A canonical-grid corner cell and its integer blend weight.
@@ -151,6 +159,19 @@ fn water_kind_name(k: WaterKind) -> &'static str {
         WaterKind::SaltBasin => "salt-basin",
         WaterKind::River => "river",
         WaterKind::DryLand => "dry-land",
+    }
+}
+
+/// Serialize an `Option<CaveKind>` by its stable name, `null` when absent —
+/// the same shape [`serialize_water_kind`] uses for a kind that is always
+/// present, extended for a field that may not be.
+fn serialize_cave_kind<S>(kind: &Option<CaveKind>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match kind {
+        Some(k) => serializer.serialize_str(k.name()),
+        None => serializer.serialize_none(),
     }
 }
 
@@ -586,6 +607,7 @@ impl LocaleContext {
                 .collect(),
             regime,                // strangeness overlay (§5-§7)
             exits: exits_of(addr), // base + vertical exits (§6)
+            cave: self.terrain.cave_at(best.0).map(|c| c.kind),
         })
     }
 
@@ -1159,6 +1181,61 @@ mod tests {
         assert!(
             saw_fresh,
             "seed 42 must have fresh water (River) reachable on land — else lower RIVER_MIN_DRAINAGE"
+        );
+    }
+
+    /// The Grain, Task 3: a room's `cave` must name the same cell `biome`
+    /// and `water` do — the dominant corner, never a blend.
+    ///
+    /// A direct aim at a cave cell's own canonical-grid position does not
+    /// reliably land that cell as the resolved address's dominant corner
+    /// (the room mesh's nearest-cell resolution does not coincide with the
+    /// geosphere's own cell centroids closely enough to guarantee it), so
+    /// this uses the same directional-sweep idiom as
+    /// `describe_and_reflectance_agree_on_one_dominant_cell` and
+    /// `locale_water_field_varies_and_includes_fresh_water_on_seed_42`:
+    /// scan a deterministic spread of directions, and for each resolved
+    /// address's ACTUAL dominant corner (not a guess), check whether the
+    /// terrain places a cave there. Seed 42 has 628 of 11 066 land cells
+    /// carrying a cave (~5.7%, confirmed by a throwaway probe), so a 2000-
+    /// direction sweep finds one reliably.
+    #[test]
+    fn describe_reports_the_cave_at_its_dominant_corner_on_seed_42() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let geo = ctx.climate.geosphere();
+        let terrain = ctx.terrain();
+
+        let mut found = false;
+        for i in 0..2000u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, ctx.globe_level());
+            let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
+                continue;
+            };
+            let dominant = dominant_corner(&weights).0;
+            let Some(cave) = terrain.cave_at(dominant) else {
+                continue;
+            };
+            let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            assert_eq!(
+                loc.cave,
+                Some(cave.kind),
+                "describe must report the dominant corner's cave at {addr:?}"
+            );
+            found = true;
+            break;
+        }
+        assert!(
+            found,
+            "seed 42 must have a reachable cave findable by this sweep — if this \
+             fails, that is a finding to report (no cave reachable), not a test \
+             to weaken"
         );
     }
 
