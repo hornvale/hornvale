@@ -31,6 +31,17 @@ use serde::Serialize;
 /// type-audit: bare-ok(identifier-text)
 pub const ROOM_SCHEMA: &str = "locale/room/v2";
 
+/// The document fields decided at canonical-grid resolution, in stable order.
+/// The membership argument — including why four other families are absent —
+/// is on [`Resolution::grid_resolution_fields`], and
+/// `windows/locale/tests/water_reading.rs` pins both the inclusions and the
+/// exclusions so the list reads as a decision rather than an oversight.
+const GRID_RESOLUTION_FIELDS: [&str; 3] = ["biome", "cave", "fields.water"];
+
+/// The document fields decided at channel (nearest-vertex) resolution, in
+/// stable order. See [`Resolution::channel_resolution_fields`].
+const CHANNEL_RESOLUTION_FIELDS: [&str; 1] = ["channel_bands"];
+
 /// One placed exotic site, rendered for a reader.
 /// type-audit: bare-ok(index: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -49,7 +60,7 @@ pub struct StrangeSiteRow {
 
 /// A room rendered as an observable place — ground truth, re-derivable, never
 /// stored (UNI-20 derived view). Plain serializable values only.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(index: id), bare-ok(index: face), bare-ok(index: path), bare-ok(count: depth), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(index: id), bare-ok(index: face), bare-ok(index: path), bare-ok(count: depth), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), pending(wave-1: channel_distance), pending(wave-1: channel_bands)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Locale {
     /// Schema tag (`locale/room/v2`).
@@ -93,6 +104,135 @@ pub struct Locale {
     /// to this new trailing key.
     #[serde(serialize_with = "serialize_cave_kind")]
     pub cave: Option<CaveKind>,
+    /// Signed angular distance from the room centroid to the nearest river
+    /// channel, radians — **positive on the left bank facing downstream** —
+    /// or `None` where the world has no channel network at all. Quantized at
+    /// emit. Appended after `cave` rather than inserted, so a document built
+    /// before this field existed is still byte-identical up to this new
+    /// trailing key.
+    ///
+    /// This is the **quantity**, not a classification of it. A consumer bands
+    /// it against [`Locale::channel_bands`] for its own question — a wader and
+    /// a bridge-builder want different edges of the same number — and a stored
+    /// class would answer only the one question whoever stored it had.
+    ///
+    /// **The sign means something only close in.** It is a signed distance to
+    /// the nearest of many open arcs, so it also flips beyond a river's source
+    /// and mouth and along the bisector between two arcs that meet, where the
+    /// flip is a fact about the polyline soup rather than about water. Read it
+    /// where the reading is inside its own bands — where banding it does not
+    /// answer `Transverse::Dry` — and gate a crossing on the channel or bank
+    /// band, not on the terrace. `ChannelNetwork::bank_signed_distance` carries
+    /// the measurement that establishes this.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
+    pub channel_distance: Option<f64>,
+    /// The four band edges that apply at this room — channel/bank,
+    /// bank/floodplain, floodplain/terrace, terrace/dry — in the same angular
+    /// units (radians) as [`Locale::channel_distance`], and `None` exactly
+    /// when that is. Quantized at emit.
+    ///
+    /// **These edges are DISCHARGE-DEPENDENT**, and that asymmetry is the
+    /// whole argument for storing a quantity beside them. The edges derive
+    /// from the reach's discharge, gradient and local cell spacing
+    /// (`hornvale_terrain::channel::band_edges`), so under a seasonality this
+    /// campaign deliberately leaves open they move with the flood: the same
+    /// room is bank in one season and channel in another **without moving**.
+    /// The distance stays true across that; a stored classification would not.
+    ///
+    /// They are the edges of the nearest vertex of the polyline the distance
+    /// was measured to — `ChannelNetwork::bank_reading` selects both in one
+    /// call, so the pair can never disagree about which reach it describes.
+    #[serde(serialize_with = "serialize_opt_quantized_array")]
+    pub channel_bands: Option<[f64; 4]>,
+    /// Which of this document's fields are decided at canonical-cell
+    /// resolution and which at channel resolution (decision 0123).
+    pub resolution: Resolution,
+}
+
+/// What this document's fields are decided at, so a reader can tell a field
+/// that is flat from a field that is broken (decision 0123).
+///
+/// **Why a room says this at all.** A room at walking depth sits six
+/// refinement levels below the canonical grid, so a field decided per grid
+/// cell is necessarily identical across all `4^6 = 4096` rooms in that cell —
+/// and now that the same document also carries a channel reading, it holds
+/// fields at *three* different grains at once. Without this block a reader has
+/// to guess which, and the last two campaigns' worth of diagnosis went into a
+/// contradiction that guessing invented.
+///
+/// The shape deliberately mirrors `hornvale_scene::surrounds`'s `Resolution`
+/// — the same three keys, in the same order, meaning the same things — rather
+/// than inventing a second vocabulary for the same disclosure. It is not
+/// *imported* from there only because `windows/scene` depends on this crate,
+/// so the dependency cannot run the other way.
+///
+/// [`Resolution::channel_resolution_fields`] is the one addition: 0123's
+/// single list assumed a single coarse category, and with two categories in
+/// play a lone list would leave every unnamed key ambiguous between "finer
+/// than the grid" and "not classified". A second parallel list is 0123's own
+/// idiom applied again, not a new one.
+///
+/// **Declaring a resolution is not a step toward refining it** (0123 rule 4).
+/// The disclosure is the finished answer for the fields it names.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: depth_below_grid), bare-ok(identifier-text: grid_resolution_fields), bare-ok(identifier-text: channel_resolution_fields)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Resolution {
+    /// The canonical grid's refinement level.
+    pub grid_level: u32,
+    /// How many levels below `grid_level` this room sits. Each level quarters
+    /// a cell, so `4^depth_below_grid` rooms share one grid cell.
+    pub depth_below_grid: u32,
+    /// The names of this document's fields that are decided at canonical-grid
+    /// resolution and therefore cannot vary below it, in stable order.
+    ///
+    /// Exactly `["biome", "cave", "fields.water"]` — the three categorical
+    /// readings taken from the room's dominant corner cell (see
+    /// [`dominant_corner`]), which is one grid cell and never a blend.
+    ///
+    /// Four families are deliberately absent, and the reasons differ, which is
+    /// the test of whether a list like this means anything:
+    ///
+    /// - **The room's own address and geometry** (`schema`, `id`, `face`,
+    ///   `path`, `depth`, `latitude`, `longitude`, `corners`, `exits`) — these
+    ///   are not readings of the world at a place, they are the naming of the
+    ///   place, and a reader never mistakes one for a flattened measurement.
+    /// - **The blended continuous fields** (`fields.temperature_c`,
+    ///   `fields.moisture`, `fields.elevation_m`, `fields.height_asl_m`) —
+    ///   these are integer-barycentric means of three corner cells with
+    ///   per-room weights, so they genuinely vary room by room. Listing them
+    ///   would be false.
+    /// - **`regime`** — mixed granularity, so 0123 rule 3 says list it in
+    ///   neither: its substrate and biome expression come from the dominant
+    ///   corner while `regime.micro` is hashed from the room address itself,
+    ///   and the rendered descriptor reads both. Naming it would misstate half
+    ///   of it, and naming `regime.micro` alone would claim a grain for a key
+    ///   whose siblings do not share it.
+    /// - **`channel_distance` and `channel_bands`** — not grid-resolution at
+    ///   all; see [`Resolution::channel_resolution_fields`].
+    ///
+    /// `biome_kind` is `#[serde(skip)]` and carries no wire bytes, so it is
+    /// not a document field and does not appear here — the same reason
+    /// `hornvale_scene`'s list refuses to name a `cave` key its own document
+    /// does not have. (This document *does* have one, which is why `cave` is
+    /// listed above and is not there.)
+    pub grid_resolution_fields: Vec<String>,
+    /// The names of this document's fields decided at **channel** resolution
+    /// — the nearest vertex of the nearest river polyline, which is neither
+    /// the canonical cell nor the room — in stable order.
+    ///
+    /// Exactly `["channel_bands"]`. The band edges are a per-vertex property
+    /// of a reach (its discharge, gradient and local cell spacing), so every
+    /// room whose nearest vertex is the same vertex reads the same four
+    /// numbers, and a walker sees them step rather than slide.
+    ///
+    /// **`channel_distance` is deliberately excluded, for the opposite reason
+    /// to every exclusion above**: it is the *finest*-grained field this
+    /// document carries, a continuous function of the room's own centroid that
+    /// varies between any two rooms. It is constant below no resolution at
+    /// all, so naming it here would be exactly the stale-and-trusted list 0123
+    /// warns is worse than no list. (`hornvale_scene`'s `micro` is excluded
+    /// from its list for the same reason.)
+    pub channel_resolution_fields: Vec<String>,
 }
 
 /// A canonical-grid corner cell and its integer blend weight.
@@ -189,6 +329,26 @@ where
 {
     match kind {
         Some(k) => serializer.serialize_str(k.name()),
+        None => serializer.serialize_none(),
+    }
+}
+
+/// Serialize an `Option<[f64; 4]>` as a quantized JSON array, `null` when
+/// absent — the fixed-width companion to
+/// [`hornvale_kernel::quantize::quantize_serde::opt_f64_field`], which the
+/// kernel provides for a scalar and for a slice but not for an array. Same
+/// emit-boundary quantization (decision 0033), so a consumer that bands
+/// `channel_distance` against these edges bands exactly the numbers the
+/// document shows it.
+fn serialize_opt_quantized_array<S>(
+    value: &Option<[f64; 4]>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        Some(edges) => hornvale_kernel::quantize::quantize_serde::vec_f64_field(edges, serializer),
         None => serializer.serialize_none(),
     }
 }
@@ -604,6 +764,13 @@ impl LocaleContext {
             };
         }
 
+        // The channel reading. ONE call, so the distance and the edges are the
+        // same reading by construction — a second query for the edges would be
+        // a second chance to select a different vertex (and, on an exact tie,
+        // a different line, whose downstream direction is what the SIGN
+        // reports). Full precision here; quantized at emit, like every other
+        // float in this schema.
+        let reading = self.terrain.channels().bank_reading(addr.centroid());
         let coord = addr.coord();
         Ok(Locale {
             schema: ROOM_SCHEMA,
@@ -626,6 +793,22 @@ impl LocaleContext {
             regime,                // strangeness overlay (§5-§7)
             exits: exits_of(addr), // base + vertical exits (§6)
             cave: self.terrain.cave_at(best.0).map(|c| c.kind),
+            channel_distance: reading.map(|(d, _)| d),
+            channel_bands: reading.map(|(_, edges)| edges),
+            resolution: Resolution {
+                grid_level: self.globe_level,
+                // Non-negative by construction: `corner_weights` returned
+                // `Some`, which it only does when `depth >= geo.level()`.
+                depth_below_grid: addr.depth() - self.globe_level,
+                grid_resolution_fields: GRID_RESOLUTION_FIELDS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+                channel_resolution_fields: CHANNEL_RESOLUTION_FIELDS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            },
         })
     }
 

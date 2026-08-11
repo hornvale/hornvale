@@ -497,9 +497,38 @@ impl ChannelNetwork {
     /// and gradient do.
     /// type-audit: pending(wave-1: position), pending(wave-1: return)
     pub fn transverse_at(&self, position: [f64; 3]) -> (Transverse, f64) {
-        let Some((line_index, best)) = self.nearest_line(position) else {
+        let Some((signed, edges)) = self.bank_reading(position) else {
             return (Transverse::Dry, f64::INFINITY);
         };
+        (Transverse::from_band(band(signed, &edges)), signed)
+    }
+
+    /// The whole reading at `position`: the **signed** distance
+    /// [`ChannelNetwork::bank_signed_distance`] reports, paired with the four
+    /// [`band_edges`] borders that apply *there* — those of the nearest vertex
+    /// of the winning polyline. `None` on an empty network.
+    ///
+    /// **This is the one implementation of "which vertex's edges apply here",
+    /// and it exists so that there can only be one.**
+    /// [`ChannelNetwork::transverse_at`] classifies through it and a consumer
+    /// that stores the pair reads it from here, so the edges a document
+    /// carries are by construction the edges the classification was made
+    /// with. The alternative — a caller re-selecting the vertex itself — would
+    /// have to duplicate both the winning-line tie-break (which lives in
+    /// [`ChannelNetwork::nearest_line`], and reaches the *sign*) and the
+    /// nearest-vertex scan below, and would then agree with `transverse_at`
+    /// only by luck. That is the same argument
+    /// [`ChannelNetwork::bank_signed_distance`] makes for delegating rather
+    /// than re-deriving.
+    ///
+    /// The vertex scan is by *undisplaced angular separation* from the vertex,
+    /// not by the segment the signed distance was measured against: band
+    /// geometry is a per-vertex property (discharge, gradient, cell spacing),
+    /// and the nearest vertex is the reach whose hydraulics a point actually
+    /// sits in.
+    /// type-audit: pending(wave-1: position), pending(wave-1: return)
+    pub fn bank_reading(&self, position: [f64; 3]) -> Option<(f64, [f64; 4])> {
+        let (line_index, signed) = self.nearest_line(position)?;
         let points = &self.polylines[line_index].points;
         let mut nearest = 0usize;
         let mut nearest_distance = f64::INFINITY;
@@ -510,8 +539,7 @@ impl ChannelNetwork {
                 nearest = j;
             }
         }
-        let edges = self.band_edges[line_index][nearest];
-        (Transverse::from_band(band(best, &edges)), best)
+        Some((signed, self.band_edges[line_index][nearest]))
     }
 
     /// The polyline [`ChannelNetwork::transverse_at`] would answer from at
