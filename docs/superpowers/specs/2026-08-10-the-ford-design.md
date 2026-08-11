@@ -172,9 +172,21 @@ already derivable from the elevation map.
 `d` is distance to the **network**, not to a single edge, so confluences need
 no special case.
 
-**Cut-bank versus point-bar falls out of meander curvature sign** — the
-outside of a bend erodes, the inside deposits. Real hydrology, no extra
-machinery, available once §5.2 exists.
+**`d` is signed, and the sign is load-bearing.** The bands above are stated on
+`|d|`, but the stored and evaluated quantity must keep which *side* of the
+channel a point lies on. Two things collapse without it:
+
+1. **Fording is a side change.** A crossing is precisely the path
+   `bank → channel → bank` in which the sign flips. A model carrying only
+   `|d|` cannot distinguish crossing the river from walking to the water and
+   turning back — so it cannot express the campaign's namesake at all.
+2. **Cut-bank versus point-bar** — the outside of a bend erodes, the inside
+   deposits — is `sign(d)` read against meander curvature sign. Real
+   hydrology, no extra machinery, but unreachable from `|d|`.
+
+Symmetric bands are also simply wrong about rivers: real floodplains are
+frequently one-sided. The `|d|` formulation would impose a symmetry the world
+does not have, and the sign costs nothing to carry.
 
 ### 5.4 Seasonality is a parameter, not a mechanism
 
@@ -235,7 +247,11 @@ debt, predates this campaign, and is registered rather than repaired.
 2. **Locale reads it** — `locale/room/v3` with the ordinal; the epoch event;
    walk/vessel consumers follow.
 3. **Riparian conditioning** — `Variant::GalleryForest` and its kin
-   conditioned on band instead of drawn by dice.
+   conditioned on band instead of drawn by dice. **On `bank` and
+   `floodplain`, never on `channel`:** gallery forest grows *beside* a
+   watercourse, and conditioning it on the channel band would plant a forest
+   underwater. Expressing that distinction is the whole reason §2's ordinal
+   beats a boolean.
 4. **Scene emission** — additive on both scene schemas. Producer side only.
    **No client.**
 5. *(Out of scope — separate authorization.)* Wasm release, Orrery re-pin,
