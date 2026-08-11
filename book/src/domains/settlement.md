@@ -85,13 +85,24 @@ Each placed site is still committed as its own place entity (cell,
 latitude, longitude, biome, a generated name), exactly as before; only the
 population's provenance changed.
 
-**The founder floor still guarantees every species a place on the map.**
-Since The Branches, no species' placement is left to fall to zero purely
-because it is outcompeted: the founder floor — migrated alongside the
+**The founder floor guarantees every species a place on the map against
+competition — and against competition only.** Since The Branches, no species'
+placement is left to fall to zero purely because it is outcompeted: the founder
+floor — migrated alongside the
 field it now floors over (decision 0049) — reserves each species its
 single strongest attractor even where that attractor's catchment falls
 below the concentration threshold, and floors its committed population at
-one rather than ever rounding a settlement down to nobody. The retired
+one rather than ever rounding a settlement down to nobody.
+
+What the floor does **not** clear is a **hard exclusion**. A biome affinity of
+`0.0` is not a strong dislike; the founding pool filters on strictly positive
+capacity, so a kind excluded everywhere it could otherwise have gone has no
+attractor for the floor to reserve. [The Range](../chronicle/the-range.md)
+measured that directly: a declared biome range blocks goblin's chief settlement
+from placing at all on 2 of 1000 seeds. There are now eight such rows rather than
+two, [The Radiation](../chronicle/the-radiation.md) having authored six of them,
+so the guarantee should be read as *nothing outcompetes a species off the map*
+and never as *every species is always on the map*. The retired
 `--min-suitability` scenario pin, which used to tune this same floor
 against a suitability score, has no referent left to override — the
 concentration threshold is calibrated once and frozen rather than exposed
@@ -389,33 +400,39 @@ Tithe](../chronicle/the-tithe.md).
   (`pays-tribute-to`) over the ledger's existing entity-to-entity fact
   envelope, and no new fact shape, cause of ending, or stream label.
 
-Seed 42 under a spinning sky now grows **145 settlements** as the present
+Seed 42 under a spinning sky now grows **230 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
-competitive niche-K stack, nine peoples share the landscape — the four
+competitive niche-K stack, **fifteen peoples** share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
 Branches](../chronicle/the-branches.md) gave them two new members), the
 gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added,
 the human, the no-refuge generalist [The
-Generalist](../chronicle/the-generalist.md) added, and the three dwarves —
+Generalist](../chronicle/the-generalist.md) added, the three dwarves —
 desert, gully and hill — that [The Delvers](../chronicle/the-delvers.md)
-added as one family — but history now separates
+added as one family, and the six elves — wood, high, drow, sea, desert and
+snow — that [The Radiation](../chronicle/the-radiation.md) added as another,
+closing the peoples programme. History separates
 them into distinct territories and each holds its own
-chief settlement: the hobgoblin **Toa** (84 souls,
-tropical-seasonal-forest) is the world flagship, with the bugbear **Googo**
-(68, tropical-rainforest), the desert-dwarf **Daddadpadgad** (51,
-shrubland), the kobold **Xoraxa** (46, temperate-forest), the gnoll
-**Psoaxsmaapgzhopgshoop** (41, temperate-forest), the gully-dwarf **Tabtat**
-(37, tropical-seasonal-forest), the hill-dwarf **Bagsmogbatgat** (35,
-temperate-forest), the human **Moengato** (35, temperate-forest), and the
-goblin **Toabebe** (34, taiga) each holding their own — real,
-phonology-drawn names
+chief settlement: the bugbear **Googo** (68 souls,
+tropical-rainforest) is the largest, with the hobgoblin **Gootoenoona**
+(61, temperate-forest), the desert-dwarf **Dadgogshnagdad** (44,
+shrubland), the kobold **Raaxora** (42, temperate-forest), the gully-dwarf
+**Nagbatga** (37, tropical-seasonal-forest), the hill-dwarf **Batgat** (36,
+temperate-forest), the human **Mongato** (35, temperate-forest), the gnoll
+**Gzhopgshooshngaopgzox** (34, shrubland), the goblin **Toabeobee** (34,
+taiga), the high-elf **Bvozhgo** (34, temperate-forest), the wood-elf
+**Dudduzgu** (34, temperate-forest), the sea-elf **Nushbeshbaush** (33,
+coral-reef), the desert-elf **Pozhzaosngoshpeshpaosh** (29, savanna), the
+snow-elf **Ngasbozbboz** (28, taiga) and the drow **Govo** (23, taiga) each
+holding their own — real, phonology-drawn names
 (Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
 worth stating because it is easy to misread: a *people's* chief settlement is
 not its largest but its **oldest surviving occupation** — the first settlement
-fact that people committed and still holds — while the *world* flagship above
-it is the highest-population site of any people. *The Tumult* made the
+fact that people committed and still holds — while the *world* flagship is the
+highest-population site of any people, which need not be on the list above at
+all. *The Tumult* made the
 distinction consequential, since a conquest closes the raider's own occupation
 record and reopens it at the seized cell: a raiding people therefore hands its
 chief settlement on far more often than a peaceful one, which is a re-selection

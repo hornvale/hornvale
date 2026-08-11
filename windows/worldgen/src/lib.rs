@@ -9040,9 +9040,9 @@ mod tests {
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 88, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 88);
-        assert_eq!(count("deity-name"), 88);
+        assert_eq!(count("is-belief"), 145, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 145);
+        assert_eq!(count("deity-name"), 145);
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -9084,7 +9084,28 @@ mod tests {
         // roster, which did not move, while the gloss count is a function of
         // settlement volume, which did. Two settlements' worth of glosses is
         // the smallest movement this line has ever recorded.
-        assert_eq!(count("name-gloss"), 211);
+        //
+        // THE RADIATION re-pin (C2d, 2026-08-10): 211 -> 317, and the three
+        // counts above 88 -> 145. Six elves are the tenth through fifteenth
+        // Settled peoples, so both quantities move together for the first time
+        // since the Delvers' first pass: six more peopled pantheons form (the
+        // pantheon GREW, which is what this test is named for) and fifteen
+        // peoples re-contest placement across the whole map, moving settlement
+        // volume and the gloss count with it. Note the pantheon's +57 is NOT
+        // 6 x 8 - a peopled pantheon's size is a function of what that people
+        // observes from where it ends up living, so it varies by kind; the
+        // guard is the direction, not an arity.
+        //
+        // THE RADIATION, TASK 6 (C2d, 2026-08-10): 317 -> 355, and the three
+        // counts above are UNCHANGED at 145. The roster did not move again —
+        // placement did, twice (the task-3 affinity relevel and the
+        // founder-collision cut), which is exactly the split this file keeps
+        // on two lines: the pantheon is a function of the peopled ROSTER and
+        // the gloss count of settlement VOLUME, and only the second of those
+        // changed. Seed 42 now carries 230 settlements and 13,389 ledger
+        // facts. Same reading as The Range's, one campaign later and thirty-
+        // eight glosses larger.
+        assert_eq!(count("name-gloss"), 355);
     }
 
     #[test]
@@ -9328,16 +9349,24 @@ mod tests {
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
+        // THE RADIATION (C2d): the six elves take the roster from nine to
+        // fifteen. Still named rather than counted, for the reason above.
         let settling_peoples: std::collections::BTreeSet<&'static str> = [
             "bugbear",
             "desert-dwarf",
+            "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
+            "high-elf",
             "hill-dwarf",
             "hobgoblin",
             "human",
             "kobold",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
         ]
         .into_iter()
         .collect();
@@ -9402,9 +9431,17 @@ mod tests {
     #[test]
     fn cascade_regime_of_matches_the_authored_regime_map() {
         // THE SOLITARY TONGUE (Task 2): cascade_regime_of is a total, pure
-        // function of a biosphere row (no world/seed needed). Each of the
-        // six peoples (Settled) draws at the historical SETTLED rate; each
-        // dragon (Solitary, long-lived) freezes to the isolate rate.
+        // function of a biosphere row (no world/seed needed). A short-lived
+        // Settled people draws at the historical SETTLED rate; each dragon
+        // (Solitary, long-lived) freezes to the isolate rate.
+        //
+        // THE RADIATION (C2d) extended this to cover ALL FIFTEEN peoples, in
+        // two arms rather than one. The Settled row of the map is not constant
+        // in lifespan (The Long Age, decision 0066): six peoples sit under
+        // `LIFESPAN_THRESHOLD_YEARS` and take `SETTLED`, and nine — the three
+        // dwarves at `paced(4.0)` and the six elves at `paced(5.0)` — clear it
+        // and take the slower `{1,2}`. Listing all fifteen in one SETTLED arm
+        // would have been red on nine of them; the arms are the map.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         for people in ["goblin", "kobold", "hobgoblin", "bugbear", "gnoll", "human"] {
             let bio = wc
@@ -9414,7 +9451,28 @@ mod tests {
             assert_eq!(
                 cascade_regime_of(bio),
                 hornvale_language::CascadeRegime::SETTLED,
-                "{people} is Settled -> the SETTLED regime"
+                "{people} is Settled and short-lived -> the SETTLED regime"
+            );
+        }
+        for people in [
+            "desert-dwarf",
+            "desert-elf",
+            "drow",
+            "gully-dwarf",
+            "high-elf",
+            "hill-dwarf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
+        ] {
+            let bio = wc
+                .biosphere
+                .get_by_label(people)
+                .unwrap_or_else(|| panic!("{people} has a biosphere row"));
+            assert_eq!(
+                cascade_regime_of(bio),
+                hornvale_language::CascadeRegime::new(1, 2),
+                "{people} is Settled and long-lived -> the slow {{1,2}} regime"
             );
         }
         for dragon in ["white-dragon", "red-dragon", "black-dragon"] {
@@ -9458,6 +9516,73 @@ mod tests {
             hornvale_language::CascadeRegime::SETTLED,
             "treant is Sessile (never speaks) -> inert at SETTLED"
         );
+    }
+
+    /// THE RADIATION (C2d), N1 — **longevity is silent in language drift, and
+    /// pacing elves harder than dwarves changes nothing.**
+    ///
+    /// `cascade_regime_of` switches a `Settled` people onto the slow regime at
+    /// `LIFESPAN_THRESHOLD_YEARS = 120.0` and is **binary** there. The dwarves
+    /// already clear it with a wide margin (paced at 4.0, all three land near
+    /// 270 y). So no elf-specific tongue-slowness may be attributed to elves —
+    /// and a later reader looking at long-lived elves and slow-drifting elf
+    /// tongues will otherwise connect them, because the connection is exactly
+    /// the shape a finding has.
+    ///
+    /// Three clauses, and the third is what makes the first two mean anything:
+    /// the elves are on the slow regime; raising the pacing factor further
+    /// moves NOTHING; and dropping to pure allometry DOES move it — so the
+    /// threshold is live and the null is a null rather than a dead branch.
+    #[test]
+    fn pacing_elves_harder_than_dwarves_changes_no_drift_regime() {
+        let biosphere = hornvale_species::biosphere_registry();
+        let slow = hornvale_language::CascadeRegime::new(1, 2);
+        let mut checked = 0usize;
+        for name in [
+            "desert-elf",
+            "drow",
+            "high-elf",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf",
+        ] {
+            let bio = biosphere
+                .get(&hornvale_kernel::KindId(name))
+                .unwrap_or_else(|| panic!("{name} has a biosphere row"));
+
+            assert_eq!(
+                cascade_regime_of(bio),
+                slow,
+                "{name} is not on the slow drift regime; the authored pacing \
+                 factor does not clear LIFESPAN_THRESHOLD_YEARS"
+            );
+
+            // Clause 2: harder pacing is a NO-OP. The regime is binary at the
+            // threshold, so raising the factor cannot move it.
+            let mut faster = bio.clone();
+            faster.schedule = hornvale_species::LifeSchedule::paced(10.0).unwrap();
+            assert_eq!(
+                cascade_regime_of(&faster),
+                slow,
+                "{name}: doubling the pacing factor moved the drift regime. \
+                 `cascade_regime_of` is BINARY at 120 y — if this fires, the \
+                 threshold model changed and N1 must be re-stated, not re-pinned"
+            );
+
+            // Clause 3 (anti-vacuity): the threshold is live. Pure allometry on
+            // a ~45-70 kg endotherm reads ~69 y, well under 120.
+            let mut unpaced = bio.clone();
+            unpaced.schedule = hornvale_species::LifeSchedule::Allometric;
+            assert_eq!(
+                cascade_regime_of(&unpaced),
+                hornvale_language::CascadeRegime::SETTLED,
+                "{name}: dropping to pure allometry did NOT move the regime, so \
+                 clauses 1 and 2 above are satisfied by a branch that never \
+                 fires and prove nothing"
+            );
+            checked += 1;
+        }
+        assert_eq!(checked, 6, "all six elves must be checked");
     }
 
     #[test]
@@ -12491,25 +12616,52 @@ mod tests {
         // amphibious giant crocodile) a nonzero weight there. Renamed from
         // `the_existing_sixteen_...` (its own doc comment always said "before
         // Task 8" — this is that threshold arriving, not a workaround).
+        //
+        // THE RADIATION (C2d) adds a SIXTH occupant, and it is the first
+        // PEOPLE on the axis: sea-elf, at 0.75. The list below is therefore a
+        // witness of who has been authored marine, not a claim that only T8
+        // may be — what this test actually guards, and what stays true, is
+        // that a kind NOT authored marine reads an exact `0.0` there, so its
+        // `per_axis` entry contributes an exact zero to the dot product. A new
+        // marine kind belongs on this list; a kind that arrives here by
+        // accident is the regression it exists to catch.
         let marine_or_amphibious: std::collections::BTreeSet<&str> = [
             "giant-crocodile",
             "giant-octopus",
             "giant-squid",
             "killer-whale",
             "reef-shark",
+            "sea-elf",
         ]
         .into_iter()
         .collect();
+        let mut checked = 0usize;
         for (kind, bio) in hornvale_species::biosphere_registry().iter() {
             if marine_or_amphibious.contains(kind.0) {
+                // Anti-vacuity: an allowlisted kind must actually be ON the
+                // axis, or the list becomes a way of quieting the assertion
+                // rather than a record of an authoring decision.
+                assert!(
+                    bio.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.0,
+                    "{kind:?} is allowlisted as marine but weights the axis at \
+                     0.0 - drop it from the list rather than carry a row the \
+                     guard is silent about"
+                );
                 continue;
             }
             assert_eq!(
                 bio.niche.weight(hornvale_kernel::MARINE_FORAGE),
                 0.0,
-                "{kind:?} must not weight the marine axis (only The Vacancy T8's five may)"
+                "{kind:?} must not weight the marine axis (only the kinds \
+                 authored marine, listed in this test, may)"
             );
+            checked += 1;
         }
+        assert_eq!(
+            checked,
+            hornvale_species::biosphere_registry().len() - marine_or_amphibious.len(),
+            "every non-marine kind must have been checked"
+        );
     }
 
     /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
@@ -13596,12 +13748,13 @@ mod tests {
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| *k)
             .collect();
-        // The Delvers (C2c) re-pin: 6 -> 9, the three dwarves. Each carries
-        // its own authored `Dispersion` row, so the spread this test proves
-        // is handed through rather than defaulted covers all nine.
+        // The Delvers (C2c) re-pin: 6 -> 9, the three dwarves. The Radiation
+        // (C2d) re-pin: 9 -> 15, the six elves. Each carries its own authored
+        // `Dispersion` row, so the spread this test proves is handed through
+        // rather than defaulted covers all fifteen.
         assert_eq!(
             peoples.len(),
-            9,
+            15,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

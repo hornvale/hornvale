@@ -443,8 +443,18 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // box, two kinds gaining declared biome ranges): 10 -> 9. Same
     // roster/placement-sensitive cause as the locked-head split above; this
     // is a recorded count, not a guarded claim.
+    //
+    // The Radiation's close regen (C2d, 2026-08-10, canonical census on
+    // lefford at 07117d05, goldens committed as 6df8935c): 9 -> 10. Six new
+    // settling peoples re-decide every settlement contest, so the count
+    // returns to the value it held before The Range. WITNESS, not claim: the
+    // guarded property is the *conjunction* asserted above (a frozen sky
+    // never heads a cyclic pantheon), which is unmoved; this literal only
+    // records how many per-people heads land in the spinning-yet-eternal cell
+    // of that table. The movement is downstream of placement, which is the
+    // campaign's predicted mechanism and the only one the census diff found.
     assert_eq!(
-        spinning_eternal, 9,
+        spinning_eternal, 10,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -696,8 +706,28 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // binding on those two worlds was not traced further here; this row
     // remains a recorded witness, not a guarded directional claim, so nothing
     // beyond the count movement needs re-checking.
-    assert_eq!(coastal, 217, "coastal flagship count drifted");
-    assert_eq!(inland, 781, "inland flagship count drifted");
+    //
+    // The Radiation's close regen (C2d, 2026-08-10, lefford at 07117d05,
+    // goldens 6df8935c): 217 -> 196 coastal, 781 -> 804 inland — and the two
+    // sum to 1000 again. THE ABSENT PAIR IS GONE: the two worlds The Range
+    // introduced where no goblin flagship placed at all now place one, so the
+    // present-row count returns to 1000 (see the name-length and
+    // name-syllable rows below, which recover the same two rows for the same
+    // reason). Six new settling peoples compete for every site, and the net
+    // effect on goblin's flagship is INLAND — 21 worlds move coastal to
+    // inland on balance. WITNESS, not claim, as the paragraph above already
+    // says; nothing here asserts a direction.
+    //
+    // ONE CONSEQUENCE IS NOT A RE-PIN AND IS RECORDED AS A FINDING. 804/1000
+    // is 80.4%, and the Domesday's D1 degeneracy detector fires at >= 80.0%.
+    // `flagship-coastal` and `goblin-flagship-coastal` (the same quantity
+    // under two names) therefore CROSS THAT FROZEN BAR at this regen —
+    // 78.3% -> 80.4% — and they are the entire explanation of D1's hit count
+    // moving 27 -> 29 in `windows/lab/src/domesday/detect.rs`. The bar is
+    // 0.4 percentage points below the observed share; treat the D1 hit as a
+    // measurement sitting on an edge, not as a settled property.
+    assert_eq!(coastal, 196, "coastal flagship count drifted");
+    assert_eq!(inland, 804, "inland flagship count drifted");
 }
 
 #[test]
@@ -1101,7 +1131,22 @@ fn blind_attribution_beats_chance_decisively() {
     // invariant below (perfect attribution among spinning, mooned pairs)
     // never fired either; the run reaches it, and it is an `assert_eq!` that
     // would have.
-    assert_eq!(correct, 879, "blind-attribution count drifted");
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): six new settling peoples. The
+    // attributable-pair denominator does NOT move (969 -> 969) and correct
+    // goes 879 -> 883; accuracy 0.9071207430340558 ->
+    // 0.9112487100103199. The directional claim this test guards (blind
+    // attribution beats chance decisively) HOLDS, re-checked rather than
+    // assumed: 0.911 against the 0.75 floor asserted above is 0.161 of
+    // margin, and against the ~0.5 binary chance the claim is really about,
+    // nearly double. NOTE THAT THE NET IS NOT THE MOVEMENT: 22 rows flipped
+    // in each direction and +4 is what remains, so this is a re-decided
+    // contest re-scored, not four worlds quietly improving. The mooned-pair
+    // invariant below (perfect attribution among spinning, mooned pairs)
+    // never fired either; the run reaches it, and it is an `assert_eq!` that
+    // would have.
+    assert_eq!(correct, 883, "blind-attribution count drifted");
     assert_eq!(total, 969, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -1348,9 +1393,22 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // the detector still reads true on every one of the 998 goblin worlds that
     // hold a pantheon, and the inner `assert!` in the loop confirms it still
     // reads false on every one of the 969 kobold worlds that do.
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): six new settling peoples, and
+    // goblin goes 998/2 -> 1000/0 true/absent — THE RANGE'S ABSENT PAIR IS
+    // GONE, the same two worlds recovering here as in
+    // `goblin_flagship_coastal_split_is_pinned` and in the name-length and
+    // name-syllable present-row counts below, for the same reason: a goblin
+    // flagship places again on both, so there is a pantheon to read a
+    // honorific from. Kobold's 969/31 false/absent does not move. The claim
+    // this row guards is re-checked, not assumed — `g_false_seeds` is still
+    // exactly empty (asserted above), so the detector reads true on all 1000
+    // goblin worlds, and the inner `assert!` in the loop confirms it still
+    // reads false on every one of the 969 kobold worlds that hold a pantheon.
     assert_eq!(
         (g_true, g_absent),
-        (998, 2),
+        (1000, 0),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
@@ -1756,8 +1814,18 @@ fn name_collision_rate_is_measured_and_pinned() {
     // (H4 already failed and is recorded as such above), so nothing to
     // re-verify beyond the three-way partition still summing to 1000 — which
     // it does.
-    assert_eq!(zero, 1, "zero-collision world count drifted");
-    assert_eq!(nonzero, 999, "nonzero-collision world count drifted");
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): six new settling peoples, so a
+    // different set of settlements survives to be named on every world:
+    // 1 -> 0 zero-collision, 999 -> 1000 nonzero; absent unmoved at 0
+    // (0 + 1000 + 0 = 1000). The zero-collision column closes again — the
+    // Range's single reopening world draws a duplicate this time. This row
+    // still carries no directional claim (H4 already failed and is recorded
+    // as such above), so nothing to re-verify beyond the three-way partition
+    // still summing to 1000 — which it does.
+    assert_eq!(zero, 0, "zero-collision world count drifted");
+    assert_eq!(nonzero, 1000, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1861,7 +1929,15 @@ fn name_collision_rate_is_measured_and_pinned() {
         // 0.506_829_661_678_999_5 -> 0.510_906_343_952. This row still
         // carries no directional claim, and the rate stays inside the range
         // decision 0024 sanctions (see the note above).
-        (mean - 0.510_906_343_952).abs() < 1e-6,
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): six new settling peoples,
+        // so a different set of settlements is named on every world:
+        // 0.510_906_343_952 -> 0.508_921_923_876. Same roster-competition
+        // cause as the zero/nonzero re-pin above; this row still carries no
+        // directional claim, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        (mean - 0.508_921_923_876).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -2067,7 +2143,18 @@ fn name_length_distributions_are_measured_and_pinned() {
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7) — 1.51 characters of margin — re-checked rather than
         // assumed.
-        ("goblin", 998u32, 8.494_760_944_989_975),
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): six new settling peoples
+        // re-decide every settlement contest, and THE RANGE'S TWO BLOCKED
+        // WORLDS SEAT A GOBLIN FLAGSHIP AGAIN — present recovers 998 -> 1000
+        // (the same recovery recorded at
+        // `goblin_flagship_coastal_split_is_pinned` and at the
+        // epithet-honorific row), mean 8.494_760_944_989_975 ->
+        // 8.478_397_802_000. Still comfortably below the campaign's own
+        // <10-character claim (spec §7) — 1.52 characters of margin —
+        // re-checked rather than assumed.
+        ("goblin", 1000u32, 8.478_397_802_000),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -2159,7 +2246,15 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 6.869_846_921_177_682_5 -> 6.848_307_837_667_7. Still comfortably
         // below the campaign's own <10-character claim (spec §7) — 3.15
         // characters of margin — re-checked rather than assumed.
-        ("kobold", 969u32, 6.848_307_837_667_7),
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): kobold's present count does
+        // NOT move (969 -> 969) — the six new peoples take nothing from
+        // kobold's flagship seat — but the sites its names compound over do:
+        // mean 6.848_307_837_667_7 -> 6.879_645_463_157_894. Still
+        // comfortably below the campaign's own <10-character claim (spec §7)
+        // — 3.12 characters of margin — re-checked rather than assumed.
+        ("kobold", 969u32, 6.879_645_463_157_894),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2317,8 +2412,21 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // below the ceiling and kobold 0.177 above the floor, the narrower of
         // the two margins (kobold's, and it is the narrowest either species
         // has recorded at this row).
-        ("goblin", 998u32, 2.705_454_691_783_566),
-        ("kobold", 969u32, 2.176_904_839_215_685),
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): present counts move with
+        // the flagship-placement recovery recorded at the name-length row
+        // above: goblin 998 -> 1000 present, mean 2.705_454_691_783_566 ->
+        // 2.704_281_689_800; kobold unmoved at 969 present, mean
+        // 2.176_904_839_215_685 -> 2.187_972_906_398_349. Present counts
+        // still agree with the name-length row's re-pin above (1000 / 969),
+        // as the per-row structural relation this test also asserts requires.
+        // The claim still HOLDS at both species — 2.704 and 2.188, both
+        // inside 2-3 — re-checked, not assumed; goblin sits 0.296 below the
+        // ceiling and kobold 0.188 above the floor, the narrower of the two
+        // margins (kobold's, which widens slightly from The Range's 0.177).
+        ("goblin", 1000u32, 2.704_281_689_800),
+        ("kobold", 969u32, 2.187_972_906_398_349),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2487,7 +2595,43 @@ fn name_transparency_is_measured_and_pinned() {
         // and the spread assertion below shows the floor falling further
         // from 1.0 at the same regen — a uniformity relapse would need the
         // floor to rise toward the mean, and instead it fell.
-        (mean - 0.751_571_090_980_000_1).abs() < 1e-9,
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): six new settling peoples;
+        // present/absent unmoved at 1000/0, and the mean FALLS
+        // 0.751_571_090_980_000_1 -> 0.704_032_213_710. That is the safe
+        // direction, and this row's claim (transparency is emphatically NOT
+        // 1.0) is re-checked rather than assumed: 0.704 is the lowest mean
+        // this row has ever recorded.
+        //
+        // THE SPREAD MOVED IN BOTH DIRECTIONS AT ONCE, AND THE READING IS NOT
+        // THE OBVIOUS ONE. The floor rises 0.165 -> 0.301 and the ceiling
+        // falls off 1.0 for the first time (see the two assertions below), so
+        // `max - min` narrows 0.835 -> 0.678, -19%. Read as "the floor must
+        // not climb toward the mean" — the warning two regens ago wrote down
+        // — that single statistic moved the wrong way. Read as the claim the
+        // row actually guards, "the low tail must not vanish", it did the
+        // opposite: measured off the census, sub-0.60 mass GREW by half again
+        // (126 -> 190 worlds) and sub-0.50 mass grew (44 -> 46), while the
+        // HIGH tail collapsed (worlds above 0.90: 139 -> 29). Mass moved
+        // DOWN, not toward uniformity.
+        //
+        // ATTRIBUTION FOR THE NARROWING, measured rather than asserted: the
+        // metric is a per-world mean over settlements, and settlement-count
+        // rises 186.7 -> 243.6, so the per-world sampling spread should
+        // shrink by sqrt(186.7/243.6) = 0.875. Observed stdev ratio 0.880
+        // (0.1336 -> 0.1175) — a match to within 0.5%, and it predicts BOTH
+        // tails moving inward simultaneously, which is exactly what happened.
+        // The narrowing is an averaging artifact of a bigger denominator, not
+        // wear slowing down.
+        //
+        // WHAT THIS CENSUS CANNOT SAY: the mean's separate 6.3% fall is a
+        // mixture shift — six new species' lexicons enter a per-settlement
+        // average that is not species-weighted — and there is NO per-species
+        // transparency column, so the elves' own transparency cannot be
+        // isolated from these fixtures. Recorded as a limit of the
+        // instrument, not resolved.
+        (mean - 0.704_032_213_710).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2537,11 +2681,30 @@ fn name_transparency_is_measured_and_pinned() {
         // for. A 0.165-to-1.0 span around a 0.752 mean is still plainly a
         // distribution over worlds, not the uniformity defect the row exists
         // to catch: re-checked rather than assumed.
-        (min - 0.165_354_33).abs() < 1e-8,
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): the floor RISES
+        // 0.165_354_33 -> 0.301_324_5 and, for the first time in this row's
+        // history, THE CEILING COMES OFF 1.0 (1.0 -> 0.979_069_77, asserted
+        // below). Both tails moved inward. The full diagnosis — that this is
+        // a sqrt(n) averaging artifact of a 30% larger settlement count, and
+        // that low-tail MASS grew rather than vanished — is written out at
+        // the mean assertion above; read it before treating the risen floor
+        // as the uniformity defect returning. A 0.301-to-0.979 span around a
+        // 0.704 mean, with 190 of 1000 worlds below 0.60, is a distribution
+        // over worlds. Re-checked rather than assumed.
+        (min - 0.301_324_5).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
-        (max - 1.0).abs() < 1e-8,
+        // The Radiation's (C2d) close regen: this literal was 1.0 at every
+        // regen from The Wearing to The Range — some world always read fully
+        // transparent. It no longer does: 1.0 -> 0.979_069_77. THE MOVEMENT
+        // IS AWAY FROM THE DEFECT THIS ROW GUARDS, not toward it, so it is
+        // re-pinned rather than investigated as a regression; but it is the
+        // first time the ceiling has moved at all, and a future regen that
+        // walks it back UP toward 1.0 should be read against that.
+        (max - 0.979_069_77).abs() < 1e-8,
         "name-transparency maximum drifted: {max:.15}"
     );
 }

@@ -64,6 +64,23 @@ structural tie-breaks, so the world's cast is
 cast = Σ over peoples: min(20, occupations of that people)
 ```
 
+> **Amended, 2026-08-10 ([The Radiation](./the-radiation.md)): that is now an
+> upper bound rather than an equality, and the composition claim beneath it is
+> confirmed at fifteen peoples.** Two founding records can fold to the same
+> handle, which used to end world construction outright. The loser of such a pair
+> is now dropped from the remembered cast and **nothing is backfilled**, so the
+> losing people ends one short of its depth and the sum falls one short with it.
+> Measured over three thousand consecutive seeds rather than estimated: **five
+> worlds lose exactly one founder each**, while 958 worlds contain handle-sharing
+> pairs the depth never reaches. Every world that does not collide is
+> byte-identical across the change. The proper repair is to widen the handle so
+> it folds its referents' material facts, which renames every founder in every
+> world and is therefore a save-format epoch, deliberately deferred.
+>
+> The composition claim held exactly as designed, tested by a campaign that was
+> not trying to test it: fifteen peoples with occupations give a seed-42 cast of
+> **148**, all handles distinct, with no constant retuned.
+
 Three things follow that a world constant cannot give. Memory acquires a
 *subject*, so a founder remembered by hobgoblins and unknown to kobolds is a
 fact about knowledge rather than about the world — the seam a later account of

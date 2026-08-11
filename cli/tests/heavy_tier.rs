@@ -163,8 +163,9 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 20] = [
+const EXPECTED_UNTOKENISED: [&str; 21] = [
     "...",
+    "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
@@ -212,6 +213,19 @@ const EXPECTED_UNTOKENISED: [&str; 20] = [
 /// deferred promises with no token, no owner and no date. They are exactly
 /// what the module doc above describes. A future pass that adopts them should
 /// give them a token class and delete them from this roster.
+///
+/// **A fourth kind is now here twice, and is neither of those things.** The two
+/// `"PREREGISTERED, not met: awaits <registry-slug> (<reason>)"` entries carry
+/// a preregistered prediction that was MEASURED and NOT MET — the test's
+/// failure is the record, and the slug names the registry row a successor must
+/// discharge it against. They are findable (the prefix greps cleanly) and they
+/// name an owner (the row), so they lack nothing a token class would give them
+/// except membership in the filter above; they sit in this roster rather than
+/// in a token class because that filter governs which tier RUNS a test, and a
+/// preregistered-not-met pin must be run by neither tier. Adding one is a
+/// review decision like any other entry here: The Radiation's is
+/// `BIO-rung-weighted-concentration`, reviewed 2026-08-10, and its evidence is
+/// `windows/worldgen/tests/radiation_readout.rs::desert_elf_concentrates_in_its_authored_stronghold_biomes`.
 #[test]
 fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
     let reasons = ignore_reasons();

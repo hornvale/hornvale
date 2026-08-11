@@ -244,30 +244,65 @@ fn regenerate_occupancy_readout() {
 ///
 /// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
 /// gain at least one kind *centred* there. Measured against the committed
-/// readout, regenerated 2026-08-09 (The Range, fix wave — the regeneration that
-/// threaded the live `biome_affinity` store into this readout for the first
-/// time). **Every row in the table below is byte-identical to the 2026-08-08
-/// (The Assize) fixture**, checked rather than assumed: that regeneration moved
-/// exactly 24 of 386 rows, all of them `gnoll` or `woolly-mammoth`, and none of
-/// EC6's subjects is either.
+/// readout, regenerated twice on 2026-08-10 (The Radiation task 3, and again in
+/// its fix round once the ladder's LEVEL was derived) and before that 2026-08-09
+/// (The Range, fix wave — the regeneration that threaded the live
+/// `biome_affinity` store into this readout for the first time). **Every row in
+/// the table below is byte-identical to the fixture at `d7719e27`**, three
+/// regenerations back, checked rather than assumed: `otyugh,desert`,
+/// `treant,savanna`, `treant,taiga` and `giant-scorpion,desert` were compared
+/// field by field between that fixture, `834fee5c`'s and the live one, and all
+/// four rows are equal in every column. Nothing since has moved a row that is
+/// not `gnoll`, `woolly-mammoth` or an elf, and none of EC6's subjects is any
+/// of those.
 ///
-/// | region | new kinds present | top occupant |
-/// |---|---|---|
-/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **otyugh** (0.0470) — NOT met |
-/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | **treant** (0.0822) — NOT met |
-/// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | **treant** (0.0545) — NOT met |
+/// | region | Vacancy kinds present | kinds present | top occupant (`mean_k`) |
+/// |---|---|---|---|
+/// | hot-arid (desert) | all 8 | 35 | **otyugh** (0.04704871) — NOT met |
+/// | savanna | all 8 | 35 | **treant** (0.082202295) — NOT met |
+/// | boreal (taiga) | all 8 | 35 | **treant** (0.05448946) — NOT met |
+///
+/// ("all 8" is `giant-scorpion`, `giant-hyena`, `dire-wolf`, `rhinoceros`,
+/// `giant-constrictor-snake`, `carrion-crawler`, `shrieker`, `gnoll` — every kind
+/// The Vacancy authored for these regions carries a row in every one of the
+/// three, and has in all three fixtures checked here. The column previously held
+/// partial lists with `+5`/`+6` suffixes that summed to neither 8 nor 35 and
+/// whose denominator was never stated; it is replaced by the two counts, both
+/// obtained by filtering the live fixture's rows on `biome`.)
+///
+/// **Re-read against the 2026-08-10 regenerations, and the verdicts are
+/// unchanged.** Six elves entered every region, and none of them displaced a top
+/// occupant or came close: in desert the best elf is drow at **rank 9 of 35**
+/// (0.010847939) against otyugh's 0.04704871; in savanna it is desert-elf at
+/// rank 17 of 35 (0.017667515) against treant's 0.082202295; in taiga it is drow
+/// at rank 12 of 35 (0.023019544) against treant's 0.05448946. Every one of
+/// those six figures was obtained the same way — load the fixture this test
+/// reads *as it stands after this commit's regeneration*, group its rows by
+/// biome, sort each group descending on `mean_k`, and read off the rank and the
+/// value — not carried forward from the previous version of this paragraph.
+///
+/// Carrying them forward is precisely what went wrong. The previous version of
+/// this paragraph read "drow at rank 14 of 35 (0.006319)", "desert-elf at
+/// (0.014963)" and "drow at rank 12 (0.019443)". Those are the abandoned `0.25`
+/// arm: `cda3e3c4` derived the ladder's level from each kind's
+/// `sovereignty_floor`, which raised every elf's default and every elf's
+/// `mean_k` with it, and the paragraph was not re-read. One of the three was
+/// wrong in **rank** and not merely in digits — drow moved five places up the
+/// desert ranking, from 14th to 9th. The verdicts survive only because the
+/// numerator moved and the three top occupants did not.
 ///
 /// **EC6 is met in ZERO of three regions, not one — and it always was.** The
 /// previous version of this table claimed `giant-scorpion` (0.0177) topped
 /// desert. That figure matches nothing in either fixture: `giant-scorpion`'s
 /// desert `mean_k` is **0.035982774** (`≈0.0359`), it is not the top occupant
-/// there (`otyugh` at 0.0470 is), and it is not even the best newly-authored
-/// kind in the region — `carrion-crawler` is, at rank 2 of 29 kinds present
-/// in desert. (A naively-inherited "rank 2 of 26" would be wrong here: 26 was
-/// desert's kind count in the *pre-regeneration* fixture, before this
-/// regeneration's three new dwarves — see below — each added a desert row,
-/// taking it to 29. Re-derived against the fixture this test actually reads,
-/// not copied.)
+/// there (`otyugh` at 0.04704871 is), and it is not even the best
+/// newly-authored kind in the region — `carrion-crawler` is, at **rank 2 of 35**
+/// kinds present in desert (0.046748017). (The denominator has now gone stale
+/// twice, which is why it is stated with its provenance every time: it was 26
+/// before The Assize's three new dwarves each added a desert row, 29 after them,
+/// and 35 now that all six elves carry one. Each figure was true when written
+/// and none was re-derived by the campaign that inherited it. Counted here by
+/// filtering the live fixture's rows on `biome == "desert"`, not copied.)
 ///
 /// **All three region rows above are byte-identical before and after this
 /// regeneration** — `otyugh,desert`, `treant,savanna`, `treant,taiga` and
@@ -280,16 +315,141 @@ fn regenerate_occupancy_readout() {
 /// verdict was already NOT MET at the values it was quoting. This is the
 /// **third** under-checked attribution recorded against this one file.
 ///
+/// **The 2026-08-10 regenerations move exactly the kinds that carry an affinity
+/// row, and nobody else.** Against `834fee5c`, the last fixture written before
+/// this campaign touched the store, the live file decomposes as **80 rows added,
+/// 24 changed, 362 byte-identical**, 386 → 466. Obtained by loading both files,
+/// keying every row on `(kind, biome)`, and comparing the sets and then the
+/// surviving rows field by field:
+///
+/// - the **80 added** rows are the six elves and nothing else — `sea-elf` 20,
+///   because it is the one occupant reaching the marine classes, and 12 each for
+///   `desert-elf`, `drow`, `high-elf`, `snow-elf` and `wood-elf`;
+/// - the **24 changed** rows are `gnoll` (12) and `woolly-mammoth` (12) — the two
+///   pre-existing occupants of `biome_affinity_registry`, neither of which this
+///   campaign edited.
+///
+/// An earlier version of this paragraph called the regeneration **PURELY
+/// ADDITIVE** — "not one of the 386 pre-existing rows changed a single byte".
+/// That was true of `59904d50`, which only authored six new rows, and it stopped
+/// being true one commit later at `cda3e3c4`, which replaced the ladder's
+/// authored fourth step with each kind's `sovereignty_floor`. **A derivation is
+/// registry-wide where an authored row is not**: it relevels every row in the
+/// store, so The Range's two kinds moved without being touched, and the two
+/// commits could not both be described by the same sentence. The dead claim is
+/// kept beside its replacement because the shape of the mistake is the reusable
+/// part — it was a true statement about one commit's diff, left standing over
+/// the next commit's, in a doc that still read as though it had measured the
+/// file it sits beside.
+///
+/// The argument that claim was serving does survive, and is worth keeping
+/// because the obvious expectation is the opposite. An affinity row redistributes
+/// *placement* violently: `range_readout.rs`'s P1″ arms, re-run on this tree,
+/// take gnoll's seed-42 settlements from **13 to 40** and its arid share from
+/// **0.000000 to 0.825000** between the affinity-absent and affinity-shipped
+/// worlds. So one might expect this fixture to move everywhere. It does not,
+/// because this readout is not placement. It renders `per_species_suitability`,
+/// and a kind's suitability field is a function of **that kind's own** biosphere
+/// row, realm and affinity against the world's fields — no other kind appears in
+/// it. Competition enters at the bake, one layer down from here. So a new kind
+/// can only ADD rows to this file, and an affinity row can only move the kind
+/// that declares it — which is exactly why a registry-wide *relevel* is the one
+/// edit that moves rows nobody wrote.
+///
+/// Two internal consistencies confirm the store reached this path rather than
+/// being dropped, using the same discriminating check the 2026-08-09
+/// paragraph below relies on:
+///
+/// - **`high-elf` and `wood-elf` are identical in every numeric column of all
+///   twelve of their biome rows** (taiga `0.013465794`, savanna `0.0098947532`,
+///   desert `0.002177014`, …). Checked, not sampled: both kinds' twelve rows
+///   were pulled from the live fixture, sorted by biome, and compared column by
+///   column with the `kind` field dropped — the biome lists match and **zero**
+///   rows differ in any of `cells_occupied`, `share_of_kind_k`, `mean_k`,
+///   `p50_k`, `p95_k`. They carry the same biosphere row and the same affinity
+///   row and differ only in psyche, society and language — none of which this
+///   path reads — so spec §3.6's MIND control is confirmed at the field level
+///   here, which is P3(a)'s primary arm.
+/// - **`drow` diverges from both on all twelve** (taiga `0.023019544` against
+///   their `0.013465794`). **Do not read that as the realm gate**, and do not
+///   read it as its mass either. Its affinity row IS wood's, byte for byte,
+///   level included. Two other inputs this path reads do differ: its resource
+///   vector (`DETRITUS`-dominant against wood's `PLANT_FORAGE`) and its
+///   `HabitatRealm`. Its mass differs too (52.0 kg against 55.0), and an earlier
+///   version of this bullet named that as a third cause "which moves the
+///   sovereignty floor 0.424802 vs 0.429202". **`drow`'s OWN mass is not a cause
+///   here** — but the reason is narrow, and a first attempt at this correction
+///   got it inverted. Three arms, each run against the fixture at HEAD and then
+///   reverted:
+///
+///   ```text
+///     drow        52 →  500 kg   GREEN — readout byte-identical
+///     desert-elf  50 →  500 kg   RED   — 12 rows move, all its own
+///     wood-elf    55 →  550 kg   RED   — 36 rows move: wood 12, high 12, DROW 12
+///   ```
+///
+///   **The drow arm is green because drow's affinity row is `wood.clone()`**, so
+///   drow's affinity *level* is a function of wood-elf's mass and never of its
+///   own — not because a mass cannot reach this readout. It plainly can. The
+///   correction this bullet first carried said mass "reaches nothing but
+///   `sovereignty_floor`, that floor reaches nothing but `tolerance_liebig`'s
+///   floored axes … so the floor is computed and discarded", and generalised
+///   that to mass as such. Half of it is right and the half that is wrong is the
+///   consequential one:
+///
+///   - **True.** The floor computed *inside* `per_species_suitability` is
+///     discarded. Every occupant of this registry has `elevation.devotion` below
+///     its floor, so the unfloored elevation term is `tolerance_liebig`'s
+///     minimum at every cell and the floor never enters the product.
+///   - **False as a statement about mass.** The same `sovereignty_floor` sets
+///     each affinity row's LEVEL — `biome_affinity_registry` builds every row as
+///     `BiomeAffinity::from_preferences(floor_of(kind), …)` — and the affinity
+///     multiplies **outside** that minimum. So mass reaches this field through
+///     the affinity for every kind whose row is self-derived: six of the eight
+///     occupants. Drow and high-elf are exempt only because they take wood's row
+///     entire. The desert-elf arm above is the positive control the first
+///     attempt never ran, and it fires.
+///
+///   The desert-elf arm also shows the signature cleanly: its **stronghold** row
+///   (`desert`) keeps `mean_k`, `p50_k` and `p95_k` to the byte under a tenfold
+///   mass change — a stronghold maps to exactly `1.00` for any floor — while its
+///   `share_of_kind_k` and all eleven other biomes move.
+///
+///   One thing the drow arm did **not** hold fixed, and which the first
+///   correction reported as a clean null: it is not world-neutral. `hornvale new
+///   --seed 42` under drow at 500 kg differs from the unmutated world in exactly
+///   **one fact of 12,797** — the world's own name, because `dominant_people_in`
+///   weights candidates by `flagship.population × bio.mass.kilograms()`. Counts
+///   are unmoved (230 settlements, 474 ruins, gnoll's 40), so *placement* is
+///   untouched; "byte-identical" is a claim about this readout only.
+///
+///   The apportionment is therefore two-way, not three-way, and this readout
+///   still cannot perform it; nothing here should be quoted as the gate's
+///   magnitude. `warren_readout.rs` is the file that isolates the realm
+///   question, by holding every other input fixed and emptying one store.
+///
+/// What the divergence *does* establish is the discriminating half: had the six
+/// elf rows been silently dropped from this path, wood and drow would still
+/// differ (their resource vectors and realms alone would do it — *not* their
+/// masses, since drow takes wood's row and its own mass therefore reaches
+/// nothing here), so drow is not the check. The check is that all twelve elf
+/// rows appear at all, and that wood and high come out identical rather than
+/// merely close.
+///
 /// **The 2026-08-09 regeneration (The Range, fix wave) has exactly one cause,
-/// and its blast radius is the arithmetic of the mechanism.** The row count did
-/// not move (386 → 386) and **24 rows changed, every one of them `gnoll` (12) or
-/// `woolly-mammoth` (12)** — the two and only two occupants of
-/// `biome_affinity_registry`. The other 362 rows are byte-identical. That is
-/// what a per-kind multiplier should do, and it is the check that the store is
-/// reaching this path rather than being silently dropped: had the readout still
-/// been fed an all-`None` slice, the regeneration would have produced a
-/// byte-identical file and the drift check would have stayed green *because
-/// nothing moved*, not because nothing should have.
+/// and its blast radius is the arithmetic of the mechanism.** *This paragraph
+/// and its two bullets describe the `d7719e27` → `834fee5c` pair, not the file
+/// as it stands* — both were re-measured from git for this fix round rather than
+/// left as inherited prose, precisely because two regenerations have landed
+/// since and every unqualified number in this doc has been read as current at
+/// least once. The row count did not move (386 → 386) and **24 rows changed,
+/// every one of them `gnoll` (12) or `woolly-mammoth` (12)** — the two and only
+/// two occupants of `biome_affinity_registry` at the time. The other 362 rows
+/// are byte-identical. That is what a per-kind multiplier should do, and it is
+/// the check that the store is reaching this path rather than being silently
+/// dropped: had the readout still been fed an all-`None` slice, the regeneration
+/// would have produced a byte-identical file and the drift check would have
+/// stayed green *because nothing moved*, not because nothing should have.
 ///
 /// Two internal consistencies worth naming, because they are what distinguishes
 /// "the affinity arrived" from "some number changed":
@@ -299,13 +459,26 @@ fn regenerate_occupancy_readout() {
 ///   `p50_k` and `p95_k` before and after, while their `share_of_kind_k` rises
 ///   (gnoll's desert share `0.0052262188 → 0.017680314`). The factor there is
 ///   1.0, so the kind's absolute capacity on that ground is untouched; what
-///   changed is that every *other* biome was scaled down beneath it.
+///   changed is that every *other* biome was scaled down beneath it. **This one
+///   holds through the derivation as well**, which is the stronger statement:
+///   those three columns are still byte-identical in the live file
+///   (`gnoll,desert` `mean_k 0.0036231586`, `woolly-mammoth,ice`
+///   `0.00065375959`, `woolly-mammoth,tundra` `0.012307025`), because a
+///   stronghold maps to exactly `1.0` under the derived level too.
 /// - **Every non-stronghold share moves by the ratio of its factor to 0.25.**
 ///   `gnoll,shrubland` (0.70) and `gnoll,savanna` (0.45) rise; the eight biomes
-///   taking the 0.25 default fall together, by an identical 0.846×, and hold
-///   their order exactly —
-///   `temperate-forest / tropical-seasonal-forest` reads 1.0773 both before and
-///   after, to five figures.
+///   taking the 0.25 default fall together, by an identical 0.846× (0.845751,
+///   recomputed row by row across that fixture pair), and hold their order
+///   exactly — `temperate-forest / tropical-seasonal-forest` reads 1.0773 both
+///   before and after, to five figures. **The same test applied to the
+///   derivation passes with different constants**, which is what a relevel
+///   should look like: from `834fee5c` to the live file gnoll's eight default
+///   biomes all rise by an identical 1.092317×, desert (the stronghold) falls to
+///   0.551248×, shrubland and temperate-grassland (the `near` step) to
+///   0.668282×, savanna (the `marginal` step) to 0.885011× — four distinct
+///   ratios for four ladder rungs and no fifth — and the `temperate-forest /
+///   tropical-seasonal-forest` ratio is *still* 1.0773 to five figures, in all
+///   three fixtures.
 ///
 /// **This regeneration (2026-08-08, The Assize) has two disjoint causes of its
 /// own**, measured rather than inherited from the campaign brief that
@@ -368,26 +541,48 @@ fn regenerate_occupancy_readout() {
 ///
 /// The gnoll is the sharpest case, and it is also where this doc has been wrong
 /// most often. **Every figure in the two bullets below is re-derived from the
-/// fixture as it stands after the 2026-08-09 regeneration**, not carried
-/// forward; the prior version of each is kept beside it, because the pattern of
-/// how they went stale is the more useful thing.
+/// fixture as it stands after this commit's regeneration**, not carried forward;
+/// the prior version of each is kept beside it, because the pattern of how they
+/// went stale is the more useful thing.
 ///
 /// - *Presence, still not dominance.* A people authored explicitly for hot-arid
 ///   desert once had **zero** desert occupancy. It holds **5498** desert cells
-///   now, and declaring its affinity lifted desert's share of its world total K
-///   from **0.0052262188 to 0.017680314** — a 3.38× rise, the single largest
-///   proportional move in the file. It is still not dominance: desert is
-///   gnoll's **third-smallest share of the twelve biomes it reaches** (only
-///   `ice` and `alpine` are lower), and the region's top occupant by `mean_k` is
+///   now — a figure unmoved by either 2026-08-10 regeneration, since the
+///   viability floor is far below every factor in play. Declaring its affinity
+///   lifted desert's share of its world total K from **0.0052262188** (the
+///   pre-affinity fixture, `d7719e27`) to **0.0097462358** in the live file, a
+///   1.86× rise (1.8648733; the paragraph read "1.87×" until this fix round
+///   divided it out — every other figure in this bullet is exact to the digit,
+///   which is what made the one rounded-the-wrong-way ratio worth catching. All
+///   of them were re-divided here, not just the one reported: the companion
+///   3.38× below is 3.3830030 and stands). It is still not dominance: desert is gnoll's
+///   **second-smallest share of the twelve biomes it reaches** (only `ice`, at
+///   0.0070751272, is lower), and the region's top occupant by `mean_k` is
 ///   `otyugh` (0.04704871), then `carrion-crawler` and `shrieker`, with gnoll at
-///   **0.0036231586** — an order of magnitude below. Desert is gnoll's 8th biome
-///   by `mean_k`, a different column; the two rankings disagree and both are
-///   quoted here rather than one.
+///   **0.0036231586** — rank 20 of the region's 35 kinds, an order of magnitude
+///   below. Desert is gnoll's **9th** biome by `mean_k`, a different column; the
+///   two rankings disagree and both are quoted here rather than one.
 ///
-///   *What the prior version said:* "3793 desert cells", share "0.0097",
+///   *What the version written one commit ago said:* share "0.017680314 — a
+///   3.38× rise, the single largest proportional move in the file", desert
+///   "third-smallest … (only `ice` and `alpine` are lower)", and "8th biome by
+///   `mean_k`". All three were true of the `0.25` arm and all three moved when
+///   the level was derived: the mask is shallower now, so gnoll's desert share
+///   **fell** from the `0.25` arm's 0.017680314 even while remaining well above
+///   its pre-affinity value, `alpine` (0.018064616) rose past it, and the
+///   `mean_k` ordering shifted by one place. A number can go stale by the world
+///   improving.
+///
+///   *What a still earlier version said:* "3793 desert cells", share "0.0097",
 ///   "smallest share of any biome it reaches — 11th of 11", and
 ///   "`giant-scorpion` still tops the region". All four were true of a fixture
-///   two regenerations back. `giant-scorpion` has not topped desert since The
+///   four regenerations back. **Note the trap in the second of them**: that
+///   long-dead "0.0097" and the live 0.0097462358 agree to two significant
+///   figures by coincidence — a pre-affinity world and a derived-level world
+///   happening to cross — and a reader checking the old prose against the
+///   current file to two places would conclude it had been right all along. It
+///   was not; it was measured on a fixture in which gnoll had no affinity row at
+///   all. Quote the digits the file carries, and say which file. `giant-scorpion` has not topped desert since The
 ///   Assize — the table at the head of this doc already said `otyugh` did, in
 ///   the same comment, four paragraphs up.
 /// - *"Its largest share is temperate-forest" was right, and the correction of
@@ -397,9 +592,14 @@ fn regenerate_occupancy_readout() {
 ///   `tropical-seasonal-forest 0.3005768` against `temperate-forest 0.27692454`
 ///   — but The Tense's regeneration (`979508f8`) reversed the pair, to
 ///   `temperate-forest 0.25118309` over `tropical-seasonal-forest 0.23314924`,
-///   and the prose was not swept. After the affinity landed, both fall by the
-///   same 0.25 default and the order is unchanged: **`temperate-forest`
-///   (0.21243829)**, then `tropical-seasonal-forest` (0.19718615).
+///   and the prose was not swept. After the affinity landed both fell by the
+///   same default and the order was unchanged (`temperate-forest 0.21243829`
+///   over `tropical-seasonal-forest 0.19718615` at `834fee5c`); after the level
+///   was derived both rose by the same default and the order is *still*
+///   unchanged: **`temperate-forest` (0.23204999)**, then
+///   `tropical-seasonal-forest` (0.21538981) in the live file. The pair has now
+///   survived two relevelings with its ratio fixed at 1.0773, which is the point
+///   — a uniform factor cannot reorder a kind's own biomes, only rescale them.
 ///
 ///   So the sentence this doc "corrected" had become true again by the time it
 ///   was corrected. A drift check pins output against *change*, never against

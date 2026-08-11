@@ -669,6 +669,70 @@ is the magnitude: authoring an ecological preference for one kind is not a local
 edit to that kind, and a future occupant should expect to move every people's
 numbers.
 
+*Re-scored up by [The Radiation](./chronicle/the-radiation.md) (2026-08-10),
+which found that the evidence above was measured through an undeviced constant.
+The bet was right; the number that scored it understated it.*
+
+**The relocation half is confirmed far more strongly than it was scored, and the
+caveat attached to it does not survive.** The affinity row's fallback level — the
+factor a kind still takes on ground that is not its country — had never been
+derived from anything; it entered the code as illustrative example text and was
+adopted as a constant. Derived instead from the kind's own sovereignty floor, so
+that a row states a *shape* and never a *level*, the same gnoll row that had been
+read as *20 settlements to 2 at an arid share of 0.500* reads **13 settlements to
+40 at a share of 0.825**. The count *rises* while the share rises. The caveat
+built on the old arm — nine settlements removed for every one relocated, a
+downward-only mask that suppresses rather than moves — was a property of the
+constant and not of the mask, and it is corrected in place in
+[The Range's own chapter](./chronicle/the-range.md). The two descriptive seeds
+move the same way (seed 7: 67 → 31 at 0.645; seed 1234: 7 → 6 at 1.000).
+
+**What should lose confidence is a claim this chapter's tier is built to catch:
+a justification true of one consumer, silent about the rest.** The level was
+defended as *gauge* — a uniform factor cannot reorder a kind's own ranking of
+cells, which is true, and was the only property anyone checked. The same factor
+multiplies the capacity that becomes a settlement's population, and the history
+bake's volume is a function of population, so the level is gauge for one consumer
+and load-bearing for the next one downstream. Measured on two arms differing in
+nothing but the level, a uniform mask on **one kind of thirty-nine** removes
+13.7% of a world's facts. Six rows at the old level took seed 42's history from
+552 occupation records to 193 and breached four fidelity floors; derived, the same
+six give 704, above the 552 measured with no such rows at all. The general form is
+worth carrying past this bet: **a claim that is true and incomplete is more
+durable than one that is false, because nothing contradicts it.**
+
+**And the third measurement above — one row redistributing everyone's placement,
+deliberately left without a cause — now has half a cause.** Not the row's shape:
+its *level*, multiplying outside the limiting product, scaling every occupant's
+capacity and therefore every settlement's population and every history the bake
+grows from it. That is why one row moved a world. It does not explain the whole
+magnitude, and the chapter still holds the standing warning: an ecological
+preference authored for one kind is not a local edit to that kind.
+
+**The subterranean question this bet left open is answered.** The Delvers
+withdrew two underground dwarves and the section above recorded that placing a
+people underground waited on the underworld being declared as *places*. It does
+not, for one kind. [The Radiation](./chronicle/the-radiation.md)'s drow settles
+exclusively at cave mouths — the share of its settlements on a cell holding an
+enterable cave is exactly `1.000000` on all three tested seeds, with no allowlist
+— and a five-arm factorial attributes about 94% of its separation from a surface
+sibling to the realm gate alone, with the closure arm bit-identical, so no
+unenumerated third difference exists. What is **not** answered is the question the
+withdrawal was actually about: distinguishing *two* underground kinds by depth.
+Drow needs only to differ from surface elves. Mountain-dwarf and Duergar differ
+from each other by stratum alone, and the biome vocabulary still has no
+subterranean variant, so they remain owed.
+
+**A finding about the contest, not about elves, and it is new.** Two peoples
+authored to share a mass and an affinity row have capacity fields that are
+**bit-identical** over eleven to nineteen thousand land cells — and they settle on
+wholly *disjoint* sets of cells, in different numbers, on every seed. The bake is
+not a pure function of the capacity field; iteration order, tie-breaks, migration
+and the raid comparison all participate. This chapter has assumed the field
+decides placement wherever it reasons about placement at all. It constrains
+placement; it does not determine it, and that is now measured with the field held
+constant to the bit.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -2029,6 +2093,27 @@ stays absolute, because monoculture drives the reading to one however many
 peoples exist; only the ceiling ever scaled. This is a post-unblinding change to
 a preregistered bound, made deliberately, and it re-derives the bound's *rule*
 rather than fitting its *value*.
+
+*Extended by [The Radiation](./chronicle/the-radiation.md) (2026-08-10), which
+raised the ceiling a second time.*
+
+**A third data point, and the saturation still does not move.** The roster went
+from nine settling peoples to **fifteen**. On the thousand-world census this
+campaign regenerated, mean peoples alive at the end of the bake went **8.916 →
+14.854** — 99.1% of the ceiling before, 99.0% after. Six more peoples, six more
+survivors, and the share of the bound the metric sits on is flat to a tenth of a
+percent. The reading offered above as an explanation now has three roster sizes
+behind it rather than two: the count is not saturated because the roster is
+small, it is saturated because **extinction is rare in this world at any roster
+size**. Enlarging the roster was already struck off as an alternative; it is now
+struck off with a two-thirds-larger roster and no movement at all.
+
+The census's own per-cell diversity column — a different reading on a different
+study from the calibration bound below, and not to be confused with it — moved
+**1.96543 → 1.96710**, a rise of nine hundredths of a percent under a
+two-thirds-larger roster. Which is the same story in a second instrument: adding
+six peoples to the world changes almost nothing about how many of them share a
+cell.
 
 The margin is the part worth keeping. Re-measured on the roster that actually
 shipped, the mean per-cell claimed diversity is **3.0101** — so the retired

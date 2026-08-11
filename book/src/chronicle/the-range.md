@@ -112,12 +112,79 @@ multiplying gnoll's non-desert cells down raises its desert cells within the
 only ranking that decides anything. Two consequences fall straight out. A
 **uniform** affinity is inert by construction, because a scale-free ranking
 cannot be reordered by a constant; only the shape across biomes carries
-information, and the level is gauge. And `0.0` is not a strong preference but a
-hard exclusion, because the founding pool filters on strictly positive capacity.
+information, and the level is gauge.
+
+> **That whole sentence is false — both halves of it — and The Radiation
+> falsified it on 2026-08-10.** It is left standing above rather than quietly
+> rewritten, because it is what this campaign reasoned from and because it then
+> survived a spec, a plan, a ledger and this chronicle without anyone having to
+> say where it came from.
+>
+> **The first draft of this correction fell short in the same way the sentence
+> did**, and that is worth recording next to it. It opened "that *last clause* is
+> false", scoping itself to *the level is gauge* and leaving "a **uniform**
+> affinity is inert by construction" standing, in bold, carrying a stronger modal
+> ("by construction") than the clause it had just corrected. The uncorrected half
+> has the wider blast radius, and it took a measurement rather than an argument
+> to see it.
+>
+> **What is true, and all that is true:** a uniform affinity cannot reorder a
+> *single kind's own ranking of cells*, which is exactly what the read of the
+> settlement bake examined. Everything past that is false. The same factor
+> multiplies the capacity that becomes a settlement's **population**, the
+> founding pool filters on strictly positive capacity, and the history bake's
+> volume is a function of population — so a level that is gauge for one kind's
+> internal ranking is load-bearing for the world that ranking feeds.
+>
+> **Measured, on two arms that differ in nothing but the level.** Gnoll's row
+> replaced by a genuinely uniform one — every biome at the same factor, no shape
+> at all — and seed 42 rebuilt from scratch each time:
+>
+> | gnoll's affinity | facts | settlements | ruins | occupation records | total population | gnoll's own settlements |
+> |---|---|---|---|---|---|---|
+> | uniform **1.00** | 12461 | 212 | 477 | 689 | 6261 | 29 |
+> | uniform **0.50** | 10758 | 194 | 374 | 568 | 5856 | 4 |
+>
+> A uniform `0.5` on **one** kind of thirty-nine removes 1,703 facts — 13.7% of
+> the world — takes it from 212 settlements to 194 and 689 occupation records to
+> 568, and takes gnoll itself from **29 settlements to 4**. Not inert; and not
+> inert *for placement*, which is this clause's own stated justification.
+>
+> **The evidence this correction first offered was the wrong evidence for its own
+> mechanism.** It cited the tithe series — 552 occupation records with no elf
+> rows, **193** at the authored `0.25` level, **704** with the level derived from
+> each kind's `sovereignty_floor` — which is the measurement that made the
+> project re-derive the level, and is reported unchanged here for that reason.
+> But that series moves a row's *contrast* as well as its level (the remap pins a
+> stronghold at 1.00 in both arms and moves only the steps beneath it), so it
+> cannot isolate what a *uniform* factor does. The two arms above hold the shape
+> empty and move nothing but the level. Cite the arm that isolates the mechanism,
+> not the arm that happens to be nearby.
+
+And `0.0` is not a strong preference but a hard exclusion, because the founding
+pool filters on strictly positive capacity.
 
 The occupants declared are `gnoll` — desert 1.00, temperate grassland and
 shrubland 0.70, savanna 0.45, everything else 0.25 — and `woolly-mammoth` —
 ice and tundra 1.00, taiga 0.70, alpine 0.45, default 0.25.
+
+> **Superseded, 2026-08-10 (The Radiation).** Those four numbers were a *shape*
+> and a *level* run together, and the level was never derived — `0.25` reached
+> this campaign from illustrative fixture code in its own plan. The shape
+> stands; the level is now each kind's `sovereignty_floor`, with the rungs read
+> as preferences and mapped `floor + (1 − floor) · p`. Gnoll's row therefore
+> reads 1.00 / 0.848615 / 0.722461 / 0.495384 and the mammoth's 1.00 / 0.907710
+> / 0.830802 / 0.692367. Every figure quoted below was measured under the old
+> level and is kept as this campaign published it.
+>
+> **Two of those figures are not figures but interpretations, and both reverse.**
+> A stale number is inert; a stale reading is not, because the next reader
+> carries it forward as a property of the mechanism. The "nine settlements
+> removed for every one relocated" caveat below is corrected in place where it
+> appears, and this campaign's Confidence Gradient entry in
+> `book/src/open-questions.md` — which scores the bet on a mask that "relocates
+> rather than merely thinning" — is re-scored at The Radiation's close under
+> decision 0030, not here.
 
 Both were admitted by an arithmetic test rather than chosen by theme. A
 tolerance floored by the kind's sovereignty can never read below that floor; the
@@ -153,6 +220,24 @@ run descriptively after unblinding and are kinder — seed 7 keeps all four of i
 gnoll settlements and moves every one of them onto arid ground — but seed 42's
 baseline of twenty is the outlier, and the collapse should not be read as the
 mechanism's general behaviour.
+
+> **The caveat does not survive, 2026-08-10 (The Radiation).** "Nine settlements
+> removed for every one relocated" was a consequence of the undeviced `0.25`
+> level, not of the mechanism. Under the derived level the arms read
+>
+> ```
+>   seed 42   affinity ABSENT    13 settlements    0 arid   share 0.000000
+>             affinity SHIPPED   40 settlements   33 arid   share 0.825000
+> ```
+>
+> — the count **rises** 13 → 40 while the arid share rises to 0.825, where the
+> published reading had it fall 20 → 2 for a share of 0.500. The descriptive
+> seeds move the same way (seed 7: 67 → 31 at 0.645; seed 1234: 7 → 6 at 1.000).
+> So P1″ passes far more strongly than it was frozen to, and the *thinning* this
+> campaign apologised for was the level rather than the mask. The correction is
+> pinned in `windows/worldgen/tests/range_readout.rs`, which carries the arms
+> live; the paragraph above is left as published so that the two readings can be
+> compared.
 
 The second asked whether the factor **differentiates**: gnoll's capacity field
 must separate from the other peoples'. Pairwise Pearson correlation over every
@@ -317,6 +402,16 @@ And the eight biomes taking the `0.25` default fall together by an identical
 factor of 0.846, holding their order to eight figures, which is the gauge
 property of a uniform mask visible in the artifact.
 
+> **Third correction, 2026-08-10 (The Radiation), and it is the same reading as
+> the first two.** *Order preserved to eight figures* is true and is all that was
+> measured. Calling it "the gauge property of a uniform mask" restates, two
+> hundred lines below the erratum that dismantles it, the claim that a uniform
+> factor is inert — and it does so with the superseded `0.25` as its subject. It
+> is gauge for the order of one kind's own cells, which is what the artifact
+> shows; it is not gauge for the magnitudes, and the magnitudes are what the
+> founding pool and the history bake read. Two measured arms are in the first
+> erratum above.
+
 ## What this leaves
 
 **The mask is a ratchet, and that is stated rather than solved.** A
@@ -332,6 +427,10 @@ the floor at zero had been guarded and the ceiling at one had not.
 **The elves are the point of all this and are not in it.** Six of them are
 waiting, and they will now be authored in a vocabulary the model computes rather
 than fitted as curves approximating it.
+
+> They landed in [The Radiation](./the-radiation.md), all six on that route and
+> on no other, taking the settling roster to fifteen. That campaign is also where
+> the level was derived and where the corrections above were measured.
 
 **One test proves less than its name suggests, and says so.** The check that an
 absent affinity is a no-op compares the absent branch against an explicit

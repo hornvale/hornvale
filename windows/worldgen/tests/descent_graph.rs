@@ -84,7 +84,13 @@ fn a_genesis_occupation_is_its_own_clan_root_and_has_no_forebear() {
     // the bake seeds it, which is not one per people — it read 34 while the
     // campaign carried five dwarves (spec §11 withdrew two), and 34 - 28 = 6
     // is three roots per withdrawn kind, not one.
-    assert_eq!(genesis.len(), 28, "seed 42 has 28 genesis roots");
+    //
+    // The Radiation re-pin (C2d, 2026-08-10): the six elves join as the tenth
+    // through fifteenth genesis-seeded peoples, 28 -> 46. Measured, not
+    // computed, for the same reason: 18 new roots over 6 new peoples is three
+    // apiece on average, but the bake seeds by proto-community rather than by
+    // people and the per-kind counts are not equal.
+    assert_eq!(genesis.len(), 46, "seed 42 has 46 genesis roots");
     for o in genesis {
         assert_eq!(clan_root_of(&w, o.id), o.id);
         assert!(forebear_of(&w, o.id).is_none());

@@ -69,7 +69,8 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
     // settling peoples — the same set the pre-Eremite psyche key-set held for
     // the original four. The Vacancy T9 adds the gnoll, a fifth; The
     // Generalist (C2-0) adds the human, a sixth; The Delvers (C2c) adds the
-    // three dwarves, taking the roster to nine. After The Eremite the
+    // three dwarves, taking the roster to nine; The Radiation (C2d) adds the
+    // six elves, taking it to fifteen. After The Eremite the
     // dragons carry a mind while staying Solitary, so psyche is a SUPERSET of
     // Settled (Settled ⊆ psyche), not equal — hence a named pin.
     //
@@ -88,15 +89,21 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
         [
             "bugbear",
             "desert-dwarf",
+            "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
+            "high-elf",
             "hill-dwarf",
             "hobgoblin",
             "human",
-            "kobold"
+            "kobold",
+            "sea-elf",
+            "snow-elf",
+            "wood-elf"
         ],
-        "Settled is exactly the nine settling peoples (ascending KindId)"
+        "Settled is exactly the settling peoples (ascending KindId)"
     );
     for &name in &settled {
         assert!(

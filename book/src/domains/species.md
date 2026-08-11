@@ -35,14 +35,14 @@ six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-nine settling peoples and, since *The Eremite*, the three solitary dragons
+fifteen settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
 nomadic band would carry a society without ever settling — though today that
-set is exactly the nine settling peoples, since no `Gregarious` kind is yet
+set is exactly the fifteen settling peoples, since no `Gregarious` kind is yet
 minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
 left open and recorded rather than filled, because a settlement-free people
 is unaudited everywhere downstream of a settlement.
@@ -263,11 +263,11 @@ one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the nine settling
+mind — so the three chromatic dragons carry it alongside the fifteen settling
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
-`Gregarious` or `Settled` kind) carries it, which today is exactly the nine
+`Gregarious` or `Settled` kind) carries it, which today is exactly the fifteen
 settling peoples — a `Solitary` dragon carries none.
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
@@ -410,7 +410,7 @@ sentence was only ever sayable because a people was a point. Once a people
 became a distribution, the gate's input became a *draw*: each settlement takes
 its own threat response from its people's authored mean and dispersion, keyed
 on where and when it was founded. Every one of the six settling peoples the
-campaign measured — the roster has since grown to nine, which that
+campaign measured — the roster has since grown to fifteen, which that
 measurement does not cover — now has
 settlements on both sides of the threshold — the assertive ones mostly above it
 and the neutral ones mostly below, but none wholly either. Warlikeness became a
@@ -563,13 +563,45 @@ religion across more than a pair, once a third people exists to make
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;
-inter-species politics, trade, and conflict; and, past six, however many
+inter-species politics, trade, and conflict; and, past fifteen, however many
 further peoples the registry is asked to hold.
 
-One limit is now measured rather than suspected. Carrying capacity is a supply
+One limit was measured rather than suspected. Carrying capacity is a supply
 term spanning orders of magnitude multiplied by a condition product bounded in
 the unit interval, so an authored niche can only modulate the primary-production
 signal, never select against it: a kind authored for a particular climate can be
 genuinely present there and still rank behind kinds with no affinity for it at
 all. The gnoll, authored for hot-arid desert, has none. Until that is addressed,
 "centred on a biome" is not a thing this model can express.
+
+**It was addressed, and the last sentence no longer holds.** The repair is not a
+better curve but a different *place* in the pipeline: a **biome affinity** is a
+per-kind mask over biome classes, applied *outside* the four-way tolerance
+minimum rather than folded in as a fifth axis, so it cannot be discarded by the
+minimum the way a climate curve is. [The Range](../chronicle/the-range.md) built
+it and gave gnoll its desert back;
+[The Radiation](../chronicle/the-radiation.md) authored six elves *entirely* in
+that vocabulary and on no other route, and derived the one number the mechanism
+had been guessing at.
+
+Two things about it are worth carrying, because both were surprises.
+
+**A row states a shape and never a level.** The rungs — stronghold, near,
+marginal, elsewhere — are *preferences* in `[0, 1]`, mapped through the kind's own
+sovereignty floor as `floor + (1 − floor) · preference`, so a row's default **is**
+that floor and a stronghold is exactly `1.00` for every kind however heavy. That
+is not a stylistic choice. The level had been an authored constant defended as
+*gauge*, which is true of how a single kind ranks its own cells and false of
+everything downstream: the same factor multiplies the capacity that becomes a
+settlement's population. A uniform mask on one kind of thirty-nine removes 13.7%
+of a world's facts (decision 0120).
+
+**A `0.0` rung is a hard exclusion, not a strong dislike**, because the founding
+pool filters on strictly positive capacity. Any zero in a row is a deliberate act
+and the founder floor does not clear it.
+
+What the mechanism does not yet express is *degree of centring*. A concentration
+measured on the top rung alone reads a people that has moved entirely onto the
+second and third rungs as a people that was merely thinned — which is exactly
+what happened to the desert elf, and is the successor question rather than a
+defect in the mask.

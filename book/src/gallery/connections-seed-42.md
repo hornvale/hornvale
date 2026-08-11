@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Batat
-========================
+The connections of cell 13980
+=============================
 
-A natural route runs to Nagbatga, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+cell 13980 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-Batat sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+cell 13980 sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore

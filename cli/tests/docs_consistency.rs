@@ -951,6 +951,13 @@ fn the_history_page_prose_names_the_cell_it_renders() {
     // makes the guard check LESS, never fail, which is why the note above
     // records the last omission as "dormant, not red". Anyone adding a
     // settling kind must append it here.
+    //
+    // The Radiation (C2d) appends the elf family's six, taking the settling
+    // roster to fifteen. It was omitted for the whole campaign and found at
+    // the close, dormant exactly as this comment predicts: the page's prose
+    // named kobolds throughout, so no elf name was ever there to check. The
+    // omission cost nothing this time and the mechanism that hides it is
+    // unchanged — a list authored beside a roster that is not.
     for people in [
         "bugbear",
         "hobgoblin",
@@ -961,6 +968,12 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         "desert-dwarf",
         "gully-dwarf",
         "hill-dwarf",
+        "desert-elf",
+        "drow",
+        "high-elf",
+        "sea-elf",
+        "snow-elf",
+        "wood-elf",
     ] {
         if prose.to_lowercase().contains(people) {
             assert!(
