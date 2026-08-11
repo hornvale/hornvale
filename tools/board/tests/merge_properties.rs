@@ -111,6 +111,102 @@ fn identical_posts_recorded_independently_are_idempotent() {
     );
 }
 
+/// The read-side counterpart of the two arms above (B1). They establish that
+/// two divergent logs *could* be merged into one tree without conflict; this
+/// asserts that the board never needs to, because a read unions the refs
+/// instead — each host keeps writing only its own log, and what a session
+/// sees is the union of the local log with every peer mirror it has fetched.
+///
+/// Deliberately not `merge-tree`: merging is exactly what B1 declines to do.
+/// One writer per ref is what keeps the compare-and-swap correct across
+/// machines and what makes a reap terminal for the log that made it — under a
+/// merge design, the host that reaps a post has it resurrected by the next
+/// fetch from the host that did not, forever.
+#[test]
+fn a_union_read_sees_both_clones_posts_once_each_is_fetched_into_its_own_peer_ref() {
+    let (_d, repo) = temp_repo("union-read");
+    // Two hosts' logs, built exactly as a fetch of each host's own
+    // `refs/hornvale/board` would land them: one ref per host, no merge.
+    let peers_prefix = Board::peers_ref_prefix();
+    // Peer names derived from the real host, never literals: this suite runs
+    // on lefford too, where a hardcoded "lefford" would name THIS host's own
+    // mirror, be correctly skipped by the union, and fail this test for a
+    // reason unrelated to what it checks.
+    let host = board::live::current_host();
+    let (peer_a, peer_b) = (format!("{host}-peer-a"), format!("{host}-peer-b"));
+    let local = Board::new(repo.clone());
+    let mine = local
+        .append(&Post::new("technique", "campaign/here"))
+        .expect("local post");
+    let shared = Post::new("technique", "campaign/both");
+    let mine_shared = local.append(&shared).expect("shared, locally");
+
+    let first_peer = Board::with_ref(repo.clone(), &format!("{peers_prefix}{peer_a}"));
+    let theirs = first_peer
+        .append(&Post::new("notice", "campaign/there"))
+        .expect("peer post");
+    // The same technique, published independently on both hosts.
+    let theirs_shared = first_peer.append(&shared).expect("shared, on the peer");
+    assert_eq!(
+        mine_shared, theirs_shared,
+        "content addressing must make the independently-posted duplicate one id"
+    );
+
+    let second_peer = Board::with_ref(repo.clone(), &format!("{peers_prefix}{peer_b}"));
+    let third = second_peer
+        .append(&Post::new("ask", "campaign/elsewhere"))
+        .expect("third host post");
+
+    let ids: Vec<String> = local
+        .posts_at_tip()
+        .expect("union read")
+        .into_iter()
+        .map(|s| s.id)
+        .collect();
+    for (label, id) in [
+        ("this host's own post", &mine),
+        ("the peer's post", &theirs),
+        ("a second peer's post", &third),
+        ("the post both hosts published", &mine_shared),
+    ] {
+        assert!(
+            ids.contains(id),
+            "{label} is missing from the union: {ids:?}"
+        );
+    }
+    assert_eq!(
+        ids.iter().filter(|i| **i == mine_shared).count(),
+        1,
+        "the duplicate must collapse to one entry: {ids:?}"
+    );
+    assert_eq!(
+        ids.len(),
+        4,
+        "four distinct posts across three logs: {ids:?}"
+    );
+
+    // And the union is a READ: neither log was rewritten to produce it.
+    assert_eq!(
+        local.post_ids_at_tip().expect("id union").len(),
+        4,
+        "the id read must union identically -- the cursor prunes against it"
+    );
+    let tip_of = |b: &Board| b.tip().expect("tip").expect("some");
+    let listed = |b: &Board| {
+        repo.git(&["ls-tree", "-r", "--name-only", &tip_of(b)])
+            .expect("ls-tree")
+            .lines()
+            .count()
+    };
+    assert_eq!(listed(&local), 2, "the local log holds only its own posts");
+    assert_eq!(listed(&first_peer), 2, "and the peer's, only its own");
+    assert_eq!(
+        listed(&second_peer),
+        1,
+        "and the third host's, only its own"
+    );
+}
+
 /// The control: the rejected shape. Two clones appending to one shared
 /// line-oriented file CONFLICT. If this test ever passes, the premise behind
 /// D11 has changed and the decision should be revisited.

@@ -88,8 +88,87 @@ const EXHAUSTION_MARKER: &str = "compare-and-swap races";
 /// across processes.
 static CALL_DISCRIMINANT: AtomicU64 = AtomicU64::new(0);
 
-/// A post as stored: its id, its content, and when it was appended. The commit
-/// is the clock (D5) — posts carry durations, never instants.
+/// Which ref a post was read from — the board's provenance, and the only
+/// trustworthy source of it.
+///
+/// NOT derived from the post's `host` field: zero of the 32 posts on the board
+/// at the time of writing carried `host` at all (it is a `claim` convention and
+/// optional even there), so a field-reading predicate would classify every peer
+/// post as local and B4 would be silently inert. A ref name cannot be omitted
+/// or mistyped by a posting session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Origin {
+    /// Read from this host's own log, `refs/hornvale/board`.
+    Local,
+    /// Read from a peer mirror, `refs/hornvale/peers/<host>`; carries the host.
+    Peer(String),
+}
+
+/// Collapse a union read to one record per post id, oldest first.
+///
+/// Deduplication is free rather than clever: an id IS the object id of the
+/// post's own bytes (D11), so the same post fetched from two hosts is the
+/// same string twice, with nothing to reconcile. Two fields still have to
+/// choose:
+///
+/// - `committed_at` keeps the **earliest** occurrence, the same rule
+///   [`crate::digest::history`] already applies to a reap-then-repost of
+///   byte-identical content. One rule for one situation, not two.
+/// - `origin` keeps the **first ref** the id was seen in.
+///   [`Board::read_refs`] lists this host's own log first, so a post this
+///   host also holds is never reported as foreign — which matters, because
+///   B4 judges a foreign post by time alone.
+///
+/// The final sort is `(committed_at, id)`, exactly as the single-ref read
+/// always sorted: `Displayed::cap` drops the OLDEST, so a union that merely
+/// concatenated per-ref runs would elide by ref rather than by age.
+fn merge_by_id(collected: Vec<StoredPost>) -> Vec<StoredPost> {
+    let mut by_id: std::collections::BTreeMap<String, StoredPost> =
+        std::collections::BTreeMap::new();
+    for s in collected {
+        match by_id.entry(s.id.clone()) {
+            std::collections::btree_map::Entry::Vacant(slot) => {
+                slot.insert(s);
+            }
+            std::collections::btree_map::Entry::Occupied(mut slot) => {
+                if s.committed_at < slot.get().committed_at {
+                    slot.get_mut().committed_at = s.committed_at;
+                }
+            }
+        }
+    }
+    let mut out: Vec<StoredPost> = by_id.into_values().collect();
+    out.sort_by_key(|s| (s.committed_at, s.id.clone()));
+    out
+}
+
+/// Classify a failure to read ONE ref of a union read.
+///
+/// This board's own log is fatal: the distinction the whole read path rests
+/// on is that "could not read the board" must never be indistinguishable from
+/// "the board is empty". A peer mirror is not — one unreadable mirror must
+/// never blank the whole board (D7), and the local half is exactly the half
+/// this session needs to see its own claims.
+fn tolerate_unreadable_peer(
+    origin: &Origin,
+    refname: &str,
+    e: BoardError,
+) -> Result<(), BoardError> {
+    match origin {
+        Origin::Local => Err(e),
+        Origin::Peer(_) => {
+            eprintln!(
+                "board: skipping peer ref {refname}: {e} -- one unreadable mirror must never \
+                 blank the whole board (D7)"
+            );
+            Ok(())
+        }
+    }
+}
+
+/// A post as stored: its id, its content, when it was appended, and which log
+/// it came from. The commit is the clock (D5) — posts carry durations, never
+/// instants.
 #[derive(Debug, Clone)]
 pub struct StoredPost {
     /// Object id of the post's bytes; also its filename.
@@ -98,6 +177,8 @@ pub struct StoredPost {
     pub post: Post,
     /// Unix seconds of the commit that appended it.
     pub committed_at: u64,
+    /// Which ref this reading of the post came from (B1).
+    pub origin: Origin,
 }
 
 /// One atomic read of the board: the tip commit, and exactly the posts
@@ -191,6 +272,17 @@ pub struct Board {
 }
 
 impl Board {
+    /// Where a peer host's log is mirrored locally: `refs/hornvale/peers/`,
+    /// plus the peer's host name. One writer per ref — this host never writes
+    /// under this prefix; a fetch does (B1).
+    pub const PEERS_PREFIX: &'static str = "refs/hornvale/peers/";
+
+    /// [`PEERS_PREFIX`](Self::PEERS_PREFIX) as a function, for callers that
+    /// would rather ask than name the constant.
+    pub fn peers_ref_prefix() -> &'static str {
+        Self::PEERS_PREFIX
+    }
+
     /// The board on the canonical ref.
     pub fn new(repo: Repo) -> Self {
         Self::with_ref(repo, BOARD_REF)
@@ -212,6 +304,64 @@ impl Board {
     /// This board's ref name.
     pub fn refname(&self) -> &str {
         &self.refname
+    }
+
+    /// The [`Origin`] of a post read from `refname`, from this board's point
+    /// of view: its own ref is `Local`, anything under
+    /// [`PEERS_PREFIX`](Self::PEERS_PREFIX) is that host's `Peer`.
+    ///
+    /// A ref that is neither cannot come out of [`read_refs`](Self::read_refs),
+    /// so the remaining arm exists only for a board pointed at some other ref
+    /// directly (the tests' `refs/test/*` boards): that ref is the only log
+    /// such a board has, which is what `Local` means here — "this board's own
+    /// log", not "the canonical board".
+    fn origin_of(&self, refname: &str) -> Origin {
+        if refname == self.refname {
+            return Origin::Local;
+        }
+        match refname.strip_prefix(Self::PEERS_PREFIX) {
+            Some(host) => Origin::Peer(host.to_string()),
+            None => Origin::Local,
+        }
+    }
+
+    /// The origin of a post read from this board's own ref.
+    pub fn own_origin(&self) -> Origin {
+        self.origin_of(&self.refname)
+    }
+
+    /// The refs a read draws from: this host's own log plus every peer
+    /// mirror, **excluding this host's own mirror**.
+    ///
+    /// Own-mirror exclusion is not tidiness. `peers/<self>` is whatever this
+    /// host last *pushed*, so it sits behind the local log whenever a reap
+    /// has not been pushed yet — unioning it would resurrect this host's own
+    /// reaped posts, permanently, on every read. Pushing before fetching
+    /// would also avoid that, but then a compaction invariant would depend on
+    /// the order of two calls in a shell script; skipping the ref makes
+    /// push-before-fetch an optimisation instead.
+    ///
+    /// A failure to LIST the peer refs is propagated, not swallowed: this
+    /// crate's one hard rule about reads is that a git failure must never be
+    /// indistinguishable from an empty board. Failures to *resolve* an
+    /// individual peer ref are a different matter and are skipped with a
+    /// warning by the caller.
+    pub fn read_refs(&self) -> Result<Vec<String>, BoardError> {
+        let mut refs = vec![self.refname.clone()];
+        let listed = self
+            .repo
+            .git(&["for-each-ref", "--format=%(refname)", Self::PEERS_PREFIX])?;
+        // An empty host (`hostname` unavailable) matches no real ref, so
+        // nothing is skipped and every mirror is read. That is the fail-open
+        // direction: a resurrected post is visible and self-correcting on the
+        // next push, while a swallowed peer hold-off is silent.
+        let own = format!("{}{}", Self::PEERS_PREFIX, crate::live::current_host());
+        for line in listed.lines().filter(|l| !l.is_empty()) {
+            if line != own && line != self.refname {
+                refs.push(line.to_string());
+            }
+        }
+        Ok(refs)
     }
 
     /// The current tip commit, or `None` if the board does not exist yet.
@@ -294,20 +444,42 @@ impl Board {
 
     /// The tip and its posts, read once — see [`TipSnapshot`] for why the
     /// pair has to be one value. `None` means the board does not exist yet.
+    ///
+    /// **Single-ref, deliberately, and it must stay that way** (B1). This is
+    /// the value [`ReapPlan`] and [`reap`](Self::reap) are built from, and
+    /// compaction is a judgment: which posts are permanently dead is decided
+    /// by the host that owns the log, against a process table and a set of
+    /// branches only that host can see. A snapshot that unioned peer refs
+    /// would let this host's predicate delete another host's posts — and,
+    /// because one writer per ref is what keeps the compare-and-swap correct
+    /// across machines, it could not even do so safely.
     pub fn snapshot(&self) -> Result<Option<TipSnapshot>, BoardError> {
         let Some(tip) = self.tip()? else {
             return Ok(None);
         };
-        let posts = self.posts_in(&tip)?;
+        let posts = self.posts_in(&tip, &self.own_origin())?;
         Ok(Some(TipSnapshot { tip, posts }))
     }
 
-    /// Post ids present in the tip tree, sorted.
+    /// Post ids present at every ref a read draws from
+    /// ([`read_refs`](Self::read_refs)), deduplicated and sorted.
+    ///
+    /// Unions for the same reason [`posts_at_tip`](Self::posts_at_tip) does,
+    /// and it is not merely for symmetry: [`crate::relevance::Cursor::record`]
+    /// prunes its "already shown" set against this. Left single-ref, every
+    /// foreign post would be pruned out of `seen` on the very read that
+    /// displayed it, and would then re-render at every session start forever.
     pub fn post_ids_at_tip(&self) -> Result<Vec<String>, BoardError> {
-        let Some(tip) = self.tip()? else {
-            return Ok(Vec::new());
-        };
-        self.post_ids_in(&tip)
+        // A set, not a `Vec`: the same post at two refs is one id (D11), and
+        // this is the value the cursor's prune is a membership test against.
+        let mut ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for (refname, origin, tip) in self.resolved_read_refs()? {
+            match self.post_ids_in(&tip) {
+                Ok(found) => ids.extend(found),
+                Err(e) => tolerate_unreadable_peer(&origin, &refname, e)?,
+            }
+        }
+        Ok(ids.into_iter().collect())
     }
 
     /// Post ids present in `tip`'s tree, sorted. Takes the tip rather than
@@ -349,22 +521,74 @@ impl Board {
         Ok(ids)
     }
 
-    /// Every post in the tip tree, with its append time, oldest first.
+    /// Every post at every ref a read draws from
+    /// ([`read_refs`](Self::read_refs)) — this host's log unioned with each
+    /// peer mirror — deduplicated by id, oldest first, each tagged with the
+    /// [`Origin`] of the ref it came from (B1).
     ///
-    /// A post that fails to parse is skipped with a warning: one corrupt post
-    /// must never break a session's render (D7).
+    /// The union is a read-time operation over refs each of which has exactly
+    /// one writer; nothing here merges histories. That is what keeps the
+    /// compare-and-swap in [`append`](Self::append) correct across machines,
+    /// and what keeps a reap terminal for the log that made it: under a merge
+    /// design, host A reaps a post and the next fetch from B resurrects it,
+    /// forever.
+    ///
+    /// A post that fails to parse is skipped with a warning, and so is a peer
+    /// ref that cannot be read at all: one corrupt post — or one unreadable
+    /// mirror — must never break a session's render (D7). A failure on this
+    /// host's OWN log is still an error, never an empty board.
     pub fn posts_at_tip(&self) -> Result<Vec<StoredPost>, BoardError> {
-        let Some(tip) = self.tip()? else {
-            return Ok(Vec::new());
-        };
-        self.posts_in(&tip)
+        let mut collected: Vec<StoredPost> = Vec::new();
+        for (refname, origin, tip) in self.resolved_read_refs()? {
+            match self.posts_in(&tip, &origin) {
+                Ok(posts) => collected.extend(posts),
+                Err(e) => tolerate_unreadable_peer(&origin, &refname, e)?,
+            }
+        }
+        Ok(merge_by_id(collected))
     }
 
-    /// [`posts_at_tip`](Self::posts_at_tip)'s body, against a tip the caller
-    /// already read. Private, and the single implementation both
-    /// `posts_at_tip` and [`snapshot`](Self::snapshot) go through — so there
-    /// is no second copy of this walk that could drift from it.
-    fn posts_in(&self, tip: &str) -> Result<Vec<StoredPost>, BoardError> {
+    /// Every ref a read draws from, resolved to a commit, with the origin to
+    /// tag its posts with.
+    ///
+    /// One resolution policy for both public reads, rather than each
+    /// resolving for itself: [`posts_at_tip`](Self::posts_at_tip) and
+    /// [`post_ids_at_tip`](Self::post_ids_at_tip) have to agree about which
+    /// refs contributed, because the cursor prunes one against the other. The
+    /// `^{commit}` peel is part of that agreement — `ls-tree` accepts a ref
+    /// pointing at a tree while `git log` does not, so without it a
+    /// malformed ref would contribute ids to one read and posts to neither.
+    ///
+    /// A ref that does not resolve is skipped: absent is how a board that
+    /// does not exist yet reads, and a listed-but-unresolvable peer mirror
+    /// says so on stderr rather than failing the read.
+    fn resolved_read_refs(&self) -> Result<Vec<(String, Origin, String)>, BoardError> {
+        let mut out = Vec::new();
+        for refname in self.read_refs()? {
+            let origin = self.origin_of(&refname);
+            let peeled = format!("{refname}^{{commit}}");
+            match self.repo.rev_parse_verify(&peeled) {
+                Ok(Some(tip)) => out.push((refname, origin, tip)),
+                Ok(None) => {
+                    if let Origin::Peer(_) = origin {
+                        eprintln!(
+                            "board: skipping peer ref {refname}: it does not resolve to a commit \
+                             -- one unreadable mirror must never blank the whole board (D7)"
+                        );
+                    }
+                }
+                Err(e) => tolerate_unreadable_peer(&origin, &refname, e)?,
+            }
+        }
+        Ok(out)
+    }
+
+    /// One ref's posts, against a tip the caller already resolved, tagged
+    /// with that ref's `origin`. Private, and the single implementation
+    /// [`posts_at_tip`](Self::posts_at_tip) and [`snapshot`](Self::snapshot)
+    /// both go through — so there is no second copy of this walk that could
+    /// drift from it.
+    fn posts_in(&self, tip: &str, origin: &Origin) -> Result<Vec<StoredPost>, BoardError> {
         let ids = self.post_ids_in(tip)?;
         let mut when: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
         // One `git log` over the ref, mapping each added post file to the
@@ -428,6 +652,7 @@ impl Board {
                         committed_at,
                         id,
                         post,
+                        origin: origin.clone(),
                     });
                 }
                 Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
@@ -454,9 +679,10 @@ impl Board {
     /// silently miss on lookup — see [`is_full_object_id`].
     ///
     /// Filtered (warn-and-skip) right here, before any `git` invocation, not
-    /// delegated to a caller: this is the one point every consumer converges
-    /// on (`posts_in` today, `digest.rs`'s `history` and Task 5's cross-ref
-    /// union next), and an id reaching this function is repository data —
+    /// delegated to a caller: this is the one point all three consumers
+    /// converge on (`posts_in`, once per ref of the cross-ref union, and
+    /// `digest.rs`'s `history`), and an id reaching this function is
+    /// repository data —
     /// untrusted, not a caller bug — so a bad one must never blank or crash
     /// the whole read (D7). [`post_ids_in`](Self::post_ids_in) also filters,
     /// independently (it can name the tree path in its own warning, which
@@ -1409,11 +1635,7 @@ mod tests {
         let plan = ReapPlan::probe(&repo, &snapshot).expect("probe");
 
         // The window: another session posts after the probe.
-        let host = std::process::Command::new("hostname")
-            .arg("-s")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .expect("hostname");
+        let host = crate::live::current_host();
         let latecomer = board
             .append(
                 &Post::new("claim", "campaign/other")
@@ -1636,6 +1858,259 @@ mod tests {
             board.snapshot().is_err(),
             "and the snapshot a reap is built from must fail loudly too"
         );
+    }
+
+    // --- B1: the union read over per-host refs ---
+
+    /// A host name that is guaranteed not to be this host's own.
+    ///
+    /// Not a hardcoded `"lefford"`: this suite runs on lefford too, where
+    /// that literal names THIS host's mirror, is correctly skipped by the
+    /// union, and fails these tests for a reason that has nothing to do with
+    /// what they check. Derived from the real host so the two can never
+    /// collide however either machine is renamed.
+    fn foreign_host() -> String {
+        format!("{}-peer", crate::live::current_host())
+    }
+
+    /// A peer's log, mirrored under `refs/hornvale/peers/<host>` exactly as
+    /// the fetch in Task 7 will build it. Deliberately built by appending
+    /// through a `Board` on that ref rather than by copying the local one:
+    /// that is what makes the resulting posts genuinely foreign content
+    /// rather than the same commits under a second name.
+    fn peer_board(repo: &Repo, host: &str) -> Board {
+        Board::with_ref(repo.clone(), &format!("{}{host}", Board::PEERS_PREFIX))
+    }
+
+    #[test]
+    fn a_read_unions_the_local_log_with_every_peer_ref() {
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let mine = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("local")))
+            .expect("mine");
+
+        let peer = peer_board(&repo, &foreign_host());
+        let theirs = peer
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("remote")))
+            .expect("theirs");
+
+        let posts = board.posts_at_tip().expect("read");
+        let ids: Vec<String> = posts.iter().map(|s| s.id.clone()).collect();
+        assert!(ids.contains(&mine), "local post missing from the union");
+        assert!(ids.contains(&theirs), "peer post missing from the union");
+
+        // Provenance comes from the REF, which is the whole point of reading
+        // it here rather than from a `host` field the posts do not carry.
+        let origin_of = |id: &String| {
+            posts
+                .iter()
+                .find(|s| &s.id == id)
+                .map(|s| s.origin.clone())
+                .expect("post present")
+        };
+        assert_eq!(origin_of(&mine), Origin::Local);
+        assert_eq!(origin_of(&theirs), Origin::Peer(foreign_host()));
+    }
+
+    #[test]
+    fn the_union_deduplicates_a_post_present_in_two_refs() {
+        // The CRDT property, at read time: an id IS a content hash, so the
+        // same post in two refs is the same string twice.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let post = Post::new("technique", "main").with("note", serde_json::json!("same"));
+        let a = board.append(&post).expect("a");
+        let peer = peer_board(&repo, &foreign_host());
+        let b = peer.append(&post).expect("b");
+        assert_eq!(a, b, "content addressing should make these one id");
+
+        let ids: Vec<String> = board
+            .posts_at_tip()
+            .expect("read")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(
+            ids.iter().filter(|i| **i == a).count(),
+            1,
+            "duplicated in the union"
+        );
+        assert_eq!(
+            board
+                .post_ids_at_tip()
+                .expect("ids")
+                .iter()
+                .filter(|i| **i == a)
+                .count(),
+            1,
+            "and the id read must dedupe identically -- `Cursor::record` prunes against it"
+        );
+    }
+
+    #[test]
+    fn the_union_skips_this_hosts_own_mirror_so_a_reaped_post_cannot_return() {
+        // peers/<self> is behind the local log whenever a reap has not been
+        // pushed, so including it would resurrect this host's own reaped
+        // posts. Skipping the ref makes push-before-fetch an optimisation
+        // rather than a correctness requirement.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let host = crate::live::current_host();
+        assert!(
+            !host.is_empty(),
+            "this test is vacuous without a hostname: every peer ref would be read"
+        );
+        let own_mirror = peer_board(&repo, &host);
+        let ghost = own_mirror
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("reaped here")))
+            .expect("ghost");
+
+        let ids: Vec<String> = board
+            .posts_at_tip()
+            .expect("read")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert!(!ids.contains(&ghost), "own mirror must be skipped");
+        assert!(
+            !board.post_ids_at_tip().expect("ids").contains(&ghost),
+            "and the id read must skip it too, or `unseen` would re-offer it forever"
+        );
+        assert!(
+            !board
+                .read_refs()
+                .expect("refs")
+                .contains(&own_mirror.refname),
+            "the skip must be at the ref list, not at each individual read"
+        );
+    }
+
+    #[test]
+    fn reap_and_snapshot_never_see_a_peer_ref() {
+        // Compaction is a judgment, and judgments do not union: a reap that
+        // could see a peer ref would let this host's predicate govern another
+        // host's log.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        merge_branch_into_main(&repo, "campaign/merged");
+        let board = Board::new(repo.clone());
+        board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("mine")))
+            .expect("mine");
+        let peer = peer_board(&repo, &foreign_host());
+        // Reapable BY THIS HOST'S predicate -- a notice on a branch that
+        // resolves here and is merged here -- so if the reap could see it, it
+        // would drop it.
+        let theirs = peer
+            .append(&Post::new("notice", "campaign/merged").with("note", serde_json::json!("t")))
+            .expect("t");
+        let peer_tip_before = peer.tip().expect("peer tip").expect("some");
+
+        let snap = board.snapshot().expect("snapshot").expect("some");
+        assert!(
+            !snap.posts().iter().any(|p| p.id == theirs),
+            "a snapshot must be single-ref: reap must never judge a peer's log"
+        );
+
+        let mut plan = ReapPlan::probe(&repo, &snap).expect("probe");
+        plan.advance_clock(crate::live::NOTICE_GRACE_PERIOD_S + 1);
+        board.reap(&plan).expect("reap");
+        assert_eq!(
+            peer.tip().expect("peer tip").expect("some"),
+            peer_tip_before,
+            "a reap must not move a peer ref at all"
+        );
+        assert!(
+            peer.post_ids_at_tip().expect("peer ids").contains(&theirs),
+            "and the peer's post must survive this host's compaction judgment"
+        );
+    }
+
+    #[test]
+    fn a_peer_ref_that_does_not_resolve_is_skipped_with_a_warning_not_fatal() {
+        // D7 again, at the ref level: one unreadable mirror must never blank
+        // the board. A ref pointed at a tree (not a commit) is listed by
+        // `for-each-ref` and then fails every read a tip is used for.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let mine = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("keep me")))
+            .expect("mine");
+        let tip = board.tip().expect("tip").expect("some");
+        let tree = repo
+            .git(&["rev-parse", "--verify", &format!("{tip}^{{tree}}")])
+            .expect("tree");
+        repo.git(&[
+            "update-ref",
+            &format!("{}broken", Board::PEERS_PREFIX),
+            &tree,
+        ])
+        .expect("a peer ref pointing at a tree");
+
+        let ids: Vec<String> = board
+            .posts_at_tip()
+            .expect("one broken mirror must never fail the whole read")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(
+            ids,
+            vec![mine.clone()],
+            "the local log must still be read: {ids:?}"
+        );
+        assert_eq!(
+            board.post_ids_at_tip().expect("ids"),
+            vec![mine],
+            "and the id read must degrade the same way"
+        );
+    }
+
+    #[test]
+    fn the_union_keeps_the_earliest_time_and_the_first_refs_origin_for_one_id() {
+        // The dedupe rule, stated on its own because two real appends land in
+        // the same wall-clock second and so cannot express it. Earliest wins,
+        // matching `digest::history`'s rule for a reap-then-repost of
+        // byte-identical content -- one rule for the same situation, not two.
+        // Origin comes from the FIRST ref the id was seen in, and `read_refs`
+        // puts the local log first, so a post this host also holds is never
+        // reported as foreign.
+        let same = Post::new("technique", "main");
+        let local = StoredPost {
+            id: "a".repeat(40),
+            post: same.clone(),
+            committed_at: 200,
+            origin: Origin::Local,
+        };
+        let peer = StoredPost {
+            id: "a".repeat(40),
+            post: same,
+            committed_at: 100,
+            origin: Origin::Peer("lefford".into()),
+        };
+        let merged = merge_by_id(vec![local, peer]);
+        assert_eq!(merged.len(), 1, "one id, one post: {merged:?}");
+        assert_eq!(merged[0].committed_at, 100, "the earliest time wins");
+        assert_eq!(
+            merged[0].origin,
+            Origin::Local,
+            "a post this host also holds is not foreign"
+        );
+    }
+
+    #[test]
+    fn the_union_is_ordered_oldest_first_across_refs() {
+        // `Displayed::cap` drops the OLDEST, so a union that concatenated
+        // per-ref runs instead of re-sorting would silently elide by ref
+        // rather than by age.
+        let post = |n: u64| StoredPost {
+            id: format!("{n:040}"),
+            post: Post::new("technique", "main"),
+            committed_at: n,
+            origin: Origin::Peer("lefford".into()),
+        };
+        let merged = merge_by_id(vec![post(30), post(10), post(20)]);
+        let times: Vec<u64> = merged.iter().map(|s| s.committed_at).collect();
+        assert_eq!(times, vec![10, 20, 30]);
     }
 
     #[test]

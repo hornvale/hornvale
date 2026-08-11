@@ -231,6 +231,7 @@ mod tests {
             id: id.to_string(),
             post,
             committed_at: 900,
+            origin: crate::store::Origin::Local,
         }
     }
 

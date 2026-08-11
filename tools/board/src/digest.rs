@@ -86,6 +86,10 @@ pub fn history(
                     id,
                     post,
                     committed_at,
+                    // A single-ref walk of `board`'s OWN history, so every
+                    // post here carries that board's origin — this is not the
+                    // union read (B1), which is `Board::posts_at_tip`.
+                    origin: board.own_origin(),
                 });
             }
             Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
@@ -178,7 +182,7 @@ mod tests {
     use super::*;
     use crate::git::test_support::temp_repo;
     use crate::post::Post;
-    use crate::store::Board;
+    use crate::store::{Board, Origin};
     use serde_json::json;
 
     #[test]
@@ -284,16 +288,19 @@ mod tests {
                 id: "a".into(),
                 post: Post::new("technique", "campaign/x").with("note", json!("t1")),
                 committed_at: 10,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "b".into(),
                 post: Post::new("technique", "campaign/y").with("note", json!("t2")),
                 committed_at: 20,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "c".into(),
                 post: Post::new("claim", "campaign/x"),
                 committed_at: 30,
+                origin: Origin::Local,
             },
         ];
         let out = digest(&posts);
@@ -323,6 +330,7 @@ mod tests {
                 .with("thread", json!("t1"))
                 .with("note", json!("is anyone else seeing this")),
             committed_at: 10,
+            origin: Origin::Local,
         }];
         let out = digest(&posts);
         assert!(
@@ -340,11 +348,13 @@ mod tests {
                     .with("thread", json!("t1"))
                     .with("note", json!("is anyone else seeing this")),
                 committed_at: 10,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "b".into(),
                 post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
                 committed_at: 20,
+                origin: Origin::Local,
             },
         ];
         let out = digest(&posts);
@@ -362,6 +372,7 @@ mod tests {
             id: "a".into(),
             post: Post::new("ask", "campaign/x").with("note", json!("untethered question")),
             committed_at: 10,
+            origin: Origin::Local,
         }];
         let out = digest(&posts);
         assert!(
@@ -383,11 +394,13 @@ mod tests {
                     .with("thread", json!("t1"))
                     .with("note", json!("first question")),
                 committed_at: 10,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "reply1".into(),
                 post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
                 committed_at: 20,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "ask2".into(),
@@ -395,6 +408,7 @@ mod tests {
                     .with("thread", json!("t1"))
                     .with("note", json!("second question")),
                 committed_at: 30,
+                origin: Origin::Local,
             },
         ];
         let out = digest(&posts);
@@ -417,6 +431,7 @@ mod tests {
                 id: "reply1".into(),
                 post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
                 committed_at: 50,
+                origin: Origin::Local,
             },
             StoredPost {
                 id: "ask1".into(),
@@ -424,6 +439,7 @@ mod tests {
                     .with("thread", json!("t1"))
                     .with("note", json!("asked after the only reply")),
                 committed_at: 100,
+                origin: Origin::Local,
             },
         ];
         let out = digest(&posts);

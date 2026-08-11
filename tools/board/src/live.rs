@@ -53,6 +53,29 @@ pub struct LiveContext {
     pub merged_branches: BTreeSet<String>,
 }
 
+/// This host's short name, as `hostname -s` reports it, or an empty string if
+/// `hostname` cannot be run at all.
+///
+/// One function rather than a shellout per call site, because this value
+/// decides two different things that must agree: which claims are judged
+/// against this machine's process table (D8), and which peer mirror is *this*
+/// host's own and so must be skipped by a union read
+/// ([`Board::read_refs`](crate::store::Board::read_refs)). Two copies of it
+/// could disagree only in the confusing direction — a hostname collision is
+/// already the subtlest failure this design has, and it does not need a
+/// second, local source of disagreement on top.
+///
+/// Fails to the empty string rather than erroring, matching the rest of this
+/// crate's fail-open convention: an unknown host makes every claim foreign
+/// (rendered, not silently dropped) and makes no peer ref look like our own.
+pub fn current_host() -> String {
+    std::process::Command::new("hostname")
+        .arg("-s")
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default()
+}
+
 /// Judge one already-run `ps -p <pid>` invocation. `Ok` means `ps` ran, so its
 /// exit status is authoritative: success is alive, failure is dead. `Err`
 /// means `ps` itself could not be spawned (missing binary, a sandboxed PATH,
@@ -164,11 +187,7 @@ impl LiveContext {
             .map_err(|e| BoardError::Io(format!("clock: {e}")))?
             .as_secs();
 
-        let host = std::process::Command::new("hostname")
-            .arg("-s")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_default();
+        let host = current_host();
 
         let retracted = posts
             .iter()
@@ -425,6 +444,7 @@ mod tests {
             id: id.to_string(),
             post,
             committed_at: at,
+            origin: crate::store::Origin::Local,
         }
     }
 
