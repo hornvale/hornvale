@@ -109,6 +109,14 @@ mod tests {
 
     const NOON: WorldTime = WorldTime { day: 0.5 };
 
+    // This is also the sole coverage for the claim
+    // `kernel::ledger::tests::non_finite_day_is_rejected` used to make at the
+    // ledger boundary (Task 2, The Ell, fix round 1): once `Fact.day` became
+    // `Option<WorldTime>`, that test's assertion was word-for-word this one —
+    // a `Fact` can no longer be BUILT with a non-finite day, so there was
+    // nothing left for `Ledger::check`/`commit` to reject, and the duplicate
+    // was deleted rather than kept under a name that still promised
+    // ledger-level rejection.
     #[test]
     fn a_world_time_cannot_be_built_from_a_non_finite_value() {
         assert!(

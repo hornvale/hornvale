@@ -2686,7 +2686,15 @@ impl<'w> Session<'w> {
             .map(|npc| npc.entity)
             .collect();
         let from = self.day;
-        self.day = WorldTime::new(self.day.day() + days).expect("a day value is finite");
+        // `days` was validated as finite and positive above, but the SUM can
+        // still overflow to infinity — an accumulation, not a parse, so the
+        // parse-site guard above cannot see it (fix round 1, The Ell Task 2
+        // review: reachable live from `possess` stdin via two `wait 1e308`s).
+        // Route it through `wait`'s own error channel rather than expecting.
+        self.day = match WorldTime::new(self.day.day() + days) {
+            Ok(d) => d,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
         // above) and its three neighbours — the rooms this tick's drive
@@ -4033,6 +4041,31 @@ mod tests {
                 "after `wait`, every derived npc must have a tracked within-room anchor: {}",
                 npc.label
             );
+        }
+    }
+
+    #[test]
+    fn wait_routes_a_clock_overflow_instead_of_panicking() {
+        // Fix round 1 (The Ell, Task 2 review, Important finding): `wait`
+        // validates its PARSED argument (`d.is_finite() && d > 0.0`), but the
+        // day it feeds `WorldTime::new` is an ACCUMULATION
+        // (`self.day.day() + days`), which can overflow to infinity even when
+        // both operands are individually finite. That used to `.expect()`,
+        // so a long enough possession session (or a single adversarial `wait
+        // 1e308` twice, driven live from `possess`'s stdin) panicked the
+        // whole process instead of failing one verb. `self.day` starts at
+        // `WorldTime::GENESIS` and only this test's own setup pushes it to
+        // `f64::MAX`, so nothing else in the suite depends on the clock
+        // reaching this range.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.day = WorldTime::new(f64::MAX).expect("f64::MAX is finite");
+        match session.wait(&f64::MAX.to_string()) {
+            Turn::Out(msg) => assert!(
+                msg.contains("finite") || msg.to_lowercase().contains("day"),
+                "expected an error naming the clock overflow, got: {msg}"
+            ),
+            Turn::Released(_) => panic!("an overflowing wait must not release the session"),
         }
     }
 

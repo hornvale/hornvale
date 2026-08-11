@@ -951,23 +951,6 @@ mod tests {
     }
 
     #[test]
-    fn non_finite_day_is_rejected() {
-        // Before Task 2 (The Ell), `Fact.day` was a bare `f64` and this test
-        // proved the ledger caught a non-finite one at `commit`. Now `day` is
-        // `Option<WorldTime>`, and `WorldTime::new` rejects non-finite values
-        // at construction — a `Fact` carrying one can no longer be built at
-        // all, so there is nothing left for `commit`/`check` to catch. The
-        // invariant is enforced earlier and unconditionally; see
-        // `field::tests::a_world_time_cannot_be_built_from_a_non_finite_value`
-        // for the construction-time coverage this test used to duplicate at
-        // the ledger boundary.
-        assert!(
-            WorldTime::new(f64::INFINITY).is_err(),
-            "a non-finite day must be rejected before it ever reaches a Fact"
-        );
-    }
-
-    #[test]
     fn committed_numbers_and_days_are_quantized() {
         use crate::quantize::quantize;
         let r = registry();
