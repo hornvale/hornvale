@@ -112,21 +112,42 @@ taking two rooms, not as a field on either.
 **A sign change alone is not a crossing, and an earlier draft of this section
 said it was.** Measured at Task 1's close: the sign flips on **dry land**
 wherever the nearest-arc field has a discontinuity that is not water. Sampling
-a 720-point circle of radius `1e-2` rad around each of seed 42 / level 5's 26
-polyline endpoints produced **26 spurious sign changes at `|d| ≈ 1.0e-2` rad**
-— maximally far from any water, since the terrace edge is `3.1e-3` — and the
-single confluence produced 3 real crossings at `|d| ≈ 0` plus **one spurious
-flip at `|d| = 4.8e-3`**. This is inherent to signed distance against several
-open arcs, not a defect introduced by the bank convention.
+On seed 42 / level 5 there is **one spurious sign change per true polyline
+endpoint — 25 of them** (the 26th endpoint is a confluence mouth, not a true
+end), plus **one at the single confluence bisector at `|d| = 4.7946e-3`**,
+against 3 real crossings at `|d| ≈ 3e-5`. This is inherent to signed distance
+against several open arcs, not a defect introduced by the bank convention.
+
+Two measured properties of that locus decide the gate:
+
+1. **The endpoint flip is a ray, not a place.** Probing at radii `1.0e-2`,
+   `5.0e-3` and `3.1e-3` finds the *same* flips each time, at whatever `|d|`
+   the probe happens to stand at: the sign-change surface extends outward from
+   the endpoint without bound. **No fixed distance threshold removes it.** The
+   gate cannot be "far enough away is safe" — it must ask whether a reading is
+   inside its own bands.
+2. **The confluence bisector flip lands inside the terrace.** `4.7946e-3`
+   against a *maximum* terrace edge of `6.9e-3` — the edges vary per vertex
+   (min `2.0e-4`, median `3.5e-3`, max `6.9e-3`), and it is the maximum a
+   spurious flip must clear, not the median. So `Transverse != Dry` does
+   **not** exclude it.
 
 Taken literally, the earlier wording would have reported a ford across dry
 ground at **every river source, every river mouth, and every confluence
 bisector**.
 
 **So a crossing requires both**: the sign differs **and** at least one of the
-two rooms is within the channel band (`|d|` inside `channel_bands[0]`). The
-sign is only interpretable inside the banded neighbourhood of the winning
+two rooms reads `Channel` or `Bank` — `|d|` inside `channel_bands[1]`. Gating
+merely on not-`Dry` (`|d| < channel_bands[3]`) is **insufficient**, per (2).
+The sign is only interpretable inside the banded neighbourhood of the winning
 segment; outside it, a flip carries no hydrological meaning.
+
+**Task 3 owes a test that a `Dry`-band sign change exists and is excluded.**
+The spurious locus is documented but nothing currently reddens if it worsens.
+
+**The `4.7946e-3` figure is an existence proof, not a distribution** — level 5
+seed 42 has exactly one confluence; level 6 has 15. A later stage needing that
+magnitude quantitatively must measure it there.
 
 ### 5.4 What this stage does not do
 
