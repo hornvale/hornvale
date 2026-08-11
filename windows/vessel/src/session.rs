@@ -955,7 +955,7 @@ impl<'w> Session<'w> {
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
-            day: self.day.day,
+            day: self.day.day(),
             me: SelfChannel {
                 agent: self.agent.id.0,
                 species: self.agent.species.clone(),
@@ -1637,7 +1637,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[room {}, day {}]\n{}\nWays on: {}.",
             v.locale.id,
-            self.day.day,
+            self.day.day(),
             f.prose,
             ways.join(", ")
         ))
@@ -2116,7 +2116,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[chamber {}, day {}]\n{}\nWays on: {}.",
             id,
-            self.day.day,
+            self.day.day(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
             ways.join(", ")
         ))
@@ -2686,9 +2686,7 @@ impl<'w> Session<'w> {
             .map(|npc| npc.entity)
             .collect();
         let from = self.day;
-        self.day = WorldTime {
-            day: self.day.day + days,
-        };
+        self.day = WorldTime::new(self.day.day() + days).expect("a day value is finite");
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
         // above) and its three neighbours — the rooms this tick's drive
@@ -2788,7 +2786,7 @@ impl<'w> Session<'w> {
                             predicate: TURNED_HOSTILE.to_string(),
                             object: Value::Entity(player),
                             place: None,
-                            day: Some(self.day.day),
+                            day: Some(self.day.day()),
                             provenance: "player-provoked".to_string(),
                         };
                         self.ledger
@@ -3135,7 +3133,7 @@ impl<'w> Session<'w> {
             self.agent.species,
             self.agent.village.name,
             self.agent.id.0,
-            self.day.day,
+            self.day.day(),
             self.agent
                 .position
                 .pack()
@@ -3341,7 +3339,7 @@ impl<'w> Session<'w> {
             predicate: DISPOSITION_SHIFT.to_string(),
             object: Value::Number(sign as f64),
             place: None,
-            day: Some(self.day.day),
+            day: Some(self.day.day()),
             provenance: format!("player: {verb}"),
         };
         let appended = self
@@ -3464,9 +3462,9 @@ impl<'w> Session<'w> {
     /// falls back to the re-sculpting bare form on the `None` a failed
     /// build at `start` would leave.
     fn consult(&self) -> String {
-        let day = self.day.day.trunc() as u64;
+        let day = self.day.day().trunc() as u64;
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.day)
+        let at = hornvale_astronomy::StdDays::new(self.day.day())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),

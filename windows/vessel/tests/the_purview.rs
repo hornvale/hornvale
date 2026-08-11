@@ -150,7 +150,7 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     // biome in v1) rather than assuming anything about noun ordering.
     let here_locale = session
         .context()
-        .describe(&session.agent().position, WorldTime { day: 0.0 })
+        .describe(&session.agent().position, WorldTime::GENESIS)
         .expect("the observer's own room describes");
     let biome_noun = here_locale.biome;
     let biome_chart_entry = chart

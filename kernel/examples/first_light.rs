@@ -124,7 +124,7 @@ fn render_world_document() -> String {
         .expect("name commits");
 
     let sun = MiniSun;
-    let ctx = ObserverContext::at(vale, WorldTime { day: 0.0 });
+    let ctx = ObserverContext::at(vale, WorldTime::GENESIS);
     let seen = observe(&[&sun], &ctx);
     world
         .ledger

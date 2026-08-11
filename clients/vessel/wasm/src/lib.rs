@@ -96,7 +96,7 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
     // session borrowing it before reclaiming the box.
     let world_ref: &'static World = unsafe { &*world };
     let opts = PossessOpts {
-        day: WorldTime { day: 0.0 },
+        day: WorldTime::GENESIS,
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,

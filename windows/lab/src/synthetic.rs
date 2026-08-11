@@ -82,7 +82,7 @@ impl Terrain for SyntheticTerrain {
         match self.temps.get(room) {
             None => f64::INFINITY,
             Some(&hot) => match self.calm_after {
-                Some((until, calm)) if day.day >= until => calm,
+                Some((until, calm)) if day.day() >= until => calm,
                 _ => hot,
             },
         }
@@ -284,10 +284,17 @@ pub fn stranded_from_known_water() -> Scenario {
     // History: stood in the spring (belief), then stranded far away (position).
     let reg = &registry;
     ledger
-        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), reg)
+        .commit(place_agent(e, &spring, WorldTime::GENESIS), reg)
         .expect("place at spring");
     ledger
-        .commit(place_agent(e, &exile, WorldTime { day: 0.5 }), reg)
+        .commit(
+            place_agent(
+                e,
+                &exile,
+                WorldTime::new(0.5).expect("a day value is finite"),
+            ),
+            reg,
+        )
         .expect("place in exile");
     let npc = creature(e, spring.clone(), spring.clone(), "kobold", MILD_NICHE);
     Scenario {
@@ -313,10 +320,17 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
     ledger
-        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
     ledger
-        .commit(place_agent(e, &exile, WorldTime { day: 0.5 }), &registry)
+        .commit(
+            place_agent(
+                e,
+                &exile,
+                WorldTime::new(0.5).expect("a day value is finite"),
+            ),
+            &registry,
+        )
         .expect("place in exile");
     // The exile and its neighbours are hot-but-livable — the creature senses no
     // discomfort (heat-adapted), but its thirst couples to the heat.
@@ -359,7 +373,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
     let e = ledger.mint_entity(synthetic_creature(0));
     // Seed the water belief immediately (stood in the spring on day 0).
     ledger
-        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
     // The spring and its three neighbours are equally blistering — no kinder
     // neighbour, so comfort is unservable (a local thermal pit) until the wave
@@ -400,7 +414,7 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
     let e = ledger.mint_entity(synthetic_creature(0));
     // Seed the water belief and position (stands in the spring on day 0).
     ledger
-        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
     // The spring and its three neighbours are all barren — no cell feeds the
     // creature and no neighbour is richer, so hunger has no affordance and it
@@ -437,7 +451,7 @@ pub fn a_creature_cornered_by_dread() -> Scenario {
     let registry = harness_registry();
     let e = ledger.mint_entity(synthetic_creature(0));
     ledger
-        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .commit(place_agent(e, &spring, WorldTime::GENESIS), &registry)
         .expect("place at spring");
     // The spring and every neighbour are maximally threatening — no safer step,
     // so danger has no affordance and the creature Holds (cornered by dread).
@@ -482,7 +496,7 @@ pub fn dread_pit_steady_vs_bold() -> Scenario {
         let e = ledger.mint_entity(synthetic_creature(next_creature));
         next_creature += 1;
         ledger
-            .commit(place_agent(e, spring, WorldTime { day: 0.0 }), &registry)
+            .commit(place_agent(e, spring, WorldTime::GENESIS), &registry)
             .expect("place at spring");
         threat.insert(spring.clone(), 1.0);
         for n in spring.neighbors() {
@@ -538,13 +552,17 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
     let stricken = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(
-            place_agent(stricken, &spring, WorldTime { day: 0.0 }),
+            place_agent(stricken, &spring, WorldTime::GENESIS),
             &registry,
         )
         .expect("stricken at spring");
     ledger
         .commit(
-            place_agent(stricken, &exile, WorldTime { day: 0.5 }),
+            place_agent(
+                stricken,
+                &exile,
+                WorldTime::new(0.5).expect("a day value is finite"),
+            ),
             &registry,
         )
         .expect("stricken in exile");
@@ -552,7 +570,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
     let healthy = ledger.mint_entity(synthetic_creature(1));
     ledger
         .commit(
-            place_agent(healthy, &healthy_spring, WorldTime { day: 0.0 }),
+            place_agent(healthy, &healthy_spring, WorldTime::GENESIS),
             &registry,
         )
         .expect("healthy at spring");
@@ -634,13 +652,17 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
     let stricken = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(
-            place_agent(stricken, &spring, WorldTime { day: 0.0 }),
+            place_agent(stricken, &spring, WorldTime::GENESIS),
             &registry,
         )
         .expect("stricken once at spring");
     ledger
         .commit(
-            place_agent(stricken, &exile, WorldTime { day: 0.5 }),
+            place_agent(
+                stricken,
+                &exile,
+                WorldTime::new(0.5).expect("a day value is finite"),
+            ),
             &registry,
         )
         .expect("stricken marooned at exile");
@@ -656,10 +678,7 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
         away.clone()
     };
     ledger
-        .commit(
-            place_agent(knower, &station, WorldTime { day: 0.0 }),
-            &registry,
-        )
+        .commit(place_agent(knower, &station, WorldTime::GENESIS), &registry)
         .expect("knower stationed");
 
     let npcs = vec![

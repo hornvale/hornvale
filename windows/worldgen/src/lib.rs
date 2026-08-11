@@ -3922,7 +3922,7 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time: WorldTime::new(day).expect("a day value is finite"),
             lens: PerceptionLens::identity(),
             position,
         },
@@ -3956,7 +3956,7 @@ fn observed_phenomena_occluded(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time: WorldTime::new(day).expect("a day value is finite"),
             lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
@@ -4288,7 +4288,7 @@ fn observe_with_sources(
         sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time: WorldTime::new(day).expect("a day value is finite"),
             // NO occlusion here, deliberately. This is the observation GENESIS
             // derives from — settlement name glosses and the deities a people
             // believe in (`derived-from-phenomenon` is a committed predicate).
@@ -7917,8 +7917,8 @@ pub fn sky_report_from(
     let Some(cell) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(cell, time.day);
-    let cloud = climate.cloud_type_at(cell, time.day);
+    let state = climate.weather_at(cell, time.day());
+    let cloud = climate.cloud_type_at(cell, time.day());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -8576,7 +8576,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         common_vocab: common_vocabulary(&world.registry),
         sky: sky_report_from(
             world,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             &terrain,
             &climate,
             flagship_cell(world, &terrain),
@@ -9115,7 +9115,7 @@ mod tests {
         let world = vigil_world();
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_from(&world, &terrain).unwrap();
-        let day = WorldTime { day: 0.0 };
+        let day = WorldTime::GENESIS;
         let mut seen = std::collections::BTreeSet::new();
         for cell in terrain.geosphere().cells().take(400) {
             let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
@@ -9132,7 +9132,7 @@ mod tests {
         let world = vigil_world();
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_from(&world, &terrain).unwrap();
-        let r = sky_report_from(&world, WorldTime { day: 0.0 }, &terrain, &climate, None).unwrap();
+        let r = sky_report_from(&world, WorldTime::GENESIS, &terrain, &climate, None).unwrap();
         assert!(
             !r.description.contains("The sky is"),
             "a placeless observation must not borrow a cell's weather: {}",
@@ -10662,7 +10662,7 @@ mod tests {
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
         let world = constant(42);
-        let sky = sky_report(&world, hornvale_kernel::WorldTime { day: 0.0 }).unwrap();
+        let sky = sky_report(&world, hornvale_kernel::WorldTime::GENESIS).unwrap();
         assert!(sky.description.contains("zenith"));
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
@@ -10674,7 +10674,11 @@ mod tests {
     #[test]
     fn the_sky_report_names_the_weather() {
         let world = generated(42);
-        let report = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let report = sky_report(
+            &world,
+            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+        )
+        .unwrap();
         let text = &report.description;
         assert!(
             ["clear", "fair", "overcast", "rain", "storm"]
@@ -10683,7 +10687,11 @@ mod tests {
             "the sky report must narrate the weather: {text}"
         );
 
-        let again = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let again = sky_report(
+            &world,
+            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+        )
+        .unwrap();
         assert_eq!(report, again, "the weather clause is deterministic");
     }
 
@@ -10704,10 +10712,10 @@ mod tests {
     #[test]
     fn generated_sky_round_trips_through_save_and_load() {
         let world = generated(42);
-        let before = sky_report(&world, WorldTime { day: 0.0 }).unwrap();
+        let before = sky_report(&world, WorldTime::GENESIS).unwrap();
         let reloaded = World::from_json(&world.to_json()).unwrap();
         assert!(matches!(sky_of(&reloaded).unwrap(), Sky::Generated(_)));
-        let after = sky_report(&reloaded, WorldTime { day: 0.0 }).unwrap();
+        let after = sky_report(&reloaded, WorldTime::GENESIS).unwrap();
         assert_eq!(before, after);
     }
 
@@ -11008,7 +11016,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(sky_report(&world, WorldTime { day: 0.0 }).is_err());
+        assert!(sky_report(&world, WorldTime::GENESIS).is_err());
         // No place exists on this hand-built world, so observed_phenomena
         // short-circuits to Ok(empty) before ever touching sky_of — the
         // existing "no place, no phenomena" contract, not a panic risk.

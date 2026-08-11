@@ -275,8 +275,11 @@ mod tests {
         .expect("seed 42 builds");
         let ctx = LocaleContext::build(&world).expect("the locale context builds");
         let agent = crate::mint_flagship(&world, &ctx).expect("seed 42 has a settlement");
-        ctx.describe(&agent.position, WorldTime { day: 0.5 })
-            .expect("the minted position describes")
+        ctx.describe(
+            &agent.position,
+            WorldTime::new(0.5).expect("a day value is finite"),
+        )
+        .expect("the minted position describes")
     }
 
     /// A minimal `vessel/plan/v1` document, for tests that need a

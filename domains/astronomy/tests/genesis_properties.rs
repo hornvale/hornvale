@@ -353,7 +353,7 @@ fn a_locked_worlds_hemispheres_cull_the_sky() {
         let sky = GeneratedSky::new(outcome);
         let day = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             GeoCoord {
                 latitude: 5.0,
                 longitude: 0.0,
@@ -361,7 +361,7 @@ fn a_locked_worlds_hemispheres_cull_the_sky() {
         );
         let night = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             GeoCoord {
                 latitude: 5.0,
                 longitude: 179.0,
@@ -416,7 +416,7 @@ fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
         let sky = GeneratedSky::new(outcome);
         let obs = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 3.5 },
+            WorldTime::new(3.5).expect("a day value is finite"),
             GeoCoord {
                 latitude: 55.0,
                 longitude: -120.0,

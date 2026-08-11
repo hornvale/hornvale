@@ -669,7 +669,7 @@ impl LocaleContext {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
-            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day()).get())
             .sum();
         sum / denom as f64
     }
@@ -1080,8 +1080,8 @@ mod tests {
         };
         let a = LocaleContext::build(&world).unwrap();
         let b = LocaleContext::build(&world).unwrap();
-        let la = a.describe(&addr, WorldTime { day: 0.0 }).unwrap();
-        let lb = b.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let la = a.describe(&addr, WorldTime::GENESIS).unwrap();
+        let lb = b.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(
             serde_json::to_string(&la).unwrap(),
             serde_json::to_string(&lb).unwrap()
@@ -1098,7 +1098,7 @@ mod tests {
             path: vec![1],
         };
         assert!(matches!(
-            ctx.describe(&coarse, WorldTime { day: 0.0 }),
+            ctx.describe(&coarse, WorldTime::GENESIS),
             Err(LocaleError::AboveGrid)
         ));
     }
@@ -1141,7 +1141,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         // elevation blends three real cells; the value must be finite.
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
@@ -1158,7 +1158,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         let sea = hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get());
         let expected = hornvale_kernel::quantize(loc.fields.elevation_m - sea);
         assert_eq!(
@@ -1185,7 +1185,7 @@ mod tests {
                 hornvale_kernel::math::cos(t * 0.031),
             ];
             let addr = RoomAddr::containing(dir, 6);
-            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) {
+            if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) {
                 kinds.insert(loc.fields.water);
                 if loc.fields.water == WaterKind::River {
                     saw_fresh = true;
@@ -1240,7 +1240,7 @@ mod tests {
             let Some(cave) = terrain.cave_at(dominant) else {
                 continue;
             };
-            let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
             assert_eq!(
                 loc.cave,
                 Some(cave.kind),
@@ -1268,7 +1268,7 @@ mod tests {
             path: vec![0; 30],
         };
         assert!(matches!(
-            ctx.describe(&over_deep, WorldTime { day: 0.0 }),
+            ctx.describe(&over_deep, WorldTime::GENESIS),
             Err(LocaleError::Unaddressable(_))
         ));
     }
@@ -1291,7 +1291,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(loc.fields.temperature_c, 38.082618);
         assert_eq!(
             loc.corners,
@@ -1369,7 +1369,7 @@ mod tests {
                 continue;
             };
             let expected_cell = dominant_corner(&weights).0;
-            let locale = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            let locale = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
 
             assert_eq!(
                 locale.biome_kind,
@@ -1594,7 +1594,7 @@ mod tests {
             let mut simulated: Vec<WaterKind> = Vec::new();
             let mut rooms_in_cell = 0usize;
             for addr in rooms_across_cell(geo, cell, depth) {
-                let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) else {
+                let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) else {
                     continue;
                 };
                 let dominant = dominant_of(&loc);
@@ -1679,9 +1679,9 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 1],
         };
-        let ra = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
-        let ra2 = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
-        let rb = ctx.describe(&b, WorldTime { day: 0.0 }).unwrap().regime;
+        let ra = ctx.describe(&a, WorldTime::GENESIS).unwrap().regime;
+        let ra2 = ctx.describe(&a, WorldTime::GENESIS).unwrap().regime;
+        let rb = ctx.describe(&b, WorldTime::GENESIS).unwrap().regime;
         assert_eq!(ra, ra2, "same room → identical regime");
         assert_ne!(ra.descriptor, rb.descriptor, "sibling rooms should differ");
         assert!(ra.strangeness >= 0.0);
@@ -1696,7 +1696,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(loc.schema, "locale/room/v2");
         assert!(loc.regime.strangeness >= 0.0);
         assert!(!loc.regime.descriptor.is_empty());
@@ -1718,7 +1718,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         let lateral = loc
             .exits
             .iter()
@@ -1795,7 +1795,7 @@ mod tests {
         };
         let rooms = walk_visited(&start, 3);
         assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
-        let at = WorldTime { day: 12.5 };
+        let at = WorldTime::new(12.5).expect("a day value is finite");
         let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
 
         // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
@@ -1913,6 +1913,6 @@ mod tests {
             face: 4,
             path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
         };
-        let _ = ctx.temperature_at_cached(&real_addr, WorldTime { day: 0.0 }, Some(&memo));
+        let _ = ctx.temperature_at_cached(&real_addr, WorldTime::GENESIS, Some(&memo));
     }
 }

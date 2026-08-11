@@ -50,7 +50,10 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match world_builder::sky_report(world, WorldTime { day }) {
+                match world_builder::sky_report(
+                    world,
+                    WorldTime::new(day).expect("a day value is finite"),
+                ) {
                     Ok(report) => writeln!(output, "{}", report.description)?,
                     Err(e) => writeln!(output, "error: {e}")?,
                 }
@@ -405,7 +408,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             }
             "possess" => {
                 let opts = hornvale_vessel::PossessOpts {
-                    day: WorldTime { day: 0.0 },
+                    day: WorldTime::GENESIS,
                     echo: false,
                     wild_agents: true,
                     eyes: hornvale_vessel::eyes::Eyes::Own,

@@ -475,7 +475,7 @@ fn plant_population() -> PlantedPopulation {
     for (i, room) in cold_rooms.iter().enumerate() {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         ledger
-            .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
+            .commit(place_agent(e, room, WorldTime::GENESIS), &registry)
             .expect("place cold-built creature");
         cold_idx.push(npcs.len());
         npcs.push(creature(
@@ -501,7 +501,7 @@ fn plant_population() -> PlantedPopulation {
     for (i, room) in warm_rooms.iter().enumerate() {
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         ledger
-            .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
+            .commit(place_agent(e, room, WorldTime::GENESIS), &registry)
             .expect("place warm-built creature");
         warm_idx.push(npcs.len());
         npcs.push(creature(
@@ -686,7 +686,7 @@ fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
     let registry = planted_registry();
     let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
     ledger
-        .commit(place_agent(e, &room, WorldTime { day: 0.0 }), &registry)
+        .commit(place_agent(e, &room, WorldTime::GENESIS), &registry)
         .expect("place mutation creature");
     let npc = creature(e, room.clone(), "kobold-mutation", MUTATION_NICHE);
 
@@ -833,7 +833,7 @@ fn the_landing_anchors_warmth_is_small_next_to_real_cold_built_deviations() {
     // the `assert_eq!` above already pins exactly): an `warmth < 1.0`
     // alternative would pass just as well with `HEARTH_WARMTH` reverted to
     // its pre-calibration `1.0`, so it could never catch that regression.
-    let temp = terrain.temperature(&target.home, WorldTime { day: 0.0 });
+    let temp = terrain.temperature(&target.home, WorldTime::GENESIS);
     assert!(
         temp < -20.0,
         "seed 13's cold-built settlement should deviate far enough that this \
