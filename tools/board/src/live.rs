@@ -102,6 +102,24 @@ fn resolve_branch_ref(repo: &Repo, by: &str) -> Result<Option<String>, BoardErro
     Ok(None)
 }
 
+/// Pull the checked-out branch names out of `git worktree list --porcelain`
+/// output. Pure and total: never panics or errors on any input, including
+/// empty, truncated, or entirely unrecognised text — a line that is not a
+/// `branch refs/heads/<name>` line (a detached-HEAD worktree, a bare repo
+/// entry, garbage) is simply not a match, not a parse failure. This is what
+/// makes it safe to feed it whatever a failed `git` call leaves behind.
+fn parse_worktree_branches(out: &str) -> BTreeSet<String> {
+    let mut branches = BTreeSet::new();
+    for line in out.lines() {
+        if let Some(rest) = line.strip_prefix("branch ")
+            && let Some(name) = rest.strip_prefix("refs/heads/")
+        {
+            branches.insert(name.to_string());
+        }
+    }
+    branches
+}
+
 /// Branches currently checked out in ANY worktree of this repository,
 /// including the primary checkout — a direct, unambiguous "this campaign is
 /// still active" signal that does not depend on ancestry at all.
@@ -118,17 +136,18 @@ fn resolve_branch_ref(repo: &Repo, by: &str) -> Result<Option<String>, BoardErro
 /// one that merely looks absorbed by a merge-base check — so a genuinely
 /// merged branch whose worktree is still checked out (an active campaign
 /// revisiting old work) is correctly still live, not a cost.
+///
+/// Callers must NOT propagate this `Result` with `?`: unlike
+/// `resolve_branch_ref`, which only runs when a specific post needs it, this
+/// runs once per `probe()` call, unconditionally. A `git worktree list`
+/// failure here must fall through to the ahead/behind check, not abort the
+/// whole render for every post on the board -- `probe`'s caller does exactly
+/// that on any propagated error (see `main.rs`), which is the one failure
+/// mode this board exists to avoid (D7/D14: a board nobody can read is
+/// worthless).
 fn live_worktree_branches(repo: &Repo) -> Result<BTreeSet<String>, BoardError> {
     let out = repo.git(&["worktree", "list", "--porcelain"])?;
-    let mut branches = BTreeSet::new();
-    for line in out.lines() {
-        if let Some(rest) = line.strip_prefix("branch ")
-            && let Some(name) = rest.strip_prefix("refs/heads/")
-        {
-            branches.insert(name.to_string());
-        }
-    }
-    Ok(branches)
+    Ok(parse_worktree_branches(&out))
 }
 
 impl LiveContext {
@@ -180,7 +199,20 @@ impl LiveContext {
         // One `git worktree list` for the whole probe, not per-post: see
         // `live_worktree_branches`'s doc for why this check runs FIRST,
         // ahead of the ahead/behind fallback below.
-        let worktree_branches = live_worktree_branches(repo)?;
+        //
+        // Fails OPEN, not propagated: this runs unconditionally on every
+        // probe, unlike `resolve_branch_ref` below (which only runs per
+        // post). A `git worktree list` failure must not abort the whole
+        // render for every post on the board -- an empty set here just means
+        // every branch falls through to the ahead/behind fallback, exactly
+        // as it did before this discriminator existed.
+        let worktree_branches = live_worktree_branches(repo).unwrap_or_else(|e| {
+            eprintln!(
+                "board: could not enumerate worktrees ({e}); no branch will be treated as \
+                 having a live worktree for this probe -- falling through to ahead/behind counts"
+            );
+            BTreeSet::new()
+        });
         for s in posts.iter() {
             let by = s.post.by.clone();
             if live_branches.contains(&by) || merged_branches.contains(&by) {
@@ -797,6 +829,66 @@ mod tests {
         assert!(
             matches!(liveness(&stored, &ctx), Liveness::Live),
             "and the notice must render"
+        );
+    }
+
+    // --- B11 (round 2): `live_worktree_branches` must fail open ---
+    //
+    // Injecting a genuinely failing `git worktree list --porcelain` into
+    // this crate's test harness would need either mutating process-global
+    // `PATH` (racy against every other test's own `git` calls, which run
+    // concurrently in the same test binary) or a git-runner injection seam
+    // `Repo` does not have and this fix should not add just for one test.
+    // So the smallest unit actually testable here is the parse step itself:
+    // it must never panic and must degrade to an empty set on anything that
+    // is not real `branch refs/heads/<name>` output, including the empty
+    // string a failed call's absent stdout would leave behind. This does
+    // NOT cover the `git` invocation failing outright, or the
+    // `unwrap_or_else` fallback wired to it in `probe`; both were instead
+    // checked manually (predicate-mutation style, matching Important #1's
+    // verification) and are NOT re-checked by any test that remains in the
+    // tree -- see the fix report for that transcript.
+
+    #[test]
+    fn parse_worktree_branches_of_empty_output_is_an_empty_set() {
+        // The shape a failed call's absent stdout would leave behind, if it
+        // were ever (wrongly) fed to the parser instead of short-circuited.
+        assert!(parse_worktree_branches("").is_empty());
+    }
+
+    #[test]
+    fn parse_worktree_branches_ignores_error_shaped_text_without_panicking() {
+        // Not real porcelain output at all -- stderr text, a truncated
+        // line, garbage. None of it matches `branch refs/heads/<name>`, so
+        // none of it should produce a branch, and none of it should panic.
+        let garbage = "fatal: not a git repository (or any of the parent directories): .git\n\
+                        branch\n\
+                        branch refs/tags/not-a-branch\n\
+                        brnach refs/heads/typo";
+        assert!(parse_worktree_branches(garbage).is_empty());
+    }
+
+    #[test]
+    fn parse_worktree_branches_reads_real_porcelain_output() {
+        // The shape `git worktree list --porcelain` actually produces:
+        // multiple worktree blocks, one of them detached (no `branch` line
+        // at all), separated by blank lines.
+        let out = "worktree /repo\n\
+                    HEAD abc123\n\
+                    branch refs/heads/main\n\
+                    \n\
+                    worktree /repo-wt/campaign-x\n\
+                    HEAD def456\n\
+                    branch refs/heads/campaign/x\n\
+                    \n\
+                    worktree /repo-wt/detached\n\
+                    HEAD 789abc\n\
+                    detached\n";
+        let branches = parse_worktree_branches(out);
+        assert_eq!(
+            branches,
+            BTreeSet::from(["main".to_string(), "campaign/x".to_string()]),
+            "must collect both real branches and skip the detached worktree: {branches:?}"
         );
     }
 
