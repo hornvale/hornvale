@@ -275,7 +275,9 @@ of the cell edge, and a discharge below the threshold at which the terrain
 already calls a reach a waterfall.
 
 Both quantities shipped in this stage, and neither waits on a consumer. The
-width is the innermost band edge stored at every vertex; the discharge is the
+innermost band edge stored at every vertex is the channel **half**-width — the
+full width is twice it, and anyone deriving a crossability threshold from that
+edge must double it first; the discharge is the
 same committed field the width law reads, tested against the same constant the
 existing cell-scale ford predicate uses. The transect sweep that scored the
 no-speckle prediction already strides the network vertex by vertex, which is

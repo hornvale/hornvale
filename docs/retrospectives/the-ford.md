@@ -335,8 +335,13 @@ stage 2 is required to state `X` with its derivation and to label doing so a
   identity holds on both sides of the repair, so it is a property of dropped
   singletons rather than of the anchoring.)
 - **`channel-land-fraction` returns `Number(0.0)` on a channel-free world**
-  while its two siblings return `Absent`. Defensible but asymmetric; census
-  consumers treat the two differently.
+  while its **four** siblings return `Absent`. (`channel-connectivity`,
+  `channel-band-monotonicity`, `-untruncated` and `channel-transect-dry-reach`
+  all return `Absent` when the transect sweep finds nothing;
+  `channel-land-fraction` returns `Absent` only when `land == 0`.) Defensible
+  but asymmetric; census consumers treat the two differently. The caveat now
+  ships in the metric's own doc string, and therefore in both `schema.json`
+  files and the generated Domesday page.
 - **Two `pub` parallel `Vec`s** (`polylines` / `band_edges`) carry an
   unenforced length invariant, and `band_edges[line][nearest]` is indexed
   unguarded. A hazard once stage 2 hands this to a window.
