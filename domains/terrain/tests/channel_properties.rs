@@ -1,6 +1,7 @@
 //! Channel-network properties on a real seed-42 world (The Ford, Task 5):
-//! the provider builds and exposes `ChannelNetwork`, and building it must
-//! never perturb determinism.
+//! the provider builds and exposes `ChannelNetwork`. See the comment above
+//! `provider_transverse_at_agrees_with_the_network` for why this file does
+//! not carry a pin-isolation test of its own.
 
 use hornvale_kernel::{CellId, Geosphere, Seed, math};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins, generate};
@@ -53,79 +54,38 @@ fn seed_42_has_channels_and_they_are_narrower_than_a_cell() {
     );
 }
 
-/// PIN ISOLATION, strengthened.
-///
-/// The brief's own version of this test built two terrains from the same
-/// seed and queried `.channels()` on only one, then compared
-/// `elevation_at`/`drainage_at` between them. That does not discriminate:
-/// `GeneratedTerrain::new` builds the channel network UNCONDITIONALLY at
-/// construction (Task 5's own design — "not lazily per call"), so both
-/// terrains already have a built network before either is queried, and
-/// `elevation_at`/`drainage_at` read fields `generate()` populated entirely
-/// BEFORE `GeneratedTerrain::new` (and therefore the channel network) ever
-/// runs. There is also no shared mutable RNG state in this codebase — every
-/// `Seed`/`Stream` is an explicit, pure value threaded by the caller — so
-/// two independent `generate()` calls from the same seed are guaranteed
-/// byte-identical regardless of anything the channel network does. The
-/// original test would pass even if `ChannelNetwork::build` secretly
-/// consumed a stream draw; it was asserting ordinary determinism, not pin
-/// isolation.
-///
-/// What WOULD actually indicate a stray draw or hidden global state is a
-/// later, wholly independent `generate()` call from the SAME seed
-/// diverging from a baseline that never touched the channel network at
-/// all. That is what this test checks: build a totally untouched baseline
-/// first, then separately build a terrain, exercise its channel network
-/// hard (build, `transverse_at` at many positions, `meander_at`), and
-/// finally call `generate()` again — a fresh, independent call — and
-/// diff it against the untouched baseline. A `static`/`thread_local`
-/// leak from channel-building into a later genesis call is exactly the
-/// class of defect this catches that the brief's version could not.
-#[test]
-fn querying_the_network_consumes_no_draws() {
-    let geo = Geosphere::new(TEST_LEVEL);
-    let baseline = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-
-    let terrain = build_seed_42_terrain();
-    let net = terrain.channels();
-    assert!(!net.polylines.is_empty(), "seed 42 has no channels at all");
-    // Exercise the network hard: every vertex of every polyline, plus a
-    // spread of off-line positions, so a stray draw anywhere in
-    // `transverse_at`/`meander_at` has many chances to show up.
-    for line in &net.polylines {
-        for &v in &line.points {
-            let _ = net.transverse_at(v);
-            let _ = net.meander_at(v);
-        }
-    }
-    for c in terrain.geosphere().cells().step_by(97) {
-        let _ = terrain.transverse_at(terrain.geosphere().position(c));
-    }
-
-    let after = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
-    assert_eq!(
-        after.globe, baseline.globe,
-        "an independent generate() call after heavy channel-network use diverged \
-         from a baseline that never touched the network — a stray draw or hidden \
-         global state"
-    );
-
-    // The brief's original comparison, kept as a cheap sanity check: the
-    // two terrains built from the same seed still agree everywhere.
-    let other = build_seed_42_terrain();
-    for c in terrain.geosphere().cells() {
-        assert_eq!(
-            terrain.elevation_at(c),
-            other.elevation_at(c),
-            "cell {c:?} diverged"
-        );
-        assert_eq!(
-            terrain.drainage_at(c),
-            other.drainage_at(c),
-            "cell {c:?} diverged"
-        );
-    }
-}
+// WHY THIS FILE HAS NO PIN-ISOLATION TEST.
+//
+// The brief's version built two terrains from the same seed, queried
+// `.channels()` on only one, and compared `elevation_at`/`drainage_at`
+// between them. It cannot discriminate: `GeneratedTerrain::new` builds the
+// channel network UNCONDITIONALLY at construction (Task 5's own design —
+// "not lazily per call"), so both terrains already have a built network
+// before either is queried, and `elevation_at`/`drainage_at` read fields
+// `generate()` populated entirely BEFORE `GeneratedTerrain::new` (and
+// therefore the channel network) ever runs.
+//
+// A first replacement attempt tried diffing a `generate()` baseline that
+// never touched the network against one taken after heavy channel-network
+// use, reasoning that a hidden global/`static` leak would show up there.
+// Review mutation-proved that one vacuous too: inserting a literal stray
+// draw at the top of `ChannelNetwork::build` (`seed.stream().next_f64()`)
+// left it green, because `build` takes `Seed` by value — a `Copy` type with
+// no interior mutability — so a draw off a `Stream` built from it is
+// structurally unobservable outside that call frame. What the test then
+// actually asserted (two `generate()` calls from the same seed agree) is
+// already covered by
+// `tectonic_properties.rs::genesis_is_deterministic_across_the_sweep`
+// (which includes seed 42), so it added cost without adding detection
+// power. A test whose name promises a property it cannot detect is worse
+// than no test — deleted rather than kept for appearances.
+//
+// The property this file's provider changes actually rely on — that no
+// caller of `channel_seed`/`channel_noise_seed` can derive any stream but
+// `streams::CHANNEL_MEANDER` — is enforced by the type itself: the field
+// stores the already-derived leg (see `TectonicGlobe::channel_seed`'s doc
+// in `globe.rs`), not the terrain-root seed, so there is no live draw
+// sequence left for a caller here to perturb even in principle.
 
 /// The provider's `transverse_at` delegates to the network's own — a
 /// smoke test that the two agree pointwise, since `provider.rs` must never

@@ -18,7 +18,6 @@
 
 use crate::crust::SphereFbm;
 use crate::globe::TectonicGlobe;
-use crate::streams;
 use crate::water::{RIVER_MIN_DRAINAGE, WaterKind};
 use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, band, math};
 use std::collections::BTreeSet;
@@ -297,12 +296,17 @@ impl ChannelNetwork {
     /// and following `downhill` to the sea, a terminal sink, or an
     /// already-claimed trunk. Runs of a single cell are dropped: one isolated
     /// river cell has no direction, and a one-point polyline is not a line.
-    pub fn build(globe: &TectonicGlobe, geo: &Geosphere, seed: Seed) -> ChannelNetwork {
-        let meander = SphereFbm::new(
-            seed.derive(streams::CHANNEL_MEANDER),
-            MEANDER_FREQUENCY,
-            MEANDER_OCTAVES,
-        );
+    ///
+    /// `meander_seed` must already be the derived `streams::CHANNEL_MEANDER`
+    /// leg (a caller holding the terrain-root seed derives it itself, the
+    /// same way every other hash-noise-only leg in this crate is derived
+    /// once and stored — see `TectonicGlobe::channel_noise_seed`). `build`
+    /// does not derive it again: a caller handed the ROOT seed here would
+    /// silently grant this network's build path the ability to derive any
+    /// other terrain stream, which is exactly the leak `channel_seed`'s own
+    /// doc warns against.
+    pub fn build(globe: &TectonicGlobe, geo: &Geosphere, meander_seed: Seed) -> ChannelNetwork {
+        let meander = SphereFbm::new(meander_seed, MEANDER_FREQUENCY, MEANDER_OCTAVES);
         let is_river = |c: CellId| matches!(*globe.water_kind.get(c), WaterKind::River);
 
         // In-degree within the river subgraph, as a dense Vec (CellId is a
@@ -476,6 +480,7 @@ fn meander_field(fbm: &SphereFbm, position: [f64; 3]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::streams;
 
     fn unit(x: f64, y: f64, z: f64) -> [f64; 3] {
         normalize([x, y, z])
@@ -818,8 +823,11 @@ mod tests {
         let geo = Geosphere::new(5);
         let outcome =
             crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
-        let net = ChannelNetwork::build(&outcome.globe, &geo, Seed(42));
-        let again = ChannelNetwork::build(&outcome.globe, &geo, Seed(42));
+        // The real production seed: the globe's own already-derived
+        // CHANNEL_MEANDER leg, exactly as `GeneratedTerrain::new` passes it.
+        let meander_seed = outcome.globe.channel_noise_seed();
+        let net = ChannelNetwork::build(&outcome.globe, &geo, meander_seed);
+        let again = ChannelNetwork::build(&outcome.globe, &geo, meander_seed);
         assert_eq!(net.polylines, again.polylines, "build is not deterministic");
         assert_eq!(net.band_edges, again.band_edges);
         assert!(

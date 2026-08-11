@@ -157,12 +157,13 @@ pub struct TectonicGlobe {
     /// Hash-noise seed for the subsurface-features point process (The Lode).
     pub features_seed: Seed,
     /// Hash-noise seed for the channel network's meander displacement field
-    /// (The Ford, Task 4/5). Stores `terrain_seed` itself rather than an
-    /// already-derived leg-child (unlike `lithology_seed`/`features_seed`),
-    /// because `ChannelNetwork::build` performs its own
-    /// `.derive(streams::CHANNEL_MEANDER)` internally. Hash-noise only —
-    /// never consumed as a `Stream`, so it carries no draw-order/save-format
-    /// contract.
+    /// (The Ford, Task 4/5): `terrain_seed.derive(streams::CHANNEL_MEANDER)`,
+    /// already the derived leg — a leaf exactly like `lithology_seed`/
+    /// `features_seed`, not the terrain-root seed itself.
+    /// `ChannelNetwork::build` uses it directly rather than deriving it
+    /// again. Hash-noise only — never consumed as a `Stream`, so it carries
+    /// no draw-order/save-format contract, and (being a leaf, not the root)
+    /// it cannot be used to derive any other terrain stream.
     pub channel_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
@@ -183,8 +184,8 @@ impl TectonicGlobe {
         self.features_seed
     }
 
-    /// The hash-noise seed `ChannelNetwork::build` derives
-    /// `streams::CHANNEL_MEANDER` from.
+    /// The already-derived `streams::CHANNEL_MEANDER` hash-noise seed
+    /// `ChannelNetwork::build` uses directly for the meander field.
     pub fn channel_noise_seed(&self) -> Seed {
         self.channel_seed
     }
@@ -487,11 +488,12 @@ pub fn generate(
     // only (`streams::FEATURES`) — never consumed as a `Stream`, so this is
     // not a new draw-order contract.
     let features_seed = terrain_seed.derive(streams::FEATURES);
-    // The channel network's meander field (The Ford, spec §5.2). Stores
-    // `terrain_seed` itself, not a pre-derived leg-child: `ChannelNetwork::build`
-    // performs its own `.derive(streams::CHANNEL_MEANDER)` — see
-    // `channel_seed`'s doc. Hash-noise only, no new draw-order contract.
-    let channel_seed = terrain_seed;
+    // The channel network's meander field (The Ford, spec §5.2). Stores the
+    // ALREADY-DERIVED leg, mirroring lithology_seed/features_seed above —
+    // a leaf, not the terrain root — so this field can never be used to
+    // derive any other terrain stream. Hash-noise only, no new draw-order
+    // contract.
+    let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
