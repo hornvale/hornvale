@@ -99,6 +99,51 @@ Two consequences the plan must carry:
 - **A private field means every read site needs an accessor**, so the 197
   readers change shape too. That is mechanical, but it is not small.
 
+### 2c. `founder_handle` is widened, riding this epoch
+
+Added 2026-08-11 at Nathan's direction. It is unrelated to the unit defect and
+would not justify an epoch of its own — but this campaign is already paying for
+one, so the marginal cost is zero and the window closes when The Ell lands.
+
+**The defect.** `founder_handle` (`domains/history/src/flesh.rs`) keys on
+`(people, site, founded, ended, peak_population, FOUNDER_ROLE)` and excludes
+the occupation's entity. Two occupations identical in those five collide **by
+construction**. The Radiation measured it reaching production — main panicked
+on seed 2793 and, on its own branch, on 283 and 705 *inside the census range* —
+and resolved it by **dropping** a colliding founder rather than failing
+(`07117d05`, an authorized fidelity cut). The consequence changed; the key did
+not. Verified on `8c61cbc5`: all three seeds now build clean.
+
+**The repair is already written in this crate, and merely unwired.**
+`record::founding_key_from` folds an occupation by `(people, site, founded)`
+plus **one hop of ancestry**, deliberately excluding everything after the
+founding. Its own doc says it *"feeds the founder role handle behind every
+person name"* — **it does not**; its callers are `windows/worldgen/src/descent.rs`
+and a test. That doc/reality gap is itself a finding.
+
+Wiring `founder_handle` onto that discipline does three things at once:
+
+- **the ancestry hop discriminates the colliding pairs** — every observed
+  collision is a same-day founding-and-flight cascade where one record's ender
+  is the other's parent, so the parent's own material facts separate them;
+- **it stops a founder's name depending on how their community later died**,
+  which `founding_key`'s rationale forbids and `founder_handle` currently does
+  through `ended` and `peak_population`;
+- **it makes the false doc true.**
+
+**On decision 0051.** The struck paragraph in `flesh.rs` read "`EntityId`-valued
+field" as a synonym for "unkeyable"; 0051 forbids keying on an id **as a value**
+— a mint counter that shifts when an unrelated domain mints earlier. Folding a
+*referent by its own material facts* is not that, and this crate already does it
+in three places. **A fact neither 0051 nor that correction accounts for:** The
+Signet made ids lineage-derived, so 0051's specific hazard no longer exists at
+all. This spec still does not key on the id — the material fold is stronger and
+does not depend on that being true — but the prohibition's foundation is worth
+recording as gone.
+
+**This changes every founder handle, and therefore every founder's name.** That
+is the epoch it rides.
+
 ## 3. What does not change
 
 - **`BakeConfig::start_year` / `end_year` stay years.** A history bake reasons
@@ -140,6 +185,19 @@ Frozen before the code that would move it (decision 0016).
 - **E5 — falsifiable, and the reason to preregister it.** No *non-history*
   domain's committed facts move. Six domains stamp day 0; if one of them
   drifts, the retype was not mechanical and this spec's §3 is wrong.
+- **E6 — the widened handle is unique across the cast, and nothing is dropped.**
+  Today a colliding founder is silently dropped. After §2c the drop count must
+  be **zero** on every seed measured, and handles must be unique across the
+  selected cast. Measure over **at least the census range 0-999**, not a
+  handful of seeds: The Radiation found its collisions at 283 and 705, which a
+  five-seed probe would have missed entirely.
+- **E7 — the discrimination is not free, and the null is worth having.**
+  `founding_key`'s exclusion of post-founding fields costs discrimination that
+  the ancestry hop is supposed to recover — measured stem-collision 8.4/3.3/3.6%
+  with ancestry against 27.7/14.8/16.2% without. Report the **founder-name**
+  collision rate before and after §2c. If names collide materially more often,
+  that is a real cost of the repair and ships as a finding, not as a reason to
+  retune the key.
 
 ## 6. Testing
 
