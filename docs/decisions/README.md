@@ -81,7 +81,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0039](0039-epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |
 | [0040](0040-nextest-is-the-gate-runner.md) | cargo-nextest is the gate's test runner | Accepted |
 | [0041](0041-libm-for-portable-transcendentals.md) | libm for portable transcendentals (amends 0004) | Accepted |
-| [0042](0042-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Accepted |
+| [0042](0042-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Superseded by 0125 |
 | [0043](0043-numbers-not-slugs.md) | Numbers, not slugs (supersedes 0026's decision-record naming) | Accepted |
 | [0044](0044-shared-units-live-in-the-kernel.md) | Shared units live in the kernel (refines 0008) | Accepted |
 | [0045](0045-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
@@ -164,3 +164,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0122](0122-an-emit-gate-is-not-a-grain-gate.md) | An emit gate is not a grain gate — a field's doc names the condition that makes it absent | Accepted |
 | [0123](0123-disclose-a-resolution-rather-than-refine-a-field.md) | When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail | Accepted |
 | [0124](0124-a-refinement-preregisters-a-conservation-criterion.md) | A refinement preregisters a conservation criterion, not only variation criteria | Accepted |
+| [0125](0125-github-actions-is-retired.md) | GitHub Actions is retired — every gate is local (supersedes 0042) | Accepted |

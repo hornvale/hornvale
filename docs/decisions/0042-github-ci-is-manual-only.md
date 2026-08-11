@@ -1,6 +1,6 @@
 # 0042. GitHub Actions CI is manual-only
 
-**Status:** Accepted (2026-07-13) · **Decider:** Nathan
+**Status:** Superseded by [0125](0125-github-actions-is-retired.md) (2026-08-11) · **Decider:** Nathan
 
 In the context of a one-person project whose primary dev machine (an M1 Max,
 10 cores) is markedly faster than GitHub's free 2-core runners, facing a

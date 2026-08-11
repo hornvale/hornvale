@@ -18,8 +18,8 @@ campaign, not a regression.
 from a 10,000-seed run of `studies/census-of-tongues.study.json`, executed
 once by hand at author time, in the same arrangement Studies 001, 002, 003,
 006, and 007 use for their own 10,000-seed headline runs. It is **not**
-committed and **not** part of CI — `.github/workflows/ci.yml` regenerates
-only `the-census` (1,000 seeds) in its "Artifacts are current" step;
+committed and **not** part of the drift-checked family — the once-per-campaign
+census refresh regenerates only `the-census` (1,000 seeds);
 `census-of-skies`, `census-of-lands`, `census-of-peoples`, `census-of-faiths`,
 and `census-of-eyes` are already author-time-only by the same precedent
 (only `census-of-skies` commits its raw output, per the overview above), and
