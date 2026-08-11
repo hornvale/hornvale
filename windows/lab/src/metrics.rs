@@ -8537,9 +8537,28 @@ mod tests {
         // named-goblin-settlement denominator moves again — the same placement
         // reshuffle every entry above records, with the naming machinery
         // untouched. Still inside the 2-3 target, the row's claim.
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 2.416_666_666_666_666_5 -> 2.375. WHAT MOVED IT IS NOT THE CENSUS.
+        // This row builds seed 42 live and reads no fixture, so the once-per-
+        // campaign census refresh cannot reach it. The mover is INSIDE this
+        // campaign: the value above was derived at `2bd26ff1` (the six elves),
+        // and the task-3 affinity relevel — `cda3e3c4` / `cbcf2935` /
+        // `8107faad`, which derive an affinity ladder's level instead of
+        // authoring it — re-placed every world afterwards. The campaign's
+        // standing rule was not to re-pin at task boundaries, so this row
+        // carried a known red from task 3 to here, which is why two Radiation
+        // paragraphs sit on one campaign.
+        //
+        // CORROBORATED, not merely re-run: the canonical 1000-world census
+        // authored on lefford at `07117d05` records `name-syllables-goblin`
+        // = 2.375 on its own seed-42 row. Two independent computations — a
+        // live `BuiltView` on this Mac and the census on the canonical box —
+        // land on the same value, which is stronger provenance than a green
+        // local re-run. Still inside the 2-3 target, the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.416_666_666_666_666_5)
+            MetricValue::Number(2.375)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -8650,9 +8669,31 @@ mod tests {
         // in the naming machinery (nothing in this campaign touches phonology,
         // wear or the namer). Both still inside the 2-3 target and kobold
         // still live rather than Absent — the whole of the row's claim.
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 2.734_693_877_551_020_3 -> 2.928_571_428_571_428_4. Same mover as
+        // the goblin row above and the same non-cause: this row builds seed
+        // 42 live and reads no fixture, so the census refresh cannot reach
+        // it; the task-3 affinity relevel (`cda3e3c4` / `cbcf2935` /
+        // `8107faad`) re-placed every world after the value above was derived
+        // at `2bd26ff1`. Kobold RISES 0.194 while goblin falls 0.042 —
+        // opposed once more, and by very different magnitudes, this row's
+        // stated signature of a placement reshuffle rather than a drift in
+        // the naming machinery (nothing in this campaign touches phonology,
+        // wear or the namer). Corroborated by the canonical census authored
+        // on lefford at `07117d05`, whose seed-42 row reads
+        // `name-syllables-kobold` = 2.9285714.
+        //
+        // **THE MARGIN IS NOW THIN AND SHOULD BE READ, NOT SKIMMED.** Both
+        // peoples are still inside the 2-3 target and kobold is still live
+        // rather than Absent — the whole of the row's claim — but kobold sits
+        // 0.071 below the ceiling, the narrowest this row has ever recorded,
+        // and it has risen at four of the last five passes. A pass that takes
+        // it above 3 falsifies the target and is a finding to report, not a
+        // bound to widen.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.734_693_877_551_020_3)
+            MetricValue::Number(2.928_571_428_571_428_4)
         );
     }
 
@@ -8786,7 +8827,32 @@ mod tests {
         // shift every re-pin above records. Still strictly between 0 and 1, so
         // the distribution claim — asserted separately above — holds. The
         // denominator is still not reachable here, so no fraction is invented.
-        assert_eq!(share, 0.546_875, "seed 42 transparency drifted");
+        //
+        // The Radiation, SECOND pass (C2d, task 6 step 1, 2026-08-10):
+        // 0.546_875 -> 0.6 EXACTLY. Same story as the name-syllables row
+        // above and the same non-cause: this row builds seed 42 live and
+        // reads no fixture, so the census refresh cannot reach it; the mover
+        // is the task-3 affinity relevel (`cda3e3c4` / `cbcf2935` /
+        // `8107faad`) re-placing every world after the value above was
+        // derived at `2bd26ff1`.
+        //
+        // THE ROUND VALUE IS BACK, AND IT IS STILL A COINCIDENCE. 0.6 exactly
+        // is what this row read before The Range, and the paragraph above
+        // argued from its not surviving one campaign that it was no fixed
+        // point. It has now recurred at a completely different placement:
+        // seed 42's `settlement-count` in the census goes 143 -> 230 between
+        // the two readings that both give 0.6. A quantity that lands on the
+        // same round value at two placements 60% apart in size is telling you
+        // its denominator is SMALL, not that it is pinned to anything. Still
+        // strictly between 0 and 1, so the distribution claim — asserted
+        // separately above — holds, and the denominator is still not
+        // reachable here, so no fraction is invented.
+        //
+        // CORROBORATED: the canonical census authored on lefford at
+        // `07117d05` records `name-transparency` = 0.6 on its own seed-42
+        // row (and 0.63636364 on the census this replaces, matching The
+        // Range's pin above). Two independent computations agree.
+        assert_eq!(share, 0.6, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -9524,14 +9590,49 @@ mod tests {
         // different world. Read no continuity into the seed number. A witness
         // is re-DERIVED by the sweep above, never bumped to whatever makes
         // the old subject pass — that would turn a witness into a claim.
-        let view = FullView::build(Seed(7), &SkyPins::default()).unwrap();
+        // SIXTH PASS (The Radiation, C2d, task 6 step 1, 2026-08-10). The
+        // fifth pass above was derived at `2bd26ff1`; the task-3 affinity
+        // relevel (`cda3e3c4` / `cbcf2935` / `8107faad`) then re-placed every
+        // world and seed 7's bugbears stopped rooting `island`. The
+        // precondition below caught it rather than letting the test pass on
+        // nothing — the sixth time it has done so, and the reason it is
+        // written as a precondition at all. (Its sibling test above did NOT
+        // have this line and consequently spent the same campaign reporting a
+        // stale duplicate that was not stale; that has now been repaired
+        // there by copying this shape.)
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people (read dynamically off `FullView::components().perception`)
+        // and took the earliest pair rooting AND steeping BOTH concepts. That
+        // is **(2, bugbear)**. NINETEEN pairs qualify (2/bugbear, 2/gnoll,
+        // 2/high-elf, 11/drow, 11/gully-dwarf, 14/high-elf, 15/snow-elf,
+        // 16/bugbear, 17/hobgoblin, 24/bugbear, 34/human, 38/bugbear,
+        // 46/high-elf, 46/hobgoblin, 47/hobgoblin, 51/bugbear, 54/bugbear,
+        // 58/gnoll, 59/desert-dwarf) — against fourteen, twenty-one,
+        // twenty-six, twenty-three and twenty-one before it, so the fifth
+        // pass's thinning REVERSED and this population is the second-largest
+        // this test has recorded. Four of the nineteen are elves.
+        //
+        // **THE ROOT AND STEEP SETS COINCIDE EXACTLY: 19 pairs root both
+        // concepts and all 19 also steep both.** The sweep counted them
+        // separately in order to be able to say so. The duplicate is
+        // therefore sound on this axis everywhere it can be checked, and this
+        // test passes on its merits rather than on a lenient subject.
+        //
+        // The seed returns 7 -> 2 and the species stays bugbear — back to the
+        // pair The Range chose. Read no continuity into that: it is the
+        // earliest qualifying pair under the same selection-free rule, in a
+        // world re-placed twice since. Same-seed corroboration is back and is
+        // DOUBLE this time: (2, gnoll) and (2, high-elf) both qualify in the
+        // same world, so this witness is not load-bearing alone.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 7 bugbears hold a lexicon");
+        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 7 bugbears must root {concept} for this test to bite"
+                "seed 2 bugbears must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -11208,10 +11309,84 @@ mod tests {
         // number is exactly what makes this easy to misread as continuity; it
         // is not. The witness is re-DERIVED by the sweep above, never bumped
         // to whatever keeps the old subject green.
-        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
-        let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+        // SIXTH PASS (The Radiation, C2d, task 6 step 1, 2026-08-10). The
+        // fifth pass above was derived at `2bd26ff1`; the task-3 affinity
+        // relevel (`cda3e3c4` / `cbcf2935` / `8107faad`) then re-placed every
+        // world and seed 5's bugbear lost its millet band. Re-swept 0..150 by
+        // the identical method (every placed people read dynamically off
+        // `FullView::components().perception`).
+        //
+        // **THE MESSAGE THIS TEST FAILED WITH WAS FALSE, AND THAT IS THE
+        // FINDING.** It read "the lab's independent reading does not steep
+        // millet, which worldgen does — the duplicate is stale again".
+        // Measured at the outgoing subject: seed 5's bugbear has `millet`
+        // rooted=FALSE in the committed lexicon and dup_steeped=FALSE in
+        // `independently_steeped_concepts`. The two AGREE. Worldgen stopped
+        // steeping millet there too; nothing about the duplicate went stale.
+        //
+        // The cause was structural, not accidental. The sweep's criterion is
+        // "worldgen roots all six staples", but that criterion lived only in
+        // this comment — the test body asserted the duplicate's side and
+        // nothing else, so it could not tell "the duplicate drifted" (the
+        // failure it is named for) from "the subject's world moved" (a stale
+        // witness). It has now reported the wrong one, which is exactly the
+        // shape this campaign is about: a check that still reads as though it
+        // guards something after drifting one level away from it.
+        //
+        // **REPAIRED, not re-pinned around:** the sweep's criterion is now
+        // asserted in the body as a precondition, the way this test's
+        // island/hill sibling has always done it. A moved witness now fails
+        // saying so, and only a genuine divergence can reach the second
+        // assertion. The sibling's phrasing is copied deliberately.
+        //
+        // NINE qualifying pairs — (14, high-elf), (16, bugbear),
+        // (66, hobgoblin), (84, hobgoblin), (85, hill-dwarf), (85, human),
+        // (94, hobgoblin), (108, hobgoblin), (148, hobgoblin) — against
+        // fifteen before it, and three, eleven, seven, four and three before
+        // that. The count now reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 across
+        // seven roster changes: still not monotone in anything, and still a
+        // re-sweep rather than an extrapolation every time.
+        //
+        // **THE DUPLICATE AGREES ON ALL NINE.** The sweep recorded, for each
+        // qualifying pair, whether `independently_steeped_concepts` steeps
+        // all six as well; 9 of 9 do. So the second opinion is currently
+        // sound on this axis everywhere it can be checked, and this test
+        // passes on its merits rather than because a lenient subject was
+        // chosen. (That is a claim about the STAPLE axis only. The known
+        // stale axis — whole-lexicon exposure soundness, where the duplicate
+        // has not learned The Watershed's rules — is a different one, is
+        // already diagnosed, and carries its own ignore at
+        // `calibration.rs::lexicon_is_exposure_sound_for_both_species`.)
+        //
+        // Witness is **(14, high-elf)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used. For the FIRST time
+        // in this test's history the witness is an ELF, i.e. one of the
+        // peoples this campaign added; the fifth pass observed that "not one
+        // of the fifteen is an elf", and one roster-wide replacement later a
+        // new people spans all six farmable bands and carries the row. No
+        // same-seed second species at 14, so this witness is load-bearing
+        // alone; (85, hill-dwarf) and (85, human) do corroborate each other,
+        // but selecting them over the earliest pair would be a choice, and
+        // this test does not make choices.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 5 -> 14 and bugbear ->
+        // high-elf: a different world AND a different people. Nothing below
+        // is comparable line-for-line with the previous commit.
+        let view = FullView::build(Seed(14), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "high-elf").expect("seed 14 high-elves hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "high-elf")
+            .expect("high-elf is placed at seed 14");
         for staple in STAPLE_CONCEPTS {
+            // The sweep's own criterion, asserted rather than assumed: this
+            // test bites only where WORLDGEN steeps the staple, and a lexicon
+            // `Root` is minted only from a `Steeped` classification. Without
+            // this line a moved witness is indistinguishable from a stale
+            // duplicate, and the test spent a whole campaign reporting the
+            // wrong one.
+            assert!(
+                matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
+                "seed 14 high-elves must root {staple} for this test to bite"
+            );
             assert!(
                 steeped.contains(staple),
                 "the lab's independent reading does not steep {staple}, which \

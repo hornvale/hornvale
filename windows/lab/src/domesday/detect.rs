@@ -1406,9 +1406,29 @@ mod tests {
         // flattering number; the threshold is untouched. This assertion now
         // pins the measured count so a change to D1 or to `role` is still
         // caught. If it moves, find out why before updating it.
+        //
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): 27 -> 29. INVESTIGATED
+        // BEFORE RE-PINNING, as the paragraph above requires, by diffing the
+        // per-column top-value share between the old and new `rows.csv`
+        // across all 29 firing columns. The +2 is entirely
+        // `flagship-coastal` and `goblin-flagship-coastal` — the same
+        // underlying quantity published under two names — crossing the
+        // frozen 0.80 bar from 78.3% (781/998) to 80.4% (804/1000) as six new
+        // settling peoples push goblin's flagship inland. Every other firing
+        // column was already above the bar and stays there; none dropped off.
+        //
+        // TWO THINGS A LATER READER SHOULD NOT MISREAD. First, the campaign's
+        // OWN new metric contributes nothing here: `monophyly-elf` reads true
+        // on 1000 of 1000 worlds and does not fire D1 at all, because D1 only
+        // considers columns whose `role` is `descriptor`. Second, 80.4%
+        // clears the bar by 0.4 percentage points — 4 worlds. This is a
+        // measurement sitting on an edge, not a settled degeneracy, and the
+        // honest reading is that flagship coastality is now marginally
+        // degenerate rather than that it became degenerate.
         let d1 = f.iter().filter(|x| x.detector == "D1").count();
         assert_eq!(
-            d1, 27,
+            d1, 29,
             "D1 hit count changed; investigate before re-pinning"
         );
 
@@ -1469,9 +1489,44 @@ mod tests {
         //
         // These counts are a measurement to investigate, not a target: if
         // any moves, find out why before updating it.
+        // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+        // lefford at 07117d05, goldens 6df8935c): D5 strength 19 -> 20.
+        //
+        // **THE WARNING DIRECTLY ABOVE HAS BEEN SPENT, EXACTLY AS WRITTEN.**
+        // It named two rows sitting within 0.011 of a band edge and said that
+        // either crossing would drop that row out of the direction-eligible
+        // set and take the "zero backwards out of 3" denominator to 2. Row
+        // #28, `climate-displacement-events` tracking `habitable-fraction`,
+        // has crossed: r = -0.310 (moderate, matching its declared band, and
+        // therefore silent AND direction-eligible) -> r = -0.278, which is
+        // `weak` and no longer matches the declared `moderate`. It is
+        // therefore now a strength mismatch, which is the entire +1. Row #15
+        // (`karst-fraction`/`mean-land-temperature-c`) did NOT cross and is
+        // still silent; row #25 (`pop-weighted-abs-latitude`/
+        // `mean-land-temperature-c`) did not either. INVESTIGATED before
+        // re-pinning by listing every D5-family finding at this census and
+        // diffing the roster against The Armature's; #28 is the only entrant
+        // and nothing left.
+        //
+        // **WHAT A LATER READER MUST CARRY FORWARD.** `d5_direction` below is
+        // still 0 and it is still asserted at 0 — but its meaning has
+        // changed, and the assertion cannot say so. It now reads "zero
+        // backwards links out of **2** eligible rows", not out of 3. The
+        // frame's headline null is resting on one fewer observation than the
+        // sentence above it describes, and the story in the paragraphs above
+        // — written for a 3-row denominator — is the one that is now stale.
+        // The count is a measurement to investigate, not a target; the
+        // denominator is part of the measurement.
+        //
+        // CAUSE, no more narrowly than measured: `climate-displacement-events`
+        // is one of the 80 columns this campaign's roster change moved, and
+        // by one of the largest margins in the census (mean 114.27 -> 180.27,
+        // +57.8%). Its correlation with `habitable-fraction` weakening as its
+        // own distribution moves that far is unsurprising; nothing here says
+        // which of the six new peoples did it, because nothing measured that.
         let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
         assert_eq!(
-            d5_strength, 19,
+            d5_strength, 20,
             "D5 strength hit count changed; investigate before re-pinning"
         );
         let d5_unmeasurable = f.iter().filter(|x| x.detector == "D5 unmeasurable").count();

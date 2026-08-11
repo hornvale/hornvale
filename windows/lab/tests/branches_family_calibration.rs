@@ -648,10 +648,41 @@ fn homophony_count_is_measured_and_pinned() {
     // These re-pin the witnesses, not the observation. Each mean is again an
     // exact integer count over the 1000-seed census divided by 1000 (4863,
     // 4822, 16197, 5131).
-    assert!((mg - 4.863).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 4.822).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 16.197).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 5.131).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Radiation's (C2d) close regen (2026-08-10, canonical census on
+    // lefford at 07117d05, goldens 6df8935c): goblin 4.863 -> 6.061,
+    // hobgoblin 4.822 -> 5.784, bugbear 16.197 -> 19.668, kobold 5.131 ->
+    // 5.924. All four rise together — the roster-competition signature — and
+    // by far the largest jump this row has recorded (+21% to +25% each): six
+    // new settling peoples take the settling roster from nine to fifteen, so
+    // every world's settlement contest, each daughter's surviving periphery,
+    // and the naming draws over it are decided among fifteen competitors
+    // instead of nine. No narrower cause is asserted, because none was
+    // measured. Note the six new peoples are ELVES, a different family: they
+    // add no goblinoid daughter, so nothing here is a within-family
+    // arithmetic effect.
+    //
+    // THE STANDING WARNING IS NOW SPENT, AND THIS IS THE PART TO READ BEFORE
+    // TOUCHING ANYTHING. The claim was re-checked rather than assumed and it
+    // HOLDS — bugbear still leads — but the binding margin is now the
+    // NARROWEST IN THIS ROW'S HISTORY: bugbear leads by 3.245x over goblin
+    // (against 3.331x before, and against The Tolerance's 3.25x, which every
+    // prior paragraph named as the record). Hobgoblin's margin went the other
+    // way, 3.359x -> 3.400x, so goblin is emphatically the binding daughter
+    // and it alone is closing. Three successive regens have now narrowed it
+    // (3.345 -> 3.331 -> 3.245), and the last step is five times the size of
+    // either before it.
+    //
+    // The falsification threshold is unchanged and is NOT to be widened: a
+    // regen that takes the goblin ratio below 3x falsifies the claim
+    // outright, and that is a finding to report. At the current rate of
+    // closing that is one to two campaigns away. These re-pin the witnesses,
+    // not the observation. Each mean is again an exact integer count over the
+    // 1000-seed census divided by 1000 (6061, 5784, 19668, 5924).
+    assert!((mg - 6.061).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 5.784).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 19.668).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.924).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
