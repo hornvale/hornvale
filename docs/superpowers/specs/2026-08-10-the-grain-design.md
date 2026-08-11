@@ -257,6 +257,23 @@ Not a discovery claim — a regression guard on a property the code already has
 and never checked. It fails against `dd523ab2`, which is what makes it worth
 writing.
 
+> **Measured: all four members covered.** A mid-campaign note claimed the test
+> reached only three of the four; that was wrong, and Task 4 corrected it with
+> file:line evidence. `dominant_corner`'s documented invariant
+> (`windows/locale/src/lib.rs:220-227`) names exactly those four, and the test at
+> `lib.rs:1337` covers all of them.
+>
+> **The real gap is a separate, fifth claim, and it is untested.** Two other
+> paths resolve a cell for a room and do *not* use `dominant_corner`:
+> `chamber_column_here` (the cave `delve` reads) and `column_here` (the water
+> column `dive` reads) both break weight ties with `max_by_key` — last-max wins —
+> against `dominant_corner`'s lowest-`CellId`. On an exact integer-weight tie
+> they can name a different cell than `biome`/`water`/`substrate`/rock do. That
+> divergence predates this campaign, is out of its scope, and is recorded rather
+> than fixed. **It needs a decision: either those two paths join the invariant,
+> or they are exempted in writing.** Leaving it as a comment is the failure mode
+> this campaign already documented once.
+
 **H5 (new, and it is a conservation criterion, not a preference).** Aggregating
 room-level water back over a canonical cell reproduces that cell's own water
 kind. Nearest-corner assignment satisfies this by construction; any future
