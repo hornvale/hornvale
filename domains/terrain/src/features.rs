@@ -20,6 +20,22 @@ pub enum CaveKind {
     Fracture,
 }
 
+impl CaveKind {
+    /// The three cave-kind names in stable order — the self-describing
+    /// legend for scene emission (mirrors `WaterKind::LEGEND`).
+    pub const LEGEND: [&'static str; 3] = ["karst", "lava-tube", "fracture"];
+
+    /// Stable name, for scene emission.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(self) -> &'static str {
+        match self {
+            CaveKind::Karst => "karst",
+            CaveKind::LavaTube => "lava-tube",
+            CaveKind::Fracture => "fracture",
+        }
+    }
+}
+
 /// A located cave at a cell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cave {
@@ -543,6 +559,20 @@ mod tests {
             soil_depth: SoilDepth::new(1.0),
             basement: Basement::Continental,
             thaumic: 0.0,
+        }
+    }
+
+    /// Mirrors `water.rs`'s `water_kind_index_name_and_legend_are_stable`:
+    /// `LEGEND` and `name()` must agree for all three variants, in
+    /// declaration order.
+    #[test]
+    fn cave_kind_legend_and_name_agree_for_all_three_variants() {
+        assert_eq!(CaveKind::LEGEND, ["karst", "lava-tube", "fracture"]);
+        for (i, kind) in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture]
+            .into_iter()
+            .enumerate()
+        {
+            assert_eq!(CaveKind::LEGEND[i], kind.name());
         }
     }
 

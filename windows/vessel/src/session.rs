@@ -948,7 +948,7 @@ impl<'w> Session<'w> {
             // `purview(0)` is the same call `map` makes out of doors, at the
             // same zoom, so the pane shows what the verb would have shown.
             None => SpatialChannel::Walk {
-                chart: self.purview(0)?,
+                chart: Box::new(self.purview(0)?),
             },
         };
 

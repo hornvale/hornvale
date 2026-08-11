@@ -679,6 +679,18 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-10T14:34:48Z | rebaseline | 128.926 | 160.771 | 11.007 | 1.33 | 0 | 147dab73 | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-10T14:46:29Z | gate | 511.306 | 2143.033 | 120.630 | 4.43 | 0 | 9bf32382 | campaign/the-particular | MacBookPro | 10 |
 | 2026-08-10T16:01:59Z | gate | 268.627 | 2070.073 | 103.159 | 8.09 | 0 | 4a8123bd | campaign/the-particular | MacBookPro | 10 |
+| 2026-08-10T22:50:41Z | rebaseline | 132.896 | 156.361 | 10.299 | 1.25 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T22:51:44Z | gate | 5.565 | 4.144 | 1.010 | 0.93 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T23:15:10Z | gate | 572.319 | 2409.113 | 202.108 | 4.56 | 0 | 29b9cfcd | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T23:43:42Z | rebaseline | 174.264 | 155.550 | 10.153 | 0.95 | 0 | cc171e04 | campaign/the-grain | ambrose | 12 |
+| 2026-08-10T23:52:37Z | gate | 475.885 | 2100.280 | 210.312 | 4.86 | 0 | cc171e04 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T00:03:10Z | gate | 487.473 | 2366.972 | 173.618 | 5.21 | 0 | cc171e04 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T00:21:07Z | rebaseline | 112.138 | 159.709 | 11.029 | 1.52 | 0 | 208b1795 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T00:36:47Z | gate | 581.556 | 2378.197 | 211.451 | 4.45 | 0 | 208b1795 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T01:18:19Z | rebaseline | 125.800 | 157.022 | 10.345 | 1.33 | 0 | 582dfcb9 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T01:29:51Z | gate | 602.152 | 2428.010 | 215.761 | 4.39 | 0 | 0037ff40 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T02:33:37Z | gate | 756.198 | 2380.987 | 223.809 | 3.44 | 0 | 3cc002c7 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T03:12:17Z | census | 742.780 | 21271.996 | 326.765 | 29.08 | 0 | 2b3aa426 |  | lefford | 40 |
 | 2026-08-10T18:31:52Z | rebaseline | 128.235 | 218.085 | 12.916 | 1.80 | 0 | cb40aa16 | the-radiation | MacBookPro | 10 |
 | 2026-08-10T18:50:33Z | rebaseline | 115.718 | 211.740 | 12.154 | 1.93 | 0 | 2a7d77cc | the-radiation | MacBookPro | 10 |
 | 2026-08-10T19:18:43Z | rebaseline | 117.257 | 210.628 | 13.128 | 1.91 | 0 | 5eab416a | the-radiation | MacBookPro | 10 |
@@ -690,3 +702,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-11T02:48:23Z | rebaseline | 142.557 | 217.672 | 13.578 | 1.62 | 0 | 581468bb | the-radiation | MacBookPro | 10 |
 | 2026-08-11T02:55:23Z | rebaseline | 128.923 | 215.188 | 13.967 | 1.78 | 0 | 581468bb | the-radiation | MacBookPro | 10 |
 | 2026-08-11T03:27:22Z | rebaseline | 123.628 | 212.751 | 13.432 | 1.83 | 0 | cfc028b8 | the-radiation | MacBookPro | 10 |
+| 2026-08-11T12:48:34Z | rebaseline | 210.198 | 221.922 | 15.190 | 1.13 | 0 | 9137c6ee | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T13:12:06Z | gate | 871.123 | 3621.770 | 280.788 | 4.48 | 0 | fefdde7c | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T13:20:28Z | rebaseline | 135.236 | 217.349 | 12.887 | 1.70 | 0 | e4e32877 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T13:32:40Z | gate | 684.332 | 3120.950 | 203.679 | 4.86 | 0 | a5874f81 | campaign/the-grain | ambrose | 12 |
+| 2026-08-11T13:54:56Z | gate | 795.773 | 2784.123 | 218.544 | 3.77 | 0 | 08656f2a | campaign/the-grain | ambrose | 12 |
