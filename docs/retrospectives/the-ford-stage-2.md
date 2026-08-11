@@ -82,13 +82,25 @@ whose reference lives inside the thing it checks:
    from the same inputs: it proves the clause is *live*, not that it is
    *right* (deferred, below).
 
-Two repairs generalize. For (3), **move the reference outside the object**:
+Three repairs generalize. For (3), **move the reference outside the object**:
 H2-3 now recomputes from the serialized, quantized JSON, so what survives is a
 real claim (the document is self-sufficient and quantization does not flip a
 band) rather than a tautology. For (4), **choose a population where every
 other clause is pre-satisfied by construction**, so the clause under test is
 the only thing that can decide the outcome — the reviewer named that the
 correct general repair shape, and it is worth reusing by name.
+
+The third is the one this write-up originally left in the findings and never
+promoted, which is itself the lesson that a repair list is only as good as the
+sweep that fills it: **choose a denominator that exists independently of the
+criterion**, and where no such population is available, score the claim
+against the world's own ordering rather than against the threshold. H2-4's
+denominator became transects of the network rather than sign-differing pairs
+for the first reason; §8's discharge clause is guarded by *the strongest
+crossing in the world is not a ford, the weakest is* for the second. An
+ordering claim cannot restate a constant, so it holds for any threshold
+between the two extremes — which is precisely what makes it a reference and
+not a mirror.
 
 ## 3. A crate-scoped green is not a branch-green
 
@@ -377,16 +389,28 @@ the scratch:
 
 - `windows/locale/tests/water_reading.rs` — `grid_level == ctx.globe_level()`
   compares the field to its own source (tautological; §2 item 5).
+  **Closed in the post-merge sweep**: it now reads the level from the
+  geosphere the terrain was actually built on
+  (`ctx.terrain().geosphere().level()`), which is a different path from the
+  cached field the disclosure is populated from.
 - The width positive control's expected value restates the clause from the
   same inputs (§2 item 6), and it filters on `room_edge(&a.home)` while
   `crossing_between` uses `room_edge(a).min(room_edge(b))` and each room's own
   `band_edges[0]`: 98 of 98 today, one-sided-fragile under terrain drift.
+  **Closed in the post-merge sweep**: the precondition is now stated over
+  `Transect::step_lengths` — the same `min(home, step)` the gate prices
+  against — and the population narrowed to 96, still flipping at 100%. The two
+  pairs that dropped are exactly the ones where the two quantities disagreed.
 - The `usable >= 200` floor no longer guards what its comment says — the only
   remaining drop cause is documented unreachable, so it now guards network
-  shrinkage rather than selection bias.
+  shrinkage rather than selection bias. **Closed in the post-merge sweep**:
+  the comment now says that, and says why it changed meaning (the instrument
+  went from probe-and-filter to construct-from-steps).
 - `room_edge(&transects[0].home)` indexes element 0 before the emptiness
   check, so an empty population panics in the print rather than failing the
-  informative floor.
+  informative floor. **Closed in the post-merge sweep**: the floor moved above
+  the print, and the step-sweep loop reports an empty row instead of indexing
+  into it.
 - `describe` now pays roughly a thousand transcendentals per call (144
   polylines × `acos` per segment) **inside the cached path** — about
   0.2–0.5 ms per room, tens of milliseconds per surrounds build. Bounded, not
@@ -394,7 +418,7 @@ the scratch:
   `RoomMeshMemo`, not `ChannelNetwork`.
 - `windows/locale/tests/water_reading.rs:861` assumes a fixture line ends in
   `}` (`&old[..old.len()-1]`) — would fail loudly rather than wrongly;
-  `strip_suffix` is the fix.
+  `strip_suffix` is the fix. **Closed in the post-merge sweep.**
 - The disclosure roster repeats per room: `session-seed-42.json` grew
   65,649 → 67,817 bytes (+3.3%), about 271 B per embedded room. Inherent to
   the mandated shape (scene emits one per document, locale one per room).

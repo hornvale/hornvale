@@ -6,9 +6,10 @@ Process lessons, not product. The product is in
 becomes the banding of a signed distance to a polyline network.
 
 **This is a stage retrospective, not a campaign one.** The Ford's spec §9 lays
-out five stages; only the first has shipped. Stages 2 (`locale/room/v3` — **in
-the event, stage 2 shipped with NO epoch, appending to `locale/room/v2`; see
-[the stage-2 retrospective](./the-ford-stage-2.md)**),
+out five stages; when this was written only the first had shipped, and **stage
+2 has since shipped too** — see [the stage-2
+retrospective](./the-ford-stage-2.md). Stages 2 (`locale/room/v3` — **in the
+event, stage 2 shipped with NO epoch, appending to `locale/room/v2`**),
 3 (riparian conditioning) and 4 (scene emission) are separate plans, and
 `MAP-ford-subcell-water` stays `spec'd` until they land. Two of the five
 preregistered hypotheses — H3 (the ford exists) and H5 (the conditioning null)

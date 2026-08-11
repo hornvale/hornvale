@@ -81,7 +81,13 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
             .expect("the new key is present");
         // The old document minus its closing brace IS the new document's
         // prefix, if and only if nothing before the appended keys moved.
-        let expected = &old[..old.len() - 1];
+        // `strip_suffix` rather than `&old[..old.len() - 1]` so the assumption
+        // that a fixture line ends in `}` is stated where it is made: a
+        // recapture that ever emitted a trailing newline would otherwise trim
+        // that instead, and compare a prefix one byte short of the real one.
+        let expected = old
+            .strip_suffix('}')
+            .expect("every fixture line is one complete JSON document");
         assert_eq!(
             &json[..cut],
             expected,
@@ -280,10 +286,26 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
         ["channel_bands"],
         "the per-vertex band geometry, and only it"
     );
-    assert_eq!(loc.resolution.grid_level, ctx.globe_level());
+    // Read the grid level from the TERRAIN's geosphere, not from
+    // `ctx.globe_level()` — that accessor returns the very field the
+    // disclosure is populated from, so asserting against it compares a value
+    // to its own source and holds however wrong the cached level is.
+    //
+    // The terrain is not merely a different accessor, it is a different
+    // object: `LocaleContext` caches `globe_level` from the CLIMATE geosphere
+    // (`lib.rs:498`), so this also cross-checks that the two domains were
+    // built on the same grid — a disagreement the disclosure would otherwise
+    // report with a straight face. The committed
+    // `book/src/reference/locale-seed-42.json` pins the literal 6 as well, but
+    // a drift check is not a unit test's reference.
+    assert_eq!(
+        loc.resolution.grid_level,
+        ctx.terrain().geosphere().level(),
+        "the disclosed grid level must be the level the terrain was built on"
+    );
     assert_eq!(
         loc.resolution.depth_below_grid,
-        room.depth() - ctx.globe_level()
+        room.depth() - ctx.terrain().geosphere().level()
     );
 
     // Deliberately in NEITHER list, with the reason. The reasons differ, which
@@ -406,9 +428,16 @@ const CROSSINGS_FLOOR: usize = 60;
 /// — the smallest population any assertion here runs on, and the reason the
 /// ordering claim rather than this count is the primary reference.
 const STRONG_CROSSINGS_FLOOR: usize = 4;
-/// Vertices that flip verdict on the step length alone. Measured 98 of 98
+/// Vertices that flip verdict on the step length alone. Measured **96 of 96**
 /// examined — every pair that reaches the assertion flips, which is what a
 /// clause deciding something looks like.
+///
+/// It read 98 of 98 until the precondition was restated over the step lengths
+/// the gate actually prices against (`min(home, step)` per step) instead of the
+/// home room's edge alone. The two pairs that dropped out are the ones where
+/// those two quantities disagreed — i.e. exactly the pairs the old filter was
+/// admitting on a quantity the gate does not use. A narrower population that
+/// still flips at 100% is the better instrument.
 const WIDTH_FLIP_FLOOR: usize = 50;
 
 /// Walk depth: six refinement levels below the canonical grid.
@@ -512,6 +541,25 @@ impl Transect {
         } else {
             Crossing::NotACrossing
         }
+    }
+
+    /// The step lengths `crossing_between` will actually price this transect's
+    /// three steps against — `room_edge(home).min(room_edge(step))`, per step.
+    ///
+    /// Published as its own helper because a test that filters on
+    /// `room_edge(&home)` alone is asserting against a DIFFERENT quantity than
+    /// the gate uses: two rooms of one mesh step can carry slightly different
+    /// edges, and the gate takes the shorter. Filtering on the home edge and
+    /// then asserting on the gate's verdict is one-sided — it holds only while
+    /// the two happen to agree, and fails as a spurious red rather than a
+    /// silent green when they stop.
+    fn step_lengths(&self) -> [f64; 3] {
+        let home = room_edge(&self.home);
+        [
+            home.min(room_edge(&self.steps[0])),
+            home.min(room_edge(&self.steps[1])),
+            home.min(room_edge(&self.steps[2])),
+        ]
     }
 }
 
@@ -858,6 +906,26 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 
     let usable = transects.len();
     let frac = fordable as f64 / usable as f64;
+
+    // This floor comes BEFORE the diagnostic print, which indexes
+    // `transects[0]` for the step length: on an empty population the print
+    // would panic with a slice-index message and the reader would never see
+    // the floor's explanation of what actually went wrong.
+    //
+    // What it guards, precisely, is NOT what it originally guarded. When it
+    // was written, transects were probed and then filtered, so a collapsed
+    // denominator meant selection bias. Since the instrument was rebuilt to
+    // CONSTRUCT each transect from a room and its own `neighbors()`, both drop
+    // causes became structurally impossible and `|V'| = |V|` always. So this
+    // now guards the network shrinking — a terrain change that stops producing
+    // polylines — not the sample selecting itself. Measured |V'| = 341 of 341
+    // sampled (681 vertices, stride 2), no drops.
+    assert!(
+        usable >= 200,
+        "only {usable} usable transects of {sampled} sampled ({drops:?}); the fraction is an \
+         anecdote"
+    );
+
     println!(
         "H2-4 (seed 42, level {}, walk depth {}, step = one room edge = {:e} rad):\n  \
          |V| sampled vertices      = {sampled}\n  \
@@ -888,6 +956,13 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     for delta in [-1i32, 0, 1, 2, 3] {
         let depth = (walk_depth(&ctx) as i32 + delta) as u32;
         let (ts, dr, seen) = transects_at(&ctx, 400, depth);
+        // A sweep row is diagnostic, not asserted, so an empty population here
+        // must report itself rather than panic on `ts[0]` and take the whole
+        // witness down with it.
+        let Some(first) = ts.first() else {
+            println!("  depth {depth}: no usable transects of {seen} sampled, drops {dr:?}");
+            continue;
+        };
         let f = ts
             .iter()
             .filter(|t| t.verdict(&ctx) == Crossing::Fordable)
@@ -895,20 +970,12 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
         println!(
             "  depth {depth} (step {:e} rad): fordable {f}/{} of {seen} sampled ({:.4}), \
              drops {dr:?}",
-            room_edge(&ts[0].home),
+            room_edge(&first.home),
             ts.len(),
             f as f64 / ts.len() as f64
         );
     }
 
-    // Anti-vacuity: a fraction over a handful of transects is an anecdote, and
-    // a denominator that collapsed would make any fraction reachable. Measured
-    // |V'| = 341 of 341 sampled (681 vertices, stride 2), no drops.
-    assert!(
-        usable >= 200,
-        "only {usable} usable transects of {sampled} sampled ({drops:?}); the fraction is an \
-         anecdote"
-    );
     // A WITNESS, not a hypothesis test — see the note above. It pins today's
     // reading and reddens if it moves; passing it is not a confirmation of
     // H2-4, which is not resolved.
@@ -1025,9 +1092,11 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 /// discharge — Fordable at walk depth, Impassable three levels down.** Only the
 /// traversal unit changed, which is precisely what §8 claims to measure.
 ///
-/// The references are outside `crossing_between`: the room edge at each depth
-/// comes from the mesh (`room_edge`), the channel width from the network's own
-/// `band_edges`, and every pair is required to be QUIET (`Q` below the
+/// The references are outside `crossing_between`: the step lengths at each
+/// depth come from the mesh (`Transect::step_lengths`, which is the same
+/// `min(home, step)` the gate prices against — not the home room's edge alone,
+/// which would be a different quantity), the channel width from the network's
+/// own `band_edges`, and every pair is required to be QUIET (`Q` below the
 /// discharge threshold) so the other clause cannot be what flipped the verdict.
 #[test]
 fn the_width_clause_binds_when_the_step_shrinks() {
@@ -1051,8 +1120,18 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         }
         let wide = 2.0 * a.edges[0];
         // The clause must actually flip between the two steps, or this pair has
-        // nothing to say about it.
-        if !(wide < room_edge(&a.home) && wide >= room_edge(&b.home)) {
+        // nothing to say about it — and the flip must be stated over the step
+        // lengths the GATE prices against (`min(home, step)` per step), not
+        // over the home room's edge alone. Shallow: the width must clear EVERY
+        // step, so no step can be refused on width. Deep: it must clear NONE,
+        // so no step can be admitted on width. Anything between is a pair the
+        // width clause decides only for some of the three steps, which cannot
+        // support an assertion about the transect's single verdict.
+        let shallow_steps = a.step_lengths();
+        let deep_steps = b.step_lengths();
+        let shortest_shallow = shallow_steps.iter().copied().fold(f64::INFINITY, f64::min);
+        let longest_deep = deep_steps.iter().copied().fold(0.0_f64, f64::max);
+        if !(wide < shortest_shallow && wide >= longest_deep) {
             continue;
         }
         let (near, far) = (a.verdict(&ctx), b.verdict(&ctx));
@@ -1066,19 +1145,17 @@ fn the_width_clause_binds_when_the_step_shrinks() {
         assert_eq!(
             near,
             Crossing::Fordable,
-            "vertex {:?}: full width {wide:e} is below the {shallow_depth}-depth step {:e} and \
-             the water is quiet, yet the crossing is {near:?}",
+            "vertex {:?}: full width {wide:e} is below every {shallow_depth}-depth step (shortest \
+             {shortest_shallow:e}) and the water is quiet, yet the crossing is {near:?}",
             a.vertex,
-            room_edge(&a.home)
         );
         assert_eq!(
             far,
             Crossing::Impassable,
-            "vertex {:?}: the SAME water, full width {wide:e}, is wider than the {deep_depth}-\
-             depth step {:e} — yet the crossing is {far:?}, so the width clause is not deciding \
-             anything",
+            "vertex {:?}: the SAME water, full width {wide:e}, is wider than every {deep_depth}-\
+             depth step (longest {longest_deep:e}) — yet the crossing is {far:?}, so the width \
+             clause is not deciding anything",
             a.vertex,
-            room_edge(&b.home)
         );
         flipped += 1;
     }
