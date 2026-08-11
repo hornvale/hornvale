@@ -34,10 +34,16 @@ const MAX_ATTEMPTS: u32 = 24;
 /// drains stdout is always reached — and once THAT read has started, the
 /// OUTPUT size stops mattering, because `wait_with_output` just keeps
 /// draining until git exits. Each id line is a 40-character hex oid plus a
-/// newline: 41 bytes. `256 * 41 = 10,496` bytes (~10.25 KiB), comfortably
-/// under even a conservative 16 KiB pipe buffer — so this number is not
-/// tuned to any particular OS's actual (usually larger) pipe capacity, it is
-/// deliberately far under the smallest one worth assuming.
+/// newline: 41 bytes. `256 * 41 = 10,496` bytes (~10.25 KiB).
+///
+/// What that actually relies on: POSIX itself guarantees only `PIPE_BUF` =
+/// 512 bytes, and only for write *atomicity*, not a minimum pipe buffer
+/// capacity — there is no POSIX guarantee this number is under. It relies
+/// instead on the real, non-guaranteed pipe buffer size every mainstream
+/// system provides in practice (Linux and macOS have both defaulted to
+/// considerably more than 512 B for decades). The more defensible floor to
+/// reason from is a single 4 KiB page, which 10,496 B is comfortably above,
+/// rather than any claim about "the smallest pipe buffer" in the abstract.
 const CAT_FILE_BATCH_CHUNK: usize = 256;
 
 /// True if `id` is a full, unabbreviated git object id: exactly 40 lowercase
@@ -45,9 +51,13 @@ const CAT_FILE_BATCH_CHUNK: usize = 256;
 ///
 /// [`Board::cat_file_batch`] requires this of every id it is given: git's
 /// `cat-file --batch` echoes the *resolved* id in its header line, not
-/// whatever the caller wrote, so an abbreviation or a ref name would key the
-/// result map under a different string than the caller's own — a silent
-/// miss, not an error, unless the caller is stopped from doing this at all.
+/// whatever was asked for, so an abbreviation or a ref name would key the
+/// result map under a different string than the original id — a silent
+/// miss, not an error. The requirement is enforced by filtering (warn and
+/// skip) at the point an id is first read out of repository data — see
+/// [`Board::post_ids_in`] — because an id that fails this check is untrusted
+/// input, not a caller bug; see that function's doc comment for why blanking
+/// the whole board on one bad filename is a worse outcome than skipping it.
 fn is_full_object_id(id: &str) -> bool {
     id.len() == 40
         && id
@@ -303,14 +313,40 @@ impl Board {
     /// Post ids present in `tip`'s tree, sorted. Takes the tip rather than
     /// re-reading it, so a caller holding a [`TipSnapshot`] can ask about
     /// exactly the commit it read.
+    ///
+    /// A tree entry under `posts/` whose filename is not a full 40-hex
+    /// object id is **skipped, with a warning** — not surfaced as an error.
+    /// This is the validation point for [`is_full_object_id`], deliberately
+    /// placed at the *source* (a raw `ls-tree` listing) rather than inside
+    /// [`cat_file_batch`](Self::cat_file_batch): a filename here is
+    /// repository data, exactly as untrusted as a post's bytes, and can
+    /// arrive malformed by the same routes bad bytes do — a clone, an older
+    /// version of this tool, or a hand write (`append` itself always names a
+    /// file by its own blob's id, so the tool's own writes are always valid,
+    /// same as it never emits corrupt post bytes). Fix round 2 on B7 found
+    /// that a hard `Err` here (or downstream) makes ONE bad filename blank
+    /// the ENTIRE board — every claim and hold-off, not just the one bad
+    /// post — which is worse than D7's ordinary corrupt-post case and the
+    /// opposite of what D7 requires.
     fn post_ids_in(&self, tip: &str) -> Result<Vec<String>, BoardError> {
         let listed = self.repo.git(&["ls-tree", "-r", "--name-only", tip])?;
-        let mut ids: Vec<String> = listed
-            .lines()
-            .filter_map(|l| l.strip_prefix("posts/"))
-            .filter_map(|l| l.strip_suffix(".json"))
-            .map(str::to_string)
-            .collect();
+        let mut ids: Vec<String> = Vec::new();
+        for line in listed.lines() {
+            let Some(rest) = line.strip_prefix("posts/") else {
+                continue;
+            };
+            let Some(id) = rest.strip_suffix(".json") else {
+                continue;
+            };
+            if is_full_object_id(id) {
+                ids.push(id.to_string());
+            } else {
+                eprintln!(
+                    "board: skipping malformed post filename {line:?}: not a full 40-hex \
+                     object id -- one corrupt filename must never blank the whole board (D7)"
+                );
+            }
+        }
         ids.sort();
         Ok(ids)
     }
@@ -413,14 +449,27 @@ impl Board {
     ///
     /// Ids MUST be full, unabbreviated object ids, which works because a
     /// post's id IS its object id (D11) — so this is tip-independent, and the
-    /// same call serves a union over several refs (B1). This is **enforced**,
-    /// not merely documented: `cat-file --batch` echoes the *resolved* id in
-    /// each header line, not whatever the caller wrote, so anything else
-    /// (an abbreviation, a ref name) would key the result map under a
-    /// different string than the caller's own id and silently miss on
-    /// lookup — see [`is_full_object_id`]. A caller passing anything else is
-    /// a programming error in that caller, reported loudly rather than let
-    /// through to fail quietly downstream.
+    /// same call serves a union over several refs (B1). `cat-file --batch`
+    /// echoes the *resolved* id in each header line, not whatever the caller
+    /// wrote, so anything else (an abbreviation, a ref name) would key the
+    /// result map under a different string than the caller's own id and
+    /// silently miss on lookup — see [`is_full_object_id`].
+    ///
+    /// This requirement is validated **upstream, at the source of every id
+    /// this function is ever called with** ([`post_ids_in`](Self::post_ids_in)
+    /// skips a malformed filename with a warning before it ever reaches
+    /// here), not by this function itself: an id passed to `cat_file_batch`
+    /// comes from repository data (a tree listing, a ref), never from a
+    /// caller-authored string, so a bad one is untrusted input arriving here
+    /// by the same routes a corrupt post's bytes do — not a programming
+    /// error in the caller of THIS function. Fix round 2 on B7 found that
+    /// treating it as a hard `Err` here made one malformed filename blank
+    /// the entire board (D7's exact failure mode, and worse than the
+    /// ordinary corrupt-post case: every post is lost, not one). The
+    /// `debug_assert!` below exists only to catch a genuine internal misuse
+    /// (a future call site that skips the upstream validation) loudly in
+    /// tests, without arming in release and without turning untrusted
+    /// repository data into a panic or an `Err` at runtime.
     ///
     /// A missing or unreadable object is **omitted with a warning** rather than
     /// failing the read: one corrupt post must never break a session's render
@@ -429,16 +478,12 @@ impl Board {
         &self,
         ids: &[String],
     ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, BoardError> {
-        for id in ids {
-            if !is_full_object_id(id) {
-                return Err(BoardError::Io(format!(
-                    "cat_file_batch: {id:?} is not a full 40-character hex object id; \
-                     git's cat-file --batch echoes back the RESOLVED id, so anything \
-                     shorter or non-oid would key the result map differently from what \
-                     the caller asked for and silently miss on lookup"
-                )));
-            }
-        }
+        debug_assert!(
+            ids.iter().all(|id| is_full_object_id(id)),
+            "cat_file_batch called with a non-full-oid id -- this must be validated \
+             (warn-and-skip) at the SOURCE (see post_ids_in), not asserted against here: \
+             an id reaching this function is repository data, not a caller's own string"
+        );
         let mut found: std::collections::BTreeMap<String, Vec<u8>> =
             std::collections::BTreeMap::new();
         // Chunked, not one shot: see CAT_FILE_BATCH_CHUNK's doc comment for
@@ -1433,6 +1478,22 @@ mod tests {
     /// and exactly why testing them needs this.
     fn splice_raw_post(board: &Board, repo: &Repo, bytes: &[u8]) -> String {
         let blob = repo.hash_object(bytes).expect("hash-object");
+        splice_raw_post_at(board, repo, &format!("posts/{blob}.json"), bytes);
+        blob
+    }
+
+    /// [`splice_raw_post`]'s general form: splice `bytes` under an arbitrary
+    /// `path`, not necessarily one named by the bytes' own object id.
+    ///
+    /// Exists for the malformed-*filename* case, distinct from the
+    /// malformed-*content* case `splice_raw_post` covers: a tree entry whose
+    /// name is not any real object's id is exactly as reachable from outside
+    /// this tool (a clone, an older version, a hand write) as corrupt bytes
+    /// are, and nothing at write time stops it — `append` only ever names a
+    /// file by its own blob's id, which is why the tool's own writes can
+    /// never produce one.
+    fn splice_raw_post_at(board: &Board, repo: &Repo, path: &str, bytes: &[u8]) {
+        let blob = repo.hash_object(bytes).expect("hash-object");
         let old = board.tip().expect("tip").expect("some");
         let call_id = CALL_DISCRIMINANT.fetch_add(1, Ordering::SeqCst);
         let index = repo
@@ -1447,7 +1508,7 @@ mod tests {
                 "update-index",
                 "--add",
                 "--cacheinfo",
-                &format!("100644,{blob},posts/{blob}.json"),
+                &format!("100644,{blob},{path}"),
             ],
         )
         .expect("update-index");
@@ -1456,11 +1517,10 @@ mod tests {
             .expect("write-tree");
         let _ = std::fs::remove_file(&index);
         let new = repo
-            .git(&["commit-tree", &tree, "-p", &old, "-m", "a corrupt post"])
+            .git(&["commit-tree", &tree, "-p", &old, "-m", "a spliced post"])
             .expect("commit-tree");
         repo.git(&["update-ref", board.refname(), &new, &old])
             .expect("update-ref");
-        blob
     }
 
     #[test]
@@ -1492,6 +1552,56 @@ mod tests {
             board.post_ids_at_tip().expect("ids").contains(&bad),
             "sanity: the corrupt file really is at the tip, so this test is \
              exercising the skip arm rather than an empty tree"
+        );
+    }
+
+    #[test]
+    fn a_malformed_post_filename_is_skipped_not_a_reason_to_blank_the_whole_board() {
+        // The companion regression the review's fix round 2 asked for:
+        // `one_unparseable_post_does_not_hide_the_rest_of_the_board` (above)
+        // covers corrupt CONTENT under a valid filename (a real object id).
+        // This covers the distinct failure mode -- a malformed FILENAME
+        // (not any real object's id) holding otherwise well-formed content.
+        // `resilience.rs` only ever exercises corrupt bytes, never a bad
+        // path, which is exactly the gap that let an earlier version of
+        // `cat_file_batch` respond to this case with a hard `Err` that
+        // blanked the entire board (every post lost, not just this one) --
+        // worse than D7's ordinary corrupt-post case, and never caught by a
+        // test until now.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let good = board
+            .append(
+                &Post::new("technique", "campaign/x").with("note", serde_json::json!("keep me")),
+            )
+            .expect("good post");
+        // Well-formed content, but filed under a filename that is not any
+        // real object's id -- git happily stores this; nothing at write
+        // time validates a tree entry's path against its own blob.
+        let post_bytes = Post::new("technique", "campaign/x")
+            .with("note", serde_json::json!("malformed filename"))
+            .canonical_bytes()
+            .expect("canonical bytes");
+        splice_raw_post_at(&board, &repo, "posts/deadbeef.json", &post_bytes);
+
+        let posts = board
+            .posts_at_tip()
+            .expect("a malformed filename must be SKIPPED, never turned into an Err");
+        let ids: Vec<&str> = posts.iter().map(|sp| sp.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec![good.as_str()],
+            "the good post must survive and the malformed filename must be skipped: {ids:?}"
+        );
+
+        let tip = board.tip().expect("tip").expect("some");
+        let listed = repo
+            .git(&["ls-tree", "-r", "--name-only", &tip])
+            .expect("ls-tree");
+        assert!(
+            listed.contains("posts/deadbeef.json"),
+            "sanity: the malformed filename really is at the tip, so this test is \
+             exercising the skip arm rather than an empty tree: {listed:?}"
         );
     }
 
