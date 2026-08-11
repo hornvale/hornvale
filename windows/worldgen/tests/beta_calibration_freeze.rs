@@ -105,6 +105,43 @@
 //! chronicle. The honest cost: a ceiling that scales with the roster is a
 //! weaker discriminator on a large roster than a literal was on a small one.
 //!
+//! **The Muster (2026-08-11): the guard was structurally blind to the biome-
+//! affinity level, and now is not.** `peopled_components` below built its
+//! component set with five stores left as `ComponentStore::new()`. Two of
+//! those five are read by `demography_report_with_beta_from` on the exact path
+//! to `byproducts.strife` — `habitat_realm` and `biome_affinity`
+//! (`windows/worldgen/src/lib.rs:1734-1753`) — and both are SPARSE stores read
+//! through a default on absence (`HabitatRealm::SURFACE`; `None` = unrestricted
+//! at every biome). An empty store therefore raised nothing: it silently
+//! supplied the null hypothesis, and every authored affinity level scored
+//! identically here. Measured at the frozen β over this test's own five seeds:
+//!
+//! | component set | affinity rows | mean claimed diversity |
+//! |---|---|---|
+//! | pre-Muster (both stores empty) | 0 | 2.3734235460211663 |
+//! | repaired (peopled-scoped live rows) | 7 | 2.1127601185602627 |
+//! | full canonical (`WorldComponents::assemble()`) | 8 | 1.5063123260334543 |
+//!
+//! The live rows move the peopled reading by ≈0.26 — 11% — which is the whole
+//! point: a quantity that could not move the number could not redden the gate
+//! either. The other three empty stores (`deity`, `culture`, `material`) stay
+//! empty deliberately and the code says why; no build or demography path reads
+//! them off `wc`.
+//!
+//! **The roster decides the verdict, so the assertion now names its roster.**
+//! The band `[1.5, 0.75 × oatmeal]` is scored over the PEOPLED kinds — the
+//! `psyche` key-set, 18 today. Scored instead over the 39-row biosphere, the
+//! same worlds at the same β read 1.5063: it clears the same absolute floor by
+//! **0.0063**, with two of five seeds (1.3483, 1.3784) individually beneath it.
+//! Both rosters pass, so the campaign's predicted verdict *flip* did not
+//! reproduce on this tree — the spec expected ≈1.42–1.46 and failure over the
+//! biosphere, and the measurement says otherwise. Recorded as the falsification
+//! it is rather than adjusted to recover the prediction. What survives is the
+//! sharper half: a margin of 0.4% of the floor is not a band that means the
+//! same thing under both readings, and the published figure for this bound does
+//! not state which instrument produced it. Hence the roster in the failure
+//! message.
+//!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
 //! carrying capacities, β only moves claimed-cell diversity across a narrow
@@ -173,10 +210,16 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     sum / f64::from(n)
 }
 
-/// The 4-goblinoid peopled component set: the canonical registries scoped to
-/// the peopled kinds (the `psyche` key-set — fauna are biosphere-only, so they
-/// carry no psyche row). Byte-identical to the four-goblinoid component set the
-/// freeze was originally preregistered against.
+/// The peopled component set: the canonical registries scoped to the peopled
+/// kinds (the `psyche` key-set — fauna are biosphere-only, so they carry no
+/// psyche row). This is the roster the band is scored over, and the assertion
+/// below says so in its failure message; see the module doc's Muster section
+/// for why that matters and what the biosphere reading is instead.
+///
+/// The scoping is by KEY-SET, never by a hand-written list: every store here
+/// filters a live canonical registry, so a kind added to the registries appears
+/// here without anyone editing this file. That is also why `habitat_realm` and
+/// `biome_affinity` must be filtered rather than left empty — see below.
 fn peopled_components() -> WorldComponents {
     use hornvale_kernel::{ComponentStore, KindId};
     let psyche = hornvale_species::psyche_registry();
@@ -192,6 +235,30 @@ fn peopled_components() -> WorldComponents {
         .filter(|(k, _)| peopled.contains(k))
         .map(|(k, v)| (*k, *v))
         .collect();
+    // THE MUSTER: these two stores were `ComponentStore::new()` until now, and
+    // that made this guard structurally blind to the two quantities it is most
+    // supposed to see. `demography_report_with_beta_from` reads exactly three
+    // stores off `wc` on the path to `byproducts.strife`
+    // (`windows/worldgen/src/lib.rs:1728-1753`): `biosphere`, then
+    // `habitat_realm`, then `biome_affinity` — all three iterated in the same
+    // `wc.biosphere` order so they stay index-aligned. Both sparse stores read
+    // through a default on absence (`HabitatRealm::SURFACE`; `None` =
+    // unrestricted at every biome), so an EMPTY store is not an error — it is
+    // silently the null hypothesis, and every authored affinity level scored
+    // identically here. They now hold the live rows, scoped to the peopled
+    // key-set exactly as `biosphere` and `family_of` above are.
+    let habitat_realm: ComponentStore<KindId, hornvale_species::HabitatRealm> =
+        hornvale_species::habitat_realm_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, *v))
+            .collect();
+    let biome_affinity: ComponentStore<KindId, hornvale_species::BiomeAffinity> =
+        hornvale_species::biome_affinity_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
     WorldComponents::from_stores(
         biosphere,
         psyche,
@@ -201,11 +268,18 @@ fn peopled_components() -> WorldComponents {
         hornvale_language::lexicon_registry(),
         hornvale_language::family_proto(),
         family_of,
+        // deity / culture / material stay EMPTY deliberately, not by oversight:
+        // no build or demography path reads them off `wc`. Their only readers
+        // in the whole workspace are `WorldComponents::kinds_with` and
+        // `kinds` (`windows/worldgen/src/components.rs:206-228`), pure
+        // reflection over the roster, which this guard never calls. Filling
+        // them would add non-peopled deity/culture/material kinds to
+        // `wc.kinds()` and widen the roster this test names.
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
-        ComponentStore::new(),
-        ComponentStore::new(),
+        habitat_realm,
+        biome_affinity,
     )
     .expect("the peopled-only component set is well-formed")
 }
@@ -214,7 +288,7 @@ fn peopled_components() -> WorldComponents {
 /// effective diversity across a handful of seeds lands in `[1.5, 3.0]` — see
 /// the module doc for the niche-era re-baseline and the weak-knob caveat.
 /// claim: readout(preregistered) — mean per-claimed-cell diversity across
-/// SEEDS, frozen band [1.5, 3.0]
+/// SEEDS over the PEOPLED roster, band [1.5, 0.75 x peopled_count]
 #[test]
 fn beta_yields_realistic_coexistence() {
     // This freeze is preregistered against "the shipped 4-goblinoid roster"
@@ -250,6 +324,10 @@ fn beta_yields_realistic_coexistence() {
     let oatmeal = wc.psyche.len() as f64;
     let ceiling = OATMEAL_FRACTION * oatmeal;
 
+    // THE MUSTER: the band's verdict depends on WHICH POPULATION is counted,
+    // not on the physics alone, so the assertion names its own roster. A red
+    // gate must identify its instrument as well as its number.
+    let affinity_rows = wc.biome_affinity.len();
     assert!(
         (MONOCULTURE_FLOOR..=ceiling).contains(&mean),
         "mean per-claimed-cell diversity at beta={} across seeds {per_seed:?} = {mean}, \
@@ -257,7 +335,16 @@ fn beta_yields_realistic_coexistence() {
          is 1 whatever the roster size) and the ceiling is {OATMEAL_FRACTION} x oatmeal, \
          where oatmeal = {oatmeal} peopled species. If this fails ABOVE the ceiling the \
          world has gone undifferentiated; BELOW the floor it has gone monocultural. Do not \
-         replace the derived ceiling with a literal.",
-        hornvale_demography::BETA
+         replace the derived ceiling with a literal.\n\
+         ROSTER: this number was measured over the {oatmeal} PEOPLED kinds — the `psyche` \
+         key-set, with every other canonical registry filtered to it — of which \
+         {affinity_rows} carry a biome-affinity row. It is NOT the {}-row biosphere. The \
+         distinction changes the reading, not the world: at this same beta on these same \
+         seeds, The Muster measured {mean} over this peopled roster against 1.5063 over the \
+         full biosphere (`WorldComponents::assemble()`), which clears the same absolute \
+         floor of {MONOCULTURE_FLOOR} by 0.0063 with two of five seeds individually beneath \
+         it. Before deciding this band is wrong, check which population you are counting.",
+        hornvale_demography::BETA,
+        hornvale_species::biosphere_registry().len(),
     );
 }
