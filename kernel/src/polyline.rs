@@ -15,13 +15,11 @@ pub struct SphericalPolyline {
 }
 
 /// Dot product of two 3-vectors.
-/// type-audit: bare-ok(ratio: return)
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
 /// Cross product of two 3-vectors.
-/// type-audit: bare-ok(position: return)
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [
         a[1] * b[2] - a[2] * b[1],
@@ -31,7 +29,6 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 }
 
 /// Normalize a 3-vector; returns the input unchanged if its norm is zero.
-/// type-audit: bare-ok(position: return)
 fn normalize(v: [f64; 3]) -> [f64; 3] {
     let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
     if n == 0.0 {
@@ -62,13 +59,25 @@ impl SphericalPolyline {
         }
         let mut best = f64::INFINITY;
         let mut best_sign = 1.0f64;
-        for w in self.points.windows(2) {
+        for (i, w) in self.points.windows(2).enumerate() {
             let (a, b) = (w[0], w[1]);
             let n = cross(a, b);
             let nn = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
-            // Degenerate segment (coincident endpoints): fall back to the vertex.
+            // Degenerate segment (coincident, or antipodal, endpoints): it
+            // has no travel direction of its own, so its side cannot be
+            // read off its own normal. Distance still falls back to the
+            // shared vertex, but the side is BORROWED from the nearest
+            // segment (by index distance, either direction) that still has
+            // a well-defined normal — never a hardcoded default, which
+            // would silently read every degenerate segment as "left"
+            // regardless of where the point actually is. A polyline that
+            // is degenerate everywhere carries no directional information
+            // at all, so falling back to left there is not a wrong
+            // reading — there is no reading to be wrong about.
             let (d, side) = if nn == 0.0 {
-                (math::acos(dot(p, a).clamp(-1.0, 1.0)), 1.0)
+                let d = math::acos(dot(p, a).clamp(-1.0, 1.0));
+                let side = self.nearest_defined_side(i, p).unwrap_or(1.0);
+                (d, side)
             } else {
                 let nu = normalize(n);
                 // Foot of the perpendicular, projected onto the segment's plane.
@@ -98,6 +107,33 @@ impl SphericalPolyline {
             }
         }
         best * best_sign
+    }
+
+    /// The side `p` falls on relative to the nearest segment (by index
+    /// distance from `at`, checking one step before then one step after at
+    /// each radius — a fixed, deterministic search order) that has a
+    /// well-defined travel direction. `None` if every segment in the
+    /// polyline is degenerate.
+    fn nearest_defined_side(&self, at: usize, p: [f64; 3]) -> Option<f64> {
+        let segment_count = self.points.len() - 1;
+        for radius in 1..segment_count {
+            for i in [at.checked_sub(radius), Some(at + radius)]
+                .into_iter()
+                .flatten()
+            {
+                if i >= segment_count {
+                    continue;
+                }
+                let (a, b) = (self.points[i], self.points[i + 1]);
+                let n = cross(a, b);
+                let nn = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+                if nn != 0.0 {
+                    let nu = normalize(n);
+                    return Some(if dot(p, nu) >= 0.0 { 1.0 } else { -1.0 });
+                }
+            }
+        }
+        None
     }
 }
 
@@ -172,6 +208,51 @@ mod tests {
         assert!(
             (d - to_endpoint).abs() < 1e-9,
             "d={d} endpoint={to_endpoint}"
+        );
+    }
+
+    /// A degenerate (coincident-endpoint) segment must borrow its side from
+    /// the nearest segment with a real direction, not read as "left" by a
+    /// hardcoded default. `points[0]` and `points[1]` coincide at P, so the
+    /// first segment is degenerate; the second (P -> Q) is not. A query
+    /// point right of P->Q, but close enough to P that both segments report
+    /// the exact same distance to P (a tie the degenerate segment wins,
+    /// since ties favor the first segment), must still read negative:
+    /// nothing about the degenerate segment's *distance* being the winner
+    /// should launder its side into a hardcoded "left". Against a hardcoded
+    /// `side = 1.0` for the degenerate branch this reads positive — wrong,
+    /// since the point is unambiguously on the right of the only real
+    /// direction the polyline carries here.
+    #[test]
+    fn a_degenerate_segment_borrows_its_side_instead_of_defaulting_left() {
+        let p_vertex = unit(1.0, 0.0, 0.0);
+        let q_vertex = unit(0.0, 1.0, 0.0);
+        let line = SphericalPolyline {
+            points: vec![p_vertex, p_vertex, q_vertex],
+        };
+        let on_the_right = unit(1.0, -0.1, -0.2);
+
+        // Confirm the tie this test relies on: the degenerate segment (P,P)
+        // and the real segment (P,Q) must report bit-identical distances to
+        // `on_the_right`, so the degenerate segment (first in iteration
+        // order) is the one whose SIGN determines the result.
+        let single_segment_p_only = SphericalPolyline {
+            points: vec![p_vertex, q_vertex],
+        };
+        let distance_via_pq_fallback = single_segment_p_only.signed_distance(on_the_right).abs();
+        let distance_to_p_vertex = math::acos(dot(on_the_right, p_vertex).clamp(-1.0, 1.0));
+        assert_eq!(
+            distance_via_pq_fallback.to_bits(),
+            distance_to_p_vertex.to_bits(),
+            "test setup assumption failed: the (P,Q) segment's outside-arc \
+             fallback must tie the degenerate (P,P) segment's vertex \
+             distance, or this test does not exercise the tie-break at all"
+        );
+
+        let d = line.signed_distance(on_the_right);
+        assert!(
+            d < 0.0,
+            "expected a negative (right-of-travel) reading, got {d}"
         );
     }
 
