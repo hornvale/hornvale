@@ -1,0 +1,31 @@
+[package]
+name = "seam-guard"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# Empty table: this package is deliberately outside the main workspace, the
+# same way `tools/type-audit` is (decision 0027). An empty [workspace] here
+# (not just the main Cargo.toml's `exclude`) stops cargo's ancestor search at
+# this manifest unconditionally — without it, a checkout nested under another
+# Cargo workspace (e.g. a worktree under `.claude/worktrees/`) makes cargo
+# walk past this package's own workspace root and bind to the outer one.
+[workspace]
+
+[lib]
+name = "seam_guard"
+path = "src/lib.rs"
+
+[[bin]]
+name = "seam-guard"
+path = "src/main.rs"
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+# `span-locations` makes `Span::start().line` return real line numbers when
+# parsing files (outside a proc-macro); without it, every rewrite would
+# target line 0. Parsing with `syn::parse_file` uses proc-macro2's fallback
+# spans, which carry real byte offsets and support `join`, so a whole call
+# expression's span is accurate rather than just its first token.
+proc-macro2 = { version = "1", features = ["span-locations"] }

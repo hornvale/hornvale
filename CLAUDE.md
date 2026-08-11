@@ -239,6 +239,29 @@ cargo run -p hornvale -- lab list-metrics
 # which is a separate thing — an artifact, drift-checked like every other:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
+# seam-guard — the mutation check for code no test pins. Also OUTSIDE the
+# workspace, same shape as type-audit. A *seam* is a function whose output
+# reaches a rendered or committed artifact but whose contribution no
+# assertion holds: neutralise it and the suite stays green while the world
+# renders differently. Registered by a tag on the definition, which states
+# the two things the tool cannot infer — a mutation that still TYPE-CHECKS,
+# and which tests are supposed to object:
+#     /// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
+#     /// seam-guard: identity(0) scope(hornvale-kernel)
+# `identity(N)` replaces the call with its Nth argument (unit conversions,
+# clamps, wrappers); `returns(EXPR)` replaces it outright. Runs in
+# **gate-full, not the commit gate** — each call site costs a full scoped
+# test run. A mutation that fails to COMPILE reports INVALID, never a kill:
+# a red from a compile error says nothing about whether an assertion would
+# have caught the behaviour.
+make seam-guard-list   # the roster and its call sites (cheap, no build)
+make seam-guard        # neutralise each site, run scoped tests, report survivors
+# EXPECTED RED TODAY: `conquest_victim` SURVIVES at both call sites — the
+# finding the tool was built to make. It decides whether a settlement's
+# ending reads as conquest or climate migration, and its only guard is the
+# gallery drift ritual `make gate` never runs. Closing it means adding an
+# almanac assertion, not silencing the tool.
+
 # The digest — the project's own fact ledger, also OUTSIDE the workspace (The
 # Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
 # the project asserts about itself (project time is git's); everything else is
@@ -276,9 +299,14 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
-# **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
-# workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
-# invisible until someone runs it.
+# **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
+# repo is private, so runner minutes are metered and Pages is gone. The LOCAL
+# gate is the ONLY gate, and this `git diff --exit-code` list is the only
+# drift check that exists: nothing runs it for you. A red main is invisible
+# until someone runs `make gate` and `make rebaseline`. Three coverage gaps
+# 0125 names explicitly: `clients/atlas` has no gate at all (run its four
+# `deno` commands and the atlas.js bundle diff by hand), the book is
+# unpublished, and `world-wasm-v*` releases are cut by hand.
 
 # The browser clients (outside the cargo workspace; see clients/CLAUDE.md):
 make vessel-check       # the Casement: deno checks + wasm fmt/clippy + byte-identity smoke

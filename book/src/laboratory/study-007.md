@@ -14,8 +14,8 @@ the book close. This is that shift, recorded.
 from a 10,000-seed run of `studies/census-of-eyes.study.json`, executed
 once by hand at author time, in the same arrangement Studies 001, 002, 003,
 and 006 use for their own 10,000-seed headline runs. It is **not**
-committed and **not** part of CI — `.github/workflows/ci.yml` regenerates
-only `the-census` (1,000 seeds) in its "Artifacts are current" step;
+committed and **not** part of the drift-checked family — the once-per-campaign
+census refresh regenerates only `the-census` (1,000 seeds);
 `census-of-faiths`, `census-of-lands`, `census-of-peoples`, and
 `census-of-skies` are already author-time-only by the same precedent, and
 `census-of-eyes` joins them. The drift-checked sibling,
