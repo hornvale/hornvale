@@ -12,13 +12,17 @@ them.
 studies, the type-audit report, the digest's decision index + delta report
 under `docs/digest/`, and the committed `vessel/session/v2` client fixtures
 under `clients/game/core/tests/fixtures/` — one walk-band (turn 0), one
-chamber-band, reached via `scripts/possession-chamber.txt`) — and CI + `make
-rebaseline` both call it, so local and CI regeneration cannot silently
-diverge (that's the point). Key knobs:
+chamber-band, reached via `scripts/possession-chamber.txt`) — and `make
+rebaseline` calls it, so there is exactly one regeneration path. Since 0125
+retired GitHub Actions there is no second caller to diverge *from*, and no
+automatic run at all: **the drift check happens only when a human runs it.**
+Key knobs:
 
-- **`SKIP_CENSUS=1`** — skip the census `lab run`s. CI sets this and uses a
-  fast seed probe (`ci-census-probe.sh`) instead; everyday local regen also
-  skips them so the gate stays fast.
+- **`SKIP_CENSUS=1`** — skip the census `lab run`s. Everyday local regen sets
+  it so the gate stays fast. `ci-census-probe.sh` — a fast first-N-seeds
+  spot-check against the committed rows — was the runner's substitute for the
+  full census; it still works and is worth running by hand, but nothing calls
+  it automatically any more (0125).
 - **`HV_CENSUS=1`** — regenerate the censuses. Since The Local Census the
   full ~2000-world census is a ~7-min LOCAL run (was ~1–2 h), so this is the
   sanctioned pre-merge refresh — run it via **`census-run.sh`**, not
@@ -37,9 +41,11 @@ diverge (that's the point). Key knobs:
   box authors goldens (the canonical-machine constraint, decision 0063).
 - **The script needs FULL git history.** The digest's delta report walks
   `docs/decisions/` back to the commit that put a rule in force, so a shallow
-  checkout (`git clone --depth 1` — `actions/checkout@v4`'s *default*) cannot
-  answer. The renderer now says so instead of guessing; CI's checkout sets
-  `fetch-depth: 0` for exactly this reason.
+  checkout (`git clone --depth 1`) cannot answer. The renderer says so instead
+  of guessing, but the artifact it then writes differs from the committed one
+  and the `docs/digest/` drift check goes red for the wrong reason. This used
+  to be handled by a `fetch-depth: 0` on the runner's checkout; with 0125 the
+  burden is on whoever clones — never regenerate from a shallow clone.
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits
   docs/digest book/src/domesday clients/game/core/tests/fixtures` — note
@@ -102,7 +108,7 @@ diverge (that's the point). Key knobs:
 ## `aws-gate/` — billable, admin-credentialed, handle with care
 
 The remote gate provisions real EC2 spot infrastructure. `gate-remote.sh`
-runs the CI gate on a spot box; `gate-remote-verify.sh` is the local-vs-remote
+runs the commit gate on a spot box; `gate-remote-verify.sh` is the local-vs-remote
 **byte-identity acceptance test** (the ratification gate for any
 determinism-config change — e.g. Proposed decision 0061). `panic.sh` is the
 emergency stop: it **deactivates the runner identity first** (so nothing can

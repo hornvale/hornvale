@@ -18,8 +18,8 @@ recorded.
 chart below come from one 10,000-seed run of
 `studies/census-of-coasts.study.json`, executed once by hand at author
 time, in the same arrangement Studies 001, 002, 006, 007, and 008 use for
-their own 10,000-seed headline runs. It is **not** part of CI —
-`.github/workflows/ci.yml`'s "Artifacts are current" step regenerates only
+their own 10,000-seed headline runs. It is **not** part of the drift-checked
+family — the once-per-campaign census refresh regenerates only
 `the-census`, `census-of-the-meeting`, and `census-of-skies`
 (all three select `"metrics": "all"`, so they already carry these six
 columns from Task 4's metrics commit onward). The campaign spec originally

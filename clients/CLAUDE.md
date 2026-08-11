@@ -47,11 +47,13 @@ cross-repo migration.
 
 ## Deno is pinned to 2.9.2 exactly
 
-Both `deno.json` files say so, and the CI jobs pin the same version, because
-**the bundle is drift-checked** — a different Deno emits different minified
-output and reddens the check for no semantic reason. If you bump it, bump it
-in `clients/atlas/deno.json`, `clients/vessel/deno.json`, and both CI jobs
-together, and regenerate the bundles in the same commit.
+Both `deno.json` files say so, because **the bundle is drift-checked** — a
+different Deno emits different minified output and reddens the check for no
+semantic reason. If you bump it, bump it in `clients/atlas/deno.json` and
+`clients/vessel/deno.json` together, and regenerate the bundles in the same
+commit. (Until 0125 two GitHub Actions jobs pinned the version too, and were
+a third and fourth place to keep in sync; they are gone, so the two
+`deno.json` files are now the whole story.)
 
 ## Gates
 
@@ -67,7 +69,22 @@ deno task build      # then `git diff --exit-code` the bundle it wrote
 ```
 
 `make gate` does **not** run any of these — the workspace gate cannot see
-this tree. A client change needs its own gate run, explicitly.
+this tree. A client change needs its own gate run, explicitly. Since 0125
+retired GitHub Actions, **nothing runs them for you either**; the runner used
+to catch a forgotten client gate on a manual dispatch, and now there is no
+backstop at all.
+
+**`atlas` has no `make` target — this is the one real hole.** Its checks
+lived only in the deleted `ci.yml`. Touching `clients/atlas/` means running,
+from `clients/atlas/`:
+
+```bash
+deno fmt --check && deno lint && deno task check && deno task test
+deno task build && git diff --exit-code ../../book/src/gallery/atlas.js
+```
+
+A `make atlas-check` was proposed and declined at 0125 (2026-08-11); if that
+manual discipline slips, adding the target is the fix.
 
 **The byte-identity smoke is the load-bearing test.** `world-check` asserts
 the wasm catalog's scene output is byte-identical to the native `hornvale

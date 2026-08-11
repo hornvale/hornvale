@@ -276,9 +276,14 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
-# **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
-# workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
-# invisible until someone runs it.
+# **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
+# repo is private, so runner minutes are metered and Pages is gone. The LOCAL
+# gate is the ONLY gate, and this `git diff --exit-code` list is the only
+# drift check that exists: nothing runs it for you. A red main is invisible
+# until someone runs `make gate` and `make rebaseline`. Three coverage gaps
+# 0125 names explicitly: `clients/atlas` has no gate at all (run its four
+# `deno` commands and the atlas.js bundle diff by hand), the book is
+# unpublished, and `world-wasm-v*` releases are cut by hand.
 
 # The browser clients (outside the cargo workspace; see clients/CLAUDE.md):
 make vessel-check       # the Casement: deno checks + wasm fmt/clippy + byte-identity smoke
