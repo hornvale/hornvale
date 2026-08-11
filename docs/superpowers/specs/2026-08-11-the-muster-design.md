@@ -67,9 +67,31 @@ with no test phase anywhere in that cycle.
 
 `domains/history/src/flesh.rs::founder_handle` mixes people, site, founded,
 ended, peak population and a role tag, and **deliberately excludes the entity
-id** so that a handle is reproducible from material facts alone
-(`windows/worldgen/tests/descent_graph.rs::founder_handles_are_free_of_the_entity_id`).
-Two occupations identical in all of those therefore collide **by construction**.
+id** so that a handle is reproducible from material facts alone. Two occupations
+identical in all of those therefore collide **by construction**.
+
+> **ERRATUM, 2026-08-11 — this paragraph cited the wrong guard, and the
+> correction is scope-defining.** It named
+> `windows/worldgen/tests/descent_graph.rs::founder_handles_are_free_of_the_entity_id`
+> as the pin on `flesh::founder_handle`. That test does not touch
+> `flesh::founder_handle` at all: it exercises `descent::founder_of`
+> (`windows/worldgen/src/descent.rs`), which is a **second, different** founder
+> handle — `RoleHandle(founding_key_from(own, parent) ^ seed.rotate_left(17))` —
+> consumed by `windows/lab/src/metrics.rs`'s name-prefix census metrics (The
+> Namesake). The actual guard on `flesh::founder_handle` is
+> `domains/history/tests/flesh.rs`.
+>
+> **So the world carries TWO founder identities derived from TWO keys.** This
+> campaign's epoch moves the **promotion** key — the one that decides a person's
+> name in the ledger — and **not** the descent key. Any movement under
+> `book/src/laboratory/` during Part B is therefore a **STOP**, not an expected
+> regeneration: it would mean the descent key moved too, and the epoch's blast
+> radius is larger than this spec scoped.
+>
+> Found by the plan-writer reading the tree rather than trusting the spec, which
+> is the mitigation The Radiation's retrospective prescribed. Left in place
+> rather than rewritten, because a spec that quietly corrects itself teaches the
+> next reader nothing.
 
 Measured over seeds 0–2999: **1904 handle-sharing record pairs**, five reaching
 the promoted cast. `main` panics on seed 2793; The Radiation panicked on 283 and
