@@ -136,22 +136,24 @@ fn the_channel_network_is_pinned() {
 #[test]
 fn the_pinned_displacements_are_not_all_zero() {
     let rendered = render();
-    let mut interior = 0usize;
+    // EVERY row is counted, anchored heads and mouths included — they are not
+    // filtered out, and the threshold is set knowing they are in the
+    // denominator. A run has two anchored vertices out of a typical five, so a
+    // healthy network still clears a third comfortably.
+    let mut rows = 0usize;
     let mut moved = 0usize;
     for row in rendered.lines().filter(|l| !l.starts_with('#')) {
         let f: Vec<&str> = row.split(' ').collect();
-        // A head and a mouth are anchored by design, so only interior
-        // vertices are expected to carry a displacement.
         let displacement: f64 = f[3].parse().expect("a numeric displacement column");
         if displacement != 0.0 {
             moved += 1;
         }
-        interior += 1;
+        rows += 1;
     }
-    assert!(interior > 30, "too few rows to be a real check");
+    assert!(rows > 30, "too few rows to be a real check");
     assert!(
-        moved * 3 > interior,
-        "only {moved} of {interior} vertices carry a meander displacement — the column this \
+        moved * 3 > rows,
+        "only {moved} of {rows} vertices carry a meander displacement — the column this \
          fixture guards the seed WITH is nearly constant, so the guard is vacuous"
     );
 }

@@ -3330,8 +3330,61 @@ pub fn registry() -> Vec<Metric> {
             domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
-                match lab_channel_band_monotonicity(v.terrain.channels()) {
-                    Some(f) => MetricValue::Number(f),
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => MetricValue::Number(t.monotone as f64 / t.transects as f64),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "channel-band-monotonicity-untruncated",
+            doc: "`channel-band-monotonicity` over the SAME transects with the \
+                  nearest-line truncation switched off — the whole sweep \
+                  scored, including the stretch where a different river has \
+                  become the nearest and its band legitimately falls back to \
+                  `channel`. Published because the truncation rule is \
+                  load-bearing rather than cosmetic (most worlds read below \
+                  H4's 0.99 floor without it), and a rule that changes the \
+                  verdict must have the reading it changes on the record \
+                  beside it rather than in a campaign report. The gap between \
+                  the two columns is the world's count of transects that left \
+                  their own valley, NOT a count of band-edge speckle. Absent \
+                  on a world with no channels",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => {
+                        MetricValue::Number(t.monotone_untruncated as f64 / t.transects as f64)
+                    }
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "channel-transect-dry-reach",
+            doc: "The anti-vacuity companion to `channel-band-monotonicity` \
+                  (The Ford, spec §10): the fraction of the SAME transects \
+                  whose own-channel prefix reached the `dry` band before a \
+                  different river became the nearest and truncated it. \
+                  Monotonicity scores a truncated transect as a success \
+                  however short its prefix, so without this column a world \
+                  where truncation fired immediately everywhere would report \
+                  a perfect 1.0 with nothing to show it. Read the two \
+                  together: monotonicity near 1 is only a claim about full \
+                  transverse profiles while this stays high. Absent on a \
+                  world with no channels",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => MetricValue::Number(t.reached_dry as f64 / t.transects as f64),
                     None => MetricValue::Absent,
                 }
             }),
@@ -6853,29 +6906,66 @@ fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Opt
     Some(intact as f64 / walks as f64)
 }
 
-/// H4's axis: the fraction of transects whose band sequence is monotone
-/// outward with no re-entry.
+/// One sweep of the channel network's transects, counted four ways.
+///
+/// **All four counts come from a single sampling design**, which is the point
+/// of the struct existing rather than three functions. Task 6 first reported
+/// the un-truncated figures from a separate ad-hoc probe whose stride and
+/// window differed from the shipped metric's, and the two disagreed enough to
+/// swap which seed cleared H4's floor. Numbers that reach a chronicle have to
+/// be the shipped instrument's numbers, so there is now exactly one instrument.
+struct LabBandTransects {
+    /// Transects swept.
+    transects: usize,
+    /// Transects monotone over the own-channel prefix — H4's axis.
+    monotone: usize,
+    /// Transects monotone over the WHOLE sweep, truncating nothing. Reported
+    /// alongside H4 so the truncation rule is never the only reading on offer.
+    monotone_untruncated: usize,
+    /// Own-channel prefixes that reached `Dry` before truncation — the
+    /// anti-vacuity companion. A truncated transect counts as monotone however
+    /// short its prefix, so without this a world where truncation fired
+    /// immediately everywhere would report a perfect 1.0000 with no trace.
+    reached_dry: usize,
+}
+
+/// Sweep transects outward from a strided sample of channel vertices, both
+/// sides, and count them four ways.
 ///
 /// **A transect is a transect of ONE channel, and stops being one where a
 /// different river becomes the nearest.** `transverse_at` answers from
 /// whichever polyline is nearest, so a ray walked far enough out of one
 /// valley enters another and the band legitimately falls back to `Channel` —
-/// that is two rivers being close together, not a band edge speckling. The
+/// that is two rivers being close together, not a band edge speckling. H4's
 /// scored sequence is therefore the prefix over which
 /// [`hornvale_terrain::channel::ChannelNetwork::nearest_line`] still names the
-/// originating line. This rule is stated as a rule, not fitted: on seeds 42
-/// and 7 at level 6 **every** un-truncated violation (5/5 and 5/5) coincided
-/// with the nearest line changing, and the truncated reading is 1.0000 on
-/// both, with 96%+ of prefixes still reaching `Dry` — so the truncation is
-/// not buying the result by making the sequences too short to fail.
-fn lab_channel_band_monotonicity(net: &hornvale_terrain::channel::ChannelNetwork) -> Option<f64> {
+/// originating line.
+///
+/// **The attribution is not asserted here — it is readable off the two
+/// columns.** A transect monotone over its whole sweep is monotone over every
+/// prefix of it, so `monotone_untruncated <= monotone` always
+/// (`untruncated_monotonicity_is_a_subset_of_truncated` pins that). Therefore
+/// whenever a world reports `monotone == transects` while
+/// `monotone_untruncated < transects`, **every** violation it has necessarily
+/// occurred after a different river became the nearest — none can have
+/// happened while the originating line still was. That is the "no speckle"
+/// claim H4 actually asks about, derived rather than measured by hand, and it
+/// is what the readout observed on all 64 probe worlds.
+///
+/// The truncation is load-bearing, not cosmetic, which is why the reading it
+/// changes ships as its own column instead of living in a campaign report.
+fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option<LabBandTransects> {
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     if vertices == 0 {
         return None;
     }
     let stride = vertices.div_ceil(LAB_FORD_MAX_TRANSECTS).max(1);
-    let mut transects = 0usize;
-    let mut monotone = 0usize;
+    let mut out = LabBandTransects {
+        transects: 0,
+        monotone: 0,
+        monotone_untruncated: 0,
+        reached_dry: 0,
+    };
     let mut index = 0usize;
     for (i, line) in net.polylines.iter().enumerate() {
         for j in 0..line.points.len() {
@@ -6891,32 +6981,50 @@ fn lab_channel_band_monotonicity(net: &hornvale_terrain::channel::ChannelNetwork
             }
             let left = lab_left_normal(line, j);
             for side in [1.0_f64, -1.0] {
-                transects += 1;
+                out.transects += 1;
                 let mut previous = 0u8;
+                let mut own_previous = 0u8;
+                let mut still_own = true;
                 let mut good = true;
+                let mut good_untruncated = true;
+                let mut reached_dry = false;
                 for s in 0..=LAB_FORD_TRANSECT_STEPS {
                     let offset = side * outer * s as f64 / LAB_FORD_TRANSECT_STEPS as f64;
                     let q = lab_offset(line, j, left, offset);
                     if net.nearest_line(q).map(|(k, _)| k) != Some(i) {
-                        break; // no longer this channel's transect
+                        still_own = false;
                     }
                     let band = net.transverse_at(q).0.index();
                     if band < previous {
-                        good = false;
-                        break;
+                        good_untruncated = false;
                     }
                     previous = band;
+                    if still_own {
+                        if band < own_previous {
+                            good = false;
+                        }
+                        own_previous = band;
+                        if band == hornvale_terrain::channel::Transverse::Dry.index() {
+                            reached_dry = true;
+                        }
+                    }
                 }
                 if good {
-                    monotone += 1;
+                    out.monotone += 1;
+                }
+                if good_untruncated {
+                    out.monotone_untruncated += 1;
+                }
+                if reached_dry {
+                    out.reached_dry += 1;
                 }
             }
         }
     }
-    if transects == 0 {
+    if out.transects == 0 {
         return None;
     }
-    Some(monotone as f64 / transects as f64)
+    Some(out)
 }
 
 /// The seven toponymic terrain gates (Task 4) and the concept each steeps
@@ -8581,11 +8689,21 @@ mod tests {
         // in the gate, and 0097 prescription 3 forbids the same claim living
         // in both instruments.
         //
-        // +3 for THE FORD (channel-land-fraction, channel-connectivity,
-        // channel-band-monotonicity — the three preregistered axes of spec
-        // §10, retiring nothing: they are the first readings of a feature
-        // that did not exist before, not a second opinion on one that did).
-        assert_eq!(registry().len(), 197);
+        // +5 for THE FORD. Three are spec §10's preregistered axes
+        // (channel-land-fraction, channel-connectivity,
+        // channel-band-monotonicity), retiring nothing: they are the first
+        // readings of a feature that did not exist before, not a second
+        // opinion on one that did. The other two exist because H4's scoring
+        // rule needed defending with data rather than with prose, and both
+        // are free — the same sweep already computes them:
+        // channel-band-monotonicity-untruncated is the reading WITHOUT the
+        // nearest-line truncation (the rule changes the verdict, so the
+        // reading it changes belongs on the record), and
+        // channel-transect-dry-reach is the anti-vacuity companion, since a
+        // truncated transect scores as monotone however short its prefix.
+        // Both must travel with the SAME population monotonicity is read
+        // over, which a gate test on one world cannot do.
+        assert_eq!(registry().len(), 199);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -8655,43 +8773,51 @@ mod tests {
     /// into nothing. If the prefix rule were doing the work, prefixes would
     /// stop before reaching `Dry`; require most of them to get all the way
     /// out, so the 1.0 the metric reports is a claim about full profiles.
+    ///
+    /// This runs on ONE world, so it is a floor on the mechanism, not on the
+    /// population — a review finding, and the reason the same quantity also
+    /// ships as `channel-transect-dry-reach`. A gate test cannot see the 64
+    /// worlds the readout is scored over; a census column can.
+    ///
+    /// It reads the shipped [`lab_band_transects`] rather than re-sweeping,
+    /// so it is a guard on the code path the metric actually takes — a second
+    /// copy of the sweep here could drift away from the metric and still pass.
     #[test]
     fn most_band_transects_reach_dry_before_they_are_truncated() {
         let terrain = ford_test_terrain();
-        let net = terrain.channels();
-        let mut transects = 0usize;
-        let mut reached_dry = 0usize;
-        for (i, line) in net.polylines.iter().enumerate() {
-            for j in 0..line.points.len() {
-                let outer = net.band_edges[i][j][3] * 1.5;
-                if outer <= 0.0 {
-                    continue;
-                }
-                let left = lab_left_normal(line, j);
-                for side in [1.0_f64, -1.0] {
-                    transects += 1;
-                    for s in 0..=LAB_FORD_TRANSECT_STEPS {
-                        let offset = side * outer * s as f64 / LAB_FORD_TRANSECT_STEPS as f64;
-                        let q = lab_offset(line, j, left, offset);
-                        if net.nearest_line(q).map(|(k, _)| k) != Some(i) {
-                            break;
-                        }
-                        if net.transverse_at(q).0 == hornvale_terrain::channel::Transverse::Dry {
-                            reached_dry += 1;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        assert!(transects > 50, "too few transects to be a real check");
-        let share = reached_dry as f64 / transects as f64;
+        let t = lab_band_transects(terrain.channels()).expect("this world has channels");
+        assert!(t.transects > 50, "too few transects to be a real check");
+        let share = t.reached_dry as f64 / t.transects as f64;
         assert!(
             share > 0.8,
-            "only {reached_dry}/{transects} ({share}) transect prefixes reached Dry — the \
-             nearest-line truncation is cutting profiles short, so a monotonicity of 1.0 \
-             would be measuring almost nothing"
+            "only {}/{} ({share}) transect prefixes reached Dry — the nearest-line \
+             truncation is cutting profiles short, so a monotonicity of 1.0 would be \
+             measuring almost nothing",
+            t.reached_dry,
+            t.transects
         );
+    }
+
+    /// The load-bearing half of H4's attribution, as an invariant rather than
+    /// an observation: a transect monotone over its WHOLE sweep is monotone
+    /// over every prefix of it, so the un-truncated count can never exceed the
+    /// truncated one. That ordering is what licenses reading "no speckle" off
+    /// the pair of columns — a world with `monotone == transects` and
+    /// `monotone_untruncated < transects` can only have violated after a
+    /// different river took over. If this ever inverts, that inference is void
+    /// and every H4 verdict drawn from it has to be re-derived.
+    #[test]
+    fn untruncated_monotonicity_is_a_subset_of_truncated() {
+        let terrain = ford_test_terrain();
+        let t = lab_band_transects(terrain.channels()).expect("this world has channels");
+        assert!(
+            t.monotone_untruncated <= t.monotone,
+            "{} transects were monotone un-truncated but only {} truncated — a whole-sweep \
+             monotone sequence cannot fail on its own prefix",
+            t.monotone_untruncated,
+            t.monotone
+        );
+        assert!(t.monotone <= t.transects && t.reached_dry <= t.transects);
     }
 
     /// The connectivity walk must be able to FAIL, and must be reading the
