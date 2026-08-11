@@ -75,8 +75,18 @@ fn notability_label(n: Notability) -> &'static str {
 /// actually exercises `material_key` instead of falling back to a shared
 /// `unwrap_or(0)` on a ledger with nothing about `id` in it.
 fn commit_occupation(world: &mut World, id: EntityId, core: &Occupation) {
-    let day = core.founded;
-    let end_day = core.ended.unwrap_or(core.founded);
+    // The Ell: an `Occupation` carries the bake's YEARS and the ledger speaks
+    // standard DAYS, so this fixture must cross at the same boundary
+    // `history_emit::ledger_day_of_bake_year` does — otherwise `record_of` would
+    // divide a year by 365.25 and reconstruct a *different* core, quietly
+    // falsifying this file's whole premise (see the module doc: "reconstructs
+    // `core` byte-for-byte"). That premise was prose until now;
+    // `the_flesh_seed_round_trips_the_core_it_was_committed_from` below asserts
+    // it. `hornvale-worldgen` cannot be a dev-dependency here (it already
+    // depends on this crate), so the constant is shared, not the function.
+    let cross = |year: f64| year * hornvale_kernel::Years::DAYS_PER_YEAR;
+    let day = cross(core.founded);
+    let end_day = core.ended.map_or(day, cross);
     let mut commit = |predicate: &str, object: Value, day: f64| {
         world
             .ledger
@@ -96,9 +106,11 @@ fn commit_occupation(world: &mut World, id: EntityId, core: &Occupation) {
 
     commit(OCC_PEOPLE, Value::Text(core.people.0.to_string()), day);
     commit(OCC_SITE, Value::Number(f64::from(core.site.0)), day);
-    commit(OCC_FOUNDED, Value::Number(core.founded), day);
-    if let Some(ended) = core.ended {
-        commit(OCC_ENDED, Value::Number(ended), end_day);
+    // Objects cross too, exactly as the stamps do — `occ-founded`/`occ-ended`
+    // name days on the ledger's own axis.
+    commit(OCC_FOUNDED, Value::Number(day), day);
+    if core.ended.is_some() {
+        commit(OCC_ENDED, Value::Number(end_day), end_day);
     }
     commit(
         OCC_PEAK,
@@ -161,6 +173,42 @@ fn world_with_occupation(id: u64, core: Occupation) -> (World, OccupationRecord)
         ended_by: Ended::Nature,
     };
     (world, record)
+}
+
+/// This file's stated premise, asserted instead of claimed.
+///
+/// The module doc says `commit_occupation` commits "the exact fact set
+/// `record_of` reads, so `flesh_seed(world, id)` reconstructs `core`
+/// byte-for-byte". Nothing checked that, and The Ell made it briefly false: the
+/// ledger moved to days while this fixture still wrote years, so `record_of`
+/// divided a year by 365.25 and reconstructed a core the fixture never
+/// committed. Every test here still passed, because they all compare two
+/// fixtures against *each other* and both were wrong the same way.
+///
+/// `flesh_seed` (ledger-side, through `record_of`) and `flesh_seed_for`
+/// (record-side, straight off the core) are the two producers of one key. This
+/// asserts they agree, which is the round trip: the crossing on the way in and
+/// the crossing on the way out must compose to the identity, or the almanac
+/// derives a different assemblage of structures and residue for a community
+/// than `hornvale_history::flesh` derives from the bake's own record.
+#[test]
+fn the_flesh_seed_round_trips_the_core_it_was_committed_from() {
+    // Both arms of `record_of`'s `ended` decode: a ruin (`Some`) and a
+    // still-standing community (`None`), so neither crossing is untested.
+    let alive = Occupation {
+        ended: None,
+        cause: None,
+        ..dead_core()
+    };
+    for core in [dead_core(), alive] {
+        let (world, record) = world_with_occupation(4242, core.clone());
+        assert_eq!(
+            hornvale_almanac::history::flesh_seed(&world, record.id),
+            hornvale_almanac::history::flesh_seed_for(&world, &core),
+            "the ledger-side and record-side flesh seeds disagree — `record_of` \
+             did not reconstruct the core that was committed"
+        );
+    }
 }
 
 #[test]

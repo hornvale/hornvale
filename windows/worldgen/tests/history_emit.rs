@@ -294,6 +294,41 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     assert_eq!(occ_site.day, Some(founded_day));
 }
 
+/// `present_year`'s **fallback** arm — the one a world with no committed
+/// `history-now` takes (a pre-T8 save, or a synthetic Lab world that never ran
+/// the composition-root bake) — reads back in bake years like the primary arm.
+///
+/// It has to be tested here rather than in `history_units.rs`, because it is
+/// only reachable on a world that `emit_now` never touched, and every real
+/// world commits `history-now`. `emit_history` alone is exactly that world.
+///
+/// The arm is a `max` over `occ-founded`/`occ-ended`, which is why it needs its
+/// own guard at all: the max is taken on the ledger's day axis and crossed once
+/// on the winner, so it shares no code with the primary read and no test of the
+/// primary read can reach it. Drop the crossing and every consumer of a
+/// bake-less world's present is 365× out, silently.
+#[test]
+fn the_present_fallback_reads_back_in_years_too() {
+    let mut w = test_world();
+    let mut ruin = base_record(1, "goblin", 0, 100.0);
+    ruin.core.ended = Some(900.0);
+    let h = History::new(vec![ruin], 1000.0);
+    emit_history(&mut w, &h).unwrap();
+    assert!(
+        w.ledger
+            .find(hornvale_history::HISTORY_NOW)
+            .next()
+            .is_none(),
+        "this fixture must NOT commit history-now, or it tests the primary arm"
+    );
+    assert_eq!(
+        hornvale_worldgen::present_year(&w),
+        900.0,
+        "with no committed present, the latest occupation event is the present \
+         — as a bake YEAR, not as the day it is stored as"
+    );
+}
+
 #[test]
 fn occupation_records_round_trip_every_committed_field() {
     // Task 1 (The Vestige): `occupation_records`/`occupations_at` are the

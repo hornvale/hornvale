@@ -99,6 +99,72 @@ fn a_founding_fact_is_stamped_on_the_day_it_records() {
     assert!(checked > 0, "seed 42 must bake some occupations");
 }
 
+/// `present_year` reads the present back in the unit it was written in.
+///
+/// The round trip is the whole claim: `emit_now` crosses `BakeConfig::end_year`
+/// into days on the way in, `present_year` crosses it back on the way out, and
+/// the number a consumer sees is the bake's own year. Dropping the read-side
+/// crossing leaves every test in `hornvale-worldgen`, `hornvale-almanac` and
+/// `hornvale` green while every ruin's age and tenure silently becomes 365×
+/// what it should be — measured, which is why this test exists.
+#[test]
+fn the_present_reads_back_as_the_bake_year_it_was_committed_from() {
+    let world = world();
+    assert_eq!(
+        hornvale_worldgen::present_year(&world),
+        hornvale_worldgen::BakeConfig::default_millennia().end_year,
+        "the committed present must read back as the bake year it was written \
+         from, not as the day count it is stored as"
+    );
+}
+
+/// A founder's remove from their forebear is counted in **generations**, which
+/// only works while the founding gap and the generation length are the same
+/// unit.
+///
+/// This is a ceiling, not a point value, and it is derived rather than pinned:
+/// the widest gap any edge can span is the bake's own 2000-year history, and no
+/// kind in the roster has a generation length under 5 years, so no remove can
+/// exceed 400. The observed maximum is far below that (`descent.rs` records 32
+/// for seed 42) — the headroom is deliberate, so an honest change to the
+/// allometry does not redden this.
+///
+/// What it does catch is the unit: with the crossing dropped in
+/// `descent::founded_year`, the gap arrives in days against a generation length
+/// in years and the removes climb into the tens of thousands. `descent_graph`'s
+/// existing tests cannot see that — `some_edges_resolve_to_siblings_and_some_to_ancestors`
+/// counts zero-gap versus nonzero-gap edges, and zero is zero in any unit, while
+/// `founder_handles_are_free_of_the_entity_id` keys a map on the year form and
+/// compares handles derived from the day form, so it is invariant under any
+/// injective rescaling of `founded`. Both stay green under the mutation.
+///
+/// It matters beyond descent's own callers: `windows/lab`'s name renderer folds
+/// `founder_of`/`forebear_of` into committed census values, and no census runs
+/// in the commit gate.
+#[test]
+fn no_founder_is_an_impossible_number_of_generations_removed() {
+    let world = world();
+    let mut worst = 0u32;
+    let mut edges = 0usize;
+    for record in occupation_records(&world) {
+        if let Some((_, kinship)) = hornvale_worldgen::forebear_of(&world, record.id) {
+            edges += 1;
+            if let hornvale_history::descent::Kinship::Ancestor(n) = kinship {
+                worst = worst.max(n);
+            }
+        }
+    }
+    assert!(edges > 0, "seed 42 must have descent edges to measure");
+    // 2000-year bake span / a 5-year floor on any roster generation length.
+    assert!(
+        worst <= 400,
+        "a founder came back {worst} generations removed from their forebear. \
+         The whole history is 2000 years and no kind's generation length is \
+         under 5, so this cannot be a generation count — the founding gap and \
+         the generation length are being measured in different units"
+    );
+}
+
 /// The disposition draw's two paths still agree — measured on a **real world**,
 /// not on a hand-built ledger.
 ///

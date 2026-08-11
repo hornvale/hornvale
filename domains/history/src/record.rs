@@ -103,9 +103,19 @@ pub struct Occupation {
     pub people: KindId,
     /// The Geosphere cell the occupation sits on.
     pub site: CellId,
-    /// The standard day the occupation began.
+    /// The bake **year** the occupation began.
+    ///
+    /// Not a day, despite what the `occ-founded` predicate this becomes on the
+    /// ledger is measured in: a history bake reasons in years
+    /// (`BakeConfig::start_year`/`end_year`) and the unit boundary is the
+    /// ledger, not this struct (The Ell, spec §3). `windows/worldgen`'s
+    /// `history_emit::{ledger_day_of_bake_year, bake_year_of_ledger_day}` are
+    /// the two seams that cross it, and every key derived from this field
+    /// ([`material_key`], [`founding_key`], [`layer_key`],
+    /// [`crate::flesh::founder_handle`]) is keyed on the year form.
     pub founded: f64,
-    /// The standard day the occupation ended, `None` if still alive.
+    /// The bake **year** the occupation ended, `None` if still alive. Same unit
+    /// as [`Occupation::founded`], and the same reason.
     pub ended: Option<f64>,
     /// The highest population this occupation ever reached.
     pub peak_population: u32,
@@ -310,7 +320,13 @@ pub struct FoundingCoords<'a> {
     pub people: &'a str,
     /// The cell founded on.
     pub site: CellId,
-    /// The standard day founded.
+    /// The bake **year** founded — the same unit [`Occupation::founded`]
+    /// carries, and it has to be: this struct has two producers,
+    /// [`founding_coords`] from a bake record and
+    /// `windows/worldgen::descent`'s `founding_coords_of` from the ledger, and
+    /// they feed one key function ([`founding_key_from`]). If they ever
+    /// disagreed on the unit, two foundings that are the same founding would
+    /// derive two different founder handles (The Ell, spec §3).
     pub founded: f64,
 }
 
