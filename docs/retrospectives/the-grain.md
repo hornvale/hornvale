@@ -333,10 +333,22 @@ The lesson is about attribution under a tiered suite. The test carries
 absent from every `docs/timings/test-baseline-*.tsv` (those baselines cover the
 non-ignored suite only). A heavy-tier test therefore has **no** cheap local
 history to consult: its last known state lives in prior heavy-run records, not
-in the per-host baseline you would naturally reach for. Two habits follow:
-check for prior references to the test before concluding your branch broke it,
-and **re-measure any red-main claim after absorbing** rather than carrying it
-forward as a known failure. A red that predates your branch and a red you caused
+in the per-host baseline you would naturally reach for.
+
+Those records do exist, and naming them is the actionable half. `heavy-run.sh`
+appends one row per dispatch to **`$HV_HEAVY_LOG_DIR/runs.tsv`** —
+`/tmp/hornvale-heavy/runs.tsv` on lefford — with the timestamp, exit code,
+duration, ref, and a path to that run's full log. Reading it is what showed this
+campaign that two *earlier* refs had also exited 100, on **different** tests,
+which is what made "the heavy tier is simply red" an unsafe conclusion in either
+direction. Note where it lives, though: `/tmp`, on one box, outside the repo. It
+is genuinely useful and it is not durable — a reboot or a tmp sweep takes the
+project's only heavy-tier history with it.
+
+Three habits follow: read `runs.tsv` for prior refs before concluding your branch
+broke a heavy test; **re-measure any red-main claim after absorbing** rather than
+carrying it forward as a known failure; and cite the SHA in any red-main claim
+you publish, because the claim expires the moment main moves. A red that predates your branch and a red you caused
 are indistinguishable from inside the branch, and the absorption is the cheapest
 experiment that separates them.
 
