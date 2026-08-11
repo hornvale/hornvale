@@ -624,10 +624,35 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   band), 0.3372 at walk depth, 0.3959 one level down, 0.1026 two, 0.0000
 ///   three — by then no step spans the water.
 ///
-/// **This is a late freeze, not a preregistration** (spec §8), and the step
-/// length was fixed after unblinding (see the campaign report). Two discounts
-/// stack; read the verdict as *parameter-dependent* rather than confirmed
-/// outright.
+/// # H2-4 IS NOT RESOLVED, AND THE ASSERTION BELOW IS NOT A CONFIRMATION
+///
+/// Read this before quoting the number anywhere.
+///
+/// §8's criterion is a **late freeze**, not a preregistration (spec §8): it was
+/// chosen with stage-1 measurements already in hand. On top of that, **three
+/// separate instrument changes were made after seeing a number**:
+///
+/// 1. the probe separation was reinterpreted from one room edge *per probe* to
+///    one room edge *between the pair*, after the first reading (**0.0308**)
+///    fell outside the interval;
+/// 2. the mesh-adjacency requirement was added, after which the surviving
+///    population was 34 of 341 pairs and read **0.7059** — **also outside
+///    [0.10, 0.70]**, i.e. a *falsifying* reading, not merely a thin one;
+/// 3. the transect was rebuilt around three mesh steps per vertex — **adopted
+///    directly after that falsifying reading** — giving the **0.3372** above.
+///
+/// Every change was forced by a defect in the previous instrument rather than by
+/// the number it produced, each is disclosed, and the quantifier and expected
+/// band for (3) were written down before it ran. None of that restores the
+/// epistemic status of a hypothesis whose free parameter moved four times under
+/// unblinded observation.
+///
+/// **So: H2-4 was not tested under preregistration and is not resolved. 0.3372
+/// at one room edge at walk depth is reportable as a measurement of the world at
+/// a stated step length — not as a confirmation of the [0.10, 0.70] interval.**
+/// The range check below is a **witness** that pins today's reading and reddens
+/// if it moves; it is not a hypothesis test, and this test's name should be read
+/// as naming the check rather than announcing a result.
 #[test]
 fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let world = world();
@@ -719,6 +744,9 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
         "only {usable} usable transects of {sampled} sampled ({drops:?}); the fraction is an \
          anecdote"
     );
+    // A WITNESS, not a hypothesis test — see the note above. It pins today's
+    // reading and reddens if it moves; passing it is not a confirmation of
+    // H2-4, which is not resolved.
     assert!(
         (0.10..=0.70).contains(&frac),
         "fordable fraction {frac} outside the spec's [0.10, 0.70] \
