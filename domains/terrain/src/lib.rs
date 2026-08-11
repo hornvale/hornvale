@@ -5,6 +5,7 @@
 
 pub mod boundaries;
 pub mod carve;
+pub mod channel;
 pub mod crust;
 pub mod drainage;
 pub mod elevation;
@@ -28,6 +29,10 @@ pub use boundaries::{BoundaryKind, CellBoundary};
 pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
+};
+pub use channel::{
+    BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
+    FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, Transverse, band_edges, channel_half_width, confinement,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
