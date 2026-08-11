@@ -2637,18 +2637,42 @@ impl Component for BiomeAffinity {}
 /// 193): the ladder had been calibrated on a store holding one settling people
 /// in nine, and it now holds seven of fifteen.
 ///
-/// "Level is gauge" is what made a bare constant look safe, and it is true of
-/// exactly ONE consumer. Genesis and `best_home` rank cells in the kind's own
-/// units, so a constant factor reorders nothing *for that kind*: **only
-/// within-kind ranking is level-invariant.** There are three other consumers,
-/// and every one of them reads the level.
+/// "Level is gauge" is what made a bare constant look safe, and the sentence
+/// that states its exemption has to be written carefully, because the obvious
+/// version of it is false. **A UNIFORM rescale of a whole row cannot reorder
+/// that kind's own ranking** — genesis and `best_home` rank cells in the kind's
+/// own units, so a constant factor reorders nothing for it. That is true, and it
+/// is what The Radiation's chronicle says.
 ///
-/// 1. **`per_species_capacity`** — the factor multiplies the headcount that
+/// **A change to the LEVEL is not a uniform rescale, so it does not inherit
+/// that exemption.** [`BiomeAffinity::from_preferences`] maps each preference to
+/// `floor + (1 - floor) * p`, which holds a stronghold at exactly `1.00` while
+/// pulling every lower rung down: it changes the ladder's CONTRAST, not its
+/// scale. The factor then multiplies the capacity field per cell, keyed on that
+/// cell's biome, so it reweights biome against every other condition in the
+/// product — and cells reorder. Measured, seed 42, the seven authored rows moved
+/// from their shipped level to `0.6 x` their gap to `1.0`, with every shape held
+/// fixed: **all seven row-carrying kinds have their own cell ranking changed**,
+/// and gnoll's argmax — the cell `best_home` would pick — moves from 30312 to
+/// 2276 with only 5 of its top 50 cells surviving. All eleven row-LESS kinds are
+/// bit-identical, which is the control: for them the factor is `1.0` at every
+/// level and the level genuinely is gauge.
+///
+/// So the exemption is narrow and it is about the *shape*, not the consumer:
+/// within-kind ranking is invariant under a uniform rescale of a whole row, and
+/// under any level change for a kind carrying no row at all — and under nothing
+/// else. For a kind with a shaped row, **the level is load-bearing in all four
+/// consumers**, and here they are with the evidence for each.
+///
+/// 1. **Within-kind cell ranking** (genesis's founding pool, `best_home`'s
+///    choice of ground) — the consumer this paragraph used to exempt.
+///    Evidence: the seven-of-seven reordering measured above.
+/// 2. **`per_species_capacity`** — the factor multiplies the headcount that
 ///    becomes a settlement's POPULATION, and the history bake's volume is a
 ///    function of population. Evidence, immediately above: at the abandoned
 ///    `0.25` the six elf rows took seed 42's tithe census from 552 occupation
 ///    records to 193 and breached four deliberate fidelity floors.
-/// 2. **`coexist::pack`, the per-kind share** — a cell's share is `K^β`
+/// 3. **`coexist::pack`, the per-kind share** — a cell's share is `K^β`
 ///    normalized **across** kinds (`hornvale_worldgen`'s
 ///    `demography_report_with_beta_from` hands `per_species_k` to
 ///    `hornvale_demography::coexist::pack`), so rescaling ONE kind's level
@@ -2660,15 +2684,24 @@ impl Component for BiomeAffinity {}
 ///    preregistered band. It takes a roster where every kind carries a row to
 ///    do it; at today's seven rows in eighteen kinds the level moves that
 ///    quantity by 0.9 without ever crossing an edge, which is a statement
-///    about the guard's sensitivity and not about the level's reach.
-/// 3. **`coexist::pack`, the cell's capacity** — that same cell's total is a
+///    about the guard's sensitivity and not about the level's reach. Full
+///    reach is necessary and not sufficient: whether the crossing happens
+///    also depends on which kind holds which ground, and the test file's
+///    record gives three arrangements that move the mean by −0.94 to −1.22
+///    of which only one crosses. Cite it as an existence proof.
+/// 4. **`coexist::pack`, the cell's capacity** — that same cell's total is a
 ///    plain **sum** of the present kinds' `K`, so the level moves the total,
 ///    and with it the wilderness fraction and the emigration pressure derived
 ///    from it, even where it moves no ordering at all.
 ///
-/// A level is gauge for one consumer and load-bearing for three. That is why
-/// the phrase survived two campaigns: it was a true statement about within-kind
-/// ranking, applied to everything.
+/// For a kind carrying a shaped row, then, the level is load-bearing in all
+/// four and gauge in none. That is why the phrase survived two campaigns: it
+/// was a true statement about a UNIFORM rescale, restated as a statement about
+/// the level and then applied to every consumer — and the one consumer it was
+/// still believed to exempt turns out not to be exempt either. When a quantity
+/// is described as gauge, name the transformation it is gauge under; "level is
+/// gauge" names none, which is exactly how it stayed unfalsified for two
+/// campaigns while being wrong about four consumers out of four.
 ///
 /// What the level is **not** is two quantities. The Muster asked exactly that,
 /// preregistered, and the sweep answered it: `level_k = λ · floor_k` satisfies

@@ -172,6 +172,22 @@
 //! one ULP off at `d = 1` and costs the bit-exact reproduction of the shipped
 //! rows that makes the whole sweep interpretable.
 //!
+//! **`l(d)` is CLAMPED at `0`, and past a certain depth that clamp binds.**
+//! `BiomeAffinity::from_preferences` documents `floor ∈ [0, 1)` as a caller's
+//! contract, so every arm here takes `l(d).max(0.0)`. Where the clamp binds, the
+//! arm has stopped being a graded level penalty for that kind and become a hard
+//! exclusion off its shape — which is a real change in *kind*, not only in
+//! degree, and any reader re-running these sweeps needs to know where it starts.
+//! Depths at which it first binds are noted with each arm below. A trap for
+//! whoever re-implements this: leaving the clamp OUT reproduces some arms
+//! exactly and not others. A row whose only rung is preference `1.0` has factor
+//! `l + (1 - l)·1.0 = 1.0` at *any* level, so its level sets only the
+//! off-stronghold default, and `pack` filters a non-positive `K` as absence
+//! (`k > 0.0`) whether that `K` is zero or negative — clamped and unclamped are
+//! then the same input. Verified on the fired arm below: clamped and unclamped
+//! agree to the last digit at `d = 1.60` and `d = 1.70`. On the common-shape
+//! arm, whose rows carry five graded rungs, they do not.
+//!
 //! **The level alone, at today's reach, cannot redden this guard.** Its WHOLE
 //! attainable range over the seven authored rows, five seeds, frozen β, each
 //! arm building its own worlds exactly as the test below does:
@@ -204,15 +220,37 @@
 //!    level's total downward reach from the shipped value is 0.043.
 //!
 //! **The level DOES redden it once the rows reach the whole roster.** Same
-//! knob, same round trip, all seven authored shapes unchanged; the eleven kinds
-//! with no authored row are each given one row carrying a single distinct land
-//! stronghold (non-marine `hornvale_climate::biome::ALL`, taken in roster
-//! order) at their own `sovereignty_floor` as level. Then:
+//! knob, same round trip, all seven authored shapes unchanged. The eleven kinds
+//! with no authored row are each given one row whose ONLY rung is
+//! `(land[i % 12], 1.0)`, at their own `sovereignty_floor` as level — where
+//! `land` is the twelve non-marine names of `hornvale_climate::biome::ALL` in
+//! declaration order and **`i` is the kind's position among all EIGHTEEN
+//! peopled kinds** (`wc.biosphere` order, ascending `KindId`), not its position
+//! among the eleven. State that index expression exactly; the obvious reading —
+//! the eleven added kinds taking `land[0..10]` — is a DIFFERENT arm and it does
+//! not redden the guard (below). The assignment it produces:
+//!
+//! ```text
+//!   black-dragon  pos  0 -> ice          hill-dwarf  pos  9 -> tropical-seasonal-forest
+//!   bugbear       pos  1 -> tundra       hobgoblin   pos 10 -> tropical-rainforest
+//!   desert-dwarf  pos  2 -> taiga        human       pos 11 -> alpine
+//!   goblin        pos  6 -> temperate-rainforest      kobold      pos 12 -> ice
+//!   gully-dwarf   pos  7 -> desert       red-dragon  pos 13 -> tundra
+//!   white-dragon  pos 16 -> shrubland
+//! ```
+//!
+//! **Read that table before reusing the word "distinct" about it.** The modulo
+//! wraps: `kobold` collides with `black-dragon` on `ice` and `red-dragon` with
+//! `bugbear` on `tundra`, so eleven added rows hold **nine** biomes, and three
+//! of the twelve (`temperate-grassland`, `temperate-forest`, `savanna` — three
+//! of the largest) are held by nobody. An earlier revision of this section
+//! called the assignment "distinct". It is not, and the difference is
+//! load-bearing (below).
 //!
 //! | arm (all 18 kinds carry a row) | mean | verdict |
 //! |---|---|---|
 //! | `d = 1.00` (the 7 authored rows bit-identical to shipped) | 2.5789073591583951 | PASS |
-//! | `d = 1.60` | 1.5473196487276366 | PASS |
+//! | `d = 1.60` — the clamp first binds here (`goblin`, `kobold`) | 1.5473196487276366 | PASS |
 //! | **`d = 1.70`** | **1.4155085834088321** | **RED, beneath the floor** |
 //!
 //! Reach and shape are held fixed across those three rows; only the level
@@ -222,19 +260,70 @@
 //! own check that it interpolates the shipped world rather than a neighbour of
 //! it (the control §6 of the campaign spec generalises).
 //!
-//! **The qualification, stated as the property this guard actually has.** It is
-//! not reach on its own: widening the reach to all eighteen kinds while giving
-//! them a COMMON shape leaves the level nearly gauge again — 2.3678 / 2.5792 /
-//! 2.5754 across the whole depth range, a span of 0.21, every arm PASS. What
-//! the level needs in order to be visible here is a roster DIFFERENTIATED
-//! ACROSS SPACE; the level then sets how sharply each kind is confined to its
-//! own ground.
+//! **The qualification, stated as the property this guard actually has.** Two
+//! things had to be true before the level could cross an edge, and only the
+//! first is the one a reader would guess.
 //!
-//! > `beta_yields_realistic_coexistence` detects the biome-affinity level to
-//! > the extent that the rows it scales partition the world between kinds. At
-//! > today's seven overlapping rows in eighteen kinds it detects the level at
-//! > no value whatsoever; with every kind on its own ground it detects it
-//! > sharply, crossing the floor between `d = 1.60` and `d = 1.70`.
+//! *Reach is necessary and nowhere near sufficient.* Widening the reach to all
+//! eighteen kinds while giving them a COMMON shape (wood-elf's preference
+//! vector, each kind at its own floor) leaves the level unable to cross at any
+//! depth. Sampled, with the clamp first binding at `d ≈ 1.45` (`kobold`):
+//!
+//! | common-shape arm | mean | verdict |
+//! |---|---|---|
+//! | `d = 0.00` | 2.3678005458279161 | PASS |
+//! | `d = 1.00` | 2.5792222335344528 | PASS |
+//! | `d = 1.20` — the in-contract MAXIMUM | 2.7322885440849425 | PASS |
+//! | `d = 1.44` — the deepest in-contract depth | 2.5430858241183563 | PASS |
+//! | `d = 1.74` (clamp binding) | 2.5754000977512357 | PASS |
+//! | `d = 1.80` (clamp binding for 10 of 18) | 4.3914867404688325 | PASS |
+//! | level `0` | 5.4146996869217450 | PASS |
+//!
+//! An earlier revision quoted three of those points as "a span of 0.21 across
+//! the whole depth range". That was a three-point sample of a NON-MONOTONE
+//! response and it understated the level's effect: the in-contract span is at
+//! least 0.365 (`d = 0.00` to `d = 1.20`, an interior maximum above both
+//! endpoints), and carried to the same off-shape `level = 0` endpoint the
+//! authored-roster table uses it is 3.05. The conclusion survives and is
+//! stronger than the arithmetic that was quoted for it: **no common-shape arm
+//! crosses either edge at any depth sampled**, including one that more than
+//! doubles claimed-cell diversity. (5.41 is also still far under the ceiling of
+//! 13.5, which is mechanism 1 above showing up from the other side.)
+//!
+//! *Differentiation is necessary and ALSO not sufficient.* Two full-reach,
+//! per-kind-differentiated assignments of identical construction disagree on
+//! the verdict:
+//!
+//! | assignment of the 11 added rows | `d = 1.00` | `d = 1.70` | Δ | verdict at 1.70 |
+//! |---|---|---|---|---|
+//! | `land[i % 12]`, `i` over all 18 (9 biomes, 2 collisions) | 2.5789073591583951 | 1.4155085834088321 | −1.163 | **RED** |
+//! | the same, with only the two collisions moved onto two unused biomes | 2.7441247810223062 | 1.5222025802564441 | −1.222 | PASS |
+//! | fully distinct: the 11 added kinds take `land[0..10]` | 2.7514058715031107 | 1.8150142892666530 | −0.936 | PASS |
+//!
+//! The fully distinct arm does not cross at `d = 1.74`, `1.90` or `2.20` either
+//! (1.6876 / 1.7626 / 1.6945), so it is not merely slower to arrive. **The
+//! collisions are load-bearing**: repairing those two rows alone, changing
+//! nothing else, moves `d = 1.70` from 1.4155 to 1.5222 and the verdict from RED
+//! to PASS.
+//!
+//! Read the Δ column rather than the verdict column for the physics. The level's
+//! EFFECT is large and stable across all three arrangements — it removes about
+//! 1.0–1.2 of diversity in every one. What the arrangement decides is where the
+//! `d = 1.00` baseline sits, and therefore whether that consistent effect lands
+//! short of the floor or past it. So:
+//!
+//! > `beta_yields_realistic_coexistence` detects the biome-affinity level only
+//! > on a roster whose rows both reach every kind and point at different ground,
+//! > and even then whether the level crosses the floor depends on the particular
+//! > arrangement: three assignments differing only in which kind holds which
+//! > biome move the mean by −0.94 to −1.22, and one of the three crosses. At
+//! > today's seven overlapping rows in eighteen kinds the guard detects the
+//! > level at no value whatsoever.
+//!
+//! That is a weaker property than "the guard can see the level", and it is the
+//! one the measurements support. A1 is confirmed — a level-only mutation with
+//! reach, shape and seeds held fixed does redden this guard — but the control is
+//! an existence proof, not a demonstration that the band tracks the level.
 //!
 //! Nor does either row group's level carry that red on its own (measured on a
 //! shared-world probe, so read the third digit as approximate): with both
