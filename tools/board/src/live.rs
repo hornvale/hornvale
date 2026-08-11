@@ -33,7 +33,13 @@ pub struct LiveContext {
     /// Branches that RESOLVE and ARE merged into `main` — an unambiguous,
     /// positive "definitely dead" signal that `is_reapable` treats
     /// differently from a branch that simply does not resolve at all (see
-    /// `is_reapable`'s doc comment for why the distinction matters).
+    /// `is_reapable`'s doc comment for why the distinction matters). "Merged"
+    /// here means genuinely absorbed and superseded (no commits of its own
+    /// left outstanding, AND `main` has since moved past it) — not merely
+    /// identical to `main`'s tip. `main` compared with itself, and a
+    /// campaign branch that has not yet made its first commit, are both
+    /// identical-to-`main` rather than merged, and belong in
+    /// `live_branches` (B11).
     pub merged_branches: BTreeSet<String>,
 }
 
@@ -147,9 +153,39 @@ impl LiveContext {
             // a tag named "main" would let the right-hand side of this same
             // ambiguity steal the answer just as easily as the left-hand
             // side did before I1's fix.
+            //
+            // B11: a plain ancestor check (`merge-base --is-ancestor resolved
+            // main`) is trivially true whenever `resolved` and `main` are the
+            // SAME commit, not just when `resolved` is a strict ancestor --
+            // and that is exactly `by == "main"` comparing itself, or a
+            // freshly-branched campaign that has not yet made a commit of its
+            // own. Both were being classified `merged` and filtered from
+            // every render (and were one `reap` away from permanent
+            // deletion). Ahead/behind counts distinguish the two: "merged"
+            // means the branch's own commits are fully absorbed (ahead == 0)
+            // AND main has since moved past it (behind > 0); a branch that is
+            // merely IDENTICAL to main (ahead == 0, behind == 0) has not
+            // diverged at all and is not "merged" in any meaningful sense.
+            // On any failure to compute the counts (a `refs/heads/main` that
+            // itself does not resolve, say), this errs toward LIVE, not
+            // merged -- an uncertain classification must render, never
+            // silently vanish (the exact failure mode this predicate exists
+            // to close).
             let merged = repo
-                .git(&["merge-base", "--is-ancestor", &resolved, "refs/heads/main"])
-                .is_ok();
+                .git(&[
+                    "rev-list",
+                    "--left-right",
+                    "--count",
+                    &format!("{resolved}...refs/heads/main"),
+                ])
+                .ok()
+                .and_then(|counts| {
+                    let mut parts = counts.split_whitespace();
+                    let ahead: u64 = parts.next()?.parse().ok()?;
+                    let behind: u64 = parts.next()?.parse().ok()?;
+                    Some(ahead == 0 && behind > 0)
+                })
+                .unwrap_or(false);
             if merged {
                 merged_branches.insert(by);
             } else {
@@ -506,6 +542,96 @@ mod tests {
         // from a render.
         let err = std::io::Error::new(std::io::ErrorKind::NotFound, "no such file or directory");
         assert!(pid_probe_alive(1, Err(err)));
+    }
+
+    // --- B11: notice liveness for main and newborn branches ---
+
+    /// `stored()` with a fixed id -- these tests never check the id itself,
+    /// only `committed_at`, so a constant stand-in keeps them readable.
+    fn stored_notice(post: &Post, committed_at: u64) -> StoredPost {
+        stored(post.clone(), "a", committed_at)
+    }
+
+    /// One commit with no file changes -- these tests care about ancestry,
+    /// not content, so an empty commit is the boring choice.
+    fn commit_empty(repo: &crate::git::Repo, message: &str) {
+        repo.git(&["commit", "--allow-empty", "-m", message])
+            .expect("commit");
+    }
+
+    /// Duplicated locally rather than shared from `store.rs`: that helper
+    /// creates its own root commit and its own branch (it owns the whole
+    /// setup), while these tests need to merge a branch that ALREADY has
+    /// commits of its own -- a different calling convention, not the same
+    /// helper. Sharing would mean reshaping one caller to fit the other.
+    fn merge_branch_into_main(repo: &crate::git::Repo, branch: &str) {
+        repo.git(&["checkout", "-q", "main"])
+            .expect("checkout main");
+        repo.git(&["merge", "--no-ff", "-m", "merge", branch])
+            .expect("merge");
+    }
+
+    #[test]
+    fn a_notice_authored_by_main_is_live_because_main_is_never_superseded() {
+        // main is trivially its own ancestor, so an ancestry-derived predicate
+        // classifies it as merged and filters every notice main ever posts --
+        // including, when this was found, one reporting main red on a heavy-tier
+        // calibration. B11.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        // A real `main` always has a commit; the docstring's mechanism
+        // (self-ancestry) only exists once `main` resolves to something.
+        commit_empty(&repo, "root");
+        let post = Post::new("notice", "main").with("note", json!("main is red"));
+        let stored = stored_notice(&post, /* committed_at */ 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            matches!(liveness(&stored, &ctx), Liveness::Live),
+            "a notice from main must render; it is the default author"
+        );
+    }
+
+    #[test]
+    fn a_notice_from_a_branch_with_no_commits_of_its_own_is_live() {
+        // A fresh campaign branch's tip EQUALS main, so it tests as merged and the
+        // post announcing a campaign's start is swallowed. Self-heals on the first
+        // commit -- measured going 0 -> 1 mid-session. B11.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        // `main` needs its own commit first so the branch's tip can be
+        // IDENTICAL to it (the docstring's scenario) rather than merely two
+        // unborn refs with nothing behind either of them.
+        commit_empty(&repo, "root");
+        repo.git(&["checkout", "-b", "campaign/newborn"])
+            .expect("branch");
+        let post = Post::new("notice", "campaign/newborn").with("note", json!("starting"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(matches!(liveness(&stored, &ctx), Liveness::Live));
+    }
+
+    #[test]
+    fn a_notice_from_a_genuinely_merged_branch_still_stops_rendering() {
+        // The arm that keeps the fix honest: D9's decay must still work, or this
+        // is not a fix, it is a removal.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        // `main` needs a commit of its own before it can be checked back out
+        // to below -- a fresh `temp_repo()` has no commit on ANY branch yet,
+        // and switching straight to a second unborn branch loses the first
+        // branch's name entirely (there is no ref to come back to).
+        commit_empty(&repo, "root");
+        repo.git(&["checkout", "-b", "campaign/done"])
+            .expect("branch");
+        // one real commit, so the branch is ahead...
+        commit_empty(&repo, "work");
+        repo.git(&["checkout", "main"]).expect("back");
+        merge_branch_into_main(&repo, "campaign/done");
+        commit_empty(&repo, "main moves on"); // main now ahead of the branch
+        let post = Post::new("notice", "campaign/done").with("note", json!("stale"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            !matches!(liveness(&stored, &ctx), Liveness::Live),
+            "a merged branch's notice must still decay, or D9 is gone"
+        );
     }
 
     // --- probe() against a real repo: I1's regression coverage ---
