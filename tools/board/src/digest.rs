@@ -36,7 +36,15 @@ pub fn history(
         "--reverse",
         &tip,
     ])?;
-    let mut out = Vec::new();
+    // First pass: the same oldest-first walk as before, but it only collects
+    // in-window ids and their attributed commit time -- no `git cat-file` yet.
+    // `seen_ids`/`order` dedupe together (oldest wins, load-bearing: a
+    // reap-then-repost of byte-identical content is the SAME post
+    // reappearing in this walk, not a new one), so the ids handed to the
+    // batch read below are already exactly the set the old per-post loop
+    // would have read, once each.
+    let mut order: Vec<String> = Vec::new();
+    let mut when_by_id: BTreeMap<String, u64> = BTreeMap::new();
     let mut seen_ids: BTreeSet<String> = BTreeSet::new();
     let mut when = 0u64;
     for l in log.lines() {
@@ -49,31 +57,38 @@ pub fn history(
             if when < cutoff {
                 continue;
             }
-            if seen_ids.contains(id) {
+            if !seen_ids.insert(id.to_string()) {
                 // Same content, already recorded from an earlier (or equal)
                 // commit in this oldest-first walk -- not a second post.
                 continue;
             }
-            // Read the blob by id — it survives compaction because the id IS
-            // the object id (D11).
-            let text = match board.repo().git(&["cat-file", "-p", id]) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("board: skipping unreadable post {id}: {e}");
-                    continue;
-                }
-            };
-            match Post::from_json(&text) {
-                Ok(post) => {
-                    seen_ids.insert(id.to_string());
-                    out.push(StoredPost {
-                        id: id.to_string(),
-                        post,
-                        committed_at: when,
-                    });
-                }
-                Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
+            order.push(id.to_string());
+            when_by_id.insert(id.to_string(), when);
+        }
+    }
+
+    // Second pass: one batched read over every in-window id, same as
+    // `posts_in`'s. Read the blob by id — it survives compaction because the
+    // id IS the object id (D11).
+    let blobs = board.cat_file_batch(&order)?;
+    let mut out = Vec::new();
+    for id in order {
+        // Absent means `cat_file_batch` already warned (unreadable or, in
+        // principle, malformed); do not warn twice.
+        let Some(bytes) = blobs.get(&id) else {
+            continue;
+        };
+        let text = String::from_utf8_lossy(bytes);
+        match Post::from_json(&text) {
+            Ok(post) => {
+                let committed_at = when_by_id.get(&id).copied().unwrap_or(0);
+                out.push(StoredPost {
+                    id,
+                    post,
+                    committed_at,
+                });
             }
+            Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
         }
     }
     Ok(out)
@@ -416,6 +431,48 @@ mod tests {
             out.contains("asked after the only reply"),
             "a reply older than the ask it shares a thread with must not clear it: {out}"
         );
+    }
+
+    #[test]
+    fn history_reads_every_post_in_the_window_in_one_batch() {
+        // Behavioural, not a spawn count: the guarantee is that batching changed
+        // nothing observable. Ten posts, all inside the window, all present, in
+        // committed order.
+        //
+        // The brief's literal `now_unix` (2_000_000_000, i.e. 2033-05-18) is a
+        // fixed future sentinel; with `since_days = 14` that opens a 14-day
+        // window ending in 2033, which excludes every real commit made before
+        // then -- including these, made today. Use the tip's own real commit
+        // time instead, exactly as
+        // `one_unparseable_post_in_history_does_not_hide_the_digest` already
+        // does below: `SystemTime::now()` would need a fresh
+        // `#[allow(clippy::disallowed_types)]`, and this crate already has
+        // exactly two sanctioned wall-clock call sites (`main.rs`, `live.rs`'s
+        // probe) -- a test can read the clock through git instead of minting
+        // a third.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        for i in 0..10 {
+            board
+                .append(&Post::new("technique", "main").with("note", json!(format!("note {i}"))))
+                .expect("append");
+        }
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let posts = history(&board, 14, now_unix).expect("history");
+        assert_eq!(posts.len(), 10);
+        for i in 0..10 {
+            assert!(
+                posts
+                    .iter()
+                    .any(|p| p.post.str_field("note") == Some(&format!("note {i}")[..])),
+                "post {i} missing from the digest window"
+            );
+        }
     }
 
     #[test]

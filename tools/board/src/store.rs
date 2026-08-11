@@ -466,7 +466,7 @@ impl Board {
     /// A missing or unreadable object is **omitted with a warning** rather than
     /// failing the read (D7). The caller treats absence as "already warned
     /// about" — including an id this function itself rejected.
-    fn cat_file_batch(
+    pub(crate) fn cat_file_batch(
         &self,
         ids: &[String],
     ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, BoardError> {
