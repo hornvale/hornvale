@@ -283,6 +283,9 @@ fn sample_positions_near_channels(net: &ChannelNetwork, wanted: usize) -> Vec<[f
 /// **347** segments (seed 42: 33, seed 7: 104, seed 1234: 50, seed 99: 88,
 /// seed 2024: 72), which is also the answer to "would this notice if a seed
 /// stopped producing rivers" — the per-seed floor below is what notices.
+///
+/// claim: invariant(forall-seed) — every polyline segment is a downhill step,
+/// so vertex order is downstream order and the bank sign has a referent
 #[test]
 fn the_polyline_vertex_order_is_downstream_order() {
     let mut total = 0usize;
