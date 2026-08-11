@@ -350,6 +350,7 @@
 - [The Grain](./chronicle/the-grain.md)
 - [The Radiation](./chronicle/the-radiation.md)
 - [The Ford](./chronicle/the-ford.md)
+- [The Ford, stage 2](./chronicle/the-ford-stage-2.md)
 
 # Appendix: The Frontier
 

@@ -715,3 +715,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-11T13:32:40Z | gate | 684.332 | 3120.950 | 203.679 | 4.86 | 0 | a5874f81 | campaign/the-grain | ambrose | 12 |
 | 2026-08-11T13:54:56Z | gate | 795.773 | 2784.123 | 218.544 | 3.77 | 0 | 08656f2a | campaign/the-grain | ambrose | 12 |
 | 2026-08-11T15:03:53Z | rebaseline | 270.670 | 221.893 | 12.667 | 0.87 | 0 | d012cbc8 | the-ford | MacBookPro | 10 |
+| 2026-08-11T15:15:53Z | gate | 677.105 | 3063.305 | 180.818 | 4.79 | 0 | 7b62955c | the-ford | MacBookPro | 10 |
+| 2026-08-11T18:55:42Z | gate | 493.419 | 2996.830 | 166.714 | 6.41 | 0 | cb452ef9 | the-ford | MacBookPro | 10 |
+| 2026-08-11T19:45:04Z | gate | 813.997 | 2913.290 | 160.402 | 3.78 | 0 | 1a0ef764 | the-ford | MacBookPro | 10 |
+| 2026-08-11T19:47:22Z | rebaseline | 130.977 | 211.091 | 10.824 | 1.69 | 0 | 1a0ef764 | the-ford | MacBookPro | 10 |

@@ -1588,6 +1588,36 @@ whose land itself never varies because it is permanently frozen.
   criterion — which The Ford's own spec, frozen before 0124 existed, did not do.
   The bet's honest state: the floor is crossable in more ways than this row
   once assumed, and each way owes a different proof.
+  **Answered, in part, by [The Ford's stage 2](./chronicle/the-ford-stage-2.md)
+  (2026-08-11): the inherited conservation obligation was not met — it was
+  declined, by not making a refinement claim at all, and the row should record
+  which of those two things happened.** Stage 2 was expected to redefine the
+  room's water field and mint a new schema. It did neither. The room instead
+  gained the *quantity* — a signed distance to the channel and the band edges
+  that apply at that spot — appended as trailing keys, with the existing water
+  field, its mechanism, the availability predicate and the toponymic gates all
+  held fixed by asserted invariant. Nothing coarse was re-derived, so nothing
+  had to be conserved, and the byte-cleanliness of the append was checked
+  rather than asserted: nineteen insertions and no other change across seven
+  regenerated artifacts. That is a third way past the floor, distinct from both
+  re-scores above — not refining a field, and not changing a carrier either,
+  but **adding a measurement beside the field and letting the consumer set the
+  cut**. The Grain's disclosure answer is what makes it legible: the room now
+  declares which of its fields were decided at grid resolution and which by the
+  channel, so a reader can tell a flat field from a broken one without guessing.
+  **What this does not do is close the conservation question, and stage 2
+  produced its sharpest witness.** A seed-42 room reports its water as *river*
+  while standing twenty times its own outermost band edge from any channel —
+  the grid's answer and the network's answer, contradicting each other inside
+  one document, because a river short enough to occupy a single cell never
+  becomes a polyline. The disagreement is not new; what is new is that it is
+  now visible in a single record instead of split across two subsystems that
+  never met. A contradiction a reader can see is the precondition for repairing
+  it, and the repair — a stated rule for which half wins, or lines for those
+  cells — is owed by a later stage. The bet's confidence is unchanged.
+  What moved is the menu: crossing the floor by *addition and disclosure* costs
+  no conservation proof, and is available to any quantity willing to travel
+  beside the coarse field rather than replacing it.
 
 
 ## Genuinely open — split by whether the world can grade itself

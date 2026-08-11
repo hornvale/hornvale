@@ -322,7 +322,10 @@ now is the producer: a network on the globe, a band predicate any position can
 be handed to, and three instruments in the laboratory watching it.
 
 Still ahead: the room reading its transverse position, and the epoch that
-implies; gallery forest conditioned on *bank* and *floodplain* rather than
+implies — [stage two](./the-ford-stage-2.md) has since done the first and
+avoided the second, by storing the distance and its band edges as appended
+keys rather than restating the water field as a class; gallery forest
+conditioned on *bank* and *floodplain* rather than
 drawn two-in-seven by dice — and never on the channel, since a forest planted
 in the water is not a gallery forest; and the network reaching the scene
 schemas additively. One hypothesis genuinely waits on those consumers:
