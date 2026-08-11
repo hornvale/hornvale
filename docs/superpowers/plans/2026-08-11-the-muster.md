@@ -241,7 +241,7 @@ rows read.
 | `book/src/chronicle/the-muster.md` | **create** — the campaign's chronicle, carrying the promoted sweep (spec §6) | 6 |
 | `docs/retrospectives/the-muster.md` | **create** — process lessons (decision 0020) | 6 |
 | `book/src/frontier/idea-registry.md` | **modify** — `MEM-founder-handle-epoch` → `shipped`; `BIO-40` repointed | 6 |
-| `docs/decisions/0121-*.md` | **create** — the founder-handle epoch, ratified | 6 |
+| `docs/decisions/0125-*.md` | **create** — the founder-handle epoch, ratified | 6 |
 
 ---
 
@@ -1221,7 +1221,7 @@ git commit -F /tmp/hv-msg-t5.txt -- windows/worldgen/tests/founder_collision.rs
 **Files:**
 - Create: `book/src/chronicle/the-muster.md`
 - Create: `docs/retrospectives/the-muster.md`
-- Create: `docs/decisions/0121-<slug>.md`
+- Create: `docs/decisions/0125-<slug>.md`
 - Modify: `book/src/frontier/idea-registry.md`
 - Modify: `book/src/SUMMARY.md`, `book/src/open-questions.md` (as the sweep
   requires)
@@ -1268,11 +1268,31 @@ the same family as The Radiation's twenty-four.
 
 - [ ] **Step 3: The decision record**
 
-`docs/decisions/0121-<slug>.md`, following the format of `0120`. The subject is
+`docs/decisions/0125-<slug>.md`, following the format of `0120`. The subject is
 the founder-handle epoch: what changed, that v1 stays declared, that the drop
 backstop stays because no key is total, and that `descent::founder_of` is a
 separate handle this epoch does not move. Append-only; do not edit 0051, 0006
 or 0120 — cite them.
+
+**The number is not a free choice, and it moved once already.** This plan was
+written claiming `0121`; The Grain landed four records (0121–0124) while the plan
+sat unmerged, and the absorption renumbered this one to `0125`. Since The Grain,
+`cli/tests/docs_consistency.rs` also **enforces that the decision log's numbers
+form a contiguous run starting at 0001** — so a gap or a duplicate is now a red
+gate, not a convention.
+
+Do not trust the number written above. Branch on what you find:
+
+```bash
+ls docs/decisions/ | grep -E '^[0-9]{4}-' | sort | tail -3
+```
+
+- highest is `0124` → use `0125`, as written.
+- highest is above `0124` → **another campaign landed while this one ran.** Use
+  the next free number, and update every reference to it in this plan and in the
+  chronicle in the same commit.
+- there is a gap below the highest → **STOP.** The contiguity guard is already
+  red for a reason that is not yours; report it rather than filling the gap.
 
 - [ ] **Step 4: Registry rows**
 
