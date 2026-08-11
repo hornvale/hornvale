@@ -30,7 +30,10 @@ POSIX `sh` under `shellcheck`.
 - **No new dependencies.** `tools/board/Cargo.toml` gets nothing added. The
   workspace allowlist does not reach here, but the project's temperament does.
 - **No schema change.** No new *required* post field. New post *kinds* are
-  conventions, shipped as a post, not as an enum (D12).
+  conventions, shipped as a post, not as an enum (D12). **This constrains the
+  JSON on disk, not Rust internals** — Task 5 adds a field to the in-memory
+  `StoredPost`, which is a reader-side struct that is never serialised, and that
+  is not a schema change. Do not read the two as being in conflict.
 - **The board never blocks and is never authority** (D7/D7c). Every read seam
   stays non-fatal; a corrupt post warns and is skipped; the render exits zero.
 - **`board digest` is the exception and must stay loud** — it exits non-zero on
@@ -1429,8 +1432,15 @@ does test it runs in no gate.
 
 - [ ] **Step 3: Verify both arms, by running them**
 
+**These probes use `git reset --hard`, which destroys uncommitted work.** Commit
+your real changes FIRST and confirm a clean tree, or you will lose them:
+
 ```bash
 cd /Users/nathan/Projects/hornvale/.claude/worktrees/the-beacon
+git status --porcelain    # MUST be empty before continuing; if not, commit first
+```
+
+```bash
 # arm 1: a board-only change runs the board suite
 printf '\n' >> tools/board/src/lib.rs && git add tools/board/src/lib.rs
 git commit -m "chore: hook arm 1 probe" 2>&1 | tail -5
@@ -1441,6 +1451,7 @@ printf '\n' >> tools/board/src/lib.rs && printf '\n' >> cli/src/main.rs
 git add tools/board/src/lib.rs cli/src/main.rs
 git commit -m "chore: hook arm 2 probe" 2>&1 | tail -5
 git reset --hard HEAD~1
+git status --porcelain    # MUST be empty again; the probes left nothing behind
 ```
 
 Record both outputs verbatim. Arm 2 failing to run `make quick` is a defect in
@@ -1483,11 +1494,27 @@ git commit -m "chore(board): a risk-scoped lane, and a hook rule that gates what
 
 ```bash
 git push origin campaign/the-beacon
-ssh lefford 'cd ~/Projects/hornvale && git fetch origin && git checkout <full-sha> -- . 2>/dev/null; cargo build --release --manifest-path tools/board/Cargo.toml && ./tools/board/target/release/board sync && ./tools/board/target/release/board read | head -20'
+git rev-parse HEAD          # copy this FULL SHA into the command below
+```
+
+Then, substituting the SHA — and note this uses a **detached checkout of the
+SHA**, not `checkout <sha> -- .`, which would overwrite files without moving HEAD
+and leave lefford's tree lying about what it is:
+
+```bash
+ssh lefford 'cd ~/Projects/hornvale && git fetch origin && git status --porcelain'
+```
+
+**Stop if that status is not empty** — lefford's checkout is shared, and another
+session's work is not yours to move. Ask before continuing. Otherwise:
+
+```bash
+ssh lefford 'cd ~/Projects/hornvale && git checkout --detach <full-sha> && cargo build --release --manifest-path tools/board/Cargo.toml && ./tools/board/target/release/board sync && ./tools/board/target/release/board read | head -20'
 ```
 
 Use a **full SHA**, never a branch name — the census dispatch rule exists because
-`reset --hard` on a branch name can land on a stale local branch over there.
+`reset --hard` on a branch name can land on a stale local branch over there. Note
+where you left lefford's HEAD in your report, so it can be restored.
 Then sync back here and confirm lefford's posts arrive:
 
 ```bash
