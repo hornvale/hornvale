@@ -3,7 +3,7 @@
 **Campaign:** The Beacon
 **Branch:** `campaign/the-beacon`
 **Date:** 2026-08-11
-**Status:** spec, awaiting G3
+**Status:** spec, G3 approved 2026-08-11 with two extensions (§9)
 
 A cairn marks a place. A beacon relays between summits — the same stones,
 stacked on a second hill, so that a signal lit on one is seen from the other.
@@ -379,6 +379,98 @@ vanishing.
 Test both arms, and all three authors — main, a newborn branch, and a genuinely
 merged branch — or the fix is untested in the direction that matters.
 
+**B12 — Suggestions are a post kind, they carry the friction that provoked
+them, and they are digest-only.** `suggest{note, evidence{cmd,out}?, paths[]}`
+— a proposal for improving the board, posted on the board.
+
+The gap it fills is friction, not absence of a home. A board improvement already
+*has* a durable home: CLAUDE.md is explicit that "the tooling/process backlog is
+the idea registry's `TOOL-*` and `PROC-*` rows." But a registry row costs a
+commit, a gate, five-column conformance and a 600-character budget — this
+campaign spent three rounds trimming two rows to fit. That cost is right for an
+idea meant to outlive a campaign and wrong for "the render should report sync
+age." So `suggest` is the zero-friction inbox and the registry stays the durable
+record; the promotion path is `suggest` → digest → `PROC-*` row for whatever
+survives, which is the same promote-before-teardown discipline the campaign
+followup register already uses.
+
+Two properties, both load-bearing:
+
+- **It carries its provoking incident**, exactly as D12b makes a `technique`
+  carry the command and output that established it. "The render should show sync
+  age" is a wish; "I ran this, wanted that, got the other" is a bug report. The
+  convention makes the difference visible to a reader without anyone policing
+  it — the same reason D12b can afford not to be a validation rule.
+- **It never renders ambiently; it renders only in `board digest`.** Three
+  reasons that compound: a suggestion is not actionable by the session that
+  reads it, so ambient delivery is pure cost; it is the lowest-effort post kind
+  and therefore the likeliest flood source, against which F13 records that
+  nothing bounds distinct posts; and B7 is spending real effort on the render
+  budget, so a new *free* post kind is worth having. Digest-only costs the
+  render nothing and reaches the one reader who can act on it (D14).
+
+**A property to preserve rather than change:** `board digest` exits non-zero on
+error, unlike the deliberately quiet ambient render (D7). That asymmetry must
+survive, because the digest is the instrument that would report the board itself
+being broken — a digest that failed quietly would make board defects invisible
+by construction, which is D14's failure mode reached through the back door.
+
+**B13 — A risk-scoped fast lane for the board's non-destructive surface, and a
+path-scoped hook rule.** The board is dev tooling outside the cargo workspace
+with no determinism surface, so campaign cadence is the wrong price for a render
+fix. Two separate mechanisms, which solve two different problems and do not
+substitute for each other.
+
+**The hook rule fixes a mis-targeted check.** Measured: `tools/board` is *not* a
+workspace member (`members = ["kernel", "domains/*", "windows/*", "cli"]`), so
+`cargo clippy --workspace` and `make quick` never examine it — while the
+pre-commit hook's Rust-relevant filter *does* include `.rs`, so a board change
+triggers `make quick` anyway. The suite that actually tests the board takes
+**24.4 s** and is run by no gate at all. So a board change today pays for a gate
+that cannot see it and skips the one that can. The rule: a `tools/board/`-only
+change runs `cargo test --manifest-path tools/board/Cargo.toml` in place of
+`make quick`. This is a strict improvement and is independent of any branch.
+
+**The lane fixes write contention on `main`.** `scripts/CLAUDE.md` records that
+a linked worktree may not commit to `main` and the primary checkout may — so
+main has a single writer, and that writer is frequently mid-landing (it was
+during this campaign's own spec work, with 0125 staged). A shared lane that any
+worktree may commit to and that merges promptly sidesteps the bottleneck.
+
+**Named by risk, not by schedule.** Nothing here runs nightly, so a name
+promising a cadence invites the lane becoming long-lived — which would make it a
+second `main` and reintroduce every divergence problem B1 exists to avoid. One
+lane, short-lived per cycle, merged promptly.
+
+**The lane is not uniform across the board's surface, and cross-host shortens
+the eligible list:**
+
+| change class | lane? | why |
+|---|---|---|
+| render, relevance, digest | yes | read-only, per-host, non-destructive |
+| a new post kind or convention | yes | D12: the schema is open, unknown fields round-trip |
+| liveness predicates (the B11 family) | yes | B1 keeps `reap` per-host, so the blast radius is one log |
+| **`reap` semantics** | **no** | the only destructive operation; a wrong rule deletes posts |
+| **the CAS / append path** | **no** | silent write loss |
+| **the sync / push path** | **no** | B3 — this is where 0118 part 3 can be violated across hosts |
+
+"The board cannot break a world" does not cover the exclusions: `reap` can
+delete the evidence, which is precisely the hazard B11 surfaced. Those three
+keep campaign discipline.
+
+**B12 and B13 must not be wired into a loop.** They arrived in one sentence,
+which invites fusing them: a suggestion posted, then auto-implemented on the
+lane. That would make the board self-modifying with no human in it, and the
+board is what every session reads at `SessionStart`. The lane lowers *ceremony*,
+never *review* — the human-visible commit and the suite stay. Stated as a
+decision because the fusion is the attractive mistake, not an unlikely one.
+
+**And a non-obvious reason the suite is mandatory on the lane.** The read seams
+are deliberately non-fatal (D7): the hook is `|| true` and a failed render warns
+and stays quiet. So a broken board does not announce itself — it goes *silent*,
+which is the one failure mode D14 says kills a board. Non-fatal is not the same
+as safe, and the 24 s suite is the only thing that would notice.
+
 ## 4. The design
 
 ### 4a. Refs
@@ -638,12 +730,28 @@ Test plan (`cargo test --manifest-path tools/board/Cargo.toml`):
 15. **A reap does not drop a live-by-B11 notice** — the regression guard for the
     deadline: main-authored and newborn-branch notices survive compaction, while
     a genuinely merged branch's notice is still dropped.
+16. **A `suggest` post is digest-only** (B12) — present in `board digest`,
+    absent from both the ambient render and `board read`, and it does not
+    consume the ambient post budget. Both arms: absent where it should be,
+    present where it should be.
+17. **The digest still fails loud** (B12) — an unreadable board makes
+    `board digest` exit non-zero, where the ambient render exits zero. The
+    asymmetry is the property, so assert both halves in one test or the next
+    change to error handling will quietly flatten them.
+
+Verification steps that are not unit tests, and must be run and recorded rather
+than asserted:
+
+- **The hook rule** (B13) — stage a `tools/board/`-only change and confirm the
+  hook runs the board suite and not `make quick`; then stage a mixed change and
+  confirm it runs `make quick`. The second arm is the one that matters, since a
+  path filter that is too broad silently drops the workspace gate.
 
 ## 8. Definition of Done
 
 - `board sync`, the union read, B4/B5's liveness split, B7's batched read,
   `board redact`, the secret scan, and the `confirm`/`stale` convention post
-  landed, with §7's fifteen tests green.
+  landed, with §7's seventeen tests green, plus B13's two recorded hook-rule arms.
 - The read seams updated: `scripts/board-render.sh`, `doctor.sh`'s board
   section, `preflight-merge.sh`'s `hold-off` surface, `board digest`.
 - `make board-sync` added; `make help` lists it. The board built on lefford so
@@ -659,10 +767,47 @@ Test plan (`cargo test --manifest-path tools/board/Cargo.toml`):
   actually dominated.
 - Decision record for B1/B2/B4 (the substrate, the transport and its standing
   privacy consequence, and the foreign-post judgment rule).
+- `suggest` shipped as part of the version-2 convention post (B12), digest-only,
+  with a `PROC-*` promotion path stated in the convention itself.
+- B13's hook rule landed in `scripts/hooks/pre-commit` and documented in
+  `scripts/CLAUDE.md`; the lane, its exclusion list, and the
+  no-loop-with-B12 rule documented in the root `CLAUDE.md` board section.
+- Decision record for B13 — it is a process change, and process choices that
+  live only in a spec get relitigated.
+- An invitation to suggest posted **to the board**, since B12's channel is
+  worth nothing unannounced.
 - Chronicle entry, `docs/retrospectives/the-beacon.md`, book freshness sweep,
   Confidence Gradient re-score if any bet moved.
 
-## 9. Open questions
+## 9. Post-G3 amendments (2026-08-11)
+
+Approved at G3 with no changes, then extended by two directives from Nathan,
+both folded in as B12 and B13.
+
+**N1 — encourage suggestions for improving the board.** Became B12. The design
+question it forced was not *where* suggestions live — the idea registry already
+claims that role — but why nobody uses it for small things, which is friction.
+The answer is a two-tier path (free post, durable row) rather than a new
+backlog, and the non-obvious call is that suggestions must be **digest-only**:
+the lowest-effort post kind is the likeliest flood source, and B7 is spending
+real effort on exactly the budget it would consume.
+
+**N2 — a fast lane for board changes, off `main`.** Became B13, and it changed
+under measurement. The proposal was one mechanism; the ideonomy pass established
+that two different problems were in play — a mis-targeted check and single-writer
+contention on `main` — which are orthogonal, so neither substitutes for the
+other. Both are in scope. Two adjustments to what was asked for: the lane is
+named by **risk rather than schedule**, because nothing runs nightly and a
+cadence-shaped name invites a long-lived second `main`; and B12 and B13 are
+explicitly **not** wired together, because auto-implementing suggestions would
+make the medium every session reads self-modifying with no human in it.
+
+The measurement that shaped it: `tools/board` is not a workspace member, so
+`make quick` cannot see it, while the pre-commit hook's `.rs` filter runs
+`make quick` anyway — and the 24.4 s suite that does test it runs in no gate.
+The current cost is not merely high, it is spent in the wrong place.
+
+## 10. Open questions
 
 1. **Does a third host ever appear?** The design is N-host by construction, but
    only two are real. Nothing here assumes two except the measurement budgets.
