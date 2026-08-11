@@ -1,11 +1,11 @@
-# 0126. When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail
+# 0123. When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail
 
 **Status:** Accepted (2026-08-11) · **Decider:** Nathan · **Relates:**
 [0038](0038-identity-computes-on-the-canonical-grid.md),
 [0055](0055-external-clients-consume-a-versioned-wasm-catalog.md),
 [0076](0076-the-situated-pole-is-egocentric-and-knowledge-limited.md),
-[0124](0124-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md),
-[0125](0125-an-emit-gate-is-not-a-grain-gate.md)
+[0121](0121-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md),
+[0122](0122-an-emit-gate-is-not-a-grain-gate.md)
 
 In the context of *The Grain* finding that a walking-depth chart reports one
 biome and one water kind across a whole neighbourhood, facing the fact that this
@@ -24,7 +24,7 @@ which of its fields those were, so a reader had to guess, and guessed wrong. Two
 campaigns' worth of diagnosis went into a contradiction that did not exist.
 
 Refinement was tried and is illegal for the field in question
-([0124](0124-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md)):
+([0121](0121-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md)):
 thresholding a blend of a nominal field's underlay deletes a category, and it
 deleted 29% of seed 42's fresh water. So the choice was not between a flat field
 and a varied one. It was between a flat field a reader could interpret and a flat

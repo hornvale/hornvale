@@ -1,4 +1,4 @@
-# 0125. An emit gate is not a grain gate — a field's doc names the condition that makes it absent
+# 0122. An emit gate is not a grain gate — a field's doc names the condition that makes it absent
 
 **Status:** Accepted (2026-08-11) · **Decider:** Nathan · **Relates:**
 [0013](0013-definition-of-done-includes-the-book.md),
@@ -53,7 +53,7 @@ phrased as physics.
 4. **A published schema carries the same obligation, one level up.** A wire field
    documented `null`-able owes its consumer the condition. Where the condition is
    a resolution rather than a gate, the *document itself* discloses it — see
-   [0126](0126-disclose-a-resolution-rather-than-refine-a-field.md).
+   [0123](0123-disclose-a-resolution-rather-than-refine-a-field.md).
 
 ## Consequences
 

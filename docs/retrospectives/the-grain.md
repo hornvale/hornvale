@@ -2,10 +2,10 @@
 
 Process lessons, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-grain.md), and the settled positions
-are decisions [0124](../decisions/0124-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md),
-[0125](../decisions/0125-an-emit-gate-is-not-a-grain-gate.md),
-[0126](../decisions/0126-disclose-a-resolution-rather-than-refine-a-field.md) and
-[0127](../decisions/0127-a-refinement-preregisters-a-conservation-criterion.md).
+are decisions [0121](../decisions/0121-ordinal-fields-may-band-a-blend-nominal-fields-must-partition.md),
+[0122](../decisions/0122-an-emit-gate-is-not-a-grain-gate.md),
+[0123](../decisions/0123-disclose-a-resolution-rather-than-refine-a-field.md) and
+[0124](../decisions/0124-a-refinement-preregisters-a-conservation-criterion.md).
 
 Five tasks. One of them was implemented, gated green, escalated, and reverted, and
 its replacement was a different feature. Most of what this campaign has to teach
@@ -289,9 +289,9 @@ regeneration exclusively, or it is written as a verification task from the start
   measurement.** *Trigger:* the freshness sweep found it.
   `docs/design/room-scale/p2-subdivision-design.md` still lists "max-weight vs
   blend-then-reclassify" as "small, but a real choice". One of the two named
-  options is now known illegal for nominal fields (decision 0124), measured. The
+  options is now known illegal for nominal fields (decision 0121), measured. The
   doc is a design document rather than a published chapter, so it was left alone
-  here; it should either point at 0124 or be marked superseded.
+  here; it should either point at 0121 or be marked superseded.
 - **F8 — The snapshot channel still cannot zoom.** *Trigger:* named out of scope in
   the spec and unchanged. The session builds its spatial channel at a hardcoded
   zoom while the map verb honours the caller's. Additive and small; the campaign

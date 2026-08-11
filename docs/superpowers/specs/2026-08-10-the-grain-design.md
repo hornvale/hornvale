@@ -384,19 +384,19 @@ Three candidates for `docs/decisions/`, subject to G3:
 > **SUPERSEDED BY WHAT ACTUALLY SHIPPED: four decisions, not three, and
 > proposal 1 as stated above is the exact claim the revert falsified.**
 >
-> - **0124 — an ordinal field may band a blend, a nominal field must take a
+> - **0121 — an ordinal field may band a blend, a nominal field must take a
 >   partition.** This is the reformulation of proposal 1, not proposal 1
 >   itself: "a fine layer bands from the blend; it does not inherit a
 >   category" is precisely the claim Change B's attempt 2 built, measured, and
 >   falsified (§5) — `relief` (ordinal) may band safely, `water` (nominal) may
 >   not. Biome is not a deliberate exception to a banding rule; it is a
 >   nominal field like water, governed by the same line.
-> - **0125 — an emit gate is not a grain gate.** Shipped as proposal 2 above
+> - **0122 — an emit gate is not a grain gate.** Shipped as proposal 2 above
 >   states it.
-> - **0126 — disclose a resolution rather than refine a field.** Not on the
+> - **0123 — disclose a resolution rather than refine a field.** Not on the
 >   original shortlist. This is what replaced Change B once refining water was
 >   ruled out (§5's "What replaces it").
-> - **0127 — a refinement preregisters a conservation criterion.** Also not on
+> - **0124 — a refinement preregisters a conservation criterion.** Also not on
 >   the original shortlist. This is the H1/H2-passed-yet-illegal lesson (§8)
 >   made durable: a variation-only preregistration cannot detect a broken
 >   global invariant.
