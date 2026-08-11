@@ -143,11 +143,105 @@
 //! while a change to the per-biome **shape** — each kind given a distinct
 //! stronghold biome — drives it to ≈1.334 and fails beneath the floor. So what
 //! is demonstrated is sensitivity to affinity *structure*. Whether the level
-//! alone can be made to redden this band is an open question for the campaign's
-//! positive-control work, not a property to claim here. (A further trap for
-//! whoever writes that control: an over-strong affinity crush makes the world
+//! alone can be made to redden this band is settled by the positive control in
+//! the next section, and the answer is *not at today's reach*. (A trap that
+//! section had to steer around: an over-strong affinity crush makes the world
 //! claim no cells at all and trips `claimed_diversity`'s `assert!(n > 0)`
 //! before the band is ever evaluated — a red for the wrong reason.)
+//!
+//! **The Muster's positive control (2026-08-11): what reddens this guard, and
+//! what does not.** A repaired guard that stays green proves nothing, so the
+//! campaign owed a mutation that makes this assertion fail. What it got is a
+//! *qualified* confirmation, and the qualification is the finding.
+//!
+//! Every arm below is test-fixture-only — nothing under `domains/species/` is
+//! edited. A row is mutated by inverting it to its authored preference vector
+//! and rebuilding it at a new level, so the authored **shape** is carried
+//! through unchanged:
+//!
+//! ```text
+//!   pref = (factor - level) / (1 - level)             // invert
+//!   row  = BiomeAffinity::from_preferences(l, pref)   // rebuild at level l
+//!   l(d) = level - (d - 1) * (1 - level)              // the depth knob
+//! ```
+//!
+//! `d` is the PENALTY DEPTH: `d = 1` is the shipped level exactly, `d = 0` sets
+//! every factor to `1.0` (affinity off), and `d > 1` drives the level below its
+//! authored value toward the hard-exclusion `0`. Write `l(d)` in the form
+//! above and not as the algebraically identical `1 - d * (1 - level)`, which is
+//! one ULP off at `d = 1` and costs the bit-exact reproduction of the shipped
+//! rows that makes the whole sweep interpretable.
+//!
+//! **The level alone, at today's reach, cannot redden this guard.** Its WHOLE
+//! attainable range over the seven authored rows, five seeds, frozen β, each
+//! arm building its own worlds exactly as the test below does:
+//!
+//! | arm (the 7 authored rows) | mean claimed diversity | verdict |
+//! |---|---|---|
+//! | `d = 0.00` — level 1, affinity off | 2.3678005458279161 | PASS |
+//! | `d = 1.00` — SHIPPED | 2.1127601185602627 | PASS |
+//! | `d = 1.20` | 2.0817935086273343 | PASS |
+//! | `d = 1.40` — the level's MINIMUM | 2.0691689632978352 | PASS |
+//! | level `0` — hard exclusion off-shape | 2.9734723549133930 | PASS |
+//!
+//! The floor sits 0.569 below that minimum and the ceiling 10.5 above that
+//! maximum. Two mechanisms hold it there, and they are different in kind:
+//!
+//! 1. **The ceiling is unreachable in principle, by any mutation of this
+//!    store.** `strife` cannot exceed the number of species PRESENT in a cell,
+//!    and the mean claimed cell holds 6.44 of the 18 (pooled over the five
+//!    seeds' 177 336 claimed cells). A mean of 13.5 asks for more coexistence
+//!    than the world puts in a cell at all. This band can only ever be failed
+//!    from below.
+//! 2. **The floor asks for dominance, and the level cannot manufacture it at
+//!    partial reach.** The level is a biome-INDEPENDENT scalar on a kind's `K`,
+//!    so it registers only as a *contrast* between kinds that carry a row and
+//!    kinds that do not. That contrast is not thin — the seven carriers hold
+//!    61.2% of claimed-cell density — but deepening it SUPPRESSES those seven,
+//!    which evens out the survivors instead of concentrating them. Driven to
+//!    the extreme (level `0`: hard exclusion everywhere off the authored shape)
+//!    the mean *rises* to 2.97, away from the only edge it could cross. The
+//!    level's total downward reach from the shipped value is 0.043.
+//!
+//! **The level DOES redden it once the rows reach the whole roster.** Same
+//! knob, same round trip, all seven authored shapes unchanged; the eleven kinds
+//! with no authored row are each given one row carrying a single distinct land
+//! stronghold (non-marine `hornvale_climate::biome::ALL`, taken in roster
+//! order) at their own `sovereignty_floor` as level. Then:
+//!
+//! | arm (all 18 kinds carry a row) | mean | verdict |
+//! |---|---|---|
+//! | `d = 1.00` (the 7 authored rows bit-identical to shipped) | 2.5789073591583951 | PASS |
+//! | `d = 1.60` | 1.5473196487276366 | PASS |
+//! | **`d = 1.70`** | **1.4155085834088321** | **RED, beneath the floor** |
+//!
+//! Reach and shape are held fixed across those three rows; only the level
+//! moves. It fails through the BAND — every seed still claims cells at every
+//! arm, so `assert!(n > 0)` is never the thing that fires. And the seven-row
+//! `d = 1.00` arm reproduces 2.1127601185602627 exactly, which is this sweep's
+//! own check that it interpolates the shipped world rather than a neighbour of
+//! it (the control §6 of the campaign spec generalises).
+//!
+//! **The qualification, stated as the property this guard actually has.** It is
+//! not reach on its own: widening the reach to all eighteen kinds while giving
+//! them a COMMON shape leaves the level nearly gauge again — 2.3678 / 2.5792 /
+//! 2.5754 across the whole depth range, a span of 0.21, every arm PASS. What
+//! the level needs in order to be visible here is a roster DIFFERENTIATED
+//! ACROSS SPACE; the level then sets how sharply each kind is confined to its
+//! own ground.
+//!
+//! > `beta_yields_realistic_coexistence` detects the biome-affinity level to
+//! > the extent that the rows it scales partition the world between kinds. At
+//! > today's seven overlapping rows in eighteen kinds it detects the level at
+//! > no value whatsoever; with every kind on its own ground it detects it
+//! > sharply, crossing the floor between `d = 1.60` and `d = 1.70`.
+//!
+//! Nor does either row group's level carry that red on its own (measured on a
+//! shared-world probe, so read the third digit as approximate): with both
+//! groups at `d = 1.70` the mean is 1.414; moving only the eleven added rows
+//! gives 1.738 and moving only the seven authored rows gives 2.436, both PASS.
+//! Parts of −0.842 and −0.143 against a combined −1.165 — about 15%
+//! interaction. The red is a property of the roster, not of a subset of it.
 //!
 //! **The roster decides the verdict, so the assertion now names its roster.**
 //! The band `[1.5, 0.75 × oatmeal]` is scored over the PEOPLED kinds — the

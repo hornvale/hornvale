@@ -2637,12 +2637,45 @@ impl Component for BiomeAffinity {}
 /// 193): the ladder had been calibrated on a store holding one settling people
 /// in nine, and it now holds seven of fifteen.
 ///
-/// "Level is gauge" is what made a bare constant look safe, and it is true only
-/// of RANKING. Genesis and `best_home` rank cells in the kind's own units, so a
-/// constant factor reorders nothing *for that kind* — but the same factor
-/// multiplies the capacity that becomes a settlement's POPULATION, and the
-/// history bake's volume is a function of population. A level is gauge for one
-/// consumer and load-bearing for the next.
+/// "Level is gauge" is what made a bare constant look safe, and it is true of
+/// exactly ONE consumer. Genesis and `best_home` rank cells in the kind's own
+/// units, so a constant factor reorders nothing *for that kind*: **only
+/// within-kind ranking is level-invariant.** There are three other consumers,
+/// and every one of them reads the level.
+///
+/// 1. **`per_species_capacity`** — the factor multiplies the headcount that
+///    becomes a settlement's POPULATION, and the history bake's volume is a
+///    function of population. Evidence, immediately above: at the abandoned
+///    `0.25` the six elf rows took seed 42's tithe census from 552 occupation
+///    records to 193 and breached four deliberate fidelity floors.
+/// 2. **`coexist::pack`, the per-kind share** — a cell's share is `K^β`
+///    normalized **across** kinds (`hornvale_worldgen`'s
+///    `demography_report_with_beta_from` hands `per_species_k` to
+///    `hornvale_demography::coexist::pack`), so rescaling ONE kind's level
+///    moves EVERY kind's share in that cell, not only its own. Evidence: The
+///    Muster's positive control, recorded in full in the module doc of
+///    `windows/worldgen/tests/beta_calibration_freeze.rs` — a level-only
+///    change, every authored shape carried through unchanged, takes the mean
+///    per-claimed-cell diversity from 2.5789 to 1.4155 and reddens a
+///    preregistered band. It takes a roster where every kind carries a row to
+///    do it; at today's seven rows in eighteen kinds the level moves that
+///    quantity by 0.9 without ever crossing an edge, which is a statement
+///    about the guard's sensitivity and not about the level's reach.
+/// 3. **`coexist::pack`, the cell's capacity** — that same cell's total is a
+///    plain **sum** of the present kinds' `K`, so the level moves the total,
+///    and with it the wilderness fraction and the emigration pressure derived
+///    from it, even where it moves no ordering at all.
+///
+/// A level is gauge for one consumer and load-bearing for three. That is why
+/// the phrase survived two campaigns: it was a true statement about within-kind
+/// ranking, applied to everything.
+///
+/// What the level is **not** is two quantities. The Muster asked exactly that,
+/// preregistered, and the sweep answered it: `level_k = λ · floor_k` satisfies
+/// every band simultaneously at λ ∈ {0.25, 0.50, 1.00, 1.20} with the shipped
+/// configuration interior to the grid, and λ = 1.0 reproduces the shipped world
+/// byte-identically across five seeds. One quantity, in force — the freeze and
+/// both result sets are in `book/src/chronicle/the-muster.md`.
 ///
 /// Note what the derivation is **not**: it is not `0.50`, the value measured to
 /// restore those floors. Restoring them was not the criterion, and whether the
