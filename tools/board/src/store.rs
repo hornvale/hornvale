@@ -17,70 +17,29 @@ const MAX_ATTEMPTS: u32 = 24;
 
 /// Ids per `git cat-file --batch` invocation, in [`Board::cat_file_batch`].
 ///
-/// `Repo::git_stdin_bytes` writes the whole request before it reads any of
-/// the response. `cat-file --batch`'s OUTPUT grows with both id count and
-/// each object's size, so a big enough batch can fill git's stdout pipe
-/// before git has drained our stdin; git then blocks writing output nobody
-/// is draining yet, which stops it reading further input, which leaves our
-/// own write blocked on a pipe git will never come back to drain — a
-/// deadlock, not a slow path, with no timeout anywhere in the chain (fix
-/// round 1 on B7, 2026-08-11: reproduced at n=4000 against ~500-byte
-/// objects, and independently on real board posts; cost 42 minutes of wall
-/// clock before it was diagnosed).
-///
-/// The fix bounds only the INPUT side, which is what actually matters here:
-/// if one chunk's id-line list fits inside the smallest plausible pipe
-/// buffer, `write_all` for that chunk can never block, so the read that
-/// drains stdout is always reached — and once THAT read has started, the
-/// OUTPUT size stops mattering, because `wait_with_output` just keeps
-/// draining until git exits. Each id line is a 40-character hex oid plus a
-/// newline: 41 bytes. `256 * 41 = 10,496` bytes (~10.25 KiB).
-///
-/// **The argument requires this number to stay UNDER pipe capacity, not
-/// above any floor** — get the direction backwards and the comment reads as
-/// reassuring while licensing an unsafe increase (fix round 2 on B7 wrote a
-/// version of this comment that did exactly that, reasoning from a 4 KiB
-/// page as a "floor" the chunk size was "comfortably above" — which argues
-/// FOR raising this constant, the opposite of what keeps it safe). Measured
-/// directly on this host in fix round 3's review: an undrained pipe accepts
-/// 65,536 bytes before a writer blocks, matching Linux's own default pipe
-/// capacity. 10,496 B against a measured 65,536 B is roughly a 6x margin —
-/// state that margin, and check any future change against it, rather than
-/// reasoning from an unrelated lower bound.
+/// `Repo::git_stdin_bytes` writes the whole request before reading any
+/// response, so a chunk's INPUT must stay under the pipe buffer or both
+/// sides deadlock: git blocks on its own full stdout, stops draining our
+/// stdin, and our write never completes (no timeout anywhere in that
+/// chain). Each id line is 41 bytes (40-hex oid + newline):
+/// `256 * 41 = 10,496` bytes, against a measured 65,536-byte pipe capacity
+/// on this host — roughly a 6x margin. Check any change to this constant
+/// against that margin (the argument needs staying UNDER it), not against
+/// an unrelated floor.
 const CAT_FILE_BATCH_CHUNK: usize = 256;
 
 /// True if `id` is a full, unabbreviated git object id: exactly 40 lowercase
 /// hex characters (this project's objects are SHA-1).
 ///
-/// [`Board::cat_file_batch`] requires this of every id it is given: git's
-/// `cat-file --batch` echoes the *resolved* id in its header line, not
-/// whatever was asked for, so an abbreviation or a ref name would key the
-/// result map under a different string than the original id — a silent
-/// miss, not an error. The requirement is enforced by filtering (warn and
-/// skip) **inside `cat_file_batch` itself** — the one point every consumer
-/// converges on, including `digest.rs`'s `history` walk, which harvests ids
-/// straight from its own `git log` and never passes through
-/// [`Board::post_ids_in`] — because an id that fails this check is untrusted
-/// repository data, not a caller bug. `post_ids_in` also filters (it can
-/// name the tree path in its own warning, which `cat_file_batch` cannot),
-/// but `cat_file_batch` does not rely on it: see that function's doc
-/// comment for why fix round 3 moved the filter here after a debug-only
-/// assertion at this exact spot turned out to be reachable from
-/// `digest.rs`, and why blanking or panicking the whole board on one bad
-/// filename is a worse outcome than skipping it.
+/// [`Board::cat_file_batch`] requires this: `cat-file --batch` echoes the
+/// *resolved* id in its header, not whatever was asked for, so anything
+/// else (an abbreviation, a ref name) would key the result map under a
+/// different string and silently miss.
 ///
-/// **Deliberately SHA-1-only (40 chars), not 40-or-64.** A SHA-256
-/// repository (`git init --object-format=sha256`) would fail every check
-/// here, including on ids this tool wrote itself, and fall back to warn-and-
-/// skip for every single post — not a crash, but a silently empty board on
-/// a format this project does not use anywhere (fix round 3's review
-/// verified the failure mode directly and confirmed it degrades gracefully
-/// rather than panicking). Left as a known, named gap rather than widened to
-/// accept 64 hex characters too: hornvale has no SHA-256 repository today,
-/// and every other id-shaped constant in this crate (`"0".repeat(40)` in
-/// tests, the `41` in `CAT_FILE_BATCH_CHUNK`'s arithmetic) already assumes
-/// 40, so widening only this one check would not have made the crate
-/// SHA-256-capable, only inconsistent about it.
+/// Deliberately SHA-1-only: a SHA-256 repository (`git init
+/// --object-format=sha256`) degrades gracefully on this check (warns and
+/// skips every post, exit 0) rather than crashing, but is not supported —
+/// hornvale has no SHA-256 repository today.
 fn is_full_object_id(id: &str) -> bool {
     id.len() == 40
         && id
@@ -355,30 +314,14 @@ impl Board {
     /// re-reading it, so a caller holding a [`TipSnapshot`] can ask about
     /// exactly the commit it read.
     ///
-    /// A tree entry under `posts/` whose filename is not a full 40-hex
-    /// object id is **skipped, with a warning** — not surfaced as an error.
-    /// This is a second validation point for [`is_full_object_id`], not the
-    /// only one: [`cat_file_batch`](Self::cat_file_batch) filters again,
-    /// independently, right before it invokes `git` — see that function's
-    /// doc comment for why neither point can rely on the other having run
-    /// first. This one exists anyway because it is strictly more
-    /// informative (it can name the full tree path in its warning; a bare
-    /// id reaching `cat_file_batch` cannot), and every caller of THIS
-    /// function already treats an id's absence from the returned list as
-    /// "already warned about". Fix round 2 on B7 found that a hard `Err`
-    /// here (or downstream) makes ONE bad filename blank the ENTIRE board —
-    /// every claim and hold-off, not just the one bad post — which is worse
-    /// than D7's ordinary corrupt-post case and the opposite of what D7
-    /// requires.
-    ///
-    /// The warning is deduplicated per process (see
-    /// `WARNED_MALFORMED_POST_FILENAMES`) because this function runs three
-    /// times in one ordinary `board render`/`read` invocation
-    /// (`posts_at_tip`, `relevance::unseen`, `Cursor::record` each call it
-    /// independently) — without the dedup, one bad filename would print the
-    /// same warning three times per invocation, which is noise `make board`
-    /// would see even though the corrupt-*content* warning in `posts_in`
-    /// below prints only once for the equivalent case.
+    /// A `posts/` filename that is not a full 40-hex object id is
+    /// **skipped, with a warning** — never an error (D7: one corrupt post
+    /// must never blank the whole board). [`cat_file_batch`](Self::cat_file_batch)
+    /// filters the same way, independently; this filter stays too because
+    /// it can name the full tree path in its warning, which `cat_file_batch`
+    /// cannot. Deduplicated per THREAD (see `WARNED_MALFORMED_POST_FILENAMES`)
+    /// because this runs three times in one ordinary render/read
+    /// (`posts_at_tip`, `relevance::unseen`, `Cursor::record`).
     fn post_ids_in(&self, tip: &str) -> Result<Vec<String>, BoardError> {
         let listed = self.repo.git(&["ls-tree", "-r", "--name-only", tip])?;
         let mut ids: Vec<String> = Vec::new();
@@ -510,32 +453,19 @@ impl Board {
     /// result map under a different string than the original id and
     /// silently miss on lookup — see [`is_full_object_id`].
     ///
-    /// **This is filtered right here, warn-and-skip, before any `git`
-    /// invocation** — not merely documented, and not by a caller upstream.
-    /// Fix round 2 on B7 put the filter in [`post_ids_in`](Self::post_ids_in)
-    /// instead and asserted the requirement here with a debug-only
-    /// `debug_assert!`, reasoning that `post_ids_in` was the one place every
-    /// id converges. That reasoning was wrong on a fact fix round 3's review
-    /// caught by simulating Task 4: `digest.rs` harvests its own ids
-    /// straight from `git log --diff-filter=A --name-only` and calls this
-    /// function directly, **never through `post_ids_in`** — so the assert
-    /// was reachable with an ordinary malformed filename, and it fired as a
-    /// release-mode-only debug assertion: `board digest` (which
-    /// `make board-digest` always runs *without* `--release`) would panic —
-    /// exit 101, empty stdout — on exactly the input fix round 2 spent an
-    /// entire round teaching `read`/`render` to survive. A panic on
-    /// untrusted repository data is not better than fix round 1's hard
-    /// `Err`; it is the same failure with a louder exit code. `post_ids_in`
-    /// still filters too (kept — it can name the tree path in its warning,
-    /// which this function cannot), but this function no longer trusts any
-    /// caller, including its own siblings in this crate, to have done so
-    /// first.
+    /// Filtered (warn-and-skip) right here, before any `git` invocation, not
+    /// delegated to a caller: this is the one point every consumer converges
+    /// on (`posts_in` today, `digest.rs`'s `history` and Task 5's cross-ref
+    /// union next), and an id reaching this function is repository data —
+    /// untrusted, not a caller bug — so a bad one must never blank or crash
+    /// the whole read (D7). [`post_ids_in`](Self::post_ids_in) also filters,
+    /// independently (it can name the tree path in its own warning, which
+    /// this function cannot), but this function does not rely on that
+    /// having run first.
     ///
     /// A missing or unreadable object is **omitted with a warning** rather than
-    /// failing the read: one corrupt post must never break a session's render
-    /// (D7). The caller therefore treats absence as "already warned about" —
-    /// which now includes an id this function itself rejected, not only one
-    /// git reported missing.
+    /// failing the read (D7). The caller treats absence as "already warned
+    /// about" — including an id this function itself rejected.
     fn cat_file_batch(
         &self,
         ids: &[String],
@@ -568,7 +498,10 @@ impl Board {
     ///
     /// Split out of [`cat_file_batch`](Self::cat_file_batch) purely so that
     /// function can call this once per chunk without duplicating the
-    /// header-framing parse; `ids` here is already validated by the caller.
+    /// header-framing parse. `cat_file_batch` only ever passes ids that have
+    /// already passed [`is_full_object_id`]; a test in this module calls
+    /// this function directly with one that has not, to exercise the parse
+    /// on its own.
     fn cat_file_batch_chunk(
         &self,
         ids: &[String],
@@ -601,39 +534,20 @@ impl Board {
             let mut parts = header.split(' ');
             let name = parts.next().unwrap_or_default().to_string();
             match parts.next() {
-                // KNOWN STATUS-ONLY tokens: git's header line ends right
-                // here, with no third field and no body to skip past.
-                // `continue` — skip just this one id and keep parsing the
-                // rest of the chunk. "missing" is the ordinary case (object
-                // absent); "ambiguous"/"dangling"/"notdir" are `cat-file
-                // --batch`'s other documented statuses, demonstrated by fix
-                // round 3's review with an actually-ambiguous short input
-                // (`printf '5093\n<oid>\n' | git cat-file --batch` answers
-                // `5093 ambiguous` with no body). Every id `cat_file_batch`
-                // hands this function has already passed `is_full_object_id`
-                // upstream, which makes an ambiguity genuinely unreachable
-                // for a full 40-hex oid in practice — but the earlier
-                // version of this match fell through to the size parse on
-                // ANY unrecognised second token, `break`-ing the whole
-                // chunk (losing every id still queued behind the odd one,
-                // up to `CAT_FILE_BATCH_CHUNK - 1` of them) rather than
-                // losing just the one id that produced it. Handling these
-                // tokens explicitly is cheap insurance against that, not a
-                // response to a live hazard.
-                Some("missing" | "ambiguous" | "dangling" | "notdir") => {
+                // Body-less statuses: the header ends right here, so skip
+                // just this id and keep parsing the chunk. None of these is
+                // ever a valid object type, so this can't misfire on a real
+                // content line. (`symlink`/`dangling`/`loop`/`notdir` are
+                // first-field `--follow-symlinks` shapes, not reachable via
+                // this second-token match; not used here.)
+                Some("missing" | "ambiguous" | "submodule" | "excluded") => {
                     eprintln!("board: skipping {name:?}: cat-file reported {header:?}");
                     continue;
                 }
-                // A real object type (blob/tree/commit/tag): a third field
-                // (the byte size) and a body still follow, parsed below.
+                // A real object type: size and body still follow, below.
                 Some(_) => {}
-                // GENUINE FRAMING DESYNC, not a recognised status: a header
-                // with no second field at all. Unlike the tokens above, this
-                // means the byte stream itself cannot be trusted — there is
-                // no way to know whether a body follows or how long it is —
-                // so `break` (stop the whole chunk) is the only safe
-                // response here. `continue`-ing instead would risk reading
-                // some body's bytes as the next record's header.
+                // No second field at all: the stream itself can't be
+                // trusted, so stop the batch rather than guess at a body.
                 None => {
                     eprintln!("board: unparseable cat-file header {header:?}; stopping this batch");
                     break;
@@ -1647,17 +1561,10 @@ mod tests {
 
     #[test]
     fn a_malformed_post_filename_is_skipped_not_a_reason_to_blank_the_whole_board() {
-        // The companion regression the review's fix round 2 asked for:
-        // `one_unparseable_post_does_not_hide_the_rest_of_the_board` (above)
-        // covers corrupt CONTENT under a valid filename (a real object id).
-        // This covers the distinct failure mode -- a malformed FILENAME
-        // (not any real object's id) holding otherwise well-formed content.
-        // `resilience.rs` only ever exercises corrupt bytes, never a bad
-        // path, which is exactly the gap that let an earlier version of
-        // `cat_file_batch` respond to this case with a hard `Err` that
-        // blanked the entire board (every post lost, not just this one) --
-        // worse than D7's ordinary corrupt-post case, and never caught by a
-        // test until now.
+        // The companion to `one_unparseable_post_does_not_hide_the_rest_of_
+        // the_board` (above), which covers corrupt CONTENT under a valid
+        // filename. This covers a malformed FILENAME (not any real
+        // object's id) holding otherwise well-formed content.
         let (_d, repo) = temp_repo();
         let board = Board::new(repo.clone());
         let good = board
@@ -1760,23 +1667,11 @@ mod tests {
 
     #[test]
     fn cat_file_batch_never_panics_on_a_non_full_oid_even_when_called_directly() {
-        // Regression test for fix round 3's item 1. `digest.rs`'s `history`
-        // walk harvests its own ids from `git log --diff-filter=A
-        // --name-only` and calls `cat_file_batch` directly -- Task 4 routes
-        // exactly that through this function, never through
-        // `post_ids_in`. Fix round 2 put the non-full-oid guard behind a
-        // `debug_assert!` here, reasoning `post_ids_in` was the one
-        // upstream choke point; fix round 3's review simulated Task 4 and
-        // found the assert IS reachable this way, and it fires as a
-        // debug-only panic -- exit 101, empty stdout -- on a build profile
-        // `make board-digest` always uses (`cargo run` with no `--release`).
-        // A panic on untrusted repository data is not an improvement on the
-        // hard `Err` fix round 2 replaced; it is the identical failure
-        // shape with a louder exit code and a narrower reproduction window
-        // (debug only). This calls `cat_file_batch` the same way a
-        // Task-4-shaped caller would -- directly, with an id that never
-        // passed through `post_ids_in` -- and must return `Ok` with the
-        // bad id simply absent, under a debug build, not panic.
+        // `digest.rs`'s `history` walk harvests its own ids from `git log`
+        // and calls `cat_file_batch` directly, never through `post_ids_in`
+        // -- this calls it the same way, with an id that never passed
+        // through that upstream filter, and must return `Ok` with the bad
+        // id simply absent, not panic.
         let (_dir, repo) = crate::git::test_support::temp_repo();
         let board = Board::new(repo.clone());
         let good = board
@@ -1819,38 +1714,23 @@ mod tests {
 
     #[test]
     fn an_ambiguous_status_token_costs_one_id_not_the_rest_of_the_chunk() {
-        // Regression test for fix round 3's item 2: a header whose status is
-        // a recognised token OTHER than "missing" (git's "ambiguous",
-        // "dangling", "notdir") must cost exactly the one id that produced
-        // it, not every id still queued behind it in the same chunk. Before
-        // this fix, any second-token value other than "missing" fell through
-        // to the size parse, found no third field, and `break`, silently
-        // dropping every subsequent id in the chunk -- demonstrated
-        // end-to-end in the fix-round report with walk order
-        // good1, deadbeef, 5093, good2: the unbatched read kept both good
-        // posts, the batched one silently lost the second.
+        // A header whose status is a recognised token other than "missing"
+        // must cost exactly the one id that produced it, not every id still
+        // queued behind it in the chunk.
         //
-        // "x1006" and "x3205" are not meaningful content -- they are two
-        // magic strings, found once by an offline birthday search over
-        // ~4000 candidates, whose git blob object ids (a content-only hash,
-        // independent of which repository holds them) both start with the
-        // same 4-hex-char prefix:
+        // "x1006" and "x3205" are two magic strings (found once, offline,
+        // by a birthday search) whose blob ids -- a content-only hash,
+        // independent of which repository holds them -- both start with
+        // "cf6e":
         //   cf6e7b5aa2d6cc5cb24323c224d9481d5afe3a5b  ("x1006")
         //   cf6e33624013139ce10daeeb07ef4a512212cfcb  ("x3205")
-        // so asking `git cat-file --batch` for the bare prefix "cf6e"
-        // reproducibly answers `cf6e ambiguous`, with no body -- on real
-        // git, no mocking, the same status the review's own repro
-        // (`printf '5093\n<oid>\n' | git cat-file --batch` -> `5093
-        // ambiguous`) demonstrated.
+        // so `git cat-file --batch` for the bare prefix "cf6e" reproducibly
+        // answers `cf6e ambiguous`, on real git, no mocking.
         //
-        // `is_full_object_id` makes this unreachable through the public
-        // `cat_file_batch`: a full 40-hex oid is never itself ambiguous, so
-        // every id that function accepts already can't trigger this. This
-        // test calls the lower-level `cat_file_batch_chunk` directly,
-        // bypassing that filter, specifically to exercise the header-parsing
-        // match arm on its own -- the defensive code fix round 3's review
-        // asked to keep even though the filter makes it unreachable in
-        // practice today.
+        // Calls `cat_file_batch_chunk` directly, bypassing
+        // `is_full_object_id` (which makes a full-oid ambiguity unreachable
+        // through the public `cat_file_batch`), to exercise the
+        // header-parsing match arm on its own.
         let (_dir, repo) = crate::git::test_support::temp_repo();
         let board = Board::new(repo.clone());
         let good1 = board
@@ -1866,6 +1746,22 @@ mod tests {
         repo.hash_object(b"x1006").expect("hash x1006");
         repo.hash_object(b"x3205").expect("hash x3205");
 
+        // Sanity: confirm "cf6e" is genuinely ambiguous in THIS repo before
+        // trusting the assertions below -- otherwise a change in git's
+        // behavior (or a hash algorithm switch) could make both posts
+        // survive for a reason unrelated to the fix, and this test would
+        // pass while no longer guarding anything.
+        let rev_parse_err = repo
+            .git(&["rev-parse", "--verify", "cf6e"])
+            .expect_err("\"cf6e\" must be genuinely ambiguous, or this test exercises nothing");
+        let BoardError::Git { stderr, .. } = rev_parse_err else {
+            panic!("expected BoardError::Git, got a different variant");
+        };
+        assert!(
+            stderr.contains("ambiguous"),
+            "git must report \"cf6e\" as ambiguous, not some other reason: {stderr}"
+        );
+
         let mut found = std::collections::BTreeMap::new();
         board
             .cat_file_batch_chunk(
@@ -1880,41 +1776,26 @@ mod tests {
         );
         assert!(
             found.contains_key(&good2),
-            "the good post AFTER the ambiguous id must still be read -- this is exactly what \
-             an old `break` on any unrecognised token would have silently lost: {found:?}"
+            "the good post AFTER the ambiguous id must still be read: {found:?}"
         );
     }
 
     #[test]
     fn cat_file_batch_does_not_deadlock_on_a_batch_large_enough_to_fill_both_pipes() {
-        // Regression test for fix round 1's Critical: `Repo::git_stdin_bytes`
-        // writes the whole request before it reads any of the response. Once
-        // the accumulated OUTPUT `cat-file --batch` would produce fills
-        // git's stdout pipe before git has drained our stdin, git blocks
-        // writing output nobody is reading yet, which stops it reading
-        // further input, which leaves OUR write blocked on a pipe git will
-        // never come back to drain -- a silent, timeout-free hang, not a
-        // slow path. It cost 42 minutes of wall clock before it was
-        // diagnosed; `cat_file_batch` now chunks requests (see
-        // CAT_FILE_BATCH_CHUNK) specifically so this cannot happen.
+        // `Repo::git_stdin_bytes` writes the whole request before reading
+        // any response, so a batch whose output fills git's stdout pipe
+        // before our stdin drains is a silent, timeout-free hang, not a
+        // slow path. Uses the SAME 500-byte object 4000 times, not 4000
+        // distinct objects: git emits one full record per requested line
+        // regardless, so a repeated id fills both pipes just as well.
         //
-        // Reproduced independently against the review's own numbers at
-        // n=4000 with ~500-byte objects (confirmed directly against the
-        // unchunked helper before this test was written -- see the fix-round
-        // report). This constructs an equivalent payload: the SAME 500-byte
-        // object requested 4000 times, since git still emits one full
-        // record per requested line regardless of whether the underlying
-        // object is the same each time -- 4000 distinct objects are not
-        // needed to fill both pipes.
-        //
-        // This crate runs under plain `cargo test`, which has NO per-test
+        // This crate runs under plain `cargo test`, with NO per-test
         // timeout, so a naive version of this test would itself be a hang
-        // generator on a regression, not a guard. Bounded instead: the call
-        // runs on its own thread, and the test waits on a channel with a
-        // timeout rather than joining that thread. If chunking ever
-        // regresses, this test FAILS after the timeout (and leaks the stuck
-        // thread, harmlessly, until the process exits) instead of hanging
-        // the run.
+        // generator on a regression. Bounded instead: the call runs on its
+        // own thread, and the test waits on a channel with a timeout rather
+        // than joining it, so a regression FAILS after the timeout (leaking
+        // the stuck thread harmlessly until the process exits) instead of
+        // hanging the run.
         let (_dir, repo) = crate::git::test_support::temp_repo();
         let board = Board::new(repo.clone());
         let id = repo
