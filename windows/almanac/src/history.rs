@@ -46,7 +46,7 @@ pub fn render_site(world: &World, site: CellId) -> String {
         );
     }
 
-    let now = present_day(world);
+    let now = present_year(world);
     let mut out = String::new();
     let header = format!("The clearing at cell {}", site.0);
     out.push_str(&header);
@@ -239,8 +239,10 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
     let site = CellId(number(world, entity, hornvale_history::OCC_SITE)? as u32);
-    let founded = number(world, entity, hornvale_history::OCC_FOUNDED)?;
-    let ended = number(world, entity, hornvale_history::OCC_ENDED);
+    // Days on the ledger, years in an `Occupation` — see
+    // [`bake_year_of_ledger_day`] for why the flesh derivation depends on this.
+    let founded = bake_year_of_ledger_day(number(world, entity, hornvale_history::OCC_FOUNDED)?);
+    let ended = number(world, entity, hornvale_history::OCC_ENDED).map(bake_year_of_ledger_day);
     let peak_population = number(world, entity, hornvale_history::OCC_PEAK)? as u32;
     let tech = parse_tech(world.ledger.text_of(entity, hornvale_history::OCC_TECH)?)?;
     let function = parse_function(
@@ -302,16 +304,42 @@ fn number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
     }
 }
 
-/// The present frame's day: the latest founding-or-ending recorded anywhere in
-/// the world's deep history. This is the moment "today" sits at — a ruin's age
-/// is measured back from here. Deterministic (`f64::total_cmp` over ledger
-/// numbers).
+/// This window's read-side unit boundary (The Ell): a standard **day** off the
+/// ledger becomes the bake **year** every occupation value in this module is
+/// expressed in.
+///
+/// `occ-founded`, `occ-ended` and `history-now` are committed in days
+/// (`windows/worldgen::history_emit::ledger_day_of_bake_year`). Everything
+/// downstream of [`record_of`] here — the span sentence's rendered years and
+/// tenures, [`present_year`], `layer_key`'s ordering, and above all
+/// `material_key`/`flesh_seed_for`, which turn a record into a *seed* — must
+/// see the same numbers the bake side sees, or this window would derive a
+/// different assemblage of structures and residue for the same community than
+/// `hornvale_history::flesh` derives from the bake's own record.
+///
+/// The mirror of `windows/worldgen`'s helper of the same name. The duplication
+/// is the one the module docs already record for the decoders: this window
+/// cannot depend on that one and the constant is the kernel's, so what is
+/// shared is `Years::DAYS_PER_YEAR` rather than the function.
+fn bake_year_of_ledger_day(day: f64) -> f64 {
+    day / hornvale_kernel::Years::DAYS_PER_YEAR
+}
+
+/// The present frame's **year**: the latest founding-or-ending recorded
+/// anywhere in the world's deep history. This is the moment "today" sits at — a
+/// ruin's age is measured back from here. Deterministic (`f64::total_cmp` over
+/// ledger numbers).
+///
+/// Named for its unit (The Ell): it was `present_day` and returned the ledger's
+/// raw number, which was a year wearing the word "day". The ledger now stores
+/// days, so the read crosses [`bake_year_of_ledger_day`] and every caller keeps
+/// subtracting a year from a year.
 /// type-audit: bare-ok(count: return)
-fn present_day(world: &World) -> f64 {
+fn present_year(world: &World) -> f64 {
     if let Some(now) = world.ledger.find(hornvale_history::HISTORY_NOW).next()
         && let Value::Number(n) = &now.object
     {
-        return *n;
+        return bake_year_of_ledger_day(*n);
     }
     // Fallback for a world with no committed `history-now` fact (a save from
     // before T8, or a synthetic Lab world that never ran the composition-root
@@ -329,6 +357,9 @@ fn present_day(world: &World) -> f64 {
             _ => None,
         })
         .max_by(|a, b| a.total_cmp(b))
+        // Monotone map, so the max is the same fact either side of it; crossed
+        // once, on the winner.
+        .map(bake_year_of_ledger_day)
         .unwrap_or(0.0)
 }
 
@@ -645,8 +676,13 @@ fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
         .filter(|f| f.predicate == hornvale_history::OCC_ENDED_BY)
         .map(|f| f.subject)
         .filter(|&victim| {
+            // `left` came through [`record_of`], so it is a bake YEAR; this
+            // reads the ledger directly, which is DAYS. Cross it, or the
+            // equality is the campaign's own defect reproduced inside its
+            // repair — and it would fail silently, returning `None` for every
+            // conquest in every world (The Ell).
             matches!(
-                number(world, victim, hornvale_history::OCC_ENDED),
+                number(world, victim, hornvale_history::OCC_ENDED).map(bake_year_of_ledger_day),
                 Some(fell) if left.total_cmp(&fell).is_eq()
             )
         })
@@ -663,6 +699,9 @@ fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
                 number(world, victim, hornvale_history::OCC_SITE)
                     .map(|s| s as u32)
                     .unwrap_or(u32::MAX),
+                // A pure ordering key: `day_key` is monotone and so is the
+                // year↔day map, so this tie-break is invariant under the unit
+                // and the raw ledger value is used deliberately (The Ell).
                 number(world, victim, hornvale_history::OCC_FOUNDED)
                     .map(hornvale_history::record::day_key)
                     .unwrap_or(u64::MAX),

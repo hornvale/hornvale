@@ -34,7 +34,9 @@ pub struct Founder {
     pub people: KindId,
     /// The community whose occupation they founded.
     pub community: EntityId,
-    /// The occupation's founding day — this founder's birth.
+    /// The occupation's founding, as the bake's **year** — the unit an
+    /// `OccupationRecord` carries. [`promote`] crosses it into standard days
+    /// before any life-history arithmetic touches it.
     pub founded: f64,
 }
 
@@ -208,7 +210,9 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// value is local to an earlier stage's closure and out of scope here.
 ///
 /// Birth is `founded − age_at_maturity` and death is `birth + lifespan`, both
-/// from `domains/species::allometry::life_history`, which draws nothing. The
+/// from `domains/species::allometry::life_history`, which draws nothing, and
+/// **all three in standard days** — the founding crosses out of the bake's
+/// years once, at the top of the loop below. The
 /// `person-died` fact is committed only once that day has passed at `now`; a
 /// living person is the absence of one. A species with no lifespan
 /// (`Ametabolic`) yields no death fact either, which reads as "not known to have
@@ -218,7 +222,14 @@ pub fn promote(
     wc: &crate::components::WorldComponents,
 ) -> Result<Vec<EntityId>, crate::BuildError> {
     let records = crate::occupation_records(world);
-    let now = world
+    // Standard DAYS, straight off the ledger — deliberately NOT crossed back
+    // into bake years. Everything this function computes is a person's life in
+    // days (`Years::days()` off the allometry), so the present it filters
+    // against must be days too. This comparison is the whole defect The Ell
+    // repairs: `history-now` used to be committed as a bare year count, so a
+    // death in day-space was measured against a present in year-space and no
+    // founder could ever have died.
+    let now_days = world
         .ledger
         .find("history-now")
         .filter_map(|f| match f.object {
@@ -258,14 +269,19 @@ pub fn promote(
             .as_ref()
             .and_then(|l| l.age_at_maturity)
             .map_or(0.0, |y| y.days());
-        let birth_day = f.founded - maturity_days;
+        // `Founder::founded` comes off an `OccupationRecord`, which is a
+        // bake-side value in YEARS; a person's life history is in days. Cross
+        // once, here, so birth, death, the founding day committed on the person
+        // and the present they are all measured against are one unit (The Ell).
+        let founded_day = crate::history_emit::ledger_day_of_bake_year(f.founded);
+        let birth_day = founded_day - maturity_days;
         // Death follows BIRTH by a lifespan, not the founding, and is committed
-        // only once it has already passed at `now`.
+        // only once it has already passed at `now_days`.
         let death = life
             .as_ref()
             .and_then(|l| l.lifespan)
             .map(|y| birth_day + y.days())
-            .filter(|d| *d <= now);
+            .filter(|d| *d <= now_days);
         // Named here, where the language machinery already stands. `Namer` holds
         // no mutable stream and derives fresh per call, so this draw is on a
         // path disjoint from every other name in the world.
@@ -290,7 +306,7 @@ pub fn promote(
             community: f.community,
             name,
             birth_day,
-            founding_day: f.founded,
+            founding_day: founded_day,
             death_day: death,
         });
     }

@@ -115,10 +115,11 @@ pub use history_bake::{
     bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,
 };
 pub use history_emit::{
-    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
-    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
-    occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
-    sundered_landmasses, territories,
+    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
+    collapse_events, emit_history, emit_now, goblinoid_overlap, goblinoid_region_overlap,
+    ledger_day_of_bake_year, migration_events, occupation_records, occupations_at,
+    occupations_by_cell, present_year, ruins_of_people, stratigraphy, sundered_landmasses,
+    territories,
 };
 /// The demography fit's result, re-exported so a caller that only depends on
 /// the composition root can NAME what [`demography_report_from`] hands back
@@ -5745,6 +5746,11 @@ pub fn deity_site_concepts(
 /// cannot occur — two occupations of one cell founded on the identical day
 /// would be the same layer.
 ///
+/// The `occ-founded` object is read **raw** here and is not crossed back into
+/// bake years (The Ell): its only role is to order candidates, and the
+/// year↔day map is monotone, so the winner is the same number of conversions
+/// later. Nothing about the value itself reaches the name.
+///
 /// Returns `None` when the cell has no foreign occupation, exactly as a
 /// settlement away from water carries no hydrology concept. A people whose
 /// kind concept is unregistered also yields `None` rather than an invented
@@ -6651,7 +6657,7 @@ fn build_to(
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
-    // scenario constant. `present_day` (windows/almanac) reads it back.
+    // scenario constant. `present_year` (windows/almanac) reads it back.
     let cfg = history_bake::BakeConfig::default_millennia();
     history_emit::emit_now(&mut world, world_entity, cfg.end_year)?;
 

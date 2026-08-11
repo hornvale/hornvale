@@ -205,7 +205,9 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
         .expect("the relation must be committed");
     assert_eq!(
         fact.day,
-        Some(WorldTime::new(120.0).expect("finite")),
+        // The Ell: `TributeRelation::since` is a bake YEAR and `Fact.day` is a
+        // standard DAY, so the stamp is the crossing of the two.
+        Some(WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(120.0)).expect("finite")),
         "dated by the day the relation was established, not by `now`"
     );
     assert!(
@@ -242,46 +244,54 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     assert_eq!(ruins.len(), 1);
     let ruin_id = ruins[0];
 
-    // End-of-life facts are stamped at `ended` (900.0), not `founded`
-    // (100.0) — the day each of these actually became true.
+    // End-of-life facts are stamped at `ended` (bake year 900), not `founded`
+    // (bake year 100) — the day each of these actually became true.
+    //
+    // The Ell: the record's years cross into standard days at the emit
+    // boundary, so the stamps are those years crossed. Written as the crossing
+    // rather than as 328725.0/36525.0 so the two claims stay separable — this
+    // test is about WHICH event dates a fact, and the unit is stated, not
+    // baked into a literal.
+    let ended_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+        .expect("a bake year crosses to a finite day");
+    let founded_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(100.0))
+        .expect("a bake year crosses to a finite day");
+
     let is_ruin = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == IS_RUIN)
         .expect("IS_RUIN must be committed for a dead occupation");
-    assert_eq!(is_ruin.day, Some(WorldTime::new(900.0).expect("finite")));
+    assert_eq!(is_ruin.day, Some(ended_day));
 
     let occ_ended = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_ENDED)
         .expect("OCC_ENDED must be committed for a dead occupation");
-    assert_eq!(occ_ended.day, Some(WorldTime::new(900.0).expect("finite")));
+    assert_eq!(occ_ended.day, Some(ended_day));
 
     let occ_cause = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_CAUSE)
         .expect("OCC_CAUSE must be committed for a dead occupation");
-    assert_eq!(occ_cause.day, Some(WorldTime::new(900.0).expect("finite")));
+    assert_eq!(occ_cause.day, Some(ended_day));
 
-    // Founding facts stay stamped at `founded` (100.0).
+    // Founding facts stay stamped at `founded`.
     let occ_founded = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_FOUNDED)
         .expect("OCC_FOUNDED must be committed");
-    assert_eq!(
-        occ_founded.day,
-        Some(WorldTime::new(100.0).expect("finite"))
-    );
+    assert_eq!(occ_founded.day, Some(founded_day));
 
     let occ_site = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_SITE)
         .expect("OCC_SITE must be committed");
-    assert_eq!(occ_site.day, Some(WorldTime::new(100.0).expect("finite")));
+    assert_eq!(occ_site.day, Some(founded_day));
 }
 
 #[test]
