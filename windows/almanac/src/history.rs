@@ -636,11 +636,19 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// float equality is banned.
 ///
 /// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
+///             expect(survives: only the gallery drift check pins this, and
+///             `make gate` does not run it; the almanac assertion that would
+///             close it is in flight elsewhere)
 ///
 /// This function decides whether a settlement's ending reads as conquest or
-/// as climate migration, and its only real guard is the gallery drift check
-/// — which `make gate` does not run. `tools/seam-guard` neutralises it here
-/// and reports whether the almanac's own tests notice. See that crate's docs.
+/// as climate migration. Neutralised, all of `hornvale-almanac`'s tests stay
+/// green while rendered lines flip from conquest to climate-migration — the
+/// finding `tools/seam-guard` was built to make, and the reason the
+/// declaration above carries a reason rather than silencing it.
+///
+/// **When the guard lands, delete the `expect(survives: …)` clause.** The run
+/// goes red on a declared seam that a test now catches, precisely so the
+/// acknowledgement cannot outlive the gap it describes.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
     if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;

@@ -84,8 +84,12 @@ fn doc_of(attrs: &[syn::Attribute]) -> String {
                 ..
             }) = &nv.value
         {
+            // Joined with a NEWLINE, not a space: the tag is one paragraph,
+            // and `tag::parse` stops at the first blank doc line. Flattening
+            // to spaces destroys that boundary and lets ordinary prose
+            // further down the comment be parsed as tag clauses.
             out.push_str(&s.value());
-            out.push(' ');
+            out.push('\n');
         }
     }
     out
@@ -109,10 +113,11 @@ impl<'ast> Visit<'ast> for SeamVisitor<'_> {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
         let line = node.sig.ident.span().start().line;
         match tag::parse(&doc_of(&node.attrs)) {
-            Ok(Some((op, scope))) => self.seams.push(Seam {
+            Ok(Some(p)) => self.seams.push(Seam {
                 name: node.sig.ident.to_string(),
-                op,
-                scope,
+                op: p.op,
+                scope: p.scope,
+                expect_survives: p.expect_survives,
                 file: self.path.display().to_string(),
                 line,
             }),
