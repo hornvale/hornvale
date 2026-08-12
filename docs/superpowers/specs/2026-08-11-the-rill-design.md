@@ -34,24 +34,40 @@ derivation.
 
 ## 2. Keystone
 
-> **The coarse flow graph is a boundary condition, not a suggestion.**
+> **Subdivide the scalar, never the direction. A tributary's direction is not
+> computed — it is inherited from what it is attached to.**
+
+**This section previously said something else, and Task 4 falsified it by
+measurement.** It read *"the coarse flow graph is a boundary condition, not a
+suggestion"*, and assumed the coarse flow could be constrained onto rooms. It
+cannot, and §4.2 records why. What follows is what the evidence supports.
 
 `MAP-subcell-hydrology` is **rejected** — refining elevation per cell and
-recomputing flow accumulation below the cell floor forces laziness and, in the
-registry's own words, *"a lazily-refined flow field carries no guarantee of
-agreeing with the coarse answer it constitutionally may not contradict."*
+recomputing flow accumulation forces laziness and, in the registry's words,
+*"a lazily-refined flow field carries no guarantee of agreeing with the coarse
+answer it constitutionally may not contradict."*
 
-This campaign does not recompute flow. It takes the coarse graph's answer as a
-**constraint on the fine one**: inside a cell, the network must collect what
-the coarse graph says flows in, and deliver it to the single neighbour the
-coarse graph says it flows out to. Agreement is then structural rather than
-hoped for, and "coarse constrains fine" is satisfied the way The Ford
-satisfied it — by construction, not by a conservation test.
+The distinction this campaign needs is sharper than "we don't touch elevation",
+because Task 4 satisfied that and **still** landed on the rejected row's stated
+failure mode. The real distinction is which **kind** of quantity gets refined:
 
-This is a materially different claim from the rejected row and the spec should
-be read as reopening nothing: `MAP-subcell-hydrology` proposed a **new fine
-model**; this proposes a **rendering of the existing coarse model at finer
-resolution under its own constraints**.
+- **Drainage is a scalar** — a number on a node. Refining it means
+  **partitioning it by area**. That is canonical, conserves by construction,
+  and cannot disagree with the coarse answer because the parts sum to the
+  whole.
+- **Flow is a direction** — an arrow on an edge. Moving it from the grid's
+  cells onto rooms requires a transfer operator, **and there is no canonical
+  one** (§4.2). Choose wrongly and the conservation law breaks — measurably:
+  Task 4's construction delivered 26–31% of land to the sea where the coarse
+  graph delivers 74–82%.
+
+So the fine network **partitions the scalar and inherits the direction**. A
+sub-cell watercourse is *attached* to the coarse one it branches from, and
+flows into it because it is joined to it. The un-transferable quantity is never
+transferred; it stops being a problem rather than being solved.
+
+That is a materially different claim from the rejected row, and unlike the
+previous wording it is one the guards can actually check (§6, R-4).
 
 ## 3. What must not move
 
@@ -101,7 +117,66 @@ every run reaches its outlet and the singleton special case disappears. Under
 Tier 1 this matters more, not less: with all land cells in the network, the
 number of runs terminating at a non-river cell rises sharply.
 
-### 4.2 Tier 2 — the drainage tree rides the room mesh
+### 4.2 Tier 2 — tributaries attach to the network Tier 1 renders
+
+**This section formerly specified a routing construction on the room mesh, and
+Task 4 built it, measured it, and falsified it. The design below replaces it;
+the falsification is kept because it is the campaign's most transferable
+result.**
+
+**Why the former design could not work.** `Geosphere` cells are the icosphere's
+**vertices**; `RoomAddr` is a **face** — its `corners()` doc says byte-identical
+to the same *face* in `Geosphere::new(depth)`. A `downhill` edge joins two
+adjacent vertices, and an edge is shared by exactly two faces, so **a coarse
+flow edge runs along a room's boundary, never through it.** There is no
+canonical lift of the flow graph onto rooms, and the former §4.2's premise —
+"a parent flows out through one edge" — is a property of a *cell* silently
+transferred onto a *room*. That is the same primal/dual conflation as
+`faces(L)/cells(L) = 1.9999999`, and it is the third occurrence in this
+campaign.
+
+Task 4 built the routing construction honestly and measured what it cost, on
+three worlds:
+
+| | coarse | the invented lift |
+|---|---|---|
+| land whose flow reaches the sea | 74–82% | **26–31%** |
+| land stranded > 6 cells inland | 9–13% | **28–35%** |
+| basin count (seed 42) | 1,373 | **2,694** |
+| interior faces terminating outside their own coarse basin | — | **6.0–7.5%** |
+
+It also **saturates**: routing a direction out of every face gives every face a
+channel, so ~74% of land rooms carry a reach and ~5–6% of all land sits inside
+one, against a preregistered ceiling of 0.5% (§6, R-6). Saturation is the
+signature of having refined the wrong quantity.
+
+**The design.** A sub-cell watercourse is a **branch attached to a rendered
+polyline**, not a cell of an invented flow field:
+
+1. **Direction is inherited, never computed.** A branch joins its trunk at a
+   point on the trunk, and flows into it. Nothing is transferred primal-to-dual,
+   so the operator that has no canonical form is never needed.
+2. **Drainage is partitioned by area.** The catchment a coarse cell already
+   accounts for is divided among the branches within it; the parts sum to the
+   whole, so accumulation conserves against `drainage` by construction rather
+   than by test.
+3. **Branches are bounded by the coarse catchment they subdivide.** A branch may
+   not cross a coarse divide, because it may not leave the cell whose drainage
+   it is a share of. Basins refine; they cannot be rerouted.
+4. **The branching is driven by the partition, not by a fixed ratio.** This is
+   load-bearing for R-5 — see §6. A generator that splits *k* ways by rule makes
+   the bifurcation ratio an arithmetic property of *k*, which is exactly how the
+   former design made R-5 untestable. The number and size of branches must
+   follow from how the catchment divides, so Horton's ratios remain a claim
+   about the world.
+
+**What Task 4 established that survives.** The width law's depth pairing and
+its absolute anchor against `Geosphere::position`; the adjacency facts about
+`RoomAddr::child`/`neighbors` (including that the outflow edge is shared by
+**two** corner children, not one, and that `child(3).neighbors()[k] ==
+child((k+2)%3)` is a rotation); that `RIVER_MIN_DRAINAGE` has exactly one
+executable use workspace-wide, so no count threshold is inherited; and the
+finding that no walk-depth room anywhere in these worlds is fully inside water.
 
 `RoomAddr::corners()` is a deterministic 4-way descent whose doc states it is
 **byte-identical to the same face in `Geosphere::new(self.path.len())`**. The
@@ -242,19 +317,47 @@ is labelled a **witness**, not a hypothesis test.
   areas plus its inflows equals its own accumulation, to within quantization —
   conservation under subdivision, which is a separate claim from invariance
   under rescaling and can fail independently.
-- **R-4 — the fine network cannot contradict the coarse one.** For every
-  subdivided cell, the sub-network has exactly one outlet, on the parent's
-  outflow edge, and no child drains across a parent edge that is not an
-  inlet or the outlet. **100%.** This is a test of whether the implementation
-  honours §4.2's forced topology, not of the design — the design cannot
-  express a violation, so a failure means a coding error.
+- **R-4 — the fine network reproduces the coarse network's basins.** For every
+  branch, the coarse cell whose catchment it is a share of must be the coarse
+  cell its trunk chain terminates in. **≥ 99%**, on ≥ 3 seeds, and the
+  shortfall reported rather than absorbed.
+
+  **This replaces a local invariant with a composed one, deliberately.** The
+  former R-4 asserted three one-step properties, all of which passed while the
+  network diverged from the coarse graph by the margins in §4.2. *Every local
+  invariant can hold while the global one fails*, and that is what happened.
+  The reference is the coarse graph's own **composed** answer — where a cell
+  ultimately drains — not one step of it.
 - **R-5 — the generated network obeys Horton's laws.** Under Strahler
-  ordering at walk depth, the **bifurcation ratio** `R_b` lies in
-  **[3.0, 5.0]** and the **length ratio** `R_l` in **[1.5, 3.5]**, on **≥ 3
-  seeds**. *This is the campaign's central claim and its reference is entirely
-  outside this codebase* — those intervals are the empirically observed ranges
-  for real river networks, not values fitted here. A generated network that
-  merely looks branchy will fail them.
+  ordering at walk depth, the **bifurcation ratio** `R_b` in **[3.0, 5.0]** and
+  the **length ratio** `R_l` in **[1.5, 3.5]**, on **≥ 3 seeds**, using the
+  **geometric** mean over orders — Horton's laws are geometric, and the
+  arithmetic mean is not the estimator they imply. *The reference is entirely
+  outside this codebase*: those are the empirically observed ranges for real
+  river networks.
+
+  **R-5 is only a claim about the world if the branching is partition-driven
+  (§4.2.4).** Task 4's construction split every element four ways by rule, so
+  `R_b` converged on the subdivision factor — three worlds agreeing to three
+  significant figures at ~4.0, inside [3, 5] for arithmetic reasons having
+  nothing to do with hydrology. **A generator with a fixed branching ratio
+  makes R-5 untestable, and a pass under one is worthless.** The
+  falsification is one line: hold the generator's seeded freedom constant and
+  re-measure; if the ratios do not move, they are the rule's and not the
+  world's. **Run it, and report it beside the ratios.**
+- **R-6 — the world does not become implausibly wet.** Channel area as a
+  fraction of land stays within `channel-land-fraction`'s preregistered
+  **[0.005%, 0.5%]**, measured with reach length as **centroid-to-centroid**
+  (two inradii, `spacing/√3`) rather than the mean edge — Task 4's probe used
+  the edge and overstated the integral by exactly √3.
+
+  Task 4's construction measured **5.4–5.9%**, roughly **11× the ceiling** and
+  ~10× real continental land (0.3–0.6%). The ceiling exists precisely to catch
+  *"a river is still effectively as wide as the cell carrying it"*, and no
+  census column reads the sub-cell network, so nothing else would have caught
+  it. **This is a preregistered interval this campaign has already breached
+  once; a second breach is a finding to ship, not a reason to retune
+  `CHANNEL_WIDTH_COEFF`.**
 - **R-6 — a walk gets damper as it descends.** Over sampled descending walks
   of ≥ 8 rooms at walk depth, `wetness` is non-decreasing in at least **80%**
   of steps. Reference: the elevation the walk descends, outside the wetness
