@@ -200,10 +200,13 @@ fn parent_at(site: u32, founded: f64) -> FoundingCoords<'static> {
 
 #[test]
 fn ancestry_discriminates_two_otherwise_identical_foundings() {
-    // The observed collision shape (The Radiation, seeds 283 and 705): a
-    // same-day founding-and-flight cascade where two records agree on every
-    // material field and differ only in where they came from. The ancestry hop
-    // is the whole of what separates them.
+    // The collision the ancestry hop clears (seeds 283, 705, 2403): two
+    // records agreeing on every material field whose PARENTS differ, so the
+    // hop is the whole of what separates them. Measured, against the spec's
+    // stated mechanism — the spec said the pairs separate because one record's
+    // ender is the other's parent; the parents do genuinely differ at those
+    // three seeds, but not for that reason, and at 2634/2898 they are
+    // identical. The hop earns its place; the story attached to it did not.
     let a = burned_goblin_village();
     assert_ne!(
         founder_handle(&a, Some(parent_at(11, 100.0))).0,

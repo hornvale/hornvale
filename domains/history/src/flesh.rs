@@ -68,9 +68,14 @@ pub fn persona_of(handle: RoleHandle, seed: Seed) -> Persona {
 /// role at the same occupation cannot collide with the founder.
 const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 
-/// Derive a founder's stable identity from **their founding, one hop of
-/// ancestry, and their community's whole span** — where, when, by whom, out of
-/// which community, and how far it got.
+/// A founder's **discrimination handle**: the identity of their founding
+/// ([`crate::record::founding_key`] — where, when, by whom, out of which
+/// community) plus the tail that makes it unique across the cast a world
+/// promotes.
+///
+/// The two halves are named, separate, and answer different questions; the
+/// section below on identity-versus-discrimination is the load-bearing part of
+/// this doc, and Nathan's ruling of 2026-08-11.
 ///
 /// Never from its `EntityId` and never from its position in a collection.
 /// Decision 0051 forbids salting a procedural name from mint order, and a
@@ -130,65 +135,75 @@ const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 /// (Nathan's ruling), not a repair of this key.
 ///
 /// **The widening landed in The Ell (2026-08-11), riding that campaign's
-/// epoch rather than paying for one of its own.** The key is now
-/// [`crate::record::founding_key_from`] — which is the founding triple **plus
-/// one hop of ancestry**, the fold this crate had already written and was
-/// already using elsewhere — with `ended` and `peak_population` folded on top
-/// of it and [`FOUNDER_ROLE`] mixed in last. It is a *widening*, not a
-/// replacement: nothing the old key read has left it, and the parent's own
-/// `(people, site, founded)` has joined it.
+/// epoch rather than paying for one of its own.** It is a *widening*, not a
+/// replacement: nothing the old key read has left it, and the founding's own
+/// one hop of ancestry has joined it. The parent is **resolved by the caller
+/// and passed in**, exactly as [`crate::record::layer_key`]'s ancestry tail
+/// takes it, because a domain holds no `World` and cannot follow an
+/// `EntityId` to its referent.
 ///
-/// The parent is **resolved by the caller and passed in**, exactly as
-/// [`crate::record::layer_key`]'s ancestry tail takes it, because a domain
-/// holds no `World` and cannot follow an `EntityId` to its referent.
+/// # An IDENTITY key and a DISCRIMINATION key are different things
 ///
-/// **What did NOT change, and is the thing to read the strike above for.**
-/// Decision 0051 forbids keying on an id **as a value** — a mint counter that
-/// shifts when an unrelated domain mints earlier in genesis. Folding a
-/// *referent's own material facts* is a different act, and this crate performs
-/// it in three places already ([`crate::record::material_key`],
-/// [`crate::record::founding_key`], [`crate::record::layer_key`]). This key
-/// still reads no id, not the occupation's own and not its parent's; the
-/// parent arrives as coordinates. (The Signet has since made ids
-/// lineage-derived rather than mint-ordered, so 0051's specific hazard no
-/// longer exists at all — but this design would not need that reprieve.)
+/// This is the distinction `domains/history` had been making in code for two
+/// campaigns without ever naming, and naming it is most of what The Ell
+/// changed here. The body below is two steps and they answer two questions:
 ///
-/// # Why the ancestry hop was ADDED and the post-founding fields were KEPT
+/// - **Identity** — *is this the same founding?* [`crate::record::founding_key`]
+///   answers it, and it must be **founding-side only**: an identity that moves
+///   when later events move is not an identity. That is why `ended`,
+///   `peak_population`, `cause` and `notability` are excluded *there*, and the
+///   exclusion is right *there*.
+/// - **Discrimination** — *is this one unique across the population that will
+///   be promoted?* That is a different requirement with a different
+///   entitlement: a discrimination key must separate every member of a cast,
+///   and it may legitimately read anything the record carries. `ended` and
+///   `peak_population` are folded on for exactly this and nothing else.
 ///
-/// The Ell's plan called for the narrower, more principled key — the founding
-/// and its ancestry **alone**, dropping `ended` and `peak_population`, on the
-/// ground that a founder is named at their founding and what their community
-/// later grew to and how it died must not rename them. That is
-/// [`crate::record::founding_key`]'s stated rationale and it is a good one.
-/// **It was measured and it is unaffordable here.** Three arms, seeds 0–999,
-/// `BuildDepth::Settlements`, default pins, 2026-08-11, counting worlds whose
-/// *promoted cast* carries a handle collision and the founders that costs:
+/// `founder_handle` was previously being asked to do the second job while
+/// wearing the first one's name and inheriting its rationale — one name, two
+/// meanings, no marker, which is this campaign's own defect one level up. So
+/// **"a founder's name must not be a function of how their community later
+/// died" was not abandoned, it was mis-assigned.** It is
+/// [`crate::record::founding_key`]'s rule, it is true there, and it was never
+/// this function's to hold. What *is* this function's rule is that the
+/// identity half must remain bit-for-bit the key a ledger-side caller derives
+/// for the same founding, which is why step one is a call and not a copy.
+///
+/// # What the split is worth: the measurement that forced it
+///
+/// The Ell's plan called for the identity key **alone** as the handle. Three
+/// arms, seeds 0–999, `BuildDepth::Settlements`, default pins, 2026-08-11,
+/// counting worlds whose *promoted cast* carries a handle collision and the
+/// founders that costs:
 ///
 /// ```text
 ///   key                                    colliding worlds   founders lost
 ///   (people, site, founded, ended, peak)             2 / 1000             2
-///   founding + parent hop ALONE                    732 / 1000          1582
-///   founding + parent hop + ended + peak  <- this    0 / 1000             0
+///   identity key ALONE                             732 / 1000          1582
+///   identity + discrimination tail  <- this          0 / 1000             0
 /// ```
 ///
-/// The narrow key is 790× *worse* at the thing this repair exists to fix, and
-/// the reason is legible rather than statistical. Dumping the pairs it newly
-/// collides shows one shape every time: a people founds at a site in some
-/// year, the attempt is raided and closed in that same year (`founded ==
-/// ended`, `peak_population == 8`, `cause == Fled`, `ended_by == By(..)`), and
-/// a second record — same people, same site, same year, same parent — carries
-/// the community that took. Those two records are **identical in every
-/// founding-side field there is**, so no amount of ancestry can separate them:
-/// a second or third hop reaches the same parent. Only a post-founding fact
-/// can, which is exactly the fact the narrow key discards.
+/// The identity key alone is **366× worse by colliding worlds and 791× worse
+/// by founders lost** (both axes named, because they differ). The reason is
+/// legible rather than statistical. Dumping the pairs it newly collides shows
+/// one shape every time: a people founds at a site in some year, the attempt
+/// is raided and closed in that same year (`founded == ended`,
+/// `peak_population == 8`, `cause == Fled`, `ended_by == By(..)`), and a
+/// second record — same people, same site, same year, **same parent** —
+/// carries the community that took. Those two records are **identical in every
+/// founding-side field there is**, so no depth of ancestry separates them: a
+/// two-hop key produces bit-identical keys for these pairs because the
+/// grandparent is identical too (measured, not assumed). Only a post-founding
+/// fact can separate them, which is exactly what a discrimination key is
+/// entitled to read and an identity key is not.
 ///
-/// That leaves a real world-model question — whether a failed attempt and its
-/// same-year successor are *one* founding with *one* founder — and it is
-/// Nathan's to answer, not this function's. What is settled is that answering
-/// it "yes" by narrowing this key would silently turn
-/// `windows/worldgen::person_promote`'s rare authorized fidelity cut into the
-/// normal path in 73% of worlds, which is a change to what a world remembers
-/// and not a change to a hash.
+/// **The mechanism the plan gave for the hop was wrong, and the hop works
+/// anyway.** The spec said the pairs are separated because "one record's ender
+/// is the other's parent, so the parent's own material facts separate them."
+/// Measured: the two parents genuinely differ at 283, 705 and 2403 — which is
+/// *why* those three clear — but they are identical at 2634 and 2898 and in
+/// all 732 worlds the identity-only key collides. The hop earns its place; the
+/// story attached to it did not survive measurement.
 ///
 /// # The known residual
 ///
@@ -202,31 +217,64 @@ const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 /// `person_promote::select_founders` is what happens when it fires, and
 /// `windows/worldgen/tests/founder_collision.rs` carries the per-seed truth.
 ///
+/// **Every field in the discrimination tail is a field a future campaign can
+/// recompute, and each one is a forced epoch when it does — so the tail was
+/// measured for trimmability and it does not trim.** Seeds 0–999, tail cut to
+/// one field at a time:
+///
+/// ```text
+///   discrimination tail        colliding worlds   founders lost
+///   ended + peak  <- this               0 / 1000             0
+///   ended alone                         5 / 1000             5   (92, 305, 365, 447, 535)
+///   peak alone                          5 / 1000             5   (148, 301, 447, 517, 594)
+/// ```
+///
+/// Neither field alone reaches zero, and the two failure sets are nearly
+/// disjoint — each field catches pairs the other misses. Seed 447 is in both,
+/// which means it holds two separate pairs: one the records separate only by
+/// `peak_population`, one only by `ended`. Both fields carry their weight;
+/// there is no cheaper tail to fall back to.
+///
 /// `parent` is the founding coordinates of the occupation `founded_from`
 /// names, or `None` — for a `Genesis` founding, and for a caller that holds a
 /// record whose predecessor it cannot resolve. Those two cases fold
 /// identically, which is [`crate::record::founding_key_from`]'s existing
 /// contract and the one `windows/worldgen::descent::founder_of` reads off the
 /// ledger; deliberately **not** [`crate::record::layer_key`]'s three-way rank,
-/// so that the founding-side half of this handle stays bit-for-bit the key a
+/// so that the identity half of this handle stays bit-for-bit the key a
 /// ledger-side caller derives for the same founding.
 pub fn founder_handle(
     occ: &OccupationRecord,
     parent: Option<crate::record::FoundingCoords<'_>>,
 ) -> RoleHandle {
-    use crate::record::{day_key, founding_coords, founding_key_from, mix};
-    let mut h = founding_key_from(founding_coords(&occ.core), parent);
+    use crate::record::{day_key, founding_key, mix};
+
+    // STEP 1 — IDENTITY. Is this the same founding? Delegated, never copied:
+    // a ledger-side caller derives this same value from committed facts alone
+    // (`windows/worldgen::descent::founder_of`), and two derivations of one
+    // founding's identity must not be two pieces of arithmetic that agree by
+    // inspection.
+    let identity = founding_key(&occ.core, parent);
+
+    // STEP 2 — DISCRIMINATION. Is this one unique across the cast? The
+    // identity key is not, and cannot be made so: see this function's doc.
+    // Nothing below may ever be read as part of the founding's identity —
+    // it exists solely to separate two records of one founding.
+    //
     // `ended` folds with a presence tag and through `day_key`, matching
     // `material_key` rather than the raw `to_bits` the superseded key used:
     // `to_bits` disagrees with float order on negatives and `-0.0`, and a
     // sentinel `u64::MAX` for `None` is a value a real day could in principle
     // reach. Neither is reachable from today's bake, and neither should have
     // to be argued about again.
-    h = match occ.core.ended {
-        Some(d) => mix(mix(h, 1), day_key(d)),
-        None => mix(h, 0),
+    let mut h = match occ.core.ended {
+        Some(d) => mix(mix(identity, 1), day_key(d)),
+        None => mix(identity, 0),
     };
     h = mix(h, u64::from(occ.core.peak_population));
+
+    // The role discriminant last, so a future second role at the same
+    // occupation cannot collide with the founder.
     RoleHandle(mix(h, FOUNDER_ROLE))
 }
 

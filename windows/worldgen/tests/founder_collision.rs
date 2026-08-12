@@ -175,15 +175,25 @@ fn the_dropped_founders_are_pinned_per_seed() {
                 hornvale_history::flesh::founder_handle(kept, parent_of(kept)).0,
                 "seed {seed}: a drop is only ever justified by an equal handle"
             );
-            // The residual's whole shape: the pair's two PARENTS fold
-            // identically, which is why one hop of ancestry cannot separate
-            // them and why the drop still exists after the widening.
+            // A TRIPWIRE FOR A FUTURE NARROWING — not a detector of new
+            // collision shapes, which it cannot be. Under the shipped key the
+            // parent's coordinates are folded into the handle by
+            // `record::founding_key`, so two records with an equal handle
+            // necessarily have equal parent coordinates and this assertion is
+            // ENTAILED: it cannot fail while the identity step reads the
+            // parent. It is not dead — patching `founder_handle` parent-blind
+            // makes it fire, which is how that was established — and that is
+            // precisely what it is here to catch. If someone ever removes the
+            // ancestry hop from the identity key, worlds start colliding on
+            // pairs whose parents differ, and this line reddens before the
+            // per-seed counts above have to be re-read one by one.
             let dropped = &occs[u.occupation];
             assert_eq!(
                 parent_of(dropped).map(|p| (p.site, p.founded)),
                 parent_of(kept).map(|p| (p.site, p.founded)),
-                "seed {seed}: a surviving collision must be the twin-parent \
-                 case; anything else is a NEW collision shape and wants reading"
+                "seed {seed}: two records collided despite different parents, \
+                 which the shipped key makes impossible — the identity step has \
+                 stopped folding the ancestry hop"
             );
         }
     }

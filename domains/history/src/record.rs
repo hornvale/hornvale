@@ -432,15 +432,30 @@ pub fn founding_key_from(own: FoundingCoords<'_>, parent: Option<FoundingCoords<
     }
 }
 
-/// A derived handle for the *founding* of an occupation, plus one hop of
-/// ancestry — where, when and from whom.
+/// **The IDENTITY of a founding** — where, when, from whom — as a derived
+/// handle. It answers one question, *is this the same founding?*, and it is
+/// deliberately not asked to answer any other.
 ///
-/// Deliberately **excludes** everything after the founding (`ended`,
-/// `peak_population`, `cause`, `notability`): a founder's name must not be a
-/// function of how their community later died. The ancestry hop is what
-/// recovers the discrimination that exclusion costs — measured stem-collision
-/// rate 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% /
-/// 16.2% for the founding triple alone (spec D2, Nathan's ruling).
+/// It therefore **excludes** everything after the founding (`ended`,
+/// `peak_population`, `cause`, `notability`), and the reason is what makes it
+/// an identity at all: a value that moves when later events move is not an
+/// identity of the founding, it is a summary of the occupation. The rule this
+/// crate states as "a founder's name must not be a function of how their
+/// community later died" belongs **here**, and holds here without exception.
+/// The ancestry hop is what recovers the discrimination that exclusion costs —
+/// measured stem-collision rate 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000,
+/// against 27.7% / 14.8% / 16.2% for the founding triple alone (spec D2,
+/// Nathan's ruling).
+///
+/// **What it does NOT answer is uniqueness across a population.** It cannot:
+/// two records of one founding — a raided attempt closed the year it opened,
+/// and the same-year successor at the same site from the same parent — are
+/// identical in every founding-side field there is, so they share this key by
+/// construction and *correctly* so. A caller that needs every member of a cast
+/// separated needs a **discrimination** key, which is a different object with
+/// a different entitlement; see [`crate::flesh::founder_handle`], which builds
+/// one on top of this one and carries the three-arm measurement behind the
+/// split (Nathan's ruling, The Ell, 2026-08-11).
 ///
 /// **Who reads it, stated precisely** (The Ell corrected this line; it used to
 /// read "feeds the founder role handle behind every person name", which was
@@ -450,13 +465,9 @@ pub fn founding_key_from(own: FoundingCoords<'_>, parent: Option<FoundingCoords<
 /// - `windows/worldgen::descent::founder_of` folds it **whole**, salted by the
 ///   world seed. That handle is the ledger-side founder identity the lab's
 ///   name renderer reads.
-/// - [`crate::flesh::founder_handle`] folds it as the **founding-side base**
-///   of its own key, then adds the occupation's `ended` and `peak_population`.
-///   That handle is the one `windows/worldgen::person_promote` turns into a
-///   committed person's name. It is deliberately wider: read that function's
-///   doc for the three-arm measurement showing that this key alone collides in
-///   73% of worlds' promoted casts, because a raided founding and its same-year
-///   successor are identical in every founding-side field there is.
+/// - [`crate::flesh::founder_handle`] calls it for its **identity step**, then
+///   folds a discrimination tail on top. That handle is the one
+///   `windows/worldgen::person_promote` turns into a committed person's name.
 ///
 /// So the two are one key up to their tails, which is the property that keeps
 /// a founding's identity from meaning two different things on the two sides of
