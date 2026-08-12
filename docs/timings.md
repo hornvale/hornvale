@@ -768,3 +768,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-12T16:39:33Z | gate | 11.052 | 19.625 | 10.565 | 2.73 | 0 | 546b4a44 | the-repose | MacBookPro | 10 |
 | 2026-08-12T16:47:33Z | gate | 453.130 | 3021.394 | 171.831 | 7.05 | 0 | 546b4a44 | the-repose | MacBookPro | 10 |
 | 2026-08-12T16:49:53Z | rebaseline | 132.682 | 220.595 | 11.130 | 1.75 | 0 | 546b4a44 | the-repose | MacBookPro | 10 |
+| 2026-08-12T17:30:09Z | gate | 650.533 | 2857.125 | 135.101 | 4.60 | 0 | 41a0f30b | the-repose | MacBookPro | 10 |
