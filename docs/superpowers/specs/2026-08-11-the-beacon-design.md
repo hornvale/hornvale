@@ -512,6 +512,31 @@ Two properties, both load-bearing:
   budget, so a new *free* post kind is worth having. Digest-only costs the
   render nothing and reaches the one reader who can act on it (D14).
 
+**Amended during Task 10: `confirm` and `stale` are digest-only too.** The
+review noticed an irony that decides it — they are consumed *only* by the
+digest's tally, which makes them **more** strictly digest-only than `suggest`,
+which at least carries a readable note. Ambiently they render as content-free
+pointers that do not even name what was corroborated:
+
+```
+[stale] campaign/a — post=33a55045514ce0f7748c68b246970785e28936ea
+```
+
+A reader cannot act on that, and six corroborations of one technique cost six
+ambient lines — reopening the exact budget-dilution channel this decision closed
+for `suggest`. So `DIGEST_ONLY_KINDS` is `["suggest", "confirm", "stale"]`: the
+corroboration signal lives where it is legible, beside its target and its count,
+and a bare pointer in the ambient view is worse than nothing.
+
+Two consequences worth stating. The tally is rendered for **every** target kind,
+not only techniques — the first implementation printed it inside a
+technique-only loop, so the convention's own headline example (several `stale`
+posts against an inconvenient `hold-off`) produced no corroboration line
+anywhere. And the convention post on the board was superseded to v3 to say all
+three are digest-only, because conventions are data (D12) and a v2 silent on
+where `confirm`/`stale` appear would have been an incomplete protocol
+statement.
+
 **A property to preserve rather than change:** `board digest` exits non-zero on
 error, unlike the deliberately quiet ambient render (D7). That asymmetry must
 survive, because the digest is the instrument that would report the board itself
