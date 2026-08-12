@@ -172,6 +172,19 @@ recomputed the H-1/H-2 arithmetic and confirmed the 5% figure was original,
 not adjusted — an independent check on the "nothing was retuned" claim,
 not just a repetition of it.
 
+## Two deferred minors, given a home
+
+Task 1's review deferred two cosmetic findings rather than fixing them
+inline; recorded here so neither is a minor nobody wrote down.
+
+- `hornvale_climate::provider::test_support::sample_world` was added with
+  no consumer besides its own delegator, `sample_climate()` — scope beyond
+  the task's brief, harmless, purely additive. Leave it; a future test in
+  that crate may want the raw `Geosphere` `sample_climate()` discards.
+- `domains/climate/tests/column.rs`'s file-level doc comment has a garbled
+  backtick in a pasted `E0432` compiler-error quote. Cosmetic; fix on next
+  touch of that file rather than as a standalone change.
+
 ## Follow-ups
 
 Ten items were found by reading during the brainstorm that opened this
