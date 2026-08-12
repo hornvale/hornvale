@@ -2,8 +2,12 @@
 //! channel area (R-6), and Horton's laws with their falsification (R-5).
 //!
 //! Both are **measurements, not gates**, so both are `#[ignore]`d under the
-//! `probe:` token `rift_probe.rs` established: they enumerate millions of
-//! branches and take minutes. Run them by hand:
+//! `probe:` token `rift_probe.rs` established. They enumerate millions of
+//! branches; the cost is now measured rather than guessed at — **21.8 s** for
+//! the containment sweep (104 MB peak RSS) and **1.4 s** for the Horton sweep
+//! (158 MB), on the dev profile, which is optimized workspace-wide since
+//! decision 0113. Both doc and ignore reasons said "minutes" before anything
+//! had run them. Run them by hand:
 //!
 //! ```text
 //! cargo test --release -p hornvale-terrain --test rill_probe -- --ignored --nocapture
@@ -95,9 +99,18 @@ fn mark(a: [f64; 3], b: [f64; 3], step: f64, rooms: &mut BTreeSet<u64>) {
 ///
 /// The curve this builds is what makes the containment figure honest: a
 /// space-filling network's containment is bounded by the resolution it is
-/// drawn to, so "89%" on its own is a statement about
+/// drawn to, so the headline number on its own is a statement about
 /// `RILL_MIN_CATCHMENT` as much as about the world. Reading containment
-/// against octave shows which it is.
+/// against octave shows which it is — and the run says it is mostly the
+/// former: **89.40-89.81%** across the three seeds, of which octave 0 (the
+/// trunks) supplies 0.99-1.15% and the remaining 88% arrives steadily from
+/// octaves 2 through 16, no single one of them contributing more than about
+/// 13 points.
+///
+/// The figure in this doc used to be a bare `"89%"` with no run behind it. It
+/// happens to have been right, which is the least useful way for an unmeasured
+/// number to be wrong: it is stated here with the run's own range because a
+/// figure nobody measured is a figure nobody can tell has gone stale.
 fn mark_at(a: [f64; 3], b: [f64; 3], step: f64, octave: u32, rooms: &mut BTreeMap<u64, u32>) {
     let length = arc(a, b);
     let steps = (length / step).ceil().max(1.0) as usize;
@@ -185,7 +198,7 @@ fn midpoint(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 /// independently. Where it does not, the difference is the instrument's and
 /// both figures move together.
 #[test]
-#[ignore = "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (minutes); run by hand"]
+#[ignore = "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (21.8 s measured); run by hand"]
 fn containment_and_channel_area_of_the_branch_network() {
     let geo = Geosphere::new(LEVEL);
     let unit = cell_catchment(&geo);
@@ -546,7 +559,7 @@ fn basin_network(
 /// untestable as posed. That is what happened to the quadrisecting design this
 /// replaces, and it was only visible after the fact.
 #[test]
-#[ignore = "probe: enumerates every branch of a whole coarse basin, twice (minutes); run by hand"]
+#[ignore = "probe: enumerates every branch of a whole coarse basin, twice (1.4 s measured); run by hand"]
 fn horton_ratios_of_the_branch_network() {
     let geo = Geosphere::new(LEVEL);
     for seed in SEEDS {

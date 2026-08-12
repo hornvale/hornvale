@@ -856,9 +856,18 @@ fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
 // ---------------------------------------------------------------------------
 
 /// Coarse cells sampled per seed, by stride over the whole `CellId` ordering so
-/// the sample crosses every latitude rather than one cap. Each carries the
-/// whole of its own partition — about 14,000 branches — so this is a real cost
-/// and the number is chosen to keep the sweep inside a commit gate.
+/// the sample crosses every latitude rather than one cap.
+///
+/// **The population is one cell's whole partition, and the figure is
+/// [`RILLS_PER_CELL_MAX`]'s, not a second one typed here.** That constant
+/// carries the derivation: `4π/40962` of catchment over a `RILL_MIN_CATCHMENT`
+/// of `4π/335544320` is a ratio of 8191.6, which the drawn cut turns into
+/// about **25,190 branches** (12,596 leaves) against the even cut's 16,382.
+/// This doc previously read "about 14,000 branches", a third number that
+/// matched neither the branch count nor the leaf count — the stale-figure class
+/// this campaign has now caught three times, and once inside the repair for it.
+/// The sweeps below print what they actually walked, so the count is a
+/// measurement in the run rather than a claim in a comment.
 const CELL_SAMPLE: usize = 120;
 
 /// Floor on the cells that actually carry a partition across the sweep, so
@@ -866,12 +875,12 @@ const CELL_SAMPLE: usize = 120;
 /// only if a run continues past it, so this tracks the land fraction.
 const MIN_PARTITIONED_CELLS: usize = 100;
 
-/// How deep the exhaustive attachment check goes. Every branch is checked
-/// against its cell's bound; the *incidence* check — a branch's mouth lies on a
-/// branch one bisection shallower — is quadratic in the population, so it runs
-/// over the top seven levels, which is 127 branches per cell and includes the
-/// attachment to the trunk itself.
-const ATTACHMENT_DEPTH: u32 = 6;
+/// Floor on the attachments the incidence check below walks, so a sweep that
+/// stopped descending the partition cannot pass by checking a handful of
+/// branches. Measured at full coverage: **3,099,482** across the three seeds,
+/// against the 31,242 the old depth cap reached. A tenth of that, which leaves
+/// room for terrain drift and none for the coverage collapsing.
+const MIN_ATTACHMENTS: usize = 300_000;
 
 /// The reach cells of one seed, sampled by stride.
 fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<CellId> {
@@ -1025,21 +1034,28 @@ fn a_cells_branches_partition_its_own_unit_of_catchment() {
 /// and it holds by construction rather than by margin, which is the whole
 /// difference between this design and the routed one it replaces.
 ///
-/// The bound is stated in the cell's own terms: no point of any branch is
-/// further from the cell than the diagonal of the square its catchment is, so
-/// a branch cannot reach a neighbouring cell's trunk even in principle.
+/// **What the reach bound below does and does not say, because the two are
+/// easy to confuse and the failure message used to confuse them.** It bounds a
+/// branch's angular reach from its own cell by the span of the object the
+/// branch is a share of \u2014 the catchment square plus the stretch of trunk it may
+/// attach to. That is a statement about the SCALAR partition's extent, and it
+/// holds by construction. It is **not** a statement that a branch stays inside
+/// its cell's Voronoi region: the square is a same-area proxy for the real
+/// region, so neighbouring cells' squares overlap at their corners
+/// (`branch.rs`'s own module doc concedes this), and a branch can satisfy this
+/// bound while sitting nearer another cell. `tests/rill_probe.rs` measures that
+/// geometric spill directly and it is **10.5\u201310.8%** of sampled branch heads
+/// across the three seeds \u2014 a named deviation, not a hypothetical. The divide
+/// that cannot be crossed is the one the partitioned scalar draws, and R-4's
+/// composed claim is made about that.
 #[test]
 fn every_branch_is_attached_to_the_line_above_it() {
     let geo = Geosphere::new(OUTLET_LEVEL);
     let unit = cell_catchment(&geo);
-    // The furthest a branch may be from its cell: the half-diagonal of the
-    // cell's own square, plus the half-stretch of trunk it may attach to. The
-    // half-diagonal of a square of side `s` is `s/\u221a2` exactly, so the
-    // constant is named rather than typed to five places.
-    let bound = std::f64::consts::FRAC_1_SQRT_2 * unit.sqrt() + 0.6 * 0.0189;
     let mut partitioned = 0usize;
     let mut checked = 0usize;
     let mut worst_reach = 0.0_f64;
+    let mut worst_ratio = 0.0_f64;
     let mut worst_gap = 0.0_f64;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
@@ -1063,16 +1079,49 @@ fn every_branch_is_attached_to_the_line_above_it() {
             );
 
             let here = geo.position(cell);
+            // THE BOUND IS COMPUTED, NOT TYPED. The furthest a branch may be
+            // from its cell is the half-diagonal of the cell's own catchment
+            // square — `s/√2` for a square of side `s`, hence the named
+            // constant — plus the furthest point of the cell's own stretch of
+            // trunk. That stretch runs to the midpoints of the arcs either
+            // side, which is half a cell spacing out, and the rendered vertex
+            // is meander-displaced by up to `MEANDER_AMPLITUDE_RATIO` of the
+            // same spacing. So the trunk term is `(0.5 + 0.25)·spacing`, every
+            // factor of it read from the mesh or from a published constant.
+            // This line previously carried a hand-typed `0.6 * 0.0189` — a
+            // level-6 spacing typed to three places, three lines below a
+            // comment congratulating itself on naming constants rather than
+            // typing them.
+            let neighbors = geo.neighbors(cell);
+            let spacing = neighbors
+                .iter()
+                .map(|&n| arc(here, geo.position(n)))
+                .sum::<f64>()
+                / neighbors.len() as f64;
+            let bound = std::f64::consts::FRAC_1_SQRT_2 * unit.sqrt()
+                + (0.5 + hornvale_terrain::MEANDER_AMPLITUDE_RATIO) * spacing;
+            // PER CELL, so the message names the cell the reach came from.
+            // The running maximum this replaced was correct only by an
+            // argument — it is monotone and the assertion sits inside the
+            // loop, so the first crossing is always the current cell's — and a
+            // message whose accuracy depends on where the assertion happens to
+            // sit is one refactor from lying.
+            let mut reach = 0.0_f64;
             for rill in &rills {
-                worst_reach = worst_reach
-                    .max(arc(here, rill.head))
-                    .max(arc(here, rill.mouth));
+                reach = reach.max(arc(here, rill.head)).max(arc(here, rill.mouth));
             }
+            worst_reach = worst_reach.max(reach);
+            worst_ratio = worst_ratio.max(reach / bound);
             assert!(
-                worst_reach < bound,
-                "seed {seed}, {cell:?}: a branch reaches {worst_reach} from its own cell, \
-                 past the {bound} its own catchment spans. A branch that far out is in a \
-                 neighbouring cell's catchment, which is a coarse divide crossed"
+                reach < bound,
+                "seed {seed}, {cell:?}: a branch reaches {reach} rad from its own cell, past \
+                 the {bound} rad its own catchment and trunk stretch span. The partition has \
+                 stopped being confined to the object it divides — a branch is drawing line \
+                 outside the catchment whose share it carries. NOTE what this does NOT say: \
+                 a branch INSIDE this bound may still sit nearer a neighbouring cell, because \
+                 the catchment square is a same-area proxy for the real region and the two \
+                 overlap at the corners. That spill is measured in `tests/rill_probe.rs` \
+                 (10.5-10.8% of sampled branch heads) rather than asserted here"
             );
 
             // THE TRUNK ITSELF, rebuilt from the published polyline rather
@@ -1092,7 +1141,17 @@ fn every_branch_is_attached_to_the_line_above_it() {
                 trunk.push([points[j - 1], points[j]]);
             }
 
-            for rill in rills.iter().filter(|r| r.depth <= ATTACHMENT_DEPTH) {
+            // EVERY BRANCH, not a depth-capped prefix. This loop used to stop
+            // at `ATTACHMENT_DEPTH = 6` — 127 branches of about 25,190, some
+            // 0.5% of the population — justified as the incidence check being
+            // "quadratic in the population". IT IS NOT: the check is one
+            // `rills[parent]` index and one `segment_gap`, both O(1), once per
+            // branch, so the loop is LINEAR. Measured either way: 31,242
+            // attachments in 1.45 s capped, 3,099,482 in 1.45-1.49 s uncapped
+            // (three runs). A hundredfold more coverage for a cost inside the
+            // run-to-run noise, because the enumeration was already paid for
+            // by `rills_of` and only the check was being skipped.
+            for rill in &rills {
                 checked += 1;
                 let gap = match rill.parent {
                     // The first pair attaches to the trunk itself.
@@ -1130,10 +1189,20 @@ fn every_branch_is_attached_to_the_line_above_it() {
         partitioned >= MIN_PARTITIONED_CELLS,
         "only {partitioned} sampled cells carry a partition"
     );
+    // THE COVERAGE IS PRINTED AND FLOORED, not typed into a doc. `checked` is
+    // already accumulated by the loop that owns it, so the number in the
+    // report is the run's own.
+    assert!(
+        checked >= MIN_ATTACHMENTS,
+        "only {checked} attachments checked against a floor of {MIN_ATTACHMENTS} — the sweep \
+         is no longer walking the whole partition, so the incidence claim covers a prefix of \
+         the network rather than the network"
+    );
     println!(
-        "R-4 (Tier 2 half): {partitioned} cells, {checked} attachments checked, worst mouth \
-         gap {worst_gap:.3e} rad, furthest branch point {worst_reach:.5} rad against a bound \
-         of {bound:.5}"
+        "R-4 (Tier 2 half): {partitioned} cells, {checked} attachments checked (EVERY branch, \
+         no depth cap), worst mouth gap {worst_gap:.3e} rad, furthest branch point \
+         {worst_reach:.5} rad, worst reach as a fraction of its own cell's bound \
+         {worst_ratio:.4}"
     );
 }
 

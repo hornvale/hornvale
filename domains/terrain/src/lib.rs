@@ -37,7 +37,8 @@ pub use carve::{
 };
 pub use channel::{
     BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
-    FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, Transverse, band_edges, channel_half_width, confinement,
+    FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
+    channel_half_width, confinement,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,

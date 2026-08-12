@@ -680,28 +680,38 @@ pub fn rills_of(
     out
 }
 
-/// The nearest branch of `cell`'s own partition to `position`, as
-/// `(distance, catchment)` in local coordinates — `None` where the cell has no
-/// trunk to attach to.
+/// The nearest branch to `target` (in local coordinates) found by **descending**
+/// the partition from `start`, as `(distance, catchment)`.
 ///
-/// Descends the partition instead of enumerating it: at each bisection both
-/// parts' branches are measured and then the part whose region holds the query
-/// point is entered, so the cost is `O(depth)` — about thirty segment tests —
-/// with nothing stored. The winner is therefore the nearest branch **on the
-/// descent**, which is the nearest branch outright except where a sibling
-/// subtree reaches back across a region boundary; the probe measures how often
-/// that matters rather than leaving it as an assumption.
-fn nearest_rill(
+/// At each bisection both parts' branches are measured and then the part whose
+/// region holds the query point is entered, so the cost is `O(depth)` — about
+/// thirty segment tests — with nothing stored. The winner is therefore the
+/// nearest branch **on the descent**, which is the nearest branch outright
+/// except where a sibling subtree reaches back across a region boundary.
+///
+/// **How often that matters is now MEASURED, and the answer has two halves.**
+/// `tests::the_descent_finds_what_an_exhaustive_walk_finds` runs this against
+/// an exhaustive walk of the same partition, on the same query points, in the
+/// same frame: **inside** the catchment square the two disagree on 2.0% of
+/// queries by at most 0.118 of a walk-depth room's edge — below the resolution
+/// the network is drawn to; **outside** it they disagree on 26.5% by up to
+/// 1.099 room edges. So the shortcut is exact where it has a rectangle to
+/// stand on and degrades to about a room where it does not, which is why
+/// [`rill_reading`] scans the neighbours rather than trusting one cell.
+///
+/// This doc previously asserted that "the probe measures how often that
+/// matters" while nothing measured it: `tests/rill_probe.rs` measures which
+/// coarse cell owns a branch HEAD, a different quantity in a different frame.
+/// The descent is split out from [`nearest_rill`] precisely so the claim could
+/// be made checkable rather than left as prose.
+fn descend_to_nearest(
     cell: CellId,
-    position: [f64; 3],
-    net: &ChannelNetwork,
-    geo: &Geosphere,
+    start: Node,
+    unit: f64,
     cut: &CatchmentCut,
+    target: [f64; 2],
 ) -> Option<(f64, f64)> {
-    let (frame, stretch) = trunk_stretch(cell, net, geo)?;
-    let unit = cell_catchment(geo);
-    let target = frame.project(position);
-    let mut node = root(stretch, unit);
+    let mut node = start;
     let mut best: Option<(f64, f64)> = None;
     while let Some(children) = parts(&node, cell, unit, cut) {
         let mut chosen = 0usize;
@@ -729,6 +739,29 @@ fn nearest_rill(
         node = children[chosen];
     }
     best
+}
+
+/// The nearest branch of `cell`'s own partition to `position`, as
+/// `(distance, catchment)` in local coordinates — `None` where the cell has no
+/// trunk to attach to.
+///
+/// The frame and the root; the search itself is [`descend_to_nearest`].
+fn nearest_rill(
+    cell: CellId,
+    position: [f64; 3],
+    net: &ChannelNetwork,
+    geo: &Geosphere,
+    cut: &CatchmentCut,
+) -> Option<(f64, f64)> {
+    let (frame, stretch) = trunk_stretch(cell, net, geo)?;
+    let unit = cell_catchment(geo);
+    descend_to_nearest(
+        cell,
+        root(stretch, unit),
+        unit,
+        cut,
+        frame.project(position),
+    )
 }
 
 /// The sub-cell network at a position: the nearest branch, and the transverse
@@ -790,8 +823,15 @@ mod tests {
     const PROBE_LEVEL: u32 = 6;
 
     /// The hard ceiling the probe aborts at, in emitted nodes — generous
-    /// against the derived bound (about 27,000) and small enough that a
-    /// broken stopping rule reports a number instead of exhausting the box.
+    /// against [`RILLS_PER_CELL_MAX`] (32,768, itself about 30% above the
+    /// drawn arm's measured worst of 25,202) and small enough that a broken
+    /// stopping rule reports a number instead of exhausting the box.
+    ///
+    /// This doc read "about 27,000" until the stale-figure sweep of fix round
+    /// 1 reached it — a fourth number for a quantity that already had a
+    /// derived one and a measured one, sitting 160 lines below the constant
+    /// that reconciles them. Stated as a multiple of the real bound rather
+    /// than as a fresh figure, so it cannot drift on its own.
     ///
     /// **This constant is the reason the probe is safe to run at all.** The
     /// defect it was written against reached 269 million nodes and 23.7 GB of
@@ -937,6 +977,163 @@ mod tests {
             cells.len(),
             worst * rill,
             RILLS_PER_CELL_MAX * rill,
+        );
+    }
+
+    /// The nearest branch to `target` found by walking the WHOLE partition —
+    /// the control [`descend_to_nearest`]'s `O(depth)` shortcut is measured
+    /// against.
+    ///
+    /// **Carries the same hard node cap the rest of this module's probes do**,
+    /// and returns `None` if it trips, so a stopping rule that stopped
+    /// stopping reports a refusal rather than eating the box. The DFS stack is
+    /// bounded by depth, and nothing is materialised — the walk carries one
+    /// running minimum.
+    fn exhaustive_nearest(
+        cell: CellId,
+        start: Node,
+        unit: f64,
+        cut: &CatchmentCut,
+        target: [f64; 2],
+    ) -> Option<(f64, f64)> {
+        let mut best: Option<(f64, f64)> = None;
+        let mut seen = 0usize;
+        let mut stack = vec![start];
+        while let Some(node) = stack.pop() {
+            let Some(children) = parts(&node, cell, unit, cut) else {
+                continue;
+            };
+            for child in children {
+                seen += 1;
+                if seen > PROBE_NODE_CAP {
+                    return None;
+                }
+                let distance = distance_to(child.line, target);
+                if best.is_none_or(|(d, _)| distance < d) {
+                    best = Some((distance, area_of(child.share, unit)));
+                }
+                stack.push(child);
+            }
+        }
+        best
+    }
+
+    /// claim: bound(the descent's answer against the exhaustive one, over a
+    /// lattice of query points) — [`descend_to_nearest`] finds the nearest
+    /// branch, or one no further out than a stated ceiling.
+    ///
+    /// **This is the measurement `nearest_rill`'s doc used to claim and nobody
+    /// had built.** The shipped read path descends the partition choosing one
+    /// child per level, so it cannot see a branch in the sibling subtree it
+    /// declined to enter. Whether that matters is an empirical question about
+    /// how far a branch reaches out of its own rectangle, and the honest way
+    /// to answer it is to run the exhaustive walk the descent replaces and
+    /// compare, on the same partition and in the same frame — which is the
+    /// second thing the old claim got wrong, since `tests/rill_probe.rs`
+    /// measures which coarse cell owns a branch head, a different quantity
+    /// entirely.
+    ///
+    /// The query lattice deliberately runs **past** the catchment square's own
+    /// edges, because a position outside every child's rectangle is exactly
+    /// the case the descent has to fall back on "nearer centre" for. Inside
+    /// and outside are counted separately, because they are two different
+    /// claims and a single mixed rate would hide which one moved.
+    ///
+    /// **WHAT IT MEASURED, and the split is the whole result.** Inside the
+    /// catchment square the descent disagrees with the exhaustive walk on
+    /// **3 of 150** query points (2.0%), by at most **0.118** of a walk-depth
+    /// room's edge — under the resolution the network is drawn to, so no
+    /// observer can be placed where it matters. Outside the square it
+    /// disagrees on **89 of 336** (26.5%), by up to **1.099** room edges.
+    ///
+    /// That is a sharper statement than the old prose and a different one. The
+    /// shortcut is not "the nearest branch outright, except rarely": it is
+    /// **the nearest branch wherever the query is inside the catchment it
+    /// subdivides**, and an approximation that degrades to about one room
+    /// outside it. Which is the same boundary everything else in this module
+    /// is honest about — the square is a same-area proxy, and it is at the
+    /// corners that it stops being one.
+    ///
+    /// [`rill_reading`] is the shipped path and it takes the outside case
+    /// seriously already: it runs this descent on the nearest cell **and all
+    /// of its neighbours** and takes the minimum, so a position outside one
+    /// cell's square is inside another's. That mitigation is not measured
+    /// here — this isolates the shortcut itself, which is the quantity the doc
+    /// claimed.
+    ///
+    /// The ceilings below are a **ratchet on the measured value, not a claim
+    /// that the value is good**: they exist so a change that makes the
+    /// shortcut worse goes red.
+    #[test]
+    fn the_descent_finds_what_an_exhaustive_walk_finds() {
+        let geo = Geosphere::new(PROBE_LEVEL);
+        let unit = cell_catchment(&geo);
+        let half = 0.5 * unit.sqrt();
+        let stretch: Chain = [[-half, 0.0], [0.0, 0.0], [half, 0.0]];
+        let room = RILL_MIN_CATCHMENT.sqrt();
+        // (queries, disagreements, worst excess in room edges), inside the
+        // catchment square and outside it.
+        let mut arm = [(0usize, 0usize, 0.0_f64); 2];
+        for cell in [CellId(0), CellId(4_099), CellId(20_481)] {
+            for cut in [CatchmentCut::Even, CatchmentCut::Drawn(Seed(42))] {
+                // A 9x9 lattice over 1.5x the square, so the outer ring sits
+                // outside the catchment entirely.
+                for i in 0..9 {
+                    for j in 0..9 {
+                        let target = [
+                            (i as f64 / 4.0 - 1.0) * 1.5 * half,
+                            (j as f64 / 4.0 - 1.0) * 1.5 * half,
+                        ];
+                        let start = root(stretch, unit);
+                        let inside = usize::from(!start.patch.contains(target));
+                        let descent = descend_to_nearest(cell, start, unit, &cut, target)
+                            .expect("the partition has parts");
+                        let exhaustive = exhaustive_nearest(cell, start, unit, &cut, target)
+                            .expect("the exhaustive walk stayed inside its node cap");
+                        arm[inside].0 += 1;
+                        if descent.0 != exhaustive.0 {
+                            arm[inside].1 += 1;
+                            // Measured against the ROOM the network resolves
+                            // to, not against the exhaustive distance: a query
+                            // sitting almost on a branch has a near-zero
+                            // denominator, and dividing by it would report an
+                            // enormous relative error for an absolute
+                            // difference no observer could be positioned to
+                            // notice.
+                            arm[inside].2 = arm[inside].2.max((descent.0 - exhaustive.0) / room);
+                        }
+                    }
+                }
+            }
+        }
+        for (name, &(queries, disagreed, worst)) in ["inside ", "outside"].iter().zip(arm.iter()) {
+            println!(
+                "the descent against the exhaustive walk, {name} the catchment square: \
+                 {disagreed} of {queries} queries disagree ({:.1}%), worst excess {worst:.4} of \
+                 a walk-depth room's edge",
+                100.0 * disagreed as f64 / queries as f64
+            );
+        }
+        assert!(
+            arm[0].0 >= 100 && arm[1].0 >= 200,
+            "the lattice no longer straddles the square: {} inside, {} outside — measured \
+             150 and 336, and a comparison run entirely on one side of the boundary is not \
+             the comparison this makes",
+            arm[0].0,
+            arm[1].0
+        );
+        // RECORDED, NOT DERIVED. Measured 0.1180 inside and 1.0990 outside;
+        // these are the next round numbers up. A tighter bound would be a
+        // claim about the construction that nothing here establishes, and a
+        // looser one would stop noticing.
+        assert!(
+            arm[0].2 < 0.5 && arm[1].2 < 1.5,
+            "the descent's excess over the true nearest is {:.4} room edges inside the \
+             catchment square and {:.4} outside, against the 0.1180 / 1.0990 this was \
+             recorded at. The O(depth) shortcut has got worse, and `rill_reading` is the \
+             shipped path that takes it",
+            arm[0].2,
+            arm[1].2
         );
     }
 
