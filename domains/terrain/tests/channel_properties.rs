@@ -338,7 +338,9 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     }
     // Per-seed, so a single world going riverless is visible rather than being
     // absorbed by the other four in the total. The measured minimum across the
-    // sweep is seed 42's 54 (it was 33 before The Rill's Task 2).
+    // sweep is seed 42's 2770 (it was 54 after The Rill's Task 2 and 33 at The
+    // Ford; Task 3 renders the whole land flow tree, so a "segment" is now any
+    // downhill step on land rather than one between two river cells).
     assert!(
         edges >= 1_300,
         "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} (the five sweep \
@@ -356,15 +358,26 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
 /// claim is universal. Pairs whose nearest line is not the segment's own line
 /// are skipped — for those the reading is about a different river and says
 /// nothing about this one — and the surviving population is floored so the
-/// skip cannot quietly empty the test. **Measured, re-taken at The Rill's Task
-/// 2:** 54 pairs survive on seed 42 at level 5 — which is still *every* segment
-/// the network has (22 lines, 76 vertices), so the filter is not currently
-/// masking a single case — with a worst magnitude gap of 1.67e-13 rad. (At The
-/// Ford it was 33 of 33, on a 13-line/46-vertex network: Task 2 gave most runs
-/// a mouth segment and restored the runs the old length filter dropped, and
-/// the filter still masks nothing.) The floor of 25 leaves
-/// room for ordinary terrain drift without leaving room for the filter to
-/// start swallowing the population.
+/// skip cannot quietly empty the test.
+///
+/// **Measured, re-taken at The Rill's Task 3 (fix round 2):** 2770 pairs
+/// survive on seed 42 at level 5, on a network of 1117 lines and 3887 vertices,
+/// with a worst magnitude gap of 2.22e-13 rad.
+/// Earlier readings, kept because the ratios are the finding: 54 of 54 after
+/// Task 2 (22 lines, 76 vertices, worst magnitude gap 1.67e-13 rad); 33 of 33
+/// at The Ford (13 lines, 46 vertices). **In every one of those readings the
+/// surviving population is EVERY segment the network has**, so the same-line
+/// filter has never masked a case — which is the property this paragraph exists
+/// to record, and the one that would change silently if a denser network began
+/// putting a segment's mirrored probes nearer some other line. The count is
+/// printed by the test so the log carries it too.
+///
+/// **THE FLOOR WAS 25 UNTIL FIX ROUND 2, AND THAT IS THE INTERESTING PART.**
+/// Task 3's own floor sweep raised the two floors above in this very file and
+/// walked past this one sixty lines below them, leaving 110x headroom against a
+/// stated reference (54) that the same commit was replacing with 2770 two
+/// screens up. A class sweep can miss a member of its class in the file it is
+/// editing; grep for the assertion shape, do not read down the file.
 #[test]
 fn the_bank_sign_is_left_of_downstream_and_mirrors_exactly() {
     let terrain = build_seed_42_terrain();
@@ -405,10 +418,17 @@ fn the_bank_sign_is_left_of_downstream_and_mirrors_exactly() {
             checked += 1;
         }
     }
+    let segments: usize = net.polylines.iter().map(|l| l.points.len() - 1).sum();
+    println!(
+        "mirrored pairs: {checked} survived the same-line filter of {segments} segments \
+         ({} lines, {} vertices); worst magnitude gap {worst:e} rad",
+        net.polylines.len(),
+        net.polylines.iter().map(|l| l.points.len()).sum::<usize>(),
+    );
     assert!(
-        checked >= 25,
-        "only {checked} mirrored pairs survived the same-line filter (worst magnitude gap \
-         {worst}) — the assertion above ran on almost nothing"
+        checked >= 1_300,
+        "only {checked} mirrored pairs survived the same-line filter of {segments} segments \
+         (measured 2770 of 2770) — the assertion above ran on almost nothing"
     );
 }
 

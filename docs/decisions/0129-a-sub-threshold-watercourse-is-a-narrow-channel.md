@@ -86,8 +86,33 @@ cell scale, where a count-valued threshold has no defensible value.
   `the_meander_field_is_pinned`) were written and watched green **before** the
   re-baseline, because a fixture regenerated after a change witnesses the change
   rather than judging it.
-- **A larger rendered world at a sub-linear gain.** Rendering ~15x more cells
-  bought only ~5.5x more channel area (`channel-land-fraction` 3.35e-4 → 2.14e-3
-  on seed 42), because width goes as `√Q` and the added reaches carry the
-  smallest discharges. That is the width law working as designed, and it is why
-  the whole flow tree still occupies about a fifth of one percent of the land.
+- **A larger rendered world at a sub-linear gain in AREA — but not in reach.**
+  Two different quantities move at two different rates, and conflating them is
+  the trap this bullet exists to close. Measured on seed 42 at the canonical
+  level 6, walk-depth rooms (`globe_level + 6` = 12), denominator
+  `20·4¹² × land_fraction` = 90,648,246 land rooms:
+
+  | quantity | before | after | ratio |
+  |---|---|---|---|
+  | **containment** — a walk-depth room some polyline passes through | 0.0845% | **1.237%** | **14.6×** |
+  | **centroid reads `Channel`** — what a consumer actually sees | 0.0284% | **0.1716%** | 6.0× |
+  | `channel-land-fraction` (the channel-tube area integral) | 3.354e-4 | 2.143e-3 | 6.4× |
+
+  Containment scales with `Σ1` — the count of rendered cells — so it tracks the
+  ~15x growth in the flow tree almost exactly. Area scales with `Σ√Q`, and every
+  added reach carries the smallest discharge in the world, so it grows only
+  ~5.5x. Both are correct; a prediction about one is not evidence about the
+  other. (`RoomAddr` is a **face** of the icosphere and `Geosphere::cell_count`
+  is its **dual**, so `20·4^d` is the room count and `10·4^L + 2` the cell
+  count — a factor of ~2 apart. Denominators stated because that duality has
+  already produced one 2x disagreement between two measurements of this.)
+
+- **The gap between those two rows is what Tier 2 exists to close, and it
+  widened.** Of the rooms a channel passes through, the share reading `Channel`
+  at their centroid fell **0.3366 → 0.1387**: **86% of the rooms a channel now
+  runs through do not read as water where a walker stands**, against 66% before.
+  A headwater half-width is 7.35e-6 rad against a 2.83e-4 rad walk-depth room
+  edge — **1/38 of a room**. Tier 1 put a channel in fourteen times as many
+  rooms and made each one harder to notice; recovering the difference is a
+  sub-cell rendering problem, not a width-law one, and the number to recover is
+  1.237%, not 0.214%.

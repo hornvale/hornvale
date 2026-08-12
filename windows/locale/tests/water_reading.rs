@@ -849,28 +849,43 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///
 /// # What the attribution says, measured on seed 42 at level 6
 ///
+/// **Every figure in this section is now PRINTED by the test.** Three of these
+/// bullets went stale across The Rill's Task 3 and had to be reconciled by
+/// hand; the numbers below are emitted on every run, so read the log and treat
+/// the prose as the explanation rather than the source.
+///
 /// - **The width clause is inert at walk depth.** The widest full channel in
-///   the world is 1.89e-4 rad against a room edge of 2.71e-4, so `2·b0 < step`
-///   holds at every sampled vertex and all the discrimination is done by the
-///   discharge half (`Q < 80`; discharge runs 15 to 146, median 24). It is not
-///   inert in principle — `the_width_clause_binds_when_the_step_shrinks` is the
-///   positive control that exercises it at a depth where it does bind.
-/// - **The conjunction is not the fraction.** The clauses hold on 95.0% of
-///   transects (324 of 341) while 33.7% are Fordable and only 123 transects
-///   have any crossing at all; the gap is the crossing gate itself — the
-///   same-channel clause, the sign change, and §5.3's requirement that a room
-///   stand inside its own bank edge — not §8's criterion. Where the channel is
-///   wider than every step available, both rooms sit on one bank and the
-///   verdict is `NotACrossing` rather than `Impassable`: the geometry refuses
-///   before the criterion is consulted.
-/// - **Two different rivers are a small but real part of the population.** Of
-///   the 171 step pairs whose signs differ at walk depth, **5 are cross-line**
-///   — the two readings were selected against different polylines, so the two
-///   signs are expressed in **different frames** and the comparison between
-///   them is **uninterpretable** — and **all 5 also stand inside a bank edge**,
-///   i.e. every one of them was admitted as a crossing before
-///   `crossing_between` gained its same-channel clause. The printed counts
-///   above are read from the network, not from the gate.
+///   the world is 1.892e-4 rad against a room edge of 2.831e-4, so `2·b0 < step`
+///   holds at **every** sampled vertex (395 of 395) and all the discrimination
+///   is done by the discharge half. Task 3 did not move the widest channel —
+///   the reaches it added are narrower than the ones already there — but it
+///   moved the discharge distribution underneath it: over the sampled
+///   transects, `drainage` now runs **min 0, median 2, max 102** (it ran 15 to
+///   146, median 24, when only river cells were rendered; the 0 is a mouth
+///   vertex, whose cell is the sea). So the discharge clause holds on 99.75% of
+///   transects rather than 95.0%, and does correspondingly less discriminating.
+///   The clause is not inert in principle —
+///   `the_width_clause_binds_when_the_step_shrinks` is the positive control
+///   that exercises it at a depth where it does bind.
+/// - **The conjunction is not the fraction.** The clauses hold on **99.75%** of
+///   transects (394 of 395) while **22.28%** are Fordable and only **96**
+///   transects have any crossing at all; the gap is the crossing gate itself —
+///   the same-channel clause, the sign change, and §5.3's requirement that a
+///   room stand inside its own bank edge — not §8's criterion. (It was 95.0%,
+///   33.7% and 123 of 341 at The Ford, so the gap has WIDENED: the criterion
+///   admits nearly everything and the geometry refuses more of it.) Where the
+///   channel is wider than every step available, both rooms sit on one bank and
+///   the verdict is `NotACrossing` rather than `Impassable`: the geometry
+///   refuses before the criterion is consulted.
+/// - **Two different rivers are no longer a small part of the population.** Of
+///   the **203** step pairs whose signs differ at walk depth, **36 are
+///   cross-line** — the two readings were selected against different polylines,
+///   so the two signs are expressed in **different frames** and the comparison
+///   between them is **uninterpretable** — and **22 of the 36 also stand inside
+///   a bank edge**, i.e. were admitted as crossings before `crossing_between`
+///   gained its same-channel clause. At The Ford it was 5 of 171, and all 5
+///   were inside a bank edge. The printed counts above are read from the
+///   network, not from the gate.
 ///
 ///   **"Uninterpretable" is the exact claim, and it is weaker than "nothing is
 ///   there".** A cross-line pair says the two signs cannot be compared; it does
@@ -905,13 +920,20 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   of which CROSS-LINE    3                     36      (12x)
 /// ```
 ///
-/// **The `Impassable` branch is now unexercised in this witness, and it cannot
-/// be restored here.** At walk depth the width clause is inert (395/395), so
-/// `Impassable` requires a LOUD reach (`Q >= WATERFALL_MIN_DRAINAGE`) that is
-/// also a crossing. A uniform stride of 395 over 14,606 vertices contains
-/// exactly **one** loud vertex, and it reads `NotACrossing`. Injecting loud
-/// reaches would fix the branch and destroy the thing this test reports — an
-/// UNBIASED fordable fraction — so the branch is exercised elsewhere instead:
+/// **The `Impassable` branch is now unexercised in this witness, and restoring
+/// it here is DECLINED ON COST rather than impossible.** At walk depth the
+/// width clause is inert (395/395), so `Impassable` requires a LOUD reach
+/// (`Q >= WATERFALL_MIN_DRAINAGE`) that is also a crossing. The network holds
+/// 91 loud vertices of 14,606; a uniform stride of 395 samples 2.7% of them, an
+/// expectation of **0.67** loud vertices — measured, exactly one, and it reads
+/// `NotACrossing`. (The pre arm sampled 33% of 883 and caught ~30 loud
+/// vertices, of which 8 were `Impassable`.) Recovering equal power needs about
+/// **4,800 transects — a 12x sample**, which on a per-query cost that is itself
+/// 16x higher would put one test in the tens of seconds. That is the trade, not
+/// a barrier. Enriching the sample instead would fix the branch and destroy the
+/// thing this test reports — an UNBIASED fordable fraction — so the branch is
+/// exercised elsewhere, which is the better home for a rare-branch positive
+/// control in any case:
 /// `the_discharge_clause_makes_the_strongest_crossing_impassable` asserts every
 /// loud crossing reads `Impassable` over a deliberately enriched population,
 /// and `LOUD_REACH_CELLS_FLOOR` guards that the world still has 34 loud cells
@@ -924,22 +946,49 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// edge — so its false-negative side, described above as small, is no longer
 /// small. It is still the right trade, and it is now a much larger one.
 ///
-/// - **Measured, at walk depth: 115 Fordable, 8 Impassable, 218 NotACrossing of
-///   341 — a fraction of 0.3372.** The step sweep: 0.2170 one level up (a
-///   longer step reaches further but puts the walker's rooms outside the bank
-///   band), 0.3372 at walk depth, 0.3900 one level down, 0.1026 two, 0.0000
-///   three — by then no step spans the water.
+/// - **Measured, at walk depth: 88 Fordable, 0 Impassable, 307 NotACrossing of
+///   395 — a fraction of 0.2228** (The Rill, Task 3). Two earlier readings, on
+///   the same instrument and progressively larger networks: 106/8/181 of 295,
+///   **0.3593**, immediately before Task 3; and 115/8/218 of 341, **0.3372**,
+///   at The Ford, which is the figure the rest of this doc block was written
+///   against.
 ///
-///   **The same-channel clause moved the sweep and not the headline.** Adding
-///   it left walk depth exactly where it was (115/8/218, 0.3372) because none
-///   of the 5 cross-line pairs was the *deciding* step for its transect — each
-///   of those transects reached the same verdict through a same-line step
-///   anyway. One level up it moved 0.2229 → **0.2170** (76 → 74 Fordable) and
-///   one level down 0.3959 → **0.3900** (135 → 133); depths two and three
-///   below were unchanged. This is a **correction, not a tuning**: it *adds* a
-///   constraint (the two readings must be of the same river), which is the
-///   test that separates a correction from a rescue, and it was adopted before
-///   its effect on the fraction was known.
+///   **The step sweep changed SHAPE, not only level, and that is a finding
+///   about the world rather than about the instrument:**
+///
+///   ```text
+///     depth   step (rad)   The Ford   pre-Task-3   post-Task-3
+///      11      5.66e-4      0.2170      0.2169       0.1190
+///      12*     2.83e-4      0.3372      0.3593       0.2228
+///      13      1.42e-4      0.3900      0.4339       0.3089
+///      14      7.08e-5      0.1026      0.1017       0.3342
+///      15      3.54e-5      0.0000      0.0000       0.1848
+///     (* walk depth)
+///   ```
+///
+///   The peak moved from depth 13 to **depth 14**, and the collapse to zero at
+///   depth 15 — "by then no step spans the water", as this bullet used to read
+///   — **no longer happens**. The mechanism is the width law, not the gate: a
+///   3.54e-5 rad step cannot straddle a 1.9e-4 rad mainstem, which is what
+///   every reach in the old network was, but it comfortably straddles a
+///   7.35e-6 rad headwater creek, which is what most of the new one is. A
+///   denser network means there is still water to ford three levels below walk
+///   depth. Anyone reading fordability as a function of traversal scale should
+///   take this table, not the single walk-depth row.
+///
+///   **The same-channel clause moved the sweep and not the headline — as
+///   measured AT THE FORD, on a 341-transect population with 5 cross-line
+///   pairs.** Adding it left walk depth exactly where it was (115/8/218,
+///   0.3372) because none of those 5 was the *deciding* step for its transect.
+///   One level up it moved 0.2229 → 0.2170 (76 → 74 Fordable) and one level
+///   down 0.3959 → 0.3900 (135 → 133); depths two and three below were
+///   unchanged. This is a **correction, not a tuning**: it *adds* a constraint
+///   (the two readings must be of the same river), which is the test that
+///   separates a correction from a rescue, and it was adopted before its effect
+///   on the fraction was known. **The attribution is not re-derived for the
+///   current population and should not be read as if it were**: cross-line
+///   pairs are now 36 rather than 5, so how much the clause moves the sweep is
+///   an open number, not the one above.
 ///
 /// # H2-4 IS NOT RESOLVED, AND THE ASSERTION BELOW IS NOT A CONFIRMATION
 ///
@@ -956,7 +1005,8 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///    population was 34 of 341 pairs and read **0.7059** — **also outside
 ///    [0.10, 0.70]**, i.e. a *falsifying* reading, not merely a thin one;
 /// 3. the transect was rebuilt around three mesh steps per vertex — **adopted
-///    directly after that falsifying reading** — giving the **0.3372** above.
+///    directly after that falsifying reading** — giving **0.3372**, The Ford's
+///    column in the sweep table above.
 ///
 /// A fourth change landed in the pre-merge fix wave, and it is deliberately not
 /// in that list: `crossing_between` gained its same-channel clause. That is a
@@ -972,9 +1022,13 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// epistemic status of a hypothesis whose free parameter moved four times under
 /// unblinded observation.
 ///
-/// **So: H2-4 was not tested under preregistration and is not resolved. 0.3372
-/// at one room edge at walk depth is reportable as a measurement of the world at
-/// a stated step length — not as a confirmation of the [0.10, 0.70] interval.**
+/// **So: H2-4 was not tested under preregistration and is not resolved. The
+/// current reading — 0.2228 at one room edge at walk depth, on the whole-flow-
+/// tree network — is reportable as a measurement of the world at a stated step
+/// length AND a stated network, not as a confirmation of the [0.10, 0.70]
+/// interval.** Quote it with both qualifiers: the same instrument read 0.3372
+/// and 0.3593 on the two sparser networks that preceded it, all three inside
+/// the interval, so the interval is not what is distinguishing them.
 /// The range check below is a **witness** that pins today's reading and reddens
 /// if it moves; it is not a hypothesis test, and this test's name should be read
 /// as naming the check rather than announcing a result.
@@ -1054,6 +1108,20 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 
     let usable = transects.len();
     let frac = fordable as f64 / usable as f64;
+    // The attribution numbers, COMPUTED AND PRINTED rather than left in prose.
+    // Three bullets in this doc block went stale across The Rill's Task 3 and
+    // had to be reconciled by hand; a number the test emits cannot.
+    let widest_full = net.widest_half_width() * 2.0;
+    let mut discharges: Vec<f64> = transects
+        .iter()
+        .map(|t| ctx.terrain().drainage_at(t.cell))
+        .collect();
+    discharges.sort_by(f64::total_cmp);
+    let (q_min, q_med, q_max) = (
+        discharges[0],
+        discharges[discharges.len() / 2],
+        discharges[discharges.len() - 1],
+    );
 
     // This floor comes BEFORE the diagnostic print, which indexes
     // `transects[0]` for the step length: on an empty population the print
@@ -1099,7 +1167,9 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
          this depth needs one; see this test's doc)\n  \
          sign-flip step pairs      = {sign_flip_pairs}\n  \
          of which CROSS-LINE       = {cross_line_pairs} ({cross_line_admitted} also inside a \
-         bank edge, i.e. admitted before the same-channel clause)",
+         bank edge, i.e. admitted before the same-channel clause)\n  \
+         widest full channel       = {widest_full:e} rad (vs one room edge above)\n  \
+         transect discharge        = min {q_min}, median {q_med}, max {q_max}",
         ctx.globe_level(),
         walk_depth(&ctx),
         room_edge(&transects[0].home),
