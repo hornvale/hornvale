@@ -321,6 +321,9 @@ fn number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
 /// is the one the module docs already record for the decoders: this window
 /// cannot depend on that one and the constant is the kernel's, so what is
 /// shared is `Years::DAYS_PER_YEAR` rather than the function.
+///
+/// Not registered with `tools/seam-guard`: it shares a name with worldgen's
+/// helper, which the tool cannot disambiguate. See that function's doc.
 fn bake_year_of_ledger_day(day: f64) -> f64 {
     day / hornvale_kernel::Years::DAYS_PER_YEAR
 }
