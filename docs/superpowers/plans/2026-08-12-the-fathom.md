@@ -47,6 +47,8 @@ re-keyed.
 | `domains/climate/src/biome.rs` | **Modify.** One doc line on `is_marine()` naming what it answers. No signature or body change. |
 | `domains/climate/tests/column.rs` | **Create.** AMENDED AT EXECUTION: `provider::test_support` is `#[cfg(test)]`-gated and therefore invisible to an integration test (proven with an E0432 during Task 1), and ungating it would pull it into the type-audit's pub surface. So the column's tests are an integration test carrying a ~15-line local fixture, documented at the top of the file. |
 | `windows/worldgen/tests/fathom_column_probe.rs` | **Create.** The H-1 / H-2 measurement over a real seed-42 world. Heavy-tier. |
+| `windows/locale/src/lib.rs` | **Modify.** ADDED AT EXECUTION: `water_column_at` and `expr_at_stratum` already derived the column before this campaign; they delegate to Task 1's accessors so there is one derivation, not two. |
+| `windows/locale/tests/column_delegation.rs` | **Create.** Before-arm reproduction plus the agreement property. |
 | `windows/vessel/src/vantage.rs` | **Modify.** `submerged` asks the medium, not the stratum. |
 | `windows/vessel/tests/submerged.rs` | **Create.** The failing-first test that a rock stratum is not submerged. |
 | `windows/worldgen/src/graph_derive.rs` | **Modify.** One doc line on the `marine` binding. No behaviour change. |
@@ -484,7 +486,150 @@ git commit -m "test(the-fathom): measure H-1 and H-2, and record what they said"
 
 ---
 
-### Task 3: `submerged` asks the medium, and the latent sites say so
+### Task 3: One column derivation, not two
+
+**Files:**
+- Modify: `windows/locale/src/lib.rs` — `water_column_at` (`:617`) and `expr_at_stratum` (`:636`)
+- Test: `windows/locale/tests/column_delegation.rs` (create)
+
+**Interfaces:**
+- Consumes: Task 1's `GeneratedClimate::strata_at(cell) -> Vec<Stratum>` and
+  `biome_expr_at_stratum(cell, stratum) -> Option<BiomeExpr>`.
+- Produces: nothing new. Both locale methods keep their exact signatures.
+
+**Why this task exists — read this before anything else.** It was not in the
+original plan. Task 1 added `strata_at` and `biome_expr_at_stratum` to
+`domains/climate`; the Task 3 pre-flight then found that
+`windows/locale/src/lib.rs` **already had both**, shipped before this campaign:
+
+```
+  locale:617  water_column_at(cell) -> Vec<Stratum>            == strata_at
+  locale:636  expr_at_stratum(cell, stratum) -> BiomeExpr      == biome_expr_at_stratum
+```
+
+Same `take_while`/`chain` idiom, same open-water-above-the-floor rule. So the
+campaign created a **second derivation of the water column** — the exact
+"silently-diverging derivation" hazard Task 1's own headline test exists to
+prevent. This task collapses them to one. Leaving two is worse than never
+having built the second.
+
+**THE TRAP: the two contracts are NOT the same, and delegation is therefore
+not automatically behaviour-preserving.**
+
+```
+                        locale (today)              climate (Task 1)
+  non-water cell        Vec::new()                  [Surface]  (for land)
+  below the floor       Some(OpenWater @ that rung) None
+  return type           BiomeExpr                   Option<BiomeExpr>
+```
+
+The below-floor difference is the sharp one: locale currently answers **"open
+water"** for a rung that is solid rock beneath the seabed. **That is a real
+defect and this task does NOT fix it** — fixing it moves behaviour, and this
+campaign's whole claim is byte-identity. Preserve the current answer exactly
+and record the defect.
+
+- [ ] **Step 1: Capture the before-arm**
+
+On **unmodified** code, dump both methods' outputs over a deterministic sample
+of cells — including, for `expr_at_stratum`, at least one **below-floor** query
+per realm — to a fixture under `windows/locale/tests/fixtures/`. Commit it
+alone, before any change. A before-arm re-derived from the new code proves
+nothing.
+
+- [ ] **Step 2: Establish whether the below-floor path is reachable**
+
+Both live callers are `windows/locale/src/lib.rs:763` and `:792`. Read them and
+determine whether the `stratum` they pass can ever lie below the cell's floor.
+
+**Write a decision rule, not a prediction.** Branch on what you find:
+
+- **Provably in-column always** (the stratum comes from a column walk over the
+  same cell) → say so in the doc comment, with the reasoning and the line
+  numbers, and the fallback below is dead code retained only for the
+  signature's totality.
+- **Reachable, or not provable from the code** → the fallback is live and the
+  doc comment must say that a below-floor query returns open water for solid
+  rock, and that this is preserved deliberately.
+
+Either way the implementation in Step 3 is the same. What changes is what the
+doc comment is allowed to claim.
+
+- [ ] **Step 3: Delegate, preserving behaviour exactly**
+
+```rust
+    pub fn water_column_at(&self, cell: CellId) -> Vec<Stratum> {
+        // Non-water realms keep locale's own answer: the empty vec, NOT
+        // climate's `[Surface]`. This method answers "what water is there to
+        // descend through", and on land the answer is none.
+        if self.climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
+            return Vec::new();
+        }
+        self.climate.strata_at(cell)
+    }
+
+    pub fn expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> BiomeExpr {
+        let expr = self.climate.biome_expr_at(cell);
+        self.climate
+            .biome_expr_at_stratum(cell, stratum)
+            // BELOW-FLOOR FALLBACK, PRESERVED VERBATIM AND KNOWN WRONG: a rung
+            // beneath the seabed is rock, and this answers open water. Kept
+            // byte-for-byte because The Fathom may not move behaviour; see the
+            // followup register.
+            .unwrap_or(BiomeExpr {
+                realm: expr.realm,
+                formation: Formation::OpenWater,
+                stratum,
+            })
+    }
+```
+
+- [ ] **Step 4: Write the tests**
+
+`windows/locale/tests/column_delegation.rs`:
+
+1. **The before-arm holds.** Every sampled value from Step 1 is reproduced
+   exactly.
+2. **The two derivations now agree**, where both are defined: for every cell and
+   every in-column stratum, `expr_at_stratum(cell, s)` equals
+   `climate.biome_expr_at_stratum(cell, s).unwrap()`.
+3. **A positive control that the delegation is real.** The agreement test above
+   passes trivially if both sides compute the same thing independently, which is
+   the situation this task exists to end. So also assert the property that only
+   delegation can give: `water_column_at` and `climate.strata_at` agree on
+   **every water cell**, including any the old hand-rolled loop would have got
+   wrong. If you cannot construct a case that distinguishes delegation from
+   duplication, say so in the report rather than writing a test that cannot
+   fail.
+
+- [ ] **Step 5: Verify nothing moved**
+
+Run the locale and vessel suites (`hornvale-locale`, `hornvale-vessel`) plus
+`make game-check`. `session.rs:1383`'s `column_here()` walks
+`water_column_at`, and the committed seed-42 session fixtures are the guard
+that the depth band still behaves identically.
+
+**Branch table:**
+- All green → delegation is behaviour-preserving. Proceed.
+- **A session fixture moved → STOP.** The contracts differ somewhere you did
+  not account for, and this campaign may not move a fixture.
+
+- [ ] **Step 6: Record the below-floor defect**
+
+Append it to `.superpowers/sdd/followups.md` as F-10, with the reachability
+verdict from Step 2. Do not fix it.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cargo fmt
+git add windows/locale/src/lib.rs windows/locale/tests/
+git commit -m "refactor(locale): one column derivation, not two"
+```
+
+---
+
+### Task 4: `submerged` asks the medium, and the latent sites say so
 
 **Files:**
 - Create: `windows/vessel/tests/submerged.rs`
@@ -632,7 +777,7 @@ git commit -m "fix(vessel): submerged is a question about the medium, not the ru
 
 ---
 
-### Task 4: Close the campaign
+### Task 5: Close the campaign
 
 **Files:**
 - Create: `book/src/chronicle/the-fathom.md`
