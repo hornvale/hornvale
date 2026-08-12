@@ -15,9 +15,9 @@ type it is built from already carries a vertical coordinate —
 `BiomeExpr { realm, formation, stratum }` — and the accessor discards it. **The
 accessor is behind the type.**
 
-This campaign adds the column, uses the sea as its first consumer, and re-keys
-four sites that treat "not marine" as "land". It adds **no world content** and
-**changes no world bytes**.
+This campaign adds the column, uses the sea as its first consumer, fixes the one
+live two-realm defect, and documents the three latent ones. It adds **no world
+content** and **changes no world bytes**.
 
 ## 2. Non-goals
 
@@ -37,24 +37,43 @@ four sites that treat "not marine" as "land". It adds **no world content** and
 
 At `44d7fb9f`:
 
-| # | Site | Assumption | Consequence once a third realm exists |
-|---|------|-----------|----------------------------------------|
-| 1 | `climate/src/provider.rs:703` | `if b.is_marine() { marine } else { land }` | a cavern is tallied as land |
-| 2 | `worldgen/src/graph_derive.rs:126` | `is_marine()` is the connection-graph separator | the underworld is absorbed into land adjacency, destroying the shortcut property |
-| 3 | `climate/src/provider.rs:1206` | asserts `realm == WATERWORLD` ⟺ `is_marine()` | the assertion becomes false and the invariant is lost |
-| 4 | `vessel/src/vantage.rs:64` | `submerged := stratum != Surface` | a chamber tells the client the player is underwater |
-| 5 | census column `dominant-land-biome` | the world's dominant biome is a land question | no defect — it is *correctly* named, and needs a **companion**, not a repair |
+**Corrected while writing the implementation plan.** The first draft of this
+section called all four sites re-keys. Three of them are **latent, not live**,
+and the reason is structural: they read the **cell's surface projection**
+(`CellMap<Biome>`), and under §2 the underworld is never a cell's biome — it is
+a stratum *beneath* the cell. A cell's expression stays `OVERWORLD` or
+`WATERWORLD` forever, so all three remain correct after campaign 2. Writing
+re-key tasks for them would have produced three no-ops.
 
-Items 1–4 are re-keys. Item 5 is deliberately left alone: renaming a committed
-census column for no behavioural change is churn and artifact drift, and its
-companions belong with the realms that need them.
+| # | Site | Assumption | Verdict |
+|---|------|-----------|---------|
+| 1 | `climate/src/provider.rs:703` | `if b.is_marine() { marine } else { land }` | **latent** — buckets cells by surface medium, which stays well-posed. Wants a per-realm *companion*, not a repair |
+| 2 | `worldgen/src/graph_derive.rs:126` | `is_marine()` is the connection-graph separator | **latent** — surface traversal stays correct. The underworld's *absence* from the graph is new work (campaign 2), not a mis-classification |
+| 3 | `climate/src/provider.rs:1206` | asserts `realm == WATERWORLD` ⟺ `is_marine()` | **latent** — quantified over cell expressions, which stay two-realm. Stays true |
+| 4 | `vessel/src/vantage.rs:64` | `submerged := stratum != Surface` | **LIVE.** `describe_at(.., stratum)` takes `Option<Stratum>` and campaign 2 will pass a rock rung. The one real defect |
+| 5 | census column `dominant-land-biome` | the dominant biome is a land question | **correctly named** — wants a companion, not a repair |
+
+Item 4 is fixed. Items 1, 2, 3 and 5 are **documented, not changed**: each gains
+a doc line naming what its predicate answers and what it does not — "this asks
+whether the cell's *surface* is water; it is not a question about the column."
+That is the *name the direction a check enforces* discipline, it costs no
+behaviour, and it is what actually stops campaign 2 tripping over them. Re-keying
+them would be churn that spends this campaign's byte-identity budget on nothing.
 
 ## 4. Design
 
 ### 4.1 The accessors
 
-Added to `GeneratedClimate`, alongside the existing `biome_at`, which keeps its
-signature and its behaviour exactly:
+**Corrected while writing the implementation plan.** The first draft named the
+new accessor `biome_expr_at(cell, stratum)`. **That name is already taken** —
+`GeneratedClimate::biome_expr_at(&self, cell) -> BiomeExpr` exists at
+`provider.rs:481`, and the struct already stores *both* `biome: CellMap<Biome>`
+and `biome_expr: CellMap<BiomeExpr>`, with `biome` derived from `biome_expr`
+(`provider.rs:252`). The draft would have been a breaking signature change to a
+public function, not an addition.
+
+Added to `GeneratedClimate`. Both existing accessors keep their signatures and
+behaviour exactly:
 
 ```rust
 /// Every stratum present at this cell, shallowest first.
@@ -62,11 +81,26 @@ pub fn strata_at(&self, cell: CellId) -> Vec<Stratum>;
 
 /// The community at a cell and a stratum. `None` when that stratum is not
 /// present at that cell.
-pub fn biome_expr_at(&self, cell: CellId, stratum: Stratum) -> Option<BiomeExpr>;
+pub fn biome_expr_at_stratum(&self, cell: CellId, stratum: Stratum)
+    -> Option<BiomeExpr>;
 ```
 
 `Vec<Stratum>` rather than a slice because the set is per-cell; the ladders
 themselves stay `&'static` on `Realm::strata()`.
+
+**Both are pure reads over the already-stored `biome_expr` map — no new inputs,
+no new storage, no change to construction order.** The cell's stored expression
+already carries its floor stratum, so the column is derivable from it alone.
+
+That yields a free and strong consistency assertion, which Task 1 makes its
+headline test:
+
+```
+  biome_expr_at_stratum(cell, biome_expr_at(cell).stratum) == Some(biome_expr_at(cell))
+```
+
+— the column must agree with the existing accessor at the cell's own rung, at
+every cell in the world.
 
 ### 4.2 The sea's column, derived from data that already exists
 
@@ -78,12 +112,13 @@ without a single new input:
   for an ocean cell whose floor lies in stratum F:
 
     strata_at(cell)              = [Epipelagic ..= F]        (shallowest first)
-    biome_expr_at(cell, F)       = classify_marine_expr(...)  <- UNCHANGED, the
-                                                                 seafloor community
-    biome_expr_at(cell, s) for s shallower than F
+    biome_expr_at_stratum(cell, F)
+                                 = the cell's STORED expression <- UNCHANGED,
+                                                                  the seafloor community
+    biome_expr_at_stratum(cell, s), s shallower than F
                                  = BiomeExpr { WATERWORLD, OpenWater, s }
-    biome_expr_at(cell, s) for s deeper than F
-                                 = None                       (below the floor)
+    biome_expr_at_stratum(cell, s), s deeper than F
+                                 = None                        (below the floor)
 ```
 
 This is the physically correct reading and the one `classify_marine_expr`'s own
@@ -91,30 +126,39 @@ doc already argues for: a vent is *a community at a depth*, so the water above
 it is open water at its own depth. A reef cell (floor above 200 m) has a
 one-stratum column; an abyssal cell has four.
 
-For land, `strata_at` returns `[Surface]` and `biome_expr_at(cell, Surface)`
+For land, `strata_at` returns `[Surface]` and `biome_expr_at_stratum(cell, Surface)`
 returns the land expression. Unchanged in every respect.
 
-### 4.3 The re-keys
+### 4.3 The one live fix, and the three documented
 
-Each follows the recipe already executed in `windows/locale/src/grammar.rs`:
-capture a before-arm fixture from unmodified code, commit it alone, re-key,
-assert the output did not move.
+**Fixed — `vessel/src/vantage.rs:64`.** Today:
 
-```
-  1,2,3  is_marine()  ->  the realm's medium
-         `realm_at(cell) -> Realm`, and consumers ask `medium == Medium::Water`.
-         `is_marine()` is RETAINED as a legacy surface predicate so no external
-         consumer breaks; its doc gains the sentence naming what it can and
-         cannot answer.
-
-  4      vantage.rs   ->  submerged := realm_at(cell).medium == Medium::Water
-         Identical values today, because no stratum other than Surface occurs
-         on a land cell. Correct tomorrow, when one does.
+```rust
+submerged: matches!(stratum, Some(st) if st != hornvale_climate::Stratum::Surface),
 ```
 
-Item 2 deserves its own note: `graph_derive` does not actually want *marine* —
-it wants **"is this cell traversable by land travel"**. Re-keying it to the
-medium states the real question and leaves the values untouched.
+`submerged` must ask about the **medium**, not about "is this the surface rung".
+The stratum alone cannot answer it: `Basement` is not `Surface` and is not wet.
+The replacement asks the realm that owns the stratum. Values are **identical
+today** — no stratum other than `Surface` occurs on a land cell in any shipped
+world, which is exactly why the committed client fixtures are the guard (§8) —
+and correct tomorrow, when campaign 2 passes a rock rung.
+
+Follows the recipe already executed in `windows/locale/src/grammar.rs`: capture a
+before-arm fixture from unmodified code, commit it alone, re-key, assert the
+output did not move.
+
+**Documented, not changed — sites 1, 2, 3 and 5.** Each gains a doc line naming
+the direction it enforces. `is_marine()` keeps its name, its signature and every
+caller; its doc gains the sentence that it asks whether a cell's **surface**
+medium is water and is not a question about the column. `graph_derive`'s
+`marine` binding gains the note that it separates **surface** traversal, and
+that underworld edges are a later campaign's addition rather than a defect in
+this line.
+
+Nothing here changes a value, which is the point: a re-key with no behavioural
+difference spends the byte-identity budget and buys nothing, while a doc line
+that names the direction is what a future reader actually needs.
 
 ### 4.4 Direction, stated in the doc comments
 
@@ -142,7 +186,7 @@ Frozen before the code. **W** is a witness; **H** are hypotheses that can fail.
 
 **W-1 — the re-key is invisible.** Every committed artifact is byte-identical
 after this campaign, and the seed-42 world is byte-identical. A *witness, not a
-hypothesis test*: once the accessors are additive and the re-keys preserve
+hypothesis test*: once the accessors are additive and the one fix preserves
 values, this is true by construction, and it exists to catch a regression that
 reintroduces a behavioural change.
 
@@ -178,8 +222,9 @@ outcome is a finding.
 - [ ] `strata_at` and `biome_expr_at` exist, documented, type-audit-tagged.
 - [ ] The sea's column is derivable at every ocean cell, with the floor stratum
       carrying the seafloor community and shallower strata open water.
-- [ ] Sites 1–4 read the realm's medium; `is_marine()` survives as a documented
-      legacy surface predicate.
+- [ ] `vantage.rs`'s `submerged` asks the realm's medium, not the stratum; sites
+      1, 2, 3 and 5 each carry a doc line naming the direction they enforce;
+      `is_marine()` keeps its name, signature and every caller.
 - [ ] W-1 holds: `make rebaseline` produces an empty diff across
       `book/src/gallery/`, `book/src/reference/`, `book/src/laboratory/`,
       `docs/audits/`, `docs/digest/`, `book/src/domesday/` and
