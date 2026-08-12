@@ -405,6 +405,19 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Repose: the volcano-identity derivation. Additive at
+                // v1 — a NEW label, so it perturbs no existing stream, and
+                // C0 commits nothing at all (spec §3.2 puts the whole object
+                // in the phenomenon register: a volcano is recomputed on
+                // demand and never stored). Versioned from birth for the
+                // same reason `chamber v1` and `settlement/disposition v1`
+                // above are: its KEY is a contract the moment anything
+                // narrates or commits a volcano — the edifice's SOURCE
+                // CONTACT cell, never the query cell (an edifice spans 1-2
+                // cells, so keying on the query cell would give the two
+                // halves of one mountain two identities and two names). See
+                // `windows/worldgen/src/volcano.rs`'s `volcano_key`.
+                "volcano v1",
             ]
         );
     }

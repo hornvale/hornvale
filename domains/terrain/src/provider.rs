@@ -403,19 +403,39 @@ impl GeneratedTerrain {
     /// range's volcanic line shares the ungated collision-belt crest, so the
     /// shipped elevation holds nothing that separates a volcanic crest cell
     /// from a non-volcanic one there (see `elevation::edifice_present`).
+    ///
+    /// A pure restatement of [`edifice_source_at`](Self::edifice_source_at) —
+    /// there is one derivation, and this is the question that only asks
+    /// whether it answered.
     /// type-audit: bare-ok(flag: return)
     pub fn has_edifice(&self, id: CellId) -> bool {
-        let Some((distance, source)) = *self.globe.boundary_distance.get(id) else {
-            return false;
-        };
-        let Some(contact) = *self.globe.boundary.get(source) else {
-            return false;
-        };
+        self.edifice_source_at(id).is_some()
+    }
+
+    /// The **source contact cell** of the edifice a cell belongs to, or
+    /// `None` where there is no edifice (The Repose, Task 5).
+    ///
+    /// This is the identity of a mountain, and it exists because an edifice
+    /// is wider than one cell: the gate is sampled once per contact, at the
+    /// source, precisely so a whole cone shares one value, and the elevation
+    /// then decays that value out to `ARC_EDIFICE_DECAY_CELLS`. Every cell of
+    /// one cone therefore answers with the *same* source, while the query
+    /// cell it was asked about differs — so a consumer that keys a mountain's
+    /// identity (or its name) on the query cell mints several mountains for
+    /// one landform. On the canonical seed-42 L6 globe that is 360 edifice
+    /// cells over ~187 contacts.
+    ///
+    /// Same purity as [`has_edifice`](Self::has_edifice), which is defined in
+    /// terms of this: the arc gate is hash-noise resampled at the source, so
+    /// this consumes no draw and touches no draw-order/save-format contract.
+    pub fn edifice_source_at(&self, id: CellId) -> Option<CellId> {
+        let (distance, source) = (*self.globe.boundary_distance.get(id))?;
+        let contact = (*self.globe.boundary.get(source))?;
         let plate = &self.globe.plates[*self.globe.plate_of.get(id) as usize];
         let arc_side = plate.id > contact.other_plate;
         let gate = crate::elevation::arc_gate_fbm(self.globe.arc_gate_seed)
             .sample(self.geosphere.position(source));
-        crate::elevation::edifice_present(contact.kind, arc_side, distance, gate)
+        crate::elevation::edifice_present(contact.kind, arc_side, distance, gate).then_some(source)
     }
 
     /// The geothermal gradient at a cell (K/km) — the deep's energy base.

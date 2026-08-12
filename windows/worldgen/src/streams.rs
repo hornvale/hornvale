@@ -33,4 +33,14 @@ hornvale_kernel::stream_labels! {
     /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
     /// the composed key is spelled.
     CHAMBER = "chamber/v1" => "the underworld chamber derivation";
+    /// The volcano-identity derivation (The Repose). Keyed on the edifice's
+    /// **source contact cell** — a place in the fixed geosphere, never a
+    /// generation ordinal, and never the query cell a caller happened to ask
+    /// about (an edifice spans 1-2 cells, so the query cell would mint two
+    /// mountains for one). `crate::volcano`'s private `volcano_key` is the one
+    /// place the composed key is spelled. The third time this project has met
+    /// the "generation order is never an identity" wall (decision 0102, The
+    /// Salt, The Tolerance); nothing here carries an ordinal so that mistake
+    /// cannot recur.
+    VOLCANO = "volcano/v1" => "the volcano-identity derivation, keyed on the edifice's source contact cell";
 }

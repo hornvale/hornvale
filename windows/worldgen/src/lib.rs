@@ -99,6 +99,7 @@ pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
 pub mod vestige;
+pub mod volcano;
 pub use ablation::ChannelMask;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
@@ -136,6 +137,7 @@ pub use vestige::{
     HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
     vestige_from_occupation, vestiges_at, vestiges_field,
 };
+pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
