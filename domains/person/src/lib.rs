@@ -55,7 +55,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 /// Built by the composition root, which alone can see occupation records and
 /// species lifespans. Every field is a kernel type so this crate needs no
 /// sibling domain.
-/// type-audit: waiver(decision-0014: birth_day), waiver(decision-0014: founding_day), waiver(decision-0014: death_day), bare-ok(identifier-text: name)
+/// These three day-shaped fields stay bare `f64`: this is a pre-commit DTO,
+/// not the fact envelope. Each becomes a `WorldTime` in `fact()` below, at the
+/// point it becomes a `Fact.day` (decision 0126, which typed that field and
+/// superseded 0014).
+/// type-audit: waiver(decision-0126: birth_day), waiver(decision-0126: founding_day), waiver(decision-0126: death_day), bare-ok(identifier-text: name)
 #[derive(Clone, Debug, PartialEq)]
 pub struct PersonSeed {
     /// The community whose occupation this person founded.

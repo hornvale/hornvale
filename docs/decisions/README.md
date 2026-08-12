@@ -53,7 +53,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0011](0011-studies-are-data-metrics-are-code.md) | Studies are data, metrics are code | Accepted |
 | [0012](0012-config-is-json-not-yaml.md) | Config files are JSON, not YAML | Accepted |
 | [0013](0013-definition-of-done-includes-the-book.md) | Definition of Done includes the project book | Accepted |
-| [0014](0014-fact-day-stays-bare-option.md) | `Fact.day` stays a bare `Option<f64>` | Accepted |
+| [0014](0014-fact-day-stays-bare-option.md) | `Fact.day` stays a bare `Option<f64>` | Superseded by 0126 |
 | [0015](0015-predicatedef-name-duplicates-key.md) | `PredicateDef.name` duplicates its registry key | Accepted |
 | [0016](0016-studies-preregister-hypotheses.md) | Studies preregister their hypotheses | Accepted |
 | [0017](0017-campaigns-drop-year-naming.md) | Campaigns drop the "Year" naming | Accepted |
@@ -165,3 +165,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0123](0123-disclose-a-resolution-rather-than-refine-a-field.md) | When a view is finer than the model behind a field, the document discloses the resolution rather than the field inventing detail | Accepted |
 | [0124](0124-a-refinement-preregisters-a-conservation-criterion.md) | A refinement preregisters a conservation criterion, not only variation criteria | Accepted |
 | [0125](0125-github-actions-is-retired.md) | GitHub Actions is retired — every gate is local (supersedes 0042) | Accepted |
+| [0126](0126-fact-day-is-a-typed-world-time.md) | `Fact.day` carries a typed `WorldTime` (supersedes 0014) | Accepted |
+| [0127](0127-identity-keys-and-discrimination-keys-are-different-kinds.md) | An identity key and a discrimination key are different kinds | Accepted |

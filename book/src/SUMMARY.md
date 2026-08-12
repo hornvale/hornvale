@@ -349,6 +349,7 @@
 - [The Particular](./chronicle/the-particular.md)
 - [The Grain](./chronicle/the-grain.md)
 - [The Radiation](./chronicle/the-radiation.md)
+- [The Ell](./chronicle/the-ell.md)
 
 # Appendix: The Frontier
 

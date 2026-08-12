@@ -287,6 +287,38 @@ denominator, and a prediction expressed as a *fraction of current state* silentl
 re-aims itself every time that state moves. Freezing the numerator as an identity
 is what made the falsification readable instead of merely disappointing.
 
+An eleventh campaign repairs the tenth's finding and, in doing so, measures how
+much of the family the repair itself contained. [The Ell](./chronicle/the-ell.md)
+(2026-08-11) moved the unit boundary that made a death uncommittable: the
+history bake keeps reasoning in years, and what crosses into the ledger is days,
+converted at named functions rather than at inline divides. That created sixteen
+unit crossings, and the campaign swept them by mutating each one in turn against
+the whole gate. **Five of the sixteen had no guard at all.** The most
+consequential was not on anyone's list: the crossing that feeds the census's own
+name renderer, whose blast radius is a committed census value the commit gate
+never rebuilds — and whose two plausible existing guards cannot catch it *by
+construction*, one because it counts zero-gap edges (zero is zero in any unit)
+and the other because it keys a map on the year form, which is invariant under
+any injective rescaling. Both tests are correct, both are green, and neither is
+about the quantity that moved. So the floor gains a fourth question, asked of
+conversions rather than of checks, measurements or vocabulary: *which test goes
+red if this crossing is deleted?* — answered by deleting it, not by reading the
+suite.
+
+Two smaller instances from the same campaign sharpen what a guard has to be
+compared against. An invariance test that had been green for months compared a
+reconstructed record against a committed one — by comparing **one fixture
+against another fixture**. When the ledger's unit moved, the module's stated
+premise became false and all four of its tests stayed green, because both sides
+were wrong the same way; the sibling case in the same sweep went red on its own,
+because there the two sides were production and fixture. And a collision guard
+written to detect a new failure shape turned out to be **entailed by the key it
+guards**: the key folds the parent's coordinates, so any colliding pair
+necessarily has equal parent coordinates and the assertion cannot fail while the
+key is what it is. It was kept and relabelled as a tripwire for a future
+narrowing — the honest description of what it can do — rather than deleted or
+left claiming more than it holds.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

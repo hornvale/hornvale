@@ -23,7 +23,9 @@ use crate::{language_of_wc, morph_options};
 pub const MEMORY_DEPTH: usize = 20;
 
 /// One remembered founder: an identity plus where it came from.
-/// type-audit: bare-ok(index: occupation), waiver(decision-0014: founded)
+/// `founded` stays a bare `f64`: it is the bake's year, not a `Fact.day`, and
+/// it crosses to days at the emit boundary (decision 0126, superseding 0014).
+/// type-audit: bare-ok(index: occupation), waiver(decision-0126: founded)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Founder {
     /// The stable identity, expandable by `persona_of`.

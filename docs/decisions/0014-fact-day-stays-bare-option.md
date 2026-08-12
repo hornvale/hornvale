@@ -1,6 +1,9 @@
 # 0014. `Fact.day` stays a bare `Option<f64>`
 
-**Status:** Accepted (2026-07-05) · **Decider:** Nathan
+**Status:** Superseded by [0126](0126-fact-day-is-a-typed-world-time.md) (a
+campaign shipped a predicate no world could commit, because one producer
+stamped years into this field; the "clear from context" premise had a worked
+counterexample) · **Decider:** Nathan
 
 In the context of the fact envelope's optional timestamp, facing whether to
 wrap it in a richer type, we decided to **keep `Fact.day` a bare
