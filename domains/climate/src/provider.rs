@@ -812,11 +812,16 @@ pub mod test_support {
     }
 
     /// [`sample_climate`]'s [`Geosphere`] and [`GeneratedClimate`], from one
-    /// construction — so a caller that needs to iterate cells (`strata_at`'s
-    /// and `biome_expr_at_stratum`'s tests, in particular) cannot silently
-    /// drift onto a different mesh than the climate was built over. Rebuilding
-    /// `Geosphere::new(4)` separately would compile and pass today, but
-    /// couples silently to that literal; this makes the coupling explicit.
+    /// construction, kept for a future IN-CRATE (`#[cfg(test)]`) consumer
+    /// that needs the mesh alongside the climate — `sample_climate` discards
+    /// the `Geosphere` half. **Not** for `strata_at`'s or
+    /// `biome_expr_at_stratum`'s tests: those live in
+    /// `domains/climate/tests/column.rs`, a separately-compiled integration
+    /// test that cannot see this `#[cfg(test)]`-gated module at all (see that
+    /// file's own doc comment), so it builds an identical fixture by hand
+    /// instead. Today this function's only caller is [`sample_climate`]
+    /// itself — additive, harmless scope beyond this task's brief, left
+    /// rather than removed.
     pub fn sample_world() -> (Geosphere, GeneratedClimate) {
         let geo = Geosphere::new(4);
         let elev = CellMap::from_fn(&geo, |c| {

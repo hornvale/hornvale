@@ -65,7 +65,11 @@ for an ocean cell whose floor sits at stratum F:
   biome_expr_at_stratum(cell, s > F)    = None                          (below the floor: absent)
 ```
 
-A reef sits in a one-rung column. An abyssal trench sits in a four-rung one.
+A reef sits in a one-rung column. The deepest floor recorded anywhere in
+seed 42 is `Bathypelagic` — a three-rung column; no cell in that world
+reaches `Abyssal` or `Hadal`, so a four- or five-rung column doesn't occur
+there, though the accessor is general enough to report one wherever a floor
+reaches that deep.
 Land cells, and every cell in the world before this campaign, keep a
 one-rung column of `[Surface]` — unchanged in every observable respect.
 
@@ -96,6 +100,13 @@ continental-shelf cell — and Earth's own continental shelf covers roughly
 before anyone measured a real shelf fraction against it. That is now its own
 open question, filed for a successor to re-derive the ceiling from a
 measured seed set rather than a guess.
+
+The same three numbers hold a second, unremarked finding: `1,749 + 6,669 +
+21,478 = 29,896` exactly, the full ocean-cell count, so no seed-42 cell
+reaches a fourth or fifth column height at all. No cell in the flagship
+world has an `Abyssal` or `Hadal` floor — two of the sea's five pelagic
+strata never occur as a floor anywhere seed 42 built, though the accessor
+would report them wherever a floor reached that deep.
 
 **H-2 — sea ice occurs below the surface it forms at.**
 `classify_marine_expr` selects `Formation::SeaIce` in its first arm, keyed
@@ -143,23 +154,32 @@ this campaign's one forbidden move. A captured before-arm fixture and an
 exhaustive agreement check across all 40,962 cells of the seed-42 world
 confirm nothing moved in the collapse itself.
 
-## The one live re-key
+## The one latent re-key
 
 Five sites in the codebase assumed the world has exactly two realms — land
 and sea. Reading them against the actual structure of the underworld (a
 stratum *beneath* a cell, never a cell's own biome) showed that four of the
 five stay correct forever, because they reason about a cell's surface
-projection, which never changes. Only one was live:
-`vantage.rs`'s `submerged` field asked *"is this stratum something other
-than `Surface`?"* — a question that happens to answer correctly today only
-because no rock stratum has ever reached it, and would answer *wrong* the
-day one does, since a rock stratum is not `Surface` and is not wet either.
-The fix asks the question `submerged` was always meant to ask — is this
-stratum's realm a water realm — rather than the proxy question that used to
-stand in for it. Values are identical today, by construction: no world ever
-generated places a rock stratum where `submerged` reads it, which the
-committed client-facing snapshot fixtures make a gate condition rather than
-an assumption.
+projection, which never changes. The fifth, `vantage.rs`'s `submerged`
+field, asked *"is this stratum something other than `Surface`?"* — a
+predicate that looked live, and was not: `Session` threads the water column
+and the cave lattice through two separate fields, `submerged:
+Option<Stratum>` (populated only from `water_column_at`, which never returns
+a rock stratum) and `underground: Option<Chamber>`, so no rock stratum
+reaches `describe_at` by any path that exists today. Campaign 2, the first
+campaign to give the underworld a community, is expected to extend
+`underground`, not repurpose `submerged`.
+
+The fix is worth having anyway. `Stratum` is one enum spanning both the
+pelagic and rock ladders, so nothing in the *type* stops a future session
+refactor — unifying the two descent fields, or widening the dive verb — from
+handing `submerged` a rock rung; the predicate would then answer wrong on
+the day that happens, silently, since a rock stratum is not `Surface` and is
+not wet either. The fix asks the question `submerged` was always meant to
+ask — is this stratum's realm a water realm — rather than the proxy
+question that used to stand in for it. Values are identical today, by
+construction, which the committed client-facing snapshot fixtures make a
+gate condition rather than an assumption.
 
 The other four sites keep their exact behaviour and gain a doc line each,
 naming the question they actually answer — a cell's *surface* medium, never

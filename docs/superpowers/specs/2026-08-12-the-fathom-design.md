@@ -15,9 +15,9 @@ type it is built from already carries a vertical coordinate —
 `BiomeExpr { realm, formation, stratum }` — and the accessor discards it. **The
 accessor is behind the type.**
 
-This campaign adds the column, uses the sea as its first consumer, fixes the one
-live two-realm defect, and documents the three latent ones. It adds **no world
-content** and **changes no world bytes**.
+This campaign adds the column, uses the sea as its first consumer, fixes one
+latent two-realm defect pre-emptively, and documents the four remaining
+latent ones. It adds **no world content** and **changes no world bytes**.
 
 ## 2. Non-goals
 
@@ -50,10 +50,11 @@ re-key tasks for them would have produced three no-ops.
 | 1 | `climate/src/provider.rs:703` | `if b.is_marine() { marine } else { land }` | **latent** — buckets cells by surface medium, which stays well-posed. Wants a per-realm *companion*, not a repair |
 | 2 | `worldgen/src/graph_derive.rs:126` | `is_marine()` is the connection-graph separator | **latent** — surface traversal stays correct. The underworld's *absence* from the graph is new work (campaign 2), not a mis-classification |
 | 3 | `climate/src/provider.rs:1206` | asserts `realm == WATERWORLD` ⟺ `is_marine()` | **latent** — quantified over cell expressions, which stay two-realm. Stays true |
-| 4 | `vessel/src/vantage.rs:64` | `submerged := stratum != Surface` | **LIVE.** `describe_at(.., stratum)` takes `Option<Stratum>` and campaign 2 will pass a rock rung. The one real defect |
+| 4 | `vessel/src/vantage.rs:64` | `submerged := stratum != Surface` | **latent, not live.** `Session` threads the water column and the cave lattice through two separate fields — `submerged: Option<Stratum>`, populated only from `water_column_at` (which never returns a rock stratum), and `underground: Option<Chamber>` — so `describe_at` never receives a rock rung today. `Stratum` is one enum spanning both the pelagic and rock ladders, so nothing in the type stops a near-term reuse of `submerged` for the rock ladder from making this live; worth fixing pre-emptively rather than waiting for it |
 | 5 | census column `dominant-land-biome` | the dominant biome is a land question | **correctly named** — wants a companion, not a repair |
 
-Item 4 is fixed. Items 1, 2, 3 and 5 are **documented, not changed**: each gains
+Item 4 is fixed pre-emptively — latent, not live (see the table above). Items
+1, 2, 3 and 5 are **documented, not changed**: each gains
 a doc line naming what its predicate answers and what it does not — "this asks
 whether the cell's *surface* is water; it is not a question about the column."
 That is the *name the direction a check enforces* discipline, it costs no
@@ -129,9 +130,9 @@ one-stratum column; an abyssal cell has four.
 For land, `strata_at` returns `[Surface]` and `biome_expr_at_stratum(cell, Surface)`
 returns the land expression. Unchanged in every respect.
 
-### 4.3 The one live fix, and the three documented
+### 4.3 The one latent fix, and the four documented
 
-**Fixed — `vessel/src/vantage.rs:64`.** Today:
+**Fixed pre-emptively — `vessel/src/vantage.rs:64`, latent not live.** Today:
 
 ```rust
 submerged: matches!(stratum, Some(st) if st != hornvale_climate::Stratum::Surface),
@@ -142,7 +143,15 @@ The stratum alone cannot answer it: `Basement` is not `Surface` and is not wet.
 The replacement asks the realm that owns the stratum. Values are **identical
 today** — no stratum other than `Surface` occurs on a land cell in any shipped
 world, which is exactly why the committed client fixtures are the guard (§8) —
-and correct tomorrow, when campaign 2 passes a rock rung.
+and no rock stratum reaches this predicate today by any live path: `Session`
+keeps the underworld's own descent (`underground: Option<Chamber>`) on a
+field completely separate from `submerged: Option<Stratum>` (populated only
+from `water_column_at`, which never returns a rock stratum), so campaign 2 —
+the first campaign to give the underworld a community — is expected to extend
+`underground`, not repurpose `submerged`. The fix is worth having anyway:
+`Stratum` is one enum spanning both the pelagic and rock ladders, so nothing
+in the *type* stops a future reuse of `submerged` for the rock ladder, and a
+defensive fix costs nothing under this campaign's byte-identity budget.
 
 Follows the recipe already executed in `windows/locale/src/grammar.rs`: capture a
 before-arm fixture from unmodified code, commit it alone, re-key, assert the
@@ -172,7 +181,7 @@ exists and is unreachable, and `Access` is the axis for that question.
 
 - **No new draws, no new streams, no new seed labels.** Every accessor is a
   pure read over already-derived data.
-- **Nothing new is committed.** `strata_at` and `biome_expr_at` are derived;
+- **Nothing new is committed.** `strata_at` and `biome_expr_at_stratum` are derived;
   no ledger fact, no epoch, no `/v2` label.
 - **The scene contract is untouched.** `biome_at` is unchanged, so
   `biome_legend` and its append-only cross-repo order do not move.
@@ -228,6 +237,13 @@ repo's `PREREGISTERED, not met:` idiom
 [`CLIM-shelf-single-rung-threshold`](https://github.com/hornvale/hornvale/blob/main/book/src/frontier/idea-registry.md)
 for a successor to re-derive the ceiling from a measured seed set.
 
+**An unremarked finding in the same data:** `1,749 + 6,669 + 21,478 = 29,896`
+exactly — the full ocean-cell count — so no seed-42 cell reaches a fourth or
+fifth column height. No cell in the flagship world has an `Abyssal` or
+`Hadal` floor: two of the sea's five pelagic strata never occur as a floor
+anywhere seed 42 built, even though the accessor is fully general and would
+report them wherever a floor reached that deep.
+
 Separately: the all-or-nothing bundling of four clauses under one stop
 condition was itself a preregistration-design defect, independent of clause
 3's miscalibration — the intent behind clause 3 (catch a degenerate column)
@@ -262,7 +278,10 @@ mismatch visible for the first time. Recorded as an artifact for campaign 1;
 
 ## 7. Acceptance criteria
 
-- [ ] `strata_at` and `biome_expr_at` exist, documented, type-audit-tagged.
+- [ ] `strata_at` and `biome_expr_at_stratum` exist, documented; neither needs
+      a type-audit tag — `Vec<Stratum>` and `Option<BiomeExpr>` are typed
+      values, not bare primitives at the boundary, so the report's only
+      movement is `submerged_in`'s `bare-ok(flag)`.
 - [ ] The sea's column is derivable at every ocean cell, with the floor stratum
       carrying the seafloor community and shallower strata open water.
 - [ ] `vantage.rs`'s `submerged` asks the realm's medium, not the stratum; sites
@@ -368,5 +387,5 @@ is git-ignored scratch that does not survive the worktree.
   `hornvale-game-core` excluded from the cargo workspace). All four are the
   same failure — a document asserting something about code it had not
   read — caught by running a command in every case, never by re-reading the
-  prose. See the retrospective for the full accounting, which grew to seven
-  instances by the campaign's close.
+  prose. See the retrospective for the full accounting, which grew to eight
+  instances by the time of the final whole-branch review.

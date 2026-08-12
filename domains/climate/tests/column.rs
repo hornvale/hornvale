@@ -5,8 +5,9 @@
 //! crate's own tests build fixtures from) is `#[cfg(test)]`-gated, so it is
 //! compiled only for the crate's own unit-test build and is invisible to an
 //! integration test, which links a separately-compiled, non-`cfg(test)` copy
-//! of the library. Reaching for it here fails to compile (`could not find
-//! ` `test_support` in `provider``). So this file builds its own fixture —
+//! of the library. Reaching for it here fails to compile: rustc's E0432
+//! reads "could not find `test_support` in `provider`". So this file builds
+//! its own fixture —
 //! the same shape `test_support::sample_world` uses (`ClimateInputs` and
 //! `GeneratedClimate::generate` are both `pub`, as the module's own doc
 //! anticipates) — behind one local helper every test in this file calls, so
@@ -139,7 +140,7 @@ fn nothing_exists_below_the_floor() {
 /// exactly one column height in this world, and a multi-rung cell must
 /// exist.
 ///
-/// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+/// claim: structural(seed: 1) — false-positive seed-loop flag; `s` binds
 /// a Stratum walked over one fixed synthetic world's column, not a seed.
 #[test]
 fn water_above_the_floor_is_open_water_at_its_own_depth() {

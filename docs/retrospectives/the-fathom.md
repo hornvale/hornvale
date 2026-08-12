@@ -6,9 +6,9 @@ that was free to build, a duplicate of it found one crate over, and two
 preregistered measurements — one confirmed strongly, one falsified on a
 threshold nobody had checked against a real distribution.
 
-## The count: seven times, a document asserted something about code it had not read
+## The count: eight times, a document asserted something about code it had not read
 
-Every one of the seven was caught by running a command — grep, a compiler
+Every one of the eight was caught by running a command — grep, a compiler
 error, a test failure, a second reading of the same line. None was caught by
 re-reading the prose that made the claim.
 
@@ -54,11 +54,30 @@ re-reading the prose that made the claim.
    `windows/locale/src/lib.rs` had shipped `water_column_at` and
    `expr_at_stratum` before this campaign opened, doing the identical
    derivation under the identical doc-comment argument. See §1 below.
+8. **The campaign's own mid-campaign correction of its LIVE verdict never
+   left the scratch ledger.** §3's table called `vantage.rs`'s `submerged`
+   field **LIVE** — "`describe_at(.., stratum)` takes `Option<Stratum>` and
+   campaign 2 will pass a rock rung" — on the strength of that one
+   function's signature, without reading how `Session` actually populates
+   the argument. `Session` threads the water column and the cave lattice
+   through two separate fields, `submerged: Option<Stratum>` (populated only
+   from `water_column_at`, which never returns a rock stratum) and
+   `underground: Option<Chamber>`, so no rock stratum reaches `describe_at`
+   by any live path today, and campaign 2 is expected to extend
+   `underground`, not `submerged`. This was established mid-campaign — the
+   fix is still correct and worth having, since `Stratum` is one enum
+   spanning both ladders and nothing in the type stops a future reuse of
+   `submerged` from making it live — but the correction lived only in
+   scratch that died with the worktree, and the spec and chronicle kept
+   asserting LIVE all the way to the final whole-branch review that gates
+   merge, which is what actually caught it. Recorded here for exactly what
+   it is: a document asserted something about code nobody had read, inside
+   the retrospective whose subject is that failure mode.
 
-Seven is a lot for a campaign this small, and the shape is not new — it is
+Eight is a lot for a campaign this small, and the shape is not new — it is
 the same failure mode this project's retrospectives keep naming (see
 `defects-originate-in-plan-text` in the operator's own memory index). What
-is worth adding here is the *texture*: three of these seven (#3, #4, #6) are
+is worth adding here is the *texture*: three of these eight (#3, #4, #6) are
 not architectural claims at all, they are claims about which directory a
 file lives in or which tool builds it — the cheapest possible thing to
 verify and the easiest to skip because it feels beneath verifying.
@@ -253,6 +272,16 @@ torn down.
   realm's ladder, these panic. Not introduced by this campaign — the brief
   authored the invariant — but campaign 2's to discharge, ideally by making
   the mispairing unconstructible rather than by widening the `.expect()`.
+  **A second hazard shares this entry but is not covered by it:**
+  `biome_expr_at_stratum`'s above-floor arm (`provider.rs:525-529`)
+  hardcodes `Formation::OpenWater` for every stratum shallower than the
+  floor, regardless of the realm's medium — so an `UNDERDARK` expression
+  above its own floor would also manufacture open water at a rock rung. F-10
+  below names the identical shape in `windows/locale`'s preserved fallback;
+  this is the same defect living in the new climate API itself, under the
+  same "nothing constructs an `UNDERDARK` expression yet" precondition this
+  entry already states. Worth naming here so whoever repairs locale's
+  fallback does not conclude the hazard is confined to locale.
 - **F-10 — `LocaleContext::expr_at_stratum`'s below-floor fallback answers
   open water for solid rock, and the tie-break that would make it reachable
   is not provably absent.** Preserved byte-for-byte on purpose (fixing it
