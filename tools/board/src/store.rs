@@ -943,17 +943,114 @@ impl Board {
             return Ok(0);
         }
 
+        // `old` is the tip the SNAPSHOT was read from, not a tip re-read
+        // after the probe -- so a post appended at any point after that read
+        // makes this swap lose, and the reap becomes a no-op rather than
+        // silently dropping a post the probe never saw. That is the half of
+        // the fix the CAS carries; `ReapPlan` carries the other half.
+        //
+        // A lost race is control flow, not an error: reaping is idempotent
+        // and cheap, so rather than retry against a moving target, let the
+        // next run catch it and report nothing dropped THIS call, since the
+        // tree we built no longer reflects the current tip.
+        if self.evict_and_swap(&old, &keep, &format!("board: reap {dropped}"))? {
+            Ok(dropped)
+        } else {
+            Ok(0)
+        }
+    }
+
+    /// Evict one post named `id` from the tip tree, appending a `redact`
+    /// control post first so the act itself is durably recorded — B8.
+    ///
+    /// **Byte removal from history is prohibited, and it does not work.**
+    /// This was measured during the spec, not assumed: a commit containing a
+    /// canary string was force-pushed out of a probe ref's history, and
+    /// GitHub still served both the commit and the blob's full plaintext, by
+    /// oid, afterwards. So a history rewrite buys nothing while breaking D13
+    /// (the ref's root must never move) — and multi-machine makes it worse:
+    /// a rewrite breaks fast-forward, so "real" redaction would mean
+    /// coordinated force-pushes plus a `gc` on every clone, and an offline
+    /// clone keeps the bytes regardless. `redact` is therefore a *read-time*
+    /// judgment instead (D10): the target post stays reachable by its own
+    /// object id forever, exactly like every other appended post (D11), and
+    /// what changes is only what the TIP tree carries forward and what
+    /// [`crate::digest::digest`] is willing to print. If a future reader is
+    /// tempted to propose a rewrite here — this paragraph is why not.
+    ///
+    /// The `redact` post is appended FIRST, through the ordinary retrying
+    /// [`append`](Self::append) path, and only once it has landed does this
+    /// read a fresh snapshot to evict the target from — so the control post
+    /// itself never depends on the eviction's own single-shot CAS
+    /// succeeding. Eviction reuses [`reap`](Self::reap)'s own
+    /// tree-build-and-CAS path ([`evict_and_swap`](Self::evict_and_swap))
+    /// rather than a second copy of it.
+    ///
+    /// Returns the id of the `redact` control post. A lost eviction race is
+    /// treated the same way `reap` treats one: control flow, not an error —
+    /// the control post is still recorded, and calling `redact` again is
+    /// safe (the same `redact` content is not re-appended, D11) and will
+    /// retry the eviction against whatever landed.
+    pub fn redact(&self, by: &str, id: &str) -> Result<String, BoardError> {
+        let redact_id = self.append(
+            &Post::new("redact", by).with("post", serde_json::Value::String(id.to_string())),
+        )?;
+
+        // Re-snapshot AFTER the append: it just moved the tip (or, on an
+        // idempotent replay of an identical redact, left it exactly where it
+        // already was), so eviction must be baselined on THAT tip, never an
+        // earlier one this call might have read before appending.
+        let Some(snapshot) = self.snapshot()? else {
+            // Unreachable in practice: the append above just succeeded, so
+            // the ref exists. Guarded anyway rather than unwrapped, matching
+            // this module's D7 stance that an absent read is reported, not
+            // panicked on.
+            return Ok(redact_id);
+        };
+        let posts = snapshot.posts();
+        let keep: Vec<&StoredPost> = posts.iter().filter(|s| s.id != id).collect();
+        if keep.len() == posts.len() {
+            // Nothing to evict at this tip -- already redacted, or `id`
+            // never named a post here. The control post above still
+            // recorded the act either way.
+            return Ok(redact_id);
+        }
+        self.evict_and_swap(snapshot.tip(), &keep, &format!("board: redact {id}"))?;
+        Ok(redact_id)
+    }
+
+    /// Build a tree containing only `keep`, commit it as a forward child of
+    /// `old`, and try to compare-and-swap it into the ref.
+    ///
+    /// The single implementation of "shrink the tip tree without touching
+    /// history" — [`reap`](Self::reap) and [`redact`](Self::redact) are the
+    /// only two operations that ever do this, and both go through this one
+    /// path rather than each carrying its own copy of the index-build,
+    /// commit, CAS dance (the same reasoning that put `cat_file_batch` in
+    /// one place for every reader instead of one per caller).
+    ///
+    /// `Ok(true)` means the swap won and `keep` is now the tip tree.
+    /// `Ok(false)` means the CAS lost a genuine race (something else moved
+    /// the ref between `old` being read and this call) — expected control
+    /// flow, not an error: nothing was written, so the caller's snapshot is
+    /// simply stale.
+    fn evict_and_swap(
+        &self,
+        old: &str,
+        keep: &[&StoredPost],
+        message: &str,
+    ) -> Result<bool, BoardError> {
         // A fresh throwaway index, never the repo's real one (`Repo::git_path`
-        // is a private, per-worktree path) -- a reap must not dirty the
+        // is a private, per-worktree path) -- this must not dirty the
         // working tree. Named with a per-CALL discriminant, not just the
-        // pid: two reaps (or a reap racing an append) in the same process
-        // would otherwise collide on git's index lock. This is the exact
-        // atomic `append_with_attempts` uses for the same reason, reused
-        // here rather than reinvented -- see its doc comment above.
+        // pid: two evictions (or an eviction racing an append) in the same
+        // process would otherwise collide on git's index lock. This is the
+        // exact atomic `append_with_attempts` uses for the same reason,
+        // reused here rather than reinvented -- see its doc comment above.
         let call_id = CALL_DISCRIMINANT.fetch_add(1, Ordering::SeqCst);
         let raw = self
             .repo
-            .git_path(&format!("hv-board-reap-{}-{call_id}", std::process::id()))?;
+            .git_path(&format!("hv-board-evict-{}-{call_id}", std::process::id()))?;
         // `Repo::git_path` documents itself as always absolute; guard
         // defensively anyway, exactly as `tree_with` does, since a relative
         // path here would resolve the `std::fs` cleanup below against the
@@ -979,9 +1076,9 @@ impl Board {
 
         let result = (|| -> Result<String, BoardError> {
             // Built from the survivors only -- no `read-tree` of the old
-            // tree first, so a dead post is never present to begin with,
+            // tree first, so a dropped post is never present to begin with,
             // not merely removed after the fact.
-            for s in &keep {
+            for s in keep {
                 self.repo.git_with_index(
                     &index,
                     &[
@@ -999,29 +1096,11 @@ impl Board {
         let _ = std::fs::remove_file(&index);
         let tree = result?;
 
-        let new = self.repo.git(&[
-            "commit-tree",
-            &tree,
-            "-p",
-            &old,
-            "-m",
-            &format!("board: reap {dropped}"),
-        ])?;
+        let new = self
+            .repo
+            .git(&["commit-tree", &tree, "-p", old, "-m", message])?;
 
-        // `old` is the tip the SNAPSHOT was read from, not a tip re-read
-        // after the probe -- so a post appended at any point after that read
-        // makes this swap lose, and the reap becomes a no-op rather than
-        // silently dropping a post the probe never saw. That is the half of
-        // the fix the CAS carries; `ReapPlan` carries the other half.
-        //
-        // A lost race is control flow, not an error: reaping is idempotent
-        // and cheap, so rather than retry against a moving target, let the
-        // next run catch it and report nothing dropped THIS call, since the
-        // tree we built no longer reflects the current tip.
-        if self.cas(&new, Some(&old))?.is_some() {
-            return Ok(0);
-        }
-        Ok(dropped)
+        Ok(self.cas(&new, Some(old))?.is_none())
     }
 
     /// Compare-and-swap the ref.
@@ -1637,6 +1716,55 @@ mod tests {
             dirty.is_empty(),
             "a reap must not dirty the checkout: {dirty:?}"
         );
+    }
+
+    #[test]
+    fn redact_evicts_from_the_tip_but_history_still_holds_the_post() {
+        // B8, D10: redaction is tip eviction plus digest suppression, never
+        // a history rewrite -- see `Board::redact`'s doc comment for why a
+        // rewrite was measured to buy nothing. The three properties this
+        // asserts: gone from the tip, the ref's root untouched (D13), and
+        // still reachable by oid (D11) because the id IS the object id.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let id = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("oops")))
+            .expect("id");
+        let root_before = board.root().expect("root");
+
+        board.redact("main", &id).expect("redact");
+
+        assert!(
+            !board.post_ids_at_tip().expect("ids").contains(&id),
+            "still at the tip"
+        );
+        assert_eq!(
+            board.root().expect("root"),
+            root_before,
+            "the ref was rerooted (0118 part 3)"
+        );
+        assert!(
+            repo.git(&["cat-file", "-p", &id]).is_ok(),
+            "history lost the post"
+        );
+    }
+
+    #[test]
+    fn redact_is_idempotent_and_retries_the_eviction_on_a_second_call() {
+        // Calling `redact` twice for the same target must not double-append
+        // the control post (D11: identical content is the same post) and
+        // must still leave the target evicted -- a caller retrying after an
+        // uncertain first attempt must not be punished for it.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let id = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("oops")))
+            .expect("id");
+
+        let first = board.redact("main", &id).expect("first redact");
+        let second = board.redact("main", &id).expect("second redact");
+        assert_eq!(first, second, "the same redact content is the same post");
+        assert!(!board.post_ids_at_tip().expect("ids").contains(&id));
     }
 
     #[test]

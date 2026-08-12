@@ -128,10 +128,24 @@ fn history_in(
 
 /// A human-readable summary: what was posted, by whom, and every technique in
 /// full, because technique is the half with compounding value.
+///
+/// **Redaction (B8, D10) is enforced HERE, not upstream.** `history` never
+/// drops a redacted post — D13 says the ref's root, and everything reachable
+/// from it, is never rewritten — so the target is still IN `posts` exactly
+/// as any other post is. What this function must not do is print its body:
+/// every `redact` post in the window names a target id
+/// ([`redacted_ids`]), and every body-bearing section below consults that
+/// set before printing anything the target carries. The act itself is still
+/// reported, in its own section, by id and author — reporting the act
+/// without the body is the whole point of a read-time redaction instead of a
+/// (prohibited, and measured not to work) history rewrite.
 pub fn digest(posts: &[StoredPost]) -> String {
     if posts.is_empty() {
         return "The board is empty — no session has posted yet.\n".to_string();
     }
+
+    let redacted_ids = redacted_ids(posts);
+
     let mut by_kind: BTreeMap<&str, usize> = BTreeMap::new();
     let mut by_author: BTreeMap<&str, usize> = BTreeMap::new();
     for s in posts {
@@ -153,6 +167,7 @@ pub fn digest(posts: &[StoredPost]) -> String {
     let techniques: Vec<&StoredPost> = posts
         .iter()
         .filter(|s| s.post.kind == "technique")
+        .filter(|s| !redacted_ids.contains(s.id.as_str()))
         .collect();
     if !techniques.is_empty() {
         out.push_str("\ntechnique published (the compounding half):\n");
@@ -173,6 +188,7 @@ pub fn digest(posts: &[StoredPost]) -> String {
     let unanswered: Vec<&StoredPost> = posts
         .iter()
         .filter(|s| s.post.kind == "ask")
+        .filter(|s| !redacted_ids.contains(s.id.as_str()))
         .filter(|a| {
             // Answered-ness is judged PER ASK, not per thread value: two
             // asks can share a `thread`, and a single reply must not mark
@@ -202,7 +218,32 @@ pub fn digest(posts: &[StoredPost]) -> String {
             ));
         }
     }
+
+    let redactions: Vec<&StoredPost> = posts.iter().filter(|s| s.post.kind == "redact").collect();
+    if !redactions.is_empty() {
+        out.push_str("\nredacted (body suppressed -- see Board::redact, D10):\n");
+        for s in &redactions {
+            out.push_str(&format!(
+                "  [{}] redacted {}\n",
+                s.post.by,
+                s.post.str_field("post").unwrap_or("(unnamed target)")
+            ));
+        }
+    }
     out
+}
+
+/// The ids every `redact` post in `posts` names, by its `post` field.
+///
+/// Split out of [`digest`] so every body-bearing section consults the exact
+/// same set — one place computing "what is currently redacted" is what
+/// keeps a future added section from forgetting to check.
+fn redacted_ids(posts: &[StoredPost]) -> BTreeSet<&str> {
+    posts
+        .iter()
+        .filter(|s| s.post.kind == "redact")
+        .filter_map(|s| s.post.str_field("post"))
+        .collect()
 }
 
 #[cfg(test)]
@@ -245,6 +286,48 @@ mod tests {
         let seen = history(&board, 3_650, plan.context().now_unix).expect("history");
         assert_eq!(seen.len(), 1, "history still has it");
         assert_eq!(seen[0].post.str_field("note"), Some("ephemeral"));
+    }
+
+    #[test]
+    fn the_digest_reports_that_a_redaction_happened_without_the_body() {
+        // B8's third property: the act is reported, the body is not. History
+        // keeps the post (D13), so `history` still returns it -- suppression
+        // is `digest`'s job, not `history`'s.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let id = board
+            .append(
+                &Post::new("technique", "campaign/x").with("note", json!("SENSITIVE-BODY-TEXT")),
+            )
+            .expect("id");
+        board.redact("main", &id).expect("redact");
+
+        // Clock: read the tip's REAL commit time rather than a hardcoded
+        // constant. `2_000_000_000` is 2033-05-18, so a 14-day window opens
+        // seven years AFTER these posts are committed and `history`
+        // correctly returns nothing -- Task 4 hit exactly that.
+        // `SystemTime::now()` is not an option either: clippy's
+        // `disallowed_types` fires (decision 0001's no-wall-clock ban
+        // reaching this crate).
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let text = digest(&history(&board, 14, now_unix).expect("history"));
+        assert!(
+            !text.contains("SENSITIVE-BODY-TEXT"),
+            "the body survived the redaction: {text}"
+        );
+        assert!(
+            text.contains("redacted"),
+            "the act must still be recorded; got {text}"
+        );
+        assert!(
+            text.contains("main"),
+            "who redacted it must be recorded: {text}"
+        );
     }
 
     #[test]

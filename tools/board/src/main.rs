@@ -201,6 +201,25 @@ fn main() {
                 }
             }
         }
+        // board redact <by> <post-id> — B8/D10: appends a `redact` control
+        // post, then evicts the named post from the TIP tree. History keeps
+        // it (D13) and the digest suppresses its body while still reporting
+        // the act; see `Board::redact`'s doc comment for why this is a
+        // read-time judgment rather than a (prohibited, and measured not to
+        // work) history rewrite.
+        Some("redact") => {
+            let (Some(by), Some(id)) = (args.get(2), args.get(3)) else {
+                eprintln!("usage: board redact <by> <post-id>");
+                std::process::exit(2);
+            };
+            match board.redact(by, id) {
+                Ok(new_id) => println!("{new_id}"),
+                Err(e) => {
+                    eprintln!("board: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
         // board digest [days] — the human read seam, over history (D14).
         // Never advances the read cursor and never writes to the board: it
         // is a rendering of history, not a new fact about it.
@@ -256,7 +275,7 @@ fn main() {
             }
         }
         _ => {
-            eprintln!("usage: board <post|read|render|digest|retract|reap|sync>");
+            eprintln!("usage: board <post|read|render|digest|retract|redact|reap|sync>");
             std::process::exit(2);
         }
     }
