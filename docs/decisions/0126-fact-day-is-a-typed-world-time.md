@@ -75,12 +75,15 @@ type.
   `WorldTime::day()`. Validation is **finiteness only**: a day is a point on an
   axis and goes negative legitimately (founders are born before the history
   record begins), so `Years`'s non-negative rule is deliberately not copied.
-- Three `type-audit: waiver(decision-0014: …)` tags survive on fields that are
-  *not* `Fact.day` — `PersonSeed`'s three day-shaped fields, `Founder.founded`,
-  and `SessionSnapshot.day`, the last being the `vessel/session/v2` wire schema.
-  They are re-pointed at this record. Each stays bare because it is a
-  pre-commit or wire quantity that funnels into a `Fact.day` later, not because
-  the envelope's timestamp is untyped.
+- **Five `waiver` clauses across three sites** survive on fields that are *not*
+  `Fact.day`, re-pointed from `waiver(decision-0014: …)` to
+  `waiver(decision-0126: …)` and now reading as the latter:
+  `PersonSeed`'s three day-shaped fields (`domains/person/src/lib.rs`),
+  `Founder.founded` (`windows/worldgen/src/person_promote.rs`), and
+  `SessionSnapshot.day` (`windows/vessel/src/snapshot.rs`, the
+  `vessel/session/v2` wire schema). Each stays bare because it is a pre-commit
+  or wire quantity that funnels into a `Fact.day` later, not because the
+  envelope's timestamp is untyped.
 - Making the type enforce is what forced the *unit* repair beside it: with the
   slot typed, the history bake's year-valued stamps had to cross a named
   boundary, and `person-died` became reachable with no change to its own logic

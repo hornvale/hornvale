@@ -110,10 +110,11 @@ Every occupation fact in every saved world changed. The seed-42 world went from
 exactly what moved:
 
 ```
-  objects moved     4 predicates   occ-founded  704 facts, 656 moved  25.0 -> 9131.25
+  objects moved     5 predicates   occ-founded  704 facts, 656 moved  25.0 -> 9131.25
                                    occ-ended    474 facts, 474 moved 175.0 -> 63918.75
                                    history-now    1 fact,     1 moved 2000.0 -> 730500.0
                                    person-born  148 facts,  106 moved
+                                   name         394 facts, 148 moved  <- not a unit
   day stamps moved 21 predicates   every fact the history bake emits
   untouched        92 predicates   astronomy, terrain, climate, paleoclimate,
                                    topology, religion, culture, species,
@@ -121,11 +122,21 @@ exactly what moved:
                                    genesis facts
 ```
 
-The partial counts are themselves the check. Founding facts moved 656 of 704,
-not all 704; person facts, 106 of 148. The remainder are the year-zero
-foundings, where the conversion is the identity. *Zero is zero in any unit* is
-not a claim in this campaign's prose — it is visible in the data, in the exact
-places the argument predicts it.
+**Four of those five moved because a unit moved. The fifth is the other
+epoch.** Every one of the hundred and forty-eight promoted founders was
+*renamed*, by the key change the second half of this chapter is about; the
+world changed its clock and its names in one step, and a reader who takes this
+table for the unit repair alone will come away with half of what happened.
+
+The partial counts are themselves the check, and the two kinds of partial have
+two different causes. Founding facts moved 656 of 704 and person births 106 of
+148: the remainder are the **year-zero** cases, where the conversion is the
+identity — *zero is zero in any unit*, visible in the data at exactly the places
+the argument predicts. `name` moved 148 of 394 for an unrelated reason: 394
+things in this world carry a name, and only the 148 that are **people** were
+re-keyed. Settlements, deities and the rest keep theirs. A partial count is
+evidence only when you can say which exemption produced it, and these are two
+exemptions wearing the same shape.
 
 And the deaths arrived:
 
@@ -142,9 +153,17 @@ a rule that fires for everyone is as wrong as one that fires for no one, which
 is why the acceptance criterion was two-sided rather than a floor. It survives
 interrogation as physics. Over a seven-hundred-thousand-day history, almost
 every founder outlives their lifespan; the survivors are the founders of the
-youngest communities, and they sort by lifespan exactly as they should — the
-long-lived high elves survive at seven in thirteen, the short-lived hobgoblins
-at one in twenty. Every single survivor is the latest-born of its species.
+youngest communities, and they sort by lifespan as they should — on seed 3 the
+long-lived high elves survive at seven in thirteen against the short-lived
+hobgoblins' one in twenty.
+
+The sharper property is a separation, and it holds in all five worlds without
+exception: **every surviving member of a species was born after every dead
+member of it.** Survivors are the latest-born *block*, not the latest-born
+individual — on seed 42 one surviving desert-dwarf was born a hundred years
+before the last of its kind, and is alive because the whole tail of that
+lineage is. A death rule keyed on lifespan produces exactly that shape; a
+guard failing at random does not.
 The cast itself did not move: the founder counts are identical before and
 after, which is the design's central claim and was measured rather than argued.
 

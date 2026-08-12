@@ -100,6 +100,28 @@ have different truth values. Answer the class with a sweep; verify the instance
 separately; and scope a mutation to the whole gate, not to the crate you happen
 to be reading.
 
+**A second, sharper instance of the same shape, and it reached a published
+page.** A reviewer measured per-species death separation and pasted its data —
+`max_dead_born` against `min_alive_born` for each species, with `separated=true`.
+Its *summary sentence* rendered that as "every survivor is the latest-born of
+its species," which is a different and **false** claim: the data show a block
+separation, not an individual maximum. The controller quoted the summary
+sentence into a brief, the brief carried it into the chronicle, and it was
+caught only by the whole-branch review recomputing it — one surviving
+desert-dwarf on seed 42 was born exactly a hundred years before the last of its
+kind, and pooled across five seeds there are 7 such survivors in 17.
+
+**The failure mode is new to this project's list, and it is worth more than the
+correction:** a reviewer's summary sentence can overstate the data pasted
+directly above it, and a controller who quotes the sentence instead of reading
+the table propagates the overstatement into a durable record, where it acquires
+the authority of a published page. Every intermediate reader was acting in good
+faith and none of them re-derived. **When a review hands you a number and a
+sentence about the number, the number is the finding.** The block form is also
+the *better* claim — it is what actually carries the argument that a ~97% death
+rate is physics rather than a broken guard — so re-deriving would have improved
+the chapter even if the sentence had been true.
+
 ## 4. The measurement that mattered most refuted a ratified decision
 
 The campaign's spec ratified the widened founder key from a doc comment's claim
@@ -120,7 +142,7 @@ escalated rather than silently corrected, because the narrow key's 1,582 "drops"
 are only drops if a failed founding and its same-year successor are two
 foundings — and that is a world-model question, not a key-selection one.
 
-Three process points, in descending order of transferability:
+Four process points, in descending order of transferability:
 
 1. **A five-seed probe could not have seen this.** The plan required the census
    range 0–999 for exactly the reason the previous campaign found its collisions
@@ -133,7 +155,19 @@ Three process points, in descending order of transferability:
    parent coordinates — which is what shipped. It does not describe **replacing**
    the five fields, which nobody had measured. A compressed scoring notation in
    a backlog row is not a measurement; it is a pointer to one.
-3. **The falsification was found because the before-arm was re-derived, not
+3. **The three-arm table is testimony, not a test.** The sweep that justifies
+   the shipped key — 1000 seeds, three arms, ~4 minutes per arm — exists in the
+   tree only as prose, in `domains/history/src/flesh.rs`'s doc comment. The
+   harness that produced it was deleted before the gate, and
+   `founder_collision.rs` pins seven named seeds rather than re-deriving the
+   sweep. That is a defensible cost — an expensive measurement producing a
+   *design rationale* rather than an invariant, and pinning 1000 worlds in the
+   commit gate would be absurd — but it means **the campaign's most load-bearing
+   number cannot be reproduced from the tree.** The next campaign to touch
+   `founder_handle` should read that table as a claim about a measurement
+   somebody made, not as a property anything checks, and should re-run the sweep
+   before trusting it against a changed roster.
+4. **The falsification was found because the before-arm was re-derived, not
    quoted.** The implementer set its own diff aside and rebuilt the baseline;
    the reviewer went further and transcribed the superseded key from the
    parent commit into its own harness rather than calling the implementer's

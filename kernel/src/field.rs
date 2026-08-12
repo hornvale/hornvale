@@ -23,7 +23,7 @@ pub struct Position {
 /// whole job is that a value in some *other* unit cannot be stored here.
 /// A year stamped into a day-typed slot is what made `person-died`
 /// uncommittable in every world (The Ell); decision 0014 declined this
-/// wrapper on the grounds it bought no safety, and 0125 supersedes it.
+/// wrapper on the grounds it bought no safety, and 0126 supersedes it.
 ///
 /// **Negative is legal.** A day is a *point on an axis*, not a duration:
 /// a founder born before the history record begins has a negative birth
