@@ -309,44 +309,61 @@
 //! | `1000-2500m` | ×2.578 | ×2.751 | ×2.506 |
 //! | `2500m+` | ×5.395 | ×5.836 | ×5.125 |
 //!
-//! **The headline, and it refutes the task's own going-in prediction.** Task
-//! 1 established that soil never reaches siting and that andosol is
+//! **THE HEADLINE IS THE RESIDUAL: the gradient is explained by none of the
+//! three channels, and the three arms between them DO NOT DECOMPOSE IT.**
+//! Task 1 established that soil never reaches siting and that andosol is
 //! anti-correlated with unrest, and concluded that the mineral/prospectivity
-//! channel was therefore "the only remaining candidate explanation" for the
-//! rising exposure ratio. Measured, it is not the explanation:
+//! channel was therefore "the only remaining candidate explanation". After
+//! Task 2 the position is: hostility OPPOSES the effect, soil is
+//! disconnected and anti-correlated, and minerals cannot be tested on this
+//! roster. Something else co-varying with unrest is siting these
+//! settlements, and identifying it is OPEN. The campaign must not claim the
+//! arms decomposed the effect; they did not.
 //!
-//! - **Arm B moves the gradient in the predicted DIRECTION but nowhere near
-//!   the required MAGNITUDE.** Ablating the unrest term inside prospectivity
-//!   lowers the rise in all four bands, so the mineral reward does contribute
-//!   positively — but in the strongest band it removes ×0.270 of a ×4.395
-//!   excess over unity, about 6% of the effect. If this channel were the
-//!   cause, ablating it would collapse the rise toward ×1. It does not move
-//!   it out of its own significant figures.
-//! - **Arm A runs the OTHER way: the hostility penalty is a brake on the
-//!   effect, not its source.** Ablating it RAISES the rise in every band
-//!   (×5.395 → ×5.836 in `2500m+`, ×1.572 → ×1.880 in `250-1000m`), which is
-//!   the physically correct sign — removing a term that repels settlement
-//!   from high-unrest ground lets more settlement onto it. The channel that
-//!   moves the most settlements (11.6% of them, 7.6× arm B's count) is
-//!   therefore the one that OPPOSES the measured effect.
-//! - **So most of Task 1's gradient is carried by neither channel.** With the
-//!   attracting channel worth ~6% and the other channel pushing the opposite
-//!   way, the residual is the bulk of it: unrest CO-VARIES with whatever
-//!   actually sites settlements rather than causing the siting through either
-//!   of its two direct wires. Identifying that confound is not in Task 2's
-//!   scope and is not guessed at here.
+//! Arm by arm, with each arm's evidential weight stated rather than implied:
 //!
-//! **The caveat that bounds arm B, and it is a roster fact, not a physics
-//! one.** Only two shipped kinds weight the `MINERAL` axis at all — `xorn`
-//! (subterranean) and `rust-monster` — and both are pure-`MINERAL`
-//! (`ResourceVector::new(&[(MINERAL, 1.0)])`, `domains/species/src/lib.rs`).
-//! `rust-monster` founds 104 of the 26,146 settleable-land settlements
-//! (0.4%); `twig-blight` alone is 97.6% and takes nothing from that axis.
-//! Arm B's small effect therefore measures how little the CURRENT ROSTER
+//! - **Arm A (hostility) — WELL-POWERED AND CONCLUSIVE. The penalty is a
+//!   BRAKE on the effect, not its cause.** Ablating it RAISES the rise in
+//!   every band (×5.395 → ×5.836 in `2500m+`, ×1.572 → ×1.880 in
+//!   `250-1000m`), which is the physically correct sign: removing a term
+//!   that repels settlement from high-unrest ground lets more settlement
+//!   onto it. It reaches the whole population — `hostility` is a term in
+//!   `carrying_capacity` for every kind, and 3,042 settlements move — so
+//!   this can be stated plainly.
+//! - **Arm B (mineral) — a working POSITIVE CONTROL but UNDERPOWERED for
+//!   attribution. The mineral hypothesis is UNTESTED, not refuted.** 430
+//!   settlements move, so the harness demonstrably sees the channel; the
+//!   gradient falls slightly in all four bands (×5.395 → ×5.125 in
+//!   `2500m+`, ~6% of the effect). That 6% is a fact about the ROSTER, not
+//!   about the channel, and the reason is quantified in the next paragraph.
+//!   **Do not read this arm as a refutation.** A well-powered version of it
+//!   does not exist today and cannot be built without changing the roster.
+//! - **Arm C (soil) — the connectivity null, decidable and green.** No
+//!   siting-path source reads a soil order or a soil fertility.
+//!
+//! **Why arm B is underpowered — a ROSTER fact, quantified, and worth
+//! knowing on its own.** Only two shipped kinds declare any `MINERAL` niche
+//! weight, and both are pure-`MINERAL`
+//! (`ResourceVector::new(&[(MINERAL, 1.0)])`, `domains/species/src/lib.rs`
+//! at the `xorn` and `rust-monster` entries). In the settleable-land
+//! population this readout measures:
+//!
+//! - **`xorn` does not appear AT ALL** — zero settlements across the whole
+//!   30-seed sweep, and it is absent from the committed fixture's `people`
+//!   column entirely. It is a registered kind that places nothing. (`xorn`
+//!   is `Subterranean`, so `per_species_suitability`'s cave-availability
+//!   gate zeroes its K on every cell without a cave; that is the likely
+//!   cause but this probe did not measure it, and a registered-but-unplaced
+//!   kind is worth its own look.)
+//! - **`rust-monster` holds 104 of the 26,146 settlements — 0.4%.**
+//!   `twig-blight` alone is 97.6% and takes nothing from that axis.
+//!
+//! So arm B ablates a channel **99.6% of the settled population does not
+//! read**. Its small contribution measures how little the CURRENT ROSTER
 //! reaches through the mineral channel, and must not be read as "the mineral
-//! channel is intrinsically weak". A roster with a mineral-weighted people in
-//! it would have to re-take this reading — the same shelf life spec §6.6
-//! declares for arm C.
+//! channel is intrinsically weak" or as evidence against the mineral
+//! hypothesis. A roster with a mineral-weighted PEOPLE in it would have to
+//! re-take this reading — the same shelf life spec §6.6 declares for arm C.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -1291,6 +1308,15 @@ fn body_of(src: &str, signature: &str) -> String {
 /// direction or a magnitude. The measured numbers go in the module doc, where
 /// a reader can weigh them; encoding a directional expectation here after
 /// unblinding would be a rescue, and this campaign publishes what it finds.
+///
+/// **THE ARMS ARE NOT EQUALLY POWERED, and the printed table does not say so
+/// — read the module doc's Task-2 section before drawing anything from the
+/// `armB-mineral` rows.** Arm A's term is in `carrying_capacity` for every
+/// kind. Arm B's channel is read by two roster kinds, one of which (`xorn`)
+/// places no settlement at all and the other (`rust-monster`) 0.4% of the
+/// population — so a small arm-B row is a fact about the roster, and this
+/// readout CANNOT test the mineral hypothesis on the shipped roster. A row
+/// near the baseline here is UNTESTED, never refuted.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn which_channel_carries_the_exposure_gradient() {
