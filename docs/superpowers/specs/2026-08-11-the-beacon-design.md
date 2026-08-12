@@ -746,8 +746,42 @@ once, and that stays exactly once.
 ## 6. Assumptions requiring measurement
 
 1. **The batched read holds the render under budget at cross-host volume.**
-   Budget: ≤ 1 s at 100 posts across two peers. Measured for the batch primitive
-   in isolation (§2 fact 6); unmeasured end-to-end.
+   Budget: ≤ 1 s at 100 posts across two peers.
+
+   **FALSIFIED, and the cause is structural rather than a regression.** Measured
+   at the close on a real two-host board (38 posts, 30 rendering, one live peer):
+   `scripts/board-render.sh` takes **1.29 / 1.44 / 1.39 / 1.36 / 1.51 s** — all
+   five over the 1 s budget, at less than a third of the post count the budget
+   named.
+
+   The batching itself worked. B7 took the single-host render from
+   1.69–2.05 s to **0.60 s at 32 posts**, and that held. What the budget did not
+   anticipate is that **going cross-host roughly doubles the fixed cost**:
+
+   - the **union** reads two refs instead of one, and each costs a tip resolve, a
+     tree listing, a `git log` time-map and a batch — so B1 doubles the per-ref
+     work by construction;
+   - **peer status** (B6) adds about four more calls: a `for-each-ref` for the
+     peer list, a second one inside `peer_content_ages`, and a `git log` per peer
+     for its content age.
+
+   Two things this is *not*. It is not F14's unresolved-author term: measured at
+   the close, **U = 0** — every notice author resolves, so nothing pays the
+   uncached two-`rev-parse` penalty. And it is not an operational failure — the
+   seam's real ceiling is the hook's **2 s timeout**, which 1.29–1.51 s clears
+   comfortably. What is missed is this spec's own self-imposed target, which was
+   written as a *budget* rather than derived from the cross-host call count.
+
+   The honest reading: **≤ 1 s was the wrong number, set before the union and
+   peer status existed.** A cross-host render costs roughly what a single-host
+   render costs, twice, plus a per-peer tax — and at two hosts that lands near
+   1.4 s. Remaining cheap wins, worth a followup rather than a scramble:
+   deduplicate `list_peer_hosts` (called twice per render), and take each ref's
+   tip from `for-each-ref`'s `%(objectname)` instead of a `rev-parse` per ref.
+   Together they are perhaps three calls, ~115 ms — real, but not the difference
+   between 1.4 s and 1 s. Closing that gap needs a different shape, most likely
+   caching the peer-status block between renders, and that is a design question
+   this campaign did not open.
 2. **Two hosts is the real population, and N grows roughly linearly with
    hosts.** If a third box appears, the union's fixed cost grows by 2 per peer,
    which is negligible; the post count is the term that matters.
