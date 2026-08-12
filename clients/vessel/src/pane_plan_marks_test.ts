@@ -4,7 +4,7 @@
 // pane_plan_test.ts a zero, and a future reader looking for "how are marks
 // tested" has exactly one file to open.
 
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { parseSnapshot } from "./snapshot.ts";
 import { planCells } from "./pane_plan.ts";
 import type { PaneGrid } from "./pane_cell.ts";
@@ -39,18 +39,60 @@ const OCCUPIED = Deno.readTextFileSync(
   ),
 );
 
+// DERIVED FROM THE FIXTURE, NOT PINNED TO IT — and that is the point.
+//
+// This assertion was a hard-coded `grid[11][4].glyph === "b"` and it rotted
+// TWICE: The Lantern's absorption regenerated the fixture and moved the mark
+// to a different room, position and noun (re-pinned then), and it moved again
+// afterwards, to (1, 5) in a 19x10 extent — so `grid[11]` was `undefined` and
+// the suite failed on a TypeError rather than on a glyph mismatch.
+//
+// The rot is structural, not carelessness. The Rust side SEARCHES for a world
+// that qualifies (`windows/vessel/tests/common/mod.rs`) rather than pinning
+// one, so the fixture's mark legitimately moves whenever the search's answer
+// moves — but a concrete golden cannot sweep. Pinning the coordinates froze a
+// COINCIDENCE of that search; the title's claim is about the RENDERER.
+//
+// So read the mark out of the fixture and assert the relationship the title
+// names. This still fails if `planCells` drops the mark, places it at the
+// wrong cell, or derives the wrong character — it just no longer fails when
+// an unrelated campaign regenerates the world underneath it.
 Deno.test("a mark renders its glyph at its cell", () => {
   const snap = parseSnapshot(OCCUPIED)!;
   const grid = planCells(snap)!;
-  // The fixture's one mark: noun "bugbear of Boxa" at (4, 11),
-  // lattice-local == pane-local since this plan's extent origin is (0, 0).
-  // Re-pinned when The Lantern's absorption regenerated this fixture
-  // (windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json) —
-  // a generated artifact has no merge (see clients/CLAUDE.md), so its
-  // search-for-a-qualifying-world result moved to a different room, mark
-  // position and noun. The glyph is still `b`, coincidentally: this
-  // fixture's search only requires SOME agent mark, not this one.
-  assertEquals(grid[11][4].glyph, "b");
+
+  // `assert`, not a ternary: it narrows the `Spatial` union for the type
+  // checker AND is the real guard, so a fixture that stopped being a chamber
+  // snapshot fails here rather than silently skipping the assertions below.
+  const spatial = snap.spatial;
+  assert(
+    spatial && spatial.band === "chamber",
+    "the occupied fixture must be a chamber snapshot",
+  );
+  const plan = spatial.plan;
+
+  // Anti-vacuity: the plain chamber fixture's `marks` is `[]` (see above), so
+  // a test that merely looped over marks would pass on an empty array. This
+  // fixture's whole job is to carry exactly one, and if it ever carries none
+  // the assertions below would vanish rather than fail.
+  const marks = plan.marks ?? [];
+  assertEquals(marks.length, 1, "the occupied fixture must carry exactly one mark");
+
+  const mark = marks[0];
+  const gx = mark.x - plan.extent.x;
+  const gy = mark.y - plan.extent.y;
+  // The mark must be in bounds, or `planCells` is right to ignore it and this
+  // test would be asserting on a cell the renderer never claimed to fill.
+  assert(
+    gy >= 0 && gy < grid.length && gx >= 0 && gx < grid[0].length,
+    `mark (${mark.x}, ${mark.y}) is outside the plan's ${plan.extent.w}x${plan.extent.h} extent`,
+  );
+
+  // The rule under test, stated once here and once at pane_plan.ts's mark
+  // loop: the noun's first letter lowercased, NOT `kind` — every creature's
+  // kind is the single literal "agent", so a kind-derived glyph would draw
+  // every creature as `a`.
+  assertEquals(grid[gy][gx].glyph, mark.noun.charAt(0).toLowerCase());
 });
 
 Deno.test("marks draw over the floor but never over `@`", () => {
