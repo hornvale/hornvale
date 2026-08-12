@@ -445,13 +445,25 @@ fn insolation_is_determined_by_zone_position_alone() {
     };
     let result = hornvale_lab::run(&study).expect("study runs");
     assert_eq!(result.rows.len(), 20, "one row per seed");
+    // `Row` carries `refusal: Option<String>` — a refused genesis yields a row
+    // whose `values` may be short. Assert none refused rather than indexing
+    // into a short row and reporting a confusing panic instead of the real
+    // cause. Seeds 1..20 unpinned should never refuse; if they do, that is the
+    // finding.
+    let refused: Vec<_> = result
+        .rows
+        .iter()
+        .filter_map(|r| r.refusal.as_ref().map(|m| (r.seed, m.clone())))
+        .collect();
+    assert!(refused.is_empty(), "unpinned seeds refused genesis: {refused:?}");
     for row in &result.rows {
         let u = number_of(&result, row, "zone-position");
         let s = number_of(&result, row, "insolation-rel");
         let expected = 1.0 / (0.95 + 0.42 * u).powi(2);
         assert!(
             (s - expected).abs() < 1e-6,
-            "S={s} != 1/(0.95+0.42*{u})^2 = {expected}"
+            "seed {}: S={s} != 1/(0.95+0.42*{u})^2 = {expected}",
+            row.seed
         );
     }
 }
