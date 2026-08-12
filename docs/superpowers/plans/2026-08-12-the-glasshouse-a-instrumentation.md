@@ -731,31 +731,87 @@ it is what Step 2 needs.
 
 Record at the top of the audit document which terms are reachable how.
 
-- [ ] **Step 2: Write the probe**
+- [ ] **Step 2: Write the probe — decompose directly, do NOT zero terms**
 
-Over seeds 1..50 at the canonical level-6 grid, for land cells (`e >= sea`),
-report for the total and for each term held alone: mean, sd, and the fraction of
-total variance attributable to it.
+**The zero-a-term-and-diff approach is ruled out. Controller-verified, two
+independent reasons, either one fatal:**
 
-Do **not** prescribe a specific mutation from outside the code — the property the
-probe must demonstrate is *which term dominates land-elevation variance*. Find a
-discriminating construction after reading Step 1; a term that shares no state
-with the others can be zeroed, and one that does not will need a different
-approach.
+1. **`relief_term` cannot be zeroed through its input.**
+   `relief_scale(induration, hops) = (0.25 + 0.75·induration) · belt` with
+   `belt ≥ 1.0` (`elevation.rs:154`). At `induration = 0.0` it still returns
+   `0.25 · belt`, so the term survives at a quarter amplitude. There is a hard
+   floor and no argument reaches past it.
+2. **Zeroing any term moves sea level, which changes the land set.**
+   `derive_sea_level` is the ocean-fraction **percentile** of the elevation
+   distribution (`elevation.rs:656`). Remove a term and the whole distribution
+   shifts, so sea level shifts, so *which cells are land* shifts — and the
+   before/after land-mean comparison is then taken over two different cell sets.
+   The comparison would be confounded no matter how carefully the mutation was
+   made.
 
-- [ ] **Step 3: Assert the probe actually probes**
+So decompose instead. Hold the **real** elevation field and its **real** sea
+level fixed, take the land set once (`e >= sea`), and report over that single
+fixed set, for each of the five terms: mean, sd, and share of total variance.
 
-Before trusting any number, assert that zeroing a term **changes the output**:
+**Where the probe must live.** Every input is a public field on `TectonicGlobe`
+(`plate_of`, `crust`, `plates`, `boundary`, `boundary_distance`, `induration`,
+`trail_seamounts`, `elevation`, `sea_level`), but every per-term *helper* is
+crate-internal: `isostatic_m` is `pub(crate)` (`elevation.rs:52`), `relief_scale`
+(`:154`) and `dome_m` (`:303`) are private, and `SphereFbm` is `pub(crate)`
+(`crust.rs:87`). An external integration test would therefore have to
+**reimplement** the arithmetic, which would silently drift from the real
+implementation and make the attribution worthless.
+
+So the probe reads the real terms. Preferred shape: extract the per-cell body of
+`assemble_elevation` into a small returned struct —
 
 ```rust
+/// The additive terms of one cell's elevation, in metres. `assemble_elevation`
+/// sums these; the attribution probe reads them individually, so the
+/// decomposition can never drift from the elevation it decomposes.
+pub(crate) struct ElevationTerms {
+    pub(crate) base: f64,
+    pub(crate) boundary: f64,
+    pub(crate) hotspot: f64,
+    pub(crate) relief: f64,
+    pub(crate) epsilon: f64,
+}
+```
+
+— have `assemble_elevation` sum it, and read it from an in-crate `#[cfg(test)]`
+test. If reading the code shows a cheaper faithful route, take it and say why;
+the requirement is that **no term's arithmetic is duplicated**.
+
+**BYTE-IDENTITY CONSTRAINT — this is `domains/terrain/`.** Float addition is not
+associative, so the extraction must preserve the summation **exactly**:
+
+```rust
+base + boundary_term + hotspot_term + relief_term + CELL_EPSILON_M * f64::from(cell.0)
+```
+
+Same terms, same order, no intermediate regrouping. `domains/terrain/CLAUDE.md`
+carries this discipline. Verify byte-identity by confirming the committed
+artifacts still diff clean, and say so in the report.
+
+- [ ] **Step 3: Assert the decomposition is faithful (conservation)**
+
+The old "assert the mutation took" check does not apply — there is no mutation
+now. The equivalent guard, and a stronger one, is **conservation**: the five
+terms must reconstruct the elevation they came from.
+
+```rust
+// If the terms do not sum to the elevation the pipeline actually produced,
+// the decomposition is measuring something other than this world, and every
+// variance share below it is meaningless.
+let summed = t.base + t.boundary + t.hotspot + t.relief + t.epsilon;
 assert!(
-    (baseline_sd - zeroed_sd).abs() > 1e-9,
-    "zeroing this term changed nothing — the mutation did not take, \
-     and a no-op mutation produces evidence that looks like a result"
+    (summed - elevation_at_cell).abs() < 1e-9,
+    "terms do not reconstruct elevation at {cell:?}: {summed} vs {elevation_at_cell}"
 );
 ```
 
-A no-op mutation is worse than no mutation, because it produces evidence.
+Assert this on **every land cell of every seed**, not a sample. It is the check
+that makes the attribution trustworthy, and it is cheap.
 
 - [ ] **Step 4: Decide where the probe lives**
 
