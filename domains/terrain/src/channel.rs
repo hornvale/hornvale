@@ -182,6 +182,67 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// angular. Below [`RIVER_MIN_DRAINAGE`] — the same threshold
 /// [`crate::water::classify`] uses to call a cell a river at all — the width
 /// is exactly `0.0`: a sub-threshold trickle is not a channel.
+///
+/// # THIS LAW IS ALREADY A FUNCTION OF DRAINED AREA. DO NOT "FIX" IT.
+///
+/// `drainage` is an upstream **cell count**, which reads like a grid-dependent
+/// quantity that would make every width wrong by a scale factor once anything
+/// renders below cell scale. It is not, and the reason is that `cell_edge`
+/// already carries the conversion.
+///
+/// `N` cells tile the sphere, so their mean area is `4π/N`; and a locally
+/// hexagonal tiling of cells of area `A` has nearest-neighbour spacing
+/// `d = √(2/√3)·√A = 1.0746·√A`. That is geometric necessity, not a fitted
+/// coincidence — which is what makes it safe to build on. Measured over the
+/// real mesh, `cell_spacing / √(4π/cell_count)` is **1.078208 / 1.078231 /
+/// 1.078237 / 1.078238** at levels 4 / 5 / 6 / 7: constant to five figures
+/// across a 64× change of resolution, and 0.34% above the planar value
+/// because of the twelve pentagons and the curvature. So
+///
+/// ```text
+///   a · edge · √count  =  a · (edge/√A_cell) · √(count · A_cell)
+///                      =  (a · 1.0746) · √(drained area)
+/// ```
+///
+/// and the count never appears on its own. The `edge` factor **is** the
+/// `count → area` conversion, wearing `√A_cell`'s clothes.
+///
+/// ## The trap, named because this campaign walked into it
+///
+/// The Rill's original plan proposed exactly the "fix" the paragraph above
+/// rules out: make `drainage` a drained area in steradians and **keep**
+/// `cell_edge`. That multiplies the grid factor in twice. Every width would be
+/// rescaled by `√(N₆/N_L)` — **×2 at level 5, ×1/64 at level 12** — which is
+/// the scale error the change was meant to remove, with the sign flipped. The
+/// same trap wearing a different coat: a sub-cell drainage count paired with
+/// the *parent* cell's spacing, which is that factor the other way up.
+///
+/// `tests/rill_properties.rs` is the guard, and it has been shown to catch
+/// this: mutating this line to `cell_edge * cell_edge` (dimensionally the same
+/// defect, since `A_cell ∝ edge²`) reddens it at a relative 5.000e-1 per
+/// doubling.
+///
+/// ## What Tier 2 inherits
+///
+/// Scale-freeness holds **only when the count and the spacing are at the same
+/// level**. There is no [`Geosphere`] to ask below cell scale — level 12 would
+/// be `10·4¹² + 2 = 167,772,162` cells — so a subdivision cannot obtain its
+/// spacing by building a finer globe. It must derive the spacing from
+/// [`hornvale_kernel::RoomAddr::corners`], which returns the three unit-sphere
+/// corners of a room's own triangle at its own depth, and accumulate drainage
+/// in those same sub-triangle units. Take the two from different depths and
+/// the cancellation above is exactly what breaks.
+///
+/// ## The one part that is not scale-free
+///
+/// [`RIVER_MIN_DRAINAGE`] compares against a **count**, so it is the single
+/// place where refining the grid changes the answer for a fixed physical
+/// drained area: a trickle that is not a channel here is a channel one level
+/// down, because its count quadrupled while the threshold did not. Deliberate
+/// and asserted, not overlooked — as a steradian area `15.0` exceeds every
+/// discharge in the world and would zero every channel, so making it an area
+/// is a real change with its own blast radius through
+/// [`crate::water::classify`].
 /// type-audit: bare-ok(count: drainage), pending(wave-1: cell_edge), pending(wave-1: return)
 pub fn channel_half_width(drainage: f64, cell_edge: f64) -> f64 {
     if drainage.total_cmp(&RIVER_MIN_DRAINAGE).is_lt() {
