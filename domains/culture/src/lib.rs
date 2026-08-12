@@ -8,7 +8,9 @@ pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
 pub mod structure;
 pub use structure::{EnvSummary, PsychSummary, RoleVocabulary, structure};
 
-use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
+use hornvale_kernel::{
+    ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World, WorldTime,
+};
 
 /// Predicate relating a settlement to a caste present in it.
 /// type-audit: bare-ok(identifier-text)
@@ -94,7 +96,7 @@ pub fn genesis(
             predicate: SUBSISTENCE.to_string(),
             object: Value::Text(env.subsistence.name().to_string()),
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: "culture".to_string(),
         },
         &world.registry,
@@ -106,7 +108,7 @@ pub fn genesis(
                 predicate: HAS_CASTE.to_string(),
                 object: Value::Text(caste),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: "culture".to_string(),
             },
             &world.registry,

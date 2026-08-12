@@ -74,7 +74,7 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
     let mut checked = 0usize;
     for old in FIXTURE.lines() {
         let room = room_of(old);
-        let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let json = serde_json::to_string(&loc).unwrap();
         let cut = json
             .find(",\"channel_distance\"")
@@ -122,7 +122,7 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     let mut seen: Vec<Transverse> = Vec::new();
     for line in FIXTURE.lines() {
         let room = room_of(line);
-        let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let doc: Value = serde_json::from_str(&serde_json::to_string(&loc).unwrap()).unwrap();
         let (Some(d), Some(edges)) = (
             doc["channel_distance"].as_f64(),
@@ -188,7 +188,7 @@ fn the_ordinal_is_recoverable_as_a_function_over_a_room() {
     let mut seen: Vec<Transverse> = Vec::new();
     for line in FIXTURE.lines() {
         let room = room_of(line);
-        let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let doc: Value = serde_json::from_str(&serde_json::to_string(&loc).unwrap()).unwrap();
         let (Some(d), Some(edges)) = (
             doc["channel_distance"].as_f64(),
@@ -241,7 +241,7 @@ fn the_distance_and_the_bands_are_one_reading() {
     let ctx = LocaleContext::build(&world).unwrap();
     for line in FIXTURE.lines() {
         let room = room_of(line);
-        let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let reading = ctx.terrain().channels().bank_reading(room.centroid());
         assert_eq!(
             (loc.channel_distance, loc.channel_bands),
@@ -274,7 +274,7 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let room = room_of(FIXTURE.lines().next().unwrap());
-    let loc = ctx.describe(&room, WorldTime { day: 0.0 }).unwrap();
+    let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
 
     assert_eq!(
         loc.resolution.grid_resolution_fields,

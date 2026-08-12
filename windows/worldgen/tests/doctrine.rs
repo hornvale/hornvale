@@ -16,7 +16,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_kernel::test_lineage;
-use hornvale_kernel::{EntityId, Fact, Value};
+use hornvale_kernel::{EntityId, Fact, Value, WorldTime};
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
 use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from};
@@ -70,7 +70,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_settlement::IS_SETTLEMENT.to_string(),
                 object: Value::Flag(true),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,
@@ -87,7 +87,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_terrain::facts::TERRAIN_PIN.to_string(),
                 object: Value::Text("globe-level=4".to_string()),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,
@@ -100,7 +100,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_species::PEOPLED_BY.to_string(),
                 object: Value::Text(species.to_string()),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,
@@ -117,7 +117,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_religion::IS_BELIEF.to_string(),
                 object: Value::Flag(true),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,
@@ -130,7 +130,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_religion::HELD_BY.to_string(),
                 object: Value::Entity(settlement),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,
@@ -143,7 +143,7 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
                 predicate: hornvale_religion::CULT_FORM.to_string(),
                 object: Value::Text(cult_form.to_string()),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: provenance(),
             },
             &w.registry,

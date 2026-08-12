@@ -45,7 +45,14 @@ fn history_skeleton_is_byte_identical_across_two_builds() {
 fn history_now_is_committed_and_matches_the_bake_end_year() {
     // The T8 fix: `history-now` is a committed fact, not an approximation —
     // assert it is present and equals `BakeConfig::default_millennia().end_year`
-    // (2000.0), the value `windows/almanac::history::present_day` now reads.
+    // (2000.0), the value `windows/almanac::history::present_year` now reads.
+    //
+    // The Ell: `end_year` is a bake YEAR and the ledger speaks DAYS, so the
+    // committed object is that year crossed once through
+    // `ledger_day_of_bake_year`. Asserted through the named crossing rather
+    // than against a literal 730500.0, so the claim stays "the committed
+    // present IS the bake's end year, in the ledger's unit" instead of
+    // becoming a number nobody can re-derive.
     let w = build_settlements();
     let now = w
         .ledger
@@ -54,7 +61,9 @@ fn history_now_is_committed_and_matches_the_bake_end_year() {
         .expect("the composition root commits history-now once per world");
     assert_eq!(
         now.object,
-        hornvale_kernel::Value::Number(hornvale_worldgen::BakeConfig::default_millennia().end_year),
-        "history-now must equal the bake's end_year"
+        hornvale_kernel::Value::Number(hornvale_worldgen::ledger_day_of_bake_year(
+            hornvale_worldgen::BakeConfig::default_millennia().end_year
+        )),
+        "history-now must equal the bake's end_year, expressed in standard days"
     );
 }

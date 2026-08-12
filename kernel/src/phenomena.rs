@@ -295,7 +295,7 @@ mod tests {
     }
 
     fn ctx() -> ObserverContext {
-        ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day: 0.0 })
+        ObserverContext::at(EntityId::new(1).unwrap(), WorldTime::GENESIS)
     }
 
     fn ph(kind: &str, salience: f64) -> Phenomenon {
@@ -405,11 +405,11 @@ mod tests {
 
     #[test]
     fn at_is_position_blind_and_at_position_carries_a_coord() {
-        let blind = ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day: 0.0 });
+        let blind = ObserverContext::at(EntityId::new(1).unwrap(), WorldTime::GENESIS);
         assert!(blind.position.is_none());
         let placed = ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             GeoCoord {
                 latitude: 12.0,
                 longitude: -30.0,

@@ -105,6 +105,274 @@
 //! chronicle. The honest cost: a ceiling that scales with the roster is a
 //! weaker discriminator on a large roster than a literal was on a small one.
 //!
+//! **The Muster (2026-08-11): two stores this guard reads were empty, so the
+//! affinity rows could not reach the number it asserts on.**
+//! `peopled_components` below built its component set with five stores left as
+//! `ComponentStore::new()`. Two of those five are read by
+//! `demography_report_with_beta_from` on the exact path to `byproducts.strife`
+//! — `habitat_realm` and `biome_affinity`
+//! (`windows/worldgen/src/lib.rs:1734-1753`) — and both are SPARSE stores read
+//! through a default on absence (`HabitatRealm::SURFACE`; `None` = unrestricted
+//! at every biome). An empty store therefore raised nothing: it silently
+//! supplied the null hypothesis, and every authored affinity row scored
+//! identically here. Measured at the frozen β over this test's own five seeds,
+//! with the two stores decomposed because they went live in the same change:
+//!
+//! | component set | realm rows | affinity rows | mean claimed diversity | Δ vs blind |
+//! |---|---|---|---|---|
+//! | pre-Muster (both stores empty) | 0 | 0 | 2.3734235460211663 | — |
+//! | realm only | 1 | 0 | 2.3678005458279160 | −0.0056 (0.24%) |
+//! | **affinity only** | 0 | 7 | 2.2024420744011466 | **−0.1710 (7.2%)** |
+//! | repaired, as shipped | 1 | 7 | 2.1127601185602627 | −0.2607 (11.0%) |
+//! | full canonical (`WorldComponents::assemble()`) | 3 | 8 | 1.5063123260334543 | — |
+//!
+//! **Attribute that carefully.** The combined 11% is *not* the biome-affinity
+//! effect. The two stores are not additive — −0.0056 + −0.1710 = −0.1766
+//! against a combined −0.2607, so ≈0.084, a third of the total, is interaction
+//! between the single realm row and the affinity rows. Affinity's own
+//! contribution is **−0.171, 7.2%**; size anything against that figure, not
+//! against 11%. The other three empty stores (`deity`, `culture`, `material`)
+//! stay empty deliberately and the code says why; no build or demography path
+//! reads them off `wc`.
+//!
+//! **What this does and does not establish.** It establishes that an affinity
+//! change now reaches this assertion's number, which it demonstrably could not
+//! before. It does *not* establish that the guard can go red on any affinity
+//! change: a uniform rescale of the affinity **level**, holding its per-biome
+//! shape fixed, moves the mean the wrong way (up, to ≈2.495) and still passes,
+//! while a change to the per-biome **shape** — each kind given a distinct
+//! stronghold biome — drives it to ≈1.334 and fails beneath the floor. So what
+//! is demonstrated is sensitivity to affinity *structure*. Whether the level
+//! alone can be made to redden this band is settled by the positive control in
+//! the next section, and the answer is *not at today's reach*. (A trap that
+//! section had to steer around: an over-strong affinity crush makes the world
+//! claim no cells at all and trips `claimed_diversity`'s `assert!(n > 0)`
+//! before the band is ever evaluated — a red for the wrong reason.)
+//!
+//! **The Muster's positive control (2026-08-11): what reddens this guard, and
+//! what does not.** A repaired guard that stays green proves nothing, so the
+//! campaign owed a mutation that makes this assertion fail. What it got is a
+//! *qualified* confirmation, and the qualification is the finding.
+//!
+//! Every arm below is test-fixture-only — nothing under `domains/species/` is
+//! edited. A row is mutated by inverting it to its authored preference vector
+//! and rebuilding it at a new level, so the authored **shape** is carried
+//! through unchanged:
+//!
+//! ```text
+//!   pref = (factor - level) / (1 - level)             // invert
+//!   row  = BiomeAffinity::from_preferences(l, pref)   // rebuild at level l
+//!   l(d) = level - (d - 1) * (1 - level)              // the depth knob
+//! ```
+//!
+//! `d` is the PENALTY DEPTH: `d = 1` is the shipped level exactly, `d = 0` sets
+//! every factor to `1.0` (affinity off), and `d > 1` drives the level below its
+//! authored value toward the hard-exclusion `0`. Write `l(d)` in the form
+//! above and not as the algebraically identical `1 - d * (1 - level)`, which is
+//! one ULP off at `d = 1` and costs the bit-exact reproduction of the shipped
+//! rows that makes the whole sweep interpretable.
+//!
+//! **`l(d)` is CLAMPED at `0`, and past a certain depth that clamp binds.**
+//! `BiomeAffinity::from_preferences` documents `floor ∈ [0, 1)` as a caller's
+//! contract, so every arm here takes `l(d).max(0.0)`. Where the clamp binds, the
+//! arm has stopped being a graded level penalty for that kind and become a hard
+//! exclusion off its shape — which is a real change in *kind*, not only in
+//! degree, and any reader re-running these sweeps needs to know where it starts.
+//! Depths at which it first binds are noted with each arm below. A trap for
+//! whoever re-implements this: leaving the clamp OUT reproduces some arms
+//! exactly and not others. A row whose only rung is preference `1.0` has factor
+//! `l + (1 - l)·1.0 = 1.0` at *any* level, so its level sets only the
+//! off-stronghold default, and `pack` filters a non-positive `K` as absence
+//! (`k > 0.0`) whether that `K` is zero or negative — clamped and unclamped are
+//! then the same input. Verified on the fired arm below: clamped and unclamped
+//! agree to the last digit at `d = 1.60` and `d = 1.70`. On the common-shape
+//! arm, whose rows carry five graded rungs, they do not.
+//!
+//! **The level alone, at today's reach, cannot redden this guard.** Its WHOLE
+//! attainable range over the seven authored rows, five seeds, frozen β, each
+//! arm building its own worlds exactly as the test below does:
+//!
+//! | arm (the 7 authored rows) | mean claimed diversity | verdict |
+//! |---|---|---|
+//! | `d = 0.00` — level 1, affinity off | 2.3678005458279161 | PASS |
+//! | `d = 1.00` — SHIPPED | 2.1127601185602627 | PASS |
+//! | `d = 1.20` | 2.0817935086273343 | PASS |
+//! | `d = 1.40` — the level's MINIMUM | 2.0691689632978352 | PASS |
+//! | level `0` — hard exclusion off-shape | 2.9734723549133930 | PASS |
+//!
+//! The floor sits 0.569 below that minimum and the ceiling 10.5 above that
+//! maximum. Two mechanisms hold it there, and they are different in kind:
+//!
+//! 1. **The ceiling is unreachable in principle, by any mutation of this
+//!    store.** `strife` cannot exceed the number of species PRESENT in a cell,
+//!    and the mean claimed cell holds 6.44 of the 18 (pooled over the five
+//!    seeds' 177 336 claimed cells). A mean of 13.5 asks for more coexistence
+//!    than the world puts in a cell at all. This band can only ever be failed
+//!    from below.
+//! 2. **The floor asks for dominance, and the level cannot manufacture it at
+//!    partial reach.** The level is a biome-INDEPENDENT scalar on a kind's `K`,
+//!    so it registers only as a *contrast* between kinds that carry a row and
+//!    kinds that do not. That contrast is not thin — the seven carriers hold
+//!    61.2% of claimed-cell density — but deepening it SUPPRESSES those seven,
+//!    which evens out the survivors instead of concentrating them. Driven to
+//!    the extreme (level `0`: hard exclusion everywhere off the authored shape)
+//!    the mean *rises* to 2.97, away from the only edge it could cross. The
+//!    level's total downward reach from the shipped value is 0.043.
+//!
+//! **The level DOES redden it once the rows reach the whole roster.** Same
+//! knob, same round trip, all seven authored shapes unchanged. The eleven kinds
+//! with no authored row are each given one row whose ONLY rung is
+//! `(land[i % 12], 1.0)`, at their own `sovereignty_floor` as level — where
+//! `land` is the twelve non-marine names of `hornvale_climate::biome::ALL` in
+//! declaration order and **`i` is the kind's position among all EIGHTEEN
+//! peopled kinds** (`wc.biosphere` order, ascending `KindId`), not its position
+//! among the eleven. State that index expression exactly; the obvious reading —
+//! the eleven added kinds taking `land[0..10]` — is a DIFFERENT arm and it does
+//! not redden the guard (below). The assignment it produces:
+//!
+//! ```text
+//!   black-dragon  pos  0 -> ice          hill-dwarf  pos  9 -> tropical-seasonal-forest
+//!   bugbear       pos  1 -> tundra       hobgoblin   pos 10 -> tropical-rainforest
+//!   desert-dwarf  pos  2 -> taiga        human       pos 11 -> alpine
+//!   goblin        pos  6 -> temperate-rainforest      kobold      pos 12 -> ice
+//!   gully-dwarf   pos  7 -> desert       red-dragon  pos 13 -> tundra
+//!   white-dragon  pos 16 -> shrubland
+//! ```
+//!
+//! **Read that table before reusing the word "distinct" about it.** The modulo
+//! wraps: `kobold` collides with `black-dragon` on `ice` and `red-dragon` with
+//! `bugbear` on `tundra`, so eleven added rows hold **nine** biomes, and three
+//! of the twelve (`temperate-grassland`, `temperate-forest`, `savanna` — three
+//! of the largest) are held by nobody. An earlier revision of this section
+//! called the assignment "distinct". It is not, and the difference is
+//! load-bearing (below).
+//!
+//! | arm (all 18 kinds carry a row) | mean | verdict |
+//! |---|---|---|
+//! | `d = 1.00` (the 7 authored rows bit-identical to shipped) | 2.5789073591583951 | PASS |
+//! | `d = 1.60` — the clamp first binds here (`goblin`, `kobold`) | 1.5473196487276366 | PASS |
+//! | **`d = 1.70`** | **1.4155085834088321** | **RED, beneath the floor** |
+//!
+//! Reach and shape are held fixed across those three rows; only the level
+//! moves. It fails through the BAND — every seed still claims cells at every
+//! arm, so `assert!(n > 0)` is never the thing that fires. And the seven-row
+//! `d = 1.00` arm reproduces 2.1127601185602627 exactly, which is this sweep's
+//! own check that it interpolates the shipped world rather than a neighbour of
+//! it (the control §6 of the campaign spec generalises).
+//!
+//! **The qualification, stated as the property this guard actually has.** Two
+//! things had to be true before the level could cross an edge, and only the
+//! first is the one a reader would guess.
+//!
+//! *Reach is necessary and nowhere near sufficient.* Widening the reach to all
+//! eighteen kinds while giving them a COMMON shape (wood-elf's preference
+//! vector, each kind at its own floor) leaves the level unable to cross at any
+//! depth. Sampled, with the clamp first binding at `d ≈ 1.45` (`kobold`):
+//!
+//! | common-shape arm | mean | verdict |
+//! |---|---|---|
+//! | `d = 0.00` | 2.3678005458279161 | PASS |
+//! | `d = 1.00` | 2.5792222335344528 | PASS |
+//! | `d = 1.20` — the in-contract MAXIMUM | 2.7322885440849425 | PASS |
+//! | `d = 1.44` — the deepest in-contract depth | 2.5430858241183563 | PASS |
+//! | `d = 1.74` (clamp binding) | 2.5754000977512357 | PASS |
+//! | `d = 1.80` (clamp binding for 10 of 18) | 4.3914867404688325 | PASS |
+//! | level `0` | 5.4146996869217450 | PASS |
+//!
+//! An earlier revision quoted three of those points as "a span of 0.21 across
+//! the whole depth range". That was a three-point sample of a NON-MONOTONE
+//! response and it understated the level's effect: the in-contract span is at
+//! least 0.365 (`d = 0.00` to `d = 1.20`, an interior maximum above both
+//! endpoints), and carried to the same off-shape `level = 0` endpoint the
+//! authored-roster table uses it is 3.05. The conclusion survives and is
+//! stronger than the arithmetic that was quoted for it: **no common-shape arm
+//! crosses either edge at any depth sampled**, including one that more than
+//! doubles claimed-cell diversity. (5.41 is also still far under the ceiling of
+//! 13.5, which is mechanism 1 above showing up from the other side.)
+//!
+//! *Differentiation is necessary and ALSO not sufficient.* Two full-reach,
+//! per-kind-differentiated assignments of identical construction disagree on
+//! the verdict:
+//!
+//! | assignment of the 11 added rows | `d = 1.00` | `d = 1.70` | Δ | verdict at 1.70 |
+//! |---|---|---|---|---|
+//! | `land[i % 12]`, `i` over all 18 (9 biomes, 2 collisions) | 2.5789073591583951 | 1.4155085834088321 | −1.163 | **RED** |
+//! | the same, with only the two collisions moved onto two unused biomes | 2.7441247810223062 | 1.5222025802564441 | −1.222 | PASS |
+//! | fully distinct: the 11 added kinds take `land[0..10]` | 2.7514058715031107 | 1.8150142892666530 | −0.936 | PASS |
+//!
+//! The fully distinct arm does not cross at `d = 1.74`, `1.90` or `2.20` either
+//! (1.6876 / 1.7626 / 1.6945), so it is not merely slower to arrive. **The
+//! collisions are load-bearing**: repairing those two rows alone, changing
+//! nothing else, moves `d = 1.70` from 1.4155 to 1.5222 and the verdict from RED
+//! to PASS.
+//!
+//! Read the Δ column rather than the verdict column for the physics. The level's
+//! EFFECT is large and stable across all three arrangements — it removes about
+//! 1.0–1.2 of diversity in every one. What the arrangement decides is where the
+//! `d = 1.00` baseline sits, and therefore whether that consistent effect lands
+//! short of the floor or past it. So:
+//!
+//! > `beta_yields_realistic_coexistence` detects the biome-affinity level only
+//! > on a roster whose rows both reach every kind and point at different ground,
+//! > and even then whether the level crosses the floor depends on the particular
+//! > arrangement: three assignments differing only in which kind holds which
+//! > biome move the mean by −0.94 to −1.22, and one of the three crosses. At
+//! > today's seven overlapping rows in eighteen kinds the guard detects the
+//! > level at no value whatsoever.
+//!
+//! That is a weaker property than "the guard can see the level", and it is the
+//! one the measurements support. A1 is confirmed — a level-only mutation with
+//! reach, shape and seeds held fixed does redden this guard — but the control is
+//! an existence proof, not a demonstration that the band tracks the level.
+//!
+//! Nor does either row group's level carry that red on its own (measured on a
+//! shared-world probe, so read the third digit as approximate): with both
+//! groups at `d = 1.70` the mean is 1.414; moving only the eleven added rows
+//! gives 1.738 and moving only the seven authored rows gives 2.436, both PASS.
+//! Parts of −0.842 and −0.143 against a combined −1.165 — about 15%
+//! interaction. The red is a property of the roster, not of a subset of it.
+//!
+//! **The roster decides the verdict, so the assertion now names its roster.**
+//! The band `[1.5, 0.75 × oatmeal]` is scored over the PEOPLED kinds — the
+//! `psyche` key-set, 18 today. Scored instead over the 39-row biosphere, the
+//! same worlds at the same β read 1.5063123260334543: against the floor of
+//! **1.5 then in force** that is a margin of +0.0063, with two of five seeds
+//! (1.3483, 1.3784) individually beneath that floor. (Both figures are dated
+//! deliberately. The floor is expected to move — `BIO-40` is an open row asking
+//! for exactly that recalibration — and a recorded margin is only meaningful
+//! against the floor it was recorded against.) Both rosters pass, so the
+//! campaign's predicted verdict *flip* did not reproduce on this tree — the
+//! spec expected ≈1.42–1.46 and failure over the biosphere, and the measurement
+//! says otherwise. Recorded as the falsification it is rather than adjusted to
+//! recover the prediction. What survives is the sharper half: a margin of 0.4%
+//! of the floor
+//! is not a band that means the same thing under both readings, and the
+//! published figure for this bound does not state which instrument produced it.
+//! Hence the roster in the failure message.
+//!
+//! **Re-verified after The Ell (2026-08-12): every figure above still
+//! reproduces to the last digit.** The Ell retyped `Fact.day` as an enforcing
+//! [`hornvale_kernel::WorldTime`] (decision 0126, superseding 0014) and moved
+//! the history bake from years to days. That is an epoch, and it is the obvious
+//! candidate to have moved these numbers, so they were re-measured rather than
+//! restated: an independent probe on the post-absorption tree rebuilt every arm
+//! recorded above — the four-arm store decomposition, the biosphere arm and its
+//! per-seed array, the level-only null, all three full-reach arrangements, the
+//! common-shape sweep, the clamp onsets, the clamped-versus-unclamped pair, the
+//! 177 336 claimed cells at 6.4351 kinds each, and seed 42's 7-of-7 / 11-of-11
+//! ranking split — and every one is **bit-identical** to what is written here.
+//!
+//! The reason is structural rather than lucky, and it is worth stating because
+//! it says which future changes *would* reach these tables. This guard builds
+//! only to [`BuildDepth::Terrain`] and reads `byproducts.strife`. The
+//! quantities The Ell retyped are a fact's day — committed at
+//! `WorldTime::GENESIS` on this rung, so a retyping that preserves day zero
+//! preserves the world — and a founding's and an ending's year, which are
+//! authored by the history bake at [`BuildDepth::Settlements`] and above,
+//! strictly downstream of everything recorded here. A units change lands on
+//! these numbers only if it reaches terrain, climate, the affinity/realm stores
+//! or the packer; The Ell reached none of the four.
+//!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
 //! carrying capacities, β only moves claimed-cell diversity across a narrow
@@ -173,10 +441,16 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     sum / f64::from(n)
 }
 
-/// The 4-goblinoid peopled component set: the canonical registries scoped to
-/// the peopled kinds (the `psyche` key-set — fauna are biosphere-only, so they
-/// carry no psyche row). Byte-identical to the four-goblinoid component set the
-/// freeze was originally preregistered against.
+/// The peopled component set: the canonical registries scoped to the peopled
+/// kinds (the `psyche` key-set — fauna are biosphere-only, so they carry no
+/// psyche row). This is the roster the band is scored over, and the assertion
+/// below says so in its failure message; see the module doc's Muster section
+/// for why that matters and what the biosphere reading is instead.
+///
+/// The scoping is by KEY-SET, never by a hand-written list: every store here
+/// filters a live canonical registry, so a kind added to the registries appears
+/// here without anyone editing this file. That is also why `habitat_realm` and
+/// `biome_affinity` must be filtered rather than left empty — see below.
 fn peopled_components() -> WorldComponents {
     use hornvale_kernel::{ComponentStore, KindId};
     let psyche = hornvale_species::psyche_registry();
@@ -192,6 +466,30 @@ fn peopled_components() -> WorldComponents {
         .filter(|(k, _)| peopled.contains(k))
         .map(|(k, v)| (*k, *v))
         .collect();
+    // THE MUSTER: these two stores were `ComponentStore::new()` until now, and
+    // that made this guard structurally blind to the two quantities it is most
+    // supposed to see. `demography_report_with_beta_from` reads exactly three
+    // stores off `wc` on the path to `byproducts.strife`
+    // (`windows/worldgen/src/lib.rs:1728-1753`): `biosphere`, then
+    // `habitat_realm`, then `biome_affinity` — all three iterated in the same
+    // `wc.biosphere` order so they stay index-aligned. Both sparse stores read
+    // through a default on absence (`HabitatRealm::SURFACE`; `None` =
+    // unrestricted at every biome), so an EMPTY store is not an error — it is
+    // silently the null hypothesis, and every authored affinity level scored
+    // identically here. They now hold the live rows, scoped to the peopled
+    // key-set exactly as `biosphere` and `family_of` above are.
+    let habitat_realm: ComponentStore<KindId, hornvale_species::HabitatRealm> =
+        hornvale_species::habitat_realm_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, *v))
+            .collect();
+    let biome_affinity: ComponentStore<KindId, hornvale_species::BiomeAffinity> =
+        hornvale_species::biome_affinity_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
     WorldComponents::from_stores(
         biosphere,
         psyche,
@@ -201,20 +499,31 @@ fn peopled_components() -> WorldComponents {
         hornvale_language::lexicon_registry(),
         hornvale_language::family_proto(),
         family_of,
+        // deity / culture / material stay EMPTY deliberately, not by oversight:
+        // no build or demography path reads them off `wc`. Their only readers
+        // in the whole workspace are `WorldComponents::kinds_with` and
+        // `kinds` (`windows/worldgen/src/components.rs:206-228`), pure
+        // reflection over the roster, which this guard never calls. Filling
+        // them would add non-peopled deity/culture/material kinds to
+        // `wc.kinds()` and widen the roster this test names.
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
-        ComponentStore::new(),
-        ComponentStore::new(),
+        habitat_realm,
+        biome_affinity,
     )
     .expect("the peopled-only component set is well-formed")
 }
 
 /// The preregistered freeze check: at the frozen β, the mean per-claimed-cell
-/// effective diversity across a handful of seeds lands in `[1.5, 3.0]` — see
-/// the module doc for the niche-era re-baseline and the weak-knob caveat.
+/// effective diversity across a handful of seeds lands in the band
+/// `[MONOCULTURE_FLOOR, OATMEAL_FRACTION × peopled_count]` — `[1.5, 13.5]` at
+/// today's 18 peopled kinds. The ceiling is DERIVED (The Delvers) and the
+/// literal `3.0` this line used to name is the retired pre-Delvers value; see
+/// the module doc for that re-baseline, the niche-era one, and the weak-knob
+/// caveat.
 /// claim: readout(preregistered) — mean per-claimed-cell diversity across
-/// SEEDS, frozen band [1.5, 3.0]
+/// SEEDS over the PEOPLED roster, band [1.5, 0.75 x peopled_count]
 #[test]
 fn beta_yields_realistic_coexistence() {
     // This freeze is preregistered against "the shipped 4-goblinoid roster"
@@ -235,6 +544,23 @@ fn beta_yields_realistic_coexistence() {
     /// where `strife` approaches the peopled-species count. `0.75` preserves
     /// the original preregistration exactly: `3.0` against a 4-people roster.
     const OATMEAL_FRACTION: f64 = 0.75;
+    /// THE MUSTER, recorded 2026-08-11: the same quantity measured over the
+    /// FULL 39-row biosphere (`WorldComponents::assemble()`) instead of the
+    /// peopled roster, same seeds, same β. A historical datum, not a live
+    /// read — the guard does not pay for a second 39-kind arm on every run.
+    const BIOSPHERE_PER_SEED_AT_MUSTER: [f64; 5] = [
+        1.5057753776200489,
+        1.378426262285174,
+        1.7867721889108887,
+        1.512329406007136,
+        1.3482583953440246,
+    ];
+    /// The floor in force when [`BIOSPHERE_PER_SEED_AT_MUSTER`] was recorded.
+    /// Kept beside the measurement so the recorded margin stays interpretable
+    /// after `MONOCULTURE_FLOOR` moves — `BIO-40` is an open row asking for
+    /// exactly that recalibration, and a margin quoted against an unnamed
+    /// floor goes silently false the moment the floor changes.
+    const FLOOR_WHEN_BIOSPHERE_MEASURED: f64 = 1.5;
 
     let per_seed: Vec<(u64, f64)> = SEEDS
         .iter()
@@ -250,6 +576,33 @@ fn beta_yields_realistic_coexistence() {
     let oatmeal = wc.psyche.len() as f64;
     let ceiling = OATMEAL_FRACTION * oatmeal;
 
+    // THE MUSTER: the band's verdict depends on WHICH POPULATION is counted,
+    // not on the physics alone, so the assertion names its own roster. A red
+    // gate must identify its instrument as well as its number.
+    //
+    // Everything the message says about the biosphere arm is either DATED to
+    // the floor it was measured against or DERIVED from the floor in force on
+    // this run. Nothing is a frozen margin quoted beside a live constant: that
+    // pairing is exactly how a failure message starts printing arithmetic
+    // nobody measured once someone moves the floor.
+    let affinity_rows = wc.biome_affinity.len();
+    let biosphere_rows = hornvale_species::biosphere_registry().len();
+    let biosphere_mean: f64 = BIOSPHERE_PER_SEED_AT_MUSTER.iter().sum::<f64>()
+        / BIOSPHERE_PER_SEED_AT_MUSTER.len() as f64;
+    // Recorded margin, against the floor named beside the measurement.
+    let biosphere_margin_then = biosphere_mean - FLOOR_WHEN_BIOSPHERE_MEASURED;
+    let below_then = BIOSPHERE_PER_SEED_AT_MUSTER
+        .iter()
+        .filter(|d| **d < FLOOR_WHEN_BIOSPHERE_MEASURED)
+        .count();
+    // The same recorded reading placed against THIS run's floor. Both of these
+    // stay arithmetically true if `MONOCULTURE_FLOOR` moves.
+    let biosphere_margin_now = biosphere_mean - MONOCULTURE_FLOOR;
+    let below_now = BIOSPHERE_PER_SEED_AT_MUSTER
+        .iter()
+        .filter(|d| **d < MONOCULTURE_FLOOR)
+        .count();
+    let n_seeds = BIOSPHERE_PER_SEED_AT_MUSTER.len();
     assert!(
         (MONOCULTURE_FLOOR..=ceiling).contains(&mean),
         "mean per-claimed-cell diversity at beta={} across seeds {per_seed:?} = {mean}, \
@@ -257,7 +610,21 @@ fn beta_yields_realistic_coexistence() {
          is 1 whatever the roster size) and the ceiling is {OATMEAL_FRACTION} x oatmeal, \
          where oatmeal = {oatmeal} peopled species. If this fails ABOVE the ceiling the \
          world has gone undifferentiated; BELOW the floor it has gone monocultural. Do not \
-         replace the derived ceiling with a literal.",
-        hornvale_demography::BETA
+         replace the derived ceiling with a literal.\n\
+         ROSTER: this number was measured over the {oatmeal} PEOPLED kinds — the `psyche` \
+         key-set, with every other canonical registry filtered to it — of which \
+         {affinity_rows} carry a biome-affinity row. It is NOT the {biosphere_rows}-row \
+         biosphere, and the distinction changes the reading rather than the world.\n\
+         THE OTHER ROSTER, as recorded by The Muster on 2026-08-11 (a dated measurement, \
+         not a live read): the same seeds at the same beta over the full biosphere gave \
+         mean {biosphere_mean}, which against the floor of \
+         {FLOOR_WHEN_BIOSPHERE_MEASURED} then in force was a margin of \
+         {biosphere_margin_then:+}, with {below_then} of {n_seeds} seeds beneath that \
+         floor. Placed against the floor THIS run used ({MONOCULTURE_FLOOR}), that same \
+         recorded mean sits {biosphere_margin_now:+}, with {below_now} of {n_seeds} seeds \
+         beneath it. When those two disagree in sign, the two rosters disagree on the \
+         verdict — and this band was preregistered about the peopled one. Before deciding \
+         the band is wrong, check which population you are counting.",
+        hornvale_demography::BETA,
     );
 }

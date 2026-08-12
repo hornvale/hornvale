@@ -23,7 +23,9 @@ use crate::{language_of_wc, morph_options};
 pub const MEMORY_DEPTH: usize = 20;
 
 /// One remembered founder: an identity plus where it came from.
-/// type-audit: bare-ok(index: occupation), waiver(decision-0014: founded)
+/// `founded` stays a bare `f64`: it is the bake's year, not a `Fact.day`, and
+/// it crosses to days at the emit boundary (decision 0126, superseding 0014).
+/// type-audit: bare-ok(index: occupation), waiver(decision-0126: founded)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Founder {
     /// The stable identity, expandable by `persona_of`.
@@ -34,7 +36,9 @@ pub struct Founder {
     pub people: KindId,
     /// The community whose occupation they founded.
     pub community: EntityId,
-    /// The occupation's founding day — this founder's birth.
+    /// The occupation's founding, as the bake's **year** — the unit an
+    /// `OccupationRecord` carries. [`promote`] crosses it into standard days
+    /// before any life-history arithmetic touches it.
     pub founded: f64,
 }
 
@@ -43,6 +47,10 @@ pub struct Founder {
 ///
 /// This is the record of an authorized fidelity cut, not an error: see
 /// [`select_founders`] for why a drop is possible at all and what it costs.
+/// Since The Ell widened the handle it is **empty on every seed in the census
+/// range** and fires on two worlds in 0–2999; the type stays because the drop
+/// stays reachable, and a cut no caller can see is the thing this project
+/// refuses.
 /// type-audit: bare-ok(index: occupation), bare-ok(index: kept)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnrememberedFounder {
@@ -67,8 +75,8 @@ pub struct FounderCast {
     /// The founders the world remembers, in promotion order. Handles are
     /// distinct across the whole cast.
     pub remembered: Vec<Founder>,
-    /// The founders it could not remember — empty on all but roughly two
-    /// worlds in a thousand.
+    /// The founders it could not remember — empty on every world in the census
+    /// range 0–999 since The Ell, and on all but two worlds in 0–2999.
     pub unremembered: Vec<UnrememberedFounder>,
 }
 
@@ -82,36 +90,40 @@ pub struct FounderCast {
 ///
 /// # Indistinguishable occupations are dropped, not fatal
 ///
-/// [`hornvale_history::flesh::founder_handle`] keys on
-/// `(people, site, founded, ended, peak_population)` and excludes the
-/// occupation's entity id (decision 0051), so two occupations agreeing on all
-/// five derive the **same handle by construction**. Every measured pair is one
-/// physical story: a same-day founding-and-flight cascade, `founded == ended`,
-/// one site, one people, one day. The four ranking keys tie for such a pair by
-/// the same construction, so the order alone cannot separate them.
+/// [`hornvale_history::flesh::founder_handle`] excludes the occupation's
+/// entity id (decision 0051), so two occupations agreeing on everything it
+/// *does* read derive the **same handle by construction**. The four ranking
+/// keys tie for such a pair by the same construction, so the order alone
+/// cannot separate them.
 ///
 /// This function used to `assert!` that no two cast members shared a handle,
-/// and a world that produced one **died**: seeds 283 and 705 both sit inside
-/// the census range 0–999, so the once-per-campaign census could not run. A
-/// generator that dies on a legal seed is a liveness bug whatever the key is,
-/// and the campaign's diagnosis measured that *no* candidate key is provably
-/// total — the best scored (parent **and** ender material keys) still leaves
-/// two whole-record twin pairs in 3000 worlds. So the guard could never have
-/// been discharged by widening alone.
+/// and a world that produced one **died**: under the pre-Ell key, seeds 283 and
+/// 705 both sat inside the census range 0–999, so the once-per-campaign census
+/// could not run. A generator that dies on a legal seed is a liveness bug
+/// whatever the key is.
 ///
 /// What happens instead, by Nathan's ruling in The Radiation: the **first**
 /// member of a handle-equal group under the ranking above is promoted and the
 /// rest are dropped into [`FounderCast::unremembered`]. Nothing is backfilled,
 /// so that people ends one short of `MEMORY_DEPTH`: the world forgets a
 /// founder rather than remembering a different one, which is the smaller and
-/// more honest of the two shapes. The cost is real and bounded — measured over
-/// the census range, **2 worlds in 1000 lose exactly one founder each**; every
-/// other founder in every other world is untouched, because the drop can only
-/// fire where the handles were already equal.
+/// more honest of the two shapes.
 ///
-/// Widening the key is the known correct fix and is **deferred as an epoch**
-/// (it changes every founder's name in every world): the idea registry's
-/// `MEM-founder-handle-epoch` row carries the scoring and the cost.
+/// **The Ell widened the key, and the census range is now clean.** Re-measured
+/// on this tree over the whole of seeds 0–999 (`BuildDepth::Settlements`,
+/// default pins, 2026-08-11): **0 worlds collide and 0 founders are dropped**,
+/// against 2 and 2 before. Two worlds in 0–2999 still do — 2634 and 2898, one
+/// founder each — where the colliding pair's two *parents* are themselves
+/// twins, so the ancestry hop folds identically. The drop therefore stays: it
+/// is no longer the everyday cost of a bad key, it is the honest handling of a
+/// residual the campaign's own scoring said no candidate key removes.
+///
+/// **The guard below could not be restored to a fatal assert, and that is a
+/// measurement, not a preference.** The Ell's plan called for exactly that —
+/// remove the drop, let a collision panic. Building 2634 and 2898 shows what
+/// it would cost: two legal seeds that build today would stop building, which
+/// is the liveness bug The Radiation was authorized to remove. A proven red
+/// beats a claimed one.
 ///
 /// Determinism: the kept member follows from the existing ranking, and the
 /// scan below walks peoples in `BTreeMap` order and each people in ranked
@@ -128,6 +140,18 @@ pub struct FounderCast {
 /// `promote` turns a handle into a person's name, and two people sharing a
 /// name would be a silent merge of two identities.
 pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
+    // The ancestry hop `founder_handle` folds. Resolved HERE, at the caller,
+    // because `domains/history` holds no world and cannot follow an `EntityId`
+    // to its referent — the same division of labour `layer_key` has taken
+    // since The Salt. Built once for the whole record set and indexed by
+    // record position, so the ranking comparator below reads a handle rather
+    // than recomputing one on every comparison.
+    let coords = crate::history_emit::founding_coords_by_id(records);
+    let handles: Vec<RoleHandle> = records
+        .iter()
+        .map(|r| founder_handle(r, crate::history_emit::parent_coords(r, &coords)))
+        .collect();
+
     let mut by_people: BTreeMap<&'static str, Vec<usize>> = BTreeMap::new();
     for (i, r) in records.iter().enumerate() {
         by_people.entry(r.core.people.0).or_default().push(i);
@@ -147,17 +171,18 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
                 .cmp(&x.core.peak_population)
                 .then(x.core.site.0.cmp(&y.core.site.0))
                 .then(x.core.founded.total_cmp(&y.core.founded))
-                // The handle is the last ranking key, and two records reaching
-                // this leg with the same handle tie here too — which is exactly
-                // the case the drop below handles. Deliberately unchanged: a
-                // fifth key would reorder records that tie the first four
-                // *below* the MEMORY_DEPTH cut in worlds that never collide,
-                // moving worlds this repair must leave byte-identical.
-                .then(founder_handle(x).0.cmp(&founder_handle(y).0))
+                // The handle is the last ranking key. Still four keys, not
+                // five — but the handle's VALUE moved with The Ell's rewire,
+                // which is inherent to the epoch and not something to protect
+                // against: any world whose records tie the first three keys can
+                // see a different member fall inside the `MEMORY_DEPTH` cut.
+                // What a fifth key would have done — reorder ties in worlds
+                // that never collide — this does too, and deliberately.
+                .then(handles[a].0.cmp(&handles[b].0))
         });
         for &i in idxs.iter().take(MEMORY_DEPTH) {
             let r = &records[i];
-            let handle = founder_handle(r);
+            let handle = handles[i];
             if let Some(&kept) = kept_by_handle.get(&handle.0) {
                 unremembered.push(UnrememberedFounder {
                     handle,
@@ -191,8 +216,12 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
             seen.insert(f.handle.0),
             "two promoted founders share handle {:#x} — the drop above is the \
              one thing standing between a handle collision and two people \
-             carrying one name, so reaching here means it was removed or \
-             bypassed, not that a new collision appeared.",
+             carrying one name, and it is keyed on the SAME handle this loop \
+             reads, so it cannot leave a duplicate behind. Reaching here means \
+             the drop was removed or bypassed. It does NOT mean a new collision \
+             appeared: a new collision is absorbed by the drop and shows up as \
+             a `FounderCast::unremembered` entry, which \
+             `windows/worldgen/tests/founder_collision.rs` pins per seed.",
             f.handle.0
         );
     }
@@ -208,7 +237,9 @@ pub fn select_founders(records: &[OccupationRecord]) -> FounderCast {
 /// value is local to an earlier stage's closure and out of scope here.
 ///
 /// Birth is `founded − age_at_maturity` and death is `birth + lifespan`, both
-/// from `domains/species::allometry::life_history`, which draws nothing. The
+/// from `domains/species::allometry::life_history`, which draws nothing, and
+/// **all three in standard days** — the founding crosses out of the bake's
+/// years once, at the top of the loop below. The
 /// `person-died` fact is committed only once that day has passed at `now`; a
 /// living person is the absence of one. A species with no lifespan
 /// (`Ametabolic`) yields no death fact either, which reads as "not known to have
@@ -218,7 +249,14 @@ pub fn promote(
     wc: &crate::components::WorldComponents,
 ) -> Result<Vec<EntityId>, crate::BuildError> {
     let records = crate::occupation_records(world);
-    let now = world
+    // Standard DAYS, straight off the ledger — deliberately NOT crossed back
+    // into bake years. Everything this function computes is a person's life in
+    // days (`Years::days()` off the allometry), so the present it filters
+    // against must be days too. This comparison is the whole defect The Ell
+    // repairs: `history-now` used to be committed as a bare year count, so a
+    // death in day-space was measured against a present in year-space and no
+    // founder could ever have died.
+    let now_days = world
         .ledger
         .find("history-now")
         .filter_map(|f| match f.object {
@@ -258,14 +296,19 @@ pub fn promote(
             .as_ref()
             .and_then(|l| l.age_at_maturity)
             .map_or(0.0, |y| y.days());
-        let birth_day = f.founded - maturity_days;
+        // `Founder::founded` comes off an `OccupationRecord`, which is a
+        // bake-side value in YEARS; a person's life history is in days. Cross
+        // once, here, so birth, death, the founding day committed on the person
+        // and the present they are all measured against are one unit (The Ell).
+        let founded_day = crate::history_emit::ledger_day_of_bake_year(f.founded);
+        let birth_day = founded_day - maturity_days;
         // Death follows BIRTH by a lifespan, not the founding, and is committed
-        // only once it has already passed at `now`.
+        // only once it has already passed at `now_days`.
         let death = life
             .as_ref()
             .and_then(|l| l.lifespan)
             .map(|y| birth_day + y.days())
-            .filter(|d| *d <= now);
+            .filter(|d| *d <= now_days);
         // Named here, where the language machinery already stands. `Namer` holds
         // no mutable stream and derives fresh per call, so this draw is on a
         // path disjoint from every other name in the world.
@@ -290,7 +333,7 @@ pub fn promote(
             community: f.community,
             name,
             birth_day,
-            founding_day: f.founded,
+            founding_day: founded_day,
             death_day: death,
         });
     }

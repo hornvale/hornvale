@@ -204,7 +204,7 @@ mod tests {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let agent = mint_flagship(&world, &ctx).unwrap();
-        let at = WorldTime { day: 0.0 };
+        let at = WorldTime::GENESIS;
         let vantage = observable(&world, &ctx, &agent, at).unwrap();
         let k = IdentityProjection.project(&vantage, &agent.perception);
         assert!(!k.0.is_empty(), "the agent knows something");
@@ -216,7 +216,7 @@ mod tests {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut agent = mint_flagship(&world, &ctx).unwrap();
-        let at = WorldTime { day: 0.0 };
+        let at = WorldTime::GENESIS;
         let mut k = IdentityProjection.project(
             &observable(&world, &ctx, &agent, at).unwrap(),
             &agent.perception,
@@ -237,7 +237,7 @@ mod tests {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let agent = mint_flagship(&world, &ctx).unwrap();
-        let at = WorldTime { day: 0.0 };
+        let at = WorldTime::GENESIS;
         let mut k = IdentityProjection.project(
             &observable(&world, &ctx, &agent, at).unwrap(),
             &agent.perception,

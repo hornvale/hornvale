@@ -169,9 +169,7 @@ fn surrounds_seed_1_json() -> String {
         hornvale_kernel::math::unit_sphere_from_lat_lon(0.0, 0.0),
         6,
     );
-    surrounds_json(
-        &surrounds_scene(&w, &observer, 4, hornvale_kernel::WorldTime { day: 0.0 }).unwrap(),
-    )
+    surrounds_json(&surrounds_scene(&w, &observer, 4, hornvale_kernel::WorldTime::GENESIS).unwrap())
 }
 
 #[test]
@@ -233,9 +231,7 @@ fn surrounds_seed_42_flagship_json() -> String {
         hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     );
-    surrounds_json(
-        &surrounds_scene(&w, &observer, 4, hornvale_kernel::WorldTime { day: 0.0 }).unwrap(),
-    )
+    surrounds_json(&surrounds_scene(&w, &observer, 4, hornvale_kernel::WorldTime::GENESIS).unwrap())
 }
 
 #[test]
@@ -291,7 +287,7 @@ fn seam_room() -> hornvale_kernel::RoomAddr {
 /// `hornvale_locale`.
 fn ways_on(ctx: &hornvale_locale::LocaleContext, room: &hornvale_kernel::RoomAddr) -> Vec<String> {
     let locale = ctx
-        .describe(room, hornvale_kernel::WorldTime { day: 0.0 })
+        .describe(room, hornvale_kernel::WorldTime::GENESIS)
         .expect("the gallery's pinned observers describe cleanly")
         .exits;
     locale
@@ -308,7 +304,7 @@ fn surrounds_ascii_coastline() -> String {
     let w = seed_42_world();
     let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
     let room = coastline_room();
-    let scene = surrounds_scene(&w, &room, 4, hornvale_kernel::WorldTime { day: 0.0 }).unwrap();
+    let scene = surrounds_scene(&w, &room, 4, hornvale_kernel::WorldTime::GENESIS).unwrap();
     render_surrounds_ascii(&scene, "terrain", &ways_on(&ctx, &room))
 }
 
@@ -331,7 +327,7 @@ fn surrounds_ascii_seam() -> String {
     let w = seed_42_world();
     let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
     let room = seam_room();
-    let scene = surrounds_scene(&w, &room, 4, hornvale_kernel::WorldTime { day: 0.0 }).unwrap();
+    let scene = surrounds_scene(&w, &room, 4, hornvale_kernel::WorldTime::GENESIS).unwrap();
     render_surrounds_ascii(&scene, "terrain", &ways_on(&ctx, &room))
 }
 

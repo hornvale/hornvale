@@ -12,17 +12,28 @@ never the verdicts (those cost a test run per site). Its job is to keep the
 survive a diff is harder to leave lying around than one buried in a doc
 comment.
 
-1 seam(s) registered; 1 declared unguarded.
+2 seam(s) registered; 0 declared unguarded.
 
 ## `conquest_victim`
 
-- Defined at `windows/almanac/src/history.rs:652`
+- Defined at `windows/almanac/src/history.rs:705`
 - Operator: `returns(Option::<EntityId>::None)`
-- Test scope: `hornvale-almanac`
-- **Declared unguarded:** only the gallery drift check pins this, and `make gate` does not run it; the almanac assertion that would close it is in flight elsewhere
-- This seam is expected to SURVIVE. If a test ever catches it, the
-  run goes red and this declaration must be deleted in the same change.
+- Test scope: `hornvale`
+- No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/almanac/src/history.rs:577`
-  - `windows/almanac/src/history.rs:714`
+  - `windows/almanac/src/history.rs:611`
+  - `windows/almanac/src/history.rs:775`
+
+## `ledger_day_of_bake_year`
+
+- Defined at `windows/worldgen/src/history_emit.rs:46`
+- Operator: `identity(0)`
+- Test scope: `hornvale-worldgen`
+- No declaration: a survivor here fails the gate.
+- Call sites:
+  - `windows/worldgen/src/history_emit.rs:213`
+  - `windows/worldgen/src/history_emit.rs:336`
+  - `windows/worldgen/src/history_emit.rs:363`
+  - `windows/worldgen/src/person_promote.rs:303`
+  - `windows/worldgen/tests/tolerance_draw.rs:99`
 

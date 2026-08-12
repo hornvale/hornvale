@@ -287,6 +287,45 @@ denominator, and a prediction expressed as a *fraction of current state* silentl
 re-aims itself every time that state moves. Freezing the numerator as an identity
 is what made the falsification readable instead of merely disappointing.
 
+An eleventh campaign repairs the tenth's finding and, in doing so, measures how
+much of the family the repair itself contained. [The Ell](./chronicle/the-ell.md)
+(2026-08-11) moved the unit boundary that made a death uncommittable: the
+history bake keeps reasoning in years, and what crosses into the ledger is days,
+converted at named functions rather than at inline divides. That created sixteen
+unit crossings, and the campaign swept them by mutating each one in turn against
+the whole gate. **Five of the sixteen had no guard at all.** The most
+consequential was not on anyone's list: the crossing that feeds the census's own
+name renderer, whose blast radius is a committed census value the commit gate
+never rebuilds — and whose two plausible existing guards cannot catch it *by
+construction*, one because it counts zero-gap edges (zero is zero in any unit)
+and the other because it keys a map on the year form, which is invariant under
+any injective rescaling. Both tests are correct, both are green, and neither is
+about the quantity that moved. So the floor gains a fourth question, asked of
+conversions rather than of checks, measurements or vocabulary: *which test goes
+red if this crossing is deleted?* — answered by deleting it, not by reading the
+suite.
+
+Two smaller instances from the same campaign sharpen what a guard has to be
+compared against. An invariance test that had been green for months compared a
+reconstructed record against a committed one — by comparing **one fixture
+against another fixture**. When the ledger's unit moved, the module's stated
+premise became false and all four of its tests stayed green, because both sides
+were wrong the same way; the sibling case in the same sweep went red on its own,
+because there the two sides were production and fixture. And a collision guard
+written to detect a new failure shape turned out to be **entailed by the key it
+guards**: the key folds the parent's coordinates, so any colliding pair
+necessarily has equal parent coordinates and the assertion cannot fail while the
+key is what it is. It was kept and relabelled as a tripwire for a future
+narrowing — the honest description of what it can do — rather than deleted or
+left claiming more than it holds.
+
+**No bet in the map below moved.** The Ell repairs a unit boundary and a derived
+key; it resolves no open question about the world, raises nothing from taste-gated
+to self-scorable, and leaves every score in this chapter where it stood. Recorded
+explicitly, because a campaign that changes the save format and every founder's
+name looks from the outside like it should have moved something, and decision
+0030's sweep is answered by a statement either way rather than by silence.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -732,6 +771,50 @@ and the raid comparison all participate. This chapter has assumed the field
 decides placement wherever it reasons about placement at all. It constrains
 placement; it does not determine it, and that is now measured with the field held
 constant to the bit.
+
+*Re-scored again by [The Muster](./chronicle/the-muster.md) (2026-08-12), which
+found that the one consumer still believed exempt is not exempt either.*
+
+**The exemption above does not survive, and the correction sharpens the general
+form rather than weakening it.** The paragraph two above concedes that the level
+is gauge for *one* consumer — a kind's own ranking of cells — and load-bearing
+downstream. The concession was too generous. A change to the level is not a
+uniform factor at all: the constructor holds a stronghold at exactly `1.00`
+while pulling every lower rung down, so it changes the ladder's **contrast**
+rather than its scale, and the factor then reweights biome against every other
+condition inside the per-cell limiting product. Measured on seed 42 with every
+authored shape held fixed, **all seven kinds carrying a shaped row have their
+own cell ranking changed**, and one kind's argmax — the cell the placement
+routine would choose as a stronghold — moves outright, with 5 of its top 50
+cells surviving. **All eleven row-less kinds are bit-identical**, which is the
+control: with no row the factor is `1.0` at every level, and there the level
+genuinely is gauge.
+
+So two claims had been wearing one sentence. *A uniform rescale of a whole row
+cannot reorder that kind's own ranking* is true and is what this chapter says.
+*Changing the level preserves ranking* is false, because the constructor is not
+a uniform rescale. For a kind with a shaped row the level is load-bearing in all
+four of its consumers and gauge in none. The general form above — a claim true
+and incomplete is more durable than one that is false — now has a checkable
+successor, ratified as a decision: **when a quantity is described as gauge, name
+the transformation it is gauge under, and name the consumers checked.** The
+short form named neither, which is exactly how it stayed unfalsified across two
+campaigns while being wrong about four consumers out of four.
+
+**And the split this bet's successor asked for is refuted, by its own
+instrument.** The open question left standing was whether the level should
+become two numbers, one per consumer. A preregistered sweep, its rule frozen
+before any measurement, says no — with the caution that the *first* arm said
+yes. Varying the level globally collapses the shipped per-kind spread to one
+scalar and manufactures the opposition it then reports, because at a scale
+factor of one a uniform level simply **is** the no-affinity world. Scaling each
+kind's shipped level instead — ordering preserved, and the shipped
+configuration reproducing byte-identically at a scale factor of one — satisfies
+every band simultaneously with the shipped values interior to the satisfied set.
+One quantity, correctly valued. The transferable half is a control, not a
+result: **for any one-scalar sweep over a per-kind quantity, ask whether the
+shipped configuration reproduces byte-identically somewhere on the grid; if it
+cannot, the sweep is not interpolating the shipped world.**
 
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
@@ -2236,3 +2319,41 @@ undifferentiated sharing where the original band permitted 75%, so the world is
 if anything more differentiated than the bound was written to allow. Both halves
 of that sentence are only sayable because the bound was re-derived rather than
 re-fitted.
+
+*Extended by [The Muster](./chronicle/the-muster.md) (2026-08-12), which found
+that the re-derived ceiling cannot be reached at all, and that the instrument
+enforcing this bound had been reading an empty store.*
+
+**A derived bound can rot in the opposite direction, and this one has.** The
+repair above replaced a literal `3.0` with three quarters of the peopled count,
+which was correct and which the roster's growth has since carried to **13.5**.
+The reading it bounds cannot exceed the number of kinds actually *present* in a
+cell, and the mean claimed cell holds **6.4351** of the eighteen — pooled over
+177 336 claimed cells across five seeds. **The ceiling now asks for more
+coexistence than the world puts in a cell at all**, so the band is one-sided by
+construction: it can only ever be failed from below, and no perturbation of the
+quantity it was written to watch can reach its upper edge. A literal rots by
+falling behind its dependency; a derived bound rots by outrunning what the
+world can produce, and neither failure announces itself.
+
+**And the guard enforcing it was reading nothing.** The test that asserts this
+band built its own component set with two stores left empty — the biome
+affinities and the habitat realms — both of which are sparse and read through a
+default on absence, so an empty store did not raise; it silently supplied the
+null hypothesis. Every authored affinity row in the registry scored identically
+inside the one test whose purpose was to notice when they changed. With both
+stores live the same five worlds read **2.1128** against **2.3734** blind, and
+the decomposition matters more than the total: a third of that movement is
+interaction between a *single* realm row and the affinity rows, so the affinity
+contribution alone is 7.2% rather than the 11% a naive attribution would claim.
+
+**What that costs this chapter's confidence is narrower than it looks, and
+sharper.** A repaired guard that stays green proves nothing, so it was
+mutation-proven — and the proof is an existence proof rather than a
+demonstration that the band tracks the quantity. At today's roster the level
+alone cannot cross either edge at **any** value; widening the rows to reach
+every kind is necessary and nowhere near sufficient; and of three assignments
+differing only in which kind holds which ground, all three move the reading by a
+similar amount and only one crosses the floor — the *most* differentiated of the
+three does not. The bound is a real instrument again. It is not yet a sensitive
+one, and the difference is now written down where it will be read.

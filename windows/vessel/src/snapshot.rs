@@ -43,7 +43,10 @@ fn u64_as_decimal_string<S: Serializer>(x: &u64, s: S) -> Result<S::Ok, S::Error
 }
 
 /// One committed turn, as the client sees it.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(count: turn), waiver(decision-0014: day)
+/// `day` stays a bare `f64`: it is the `vessel/session/v2` wire schema's own
+/// field, a cross-repo client contract with its own quantizing serializer, not
+/// the ledger's `Fact.day` (decision 0126, superseding 0014).
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(count: turn), waiver(decision-0126: day)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SessionSnapshot {
     /// Schema tag (`vessel/session/v2`).
@@ -275,8 +278,11 @@ mod tests {
         .expect("seed 42 builds");
         let ctx = LocaleContext::build(&world).expect("the locale context builds");
         let agent = crate::mint_flagship(&world, &ctx).expect("seed 42 has a settlement");
-        ctx.describe(&agent.position, WorldTime { day: 0.5 })
-            .expect("the minted position describes")
+        ctx.describe(
+            &agent.position,
+            WorldTime::new(0.5).expect("a day value is finite"),
+        )
+        .expect("the minted position describes")
     }
 
     /// A minimal `vessel/plan/v1` document, for tests that need a

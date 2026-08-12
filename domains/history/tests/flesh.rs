@@ -7,7 +7,8 @@ use hornvale_history::flesh::{
     residue_of, structures_of,
 };
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
+    OccupationRecord, TechHorizon, founding_coords, founding_key_from,
 };
 use hornvale_kernel::{CellId, EntityId, KindId, Seed};
 
@@ -188,6 +189,106 @@ fn structures_are_deterministic_and_gated_by_function() {
     assert!(!a.contains(&Structure::Mineshaft));
 }
 
+/// A parent founding, for the ancestry hop.
+fn parent_at(site: u32, founded: f64) -> FoundingCoords<'static> {
+    FoundingCoords {
+        people: "goblin",
+        site: CellId(site),
+        founded,
+    }
+}
+
+#[test]
+fn ancestry_discriminates_two_otherwise_identical_foundings() {
+    // The collision the ancestry hop clears (seeds 283, 705, 2403): two
+    // records agreeing on every material field whose PARENTS differ, so the
+    // hop is the whole of what separates them. Measured, against the spec's
+    // stated mechanism — the spec said the pairs separate because one record's
+    // ender is the other's parent; the parents do genuinely differ at those
+    // three seeds, but not for that reason, and at 2634/2898 they are
+    // identical. The hop earns its place; the story attached to it did not.
+    let a = burned_goblin_village();
+    assert_ne!(
+        founder_handle(&a, Some(parent_at(11, 100.0))).0,
+        founder_handle(&a, Some(parent_at(99, 100.0))).0,
+        "two foundings from different parents are two different foundings"
+    );
+    assert_ne!(
+        founder_handle(&a, None).0,
+        founder_handle(&a, Some(parent_at(11, 100.0))).0,
+        "a founding raised from nothing is not a founding descended from a \
+         community that happens to sit elsewhere"
+    );
+}
+
+#[test]
+fn the_handle_builds_on_the_founding_key_and_never_on_a_referent_id() {
+    // `founding_key_from` is the founding-side BASE of this handle, so a change
+    // that moves the key must move the handle, and a change the key cannot see
+    // must not move the handle either. That is what keeps a founding's identity
+    // from meaning one thing on the bake side and another on the ledger side.
+    let a = burned_goblin_village();
+    let p = parent_at(11, 100.0);
+    let q = parent_at(12, 100.0);
+    assert_ne!(
+        founding_key_from(founding_coords(&a.core), Some(p)),
+        founding_key_from(founding_coords(&a.core), Some(q)),
+        "the base key itself must separate two parents"
+    );
+    assert_ne!(
+        founder_handle(&a, Some(p)).0,
+        founder_handle(&a, Some(q)).0,
+        "…and the handle must inherit that separation"
+    );
+
+    // The three id-shaped fields — the record's own, its ender's, and the
+    // discriminant on `founded_from` — are all invisible. The ancestry a
+    // handle reads arrives as COORDINATES, resolved by the caller; decision
+    // 0051's prohibition is on keying an id AS A VALUE, and this key holds
+    // none.
+    let mut b = a.clone();
+    b.id = eid(9_999);
+    b.ended_by = Ended::By(eid(4_242));
+    b.founded_from = Founding::From(eid(7));
+    assert_eq!(
+        founder_handle(&a, Some(p)).0,
+        founder_handle(&b, Some(p)).0,
+        "no id may reach the handle, the record's own or any it points at"
+    );
+}
+
+/// The Ell measured the narrower, more principled key — the founding and its
+/// ancestry alone — and found it collides in the promoted casts of 73% of
+/// worlds where this one collides in none, because a raided founding and its
+/// same-year successor are identical in every founding-side field there is.
+/// So the span stays in the key. This test is that decision written down where
+/// a future narrowing has to walk past it: see `founder_handle`'s doc for the
+/// three-arm table and the world-model question it leaves open.
+#[test]
+fn the_span_is_in_the_key_because_ancestry_alone_cannot_separate_a_failed_founding() {
+    let a = burned_goblin_village(); // founded 340, ended 1980, peak 40
+    let p = parent_at(11, 100.0);
+
+    // The failed attempt: same people, same site, same year, same parent —
+    // closed the year it opened with the eight who fled.
+    let mut failed = a.clone();
+    failed.core.ended = Some(a.core.founded);
+    failed.core.peak_population = 8;
+    failed.core.cause = Some(CauseOfEnd::Fled);
+
+    assert_eq!(
+        founding_key_from(founding_coords(&a.core), Some(p)),
+        founding_key_from(founding_coords(&failed.core), Some(p)),
+        "the founding key genuinely cannot tell these apart — that is the \
+         measurement, not a defect in this fixture"
+    );
+    assert_ne!(
+        founder_handle(&a, Some(p)).0,
+        founder_handle(&failed, Some(p)).0,
+        "the span is what separates them, and it is why it stays in the key"
+    );
+}
+
 #[test]
 fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
     let mut a = OccupationRecord {
@@ -211,14 +312,14 @@ fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
     let mut b = a.clone();
     b.id = eid(9_999);
     assert_eq!(
-        founder_handle(&a).0,
-        founder_handle(&b).0,
+        founder_handle(&a, None).0,
+        founder_handle(&b, None).0,
         "mint order must not change a founder's identity (decision 0051)"
     );
     a.core.peak_population = 41;
     assert_ne!(
-        founder_handle(&a).0,
-        founder_handle(&b).0,
+        founder_handle(&a, None).0,
+        founder_handle(&b, None).0,
         "a semantic difference must change the handle"
     );
 }

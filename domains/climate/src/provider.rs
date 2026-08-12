@@ -940,7 +940,7 @@ mod tests {
     fn observe_at(climate: &GeneratedClimate, coord: GeoCoord) -> Vec<Phenomenon> {
         climate.phenomena(&ObserverContext::at_position(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 3.0 },
+            WorldTime::new(3.0).expect("a day value is finite"),
             coord,
         ))
     }
@@ -960,7 +960,7 @@ mod tests {
         let climate = varied_climate();
         let blind = climate.phenomena(&ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 3.0 },
+            WorldTime::new(3.0).expect("a day value is finite"),
         ));
         assert_eq!(
             blind.len(),
@@ -969,7 +969,7 @@ mod tests {
         );
         let expected = crate::UniformClimate.phenomena(&ObserverContext::at(
             EntityId::new(1).unwrap(),
-            WorldTime { day: 3.0 },
+            WorldTime::new(3.0).expect("a day value is finite"),
         ));
         assert_eq!(blind, expected, "ambient is byte-identical to tier 0");
         for cell in climate.geosphere().cells() {

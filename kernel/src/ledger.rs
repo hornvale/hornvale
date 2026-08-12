@@ -66,7 +66,7 @@ pub enum Value {
 
 /// The dumb envelope (spec §3.1.6): subject, predicate, object, place,
 /// time, provenance. Semantics live in the concept registry.
-/// type-audit: bare-ok(envelope: predicate), waiver(decision-0014: day), bare-ok(prose: provenance)
+/// type-audit: bare-ok(envelope: predicate), bare-ok(prose: provenance)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fact {
     /// The entity this fact is about.
@@ -78,7 +78,7 @@ pub struct Fact {
     /// The entity where this fact was observed, if location-bound.
     pub place: Option<EntityId>,
     /// The simulated day this fact was observed, if time-bound.
-    pub day: Option<f64>,
+    pub day: Option<crate::field::WorldTime>,
     /// Free-form description of what produced this fact.
     pub provenance: String,
 }
@@ -99,7 +99,9 @@ pub enum LedgerError {
         /// The functional predicate in conflict.
         predicate: String,
     },
-    /// A fact's object or day was a non-finite f64 (NaN or infinity).
+    /// A fact's object was a non-finite f64 (NaN or infinity). `day` cannot
+    /// trigger this anymore: `WorldTime::new` rejects non-finite values at
+    /// construction, before a `Fact` can even be built (Task 2, The Ell).
     NonFiniteNumber {
         /// The entity the offending fact is about.
         subject: EntityId,
@@ -271,9 +273,11 @@ impl Ledger {
                 .ok_or_else(|| LedgerError::UnknownPredicate {
                     predicate: fact.predicate.clone(),
                 })?;
+        // `day` needs no matching check here: `WorldTime::new` already
+        // rejects non-finite values at construction, so a `Fact` can never
+        // carry one (Task 2, The Ell — day used to be a bare `f64`).
         let object_is_non_finite = matches!(fact.object, Value::Number(n) if !n.is_finite());
-        let day_is_non_finite = matches!(fact.day, Some(d) if !d.is_finite());
-        if object_is_non_finite || day_is_non_finite {
+        if object_is_non_finite {
             return Err(LedgerError::NonFiniteNumber {
                 subject: fact.subject,
                 predicate: fact.predicate.clone(),
@@ -311,7 +315,10 @@ impl Ledger {
         if let Value::Number(n) = fact.object {
             fact.object = Value::Number(crate::quantize::quantize(n));
         }
-        fact.day = fact.day.map(crate::quantize::quantize);
+        fact.day = fact.day.map(|d| {
+            crate::field::WorldTime::new(crate::quantize::quantize(d.day()))
+                .expect("quantizing an already-finite WorldTime cannot produce a non-finite one")
+        });
         self.ensure_index(); // fast contradiction/dedup for the rest of this build
         self.check(&fact, registry)?;
         let dup = match &self.index {
@@ -409,12 +416,12 @@ impl Ledger {
     /// operation — the sole writer of the predicate (single-writer by
     /// construction). The kernel is roster-blind: label validation is the
     /// composition root's job (worldgen).
-    /// type-audit: bare-ok(identifier-text: kind_label), waiver(decision-0014: day), bare-ok(prose: provenance)
+    /// type-audit: bare-ok(identifier-text: kind_label), bare-ok(prose: provenance)
     pub fn mint_instance(
         &mut self,
         lineage: Lineage<'_>,
         kind_label: &str,
-        day: Option<f64>,
+        day: Option<crate::field::WorldTime>,
         provenance: &str,
         registry: &ConceptRegistry,
     ) -> Result<EntityId, LedgerError> {
@@ -436,12 +443,12 @@ impl Ledger {
     /// Commit a kind-change fact for an existing entity (owlbear ->
     /// awakened-owlbear). Appends; never edits. No transition constraints
     /// here — guards ride the c6 capability schema.
-    /// type-audit: bare-ok(identifier-text: kind_label), waiver(decision-0014: day), bare-ok(prose: provenance)
+    /// type-audit: bare-ok(identifier-text: kind_label), bare-ok(prose: provenance)
     pub fn change_kind(
         &mut self,
         e: EntityId,
         kind_label: &str,
-        day: Option<f64>,
+        day: Option<crate::field::WorldTime>,
         provenance: &str,
         registry: &ConceptRegistry,
     ) -> Result<(), LedgerError> {
@@ -552,6 +559,28 @@ pub fn test_lineage(n: u16) -> Lineage<'static> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field::WorldTime;
+
+    #[test]
+    fn a_facts_day_is_typed_and_round_trips_as_a_bare_number() {
+        let mut l = Ledger::default();
+        let e = l.mint_entity(test_lineage(0));
+        let f = Fact {
+            subject: e,
+            predicate: "is-a".to_string(),
+            object: Value::Text("thing".to_string()),
+            place: None,
+            day: Some(WorldTime::new(1234.5).expect("finite")),
+            provenance: "test".to_string(),
+        };
+        let json = serde_json::to_string(&f).expect("serializes");
+        assert!(
+            json.contains("\"day\":1234.5"),
+            "the wire shape must stay a bare number, not a nested object: {json}"
+        );
+        let back: Fact = serde_json::from_str(&json).expect("round-trips");
+        assert_eq!(back.day.map(WorldTime::day), Some(1234.5));
+    }
 
     #[test]
     fn an_inserted_mint_does_not_move_an_unrelated_id() {
@@ -922,29 +951,6 @@ mod tests {
     }
 
     #[test]
-    fn non_finite_day_is_rejected() {
-        let r = registry();
-        let mut l = Ledger::default();
-        let e = l.mint_entity(Lineage {
-            parent: None,
-            role: "non-finite-day-subject",
-            ordinal: 0,
-        });
-        let f = Fact {
-            subject: e,
-            predicate: "name".to_string(),
-            object: Value::Text("Zaggrak".to_string()),
-            place: None,
-            day: Some(f64::INFINITY),
-            provenance: "test".to_string(),
-        };
-        assert!(matches!(
-            l.commit(f, &r),
-            Err(LedgerError::NonFiniteNumber { .. })
-        ));
-    }
-
-    #[test]
     fn committed_numbers_and_days_are_quantized() {
         use crate::quantize::quantize;
         let r = registry();
@@ -961,7 +967,7 @@ mod tests {
                 predicate: "name".to_string(),
                 object: Value::Number(raw),
                 place: None,
-                day: Some(raw),
+                day: Some(WorldTime::new(raw).expect("raw is finite")),
                 provenance: "test".to_string(),
             },
             &r,
@@ -969,11 +975,19 @@ mod tests {
         .unwrap();
         let stored = l.iter().next().unwrap();
         assert_eq!(stored.object, Value::Number(quantize(raw)));
-        assert_eq!(stored.day, Some(quantize(raw)));
+        assert_eq!(
+            stored.day,
+            Some(WorldTime::new(quantize(raw)).expect("quantized raw is finite"))
+        );
         assert_ne!(
             stored.object,
             Value::Number(raw),
             "raw value must not survive"
+        );
+        assert_ne!(
+            stored.day,
+            Some(WorldTime::new(raw).expect("raw is finite")),
+            "raw day must not survive quantization at commit"
         );
     }
 
@@ -991,7 +1005,7 @@ mod tests {
             predicate: "name".to_string(),
             object: Value::Number(42.5),
             place: None,
-            day: Some(3.0),
+            day: Some(WorldTime::new(3.0).expect("finite")),
             provenance: "test".to_string(),
         };
         assert!(l.commit(f, &r).unwrap());
@@ -1415,7 +1429,7 @@ mod tests {
                     ordinal: 0,
                 },
                 "owlbear",
-                Some(0.0),
+                Some(WorldTime::GENESIS),
                 "test",
                 &w.registry,
             )
@@ -1436,7 +1450,7 @@ mod tests {
                     ordinal: 0,
                 },
                 "owlbear",
-                Some(0.0),
+                Some(WorldTime::GENESIS),
                 "test",
                 &w.registry,
             )
@@ -1445,7 +1459,7 @@ mod tests {
             .change_kind(
                 e,
                 "awakened-owlbear",
-                Some(12.5),
+                Some(WorldTime::new(12.5).expect("finite")),
                 "test: the awakening",
                 &w.registry,
             )

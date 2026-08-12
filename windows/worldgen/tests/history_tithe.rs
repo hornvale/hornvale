@@ -640,7 +640,11 @@ fn no_emitted_tribute_fact_predates_either_party() {
         .iter()
         .filter(|f| f.predicate == hornvale_history::PAYS_TRIBUTE_TO)
         .map(|f| match f.object {
-            Value::Entity(patron) => (f.subject, patron, f.day.expect("a dated relation fact")),
+            Value::Entity(patron) => (
+                f.subject,
+                patron,
+                f.day.expect("a dated relation fact").day(),
+            ),
             ref other => panic!("pays-tribute-to must carry an entity, got {other:?}"),
         })
         .collect();

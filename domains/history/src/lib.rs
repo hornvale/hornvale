@@ -22,8 +22,12 @@ use hornvale_kernel::{ConceptRegistry, RegistryError};
 /// Predicate: the world-level "now" — the standard day the deep-history
 /// bake's present sits at (`windows/worldgen::history_bake::BakeConfig`'s
 /// `end_year`), committed once per world (on the world entity) by the
-/// composition root right after the bake commits. `present_day` (in
-/// `windows/almanac`) reads this back directly instead of approximating the
+/// composition root right after the bake commits. **"Standard day" here is
+/// literal since The Ell** — the composition root crosses `end_year` out of the
+/// bake's years at the emit boundary, so this predicate's object really is a
+/// day count, as it always claimed to be. `present_year` (in
+/// `windows/almanac`, named for the unit it hands *back*) reads this
+/// directly instead of approximating the
 /// present as the latest committed occupation event — the approximation
 /// undercounted every ruin's age and tenure by the bake's post-history
 /// stretch (T7 review gap; the bake's last occupation event predates

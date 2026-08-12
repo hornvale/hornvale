@@ -103,9 +103,19 @@ pub struct Occupation {
     pub people: KindId,
     /// The Geosphere cell the occupation sits on.
     pub site: CellId,
-    /// The standard day the occupation began.
+    /// The bake **year** the occupation began.
+    ///
+    /// Not a day, despite what the `occ-founded` predicate this becomes on the
+    /// ledger is measured in: a history bake reasons in years
+    /// (`BakeConfig::start_year`/`end_year`) and the unit boundary is the
+    /// ledger, not this struct (The Ell, spec §3). `windows/worldgen`'s
+    /// `history_emit::{ledger_day_of_bake_year, bake_year_of_ledger_day}` are
+    /// the two seams that cross it, and every key derived from this field
+    /// ([`material_key`], [`founding_key`], [`layer_key`],
+    /// [`crate::flesh::founder_handle`]) is keyed on the year form.
     pub founded: f64,
-    /// The standard day the occupation ended, `None` if still alive.
+    /// The bake **year** the occupation ended, `None` if still alive. Same unit
+    /// as [`Occupation::founded`], and the same reason.
     pub ended: Option<f64>,
     /// The highest population this occupation ever reached.
     pub peak_population: u32,
@@ -310,7 +320,13 @@ pub struct FoundingCoords<'a> {
     pub people: &'a str,
     /// The cell founded on.
     pub site: CellId,
-    /// The standard day founded.
+    /// The bake **year** founded — the same unit [`Occupation::founded`]
+    /// carries, and it has to be: this struct has two producers,
+    /// [`founding_coords`] from a bake record and
+    /// `windows/worldgen::descent`'s `founding_coords_of` from the ledger, and
+    /// they feed one key function ([`founding_key_from`]). If they ever
+    /// disagreed on the unit, two foundings that are the same founding would
+    /// derive two different founder handles (The Ell, spec §3).
     pub founded: f64,
 }
 
@@ -326,7 +342,13 @@ pub fn founding_coords(c: &Occupation) -> FoundingCoords<'static> {
 /// A splitmix-style mix step. Mirrors [`crate::flesh::persona_of`]'s
 /// arithmetic so every derived handle in this crate is drawn from one space.
 /// Pure bit arithmetic — no transcendental, no `libm`, no platform dependence.
-fn mix(state: u64, x: u64) -> u64 {
+///
+/// `pub(crate)` since The Ell: [`crate::flesh::founder_handle`] folds its
+/// role discriminant into [`founding_key_from`]'s result and must do it with
+/// *this* step rather than a second copy of the same constants — a hand-rolled
+/// twin is how two derivations that are supposed to share a space drift out of
+/// one.
+pub(crate) fn mix(state: u64, x: u64) -> u64 {
     let mut z = state ^ x;
     z = z.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     z ^= z >> 29;
@@ -410,16 +432,46 @@ pub fn founding_key_from(own: FoundingCoords<'_>, parent: Option<FoundingCoords<
     }
 }
 
-/// A derived handle for the *founding* of an occupation, plus one hop of
-/// ancestry — where, when and from whom.
+/// **The IDENTITY of a founding** — where, when, from whom — as a derived
+/// handle. It answers one question, *is this the same founding?*, and it is
+/// deliberately not asked to answer any other.
 ///
-/// Feeds the founder role handle behind every person name. Deliberately
-/// **excludes** everything after the founding (`ended`, `peak_population`,
-/// `cause`, `notability`): a founder's name must not be a function of how
-/// their community later died. The ancestry hop is what recovers the
-/// discrimination that exclusion costs — measured stem-collision rate
-/// 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% / 16.2%
-/// for the founding triple alone (spec D2, Nathan's ruling).
+/// It therefore **excludes** everything after the founding (`ended`,
+/// `peak_population`, `cause`, `notability`), and the reason is what makes it
+/// an identity at all: a value that moves when later events move is not an
+/// identity of the founding, it is a summary of the occupation. The rule this
+/// crate states as "a founder's name must not be a function of how their
+/// community later died" belongs **here**, and holds here without exception.
+/// The ancestry hop is what recovers the discrimination that exclusion costs —
+/// measured stem-collision rate 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000,
+/// against 27.7% / 14.8% / 16.2% for the founding triple alone (spec D2,
+/// Nathan's ruling).
+///
+/// **What it does NOT answer is uniqueness across a population.** It cannot:
+/// two records of one founding — a raided attempt closed the year it opened,
+/// and the same-year successor at the same site from the same parent — are
+/// identical in every founding-side field there is, so they share this key by
+/// construction and *correctly* so. A caller that needs every member of a cast
+/// separated needs a **discrimination** key, which is a different object with
+/// a different entitlement; see [`crate::flesh::founder_handle`], which builds
+/// one on top of this one and carries the three-arm measurement behind the
+/// split (Nathan's ruling, The Ell, 2026-08-11).
+///
+/// **Who reads it, stated precisely** (The Ell corrected this line; it used to
+/// read "feeds the founder role handle behind every person name", which was
+/// simply false — nothing but `windows/worldgen::descent` and a test called
+/// it):
+///
+/// - `windows/worldgen::descent::founder_of` folds it **whole**, salted by the
+///   world seed. That handle is the ledger-side founder identity the lab's
+///   name renderer reads.
+/// - [`crate::flesh::founder_handle`] calls it for its **identity step**, then
+///   folds a discrimination tail on top. That handle is the one
+///   `windows/worldgen::person_promote` turns into a committed person's name.
+///
+/// So the two are one key up to their tails, which is the property that keeps
+/// a founding's identity from meaning two different things on the two sides of
+/// the emit boundary — but they are **not** the same handle and never were.
 /// type-audit: bare-ok(identifier-text: return)
 pub fn founding_key(c: &Occupation, parent: Option<FoundingCoords<'_>>) -> u64 {
     founding_key_from(founding_coords(c), parent)

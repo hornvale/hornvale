@@ -4,7 +4,7 @@
 //! canonical (spec §4.4: genesis/placement must not see these kinds).
 
 use hornvale_kernel::test_lineage;
-use hornvale_kernel::{Seed, Value, World};
+use hornvale_kernel::{Seed, Value, World, WorldTime};
 use hornvale_lab::roster::awakened_owlbear_components;
 use hornvale_species::{SPECIES_MASS_KG, instance_biosphere};
 
@@ -41,7 +41,7 @@ fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
         &wc,
         test_lineage(minted),
         "owlbear",
-        Some(0.0),
+        Some(WorldTime::GENESIS),
         "lab",
     )
     .unwrap();
@@ -53,7 +53,7 @@ fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
                 predicate: SPECIES_MASS_KG.to_string(),
                 object: Value::Number(900.0),
                 place: None,
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: "lab".to_string(),
             },
             &w.registry,
@@ -64,7 +64,7 @@ fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
         .change_kind(
             e,
             "awakened-owlbear",
-            Some(40.0),
+            Some(WorldTime::new(40.0).expect("finite")),
             "lab: the awakening",
             &w.registry,
         )
@@ -101,7 +101,7 @@ fn mighty_things_in_the_cold_north() {
                     predicate: "located-in".to_string(),
                     object: Value::Entity(region),
                     place: None,
-                    day: Some(0.0),
+                    day: Some(WorldTime::GENESIS),
                     provenance: "lab".to_string(),
                 },
                 &w.registry,

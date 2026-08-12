@@ -161,7 +161,7 @@ impl Default for PossessOpts {
     /// on the midnight boundary every integer day would.
     fn default() -> Self {
         PossessOpts {
-            day: hornvale_kernel::WorldTime { day: 0.5 },
+            day: hornvale_kernel::WorldTime::new(0.5).expect("a day value is finite"),
             echo: false,
             wild_agents: true,
             eyes: eyes::Eyes::Own,
