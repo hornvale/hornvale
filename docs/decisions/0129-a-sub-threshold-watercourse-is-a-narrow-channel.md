@@ -89,30 +89,56 @@ cell scale, where a count-valued threshold has no defensible value.
 - **A larger rendered world at a sub-linear gain in AREA — but not in reach.**
   Two different quantities move at two different rates, and conflating them is
   the trap this bullet exists to close. Measured on seed 42 at the canonical
-  level 6, walk-depth rooms (`globe_level + 6` = 12), denominator
-  `20·4¹² × land_fraction` = 90,648,246 land rooms:
+  level 6, at walk depth (`globe_level + 6` = 12). Rows 1 and 2 count rooms
+  against `20·4¹² × land_fraction` = **90,648,246 land rooms**; row 3 is an area
+  ratio in steradians. Rooms at one depth are near-equal-area, which is what
+  makes the three percentages comparable at all — the per-row denominator is
+  stated because they are not the same denominator:
 
-  | quantity | before | after | ratio |
-  |---|---|---|---|
-  | **containment** — a walk-depth room some polyline passes through | 0.0845% | **1.237%** | **14.6×** |
-  | **centroid reads `Channel`** — what a consumer actually sees | 0.0284% | **0.1716%** | 6.0× |
-  | `channel-land-fraction` (the channel-tube area integral) | 3.354e-4 | 2.143e-3 | 6.4× |
+  **THREE DIFFERENT QUANTITIES ANSWER "HOW MUCH WATER DOES A ROOM SEE", AND
+  THEY DIFFER BY UP TO 14x.** Every row below is stated as a percentage of the
+  same land, so they are directly comparable; each names what is counted, over
+  what denominator, and who reads it. Quote the row, never the bare number.
+
+  | # | quantity | what is counted | denominator | before | after | ratio |
+  |---|---|---|---|---|---|---|
+  | 1 | **containment** | walk-depth rooms some polyline passes through | 90,648,246 land rooms | 0.0845% | **1.237%** | **14.6×** |
+  | 2 | **room coverage (census)** | walk-depth rooms whose **centroid** reads `Transverse::Channel` | 90,648,246 land rooms | 0.0284% | **0.1716%** | 6.0× |
+  | 3 | **room coverage (integral)** | `channel-land-fraction`: the channel-tube **area** `Σ arc × width` | land area, steradians | 0.0335% | **0.2143%** | 6.4× |
+
+  **Rows 2 and 3 are two estimates of the SAME quantity**, one by counting rooms
+  and one by integrating area; they agree to ~25%, the gap being the integral's
+  per-line sum double-counting where channels overlap (`windows/lab`'s
+  `the_analytic_channel_area_matches_the_sampled_one` brackets exactly this).
+  **Row 1 is a different quantity** and is the one a subdivision can act on.
+  Row 3 is the shipped census column, so its raw fractions are `3.354e-4` and
+  `2.143e-3`; the percentages above are those values, and reading `2.143e-3` as
+  though it were row 2 is the specific confusion this table exists to stop.
 
   Containment scales with `Σ1` — the count of rendered cells — so it tracks the
-  ~15x growth in the flow tree almost exactly. Area scales with `Σ√Q`, and every
-  added reach carries the smallest discharge in the world, so it grows only
-  ~5.5x. Both are correct; a prediction about one is not evidence about the
-  other. (`RoomAddr` is a **face** of the icosphere and `Geosphere::cell_count`
-  is its **dual**, so `20·4^d` is the room count and `10·4^L + 2` the cell
-  count — a factor of ~2 apart. Denominators stated because that duality has
-  already produced one 2x disagreement between two measurements of this.)
+  ~15x growth in the flow tree almost exactly. Both coverage rows scale with
+  `Σ√Q`, and every added reach carries the smallest discharge in the world, so
+  they grow only ~6x. All three are correct; a prediction about one is not
+  evidence about another. (`RoomAddr` is a **face** of the icosphere and
+  `Geosphere::cell_count` is its **dual**, so `20·4^d` is the room count and
+  `10·4^L + 2` the cell count — a factor of ~2 apart. Denominators stated
+  because that duality has already produced one 2x disagreement between two
+  measurements of this.)
 
-- **The gap between those two rows is what Tier 2 exists to close, and it
-  widened.** Of the rooms a channel passes through, the share reading `Channel`
-  at their centroid fell **0.3366 → 0.1387**: **86% of the rooms a channel now
-  runs through do not read as water where a walker stands**, against 66% before.
-  A headwater half-width is 7.35e-6 rad against a 2.83e-4 rad walk-depth room
-  edge — **1/38 of a room**. Tier 1 put a channel in fourteen times as many
-  rooms and made each one harder to notice; recovering the difference is a
-  sub-cell rendering problem, not a width-law one, and the number to recover is
-  1.237%, not 0.214%.
+- **The gap between row 1 and row 2 is what Tier 2 exists to close, and it
+  widened.** Of the rooms a channel passes through (row 1), the share reading
+  `Channel` at their centroid (row 2) fell **0.3366 → 0.1387**: **86% of the
+  rooms a channel now runs through do not read as water where a walker stands**,
+  against 66% before. A headwater half-width is 7.35e-6 rad against a 2.83e-4
+  rad walk-depth room edge — **1/38 of a room**. Tier 1 put a channel in
+  fourteen times as many rooms and made each one harder to notice; recovering
+  the difference is a sub-cell rendering problem, not a width-law one.
+
+  **So the number to recover is row 1's containment, 1.237% — not row 2's
+  centroid coverage, 0.1716%, and not row 3's area integral, 0.2143%.**
+  The trap, named because this record walked into it: **0.2143% and 0.1716% are
+  the same quantity measured two ways**, so quoting the integral where the
+  census belongs looks right and is off by 25%, while quoting *either* where
+  containment belongs is off by **7x** and sets a subdivision's target an order
+  of magnitude low. Say which row. `channel_half_width`'s "What Tier 2
+  inherits" section carries the same statement, and the two agree.
