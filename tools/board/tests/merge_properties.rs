@@ -127,7 +127,7 @@ fn a_union_read_sees_both_clones_posts_once_each_is_fetched_into_its_own_peer_re
     let (_d, repo) = temp_repo("union-read");
     // Two hosts' logs, built exactly as a fetch of each host's own
     // `refs/hornvale/board` would land them: one ref per host, no merge.
-    let peers_prefix = Board::peers_ref_prefix();
+    let peers_prefix = Board::PEERS_PREFIX;
     // Peer names derived from the real host, never literals: this suite runs
     // on lefford too, where a hardcoded "lefford" would name THIS host's own
     // mirror, be correctly skipped by the union, and fail this test for a

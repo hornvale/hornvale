@@ -122,7 +122,19 @@ pub enum Origin {
 /// The final sort is `(committed_at, id)`, exactly as the single-ref read
 /// always sorted: `Displayed::cap` drops the OLDEST, so a union that merely
 /// concatenated per-ref runs would elide by ref rather than by age.
-fn merge_by_id(collected: Vec<StoredPost>) -> Vec<StoredPost> {
+///
+/// **Known, deliberately unfixed: a merged record can have MIXED PROVENANCE.**
+/// Its `origin` comes from one ref and its `committed_at` may come from
+/// another, so a peer whose clock runs behind, holding a byte-identical copy
+/// of a post this host also has, drags that post's timestamp earlier. `reap`
+/// is unaffected — it judges the un-merged single-ref [`TipSnapshot`], never
+/// this value — but read-time liveness (`ttl_s`, `NOTICE_GRACE_PERIOD_S`)
+/// does use the merged time, so such a post can render expired early. Narrow
+/// (it needs byte-identical content on two hosts AND clock skew), and carried
+/// into Task 6's brief rather than papered over here: the alternative rules
+/// (latest-wins, or per-ref times) each break something else, and the choice
+/// belongs with the code that judges foreign posts by time.
+pub(crate) fn merge_by_id(collected: Vec<StoredPost>) -> Vec<StoredPost> {
     let mut by_id: std::collections::BTreeMap<String, StoredPost> =
         std::collections::BTreeMap::new();
     for s in collected {
@@ -149,7 +161,7 @@ fn merge_by_id(collected: Vec<StoredPost>) -> Vec<StoredPost> {
 /// "the board is empty". A peer mirror is not — one unreadable mirror must
 /// never blank the whole board (D7), and the local half is exactly the half
 /// this session needs to see its own claims.
-fn tolerate_unreadable_peer(
+pub(crate) fn tolerate_unreadable_peer(
     origin: &Origin,
     refname: &str,
     e: BoardError,
@@ -277,12 +289,6 @@ impl Board {
     /// under this prefix; a fetch does (B1).
     pub const PEERS_PREFIX: &'static str = "refs/hornvale/peers/";
 
-    /// [`PEERS_PREFIX`](Self::PEERS_PREFIX) as a function, for callers that
-    /// would rather ask than name the constant.
-    pub fn peers_ref_prefix() -> &'static str {
-        Self::PEERS_PREFIX
-    }
-
     /// The board on the canonical ref.
     pub fn new(repo: Repo) -> Self {
         Self::with_ref(repo, BOARD_REF)
@@ -348,6 +354,16 @@ impl Board {
     /// warning by the caller.
     pub fn read_refs(&self) -> Result<Vec<String>, BoardError> {
         let mut refs = vec![self.refname.clone()];
+        // `%(refname)` is load-bearing, not just the shortest format that
+        // works: it is answered from the ref store alone and never looks the
+        // object up. A format that dereferences (`%(objecttype)`,
+        // `%(committerdate)`, …) makes `for-each-ref` exit 128 on ONE
+        // dangling mirror (measured: `fatal: missing object <oid> for
+        // refs/hornvale/peers/dangling`, against exit 0 here) — and because
+        // a listing failure is propagated (see
+        // above), that would blank the ambient render for this host until
+        // someone deleted the bad ref. The constraint is invisible in the
+        // code, so it is written down here rather than rediscovered.
         let listed = self
             .repo
             .git(&["for-each-ref", "--format=%(refname)", Self::PEERS_PREFIX])?;
@@ -553,16 +569,25 @@ impl Board {
     ///
     /// One resolution policy for both public reads, rather than each
     /// resolving for itself: [`posts_at_tip`](Self::posts_at_tip) and
-    /// [`post_ids_at_tip`](Self::post_ids_at_tip) have to agree about which
-    /// refs contributed, because the cursor prunes one against the other. The
-    /// `^{commit}` peel is part of that agreement — `ls-tree` accepts a ref
-    /// pointing at a tree while `git log` does not, so without it a
-    /// malformed ref would contribute ids to one read and posts to neither.
+    /// [`post_ids_at_tip`](Self::post_ids_at_tip) must draw from the same
+    /// refs, because [`crate::relevance::Cursor::record`] prunes one against
+    /// the other.
     ///
-    /// A ref that does not resolve is skipped: absent is how a board that
-    /// does not exist yet reads, and a listed-but-unresolvable peer mirror
-    /// says so on stderr rather than failing the read.
-    fn resolved_read_refs(&self) -> Result<Vec<(String, Origin, String)>, BoardError> {
+    /// **Why `^{commit}` rather than the bare ref.** Not because `git log`
+    /// rejects a tree — measured on git 2.50.1, `git log <tree-oid>` exits 0
+    /// with *empty output*, and `ls-tree` accepts it too. That is exactly
+    /// what makes the bare form bad: a mirror pointing at a tree would be
+    /// read successfully, contribute every post in it, and attribute all of
+    /// them to **epoch 0** (`posts_in`'s `when` map comes from that empty
+    /// `git log`), which biases every one of them toward `Expired` — the
+    /// opposite of this crate's fail-open convention, arriving as a pile of
+    /// stderr warnings with no statement of the actual cause. The peel turns
+    /// that into one clear D7 skip naming the ref.
+    ///
+    /// A ref that does not resolve to a commit is skipped: absent is how a
+    /// board that does not exist yet reads, and a listed-but-unresolvable
+    /// peer mirror says so on stderr rather than failing the read.
+    pub(crate) fn resolved_read_refs(&self) -> Result<Vec<(String, Origin, String)>, BoardError> {
         let mut out = Vec::new();
         for refname in self.read_refs()? {
             let origin = self.origin_of(&refname);
@@ -1925,6 +1950,24 @@ mod tests {
         let b = peer.append(&post).expect("b");
         assert_eq!(a, b, "content addressing should make these one id");
 
+        // Local-first is structural (`read_refs` pushes this board's own ref
+        // before the loop, `resolved_read_refs` preserves that order, and
+        // `merge_by_id` only ever sets `origin` on the FIRST occurrence) --
+        // but nothing else asserts it, and listing the local log last would
+        // leave the rest of the suite green while relabelling a shared post
+        // `Peer(..)`. That mislabel is not cosmetic: B4 judges a foreign post
+        // by time alone, so it would silently change how this post is judged.
+        assert_eq!(
+            board
+                .posts_at_tip()
+                .expect("read")
+                .iter()
+                .find(|s| s.id == a)
+                .map(|s| s.origin.clone()),
+            Some(Origin::Local),
+            "a post this host ALSO holds must not be reported foreign"
+        );
+
         let ids: Vec<String> = board
             .posts_at_tip()
             .expect("read")
@@ -2027,18 +2070,34 @@ mod tests {
     }
 
     #[test]
-    fn a_peer_ref_that_does_not_resolve_is_skipped_with_a_warning_not_fatal() {
-        // D7 again, at the ref level: one unreadable mirror must never blank
-        // the board. A ref pointed at a tree (not a commit) is listed by
-        // `for-each-ref` and then fails every read a tip is used for.
+    fn a_peer_ref_that_points_at_a_tree_is_skipped_with_a_warning_not_fatal() {
+        // D7 at the ref level: one unreadable mirror must never blank the
+        // board. Two things this test has to get right, both learned the hard
+        // way:
+        //
+        //  1. The tree must hold a post the LOCAL log does not, or the
+        //     dedupe hides whatever the broken ref contributes and the test
+        //     passes with or without the `^{commit}` peel. Built on a
+        //     throwaway ref, so its post is genuinely absent locally.
+        //  2. A tree-pointing ref is not rejected by the reads -- `ls-tree`
+        //     accepts a tree and `git log <tree>` exits 0 with EMPTY output
+        //     (measured, git 2.50.1). Unpeeled, this mirror would be read
+        //     "successfully" and every post in it attributed to epoch 0,
+        //     biasing it toward Expired. The peel is what turns that into
+        //     one clear skip.
         let (_dir, repo) = crate::git::test_support::temp_repo();
         let board = Board::new(repo.clone());
         let mine = board
             .append(&Post::new("technique", "main").with("note", serde_json::json!("keep me")))
             .expect("mine");
-        let tip = board.tip().expect("tip").expect("some");
+
+        let elsewhere = Board::with_ref(repo.clone(), "refs/test/only-in-the-broken-mirror");
+        let hidden = elsewhere
+            .append(&Post::new("notice", "main").with("note", serde_json::json!("unreachable")))
+            .expect("a post the local log does not hold");
+        let foreign_tip = elsewhere.tip().expect("tip").expect("some");
         let tree = repo
-            .git(&["rev-parse", "--verify", &format!("{tip}^{{tree}}")])
+            .git(&["rev-parse", "--verify", &format!("{foreign_tip}^{{tree}}")])
             .expect("tree");
         repo.git(&[
             "update-ref",
@@ -2046,10 +2105,74 @@ mod tests {
             &tree,
         ])
         .expect("a peer ref pointing at a tree");
+        assert_ne!(hidden, mine, "the two logs must hold different posts");
 
         let ids: Vec<String> = board
             .posts_at_tip()
             .expect("one broken mirror must never fail the whole read")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(
+            ids,
+            vec![mine.clone()],
+            "the local log must still be read: {ids:?}"
+        );
+        assert_eq!(
+            board.post_ids_at_tip().expect("ids"),
+            vec![mine],
+            "and the id read must degrade the same way"
+        );
+    }
+
+    #[test]
+    fn a_peer_ref_naming_an_absent_object_is_skipped_with_a_warning_not_fatal() {
+        // The OTHER arm of `resolved_read_refs`: `Ok(None)`, a ref that is
+        // listed but resolves to nothing.
+        //
+        // Reachable with no race and no injection seam, which is why this is
+        // a committed test rather than a deferred one: `for-each-ref
+        // --format=%(refname)` never looks the object up, so a loose ref file
+        // naming an object that does not exist is listed happily, and
+        // `rev-parse --verify --quiet` then exits 1 with EMPTY stderr --
+        // which `Repo::rev_parse_verify` reports as absence, not failure.
+        // Written as a file because `update-ref` refuses a missing object,
+        // which is exactly how such a ref arrives in real life: a fetch or a
+        // copy that brought the ref without its objects.
+        //
+        // The oid must be PLAUSIBLE, not the all-zeros null oid: git treats
+        // the null oid as a broken ref and drops it from `for-each-ref`
+        // output entirely (`warning: ignoring broken ref ...`), so that
+        // version of this test never reaches the arm at all -- measured,
+        // git 2.50.1.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::new(repo.clone());
+        let mine = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("keep me")))
+            .expect("mine");
+
+        let refname = format!("{}dangling", Board::PEERS_PREFIX);
+        let path = repo.git_path(&refname).expect("loose ref path");
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("ref dir");
+        std::fs::write(&path, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n")
+            .expect("write the loose ref");
+        let listed = repo
+            .git(&["for-each-ref", "--format=%(refname)", Board::PEERS_PREFIX])
+            .expect("for-each-ref");
+        assert!(
+            listed.contains(&refname),
+            "sanity: the dangling ref must be LISTED, or this test exercises nothing: {listed:?}"
+        );
+        assert_eq!(
+            repo.rev_parse_verify(&format!("{refname}^{{commit}}"))
+                .expect("absence, not failure"),
+            None,
+            "sanity: it must resolve to absence rather than an error"
+        );
+
+        let ids: Vec<String> = board
+            .posts_at_tip()
+            .expect("a dangling mirror must never fail the whole read")
             .into_iter()
             .map(|s| s.id)
             .collect();
@@ -2102,8 +2225,16 @@ mod tests {
         // `Displayed::cap` drops the OLDEST, so a union that concatenated
         // per-ref runs instead of re-sorting would silently elide by ref
         // rather than by age.
+        //
+        // The ids COUNTER-SORT against the timestamps deliberately. `merge_by_id`
+        // collects into a `BTreeMap` keyed by id, so ids that co-sort with time
+        // (`format!("{n:040}")`, the first version of this test) come back in the
+        // right order whether or not anything sorts them -- the test passed with
+        // the sort deleted entirely. Real ids are content hashes, so their order
+        // is random with respect to time; counter-sorting is the cheapest way to
+        // make this test see that.
         let post = |n: u64| StoredPost {
-            id: format!("{n:040}"),
+            id: format!("{:040}", 100 - n),
             post: Post::new("technique", "main"),
             committed_at: n,
             origin: Origin::Peer("lefford".into()),

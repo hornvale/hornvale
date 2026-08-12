@@ -4,37 +4,65 @@
 
 use crate::BoardError;
 use crate::post::Post;
-use crate::store::{Board, StoredPost};
+use crate::store::{Board, Origin, StoredPost};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Every post appended in the last `since_days`, oldest first, from history.
+/// Every post appended in the last `since_days`, oldest first, from history —
+/// across **every ref a read draws from** (B1), not just this host's log.
+///
+/// The union is not symmetry for its own sake. This is the HUMAN seam (D14),
+/// and `make board-digest` is the command Nathan actually reads the board
+/// through; leaving it single-ref would have made the human view show only
+/// this host's history while the ambient render showed the union — a silent
+/// divergence between the two seams, in the direction that matters least.
+/// Same refs, same dedupe rule ([`crate::store::merge_by_id`]) as
+/// [`Board::posts_at_tip`], so the two cannot drift.
 ///
 /// Deduplicated by id: a post's id is the object id of its own bytes (D11),
 /// so a reap-then-repost of byte-identical content is the SAME post
-/// reappearing in the `--diff-filter=A` walk, not a new one. The walk is
-/// oldest-first, and the cutoff for `since_days` is applied BEFORE this
-/// dedupe bookkeeping — so the `committed_at` recorded here is only the
-/// earliest occurrence *within the queried window*, not necessarily the
-/// post's true first appearance. If the true first appearance falls
-/// outside the window and only a later repost falls inside it, this
-/// reports the repost's later time. Fine for a windowed view; do not read
-/// it as "when the project first learned the thing."
+/// reappearing in the `--diff-filter=A` walk, not a new one — and so is the
+/// same post appearing in two hosts' logs. The walk is oldest-first, and the
+/// cutoff for `since_days` is applied BEFORE this dedupe bookkeeping — so the
+/// `committed_at` recorded here is only the earliest occurrence *within the
+/// queried window*, not necessarily the post's true first appearance. If the
+/// true first appearance falls outside the window and only a later repost
+/// falls inside it, this reports the repost's later time. Fine for a windowed
+/// view; do not read it as "when the project first learned the thing."
 pub fn history(
     board: &Board,
     since_days: u64,
     now_unix: u64,
 ) -> Result<Vec<StoredPost>, BoardError> {
-    let Some(tip) = board.tip()? else {
-        return Ok(Vec::new());
-    };
     let cutoff = now_unix.saturating_sub(since_days.saturating_mul(86_400));
+    let mut collected: Vec<StoredPost> = Vec::new();
+    for (refname, origin, tip) in board.resolved_read_refs()? {
+        match history_in(board, &tip, cutoff, &origin) {
+            Ok(posts) => collected.extend(posts),
+            // Same classification as the tip read: a peer mirror that cannot
+            // be walked is one warning, never a blank digest (D7); this
+            // host's own log is still fatal.
+            Err(e) => crate::store::tolerate_unreadable_peer(&origin, &refname, e)?,
+        }
+    }
+    Ok(crate::store::merge_by_id(collected))
+}
+
+/// [`history`]'s walk over ONE ref, against a tip the caller already
+/// resolved. Split out so the union above is a loop rather than a second
+/// copy of the walk.
+fn history_in(
+    board: &Board,
+    tip: &str,
+    cutoff: u64,
+    origin: &Origin,
+) -> Result<Vec<StoredPost>, BoardError> {
     let log = board.repo().git(&[
         "log",
         "--format=@%ct",
         "--diff-filter=A",
         "--name-only",
         "--reverse",
-        &tip,
+        tip,
     ])?;
     // First pass: the same oldest-first walk as before, but it only collects
     // in-window ids and their attributed commit time -- no `git cat-file` yet.
@@ -86,10 +114,10 @@ pub fn history(
                     id,
                     post,
                     committed_at,
-                    // A single-ref walk of `board`'s OWN history, so every
-                    // post here carries that board's origin — this is not the
-                    // union read (B1), which is `Board::posts_at_tip`.
-                    origin: board.own_origin(),
+                    // The origin of the ref this walk is over, exactly as the
+                    // tip read tags its posts — `history`'s caller unions
+                    // several of these.
+                    origin: origin.clone(),
                 });
             }
             Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
@@ -489,6 +517,88 @@ mod tests {
                 "post {i} missing from the digest window"
             );
         }
+    }
+
+    #[test]
+    fn history_unions_peer_refs_so_the_human_view_does_not_lag_the_ambient_one() {
+        // D14 is the reason this matters more than symmetry: `make
+        // board-digest` is the seam Nathan reads the board through. Left
+        // single-ref, the human view would show only this host's history
+        // while `board read` showed the union -- and a reader would have no
+        // way to tell that a whole machine's posts were missing.
+        //
+        // Peer name derived from the real host, never a literal: this suite
+        // runs on lefford too, where a hardcoded "lefford" names THIS host's
+        // own mirror and is correctly skipped.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let mine = board
+            .append(&Post::new("technique", "main").with("note", json!("mine, locally")))
+            .expect("mine");
+        let peer = Board::with_ref(
+            repo.clone(),
+            &format!(
+                "{}{}-peer",
+                Board::PEERS_PREFIX,
+                crate::live::current_host()
+            ),
+        );
+        let theirs = peer
+            .append(&Post::new("technique", "main").with("note", json!("theirs, on the peer")))
+            .expect("theirs");
+        // The same technique published independently on both hosts: it must
+        // appear ONCE, or the digest's counts and its technique list would
+        // double-count every shared post.
+        let shared = Post::new("technique", "main").with("note", json!("published on both"));
+        let shared_id = board.append(&shared).expect("shared here");
+        assert_eq!(
+            peer.append(&shared).expect("shared there"),
+            shared_id,
+            "content addressing must make the independent copies one id"
+        );
+
+        let now_unix: u64 = repo
+            .git(&[
+                "log",
+                "-1",
+                "--format=%ct",
+                &board.tip().expect("tip").expect("some"),
+            ])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let posts = history(&board, 14, now_unix).expect("history");
+
+        let ids: Vec<&str> = posts.iter().map(|p| p.id.as_str()).collect();
+        assert!(ids.contains(&mine.as_str()), "local post missing: {ids:?}");
+        assert!(ids.contains(&theirs.as_str()), "peer post missing: {ids:?}");
+        assert_eq!(
+            ids.iter().filter(|i| **i == shared_id).count(),
+            1,
+            "the shared post must be counted once, not per host: {ids:?}"
+        );
+        assert_eq!(
+            ids.len(),
+            3,
+            "three distinct posts across two logs: {ids:?}"
+        );
+        assert_eq!(
+            posts
+                .iter()
+                .find(|p| p.id == theirs)
+                .map(|p| p.origin.clone()),
+            Some(Origin::Peer(format!(
+                "{}-peer",
+                crate::live::current_host()
+            ))),
+            "and the digest must know which host a post came from"
+        );
+
+        let text = digest(&posts);
+        assert!(
+            text.contains("theirs, on the peer"),
+            "the human view must render the peer's technique in full: {text}"
+        );
     }
 
     #[test]
