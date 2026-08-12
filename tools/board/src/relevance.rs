@@ -539,6 +539,55 @@ mod tests {
     }
 
     #[test]
+    fn recording_does_not_prune_a_peer_ref_post_so_a_foreign_post_renders_once() {
+        // B1's read-side consequence, and the one that would have been silent:
+        // `record` prunes `seen` against `post_ids_at_tip`, so if that stayed
+        // single-ref while renders became a union, every foreign post would be
+        // pruned out of `seen` on the very read that displayed it -- and would
+        // then re-render at every session start, forever. The cursor itself
+        // needs no change for this: ids are globally unique content hashes, so
+        // its `BTreeSet` already works over a union, PROVIDED the prune sees
+        // the same union the render does.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        // A peer name derived from the real host, never a literal: this suite
+        // runs on lefford too, where a hardcoded "lefford" would name THIS
+        // host's own mirror and be correctly skipped by the union.
+        let peer = Board::with_ref(
+            repo.clone(),
+            &format!(
+                "{}{}-peer",
+                Board::PEERS_PREFIX,
+                crate::live::current_host()
+            ),
+        );
+        let theirs = peer
+            .append(&Post::new("notice", "campaign/theirs").with("note", json!("hold off")))
+            .expect("theirs");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let fresh = unseen(&board, &cursor).expect("unseen");
+        assert!(
+            fresh.contains(&theirs),
+            "sanity: a foreign post must be unseen before it is shown"
+        );
+        cursor
+            .record(&board, &Displayed::filter(&posts, &fresh, &[]))
+            .expect("record");
+
+        assert!(
+            cursor.seen().contains(&theirs),
+            "a foreign post that was shown must stay recorded, not be pruned: {:?}",
+            cursor.seen()
+        );
+        assert!(
+            !unseen(&board, &cursor).expect("unseen").contains(&theirs),
+            "and so it must not be offered again on the next render"
+        );
+    }
+
+    #[test]
     fn cap_at_exactly_the_budget_elides_nothing() {
         let (_d, repo) = temp_repo();
         let board = Board::with_ref(repo.clone(), "refs/test/cap-boundary-exact");
@@ -593,6 +642,7 @@ mod tests {
                 id: format!("id{i}"),
                 post: Post::new("notice", "b").with("i", json!(i)),
                 committed_at: 1_000 + i,
+                origin: crate::store::Origin::Local,
             })
             .collect();
         let all: BTreeSet<String> = posts.iter().map(|sp| sp.id.clone()).collect();
@@ -731,8 +781,8 @@ mod tests {
         );
 
         // Record the CAPPED value -- the fix. Recording the pre-cap
-        // `displayed` instead is exactly the C1 bug: see the mutation check
-        // in the task report (it reliably turns this test red).
+        // `displayed` instead is exactly the C1 bug, and that mutation
+        // reliably turns this test red.
         cursor
             .record(&board, &shown)
             .expect("record only what was actually rendered");

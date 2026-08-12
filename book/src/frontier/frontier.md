@@ -39,6 +39,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Ideonomic cognition — novel thought as seeded combinatorics](#ideonomic-cognition--novel-thought-as-seeded-combinatorics)
   - [Proto-mathematics — relational reasoning over already-known quantities](#proto-mathematics--relational-reasoning-over-already-known-quantities)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
+  - [The encodability cascade — why the unprecedented cannot be reported](#the-encodability-cascade--why-the-unprecedented-cannot-be-reported)
   - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
   - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
   - [The biogeography of coexistence — how the weak persist](#the-biogeography-of-coexistence--how-the-weak-persist)
@@ -1322,6 +1323,169 @@ every axis must change a settlement, a myth, or a life, or it is folk
 sociology ossified into false science. But the upside is a world where
 inequality is legible as *history and ideology* rather than baked-in type,
 which is both truer and far more interesting to inhabit.
+
+---
+
+## The encodability cascade — why the unprecedented cannot be reported
+
+*(High confidence on the mechanism, because two of its four gates already
+exist in the substrate and were built for other reasons. The provenance note
+at the end is load-bearing rather than decorative — the argument's first
+exemplar was argued out from under it, and that is what produced the
+mechanism.)*
+
+The section above derives *who lands in which stratum*. This one asks what
+stratification does to an institution's capacity to **perceive and act**,
+and the answer is not the obvious one. The obvious one is that a high-status
+decider discounts a low-status expert's evidence. That does happen — but it
+is the third of four gates, and leading with it hides the two upstream gates
+that do more of the work.
+
+A piece of situated knowledge — one creature's well-grounded sense that
+something is wrong — must clear four checks before it can move an
+institution's decision:
+
+1. **Encodability.** Can the holder state it as a proposition at all?
+2. **Provenance.** Can the utterance carry where it came from?
+3. **Credibility.** Does the hearer weight it by its evidence or by the
+   speaker's standing?
+4. **Model adequacy.** Does the institution's account of the world hold a
+   category the claim could fall under?
+
+Two of these already exist. **Gate 1 is the concept registry**: a fact
+carries a predicate, and a predicate absent from the registry is refused at
+commit — so a creature may hold a phenomenon at high salience and have
+*nothing to commit for it*. Inarticulate dread is not a modelling gap; it is
+the trace protocol working as specified. **Gate 2 is grammatical
+evidentiality**: a tongue marks a claim as witnessed, taught, or inferred,
+and how deeply it marks the category at all is a separate axis. A tongue
+that does not grammaticalize evidentiality cannot distinguish *I saw it*
+from *the elders say* within the sentence. Gate 3 has a partial
+implementation in the composition root, where a society's status basis
+already sets a selection temperature — rank sharpens it, knowledge flattens
+it — though today that temperature chooses myths rather than decisions.
+Gate 4 has no home.
+
+The gates are usefully drawn as the states a signal can occupy, because the
+**forbidden** transitions carry the argument:
+
+```
+  unperceived --salience--> felt --predicate exists--> predicable --> uttered
+                             |                                          |
+                       (holder dies)                                  heard
+                             v                                          v
+                           lost                              weighed --+-- discredited
+                                                                       |
+                                                                   credited
+                                                                       |
+                                                          admissible --+-- inadmissible
+                                                                       |
+                                                                   enacted
+                                                                       |
+                                                     repetition over generations
+                                                                       v
+                                                                   doctrine
+                                                                       |
+              back-edge: doctrine mints predicates ---------------------+
+
+  forbidden: felt -> uttered      (one cannot say what has no predicate)
+  forbidden: credited -> enacted  (belief is not admissibility)
+  cheap:     felt -> lost         (the dread dies with the holder)
+```
+
+**The single back-edge is the whole dynamic.** A category enters a people's
+vocabulary only by someone reaching *enacted* and the result hardening into
+doctrine — so **the unprecedented is unreportable by construction**, and an
+institution's perceptual aperture widens only by having already survived the
+thing it now has a word for. The same edge cuts the other way at gate 4: a
+mature doctrine admits the categories it lists and refuses the rest. One
+loop, two opposite signs, and between them an account of why old
+institutions handle familiar dangers superbly and novel ones worst — as a
+mechanism rather than as a proverb.
+
+The gates are therefore **partially decomposable, not independent**. Gates 2
+and 3 are independent of each other; gates 1 and 4 are coupled by the
+back-edge, since doctrine mints the very predicates gate 1 tests. The
+coupling is the interesting structure, not a defect in the decomposition.
+
+**Contact is the only non-lethal way to open gate 1.** Substituting the
+source of a predicate — where does the vocabulary come from? — gives three
+mints: institutional (the back-edge above, paid for in deaths), individual
+(a coinage named for its first memorable instance), and **borrowing**. A
+people can import the predicate for a danger it has never met from a people
+that has. That makes the connection graph epistemically load-bearing rather
+than merely a transport network: a word crosses a sailing lane and a people
+can suddenly *say* a thing it has never seen. It also gives isolation a
+second cost beyond divergence — an isolated people must buy every category
+with a catastrophe.
+
+**Two mirrored failures at gate 4, and the second one is an affordance the
+ledger already grants.** Gate 4 fails by *lacking* a true category. Its
+mirror fails by *holding an empty one*: a predicate can be registered,
+contradiction-checked, and freely committed while naming nothing whatever.
+Commit validates that the predicate is registered, that a numeric object is
+finite, and — only for predicates declared functional — that no conflicting
+object already stands. Nothing anywhere requires a subject or object to
+refer to something real. So **superstition is expressible today**: a
+well-formed, committable category with an empty extension, held in perfect
+good faith by everyone who uses it. The pair is symmetric and both halves
+are renderable, because the ledger is ground truth and a narration that
+reads only committed facts can be compared against it.
+
+**The chronicle of an institutional failure is written by whoever survived
+it.** The account of a disaster carries the provenance of its narrator, and
+the survivor of a rank disaster is systematically the subordinate — so
+chronicles should over-attribute catastrophe to the incompetence of
+superiors, because the competent-superior version of the story has no
+surviving witness. This is a bias with a *predictable sign*, derivable from
+the same seam that lets a manufactured racial doctrine be recorded as truth,
+turned from species onto institutions. It needs no new machinery: the ledger
+already differs from what a facts-only narration can reach. Its cheap
+companion is blame — one event ledger, two chronicles, and blame flowing
+downhill by the status ordering rather than settling where the channel
+actually broke.
+
+**A discipline this cluster should borrow from its own neighbours.** Every
+sibling of the cascade inside the project is a lossy multi-stage
+transmission — the sculpting pipeline, the far-field multipole summary,
+per-hop decay in a rumour's provenance grade, the serialization boundary at
+the wasm ABI — and most of them state an explicit error bound. A social
+cascade should too: a stated loss per gate, so the model is measurable
+rather than atmospheric. That is the habit the engineering half of the
+project has and the social half does not.
+
+Two honest cautions. Evidential marking depth is **drawn per species, never
+derived from culture vectors** — the anti-astrology line — so gate 2 is an
+independent random variable across peoples rather than an expression of
+their politics. That is a constraint on any design here, and incidentally a
+gift to measurement, since it varies for free. And the counterweight to gate
+3 is not flattening: the institutions that survive their own hierarchies run
+a **compulsory upward-sampling rite** — the muster, the assize, the
+visitation, the tasting, the scripted challenge that makes contradiction
+from below socially legal. The same slot with the sign reversed is status
+display consuming the channel, where a superior spends the encounter on
+dominance rather than on extraction.
+
+**Provenance, which is the point.** The cluster came from reading Steven
+Attewell's political-economy analysis of *A Game of Thrones* against its own
+comment thread. The essay's reading — a highborn officer's rank overrides a
+veteran's expertise, and men die of it — supplied gate 3 and nothing else.
+The commenters dismantled the exemplar: the veterans *felt* the wrongness
+and could not articulate it (gate 1), the narration is a resentful
+subordinate's (the survivor bias above), and every decision was correct for
+the threat the institution modelled (gate 4). What survived the objections
+is a cascade; what did not survive is the moral. The generalization is a
+reading protocol — an analysis supplies mechanisms, and its comment thread
+supplies the falsification pressure, so the mechanism that survives the
+thread is the one that belongs in a spec.
+
+The trap the whole cluster must avoid is authoring a moral instead of a
+mechanism. If competence and correctness are not drawn *separately* — so
+that the veteran's caution is sometimes superstition and the young lord's
+boldness sometimes right — then the model does not derive institutional
+failure, it merely asserts that highborn officers are fools. That is the
+same discipline the no-alignment stance already imposes, arriving one level
+up.
 
 ---
 

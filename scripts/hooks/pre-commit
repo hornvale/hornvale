@@ -95,6 +95,79 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/
     exit 1
 fi
 
+# The board lane rule (B13, decision 0129). `tools/board` is deliberately NOT
+# a workspace member (`members = ["kernel", "domains/*", "windows/*", "cli"]`
+# in the root `Cargo.toml`) — so `cargo clippy --workspace` and `make quick`
+# never examine it — but the `.rs` filter below runs `make quick` anyway on
+# any board change, since a board source file still matches `\.rs$`. Measured
+# (The Beacon): the suite that actually tests the board
+# (`cargo test --manifest-path tools/board/Cargo.toml`) takes 24.4s and runs
+# in no gate at all, so a board-only commit today pays for a gate that cannot
+# see it and skips the one that can.
+#
+# The fix is narrow on purpose: only when EVERY staged path is under
+# `tools/board/` does this replace `make quick` outright. Any other staged
+# path — including a MIXED commit that touches `tools/board/` alongside
+# workspace code — falls through to the ordinary filter below unchanged, so
+# a predicate this narrow only ever adds coverage.
+#
+# THE PREDICATE MUST SEE EVERY STAGED PATH, WHICH TAKES TWO FLAGS. Both were
+# missing when B13 landed, and each one on its own let a commit remove
+# workspace code while claiming the staged set was "entirely under
+# tools/board/" — the exact failure this comment used to say was impossible.
+# Measured (The Beacon Task 11b review):
+#
+#   1. `--diff-filter=ACMR` HIDES DELETIONS. Staging `M tools/board/…`
+#      together with `D windows/lab/src/lib.rs` listed only the board path,
+#      took this lane, skipped `make quick`, and landed a commit deleting a
+#      workspace crate's `lib.rs`. Dropping the filter fixes it: a `D` entry
+#      is a staged path like any other, and the point here is "is anything
+#      outside tools/board/ involved", not "how did it change".
+#
+#   2. RENAME DETECTION HIDES THE SOURCE PATH, and dropping the filter does
+#      NOT fix this one. `git mv windows/lab/src/lib.rs tools/board/moved.rs`
+#      lists only `tools/board/moved.rs`, because `--name-only` reports a
+#      rename as its destination. So a single `git mv` could still carry a
+#      workspace file out of the workspace on this lane. `--no-renames`
+#      decomposes it into the `D` and the `A`, exposing both paths.
+#
+# The `rust_relevant` filter below shares blind spot 1 and is deliberately
+# LEFT ALONE: it predates this work, so changing it is a separate decision.
+#
+# THE BELT, added by The Beacon Task 11b after this very lane corrupted a
+# developer's checkout. Git exports GIT_DIR and GIT_INDEX_FILE to a hook, and
+# from a LINKED WORKTREE they are absolute paths into the real repository:
+#
+#   GIT_DIR=/…/hornvale/.git/worktrees/the-beacon
+#
+# GIT_DIR outranks `git -C <dir>`, so every `git -C <tempdir>` the board's
+# tests make inherited it and operated on the real repo instead: `git init`
+# re-initialised it and guessed bare (core.bare=true), `git config` rewrote
+# user.name to `board test`, the merge helper landed root/work/merge commits on
+# main, and update-ref left a dangling ref that broke `git fetch` repo-wide.
+#
+# The real fix is in `tools/board/src/git.rs` (`Repo::command` scrubs the
+# environment) and is guarded by `tools/board/tests/hermeticity*.rs`. This is
+# the belt: `env -u` here protects any path that bypasses that constructor —
+# a shelled-out command, a new dependency, a helper script — for free.
+#
+# It must wrap ONLY the cargo invocation. The hook's own `git diff --cached`
+# calls above and below NEED the inherited GIT_INDEX_FILE to see the right
+# index, so unsetting these globally would silently change what this hook
+# checks.
+board_staged="$(git diff --cached --name-only --no-renames)"
+if [[ -n "$board_staged" ]] && ! grep -qvE '^tools/board/' <<<"$board_staged"; then
+    echo "pre-commit: staged set is entirely under tools/board/ -- running its own suite instead of 'make quick' (B13)..." >&2
+    if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR -u GIT_INDEX_FILE \
+            -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+            -u GIT_NAMESPACE -u GIT_PREFIX \
+            cargo test --manifest-path tools/board/Cargo.toml; then
+        echo "pre-commit: 'cargo test --manifest-path tools/board/Cargo.toml' failed." >&2
+        exit 1
+    fi
+    exit 0
+fi
+
 # `make quick`, and the docs-only fast path.
 #
 # The repo commits a great many docs-only changes — chronicles, retrospectives,

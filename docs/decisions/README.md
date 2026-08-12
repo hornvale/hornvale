@@ -167,3 +167,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0125](0125-github-actions-is-retired.md) | GitHub Actions is retired — every gate is local (supersedes 0042) | Accepted |
 | [0126](0126-fact-day-is-a-typed-world-time.md) | `Fact.day` carries a typed `WorldTime` (supersedes 0014) | Accepted |
 | [0127](0127-identity-keys-and-discrimination-keys-are-different-kinds.md) | An identity key and a discrimination key are different kinds | Accepted |
+| [0129](0129-the-board-gets-a-risk-scoped-lane-and-a-path-scoped-hook-rule.md) | The board gets a risk-scoped lane and a path-scoped hook rule | Accepted |

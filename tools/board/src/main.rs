@@ -1,11 +1,12 @@
 //! The Cairn CLI. Positional parsing only, `tools/digest`'s pattern.
 
 use board::git::Repo;
-use board::live::LiveContext;
-use board::post::Post;
+use board::live::{LiveContext, current_host};
+use board::post::{Post, credential_shape_matches};
 use board::relevance::{Cursor, Displayed, changed_paths, unseen};
-use board::render::{RenderOptions, live_posts, render};
+use board::render::{RenderOptions, live_posts, peer_status, render, with_peer_header};
 use board::store::{Board, ReapPlan};
+use board::sync::{peer_ages, peer_content_ages, sync};
 use std::collections::BTreeSet;
 
 fn main() {
@@ -45,6 +46,37 @@ fn main() {
                      Numbers must be bare (ttl_s=900, not ttl_s=900s)."
                 );
             }
+            // B9: refuse a post carrying a credential shape BEFORE the bytes
+            // exist. Task 8 measured why prevention is the only control that
+            // actually works here -- byte removal from history is prohibited
+            // AND does not work (a canary force-pushed out of a probe ref was
+            // still served by GitHub, commit and blob plaintext both), and
+            // its own review found redaction's two halves have different
+            // scopes: suppression is board-wide, but eviction is per-log, so
+            // a secret that reaches another host's log stays in that host's
+            // bytes until someone acts there. Only stopping the write closes
+            // that gap. `BOARD_ALLOW_CREDENTIAL_SHAPE` is the override, named
+            // in the refusal so a false positive is a two-minute unblock, not
+            // a mystery -- see `credential_shapes`'s doc comment for why the
+            // patterns stay this narrow (PROC-claim-shape-s-heuristic).
+            let matches = credential_shape_matches(&post);
+            if !matches.is_empty() {
+                for (field, pattern) in &matches {
+                    eprintln!("board: field `{field}` matches the credential shape `{pattern}`");
+                }
+                let allowed = std::env::var_os("BOARD_ALLOW_CREDENTIAL_SHAPE")
+                    .is_some_and(|v| !v.is_empty() && v != "0");
+                if !allowed {
+                    eprintln!(
+                        "board: refusing to post: it carries a credential shape (B9). If this \
+                         is a false positive, override with BOARD_ALLOW_CREDENTIAL_SHAPE=1."
+                    );
+                    std::process::exit(1);
+                }
+                eprintln!(
+                    "board: BOARD_ALLOW_CREDENTIAL_SHAPE is set -- posting despite the match above"
+                );
+            }
             match board.append(&post) {
                 Ok(id) => println!("{id}"),
                 Err(e) => {
@@ -79,11 +111,26 @@ fn main() {
                 }
             };
             let live = live_posts(&posts, &ctx);
+            // B6: ships WITH the render, not after it -- a `notice` carries
+            // no `ttl_s`, so once its authoring host goes quiet, sync age is
+            // the only local signal left that its content might be stale.
+            // Same wall clock the liveness probe already read, so this
+            // never disagrees with the render it accompanies about "now".
+            // Two signals (see `peer_status`'s doc): how stale OUR VIEW of
+            // each peer is, and how long since that peer actually posted --
+            // the second is the one a frozen/retired peer's staleness
+            // actually needs, since a host that syncs regularly reports the
+            // first as fresh forever regardless of the peer's own silence.
+            let peer_header = peer_status(
+                &peer_ages(&repo, ctx.now_unix),
+                &peer_content_ages(&repo, ctx.now_unix),
+            );
 
             if cmd == "read" {
                 // `full()` has no real cap (its post budget is effectively
                 // unbounded), so nothing is ever elided here.
-                print!("{}", render(&live, 0, &RenderOptions::full()));
+                let body = render(&live, 0, &RenderOptions::full());
+                print!("{}", with_peer_header(&peer_header, body));
                 return; // an explicit full read must not advance the cursor
             }
 
@@ -106,7 +153,8 @@ fn main() {
                 let all: BTreeSet<String> = live.iter().map(|s| s.id.clone()).collect();
                 let displayed = Displayed::filter(&live, &all, &changed);
                 let (shown, elided) = displayed.cap(opts.post_budget());
-                print!("{}", render(shown.posts(), elided, &opts));
+                let body = render(shown.posts(), elided, &opts);
+                print!("{}", with_peer_header(&peer_header, body));
                 return;
             };
             let fresh = match unseen(&board, &cursor) {
@@ -124,7 +172,8 @@ fn main() {
             let changed = changed_paths(&repo).unwrap_or_default();
             let displayed = Displayed::filter(&live, &fresh, &changed);
             let (shown, elided) = displayed.cap(opts.post_budget());
-            print!("{}", render(shown.posts(), elided, &opts));
+            let body = render(shown.posts(), elided, &opts);
+            print!("{}", with_peer_header(&peer_header, body));
             if let Err(e) = cursor.record(&board, &shown) {
                 eprintln!("board: could not record the read cursor: {e}");
             }
@@ -183,6 +232,36 @@ fn main() {
                 }
             }
         }
+        // board redact <by> <post-id> — B8/D10: appends a `redact` control
+        // post, then evicts the named post from the TIP tree. History keeps
+        // it (D13); every read (the digest, and — since B8's fix wave — the
+        // ambient render and `board read` too) suppresses the body while
+        // still reporting the act. See `Board::redact`'s doc comment for why
+        // this is a read-time judgment rather than a (prohibited, and
+        // measured not to work) history rewrite.
+        //
+        // The outcome goes to STDERR and the control post's id to STDOUT, so
+        // `$(board redact ...)` keeps capturing exactly the id it always did
+        // while the operator still gets told what actually happened. Exit
+        // stays 0 for all three: none of them is an error (see
+        // `RedactOutcome`), and a `NotHere` in particular is the ordinary
+        // shape of redacting a post a peer authored.
+        Some("redact") => {
+            let (Some(by), Some(id)) = (args.get(2), args.get(3)) else {
+                eprintln!("usage: board redact <by> <post-id>");
+                std::process::exit(2);
+            };
+            match board.redact(by, id) {
+                Ok((new_id, outcome)) => {
+                    println!("{new_id}");
+                    eprintln!("{}", outcome.diagnostic(id));
+                }
+                Err(e) => {
+                    eprintln!("board: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
         // board digest [days] — the human read seam, over history (D14).
         // Never advances the read cursor and never writes to the board: it
         // is a rendering of history, not a new fact about it.
@@ -205,8 +284,40 @@ fn main() {
                 }
             }
         }
+        // board sync [remote] — The Beacon: publish this host's log to
+        // `remote` (default `origin`), then fetch every peer's.
+        //
+        // NEVER FAILS THE PROCESS (B6): the local append this session cares
+        // about has already succeeded by the time sync ever runs, so an
+        // unreachable remote degrades to exactly the single-box behaviour
+        // that shipped before this campaign. Both halves are reported on
+        // whatever channel fits their outcome; the exit code stays 0
+        // either way, or `make board-sync` would look broken merely
+        // because the network is down.
+        Some("sync") => {
+            let remote = args.get(2).map(String::as_str).unwrap_or("origin");
+            // Same host `sync` itself resolves internally (`current_host()`
+            // is the crate's one function for this, by design -- see its
+            // doc comment on why two independent copies must never exist);
+            // read again here only to name the slot in this print, not to
+            // decide anything.
+            let host = current_host();
+            let report = sync(&repo, remote);
+            match report.pushed {
+                Ok(()) => println!("board: pushed to {remote} (refs/hornvale/hosts/{host})"),
+                Err(e) => eprintln!("board: push to {remote} failed: {e}"),
+            }
+            match report.fetched {
+                Ok(peers) => println!(
+                    "board: fetched from {remote} ({} peer mirror{})",
+                    peers.len(),
+                    if peers.len() == 1 { "" } else { "s" }
+                ),
+                Err(e) => eprintln!("board: fetch from {remote} failed: {e}"),
+            }
+        }
         _ => {
-            eprintln!("usage: board <post|read|render|digest|retract|reap>");
+            eprintln!("usage: board <post|read|render|digest|retract|redact|reap|sync>");
             std::process::exit(2);
         }
     }

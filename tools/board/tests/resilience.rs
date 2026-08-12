@@ -197,6 +197,82 @@ fn a_non_numeric_ttl_is_warned_about_at_post_time() {
 }
 
 #[test]
+fn digest_fails_loud_against_an_unreadable_local_ref() {
+    // Carried from Task 5's review. `digest::history` (and
+    // `Board::resolved_read_refs`, which it shares with `posts_at_tip`)
+    // classify a per-ref read failure as tolerable-if-peer, fatal-if-local
+    // via `tolerate_unreadable_peer`. That is the right behaviour -- one
+    // unreadable mirror must never blank the whole board (D7), but this
+    // host's own log failing to read is not survivable in the same way --
+    // but nothing pins it: a refactor that swallowed every failure,
+    // local included, would leave the whole suite green.
+    //
+    // A ref pointing at a TREE rather than a commit is the reproduction:
+    // `rev-parse --verify --quiet <ref>^{commit}` still writes to stderr for
+    // this failure ("expected commit type, but the object dereferences to
+    // tree type") even under `--quiet`, so it is a genuine `Err`, not mere
+    // absence -- and `board digest` must exit non-zero rather than print an
+    // empty digest on exit 0.
+    let (_d, repo) = temp_repo("digest-unreadable-local");
+    let tree = repo.git(&["write-tree"]).expect("write-tree");
+    repo.git(&["update-ref", board::store::BOARD_REF, &tree])
+        .expect("point the local board ref at a tree");
+
+    let (code, stdout, stderr) = run(&repo, &["digest", "3650"]);
+    assert_ne!(
+        code,
+        Some(0),
+        "an unreadable LOCAL ref must fail the digest, not report success: \
+         stdout={stdout:?} stderr={stderr:?}"
+    );
+    assert!(
+        stderr.contains("refs/hornvale/board"),
+        "and name the ref that could not be read: {stderr:?}"
+    );
+}
+
+#[test]
+fn render_stays_quiet_against_the_same_unreadable_local_ref_the_digest_dies_on() {
+    // The other half of the asymmetry the sibling test above pins. `main.rs`'s
+    // `render` arm deliberately SWALLOWS this exact `BoardError` and stays
+    // quiet (D7 -- the ambient render must never break a session), while
+    // `board digest` -- the human seam, D14 -- fails loud on the identical
+    // defect. Nothing pinned that CHOICE before this test existed: changing
+    // `render`'s arm in `main.rs` to `std::process::exit(1)` on the same
+    // error left the whole suite green, because the loud half was pinned
+    // twice over and the quiet half was never asserted at all.
+    let (_d, repo) = temp_repo("render-unreadable-local");
+    let tree = repo.git(&["write-tree"]).expect("write-tree");
+    repo.git(&["update-ref", board::store::BOARD_REF, &tree])
+        .expect("point the local board ref at a tree");
+
+    let (render_code, render_stdout, render_stderr) = run(&repo, &["render"]);
+    assert_eq!(
+        render_code,
+        Some(0),
+        "the ambient render must stay quiet on the same defect the digest dies on: \
+         stdout={render_stdout:?} stderr={render_stderr:?}"
+    );
+    assert!(
+        render_stdout.is_empty(),
+        "and print nothing to stdout: {render_stdout:?}"
+    );
+    assert!(
+        !render_stderr.is_empty(),
+        "but still SAY something on stderr rather than swallowing it silently: \
+         {render_stderr:?}"
+    );
+
+    let (digest_code, digest_stdout, digest_stderr) = run(&repo, &["digest", "3650"]);
+    assert_ne!(
+        digest_code,
+        Some(0),
+        "the digest must fail loud on the identical defect the render arm just stayed \
+         quiet on: stdout={digest_stdout:?} stderr={digest_stderr:?}"
+    );
+}
+
+#[test]
 fn reap_refuses_to_run_rather_than_reap_against_an_unreadable_board() {
     // C2's second half. `posts_at_tip().unwrap_or_default()` used to turn a
     // read failure into an empty post set, which probes as "nothing is live"
