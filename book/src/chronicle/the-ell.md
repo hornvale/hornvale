@@ -157,10 +157,15 @@ youngest communities, and they sort by lifespan as they should — on seed 3 the
 long-lived high elves survive at seven in thirteen against the short-lived
 hobgoblins' one in twenty.
 
-The sharper property is a separation, and it holds in all five worlds without
-exception: **every surviving member of a species was born after every dead
-member of it.** Survivors are the latest-born *block*, not the latest-born
-individual — on seed 42 one surviving desert-dwarf was born a hundred years
+The sharper property is a separation: **every surviving member of a species was
+born after every dead member of it.** The whole-branch review built all five
+worlds live and found no exception among their seventeen survivors — which is
+the honest weight to put on it. Seed 42 is the only world with a committed
+fixture and no harness in the tree computes this metric, so the property is a
+reading taken at review, not something the gate holds; and seventeen is a small
+enough denominator to be worth naming next to the claim. Survivors are the
+latest-born *block*, not the latest-born individual — on seed 42 one surviving
+desert-dwarf was born a hundred years
 before the last of its kind, and is alive because the whole tail of that
 lineage is. A death rule keyed on lifespan produces exactly that shape; a
 guard failing at random does not.
