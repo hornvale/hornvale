@@ -1229,6 +1229,44 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "insolation-rel",
+            doc: "Top-of-atmosphere stellar flux at the anchor, relative to Earth \
+                   (L/a², Earth = 1) — the driver of the temperature baseline. The \
+                   shared SKY-15 definition, not a re-derivation",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(hornvale_astronomy::insolation_rel(
+                    &v.system.star,
+                    &v.system.anchor,
+                ))
+            }),
+        },
+        Metric {
+            name: "zone-position",
+            doc: "Where in the habitable zone the anchor sits, normalized: \
+                   (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 \
+                   the cold outer edge. This is the DRAWN variable — the orbit is \
+                   placed uniform in radius across the zone — and it is what \
+                   temperature actually tracks; `anchor-orbit-au` is 95% collinear \
+                   with luminosity and so reads as uninformative on its own",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                let inner = v.system.star.habitable_zone.inner().get();
+                let outer = v.system.star.habitable_zone.outer().get();
+                let a = v.system.anchor.orbit.get();
+                // HabitableZone::new enforces inner < outer, so the span is positive.
+                MetricValue::Number((a - inner) / (outer - inner))
+            }),
+        },
+        Metric {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
@@ -8895,7 +8933,17 @@ mod tests {
         // truncated transect scores as monotone however short its prefix.
         // Both must travel with the SAME population monotonicity is read
         // over, which a gate test on one world cannot do.
-        assert_eq!(registry().len(), 200);
+        //
+        // +2 for THE GLASSHOUSE (Task 2: insolation-rel, zone-position) — the
+        // census held 23 astronomy metrics and none of them was insolation,
+        // luminosity, or orbital distance, so the driver behind the
+        // temperature baseline was structurally invisible to it
+        // (CLIM-astronomy-unmeasured). insolation-rel is the shared SKY-15
+        // `L/a²` definition, not a re-derivation; zone-position is the DRAWN
+        // variable the orbit is placed on, and the two are related by the
+        // closed-form identity `S = 1/(0.95+0.42u)²` pinned in
+        // `windows/lab/tests/rung_selection.rs`.
+        assert_eq!(registry().len(), 202);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
