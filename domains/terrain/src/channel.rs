@@ -827,9 +827,17 @@ impl ChannelNetwork {
     /// that treats *any* sign change as a crossing (a ford, say) will report
     /// one on dry ground at every river source and every river mouth.
     ///
-    /// Measured on seed 42 at `Geosphere::new(5)` — 13 lines, 46 vertices, 26
-    /// endpoints, 1 confluence, terrace edge (the outermost band) 2.0e-4 rad
-    /// at its narrowest, 3.5e-3 median, **6.9e-3 at its widest**:
+    /// Measured on seed 42 at `Geosphere::new(5)` **at The Ford, on the
+    /// pre-Task-2 network** — 13 lines, 46 vertices, 26 endpoints, 1
+    /// confluence, terrace edge (the outermost band) 2.0e-4 rad at its
+    /// narrowest, 3.5e-3 median, **6.9e-3 at its widest**. That network is now
+    /// 22 lines and 76 vertices (The Rill, Task 2: a run includes the cell it
+    /// drains into), so the *counts* below have moved and have not been
+    /// re-measured. What the paragraph is here to say has not: a sign change
+    /// out beyond an endpoint is a fact about the polyline soup rather than
+    /// about a river, the locus is a ray that scales with the probe, and no
+    /// fixed distance threshold removes it. More lines means more endpoints
+    /// means more of it.
     ///
     /// - A 720-point circle of radius **1.0e-2 rad** about each endpoint gives
     ///   54 sign changes. 29 are real crossings, inside the bands. **25 sit at
@@ -926,10 +934,21 @@ mod tests {
     /// reasons unrelated to what it claims.
     const CANONICAL_MAX_DRAINAGE: f64 = 180.0;
 
-    /// The **measured** number of confluences on seeds 42 and 7 at the
-    /// canonical level 6 (15 + 52) — the population the confluence-repair
-    /// test asserts over. A datum about the terrain, not a threshold anyone
-    /// chose.
+    /// A **measured** number of confluences on seeds 42 and 7 at the canonical
+    /// level 6 — the population the confluence-repair test asserts over. A
+    /// datum about the terrain, not a threshold anyone chose.
+    ///
+    /// **67 was 15 + 52, measured at The Ford. It is now 90 (20 + 70)**, and
+    /// the constant is deliberately left at the older, lower value because the
+    /// test below asserts `joins * 2 >= CONFLUENCES_AT_LEVEL_6` — an
+    /// anti-vacuity floor, not a count. What moved it was The Rill's Task 2:
+    /// before it, a run stopped one cell short of its outlet, so a trunk's last
+    /// river cell was that trunk's FINAL vertex and the owner map never
+    /// recorded it; a tributary joining exactly there was not recognised as a
+    /// confluence at all. Extending every run to its outlet makes those joins
+    /// visible — 5 more on seed 42, 18 on seed 7. They were harmless while
+    /// invisible (both copies of the shared cell were anchored, so they
+    /// coincided by accident), and they are now repaired explicitly.
     ///
     /// Level 6 rather than the level 5 the rest of this file uses, because
     /// level 5 does not have the phenomenon: seeds 42, 7 and 1234 together

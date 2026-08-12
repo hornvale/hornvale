@@ -280,9 +280,13 @@ fn sample_positions_near_channels(net: &ChannelNetwork, wanted: usize) -> Vec<[f
 /// comes from outside the object under test, so it carries the durability
 /// guarantee by itself, and one seed makes that an anecdote about one world's
 /// drainage rather than a property of `build`. The five together contribute
-/// **347** segments (seed 42: 33, seed 7: 104, seed 1234: 50, seed 99: 88,
-/// seed 2024: 72), which is also the answer to "would this notice if a seed
+/// **539** segments (seed 42: 54, seed 7: 159, seed 1234: 76, seed 99: 128,
+/// seed 2024: 122), which is also the answer to "would this notice if a seed
 /// stopped producing rivers" — the per-seed floor below is what notices.
+/// Re-measured at The Rill's Task 2, which made every run reach the cell it
+/// drains into and so added a segment to most runs and restored runs the old
+/// length filter dropped; at The Ford the same five contributed 347 (33 / 104
+/// / 50 / 88 / 72). The floors below are unchanged and still have room.
 ///
 /// claim: invariant(forall-seed) — every polyline segment is a downhill step,
 /// so vertex order is downstream order and the bank sign has a referent
@@ -330,7 +334,7 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     }
     // Per-seed, so a single world going riverless is visible rather than being
     // absorbed by the other four in the total. The measured minimum across the
-    // sweep is seed 42's 33.
+    // sweep is seed 42's 54 (it was 33 before The Rill's Task 2).
     assert!(
         edges >= 25,
         "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} — too few for this \
@@ -347,12 +351,15 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
 /// claim is universal. Pairs whose nearest line is not the segment's own line
 /// are skipped — for those the reading is about a different river and says
 /// nothing about this one — and the surviving population is floored so the
-/// skip cannot quietly empty the test. **Measured:** 33 pairs survive on seed
-/// 42 at level 5 — which is *every* segment the network has (13 lines, 46
-/// vertices), so the filter is not currently masking a single case — with a
-/// worst magnitude gap of 1.11e-13 rad. The floor of 25 leaves room for
-/// ordinary terrain drift without leaving room for the filter to start
-/// swallowing the population.
+/// skip cannot quietly empty the test. **Measured, re-taken at The Rill's Task
+/// 2:** 54 pairs survive on seed 42 at level 5 — which is still *every* segment
+/// the network has (22 lines, 76 vertices), so the filter is not currently
+/// masking a single case — with a worst magnitude gap of 1.67e-13 rad. (At The
+/// Ford it was 33 of 33, on a 13-line/46-vertex network: Task 2 gave most runs
+/// a mouth segment and restored the runs the old length filter dropped, and
+/// the filter still masks nothing.) The floor of 25 leaves
+/// room for ordinary terrain drift without leaving room for the filter to
+/// start swallowing the population.
 #[test]
 fn the_bank_sign_is_left_of_downstream_and_mirrors_exactly() {
     let terrain = build_seed_42_terrain();

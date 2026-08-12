@@ -287,6 +287,12 @@ const MIN_OUTLET_RUNS: usize = 308;
 /// distinction is load-bearing: two runs that both stopped short on the same
 /// cell would each appear in the other's cell list and would satisfy the weaker
 /// form, so the weaker form is blind to the defect wherever it happens twice.
+///
+/// The second clause carries a second assertion, on the same population: a
+/// mouth must carry the **arriving reach's** band geometry rather than the
+/// outlet cell's own. That is the one genuine design decision in Task 2, and
+/// the comment at it says why it is asserted here rather than left to the two
+/// witnesses that already exist.
 #[test]
 fn every_run_reaches_its_outlet() {
     let geo = Geosphere::new(OUTLET_LEVEL);
@@ -321,6 +327,35 @@ fn every_run_reaches_its_outlet() {
             let last: CellId = *cells.last().expect("a run has at least two cells");
             if !matches!(*globe.water_kind.get(last), WaterKind::River) {
                 outlet_runs += 1;
+                // THE BORROWED MOUTH GEOMETRY, as a property. `band_edges` is
+                // per vertex from that vertex's own drainage, slope and
+                // spacing, and this vertex's cell is NOT a river — so `build`
+                // gives the mouth the arriving reach's geometry instead. Both
+                // alternatives were measured before the choice was made
+                // (`build`'s own comment carries the numbers): an ocean outlet
+                // has drainage 0 and yields `[0, 0, 0, 0]`, a mouth with no
+                // channel at all; a salt basin holds its whole catchment at
+                // zero gradient and yields a mouth 1.4x as wide inside a
+                // valley 12.9x as broad as the river that feeds it.
+                //
+                // ASSERTED HERE BECAUSE THE OTHER TWO WITNESSES ARE NOT
+                // ENOUGH. `channel.rs`'s `e[0] > 0.0` kills only the ocean
+                // half — the zero-width case — and says nothing about a salt
+                // basin, whose own edges are all comfortably positive. The
+                // only thing that pins the basin half is the level-5 byte
+                // fixture, and that fixture is explicitly re-baselineable and
+                // will be re-baselined by later tasks in this campaign. This
+                // assertion is the durable one.
+                let n = net.band_edges[i].len();
+                assert_eq!(
+                    net.band_edges[i][n - 1],
+                    net.band_edges[i][n - 2],
+                    "seed {seed}, run {i}: the mouth at {last:?} ({}) does not carry the \
+                     arriving reach's band geometry — it computed its own from the outlet \
+                     cell's drainage and gradient, which describe the sea or the basin \
+                     rather than the river",
+                    globe.water_kind.get(last).name()
+                );
                 continue;
             }
             if globe.downhill.get(last).is_none() {

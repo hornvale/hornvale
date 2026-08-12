@@ -6897,8 +6897,14 @@ fn lab_run_owner(
 /// - *The join crossing.* The repair (`ChannelNetwork::build`) places a
 ///   tributary's mouth ON the trunk vertex it joins, so `from == to` exactly
 ///   and all seven interpolated samples land on a point at distance zero from
-///   a polyline. Measured at level 6: seed 42 has 15 joins across 144 walks,
-///   seed 7 has 52 across 295, every one at exactly zero separation.
+///   a polyline. Measured at level 6, **as of The Rill's Task 2**: seed 42 has
+///   20 joins across 183 walks, seed 7 has 70 across 359, every one at exactly
+///   zero separation. (At The Ford, which is where these numbers were first
+///   taken, it was 15 across 144 and 52 across 295. Task 2 made every run
+///   reach the cell it drains into, which both adds runs — the one-cell runs
+///   the old length filter dropped — and makes a trunk's last river cell a
+///   non-final vertex, so joins that landed exactly there are now recognised
+///   as confluences instead of being invisible to the owner map.)
 /// - *Falling out of the network.* This was never reachable, before the
 ///   repair either. In `build` the claiming run does `run.push(target)`
 ///   **before** testing `claimed.insert(target)`, so a cell with a river
