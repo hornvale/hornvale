@@ -269,6 +269,24 @@ mod tests {
         }
     }
 
+    /// A claim built the way [`live::tests::peer_claim`](crate::live) does,
+    /// read as [`Origin::Peer`].
+    fn peer_claim_post(host: &str, pid: u32, ttl_s: u64) -> Post {
+        Post::new("claim", "campaign/live")
+            .with("host", json!(host))
+            .with("pid", json!(pid))
+            .with("ttl_s", json!(ttl_s))
+    }
+
+    fn peer_stored(post: Post, id: &str, host: &str) -> StoredPost {
+        StoredPost {
+            id: id.to_string(),
+            post,
+            committed_at: 900,
+            origin: Origin::Peer(host.to_string()),
+        }
+    }
+
     #[test]
     fn the_render_is_delimited_and_declares_itself_untrusted() {
         // D7b: this text lands in another agent's context. It must be framed
@@ -663,5 +681,48 @@ mod tests {
         let out = render(&live, 0, &RenderOptions::session_start());
         assert!(out.contains("campaign/live"), "attribution present: {out}");
         assert!(out.contains("note=hi"), "body present too: {out}");
+    }
+
+    #[test]
+    fn a_foreign_claims_prefix_names_its_origin_and_says_unverifiable_exactly() {
+        // The reviewer's sharpening on Task 6: a golden's job is byte-
+        // identity, not intent, so Task 10 would freeze whatever shape
+        // exists here -- including a degraded one -- and never notice.
+        // `text.contains("unverifiable")` alone would still pass if the
+        // host were dropped, the parentheses lost, or the marker relocated
+        // within the string. Pin the whole never-truncated prefix exactly,
+        // so the wording means something before Task 10 freezes it.
+        let post = peer_claim_post("lefford", 4242, 900);
+        let stored = peer_stored(post, "a", "lefford");
+        assert_eq!(
+            line(&stored, usize::MAX),
+            "  [claim] campaign/live (lefford, unverifiable here) — host=lefford pid=4242 ttl_s=900"
+        );
+    }
+
+    #[test]
+    fn a_foreign_claims_unverifiable_marker_survives_the_session_start_truncation_cap() {
+        // The Important finding from Task 6's review: the marker test that
+        // existed before this one used `RenderOptions::full()` (a
+        // 2000-char cap), which never truncates anything -- so it could not
+        // observe WHERE the marker landed. Moving `origin_marker`'s output
+        // from the never-truncated prefix into the truncatable body reads
+        // as a plausible refactor and leaves the whole suite green, while
+        // making a foreign claim byte-for-byte indistinguishable from a
+        // local one once the ambient 240-char cap actually bites -- exactly
+        // the failure B5 exists to prevent. A long `note` forces truncation
+        // at `session_start()`'s budget; the marker must still survive it.
+        let post = peer_claim_post("lefford", 4242, 900).with("note", json!("x".repeat(600)));
+        let stored = peer_stored(post, "a", "lefford");
+        let out = render(&[stored], 0, &RenderOptions::session_start());
+        assert!(
+            out.contains('…'),
+            "sanity: this note really is long enough to be truncated: {out}"
+        );
+        assert!(
+            out.contains("unverifiable"),
+            "the unverifiable marker must survive truncation at the ambient \
+             session-start cap, not merely the unbounded full() cap: {out}"
+        );
     }
 }

@@ -197,6 +197,19 @@ impl LiveContext {
 
         let mut live_pids = BTreeSet::new();
         for s in posts.iter().filter(|s| s.post.kind == "claim") {
+            // B4, symmetric with the branch-resolution skip below: a foreign
+            // claim's `host` FIELD is self-reported and could collide with
+            // this host's OWN short name (duplicate short hostnames are not
+            // hypothetical in this repo -- see CLAUDE.md's `MacBookPro` vs
+            // `ambrose` timing-baseline fork). Without this, such a
+            // collision would spawn `ps` for a pid this host never claimed,
+            // and could admit that pid into `live_pids`, where it might then
+            // coincidentally match a genuinely dead LOCAL claim's pid and
+            // read it as live. `Origin` cannot collide the way a self-
+            // reported field can, so it is checked first.
+            if matches!(s.origin, crate::store::Origin::Peer(_)) {
+                continue;
+            }
             if s.post.str_field("host") != Some(host.as_str()) {
                 continue;
             }
@@ -338,9 +351,18 @@ impl LiveContext {
 ///
 /// Without this, importing a peer's log would judge every one of its
 /// notices by ancestry in a clone that never had the branch to begin with —
-/// unresolved forever, not merely today — and `is_reapable`'s grace period
-/// would eventually treat that as durable absence and drop a live hold-off
-/// out of the local view for good. It also makes a foreign post CHEAPER to
+/// unresolved forever, not merely today — and this function's own
+/// `"notice"` arm would then render every one of them `Expired`: a live
+/// `hold-off` from a peer would simply stop appearing in every render on
+/// this host, silently, for as long as the branch stays unresolved here
+/// (which, for a peer's branch, is forever). **This is a render-suppression
+/// bug, not a reap one**: `is_reapable`'s `"notice"` arm does not call this
+/// function at all (it reads `live_branches`/`merged_branches`/the grace
+/// period directly), and `reap` never sees a foreign post regardless,
+/// because `Board::snapshot` is single-ref by construction (B1) — so a
+/// peer's post can never be reaped from here no matter what this function
+/// returns. The fix below is still correct and needed; it just closes a
+/// different door than reap's. It also makes a foreign post CHEAPER to
 /// judge than a local one: see `LiveContext::probe`'s matching skip, which
 /// is what stops the unresolved-author cost from growing with the peer
 /// population.
@@ -1127,6 +1149,42 @@ mod tests {
             !ctx.live_branches.contains("campaign/never-existed"),
             "a branch that was never created must not be live: {:?}",
             ctx.live_branches
+        );
+    }
+
+    #[test]
+    fn probe_never_resolves_a_foreign_authors_branch_at_all() {
+        // Minor 1 from Task 6's review: removing the `Origin::Peer` skip in
+        // `probe`'s branch-resolution loop restores two `rev-parse` calls
+        // per foreign post and NOTHING FAILS for a branch that never
+        // existed here (`resolve_branch_ref` returns `None` either way, so
+        // the resulting sets are identical) -- that measurement lived only
+        // in a throwaway example, not a test. `main` is different: it
+        // ALWAYS resolves, and B11 makes it unconditionally live (self-
+        // ancestry), so a post naming it is a case where "resolved" and
+        // "skipped" produce OBSERVABLY different `live_branches`. A local
+        // post naming `main` lands there (see
+        // `a_notice_authored_by_main_is_live_because_main_is_never_superseded`);
+        // this pins that a FOREIGN one does not, because it is never asked.
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+        let foreign = StoredPost {
+            id: "a".repeat(40),
+            post: Post::new("notice", "main"),
+            committed_at: 0,
+            origin: crate::store::Origin::Peer("lefford".to_string()),
+        };
+        let ctx = LiveContext::probe(&repo, &[foreign]).expect("probe");
+        assert!(
+            !ctx.live_branches.contains("main"),
+            "a foreign post's `by` must never be resolved, not even into a \
+             TRUE answer: {:?}",
+            ctx.live_branches
+        );
+        assert!(
+            !ctx.merged_branches.contains("main"),
+            "nor into a false one: {:?}",
+            ctx.merged_branches
         );
     }
 
