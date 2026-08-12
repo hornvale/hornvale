@@ -493,6 +493,9 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; the `.map(|s| ...)`
+    /// closure parameter is a post summary, not a world seed — no world is
+    /// built here)
     #[test]
     fn a_suggest_post_does_not_consume_the_ambient_post_budget() {
         // The cost half of B12: if suggestions merely rendered as nothing

@@ -761,3 +761,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-12T05:25:53Z | gate | 644.266 | 3285.785 | 232.398 | 5.46 | 0 | dccaf5e9 | chore/the-ell-followups | MacBookPro | 10 |
 | 2026-08-12T05:28:12Z | rebaseline | 138.528 | 225.337 | 13.428 | 1.72 | 0 | dccaf5e9 | chore/the-ell-followups | MacBookPro | 10 |
 | 2026-08-12T11:23:51Z | rebaseline | 142.291 | 225.507 | 14.173 | 1.68 | 0 | 73285531 | the-muster | MacBookPro | 10 |
+| 2026-08-12T15:57:39Z | gate (RED, aborted at test 32/3443 — NOT a gate timing) | 299.058 | 1044.114 | 118.091 | 3.89 | 0 | 217b4579 | campaign/the-beacon | ambrose | 12 |
+| 2026-08-12T16:15:28Z | gate | 764.565 | 3196.520 | 237.086 | 4.49 | 0 | 217b4579 | campaign/the-beacon | ambrose | 12 |

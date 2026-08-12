@@ -122,6 +122,9 @@ fn identical_posts_recorded_independently_are_idempotent() {
 /// machines and what makes a reap terminal for the log that made it — under a
 /// merge design, the host that reaps a post has it resurrected by the next
 /// fetch from the host that did not, forever.
+///
+/// claim: structural(git-backed board plumbing test; no world seed loop —
+/// the scanner's single-letter `s` closure-param heuristic false-fires)
 #[test]
 fn a_union_read_sees_both_clones_posts_once_each_is_fetched_into_its_own_peer_ref() {
     let (_d, repo) = temp_repo("union-read");

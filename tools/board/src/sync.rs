@@ -408,6 +408,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn sync_failure_is_never_fatal_and_the_local_post_stands() {
         let (_dir, repo) = crate::git::test_support::temp_repo();

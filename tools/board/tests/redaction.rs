@@ -104,6 +104,8 @@ fn a_post_only_a_peer_holds_is_suppressed_at_the_ambient_seam() {
     );
 }
 
+/// claim: structural(git-backed board plumbing test; no world seed loop —
+/// the scanner's single-letter `s` closure-param heuristic false-fires)
 #[test]
 fn a_content_addressed_duplicate_in_two_logs_is_suppressed_at_the_ambient_seam() {
     let (_d, repo) = temp_repo("dup");

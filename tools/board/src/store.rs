@@ -2317,6 +2317,8 @@ mod tests {
         Board::with_ref(repo.clone(), &format!("{}{host}", Board::PEERS_PREFIX))
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn a_read_unions_the_local_log_with_every_peer_ref() {
         let (_dir, repo) = crate::git::test_support::temp_repo();
@@ -2348,6 +2350,8 @@ mod tests {
         assert_eq!(origin_of(&theirs), Origin::Peer(foreign_host()));
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn the_union_deduplicates_a_post_present_in_two_refs() {
         // The CRDT property, at read time: an id IS a content hash, so the
@@ -2401,6 +2405,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn the_union_skips_this_hosts_own_mirror_so_a_reaped_post_cannot_return() {
         // peers/<self> is behind the local log whenever a reap has not been
@@ -2479,6 +2485,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn a_peer_ref_that_points_at_a_tree_is_skipped_with_a_warning_not_fatal() {
         // D7 at the ref level: one unreadable mirror must never blank the
@@ -2535,6 +2543,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn a_peer_ref_naming_an_absent_object_is_skipped_with_a_warning_not_fatal() {
         // The OTHER arm of `resolved_read_refs`: `Ok(None)`, a ref that is
@@ -2630,6 +2640,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(git-backed board plumbing test; no world seed loop —
+    /// the scanner's single-letter `s` closure-param heuristic false-fires)
     #[test]
     fn the_union_is_ordered_oldest_first_across_refs() {
         // `Displayed::cap` drops the OLDEST, so a union that concatenated
