@@ -470,6 +470,34 @@ by construction* (the battery exists) — and makes it **grow with the
 simulation's fidelity**, automatically. Magic stops being a content problem and
 becomes the sim reflecting on itself, the shape UNI-21 already describes.
 
+**The complement of that catalog is the failure catalog, and it comes free from
+the same read.** A derivation names the laws it suspends; every law it does not
+name is still in force. So the batteries that supply the violations supply, from
+the other side and at no extra cost, the *remainder* a caster remains exposed to
+— and nobody authors that either. The canonical instances all have this shape: a
+scroll granting enormous leap is a valid proof of *ascent* and is silent about
+arrival, because arrival was never magic. The death is not a flaw in the
+derivation. It is the derivation being exactly as narrow as it truthfully
+claimed to be.
+
+Two formal quantities follow without further machinery. **A disaster's level is
+its remainder depth**, the mirror of a spell's level being its derivation depth
+— one unsuspended law is a footnote, four composed is a legend, and the quantity
+is again read rather than balanced. And **suspensions union while effects
+multiply**: casting two derivations together strictly enlarges the suspended
+set, so combination is monotonically *safer* on the remainder axis, while the
+space in which their effects can interact grows combinatorially. Compound magic
+is better protected and more dangerous at once — two different sets moving in
+opposite directions, rather than a tension anyone has to arbitrate.
+
+**The remainder is signed, and a world that only ever debits it has taught its
+casters not to experiment.** The unsuspended law that rescues is the same object
+as the one that kills; serendipity and catastrophe are one mechanism read at
+opposite signs. That makes the ratio a calibration rather than a flavour, with
+an optimum well short of maximal hazard — below it nobody learns anything,
+above it nobody tries — and it is the rare part of this cluster a laboratory
+could eventually measure rather than merely assert.
+
 **On sourcing: the laws, not the ladder.** Frazer's two laws are a good grammar
 and a bad theory. *The Golden Bough*'s evolutionist magic → religion → science
 progression is discredited, and citing it as theory would make the
