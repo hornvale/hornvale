@@ -125,20 +125,48 @@ Inflow boundary conditions come from the coarse graph the same way: a parent
 edge across which a neighbour flows *in* is an inlet, and the child owning
 that edge receives it.
 
-### 4.3 Discharge must be an area, not a count
+### 4.3 The width law is already scale-free — asserted, not assumed
 
-`drainage` is an **upstream land-cell count**. A level-12 triangle is
-`4^6 = 4096×` smaller in area than a level-6 one, so feeding counts into
-`w = a·Q^b` at depth makes every width wrong by a scale factor. For the width
-law to be scale-free, `Q` must be **drained area**.
+**This section previously said the opposite, and it was wrong.** It claimed
+`drainage` being an upstream cell count made the width law scale-dependent, so
+`Q` had to become a drained area. Measurement at Task 1 falsified it, and the
+reason is geometric rather than incidental.
 
-This is the campaign's sharpest edge and the difference between a network that
-is self-similar and one that only photographs well. It also changes the
-meaning of `CHANNEL_WIDTH_COEFF`, which was calibrated against counts at level
-6 (spec: fitted so seed 42's widest channel is 1/100 of a canonical cell edge).
-The recalibration must reproduce that same measured target under the new
-units, and the plan must show the before/after number rather than asserting
-equivalence.
+Cells tile the sphere, so `N` cells have mean area `4π/N`, and a locally
+hexagonal tiling has nearest-neighbour spacing `d = √(2/√3)·√A = 1.0746·√A`.
+Measured across levels 4–7, `cell_spacing / √(4π/cell_count)` is **1.07824 at
+every level**, constant to five digits — the hexagonal packing constant, off by
+0.34% from the twelve pentagons and the curvature. So
+
+```
+  w = a · edge · √count
+    = a · 1.0746 · √A_cell · √count
+    = (a · 1.0746) · √(A_cell · count)
+    = (a · 1.0746) · √(drained area)
+```
+
+`cell_edge` **already carries the count→area conversion.** Multiplying by area
+while keeping `edge` would apply the grid factor twice, rescaling every width
+by `√(N₆/N_L)` — ×2 at level 5, **×1/64 at level 12** — which is the scale
+error this campaign exists to remove, sign-flipped.
+
+Two consequences the rest of the design depends on:
+
+1. **No units change is needed, and none is made.** `TectonicGlobe.drainage`
+   stays a count, `channel_half_width` and `band_edges` keep their signatures,
+   and `CHANNEL_WIDTH_COEFF` is not recalibrated. `RIVER_MIN_DRAINAGE` keeps
+   comparing against a count, which it must — expressed as a steradian area,
+   `15.0` would exceed every discharge in the world and zero every channel.
+2. **Tier 2 must supply LOCAL units.** Scale-freeness holds only when the
+   accumulated count and the spacing are at the *same* level. Below cell scale
+   there is no `Geosphere` to ask (level 12 would be ~671 million cells), so
+   the subdivision must derive its spacing from `RoomAddr::corners()` and
+   accumulate counts in its own sub-triangle units. Mixing a sub-cell count
+   with a cell-scale spacing reintroduces exactly the error this section
+   originally imagined.
+
+The invariant is therefore promoted from an assumption to an asserted property
+(R-3), because Tier 2's correctness rests on it.
 
 ### 4.4 The consumer — wetness reads the network
 
@@ -193,10 +221,19 @@ is labelled a **witness**, not a hypothesis test.
 - **R-2 — every run reaches its outlet.** The last vertex of every polyline is
   a cell that has no downhill target, or is the outlet it drains into, or was
   already claimed by another run. Reference: `TectonicGlobe.downhill`.
-- **R-3 — drained area is conserved under subdivision.** For every subdivided
-  cell, the sum of its children's own areas plus its inflows equals its own
-  accumulation, to within quantization. This is the law §4.3 exists to
-  preserve, and it fails loudly if `Q` is left as a count.
+- **R-3 — the width law is invariant under a change of level.** For a fixed
+  physical drained area, the rendered width is the same whichever level's units
+  express it: `w(count, edge)` equals `w(4·count, edge/2)` to within
+  quantization, across at least six doublings. This is stated over the **law**,
+  not over the world — the drainage field itself changes with resolution
+  because a finer elevation field routes flow differently, so a same-basin
+  comparison across levels measures physics as well as units and cannot
+  isolate this claim. R-3 is the invariant Tier 2's correctness rests on, and
+  it fails loudly if a sub-cell count is ever paired with a cell-scale spacing.
+  **Additionally:** for every subdivided cell, the sum of its children's own
+  areas plus its inflows equals its own accumulation, to within quantization —
+  conservation under subdivision, which is a separate claim from invariance
+  under rescaling and can fail independently.
 - **R-4 — the fine network cannot contradict the coarse one.** For every
   subdivided cell, the sub-network has exactly one outlet, on the parent's
   outflow edge, and no child drains across a parent edge that is not an
