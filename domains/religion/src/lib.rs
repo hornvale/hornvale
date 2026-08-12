@@ -6,7 +6,7 @@
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError, Lineage,
-    Manifest, Phenomenon, RegistryError, Value, Venue, Void, World,
+    Manifest, Phenomenon, RegistryError, Value, Venue, Void, World, WorldTime,
 };
 
 /// Predicate marking an entity as a belief.
@@ -323,7 +323,7 @@ pub fn genesis(
             predicate: predicate.to_string(),
             object,
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: "religion".to_string(),
         };
         world

@@ -16,6 +16,56 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0.0052304675 | 0.10282625 | 0.14047298 | 0.1829423 | 0.42360194 | 0.14590002 |
 
+### `channel-band-monotonicity`
+
+H4's axis (The Ford, spec §10), the position-continuous-noise guard stated as a measurement: the fraction of transects walked outward from a channel centreline whose transverse-band sequence is monotone with no re-entry. Preregistered floor 0.99; falsification means address-hashed noise leaked into a band edge. Scored over the prefix for which the originating polyline is still the nearest one — past that the ray has entered a DIFFERENT river's valley and is no longer a transect of this channel. Absent on a world with no channels
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 1 | 1 | 1 | 1 | 1 | 1 |
+
+### `channel-band-monotonicity-untruncated`
+
+`channel-band-monotonicity` over the SAME transects with the nearest-line truncation switched off — the whole sweep scored, including the stretch where a different river has become the nearest and its band legitimately falls back to `channel`. Published because a rule that changes a verdict must have the reading it changes on the record beside it rather than in a campaign report — and the record now runs both ways. Before the confluence repair the truncation was load-bearing (47 of 64 probe worlds read below H4's 0.99 floor un-truncated, and none reached 1.0); with tributary mouths placed on their trunks all 64 read 1.0 on BOTH columns. That is the measured evidence that the gap was the confluence separation and never band-edge speckle: two lines meeting at a point share their distance minimum AT that point, so a transect leaving a join recedes from both at once and cannot descend into the partner, while two lines held 4.5 half-widths apart have no shared minimum and did. Absent on a world with no channels
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 1 | 1 | 1 | 1 | 1 | 1 |
+
+### `channel-connectivity`
+
+H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell with a river downhill is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 1 | 1 | 1 | 1 | 1 | 1 |
+
+### `channel-land-fraction`
+
+H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land cells over all cells, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the cell carrying it. NOT a per-cell reading: the polylines run THROUGH cell centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.00018457039 | 0.00027829849 | 0.00030547165 | 0.00033567362 | 0.00042678537 | 0.00030680178 |
+
+### `channel-transect-dry-reach`
+
+The anti-vacuity companion to `channel-band-monotonicity` (The Ford, spec §10): the fraction of the SAME transects whose own-channel prefix reached the `dry` band before a different river became the nearest and truncated it. Monotonicity scores a truncated transect as a success however short its prefix, so without this column a world where truncation fired immediately everywhere would report a perfect 1.0 with nothing to show it. Read the two together: monotonicity near 1 is only a claim about full transverse profiles while this stays high. Absent on a world with no channels
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.89834025 | 0.93640351 | 0.9465812 | 0.95673077 | 0.98557692 | 0.94623807 |
+
 ### `coast-roughness-slope`
 
 Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's cells onto the canonical L6 land/ocean truth (NearestCellIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline
@@ -127,6 +177,21 @@ n = 1000 present, 0 absent (of 1000 worlds)
 | 0 | 0 | 0 | 1 | 4 | 0.516 |
 
 ## Weaknesses found here
+
+### `channel-band-monotonicity`
+
+- **D2**: min == median == max == 1 across 1000 worlds
+- **D4**: median 1 equals the min (1 .. 1)
+
+### `channel-band-monotonicity-untruncated`
+
+- **D2**: min == median == max == 1 across 1000 worlds
+- **D4**: median 1 equals the min (1 .. 1)
+
+### `channel-connectivity`
+
+- **D2**: min == median == max == 1 across 1000 worlds
+- **D4**: median 1 equals the min (1 .. 1)
 
 ### `endorheic-coverage`
 

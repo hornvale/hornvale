@@ -3,7 +3,7 @@
 //! population. The first entry is the flagship. Replaces the tier-0 single
 //! hand-fed village.
 
-use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World};
+use hornvale_kernel::{EntityId, Fact, LedgerError, Lineage, Value, World, WorldTime};
 
 /// The fully-resolved per-cell data the composition root hands to genesis
 /// (placement geometry plus the name/biome/population the root drew or read).
@@ -30,7 +30,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: Some(subject),
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "settlement".to_string(),
     }
 }

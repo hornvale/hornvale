@@ -3,7 +3,7 @@
 //! (settlement-abandonment history + terrain): no live mutation, no committed
 //! facts, no metaphysics — the door and its dread, not the entity.
 
-use crate::history_emit::{occupations_at, occupations_by_cell, present_day};
+use crate::history_emit::{occupations_at, occupations_by_cell, present_year};
 use hornvale_history::record::{CauseOfEnd, Function, OccupationRecord};
 use hornvale_kernel::{CellId, CellMap, World, math};
 use hornvale_terrain::GeneratedTerrain;
@@ -165,9 +165,11 @@ pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: CellId) -> Option<Vest
 /// occupation (`occupations_at`, already oldest-founded-first), each read
 /// forward to `now` via `vestige_from_occupation`. Pure derived read: no
 /// facts are written, nothing is mutated. `now` is the world's committed
-/// present day (see [`crate::present_day`]).
+/// present frame (see [`crate::present_year`]) — a bake **year**, the same
+/// unit `OccupationRecord::founded` carries, which is what
+/// `vestige_from_occupation` subtracts it from.
 pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> Vec<Vestige> {
-    let now = present_day(world);
+    let now = present_year(world);
     let mut layers = Vec::new();
     if let Some(prehuman) = prehuman_vestige(terrain, cell) {
         layers.push(prehuman);
@@ -186,7 +188,7 @@ pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> V
 /// the entire ledger (`occupation_records`) on every call; asking for it once
 /// per cell in a `CellMap::from_fn` loop is `O(cells × occupations)` ledger
 /// reconstructions. This instead scans the ledger exactly once
-/// ([`occupations_by_cell`]) and reads `present_day` once, so the whole field
+/// ([`occupations_by_cell`]) and reads `present_year` once, so the whole field
 /// costs `O(occupations + cells)`. Per cell, the stack is built in the exact
 /// same order `vestiges_at` produces (the pre-human layer first, if any, then
 /// that cell's occupations oldest-founded-first via
@@ -195,7 +197,7 @@ pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> V
 /// every cell (see this module's `vestiges_field_matches_vestiges_at_per_cell`
 /// test).
 pub fn vestiges_field(world: &World, terrain: &GeneratedTerrain) -> CellMap<Vec<Vestige>> {
-    let now = present_day(world);
+    let now = present_year(world);
     let by_cell = occupations_by_cell(world);
     let geo = terrain.geosphere();
     CellMap::from_fn(geo, |cell| {

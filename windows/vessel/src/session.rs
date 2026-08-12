@@ -955,7 +955,7 @@ impl<'w> Session<'w> {
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
-            day: self.day.day,
+            day: self.day.day(),
             me: SelfChannel {
                 agent: self.agent.id.0,
                 species: self.agent.species.clone(),
@@ -1637,7 +1637,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[room {}, day {}]\n{}\nWays on: {}.",
             v.locale.id,
-            self.day.day,
+            self.day.day(),
             f.prose,
             ways.join(", ")
         ))
@@ -2116,7 +2116,7 @@ impl<'w> Session<'w> {
         Ok(format!(
             "[chamber {}, day {}]\n{}\nWays on: {}.",
             id,
-            self.day.day,
+            self.day.day(),
             crate::chamber_prose::describe_chamber(&interior, &brief),
             ways.join(", ")
         ))
@@ -2686,8 +2686,14 @@ impl<'w> Session<'w> {
             .map(|npc| npc.entity)
             .collect();
         let from = self.day;
-        self.day = WorldTime {
-            day: self.day.day + days,
+        // `days` was validated as finite and positive above, but the SUM can
+        // still overflow to infinity — an accumulation, not a parse, so the
+        // parse-site guard above cannot see it (fix round 1, The Ell Task 2
+        // review: reachable live from `possess` stdin via two `wait 1e308`s).
+        // Route it through `wait`'s own error channel rather than expecting.
+        self.day = match WorldTime::new(self.day.day() + days) {
+            Ok(d) => d,
+            Err(e) => return Turn::Out(format!("error: {e}")),
         };
         // Prefill the session-owned geometry memo (the-waymark fix round,
         // Finding 1) for each NPC's CURRENT position (`before`, captured
@@ -2788,7 +2794,7 @@ impl<'w> Session<'w> {
                             predicate: TURNED_HOSTILE.to_string(),
                             object: Value::Entity(player),
                             place: None,
-                            day: Some(self.day.day),
+                            day: Some(self.day),
                             provenance: "player-provoked".to_string(),
                         };
                         self.ledger
@@ -3135,7 +3141,7 @@ impl<'w> Session<'w> {
             self.agent.species,
             self.agent.village.name,
             self.agent.id.0,
-            self.day.day,
+            self.day.day(),
             self.agent
                 .position
                 .pack()
@@ -3341,7 +3347,7 @@ impl<'w> Session<'w> {
             predicate: DISPOSITION_SHIFT.to_string(),
             object: Value::Number(sign as f64),
             place: None,
-            day: Some(self.day.day),
+            day: Some(self.day),
             provenance: format!("player: {verb}"),
         };
         let appended = self
@@ -3464,9 +3470,9 @@ impl<'w> Session<'w> {
     /// falls back to the re-sculpting bare form on the `None` a failed
     /// build at `start` would leave.
     fn consult(&self) -> String {
-        let day = self.day.day.trunc() as u64;
+        let day = self.day.day().trunc() as u64;
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
-        let at = hornvale_astronomy::StdDays::new(self.day.day)
+        let at = hornvale_astronomy::StdDays::new(self.day.day())
             .expect("a session's day is always finite and non-negative");
         let epoch = match (self.wctx.terrain.as_ref(), self.wctx.climate.as_ref()) {
             (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
@@ -4035,6 +4041,31 @@ mod tests {
                 "after `wait`, every derived npc must have a tracked within-room anchor: {}",
                 npc.label
             );
+        }
+    }
+
+    #[test]
+    fn wait_routes_a_clock_overflow_instead_of_panicking() {
+        // Fix round 1 (The Ell, Task 2 review, Important finding): `wait`
+        // validates its PARSED argument (`d.is_finite() && d > 0.0`), but the
+        // day it feeds `WorldTime::new` is an ACCUMULATION
+        // (`self.day.day() + days`), which can overflow to infinity even when
+        // both operands are individually finite. That used to `.expect()`,
+        // so a long enough possession session (or a single adversarial `wait
+        // 1e308` twice, driven live from `possess`'s stdin) panicked the
+        // whole process instead of failing one verb. `self.day` starts at
+        // `WorldTime::GENESIS` and only this test's own setup pushes it to
+        // `f64::MAX`, so nothing else in the suite depends on the clock
+        // reaching this range.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.day = WorldTime::new(f64::MAX).expect("f64::MAX is finite");
+        match session.wait(&f64::MAX.to_string()) {
+            Turn::Out(msg) => assert!(
+                msg.contains("finite") || msg.to_lowercase().contains("day"),
+                "expected an error naming the clock overflow, got: {msg}"
+            ),
+            Turn::Released(_) => panic!("an overflowing wait must not release the session"),
         }
     }
 

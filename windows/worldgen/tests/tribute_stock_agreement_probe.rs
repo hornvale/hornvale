@@ -77,7 +77,7 @@ fn observe(world: &hornvale_kernel::World) -> Observed {
         stock += 1;
         // The fact is dated by the day the relation was ESTABLISHED, so its
         // age at `now` is a per-edge duration the ledger genuinely carries.
-        let age = f.day.map(|since| now - since).unwrap_or(0.0);
+        let age = f.day.map(|since| now - since.day()).unwrap_or(0.0);
         relation_years += age;
         if age > oldest {
             oldest = age;

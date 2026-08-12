@@ -26,7 +26,7 @@ fn seam_world() -> World {
 #[test]
 fn the_walker_battery_holds_the_four_invariants() {
     let world = seam_world();
-    let at = WorldTime { day: 0.0 };
+    let at = WorldTime::GENESIS;
     let (mut session, _) = Session::start(
         &world,
         &PossessOpts {

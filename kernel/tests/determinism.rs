@@ -40,7 +40,7 @@ fn mini_genesis(seed: Seed) -> String {
         .mint_entity(test_lineage(world.ledger.entity_count() as u16));
     let roughness = fbm_2d(seed.derive(StreamLabel::dynamic("terrain")), 0.5, 0.5, 3);
     let biome = ConstantField("temperate forest".to_string())
-        .sample(Position { x: 0.0, y: 0.0 }, WorldTime { day: 0.0 });
+        .sample(Position { x: 0.0, y: 0.0 }, WorldTime::GENESIS);
     assert!((0.0..1.0).contains(&roughness));
     assert_eq!(biome, "temperate forest");
 
@@ -63,7 +63,7 @@ fn mini_genesis(seed: Seed) -> String {
             predicate: "name".to_string(),
             object: Value::Text((*n).to_string()),
             place: Some(vale),
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: "settlement".to_string(),
         },
     )
@@ -76,7 +76,7 @@ fn mini_genesis(seed: Seed) -> String {
                 predicate: "name".to_string(),
                 object: Value::Text(candidates[idx].to_string()),
                 place: Some(vale),
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: "settlement".to_string(),
             },
             &world.registry,
@@ -85,7 +85,7 @@ fn mini_genesis(seed: Seed) -> String {
 
     // Religion-ish: revere the most salient phenomenon, source-blind.
     let sun = MiniSun;
-    let seen = observe(&[&sun], &ObserverContext::at(vale, WorldTime { day: 0.0 }));
+    let seen = observe(&[&sun], &ObserverContext::at(vale, WorldTime::GENESIS));
     world
         .ledger
         .commit(
@@ -94,7 +94,7 @@ fn mini_genesis(seed: Seed) -> String {
                 predicate: "revered-phenomenon".to_string(),
                 object: Value::Text(seen[0].kind.clone()),
                 place: Some(vale),
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: "religion".to_string(),
             },
             &world.registry,

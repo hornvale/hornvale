@@ -239,6 +239,53 @@ cargo run -p hornvale -- lab list-metrics
 # which is a separate thing — an artifact, drift-checked like every other:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
+# seam-guard — the mutation check for code no test pins. Also OUTSIDE the
+# workspace, same shape as type-audit. A *seam* is a function whose output
+# reaches a rendered or committed artifact but whose contribution no
+# assertion holds: neutralise it and the suite stays green while the world
+# renders differently. Registered by a tag on the definition, which states
+# the two things the tool cannot infer — a mutation that still TYPE-CHECKS,
+# and which tests are supposed to object:
+#     /// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
+#     /// seam-guard: identity(0) scope(hornvale-kernel)
+# `identity(N)` replaces the call with its Nth argument (unit conversions,
+# clamps, wrappers); `returns(EXPR)` replaces it outright. Runs in
+# **gate-full, not the commit gate** — each call site costs a full scoped
+# test run, so `list` (which shows the site count without building) is worth
+# reading first: an experimental tag on `quantize` listed 36 sites, and a
+# broadly-called function makes a poor seam.
+#
+# THE VERDICT IS THREE-VALUED, and the reason matters. A gate that failed on
+# the mere EXISTENCE of an unguarded seam would go red on day one and stay
+# red, training everyone to ignore it; a report-only check that never fails
+# is ignored just as fast. So it fails on NOVELTY instead — the same ratchet
+# `tropes check`, the timings baseline and type-audit's `waiver(...)` use.
+# A seam may declare itself unguarded, WITH A REASON (reasonless is a parse
+# error), by adding to the tag paragraph:
+#     ///             expect(survives: <why it is not fixed yet>)
+#   UNGUARDED   survivor nobody declared             -> RED
+#   KNOWN       declared survivor, still surviving   -> green, printed loudly
+#   STALE-DECL  declared survivor a test now CATCHES -> RED, delete the clause
+#   INVALID     mutation did not compile             -> RED (never a kill: a
+#               red from a compile error says nothing about whether an
+#               assertion would have caught the behaviour)
+# STALE-DECL is what keeps a declaration honest — a one-directional
+# acknowledgement can only ever be satisfied, so it rots; this one fails the
+# moment someone adds the missing assertion.
+#
+# THE TAG IS ONE PARAGRAPH, ending at the first blank `///` line. Prose below
+# it is not parsed — learned the hard way: a sentence saying "delete the
+# `expect(survives: …)` clause" silently replaced the real reason with an
+# ellipsis, and the roster still looked plausible.
+make seam-guard-list   # the roster and its call sites (cheap, no build)
+make seam-guard        # neutralise each site, run scoped tests, report verdicts
+cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # narrow
+# `conquest_victim` is currently DECLARED unguarded (only the gallery drift
+# check pins it, and `make gate` never runs that). gate-full is green; the
+# finding stays visible in docs/audits/seam-guard-roster.md, a committed,
+# drift-checked artifact whose job is to keep declarations under review
+# pressure rather than buried in a doc comment.
+
 # The digest — the project's own fact ledger, also OUTSIDE the workspace (The
 # Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
 # the project asserts about itself (project time is git's); everything else is
@@ -276,9 +323,14 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
-# **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
-# workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
-# invisible until someone runs it.
+# **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
+# repo is private, so runner minutes are metered and Pages is gone. The LOCAL
+# gate is the ONLY gate, and this `git diff --exit-code` list is the only
+# drift check that exists: nothing runs it for you. A red main is invisible
+# until someone runs `make gate` and `make rebaseline`. Three coverage gaps
+# 0125 names explicitly: `clients/atlas` has no gate at all (run its four
+# `deno` commands and the atlas.js bundle diff by hand), the book is
+# unpublished, and `world-wasm-v*` releases are cut by hand.
 
 # The browser clients (outside the cargo workspace; see clients/CLAUDE.md):
 make vessel-check       # the Casement: deno checks + wasm fmt/clippy + byte-identity smoke
@@ -414,8 +466,10 @@ contradicts, lower ("coarse constrains fine").
 - **Ratified decisions live in `docs/decisions/`** — the decision log is the
   durable, grep-able home for settled choices (do not relitigate without new
   information; supersede, never edit). Consult it before reopening an
-  architectural or process question. Examples: `Fact.day` stays a bare
-  `Option<f64>` (0014); `PredicateDef.name` duplicates its registry key
+  architectural or process question. Examples: `Fact.day` carries a typed
+  `WorldTime` (0126, superseding 0014 — a documented unit was not enough, and
+  the counterexample cost a campaign a predicate no world could commit);
+  `PredicateDef.name` duplicates its registry key
   (0015); config is JSON not YAML (0012); models author, dice roll (0009);
   studies are data, metrics are code (0011).
 - **The documentation map is `docs/README.md`** — what knowledge lives where

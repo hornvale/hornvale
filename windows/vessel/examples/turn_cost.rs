@@ -290,7 +290,7 @@
 //! three independent measurement passes on this task alone, plus review's
 //! own re-run — so it is systematic, not noise, and it has a named cause:
 //! `hv_start` (`clients/vessel/wasm/src/lib.rs`) hardcodes `PossessOpts {
-//! day: WorldTime { day: 0.0 }, .. }` (midnight), while this file uses
+//! day: WorldTime::GENESIS, .. }` (midnight), while this file uses
 //! `PossessOpts::default()` (`windows/vessel/src/lib.rs` lines 85-97), which
 //! is noon (`day: 0.5`) *specifically* so a single `wait 1` lands at the
 //! next noon too — still inside the diurnal active band — rather than on

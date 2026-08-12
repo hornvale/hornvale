@@ -19,9 +19,10 @@ use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{
-    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
+    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, band, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
+pub use hornvale_terrain::channel::Transverse;
 pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
@@ -30,6 +31,17 @@ use serde::Serialize;
 /// changed meaning mints `locale/room/v2` alongside).
 /// type-audit: bare-ok(identifier-text)
 pub const ROOM_SCHEMA: &str = "locale/room/v2";
+
+/// The document fields decided at canonical-grid resolution, in stable order.
+/// The membership argument — including why four other families are absent —
+/// is on [`Resolution::grid_resolution_fields`], and
+/// `windows/locale/tests/water_reading.rs` pins both the inclusions and the
+/// exclusions so the list reads as a decision rather than an oversight.
+const GRID_RESOLUTION_FIELDS: [&str; 3] = ["biome", "cave", "fields.water"];
+
+/// The document fields decided at channel (nearest-vertex) resolution, in
+/// stable order. See [`Resolution::channel_resolution_fields`].
+const CHANNEL_RESOLUTION_FIELDS: [&str; 1] = ["channel_bands"];
 
 /// One placed exotic site, rendered for a reader.
 /// type-audit: bare-ok(index: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
@@ -49,7 +61,7 @@ pub struct StrangeSiteRow {
 
 /// A room rendered as an observable place — ground truth, re-derivable, never
 /// stored (UNI-20 derived view). Plain serializable values only.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(index: id), bare-ok(index: face), bare-ok(index: path), bare-ok(count: depth), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(index: id), bare-ok(index: face), bare-ok(index: path), bare-ok(count: depth), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), pending(wave-1: channel_distance), pending(wave-1: channel_bands)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Locale {
     /// Schema tag (`locale/room/v2`).
@@ -93,6 +105,135 @@ pub struct Locale {
     /// to this new trailing key.
     #[serde(serialize_with = "serialize_cave_kind")]
     pub cave: Option<CaveKind>,
+    /// Signed angular distance from the room centroid to the nearest river
+    /// channel, radians — **positive on the left bank facing downstream** —
+    /// or `None` where the world has no channel network at all. Quantized at
+    /// emit. Appended after `cave` rather than inserted, so a document built
+    /// before this field existed is still byte-identical up to this new
+    /// trailing key.
+    ///
+    /// This is the **quantity**, not a classification of it. A consumer bands
+    /// it against [`Locale::channel_bands`] for its own question — a wader and
+    /// a bridge-builder want different edges of the same number — and a stored
+    /// class would answer only the one question whoever stored it had.
+    ///
+    /// **The sign means something only close in.** It is a signed distance to
+    /// the nearest of many open arcs, so it also flips beyond a river's source
+    /// and mouth and along the bisector between two arcs that meet, where the
+    /// flip is a fact about the polyline soup rather than about water. Read it
+    /// where the reading is inside its own bands — where banding it does not
+    /// answer `Transverse::Dry` — and gate a crossing on the channel or bank
+    /// band, not on the terrace. `ChannelNetwork::bank_signed_distance` carries
+    /// the measurement that establishes this.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
+    pub channel_distance: Option<f64>,
+    /// The four band edges that apply at this room — channel/bank,
+    /// bank/floodplain, floodplain/terrace, terrace/dry — in the same angular
+    /// units (radians) as [`Locale::channel_distance`], and `None` exactly
+    /// when that is. Quantized at emit.
+    ///
+    /// **These edges are DISCHARGE-DEPENDENT**, and that asymmetry is the
+    /// whole argument for storing a quantity beside them. The edges derive
+    /// from the reach's discharge, gradient and local cell spacing
+    /// (`hornvale_terrain::channel::band_edges`), so under a seasonality this
+    /// campaign deliberately leaves open they move with the flood: the same
+    /// room is bank in one season and channel in another **without moving**.
+    /// The distance stays true across that; a stored classification would not.
+    ///
+    /// They are the edges of the nearest vertex of the polyline the distance
+    /// was measured to — `ChannelNetwork::bank_reading` selects both in one
+    /// call, so the pair can never disagree about which reach it describes.
+    #[serde(serialize_with = "serialize_opt_quantized_array")]
+    pub channel_bands: Option<[f64; 4]>,
+    /// Which of this document's fields are decided at canonical-cell
+    /// resolution and which at channel resolution (decision 0123).
+    pub resolution: Resolution,
+}
+
+/// What this document's fields are decided at, so a reader can tell a field
+/// that is flat from a field that is broken (decision 0123).
+///
+/// **Why a room says this at all.** A room at walking depth sits six
+/// refinement levels below the canonical grid, so a field decided per grid
+/// cell is necessarily identical across all `4^6 = 4096` rooms in that cell —
+/// and now that the same document also carries a channel reading, it holds
+/// fields at *three* different grains at once. Without this block a reader has
+/// to guess which, and the last two campaigns' worth of diagnosis went into a
+/// contradiction that guessing invented.
+///
+/// The shape deliberately mirrors `hornvale_scene::surrounds`'s `Resolution`
+/// — the same three keys, in the same order, meaning the same things — rather
+/// than inventing a second vocabulary for the same disclosure. It is not
+/// *imported* from there only because `windows/scene` depends on this crate,
+/// so the dependency cannot run the other way.
+///
+/// [`Resolution::channel_resolution_fields`] is the one addition: 0123's
+/// single list assumed a single coarse category, and with two categories in
+/// play a lone list would leave every unnamed key ambiguous between "finer
+/// than the grid" and "not classified". A second parallel list is 0123's own
+/// idiom applied again, not a new one.
+///
+/// **Declaring a resolution is not a step toward refining it** (0123 rule 4).
+/// The disclosure is the finished answer for the fields it names.
+/// type-audit: bare-ok(count: grid_level), bare-ok(count: depth_below_grid), bare-ok(identifier-text: grid_resolution_fields), bare-ok(identifier-text: channel_resolution_fields)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Resolution {
+    /// The canonical grid's refinement level.
+    pub grid_level: u32,
+    /// How many levels below `grid_level` this room sits. Each level quarters
+    /// a cell, so `4^depth_below_grid` rooms share one grid cell.
+    pub depth_below_grid: u32,
+    /// The names of this document's fields that are decided at canonical-grid
+    /// resolution and therefore cannot vary below it, in stable order.
+    ///
+    /// Exactly `["biome", "cave", "fields.water"]` — the three categorical
+    /// readings taken from the room's dominant corner cell (see
+    /// [`dominant_corner`]), which is one grid cell and never a blend.
+    ///
+    /// Four families are deliberately absent, and the reasons differ, which is
+    /// the test of whether a list like this means anything:
+    ///
+    /// - **The room's own address and geometry** (`schema`, `id`, `face`,
+    ///   `path`, `depth`, `latitude`, `longitude`, `corners`, `exits`) — these
+    ///   are not readings of the world at a place, they are the naming of the
+    ///   place, and a reader never mistakes one for a flattened measurement.
+    /// - **The blended continuous fields** (`fields.temperature_c`,
+    ///   `fields.moisture`, `fields.elevation_m`, `fields.height_asl_m`) —
+    ///   these are integer-barycentric means of three corner cells with
+    ///   per-room weights, so they genuinely vary room by room. Listing them
+    ///   would be false.
+    /// - **`regime`** — mixed granularity, so 0123 rule 3 says list it in
+    ///   neither: its substrate and biome expression come from the dominant
+    ///   corner while `regime.micro` is hashed from the room address itself,
+    ///   and the rendered descriptor reads both. Naming it would misstate half
+    ///   of it, and naming `regime.micro` alone would claim a grain for a key
+    ///   whose siblings do not share it.
+    /// - **`channel_distance` and `channel_bands`** — not grid-resolution at
+    ///   all; see [`Resolution::channel_resolution_fields`].
+    ///
+    /// `biome_kind` is `#[serde(skip)]` and carries no wire bytes, so it is
+    /// not a document field and does not appear here — the same reason
+    /// `hornvale_scene`'s list refuses to name a `cave` key its own document
+    /// does not have. (This document *does* have one, which is why `cave` is
+    /// listed above and is not there.)
+    pub grid_resolution_fields: Vec<String>,
+    /// The names of this document's fields decided at **channel** resolution
+    /// — the nearest vertex of the nearest river polyline, which is neither
+    /// the canonical cell nor the room — in stable order.
+    ///
+    /// Exactly `["channel_bands"]`. The band edges are a per-vertex property
+    /// of a reach (its discharge, gradient and local cell spacing), so every
+    /// room whose nearest vertex is the same vertex reads the same four
+    /// numbers, and a walker sees them step rather than slide.
+    ///
+    /// **`channel_distance` is deliberately excluded, for the opposite reason
+    /// to every exclusion above**: it is the *finest*-grained field this
+    /// document carries, a continuous function of the room's own centroid that
+    /// varies between any two rooms. It is constant below no resolution at
+    /// all, so naming it here would be exactly the stale-and-trusted list 0123
+    /// warns is worse than no list. (`hornvale_scene`'s `micro` is excluded
+    /// from its list for the same reason.)
+    pub channel_resolution_fields: Vec<String>,
 }
 
 /// A canonical-grid corner cell and its integer blend weight.
@@ -193,6 +334,26 @@ where
     }
 }
 
+/// Serialize an `Option<[f64; 4]>` as a quantized JSON array, `null` when
+/// absent — the fixed-width companion to
+/// [`hornvale_kernel::quantize::quantize_serde::opt_f64_field`], which the
+/// kernel provides for a scalar and for a slice but not for an array. Same
+/// emit-boundary quantization (decision 0033), so a consumer that bands
+/// `channel_distance` against these edges bands exactly the numbers the
+/// document shows it.
+fn serialize_opt_quantized_array<S>(
+    value: &Option<[f64; 4]>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        Some(edges) => hornvale_kernel::quantize::quantize_serde::vec_f64_field(edges, serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
 /// Why a locale could not be described.
 /// type-audit: bare-ok(prose: Build.0), bare-ok(prose: Unaddressable.0)
 #[derive(Debug, Clone, PartialEq)]
@@ -251,6 +412,52 @@ fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
         }
     }
     best
+}
+
+/// What a step from one room to another does to the water between them.
+///
+/// **Fordability is a property of a path, never of a place** — a ford is a
+/// sign change, and a sign needs two positions to change between. That is why
+/// this is the answer to a question about a *pair* and there is no `fordable`
+/// field on [`Locale`]: a room cannot be asked whether it can be crossed, only
+/// whether a particular step out of it crosses water.
+///
+/// **The reading is a snapshot at fixed discharge.** The band edges a crossing
+/// is judged against move with the flood, so `Fordable` is what is true of
+/// today's world and not a standing fact about a place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Crossing {
+    /// The step does not cross a channel: the two rooms are on the same bank,
+    /// either room reads nothing at all, or the sign does change but neither
+    /// room stands inside the channel or bank of its own reading — where the
+    /// sign is a fact about the polyline soup rather than about water.
+    NotACrossing,
+    /// The step crosses a channel narrow enough and quiet enough to wade:
+    /// full width below one room edge at the pair's depth, and discharge below
+    /// [`hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`].
+    Fordable,
+    /// The step crosses a channel, and that channel is too wide or too strong
+    /// to wade.
+    Impassable,
+}
+
+/// The shortest of a room's three edges, radians — the smallest step the mesh
+/// offers out of it, and the unit "narrower than one step" is measured in.
+///
+/// Derived from [`RoomAddr::corners`], so it is the mesh's own geometry at
+/// whatever depth the room sits at; there is no length scale anywhere in this
+/// project to state a width in, and inventing one would be a defect. The
+/// *shortest* edge rather than the mean or the longest because the criterion
+/// is a claim about crossability and the strictest of a room's steps is the
+/// one that has to clear the water.
+/// type-audit: pending(wave-1: return)
+pub fn room_edge(addr: &RoomAddr) -> f64 {
+    let [a, b, c] = addr.corners();
+    let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
+        let d: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+        hornvale_kernel::math::acos(d.clamp(-1.0, 1.0))
+    };
+    sep(a, b).min(sep(b, c)).min(sep(c, a))
 }
 
 impl LocaleContext {
@@ -604,6 +811,13 @@ impl LocaleContext {
             };
         }
 
+        // The channel reading. ONE call, so the distance and the edges are the
+        // same reading by construction — a second query for the edges would be
+        // a second chance to select a different vertex (and, on an exact tie,
+        // a different line, whose downstream direction is what the SIGN
+        // reports). Full precision here; quantized at emit, like every other
+        // float in this schema.
+        let reading = self.terrain.channels().bank_reading(addr.centroid());
         let coord = addr.coord();
         Ok(Locale {
             schema: ROOM_SCHEMA,
@@ -626,7 +840,178 @@ impl LocaleContext {
             regime,                // strangeness overlay (§5-§7)
             exits: exits_of(addr), // base + vertical exits (§6)
             cave: self.terrain.cave_at(best.0).map(|c| c.kind),
+            channel_distance: reading.map(|r| r.signed_distance),
+            channel_bands: reading.map(|r| r.band_edges),
+            resolution: Resolution {
+                grid_level: self.globe_level,
+                // Non-negative by construction: `corner_weights` returned
+                // `Some`, which it only does when `depth >= geo.level()`.
+                depth_below_grid: addr.depth() - self.globe_level,
+                grid_resolution_fields: GRID_RESOLUTION_FIELDS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+                channel_resolution_fields: CHANNEL_RESOLUTION_FIELDS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            },
         })
+    }
+
+    /// Whether the step from room `a` to room `b` crosses a channel, and if so
+    /// whether it can be waded.
+    ///
+    /// # What makes a crossing
+    ///
+    /// **All three clauses, or it is not a crossing at all.**
+    ///
+    /// 1. The two rooms' readings are **of the same channel** — the same
+    ///    polyline won [`hornvale_terrain::channel::ChannelNetwork::nearest_line`]
+    ///    for both.
+    /// 2. Their signed channel distances have **opposite signs** — one on the
+    ///    left bank facing downstream, one on the right.
+    /// 3. At least one of them stands **inside its own bank edge**
+    ///    (`|d| < channel_bands[1]`, i.e. reads `Channel` or `Bank`).
+    ///
+    /// Clause 1 exists because the two readings are selected *independently*:
+    /// a room nearest river X and a room nearest river Y each get a sign in
+    /// that river's own frame, and the two frames have nothing to do with each
+    /// other. Left-of-X beside right-of-Y satisfies clause 2 while the
+    /// comparison that produced it is **uninterpretable**, and
+    /// [`hornvale_terrain::channel::BankReading`] would then price the step
+    /// against whichever reach happened to win. Confluences are where such
+    /// pairs concentrate. The line index is the only thing that can tell them
+    /// apart — which is why the reading carries it, as an in-process handle
+    /// that is **never serialized**.
+    ///
+    /// **What clause 1 refuses, and what it costs.** It establishes that the
+    /// two signs cannot be compared — *not* that no water lies between the
+    /// rooms. So it has a false-negative side, at exactly the locus where
+    /// cross-line pairs concentrate: a real crossing whose two rooms happen to
+    /// select a tributary and its trunk is refused. The trade is taken
+    /// knowingly. Pricing an uncomparable pair is a wrong answer stated
+    /// confidently; refusing it is a missed crossing at a known and nameable
+    /// locus, and a reading cannot distinguish the two on its own, since it
+    /// knows only its own winning line. A confluence-aware query would need
+    /// `ChannelNetwork::run_cells`, which states the join topology outright —
+    /// loosening this clause is not the way to it.
+    ///
+    /// Clause 3 is not belt-and-braces, and dropping it was a real draft of
+    /// this design. The signed distance is measured against many *open arcs*,
+    /// so its sign also flips beyond every river's source and mouth and along
+    /// the bisector between two arcs that meet — on dry ground, about the
+    /// polyline soup rather than about water. On seed 42 at level 5 that is
+    /// **25 spurious flips against 3 real crossings**. Two measured properties
+    /// of that locus decide the shape of clause 3:
+    ///
+    /// - **It is a ray, not a place.** Probing at radii 1.0e-2, 5.0e-3 and
+    ///   3.1e-3 rad finds the same flips each time, at whatever `|d|` the probe
+    ///   stands at. **No fixed distance threshold removes it** — only asking
+    ///   whether the reading is inside its *own* bands does, since those scale
+    ///   with the reach.
+    /// - **Not-`Dry` is too generous.** The confluence-bisector flip sits at
+    ///   `|d| = 4.7946e-3` against a widest terrace edge of 6.9e-3, so it is
+    ///   *inside* the terrace. The gate is `Channel`-or-`Bank`, deliberately.
+    ///
+    /// # What makes it fordable (spec §8, a late freeze)
+    ///
+    /// Of the readings that clause 3 made interpretable — the ones inside
+    /// their own bank edge — **every** one must satisfy both:
+    ///
+    /// - its channel's **full** width, twice `channel_bands[0]` (which is the
+    ///   *half*-width), is less than one room edge at the pair's depth
+    ///   ([`room_edge`], the smaller of the two rooms'); and
+    /// - that reach's discharge is below
+    ///   [`hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE`].
+    ///
+    /// The unit is the traversal unit rather than the water: a room edge is the
+    /// granularity at which a person moves, so "narrower than one step" is what
+    /// crossing means to the thing doing the crossing — and it is expressible
+    /// without a length scale, which no quantity in this project has.
+    ///
+    /// Both the width and the discharge come from
+    /// [`hornvale_terrain::channel::BankReading`], so they describe the same
+    /// reach the distance was measured to and the same vertex the bands came
+    /// from. Symmetric in its arguments: swapping `a` and `b` swaps a pair of
+    /// symmetric tests and nothing else.
+    pub fn crossing_between(&self, a: &RoomAddr, b: &RoomAddr) -> Crossing {
+        let net = self.terrain.channels();
+        let (Some(ra), Some(rb)) = (
+            net.bank_reading(a.centroid()),
+            net.bank_reading(b.centroid()),
+        ) else {
+            return Crossing::NotACrossing;
+        };
+        // Clause 1. The two readings were selected independently, so they may
+        // be about different rivers — in which case their signs live in
+        // different frames and comparing them is meaningless. Asked first
+        // because everything below reads the pair as one channel's geometry.
+        if ra.line != rb.line {
+            return Crossing::NotACrossing;
+        }
+        // Written as two explicit comparisons rather than a product, so a
+        // reading of exactly 0.0 (a room centroid on the centreline) is neither
+        // side rather than silently taking the sign of a signed zero.
+        let sign_differs = (ra.signed_distance > 0.0 && rb.signed_distance < 0.0)
+            || (ra.signed_distance < 0.0 && rb.signed_distance > 0.0);
+        if !sign_differs {
+            return Crossing::NotACrossing;
+        }
+        let interpretable =
+            |r: &hornvale_terrain::channel::BankReading| r.signed_distance.abs() < r.band_edges[1];
+        if !interpretable(&ra) && !interpretable(&rb) {
+            return Crossing::NotACrossing;
+        }
+        let step = room_edge(a).min(room_edge(b));
+        let wadeable = |r: &hornvale_terrain::channel::BankReading| {
+            2.0 * r.band_edges[0] < step
+                && self.terrain.drainage_at(r.cell)
+                    < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+        };
+        if [ra, rb].iter().filter(|r| interpretable(r)).all(wadeable) {
+            Crossing::Fordable
+        } else {
+            Crossing::Impassable
+        }
+    }
+
+    /// The room's transverse ordinal and its signed channel distance — the
+    /// **function** half of this stage's keystone.
+    ///
+    /// The document stores the measured quantity (`channel_distance`) and the
+    /// legend for reading it (`channel_bands`); it deliberately does not store
+    /// a band, because a band is one consumer's classification. This is the
+    /// convenience that recovers the classification anyway, so that "the
+    /// ordinal is a function, not a field" names something callable rather
+    /// than something merely describable.
+    ///
+    /// It is a *convenience*, not a second opinion. The reading comes from the
+    /// same single [`hornvale_terrain::channel::ChannelNetwork::bank_reading`]
+    /// selection [`describe`](Self::describe) emits and
+    /// [`crossing_between`](Self::crossing_between) gates on, and the banding
+    /// is [`hornvale_kernel::band`] over that reading's own edges — the same
+    /// pair a consumer recomputes from the serialized document. A second
+    /// derivation here would be the duplicate-selection defect this stage
+    /// spent its review closing.
+    ///
+    /// Full precision, not quantized: this is a compute-path read, never a
+    /// serialization boundary. A consumer banding the *document* works from
+    /// eight significant digits and may therefore disagree with this within
+    /// quantization of a band edge — which is a fact about the emit boundary,
+    /// and `the_band_recomputes_from_the_stored_distance_and_edges` is where
+    /// it is checked.
+    ///
+    /// `None` only on a world whose channel network is empty — there is no
+    /// bank to be on, and `Dry` would be an answer about water rather than the
+    /// absence of any.
+    /// type-audit: pending(wave-1: return)
+    pub fn transverse_of(&self, addr: &RoomAddr) -> Option<(Transverse, f64)> {
+        let reading = self.terrain.channels().bank_reading(addr.centroid())?;
+        Some((
+            Transverse::from_band(band(reading.signed_distance, &reading.band_edges)),
+            reading.signed_distance,
+        ))
     }
 
     /// The room's PER-DAY temperature at `at`, °C — the diurnal+seasonal
@@ -669,7 +1054,7 @@ impl LocaleContext {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
-            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day()).get())
             .sum();
         sum / denom as f64
     }
@@ -1080,8 +1465,8 @@ mod tests {
         };
         let a = LocaleContext::build(&world).unwrap();
         let b = LocaleContext::build(&world).unwrap();
-        let la = a.describe(&addr, WorldTime { day: 0.0 }).unwrap();
-        let lb = b.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let la = a.describe(&addr, WorldTime::GENESIS).unwrap();
+        let lb = b.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(
             serde_json::to_string(&la).unwrap(),
             serde_json::to_string(&lb).unwrap()
@@ -1098,7 +1483,7 @@ mod tests {
             path: vec![1],
         };
         assert!(matches!(
-            ctx.describe(&coarse, WorldTime { day: 0.0 }),
+            ctx.describe(&coarse, WorldTime::GENESIS),
             Err(LocaleError::AboveGrid)
         ));
     }
@@ -1141,7 +1526,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         // elevation blends three real cells; the value must be finite.
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
@@ -1158,7 +1543,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         let sea = hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get());
         let expected = hornvale_kernel::quantize(loc.fields.elevation_m - sea);
         assert_eq!(
@@ -1185,7 +1570,7 @@ mod tests {
                 hornvale_kernel::math::cos(t * 0.031),
             ];
             let addr = RoomAddr::containing(dir, 6);
-            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) {
+            if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) {
                 kinds.insert(loc.fields.water);
                 if loc.fields.water == WaterKind::River {
                     saw_fresh = true;
@@ -1240,7 +1625,7 @@ mod tests {
             let Some(cave) = terrain.cave_at(dominant) else {
                 continue;
             };
-            let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
             assert_eq!(
                 loc.cave,
                 Some(cave.kind),
@@ -1268,7 +1653,7 @@ mod tests {
             path: vec![0; 30],
         };
         assert!(matches!(
-            ctx.describe(&over_deep, WorldTime { day: 0.0 }),
+            ctx.describe(&over_deep, WorldTime::GENESIS),
             Err(LocaleError::Unaddressable(_))
         ));
     }
@@ -1291,7 +1676,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(loc.fields.temperature_c, 38.082618);
         assert_eq!(
             loc.corners,
@@ -1369,7 +1754,7 @@ mod tests {
                 continue;
             };
             let expected_cell = dominant_corner(&weights).0;
-            let locale = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+            let locale = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
 
             assert_eq!(
                 locale.biome_kind,
@@ -1594,7 +1979,7 @@ mod tests {
             let mut simulated: Vec<WaterKind> = Vec::new();
             let mut rooms_in_cell = 0usize;
             for addr in rooms_across_cell(geo, cell, depth) {
-                let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) else {
+                let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS) else {
                     continue;
                 };
                 let dominant = dominant_of(&loc);
@@ -1679,9 +2064,9 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 1],
         };
-        let ra = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
-        let ra2 = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
-        let rb = ctx.describe(&b, WorldTime { day: 0.0 }).unwrap().regime;
+        let ra = ctx.describe(&a, WorldTime::GENESIS).unwrap().regime;
+        let ra2 = ctx.describe(&a, WorldTime::GENESIS).unwrap().regime;
+        let rb = ctx.describe(&b, WorldTime::GENESIS).unwrap().regime;
         assert_eq!(ra, ra2, "same room → identical regime");
         assert_ne!(ra.descriptor, rb.descriptor, "sibling rooms should differ");
         assert!(ra.strangeness >= 0.0);
@@ -1696,7 +2081,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         assert_eq!(loc.schema, "locale/room/v2");
         assert!(loc.regime.strangeness >= 0.0);
         assert!(!loc.regime.descriptor.is_empty());
@@ -1718,7 +2103,7 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
         let lateral = loc
             .exits
             .iter()
@@ -1795,7 +2180,7 @@ mod tests {
         };
         let rooms = walk_visited(&start, 3);
         assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
-        let at = WorldTime { day: 12.5 };
+        let at = WorldTime::new(12.5).expect("a day value is finite");
         let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
 
         // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
@@ -1913,6 +2298,6 @@ mod tests {
             face: 4,
             path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
         };
-        let _ = ctx.temperature_at_cached(&real_addr, WorldTime { day: 0.0 }, Some(&memo));
+        let _ = ctx.temperature_at_cached(&real_addr, WorldTime::GENESIS, Some(&memo));
     }
 }

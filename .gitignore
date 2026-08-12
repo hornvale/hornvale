@@ -56,3 +56,7 @@ clients/vessel/wasm/target/
 perf.data
 perf.data.old
 *.perf
+
+# The Ford probe (studies/the-ford-probe.study.json): a run-on-demand
+# readout, deliberately not committed — same posture as the-pyx-probe.
+book/src/laboratory/generated/the-ford-probe/

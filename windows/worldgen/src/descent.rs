@@ -99,17 +99,21 @@ fn people_of(world: &World, occupation: EntityId) -> Option<String> {
 
 /// The standard year `occupation` was founded.
 ///
-/// Note the unit: the bake writes `BakeConfig::start_year`/`end_year`
-/// straight through, so this fact is in **years**, notwithstanding the
-/// "standard day" wording on `OCC_FOUNDED`'s own doc comment. The
-/// inconsistency is recorded as a followup in the spec (§7.2); the arithmetic
-/// throughout the history subsystem is self-consistent in years.
+/// **This is the crate's read-side unit boundary for descent** (The Ell). The
+/// committed `occ-founded` object is a standard **day**; every consumer here
+/// wants the bake's **year** — `forebear_of` divides a founding gap by a
+/// generation length in years, and `founding_coords_of` feeds
+/// `record::founding_key_from`, whose key must stay the one the bake-side
+/// `founding_coords` produces from an `Occupation`. The single
+/// `bake_year_of_ledger_day` call below is what keeps those two producers of
+/// one key function speaking one unit; the function name has always claimed
+/// years, and now it is true rather than a note about why it is not.
 fn founded_year(world: &World, occupation: EntityId) -> Option<f64> {
     match world
         .ledger
         .value_of(occupation, hornvale_history::OCC_FOUNDED)?
     {
-        Value::Number(n) => Some(*n),
+        Value::Number(n) => Some(crate::history_emit::bake_year_of_ledger_day(*n)),
         _ => None,
     }
 }

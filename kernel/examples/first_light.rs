@@ -107,7 +107,7 @@ fn render_world_document() -> String {
         predicate: "name".to_string(),
         object: Value::Text((*n).to_string()),
         place: Some(vale),
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "settlement".to_string(),
     };
     let idx = choose_consistent(
@@ -124,7 +124,7 @@ fn render_world_document() -> String {
         .expect("name commits");
 
     let sun = MiniSun;
-    let ctx = ObserverContext::at(vale, WorldTime { day: 0.0 });
+    let ctx = ObserverContext::at(vale, WorldTime::GENESIS);
     let seen = observe(&[&sun], &ctx);
     world
         .ledger
@@ -134,7 +134,7 @@ fn render_world_document() -> String {
                 predicate: "revered-phenomenon".to_string(),
                 object: Value::Text(seen[0].kind.clone()),
                 place: Some(vale),
-                day: Some(0.0),
+                day: Some(WorldTime::GENESIS),
                 provenance: "religion".to_string(),
             },
             &world.registry,

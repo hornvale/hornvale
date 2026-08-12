@@ -12,7 +12,10 @@ use hornvale_astronomy::{
 use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime};
 
 fn ctx(day: f64) -> ObserverContext {
-    ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
+    ObserverContext::at(
+        EntityId::new(1).unwrap(),
+        WorldTime::new(day).expect("a day value is finite"),
+    )
 }
 
 /// The pin sets that span the rotation regimes tier 0 must survive.
@@ -113,21 +116,22 @@ fn refinement_adds_structure_only_beneath_the_sun() {
 /// pinned — no census home for the pinned sub-regimes)
 #[test]
 fn the_sun_never_leaves_the_visible_bodies_list() {
-    let coarse = ConstantSun.sky_at(WorldTime { day: 0.0 });
+    let coarse = ConstantSun.sky_at(WorldTime::GENESIS);
     assert_eq!(coarse.bodies, vec!["the sun".to_string()]);
 
     for pins in regimes() {
         for seed in 0..32u64 {
             let sky = GeneratedSky::new(generate(Seed(seed), &pins).unwrap());
             for t in [0.0, 0.25, 10.5, 100.75] {
-                let report = sky.sky_at(WorldTime { day: t });
+                let report = sky.sky_at(WorldTime::new(t).expect("a day value is finite"));
                 assert!(
                     report.bodies.contains(&"the sun".to_string()),
                     "seed {seed} t {t}: the generated sky retracted the sun"
                 );
                 assert_eq!(
                     report.description,
-                    sky.sky_at(WorldTime { day: t }).description,
+                    sky.sky_at(WorldTime::new(t).expect("a day value is finite"))
+                        .description,
                     "seed {seed} t {t}: report must be deterministic"
                 );
             }

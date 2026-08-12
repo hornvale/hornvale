@@ -20,6 +20,7 @@
 //! every registry people, given exclusive placement via its own species
 //! pin (no competing dominance to lose), places its own flagship; an
 //! unknown species pin fails loudly.
+use hornvale_kernel::WorldTime;
 use hornvale_kernel::test_lineage;
 use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
 
@@ -158,7 +159,7 @@ fn minting_validates_the_kind_against_the_union_roster() {
         &wc,
         test_lineage(minted),
         "deity",
-        Some(0.0),
+        Some(WorldTime::GENESIS),
         "test",
     )
     .unwrap();

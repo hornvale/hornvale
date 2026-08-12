@@ -11,7 +11,7 @@ may use parser libraries the workspace bans.
 ```bash
 # default-deny: any untagged pub-boundary primitive fails
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
-# regenerate the committed report (drift-checked in CI)
+# regenerate the committed report (drift-checked by `make rebaseline`, never automatically — 0125)
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 ```
 

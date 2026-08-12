@@ -20,6 +20,7 @@ pub mod math;
 pub mod noise;
 pub mod phenomena;
 pub mod png;
+mod polyline;
 pub mod quantize;
 pub mod refine;
 pub mod registry;
@@ -52,6 +53,7 @@ pub use phenomena::{
     ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, VISIBILITY_FLOOR,
     Venue, Visibility, observe,
 };
+pub use polyline::{SphericalPolyline, band};
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;
 pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, RegistryError};

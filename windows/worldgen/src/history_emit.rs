@@ -17,8 +17,52 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World};
+use hornvale_kernel::{CellId, EntityId, Fact, KindId, Lineage, Value, World, WorldTime};
 use std::collections::{BTreeMap, BTreeSet};
+
+/// **The unit boundary (The Ell, spec §2a).** A bake-side YEAR becomes the
+/// standard DAY the ledger speaks.
+///
+/// The history bake reasons in years and is right to — `BakeConfig::start_year`
+/// / `end_year` stay years, and so does every `Occupation`/`FoundingCoords`
+/// value in this crate. What is constrained is what *crosses into the ledger*,
+/// which is days, the same unit `WorldTime` and every other domain's `Fact.day`
+/// already carry. Every write in this module that carries a time goes through
+/// here, so the crossing is one named seam rather than N inline multiplies.
+///
+/// Finiteness is not checked: the input is bake output (a `f64` stepped from
+/// `start_year` by `epoch_years`), never parsed text, and a finite year times a
+/// finite constant is finite. The `WorldTime::new(...).expect(...)` in [`fact`]
+/// is the assertion of that.
+/// type-audit: bare-ok(count: year), bare-ok(count: return)
+pub fn ledger_day_of_bake_year(year: f64) -> f64 {
+    year * hornvale_kernel::Years::DAYS_PER_YEAR
+}
+
+/// The inverse read: a standard DAY off the ledger becomes the bake-side YEAR
+/// this crate's `Occupation` records, `FoundingCoords` and present-frame
+/// arithmetic are all expressed in.
+///
+/// Every ledger read of an `occ-founded` / `occ-ended` / `history-now` object
+/// that will be *compared with or subtracted from* another year goes through
+/// here. Two readers deliberately do not, and both are recorded where they sit:
+/// a read whose value is used only for ordering (`lib.rs`'s `predecessor_people`,
+/// `layer_key`'s sort) is invariant under this monotone map, and a read that
+/// compares two raw ledger values against each other ([`migration_events`])
+/// has both sides move together.
+///
+/// **Losslessness is a property of the bake, not of this function.** The
+/// forward map passes through `Ledger::commit`'s 8-significant-digit
+/// quantization, and the round trip is exact only while foundings stay coarse
+/// enough to survive it — they are (25-year epochs ⇒ `k · 9131.25` days, at
+/// most 8 significant digits). `windows/worldgen/tests/history_units.rs`'s
+/// `reading_a_founding_back_out_of_the_ledger_is_lossless` asserts that
+/// property on a real world, because if it ever stops holding, every founder
+/// handle and every flesh seed in every world moves and nothing else says so.
+/// type-audit: bare-ok(count: day), bare-ok(count: return)
+pub fn bake_year_of_ledger_day(day: f64) -> f64 {
+    day / hornvale_kernel::Years::DAYS_PER_YEAR
+}
 
 /// Build one fact about occupation entity `subject`, day-stamped at `day` —
 /// the day this particular fact became true (founding facts pass
@@ -27,13 +71,19 @@ use std::collections::{BTreeMap, BTreeSet};
 /// until it ends) — self-placed (an occupation is its own place, mirroring
 /// `hornvale_settlement::genesis`'s pattern), provenanced to the deep-history
 /// bake stream.
+///
+/// `day` is a **standard day**: every caller has already crossed
+/// [`ledger_day_of_bake_year`]. It derives from `record.core.founded` or
+/// `record.core.ended` — deep-history bake output, not stdin/parsed text, so
+/// it is finite by construction of the bake it came from, and a finite year
+/// scaled by a finite constant stays finite; `.expect()` is sound here.
 fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
     Fact {
         subject,
         predicate: predicate.to_string(),
         object,
         place: Some(subject),
-        day: Some(day),
+        day: Some(WorldTime::new(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
 }
@@ -137,14 +187,16 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         .collect();
 
     for (record, &id) in h.records.iter().zip(minted.iter()) {
-        let day = record.core.founded;
+        // The unit boundary: `record.core.founded`/`ended` are bake YEARS;
+        // everything below this line is standard DAYS.
+        let day = ledger_day_of_bake_year(record.core.founded);
         // End-of-life facts (`OCC_ENDED`, `OCC_CAUSE`, `OCC_ENDED_BY`,
         // `IS_RUIN`) describe events that became true at `record.ended`, not
         // at founding — `Fact.day` means "the day this fact was observed"
         // (see `kernel/src/ledger.rs`), so an as-of-day-N query must not see
         // an occupation as already-ended on its founding day. A still-alive
         // record never commits these, so the `unwrap_or` fallback is inert.
-        let end_day = record.core.ended.unwrap_or(record.core.founded);
+        let end_day = record.core.ended.map_or(day, ledger_day_of_bake_year);
         let mut commit_on = |predicate: &str, object: Value, day: f64| -> Result<(), BuildError> {
             world
                 .ledger
@@ -163,13 +215,12 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
             Value::Number(f64::from(record.core.site.0)),
             day,
         )?;
-        commit_on(
-            hornvale_history::OCC_FOUNDED,
-            Value::Number(record.core.founded),
-            day,
-        )?;
-        if let Some(ended) = record.core.ended {
-            commit_on(hornvale_history::OCC_ENDED, Value::Number(ended), end_day)?;
+        // The object is the same crossing as the stamp: `occ-founded` and
+        // `occ-ended` name days on the ledger's own axis, so a consumer that
+        // reads the object and a consumer that reads `Fact.day` see one unit.
+        commit_on(hornvale_history::OCC_FOUNDED, Value::Number(day), day)?;
+        if record.core.ended.is_some() {
+            commit_on(hornvale_history::OCC_ENDED, Value::Number(end_day), end_day)?;
         }
         commit_on(
             hornvale_history::OCC_PEAK,
@@ -258,7 +309,10 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
                 subject,
                 hornvale_history::PAYS_TRIBUTE_TO,
                 Value::Entity(patron),
-                rel.since,
+                // `TributeRelation::since` is a bake YEAR like every other time
+                // the bake carries — the same crossing as the founding stamp
+                // above.
+                ledger_day_of_bake_year(rel.since),
             ),
             &world.registry,
         )?;
@@ -266,24 +320,28 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     Ok(())
 }
 
-/// Commit the world-level "now" fact: the bake's `end_year`, on `subject`
+/// Commit the world-level "now" fact: the bake's `end_year` **in standard
+/// days**, on `subject`
 /// (the world entity, mirroring how astronomy/terrain commit their own
 /// world-scalar genesis facts — see `domains/astronomy/src/facts.rs::fact`).
 /// Day-stamped 0.0 like those other world constants: `history-now` is an
 /// eternal fact about this world's scenario (fixed by `BakeConfig`), not an
 /// event that becomes true partway through the timeline, so it belongs with
 /// the other genesis-day scalars rather than at `end_year` itself. Reads back
-/// via `windows/almanac::history::present_day`, which now trusts this fact
+/// via `windows/almanac::history::present_year`, which now trusts this fact
 /// instead of approximating the present as the latest occupation event.
+///
+/// `now` arrives as a bake YEAR (`BakeConfig::end_year`) and crosses into the
+/// ledger as a day here, at the same seam every occupation fact crosses.
 /// type-audit: bare-ok(count: now)
 pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), BuildError> {
     world.ledger.commit(
         Fact {
             subject,
             predicate: hornvale_history::HISTORY_NOW.to_string(),
-            object: Value::Number(now),
+            object: Value::Number(ledger_day_of_bake_year(now)),
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: hornvale_history::streams::BAKE.as_str().to_string(),
         },
         &world.registry,
@@ -291,19 +349,26 @@ pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), Bu
     Ok(())
 }
 
-/// The present frame's day: the latest founding-or-ending recorded anywhere in
-/// the world's deep history — the moment "today" sits at, e.g. for measuring
-/// a ruin's age back from. Deterministic (`f64::total_cmp` over ledger
-/// numbers). Mirrors `windows/almanac::history::present_day`'s read (that
-/// window cannot be depended on here — worldgen is the composition root, so
-/// this is the shared, non-almanac-specific home for the read); a future
+/// The present frame's **year**: the latest founding-or-ending recorded
+/// anywhere in the world's deep history — the moment "today" sits at, e.g. for
+/// measuring a ruin's age back from. Deterministic (`f64::total_cmp` over
+/// ledger numbers). Mirrors `windows/almanac::history::present_year`'s read
+/// (that window cannot be depended on here — worldgen is the composition root,
+/// so this is the shared, non-almanac-specific home for the read); a future
 /// cleanup could have the almanac call this one instead of its private copy.
+///
+/// **Named for its unit** (The Ell). It was `present_day` and returned the
+/// ledger's raw number, which was a year wearing the word "day". The ledger now
+/// stores days, so the raw read crosses [`bake_year_of_ledger_day`] and the
+/// name says which side of that seam the caller is on: every consumer
+/// (`vestige`, the almanac's span and flesh prose) subtracts this from an
+/// `Occupation`'s `founded`, which is a bake year.
 /// type-audit: bare-ok(count: return)
-pub fn present_day(world: &World) -> f64 {
+pub fn present_year(world: &World) -> f64 {
     if let Some(now) = world.ledger.find(hornvale_history::HISTORY_NOW).next()
         && let Value::Number(n) = &now.object
     {
-        return *n;
+        return bake_year_of_ledger_day(*n);
     }
     // Fallback for a world with no committed `history-now` fact (a save from
     // before T8, or a synthetic Lab world that never ran the composition-root
@@ -320,6 +385,9 @@ pub fn present_day(world: &World) -> f64 {
             _ => None,
         })
         .max_by(|a, b| a.total_cmp(b))
+        // The max is taken on the ledger's own axis (the map is monotone, so
+        // which fact wins does not depend on the unit) and crossed once, here.
+        .map(bake_year_of_ledger_day)
         .unwrap_or(0.0)
 }
 
@@ -357,7 +425,9 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
 /// [`layer_key`]'s ancestry tail needs. `FoundingCoords<'static>` because
 /// `Occupation::people` is a `KindId` wrapping a `&'static str`, so this map
 /// borrows nothing from `all` and outlives the scan that built it.
-fn founding_coords_by_id(all: &[OccupationRecord]) -> BTreeMap<EntityId, FoundingCoords<'static>> {
+pub(crate) fn founding_coords_by_id(
+    all: &[OccupationRecord],
+) -> BTreeMap<EntityId, FoundingCoords<'static>> {
     all.iter()
         .map(|o| (o.id, founding_coords(&o.core)))
         .collect()
@@ -365,7 +435,7 @@ fn founding_coords_by_id(all: &[OccupationRecord]) -> BTreeMap<EntityId, Foundin
 
 /// The founding coordinates of `r`'s predecessor, if it has one and it is
 /// present in `coords`.
-fn parent_coords(
+pub(crate) fn parent_coords(
     r: &OccupationRecord,
     coords: &BTreeMap<EntityId, FoundingCoords<'static>>,
 ) -> Option<FoundingCoords<'static>> {
@@ -411,8 +481,14 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
     let site = CellId(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
-    let founded = occ_number(world, entity, hornvale_history::OCC_FOUNDED)?;
-    let ended = occ_number(world, entity, hornvale_history::OCC_ENDED);
+    // The inverse crossing: the ledger stores days, an `Occupation` carries the
+    // bake's years. Every key derived from this record downstream
+    // (`founder_handle`, `material_key`, `founding_key`, `layer_key`) is keyed
+    // on the year form, which is what keeps this epoch confined to the ledger's
+    // own numbers instead of renaming every founder in every world.
+    let founded =
+        bake_year_of_ledger_day(occ_number(world, entity, hornvale_history::OCC_FOUNDED)?);
+    let ended = occ_number(world, entity, hornvale_history::OCC_ENDED).map(bake_year_of_ledger_day);
     let peak_population = occ_number(world, entity, hornvale_history::OCC_PEAK)? as u32;
     let tech = parse_tech(world.ledger.text_of(entity, hornvale_history::OCC_TECH)?)?;
     let function = parse_function(
@@ -613,9 +689,14 @@ pub fn migration_events(world: &World) -> u64 {
         .collect();
 
     // The conquerors among them: a record someone else was driven off by, in
-    // the very year it moved. `total_cmp` rather than `==` — both days are the
-    // same `year` scalar committed through the same quantizing boundary, so
-    // they compare exactly, and the project bans bare float equality.
+    // the very year it moved. `total_cmp` rather than `==` — both are the same
+    // scalar committed through the same quantizing boundary, so they compare
+    // exactly, and the project bans bare float equality.
+    //
+    // Deliberately NOT crossed through `bake_year_of_ledger_day`: this compares
+    // two raw ledger objects against *each other*, so both sides moved together
+    // when the ledger went to days and the equality is unit-free. Converting
+    // would be an identical answer computed twice as expensively.
     let conquerors: BTreeSet<EntityId> = world
         .ledger
         .find(hornvale_history::OCC_ENDED_BY)

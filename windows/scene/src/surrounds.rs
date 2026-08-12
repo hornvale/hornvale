@@ -478,7 +478,7 @@ pub fn surrounds_scene_in(
     Ok(SurroundsScene {
         schema: SURROUNDS_SCHEMA.to_string(),
         seed: world.seed.0,
-        day: at.day,
+        day: at.day(),
         observer: SurroundsObserver {
             room: observer_room,
             face: room.face,
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn a_radius_four_neighbourhood_holds_thirty_one_cells() {
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime::GENESIS).unwrap();
         assert_eq!(s.schema, SURROUNDS_SCHEMA);
         assert_eq!(s.radius, 4);
         // Ball sizes in the triangular face-adjacency lattice are
@@ -742,7 +742,7 @@ mod tests {
     #[test]
     fn exactly_one_cell_is_here_and_it_sits_at_the_lattice_origin() {
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 3, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 3, WorldTime::GENESIS).unwrap();
         let here: Vec<&SurroundsCell> = s.cells.iter().filter(|c| c.state == "here").collect();
         assert_eq!(here.len(), 1);
         assert_eq!(
@@ -761,7 +761,7 @@ mod tests {
     #[test]
     fn every_non_seam_cell_carries_a_lattice_coordinate_and_seam_cells_carry_none() {
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime::GENESIS).unwrap();
         for c in &s.cells {
             if c.seam {
                 assert!(c.u.is_none() && c.v.is_none() && c.w.is_none() && c.up.is_none());
@@ -787,7 +787,7 @@ mod tests {
             seam_observer.face, 14,
             "fixture observer must land on the verified face"
         );
-        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime::GENESIS).unwrap();
         assert_eq!(s.cells.len(), 31, "no cell was dropped");
 
         let seam_count = s.cells.iter().filter(|c| c.seam).count();
@@ -821,8 +821,8 @@ mod tests {
     fn the_document_is_byte_identical_on_rebuild() {
         let w = world();
         let o = observer(&w);
-        let a = surrounds_json(&surrounds_scene(&w, &o, 4, WorldTime { day: 0.0 }).unwrap());
-        let b = surrounds_json(&surrounds_scene(&w, &o, 4, WorldTime { day: 0.0 }).unwrap());
+        let a = surrounds_json(&surrounds_scene(&w, &o, 4, WorldTime::GENESIS).unwrap());
+        let b = surrounds_json(&surrounds_scene(&w, &o, 4, WorldTime::GENESIS).unwrap());
         assert_eq!(a, b);
         // "Rebuild from the ledger": there is no `hornvale_worldgen::rebuild`
         // helper (confirmed absent workspace-wide) — the established pattern
@@ -834,7 +834,7 @@ mod tests {
         // `windows/explain/src/lib.rs`).
         let rebuilt = hornvale_kernel::World::from_json(&w.to_json())
             .expect("a world rebuilds from its own ledger");
-        let c = surrounds_json(&surrounds_scene(&rebuilt, &o, 4, WorldTime { day: 0.0 }).unwrap());
+        let c = surrounds_json(&surrounds_scene(&rebuilt, &o, 4, WorldTime::GENESIS).unwrap());
         assert_eq!(a, c, "same world + same query => byte-identical JSON");
     }
 
@@ -845,7 +845,7 @@ mod tests {
             &w,
             &observer(&w),
             MAX_SURROUNDS_RADIUS + 1,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
         )
         .unwrap_err();
         assert_eq!(
@@ -867,7 +867,7 @@ mod tests {
             &ctx,
             &observer(&w),
             MAX_SURROUNDS_RADIUS + 1,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
         )
         .unwrap_err();
         assert_eq!(
@@ -879,7 +879,7 @@ mod tests {
     #[test]
     fn cells_are_ordered_by_room_id() {
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 4, WorldTime::GENESIS).unwrap();
         let ids: Vec<u64> = s.cells.iter().map(|c| c.room).collect();
         let mut sorted = ids.clone();
         sorted.sort_unstable();
@@ -935,7 +935,7 @@ mod tests {
             &ctx,
             &observer(w),
             radius,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             &hornvale_kernel::color::standard_observer(),
             &light,
             sight_of("standard", 0.0),
@@ -948,7 +948,7 @@ mod tests {
         // This is what keeps book/src/gallery/scene-surrounds-seed-42.json
         // byte-identical: the field is skipped when None.
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 2, WorldTime::GENESIS).unwrap();
         for cell in &s.cells {
             assert!(
                 cell.color.is_none(),
@@ -980,7 +980,7 @@ mod tests {
         // legitimately carries the string "color" as an array element, which
         // a bare `"\"color\""` search would also match.
         let w = world();
-        let s = surrounds_scene(&w, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene(&w, &observer(&w), 1, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
         assert!(
             !json.contains("\"color\":"),
@@ -1029,7 +1029,7 @@ mod tests {
             &ctx,
             &observer(&w),
             2,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             &dichromat,
             &light,
             sight_of("dichromat", 0.0),
@@ -1053,7 +1053,7 @@ mod tests {
     #[test]
     fn coloring_changes_nothing_but_the_color() {
         let w = world();
-        let plain = surrounds_scene(&w, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        let plain = surrounds_scene(&w, &observer(&w), 2, WorldTime::GENESIS).unwrap();
         let mut stripped = colored(&w, 2);
         for cell in stripped.cells.iter_mut() {
             cell.color = None;
@@ -1095,7 +1095,7 @@ mod tests {
                 &ctx,
                 &RoomAddr::containing(pos, depth),
                 radius,
-                WorldTime { day: 0.0 },
+                WorldTime::GENESIS,
                 &hornvale_kernel::color::standard_observer(),
                 &light,
                 sight_of("standard", 0.0),
@@ -1137,7 +1137,7 @@ mod tests {
         // document, so passing the raw reading again breaks it.
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 2, WorldTime::GENESIS).unwrap();
         let mut checked = 0;
         for c in &scene.cells {
             if let Some(h) = c.height_asl_m {
@@ -1191,7 +1191,7 @@ mod tests {
             ctx.globe_level() + 6,
         );
 
-        let scene = surrounds_scene_in(&w, &ctx, &addr, 0, WorldTime { day: 0.0 }).unwrap();
+        let scene = surrounds_scene_in(&w, &ctx, &addr, 0, WorldTime::GENESIS).unwrap();
         let here = scene
             .cells
             .iter()
@@ -1225,7 +1225,7 @@ mod tests {
     fn the_document_carries_the_datum_its_bands_are_measured_from() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
-        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
+        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 1, WorldTime::GENESIS).unwrap();
         assert_eq!(scene.schema, "scene/surrounds/v2");
         assert_eq!(
             scene.sea_level_m,
@@ -1318,7 +1318,7 @@ mod tests {
         // an array element, which a bare `"\"color\""` search would also
         // match.
         let (w, ctx, room) = fixture_world();
-        let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
         assert!(
             !json.contains("\"sight\""),
@@ -1354,7 +1354,7 @@ mod tests {
             &ctx,
             &room,
             2,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             &obs,
             &light,
             claimed,
@@ -1393,8 +1393,8 @@ mod tests {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let here = observer(&w);
-        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
-            .expect("the chart builds");
+        let s =
+            surrounds_scene_in(&w, &ctx, &here, 4, WorldTime::GENESIS).expect("the chart builds");
 
         // Every cell, including the 30 that are not `here`.
         assert_eq!(
@@ -1432,8 +1432,8 @@ mod tests {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let here = observer(&w);
-        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
-            .expect("the chart builds");
+        let s =
+            surrounds_scene_in(&w, &ctx, &here, 4, WorldTime::GENESIS).expect("the chart builds");
 
         let mut lo = f64::INFINITY;
         let mut hi = f64::NEG_INFINITY;
@@ -1465,7 +1465,7 @@ mod tests {
                 &ctx,
                 &room,
                 2,
-                WorldTime { day: 0.0 },
+                WorldTime::GENESIS,
                 &obs,
                 l,
                 sight_of("standard", 0.0),
@@ -1501,8 +1501,8 @@ mod tests {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let here = observer(&w);
-        let s = surrounds_scene_in(&w, &ctx, &here, 4, WorldTime { day: 0.0 })
-            .expect("the chart builds");
+        let s =
+            surrounds_scene_in(&w, &ctx, &here, 4, WorldTime::GENESIS).expect("the chart builds");
 
         assert_eq!(s.resolution.grid_level, ctx.globe_level());
         assert_eq!(
@@ -1581,7 +1581,7 @@ mod tests {
                 hornvale_kernel::math::cos(t * 0.031),
             ];
             let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
-            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 })
+            if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
                 && loc.cave.is_some()
             {
                 cave_addr = Some(addr);
@@ -1593,7 +1593,7 @@ mod tests {
              fails, that is a finding to report, not a test to weaken",
         );
 
-        let s = surrounds_scene_in(&w, &ctx, &cave_addr, 0, WorldTime { day: 0.0 }).unwrap();
+        let s = surrounds_scene_in(&w, &ctx, &cave_addr, 0, WorldTime::GENESIS).unwrap();
         assert_eq!(s.cells.len(), 1, "radius 0 is just the observer's own cell");
         let cave_marks: Vec<&Mark> = s.cells[0]
             .marks
@@ -1611,12 +1611,12 @@ mod tests {
         // (the module's ordinary `observer()` fixture) emits no cave mark,
         // UNLESS that room happens to also sit on a cave-bearing cell.
         let elsewhere = observer(&w);
-        let elsewhere_loc = ctx.describe(&elsewhere, WorldTime { day: 0.0 }).unwrap();
+        let elsewhere_loc = ctx.describe(&elsewhere, WorldTime::GENESIS).unwrap();
         assert!(
             elsewhere_loc.cave.is_none(),
             "fixture must actually be cave-free, or the negative half below is vacuous"
         );
-        let s2 = surrounds_scene_in(&w, &ctx, &elsewhere, 0, WorldTime { day: 0.0 }).unwrap();
+        let s2 = surrounds_scene_in(&w, &ctx, &elsewhere, 0, WorldTime::GENESIS).unwrap();
         assert!(
             s2.cells[0].marks.iter().all(|m| m.kind != "cave"),
             "a cave-free cell must emit no cave mark"

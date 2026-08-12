@@ -287,6 +287,45 @@ denominator, and a prediction expressed as a *fraction of current state* silentl
 re-aims itself every time that state moves. Freezing the numerator as an identity
 is what made the falsification readable instead of merely disappointing.
 
+An eleventh campaign repairs the tenth's finding and, in doing so, measures how
+much of the family the repair itself contained. [The Ell](./chronicle/the-ell.md)
+(2026-08-11) moved the unit boundary that made a death uncommittable: the
+history bake keeps reasoning in years, and what crosses into the ledger is days,
+converted at named functions rather than at inline divides. That created sixteen
+unit crossings, and the campaign swept them by mutating each one in turn against
+the whole gate. **Five of the sixteen had no guard at all.** The most
+consequential was not on anyone's list: the crossing that feeds the census's own
+name renderer, whose blast radius is a committed census value the commit gate
+never rebuilds — and whose two plausible existing guards cannot catch it *by
+construction*, one because it counts zero-gap edges (zero is zero in any unit)
+and the other because it keys a map on the year form, which is invariant under
+any injective rescaling. Both tests are correct, both are green, and neither is
+about the quantity that moved. So the floor gains a fourth question, asked of
+conversions rather than of checks, measurements or vocabulary: *which test goes
+red if this crossing is deleted?* — answered by deleting it, not by reading the
+suite.
+
+Two smaller instances from the same campaign sharpen what a guard has to be
+compared against. An invariance test that had been green for months compared a
+reconstructed record against a committed one — by comparing **one fixture
+against another fixture**. When the ledger's unit moved, the module's stated
+premise became false and all four of its tests stayed green, because both sides
+were wrong the same way; the sibling case in the same sweep went red on its own,
+because there the two sides were production and fixture. And a collision guard
+written to detect a new failure shape turned out to be **entailed by the key it
+guards**: the key folds the parent's coordinates, so any colliding pair
+necessarily has equal parent coordinates and the assertion cannot fail while the
+key is what it is. It was kept and relabelled as a tripwire for a future
+narrowing — the honest description of what it can do — rather than deleted or
+left claiming more than it holds.
+
+**No bet in the map below moved.** The Ell repairs a unit boundary and a derived
+key; it resolves no open question about the world, raises nothing from taste-gated
+to self-scorable, and leaves every score in this chapter where it stood. Recorded
+explicitly, because a campaign that changes the save format and every founder's
+name looks from the outside like it should have moved something, and decision
+0030's sweep is answered by a statement either way rather than by silence.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -1542,6 +1581,83 @@ whose land itself never varies because it is permanently frozen.
   intention with one positive measurement and became a constraint with a
   documented violation, a rule that predicts such violations in advance, and a
   conservation test in the gate.
+  **Re-scored by [The Ford](./chronicle/the-ford.md) (2026-08-11): the field/grid
+  dichotomy this row has been reasoning inside gains a third category, and the
+  ~110 km physics floor is no longer where sub-cell *information* stops.** Decision
+  0038 split terrain quantities into *pointwise* fields any grid may resample and
+  *mesh-bound* quantities computed once on the canonical grid, and everything since
+  has treated that split as exhaustive — which is why refining beneath the cell has
+  kept reading as cosmetic. A river is neither. It is **feature-bound**: carried on
+  a polyline with a discharge-derived width, evaluated as a function of position at
+  any depth, and *the same object* at 110 km and at 27 m rather than interpolated
+  between them. That is genuine information below the cell floor, on the producer
+  side, and it arrived **without** refining the mesh — the adaptive-refinement
+  route this row has been waiting on is not what delivered it. The reason
+  generalizes past water: the quantity did not need finer resolution, it needed to
+  stop being mesh-bound at all, and no amount of subdivision could have
+  substituted, since a linear interpolant on a simplex attains its extrema at its
+  vertices and so admits no sub-cell valley for a river to occupy. So the bet's
+  confidence rises in a direction it was not pointing — the floor is a property of
+  a quantity's *carrier*, not of the grid, and any quantity whose carrier matches
+  its dimensionality escapes it. What is unchanged is what the row was actually
+  tracking: the runtime active-region swap, its delta store, and adaptive-depth
+  refinement of the quantities that legitimately remain mesh-bound are all still
+  unbuilt. What is newly open is how many other quantities are miscarried the way
+  rivers were.
+
+  **The two re-scores above landed on the same day from two campaigns that did
+  not see each other, and they must be read together.** The Grain's rule is a
+  prohibition on *mechanism*: a nominal field may not be re-derived beneath the
+  floor by thresholding a blend of corner values, because a threshold is
+  maximally nonlinear and deletes whatever category sits in the thin tails. The
+  Ford does not use that mechanism — it does not blend anything; it evaluates a
+  signed distance to an emitted polyline, so the question stops being "what
+  class does this interpolated value fall in" and becomes "where is this point
+  relative to a feature". On mechanism, therefore, they do not collide, and The
+  Grain's rule is arguably the sharpest available statement of *why* changing
+  the carrier was the right move rather than refining the field.
+  **What is genuinely open is conservation, and it is open in The Ford's
+  direction.** The Grain's measured harm was a loss of area — 29% of the world's
+  fresh water gone at walking depth. The Ford's channel occupies ~0.026% of land
+  where the cell-scale river class occupies ~6.3% of land cells, and 39 of 700
+  river cells carry no polyline at all. That is not a defect of The Ford's stage
+  1, which moved no consumer and left `river_proximity` and the toponymic gates
+  untouched by asserted invariant; it is the question its stage 2 inherits, now
+  under decision 0124's requirement that a refinement preregister a conservation
+  criterion — which The Ford's own spec, frozen before 0124 existed, did not do.
+  The bet's honest state: the floor is crossable in more ways than this row
+  once assumed, and each way owes a different proof.
+  **Answered, in part, by [The Ford's stage 2](./chronicle/the-ford-stage-2.md)
+  (2026-08-11): the inherited conservation obligation was not met — it was
+  declined, by not making a refinement claim at all, and the row should record
+  which of those two things happened.** Stage 2 was expected to redefine the
+  room's water field and mint a new schema. It did neither. The room instead
+  gained the *quantity* — a signed distance to the channel and the band edges
+  that apply at that spot — appended as trailing keys, with the existing water
+  field, its mechanism, the availability predicate and the toponymic gates all
+  held fixed by asserted invariant. Nothing coarse was re-derived, so nothing
+  had to be conserved, and the byte-cleanliness of the append was checked
+  rather than asserted: nineteen insertions and no other change across seven
+  regenerated artifacts. That is a third way past the floor, distinct from both
+  re-scores above — not refining a field, and not changing a carrier either,
+  but **adding a measurement beside the field and letting the consumer set the
+  cut**. The Grain's disclosure answer is what makes it legible: the room now
+  declares which of its fields were decided at grid resolution and which by the
+  channel, so a reader can tell a flat field from a broken one without guessing.
+  **What this does not do is close the conservation question, and stage 2
+  produced its sharpest witness.** A seed-42 room reports its water as *river*
+  while standing twenty times its own outermost band edge from any channel —
+  the grid's answer and the network's answer, contradicting each other inside
+  one document, because a river short enough to occupy a single cell never
+  becomes a polyline. The disagreement is not new; what is new is that it is
+  now visible in a single record instead of split across two subsystems that
+  never met. A contradiction a reader can see is the precondition for repairing
+  it, and the repair — a stated rule for which half wins, or lines for those
+  cells — is owed by a later stage. The bet's confidence is unchanged.
+  What moved is the menu: crossing the floor by *addition and disclosure* costs
+  no conservation proof, and is available to any quantity willing to travel
+  beside the coarse field rather than replacing it.
+
 
 ## Genuinely open — split by whether the world can grade itself
 

@@ -47,7 +47,7 @@ const SCRIPT: &[&str] = &["look", "examine sky", "whoami"];
 /// transcript that is not wrong — only taken at a different hour.
 fn opts() -> PossessOpts {
     PossessOpts {
-        day: hornvale_kernel::WorldTime { day: 0.0 },
+        day: hornvale_kernel::WorldTime::GENESIS,
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -309,7 +309,7 @@ fn the_fixture_is_taken_at_the_transcript_s_own_day() {
     // `PossessOpts::default()`, the byte-identity test above starts failing
     // for a reason that looks like worldgen drift but isn't. Pin the intent.
     assert_eq!(
-        opts().day.day,
+        opts().day.day(),
         0.0,
         "the committed transcript is a day-0 recording"
     );
