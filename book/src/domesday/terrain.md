@@ -113,6 +113,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 23.17138 | 24.972604 | 25.407315 | 25.774525 | 27.286705 | 25.385591 |
 
+### `mean-land-elevation-m`
+
+Mean elevation above sea level over land cells, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 1474.2533 | 2099.2926 | 2266.8735 | 2395.9951 | 2745.5761 | 2234.8468 |
+
 ### `mean-ore-grade`
 
 Mean ore grade [0,1] over land cells with a deposit (The Lode, spec §5); 0.0 where no land cell has a deposit
