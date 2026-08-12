@@ -385,6 +385,39 @@ impl GeneratedTerrain {
         noise < PREHUMAN_SCAR_THRESHOLD
     }
 
+    /// Whether a cell carries a volcanic **edifice** — the gated island-arc
+    /// cone the elevation raised there (The Repose, Task 4).
+    ///
+    /// A derived read, not a second model: it resamples the retained
+    /// `streams::ARC_GATE` hash-noise field at the same **source** boundary
+    /// cell `assemble_elevation` sampled (one value per contact, so a whole
+    /// edifice shares it) and hands the result to
+    /// [`elevation::edifice_present`](crate::elevation), the very predicate
+    /// the island-arc profile arm applies. Pure and deterministic — the gate
+    /// is hash-noise, never consumed as a `Stream`, so this costs no draw and
+    /// touches no draw-order/save-format contract, exactly as
+    /// [`cave_at`](Self::cave_at) and [`prehuman_scar_at`](Self::prehuman_scar_at)
+    /// resample terrain's other noise fields.
+    ///
+    /// `false` everywhere but an island arc's overriding side: a coastal
+    /// range's volcanic line shares the ungated collision-belt crest, so the
+    /// shipped elevation holds nothing that separates a volcanic crest cell
+    /// from a non-volcanic one there (see `elevation::edifice_present`).
+    /// type-audit: bare-ok(flag: return)
+    pub fn has_edifice(&self, id: CellId) -> bool {
+        let Some((distance, source)) = *self.globe.boundary_distance.get(id) else {
+            return false;
+        };
+        let Some(contact) = *self.globe.boundary.get(source) else {
+            return false;
+        };
+        let plate = &self.globe.plates[*self.globe.plate_of.get(id) as usize];
+        let arc_side = plate.id > contact.other_plate;
+        let gate = crate::elevation::arc_gate_fbm(self.globe.arc_gate_seed)
+            .sample(self.geosphere.position(source));
+        crate::elevation::edifice_present(contact.kind, arc_side, distance, gate)
+    }
+
     /// The geothermal gradient at a cell (K/km) — the deep's energy base.
     pub fn geothermal_gradient_at(&self, id: CellId) -> crate::strata::GeothermalGradient {
         crate::strata::geothermal_gradient(
@@ -506,7 +539,120 @@ mod tests {
     use super::*;
     use crate::globe::generate;
     use crate::pins::TerrainPins;
-    use hornvale_kernel::{CellId, Geosphere, Seed};
+    use hornvale_kernel::{CellId, CellMap, Geosphere, Seed};
+
+    /// The edifice read must name the cells the SHIPPED elevation raised as
+    /// edifices — one source of truth, never a second opinion.
+    ///
+    /// The proof is behavioural, and deliberately NOT a comparison against a
+    /// re-implementation of the gate formula (which would only establish that
+    /// two copies of one expression agree). It re-runs the shipped assembler
+    /// over the globe's own inputs under TWO arc-gate seeds and
+    /// cross-examines the accessor against where the elevation actually
+    /// moved:
+    ///
+    /// - **anchor** — under the shipped gate seed the re-run reproduces the
+    ///   shipped pre-carve surface (`elevation - carve_delta_m`), so the
+    ///   inputs really are the ones that shipped;
+    /// - **no phantom edifices** — a verdict that differs between the two
+    ///   gate fields must move the elevation, and move it UP on the side that
+    ///   calls it an edifice. A wrong seed, a wrong sample position or a
+    ///   wrong side desynchronises the verdict from the elevation; an
+    ///   inverted threshold flips on exactly the same cells but lowers them.
+    /// - **no missed cones** — an elevation that moves where the verdict does
+    ///   NOT differ must lie outside the edifice's own decay length. The read
+    ///   may narrow the skirt (`edifice_present` says so); it may not miss a
+    ///   cone.
+    #[test]
+    fn has_edifice_names_the_cells_the_shipped_elevation_raised() {
+        let geo = Geosphere::new(5);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        let globe = terrain.globe().clone();
+        // `assemble_elevation`'s inputs, all read back off the globe it
+        // produced. `continental` is the crust-threshold flag the provider
+        // publishes; the relief seed is the same leg `generate_elevation`
+        // derives (it is held fixed across both runs, so relief cancels).
+        let continental = CellMap::from_fn(&geo, |c| terrain.is_continental_at(c));
+        let terrain_seed = Seed(42).derive(crate::streams::ROOT);
+        let relief_seed = terrain_seed.derive(crate::streams::RELIEF);
+        let assemble = |arc_gate: Seed| {
+            crate::elevation::assemble_elevation(
+                &geo,
+                &globe.plates,
+                &globe.plate_of,
+                &globe.boundary,
+                &globe.boundary_distance,
+                &globe.trail_seamounts,
+                &globe.crust,
+                &continental,
+                arc_gate,
+                &globe.induration,
+                relief_seed,
+            )
+        };
+        let shipped_gate = globe.arc_gate_seed;
+        // A plainly different gate field over identical everything else.
+        let other_gate = Seed(shipped_gate.0 ^ 0xA5A5_A5A5_A5A5_A5A5);
+        let elev_a = assemble(shipped_gate);
+        let elev_b = assemble(other_gate);
+
+        // Anchor. `elevation == elevation_pre + carve_delta_m` is a retained
+        // identity, but the sum is re-associated on the way there, so this
+        // compares at 1e-6 m — nine orders below the edifice signal.
+        for cell in geo.cells() {
+            let pre = terrain.elevation_at(cell).get() - terrain.carve_delta_at(cell);
+            assert!(
+                (elev_a.get(cell).get() - pre).abs() < 1e-6,
+                "re-run under the shipped gate seed is not the shipped surface at {cell:?}: \
+                 {} vs {pre}",
+                elev_a.get(cell).get()
+            );
+        }
+
+        // The accessor under the other gate field: the same code path, the
+        // same globe, one seed changed.
+        let mut terrain_b = terrain.clone();
+        terrain_b.globe.arc_gate_seed = other_gate;
+
+        let mut differing_verdicts = 0_u32;
+        let mut moved_elevations = 0_u32;
+        for cell in geo.cells() {
+            let (a, b) = (elev_a.get(cell).get(), elev_b.get(cell).get());
+            let (ed_a, ed_b) = (terrain.has_edifice(cell), terrain_b.has_edifice(cell));
+            if ed_a != ed_b {
+                differing_verdicts += 1;
+                let (raised, lowered) = if ed_a { (a, b) } else { (b, a) };
+                assert!(
+                    raised > lowered,
+                    "the gate field that calls {cell:?} an edifice does not stand higher \
+                     there: {raised} vs {lowered}"
+                );
+            }
+            if a != b {
+                moved_elevations += 1;
+                if ed_a == ed_b {
+                    let hops = terrain
+                        .boundary_distance_at(cell)
+                        .expect("a cell whose elevation the arc gate moved has a boundary");
+                    assert!(
+                        f64::from(hops) > crate::elevation::ARC_EDIFICE_DECAY_CELLS,
+                        "the gate moved {cell:?} at {hops} hop(s) — inside the edifice's own \
+                         decay length — and the read did not notice"
+                    );
+                }
+            }
+        }
+        assert!(
+            differing_verdicts > 0,
+            "no cell changed its edifice verdict between two gate fields — the test is vacuous"
+        );
+        assert!(
+            moved_elevations > differing_verdicts,
+            "expected the gate to move more cells than it renames (the skirt beyond the cone): \
+             {moved_elevations} moved, {differing_verdicts} renamed"
+        );
+    }
 
     #[test]
     fn provider_answers_every_query_consistently() {

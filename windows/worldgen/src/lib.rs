@@ -88,6 +88,7 @@ pub mod components;
 mod descent;
 pub mod disposition;
 pub mod graph_derive;
+pub mod hazard;
 pub mod history_bake;
 pub mod history_emit;
 pub mod observer;
@@ -112,6 +113,7 @@ pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
 };
+pub use hazard::{Recurrence, has_edifice, hazard_at};
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
     bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,

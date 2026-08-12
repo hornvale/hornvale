@@ -165,6 +165,15 @@ pub struct TectonicGlobe {
     /// no draw-order/save-format contract, and (being a leaf, not the root)
     /// it cannot be used to derive any other terrain stream.
     pub channel_seed: Seed,
+    /// Hash-noise seed for the along-strike arc gate (Sculpting, spec §3):
+    /// `terrain_seed.derive(streams::ARC_GATE)`, the already-derived leg,
+    /// a leaf exactly like `lithology_seed`/`features_seed`/`channel_seed`.
+    /// Retained (The Repose, Task 4) so the edifice read can resample the
+    /// gate field `assemble_elevation` shaped the arcs with, instead of
+    /// forming a second opinion about where edifices are. Hash-noise only —
+    /// never consumed as a `Stream`, so the read costs no draw and carries
+    /// no draw-order/save-format contract.
+    pub arc_gate_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -188,6 +197,12 @@ impl TectonicGlobe {
     /// `ChannelNetwork::build` uses directly for the meander field.
     pub fn channel_noise_seed(&self) -> Seed {
         self.channel_seed
+    }
+
+    /// The already-derived `streams::ARC_GATE` hash-noise seed the elevation
+    /// gated island-arc edifices with.
+    pub fn arc_gate_noise_seed(&self) -> Seed {
+        self.arc_gate_seed
     }
 }
 
@@ -494,6 +509,12 @@ pub fn generate(
     // derive any other terrain stream. Hash-noise only, no new draw-order
     // contract.
     let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
+    // The along-strike arc gate (The Repose, Task 4): the SAME derivation
+    // `generate_elevation` used above, taken from the one function that
+    // spells it, and retained so the edifice read resamples that field
+    // rather than reconstructing it. Hash-noise only, no draw-order
+    // contract, and a leaf like the three seeds above.
+    let arc_gate_seed = elevation::arc_gate_seed(terrain_seed);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -541,6 +562,7 @@ pub fn generate(
         lithology_seed,
         features_seed,
         channel_seed,
+        arc_gate_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);

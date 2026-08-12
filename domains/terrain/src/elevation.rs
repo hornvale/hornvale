@@ -122,8 +122,9 @@ const CREST_DECAY_CELLS: f64 = 1.0;
 const FOOTHILLS_FRACTION: f64 = 0.1;
 /// Foothills decay length, cells: broader than the crest's apron.
 const FOOTHILLS_DECAY_CELLS: f64 = 4.0;
-/// Island-arc volcanic-edifice decay length, cells.
-const ARC_EDIFICE_DECAY_CELLS: f64 = 1.5;
+/// Island-arc volcanic-edifice decay length, cells. Also the reach of
+/// [`edifice_present`]: one e-folding out, the cone; beyond it, the apron.
+pub(crate) const ARC_EDIFICE_DECAY_CELLS: f64 = 1.5;
 /// Trench-notch decay length, cells: the sharp seaward deep.
 const TRENCH_DECAY_CELLS: f64 = 1.0;
 /// Decay length beyond the trench notch, cells.
@@ -155,6 +156,67 @@ fn relief_scale(induration: f64, boundary_hops: u32) -> f64 {
     let hardness = 0.25 + 0.75 * induration;
     let belt = 1.0 + 1.5 * math::exp(-f64::from(boundary_hops) / 3.0);
     hardness * belt
+}
+
+/// The along-strike arc-gate seed for a terrain root seed. THE one place
+/// this derivation is written: `generate_elevation` builds the gate field
+/// from it and `globe::generate` retains it on the globe so
+/// [`GeneratedTerrain::has_edifice`](crate::GeneratedTerrain::has_edifice)
+/// can resample the same field. Hash-noise only — never consumed as a
+/// `Stream`, so re-sampling costs no draw and carries no draw-order /
+/// save-format contract (see `streams::ARC_GATE`).
+pub(crate) fn arc_gate_seed(terrain_seed: Seed) -> Seed {
+    terrain_seed.derive(streams::ARC_GATE)
+}
+
+/// The along-strike gate sampler for an already-derived arc-gate seed.
+/// Shared by `assemble_elevation` (which hoists it out of the per-cell
+/// loop) and the edifice read, so both sample one field at one frequency
+/// and one octave count by construction rather than by agreement.
+pub(crate) fn arc_gate_fbm(arc_gate_seed: Seed) -> crate::crust::SphereFbm {
+    crate::crust::SphereFbm::new(arc_gate_seed, ARC_SPACING, ARC_GATE_OCTAVES)
+}
+
+/// Whether the along-strike gate is "on" at a sampled value — the duty
+/// cycle that breaks a continuous arc wall into discrete edifices.
+fn arc_gate_on(gate: f64) -> bool {
+    gate > (1.0 - ARC_DUTY)
+}
+
+/// Whether a boundary contact builds a volcanic **edifice** on a cell at
+/// `distance` hops from it, given the gate value sampled at the contact's
+/// own (source) cell.
+///
+/// This is the predicate [`boundary_profile_m`]'s island-arc arm applies,
+/// narrowed by distance: `on` scales the arc's whole decaying skirt, but
+/// only the cells within one e-folding of `ARC_EDIFICE_DECAY_CELLS` carry
+/// enough of it to be the cone rather than its apron. Beyond that the
+/// elevation still moves with the gate while this reads `false` — a
+/// deliberate, one-directional narrowing (the edifice read never claims a
+/// cell the elevation did not build as one).
+///
+/// Only `IslandArc`'s overriding side is gated. A coastal range's volcanic
+/// line is on the continent and shares the collision-belt crest profile
+/// with no gate of its own, so nothing in the shipped elevation
+/// distinguishes a volcanic crest cell there from a non-volcanic one;
+/// claiming an edifice on that arm would be a second opinion, not a read.
+pub(crate) fn edifice_present(
+    kind: BoundaryKind,
+    arc_side: bool,
+    distance: u32,
+    gate: f64,
+) -> bool {
+    match kind {
+        BoundaryKind::IslandArc if arc_side => {
+            arc_gate_on(gate) && f64::from(distance) <= ARC_EDIFICE_DECAY_CELLS
+        }
+        BoundaryKind::IslandArc
+        | BoundaryKind::CoastalRange
+        | BoundaryKind::ContinentalCollision
+        | BoundaryKind::ContinentalRift
+        | BoundaryKind::OceanicRidge
+        | BoundaryKind::Transform => false,
+    }
 }
 
 /// Per-kind boundary elevation profile (Sculpting, spec §3): crest,
@@ -202,8 +264,10 @@ fn boundary_profile_m(
         }
         BoundaryKind::IslandArc if arc_side => {
             // Overriding ocean plate: a volcanic edifice, present only
-            // where the along-strike gate is on.
-            let on = if gate > (1.0 - ARC_DUTY) { 1.0 } else { 0.12 };
+            // where the along-strike gate is on. The gate test itself is
+            // `arc_gate_on` so that `edifice_present` — the published read
+            // — cannot drift from the elevation this arm builds.
+            let on = if arc_gate_on(gate) { 1.0 } else { 0.12 };
             base * on * math::exp(-d / ARC_EDIFICE_DECAY_CELLS)
         }
         BoundaryKind::IslandArc | BoundaryKind::CoastalRange => {
@@ -417,8 +481,11 @@ pub fn trail_seamounts(
 /// additional (weaker) domes that add on top. Eleven explicit narrow
 /// inputs beat a bundling struct here — same house call as climate's
 /// assemblers (`temperature.rs`, `biome.rs`).
+/// `pub(crate)` so the edifice read's agreement test can re-run the very
+/// assembler that shipped under a second gate seed and watch which cells
+/// move (see `provider.rs`'s `has_edifice_names_the_cells_the_elevation_…`).
 #[allow(clippy::too_many_arguments)]
-fn assemble_elevation(
+pub(crate) fn assemble_elevation(
     geo: &Geosphere,
     plates: &[Plate],
     plate_of: &CellMap<u32>,
@@ -435,7 +502,7 @@ fn assemble_elevation(
     // seeds/frequencies/octaves are loop-invariant, so the slice- and
     // octave-seed derivations run once per field instead of once per cell
     // (byte-identical — same seeds, same math). See `crust::SphereFbm`.
-    let arc_gate_fbm = crate::crust::SphereFbm::new(arc_gate_seed, ARC_SPACING, ARC_GATE_OCTAVES);
+    let arc_gate_fbm = arc_gate_fbm(arc_gate_seed);
     let relief_fbm = crate::crust::SphereFbm::new(relief_seed, RELIEF_FREQUENCY, RELIEF_OCTAVES);
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
@@ -524,7 +591,7 @@ pub fn generate_elevation(
     continental: &CellMap<bool>,
     induration: &CellMap<f64>,
 ) -> CellMap<ReferenceElevation> {
-    let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
+    let arc_gate_seed = arc_gate_seed(terrain_seed);
     let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
         geo,
