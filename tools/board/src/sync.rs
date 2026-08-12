@@ -85,24 +85,43 @@ pub fn fetch_argv(remote: &str) -> Vec<String> {
     ]
 }
 
-/// Turn a rejected push's stderr into the one hypothesis worth acting on.
+/// Turn a rejected push's stderr into the one hypothesis worth acting on —
+/// but only when the failure genuinely IS a rejection.
 ///
 /// Every legitimate move of a host's own log is a forward commit, so a
-/// rejection can only mean something illegitimate happened — and the
+/// *rejection* can only mean something illegitimate happened — and the
 /// overwhelmingly likely cause is two machines both answering to
 /// `hostname -s` == `host`, both publishing under the same
-/// `refs/hornvale/hosts/<host>` slot. This never suggests `--force`: forcing
-/// here is the one operation in this whole design capable of violating
-/// decision 0118 part 3 across hosts, discarding history the local ref no
-/// longer holds.
+/// `refs/hornvale/hosts/<host>` slot. But "the push failed" and "the push
+/// was rejected" are not the same event: the commonest failure by far is an
+/// unreachable remote, expired credentials, or no network at all, and NONE
+/// of those are a rejection — git's own stderr for them never says
+/// "rejected" or "non-fast-forward" (measured: `fatal: 'no-such-remote'
+/// does not appear to be a git repository` names none of that). Applying
+/// the hostname-collision hypothesis to an offline box announces the
+/// campaign's most alarming hazard for its single most ordinary failure,
+/// and calls a push "rejected" that the remote never even saw — so this
+/// checks for those two tokens first and passes anything else through
+/// verbatim, unembellished.
+///
+/// The collision wording itself never suggests `--force`: forcing here is
+/// the one operation in this whole design capable of violating decision
+/// 0118 part 3 across hosts, discarding history the local ref no longer
+/// holds.
 pub fn explain_push_failure(host: &str, stderr: &str) -> String {
-    format!(
-        "push to refs/hornvale/hosts/{host} was rejected ({}) -- every legitimate move of a \
-         host's own log is a forward commit, so this almost certainly means another machine \
-         also answers to the hostname \"{host}\" and is publishing under the same ref; never \
-         force this push (0118 part 3) -- rename one of the two hosts instead",
-        stderr.trim()
-    )
+    let trimmed = stderr.trim();
+    let lower = trimmed.to_lowercase();
+    if lower.contains("rejected") || lower.contains("non-fast-forward") {
+        format!(
+            "push to refs/hornvale/hosts/{host} was rejected ({trimmed}) -- every legitimate \
+             move of a host's own log is a forward commit, so this almost certainly means \
+             another machine also answers to the hostname \"{host}\" and is publishing under \
+             the same ref; never force this push (0118 part 3) -- rename one of the two hosts \
+             instead"
+        )
+    } else {
+        format!("push to refs/hornvale/hosts/{host} failed: {trimmed}")
+    }
 }
 
 /// Publish this host's own board to `remote`, then fetch every peer's.
@@ -268,6 +287,41 @@ pub fn peer_ages(repo: &Repo, now_unix: u64) -> Vec<(String, Option<u64>)> {
         .collect()
 }
 
+/// How long ago each known peer's log **itself** last actually moved — the
+/// mirror ref's most recent commit time, not when this host last fetched it.
+///
+/// This is the signal the spec amendment behind B6 (commit `6fb5301a`)
+/// actually needs, and [`peer_ages`] alone cannot give it: a host that syncs
+/// on a regular cadence reports every peer's MIRROR as freshly synced
+/// forever, even while a given peer has posted nothing in a month —
+/// [`peer_ages`]'s age answers "is our view of this peer current," not "is
+/// this peer's content current." Reported separately rather than folded
+/// into `peer_ages` itself, because the two questions have different
+/// failure surfaces (a network problem bounds the first; the peer's own
+/// silence bounds the second) and `peer_ages`'s existing signature and
+/// tests are pinned by the brief this module was built against.
+///
+/// A dangling or unresolvable mirror degrades to `None` for that one host,
+/// not a failed read: `git log -1` runs per host, so one bad ref costs one
+/// entry, never the whole listing — deliberately not a dereferencing
+/// `for-each-ref` format, which `Board::resolved_read_refs`'s own doc
+/// comment documents as exiting 128 on a single bad mirror.
+pub fn peer_content_ages(repo: &Repo, now_unix: u64) -> Vec<(String, Option<u64>)> {
+    let hosts = list_peer_hosts(repo).unwrap_or_default();
+    hosts
+        .into_iter()
+        .map(|host| {
+            let refname = format!("{}{host}", Board::PEERS_PREFIX);
+            let age = repo
+                .git(&["log", "-1", "--format=%ct", &refname])
+                .ok()
+                .and_then(|out| out.trim().parse::<u64>().ok())
+                .map(|posted_at| now_unix.saturating_sub(posted_at));
+            (host, age)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,14 +334,26 @@ mod tests {
         // across hosts. Asserted on the argv, because the consequence of
         // getting it wrong is unobservable until it has already destroyed
         // history. B3.
+        //
+        // An exact `assert_eq!` on the whole vector, not merely a
+        // does-not-contain check on `--force`/`-f`/a leading `+`: those
+        // three tokens are what could sneak in TODAY, but the guard has to
+        // survive a future edit, not just today's code -- `--mirror`
+        // (which deletes remote refs), `--delete`, `--prune`, or
+        // `--force-with-lease` would each slip past a contains-check
+        // unnoticed. Locking the exact shape is what makes any of those
+        // additions a visible, deliberate diff against this test instead of
+        // a silent pass.
         let args = push_argv("origin", "ambrose");
-        assert!(
-            !args
-                .iter()
-                .any(|a| a == "--force" || a == "-f" || a.starts_with("+")),
-            "no force, and no leading-plus refspec either: {args:?}"
+        assert_eq!(
+            args,
+            vec![
+                "push".to_string(),
+                "origin".to_string(),
+                "refs/hornvale/board:refs/hornvale/hosts/ambrose".to_string(),
+            ],
+            "the push argv must be exactly this shape, nothing added: {args:?}"
         );
-        assert!(args.contains(&"refs/hornvale/board:refs/hornvale/hosts/ambrose".to_string()));
     }
 
     #[test]
@@ -313,6 +379,32 @@ mod tests {
         assert!(
             !msg.contains("--force") && !msg.contains("-f "),
             "must never suggest forcing the push: {msg}"
+        );
+    }
+
+    #[test]
+    fn a_non_rejection_failure_is_passed_through_without_the_collision_hypothesis() {
+        // Important 1 (Task 7 review): the commonest failure by far --
+        // offline, VPN, expired credentials, an unreachable remote -- is
+        // NOT a rejection, and must not be announced as the campaign's most
+        // alarming hazard. This is git's real stderr for a nonexistent
+        // remote (measured live against `no-such-remote`).
+        let msg = explain_push_failure(
+            "ambrose",
+            "fatal: 'no-such-remote' does not appear to be a git repository\n\
+             fatal: Could not read from remote repository.",
+        );
+        assert!(
+            !msg.to_lowercase().contains("hostname"),
+            "an unreachable remote is not a hostname collision: {msg}"
+        );
+        assert!(
+            !msg.contains("rejected"),
+            "it was never rejected -- the remote never saw it: {msg}"
+        );
+        assert!(
+            msg.contains("no-such-remote"),
+            "the real diagnosis must still be visible: {msg}"
         );
     }
 
@@ -423,6 +515,58 @@ mod tests {
                 .and_then(|(_, a)| *a),
             None,
             "a mirror ref with no recorded sync time must read as never-synced, not be dropped"
+        );
+    }
+
+    #[test]
+    fn peer_content_ages_reports_how_long_since_the_peer_actually_posted() {
+        // The spec-gap fix: read the peer mirror's own real commit time back
+        // out of git rather than mint a third wall-clock call site, exactly
+        // as `digest.rs`'s `history_reads_every_post_in_the_window_in_one_batch`
+        // already does -- the test is then exact (age == 500), not a
+        // "should be small" approximation.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = Board::with_ref(repo.clone(), &format!("{}lefford", Board::PEERS_PREFIX));
+        board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("seed a peer mirror");
+        let tip = board.tip().expect("tip").expect("some");
+        let posted_at: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let ages = peer_content_ages(&repo, posted_at + 500);
+        assert_eq!(
+            ages.iter()
+                .find(|(h, _)| h == "lefford")
+                .and_then(|(_, a)| *a),
+            Some(500)
+        );
+    }
+
+    #[test]
+    fn peer_content_ages_is_none_for_a_dangling_mirror_ref_not_an_error() {
+        // A per-ref failure, not a whole-listing one: `git log -1` on ONE bad
+        // ref must not blank the report for every other peer. Written as a
+        // loose ref file naming a plausible-but-absent object, exactly as
+        // `store.rs`'s `a_peer_ref_naming_an_absent_object_is_skipped_with_a_warning_not_fatal`
+        // does, for the same reason: `update-ref` refuses a missing object
+        // outright, and the null oid gets dropped from `for-each-ref`
+        // entirely -- neither reaches the arm this test exercises.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let refname = format!("{}dangling", Board::PEERS_PREFIX);
+        let path = repo.git_path(&refname).expect("loose ref path");
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("ref dir");
+        std::fs::write(&path, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n")
+            .expect("write the loose ref");
+        let ages = peer_content_ages(&repo, 1_000);
+        assert_eq!(
+            ages.iter()
+                .find(|(h, _)| h == "dangling")
+                .and_then(|(_, a)| *a),
+            None,
+            "a dangling mirror must read as unknown, not crash or blank the report"
         );
     }
 }

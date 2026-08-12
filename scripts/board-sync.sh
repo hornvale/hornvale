@@ -24,6 +24,22 @@
 # local git call would. 20s is generous for the tiny ref this board pushes
 # (a few dozen small posts) while still bounding a caller like
 # `preflight-merge.sh` that a human is waiting on.
+#
+# `board sync`'s own stdout/stderr are DELIBERATELY MERGED (2>&1) below, not
+# suppressed the way board-render.sh's `2>/dev/null` suppresses its render:
+# a rejected push here is worth a human's attention (0118 part 3's
+# hostname-collision hazard), so `preflight-merge.sh` -- the caller that
+# actually cares -- sees it rather than having it swallowed.
+#
+# WHICH IS WHY THE MISSING-`timeout` CASE IS HANDLED SEPARATELY, ahead of
+# that merge: with the merge already in effect, a missing `timeout` binary
+# does NOT degrade silently the way board-render.sh's does -- bash's own
+# "timeout: command not found" would land on the merged stream and print,
+# not vanish (measured: `PATH=/usr/bin:/bin` reproduces this exactly). So
+# this checks for `timeout` FIRST and skips the sync entirely if it is
+# absent, rather than attempting one that cannot actually be bounded --
+# unbounded is exactly the hang risk this timeout exists to remove, so
+# skipping is the safer degradation, not merely the quieter one.
 set -uo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}" || exit 0
@@ -34,8 +50,17 @@ bin="${root}/tools/board/target/release/board"
 [ -x "${bin}" ] || bin="${root}/tools/board/target/debug/board"
 [ -x "${bin}" ] || exit 0
 
+command -v timeout >/dev/null 2>&1 || exit 0
+
 cd "${root}" || exit 0
-timeout 20 "${bin}" sync "$@" 2>&1
+# GIT_TERMINAL_PROMPT=0: `timeout` does not put its child in a new process
+# group, so a credential prompt from a grandchild `git` process cannot be
+# answered and would otherwise simply burn the full 20s budget every time.
+# Failing the credential lookup immediately is exactly this script's
+# fail-open convention -- a sync that cannot authenticate degrades to the
+# single-box behaviour that shipped before this campaign, the same as any
+# other push/fetch failure.
+GIT_TERMINAL_PROMPT=0 timeout 20 "${bin}" sync "$@" 2>&1
 rc=$?
 if [ "${rc}" -eq 124 ]; then
   echo "board sync exceeded its 20s budget and was skipped; run \`make board-sync\`"

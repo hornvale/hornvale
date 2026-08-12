@@ -1,12 +1,12 @@
 //! The Cairn CLI. Positional parsing only, `tools/digest`'s pattern.
 
 use board::git::Repo;
-use board::live::LiveContext;
+use board::live::{LiveContext, current_host};
 use board::post::Post;
 use board::relevance::{Cursor, Displayed, changed_paths, unseen};
-use board::render::{RenderOptions, live_posts, peer_status, render};
+use board::render::{RenderOptions, live_posts, peer_status, render, with_peer_header};
 use board::store::{Board, ReapPlan};
-use board::sync::{peer_ages, sync};
+use board::sync::{peer_ages, peer_content_ages, sync};
 use std::collections::BTreeSet;
 
 fn main() {
@@ -85,12 +85,21 @@ fn main() {
             // the only local signal left that its content might be stale.
             // Same wall clock the liveness probe already read, so this
             // never disagrees with the render it accompanies about "now".
-            let peer_header = peer_status(&peer_ages(&repo, ctx.now_unix));
+            // Two signals (see `peer_status`'s doc): how stale OUR VIEW of
+            // each peer is, and how long since that peer actually posted --
+            // the second is the one a frozen/retired peer's staleness
+            // actually needs, since a host that syncs regularly reports the
+            // first as fresh forever regardless of the peer's own silence.
+            let peer_header = peer_status(
+                &peer_ages(&repo, ctx.now_unix),
+                &peer_content_ages(&repo, ctx.now_unix),
+            );
 
             if cmd == "read" {
                 // `full()` has no real cap (its post budget is effectively
                 // unbounded), so nothing is ever elided here.
-                print!("{peer_header}{}", render(&live, 0, &RenderOptions::full()));
+                let body = render(&live, 0, &RenderOptions::full());
+                print!("{}", with_peer_header(&peer_header, body));
                 return; // an explicit full read must not advance the cursor
             }
 
@@ -113,7 +122,8 @@ fn main() {
                 let all: BTreeSet<String> = live.iter().map(|s| s.id.clone()).collect();
                 let displayed = Displayed::filter(&live, &all, &changed);
                 let (shown, elided) = displayed.cap(opts.post_budget());
-                print!("{peer_header}{}", render(shown.posts(), elided, &opts));
+                let body = render(shown.posts(), elided, &opts);
+                print!("{}", with_peer_header(&peer_header, body));
                 return;
             };
             let fresh = match unseen(&board, &cursor) {
@@ -131,7 +141,8 @@ fn main() {
             let changed = changed_paths(&repo).unwrap_or_default();
             let displayed = Displayed::filter(&live, &fresh, &changed);
             let (shown, elided) = displayed.cap(opts.post_budget());
-            print!("{peer_header}{}", render(shown.posts(), elided, &opts));
+            let body = render(shown.posts(), elided, &opts);
+            print!("{}", with_peer_header(&peer_header, body));
             if let Err(e) = cursor.record(&board, &shown) {
                 eprintln!("board: could not record the read cursor: {e}");
             }
@@ -224,9 +235,15 @@ fn main() {
         // because the network is down.
         Some("sync") => {
             let remote = args.get(2).map(String::as_str).unwrap_or("origin");
+            // Same host `sync` itself resolves internally (`current_host()`
+            // is the crate's one function for this, by design -- see its
+            // doc comment on why two independent copies must never exist);
+            // read again here only to name the slot in this print, not to
+            // decide anything.
+            let host = current_host();
             let report = sync(&repo, remote);
             match report.pushed {
-                Ok(()) => println!("board: pushed to {remote} (refs/hornvale/hosts/<host>)"),
+                Ok(()) => println!("board: pushed to {remote} (refs/hornvale/hosts/{host})"),
                 Err(e) => eprintln!("board: push to {remote} failed: {e}"),
             }
             match report.fetched {
