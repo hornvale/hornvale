@@ -71,6 +71,20 @@ fn number_of(result: &hornvale_lab::RunResult, row: &hornvale_lab::Row, metric: 
 }
 
 #[test]
+fn mean_land_elevation_is_registered_and_positive() {
+    // Mean elevation ABOVE SEA LEVEL over land cells, so it is >= 0 by
+    // construction. A negative value would mean the land/sea comparison
+    // inverted; seed 1 has land, so Absent would also be a bug.
+    let study = solo_study("mean-land-elevation-m");
+    let result = hornvale_lab::run(&study).expect("study runs");
+    let v = number_of(&result, &result.rows[0], "mean-land-elevation-m");
+    assert!(
+        v >= 0.0,
+        "mean land elevation above sea level cannot be negative: {v}"
+    );
+}
+
+#[test]
 fn insolation_is_determined_by_zone_position_alone() {
     // The habitable zone is denominated in sqrt(L) and insolation is L/a²,
     // so L cancels EXACTLY: S = 1/(0.95 + 0.42u)². Luminosity does not enter.

@@ -1317,6 +1317,36 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "mean-land-elevation-m",
+            doc: "Mean elevation above sea level over land cells, m — the term the \
+                  lapse rate turns into a temperature penalty. Land is `e >= sea`, \
+                  matching `mountain-coverage` so the two are directly comparable \
+                  (the registry also carries an `is_ocean` land definition; this is \
+                  deliberately not that one); Absent on a landless world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let sea = v.terrain.sea_level();
+                let (mut sum, mut count) = (0.0_f64, 0_u32);
+                for cell in geo.cells() {
+                    let e = v.terrain.elevation_at(cell);
+                    if e >= sea {
+                        sum += e - sea;
+                        count += 1;
+                    }
+                }
+                if count == 0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(sum / f64::from(count))
+                }
+            }),
+        },
+        Metric {
             name: "band-count",
             doc: "Circulation bands per hemisphere; 'locked' if tidally locked",
             summary: SummaryKind::Categorical,
@@ -8943,7 +8973,14 @@ mod tests {
         // variable the orbit is placed on, and the two are related by the
         // closed-form identity `S = 1/(0.95+0.42u)²` pinned in
         // `windows/lab/tests/rung_selection.rs`.
-        assert_eq!(registry().len(), 202);
+        //
+        // +1 for THE GLASSHOUSE (Task 3: mean-land-elevation-m) — §3.3's
+        // ~2200 m mean land elevation was inferred twice (the regression
+        // intercept and mountain-coverage = 0.545) and measured never; no
+        // committed metric read the thing itself. Land is `e >= sea`,
+        // matching mountain-coverage so the hypsometry target compares the
+        // two directly.
+        assert_eq!(registry().len(), 203);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
