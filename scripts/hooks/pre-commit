@@ -111,10 +111,34 @@ fi
 # workspace code — falls through to the ordinary filter below unchanged, so
 # a filter this narrow can never silently drop the workspace gate on a
 # change that needs it.
+# THE BELT, added by The Beacon Task 11b after this very lane corrupted a
+# developer's checkout. Git exports GIT_DIR and GIT_INDEX_FILE to a hook, and
+# from a LINKED WORKTREE they are absolute paths into the real repository:
+#
+#   GIT_DIR=/…/hornvale/.git/worktrees/the-beacon
+#
+# GIT_DIR outranks `git -C <dir>`, so every `git -C <tempdir>` the board's
+# tests make inherited it and operated on the real repo instead: `git init`
+# re-initialised it and guessed bare (core.bare=true), `git config` rewrote
+# user.name to `board test`, the merge helper landed root/work/merge commits on
+# main, and update-ref left a dangling ref that broke `git fetch` repo-wide.
+#
+# The real fix is in `tools/board/src/git.rs` (`Repo::command` scrubs the
+# environment) and is guarded by `tools/board/tests/hermeticity*.rs`. This is
+# the belt: `env -u` here protects any path that bypasses that constructor —
+# a shelled-out command, a new dependency, a helper script — for free.
+#
+# It must wrap ONLY the cargo invocation. The hook's own `git diff --cached`
+# calls above and below NEED the inherited GIT_INDEX_FILE to see the right
+# index, so unsetting these globally would silently change what this hook
+# checks.
 board_staged="$(git diff --cached --name-only --diff-filter=ACMR)"
 if [[ -n "$board_staged" ]] && ! grep -qvE '^tools/board/' <<<"$board_staged"; then
     echo "pre-commit: staged set is entirely under tools/board/ -- running its own suite instead of 'make quick' (B13)..." >&2
-    if ! cargo test --manifest-path tools/board/Cargo.toml; then
+    if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR -u GIT_INDEX_FILE \
+            -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+            -u GIT_NAMESPACE -u GIT_PREFIX \
+            cargo test --manifest-path tools/board/Cargo.toml; then
         echo "pre-commit: 'cargo test --manifest-path tools/board/Cargo.toml' failed." >&2
         exit 1
     fi

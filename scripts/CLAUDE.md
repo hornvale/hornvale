@@ -152,7 +152,27 @@ confirmation-gated in the Makefile.
   falls through to the ordinary filter unchanged, so this only ever adds
   coverage and never drops the workspace gate on a change that needs it.
   This rule covers board-only *commits*; it is not a substitute for a gate
-  that runs the board's 189 tests on every push — nothing does that (see
+  that runs the board's 193 tests on every push — nothing does that (see
   root `CLAUDE.md`'s board paragraph), so a mixed commit still needs `make
   quick` to catch a workspace regression, and neither arm catches a board
   regression introduced by a change that never gets committed at all.
+- **`git -C <dir>` DOES NOT SCOPE WHICH REPOSITORY GIT ACTS ON**, and wiring
+  the board suite into the lane above is how the project learned it. Git runs
+  a hook with `GIT_DIR` and `GIT_INDEX_FILE` **exported**, and from a linked
+  worktree — where all campaign work happens — they are absolute paths into
+  the real repository (`GIT_DIR=/…/.git/worktrees/<campaign>`). `GIT_DIR`
+  outranks `-C`, which only sets the working directory. So every
+  `git -C <tempdir>` in the board's hermetic-looking tests operated on the
+  developer's own checkout: `git init` re-initialised it and guessed **bare**
+  (a worktree gitdir does not end in `/.git`, so `core.bare = true` and the
+  primary checkout stopped being a working tree at all), `git config`
+  overwrote `user.name` with `board test`, the merge helper landed
+  `root`/`work`/`merge` commits on `main` plus `campaign/*` branches, and a
+  loose-ref write left `refs/hornvale/peers/dangling -> deadbeef…`, which
+  broke `git fetch` repository-wide. The fix is
+  `tools/board/src/git.rs`'s `Repo::command`, which scrubs
+  `GIT_LOCATION_VARS`/`GIT_IDENTITY_VARS` from every invocation; the guard is
+  `tools/board/tests/hermeticity{,_env}.rs`; and the belt is the `env -u`
+  prefix on the `cargo test` line here. **Any hook that runs a test suite
+  touching git needs that `env -u`** — a temp directory is not isolation when
+  the environment names the repository.

@@ -249,14 +249,16 @@ fn a_shared_append_only_file_conflicts_which_is_why_we_do_not_use_one() {
     // failed for the reason the control exists to demonstrate, rather than
     // for some unrelated reason (a bad object id, a dropped flag, a renamed
     // subcommand) that would also exit non-zero and leave the control
-    // silently no longer watching anything. Spawning `git` directly here is
-    // deliberate, not a layering violation: this test asserts git's own
-    // behaviour, not the crate's API surface.
-    let out = std::process::Command::new("git")
-        .arg("-C")
-        .arg(repo.root())
-        .args(["merge-tree", "--write-tree", &a, &b])
-        .output()
+    // silently no longer watching anything.
+    //
+    // `git_output` rather than a bare `Command::new("git")`: this used to
+    // spawn git directly, which meant it was the one call in the suite that
+    // did NOT get `Repo::command`'s environment scrub, and so would still
+    // have run against a hook's inherited `GIT_DIR` (see `git.rs`'s module
+    // docs). Asserting on git's own behaviour does not require bypassing the
+    // one constructor that makes the target unambiguous.
+    let out = repo
+        .git_output(&["merge-tree", "--write-tree", &a, &b])
         .expect("spawn git");
     assert!(
         !out.status.success(),
