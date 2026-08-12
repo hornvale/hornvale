@@ -12,17 +12,15 @@ never the verdicts (those cost a test run per site). Its job is to keep the
 survive a diff is harder to leave lying around than one buried in a doc
 comment.
 
-1 seam(s) registered; 1 declared unguarded.
+1 seam(s) registered; 0 declared unguarded.
 
 ## `conquest_victim`
 
-- Defined at `windows/almanac/src/history.rs:683`
+- Defined at `windows/almanac/src/history.rs:702`
 - Operator: `returns(Option::<EntityId>::None)`
-- Test scope: `hornvale-almanac`
-- **Declared unguarded:** only the gallery drift check pins this, and `make gate` does not run it; the almanac assertion that would close it is in flight elsewhere
-- This seam is expected to SURVIVE. If a test ever catches it, the
-  run goes red and this declaration must be deleted in the same change.
+- Test scope: `hornvale`
+- No declaration: a survivor here fails the gate.
 - Call sites:
   - `windows/almanac/src/history.rs:608`
-  - `windows/almanac/src/history.rs:753`
+  - `windows/almanac/src/history.rs:772`
 
