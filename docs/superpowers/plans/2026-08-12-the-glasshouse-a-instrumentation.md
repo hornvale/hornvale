@@ -111,16 +111,22 @@ nothing checks.
 //! panics (Climate) or reports a silent all-`Absent` column (Settlement/Full
 //! past an early return) — see TOOL-rung-tag-unchecked.
 
-use hornvale_lab::{Study, SeedSpec, PinSet};
+use hornvale_lab::{MetricSelection, PinSet, Seeds, Study};
 
 /// A study selecting exactly one metric, over one seed.
 fn solo_study(metric: &str) -> Study {
     Study {
         name: format!("solo-{metric}"),
         description: "rung-selection guard: one metric, one seed".to_string(),
-        seeds: SeedSpec { from: 1, count: 1 },
-        pin_sets: vec![PinSet { label: "default".to_string(), pins: vec![] }],
-        metrics: vec![metric.to_string()],
+        seeds: Seeds { from: 1, count: 1 },
+        pin_sets: vec![PinSet {
+            label: "default".to_string(),
+            pins: vec![],
+            // None = the shipped {goblin, kobold} roster. Required in a
+            // struct literal even though the JSON path defaults it.
+            roster: None,
+        }],
+        metrics: MetricSelection::Named(vec![metric.to_string()]),
     }
 }
 
@@ -165,46 +171,51 @@ containing `climate-rung extractor on a shallower built view: runner bug`.
 instead, fix the constructor names and re-run until you see the panic — a compile
 error proves nothing about whether the assertion catches the defect.
 
-- [ ] **Step 3: Implement the widening**
+- [ ] **Step 3: Implement the fix — choose the variant BEFORE building**
 
-In `windows/lab/src/runner.rs`, after `BuiltView::build_to` returns and before
-metrics are applied, widen a `Terrain`-depth build into `BuiltView::Climate` when
-any selected metric is Climate-rung. The condition must be driven by the selected
-metrics, not by the depth alone, so a terrain-only study keeps paying nothing for
-the climate reconstruction.
+**Corrected by controller verification; the plan's original "widening" framing
+was wrong.** There is no `ClimateView::from_terrain`. `ClimateView::build_to(seed,
+pins, wc, BuildDepth::Terrain)` (`metrics.rs:298`) builds the world to Terrain
+depth **and** reconstructs the climate atop it, in one call. So a post-build
+widening would either need a constructor that does not exist, or would rebuild
+the world and double the cost of every climate study.
 
-```rust
-/// True when any selected metric's extractor reads the climate rung. A
-/// `Terrain`-depth build must then be widened into `BuiltView::Climate`,
-/// because `BuildDepth` has no Climate rung (climate commits no facts) and
-/// `BuiltView::climate()` panics on a `Terrain` variant.
-fn needs_climate_view(metrics: &[Metric]) -> bool {
-    metrics
-        .iter()
-        .any(|m| matches!(m.extract, Extractor::Climate(_)))
-}
-```
+The variant must therefore be selected **before** building. The root gap is that
+`BuildDepth` is worldgen's enum and has no Climate rung (correctly — climate
+commits no facts), so it cannot carry the decision, and `required_depth`
+collapses `Climate` and `Terrain` onto the same value.
 
-Then at the build site, replace the bare `build_to` result with the widened one.
-`ClimateView` is constructed from a `Terrain`-depth build — use whatever
-constructor `ClimateView` actually exposes (`metrics.rs:284` shows a `build`;
-read it and prefer a from-`TerrainView` path if one exists, so the terrain build
-is not repeated).
+Fix that collapse. The requirement is:
 
-```rust
-let built = BuiltView::build_to(seed, pins, wc, depth)?;
-let built = match built {
-    BuiltView::Terrain(tv) if needs_climate_view(metrics) => {
-        BuiltView::Climate(ClimateView::from_terrain(tv)?)
-    }
-    other => other,
-};
-```
+- A study selecting **any** Climate-rung metric must produce `BuiltView::Climate`.
+- A study selecting **no** Climate-rung metric must not pay for the climate
+  reconstruction.
+- The `BuiltView::climate()` panic should become **unreachable by construction**,
+  not merely avoided at one call site — a runtime guard leaves the next caller
+  the same trap.
 
-If no `from_terrain`-shaped constructor exists, add one to `ClimateView` that
-takes the already-built `TerrainView` and performs only the climate
-reconstruction. Do **not** rebuild the world from the seed — that would double
-the cost of every climate study and is the reason this rung exists.
+Choose the shape after reading `runner.rs:103-160` and `metrics.rs:504-575`. Two
+that satisfy the above:
+
+1. **A lab-owned view rung.** Give the lab its own enum over `BuiltView`
+   variants (`ViewRung::{Astronomy, Terrain, Climate, Settlement, Full}`), map
+   `Extractor` to it instead of to `BuildDepth`, take the max over selected
+   metrics, and have the build site match on that. `BuildDepth` stays the
+   worldgen concept it is; the lab stops overloading it. This makes the panic
+   unreachable and is the more thorough fix.
+2. **Pass the intent into `build_to`.** Add a `want_climate: bool` (or fold it
+   into the existing depth argument as a small enum) so `build_to` returns
+   `BuiltView::Climate` when asked. Smaller diff, but leaves `BuildDepth`
+   overloaded and the panic still reachable from other callers.
+
+Prefer (1) unless reading the code shows it forces churn well beyond this task —
+if so, take (2) and say why in the report. Either way `Extractor::rung()`'s
+existing doc comment (which explains why Climate maps to Terrain **depth**) must
+be updated so it no longer describes a widening that does not happen.
+
+Note for whichever shape you pick: `Metric.extract` is a `pub` field
+(`metrics.rs:767`) and `Extractor` is re-exported from `lib.rs`, so matching
+`matches!(m.extract, Extractor::Climate(_))` is available to `runner.rs`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
