@@ -372,29 +372,103 @@ narrow temperature study without checking this first.
 Per decision 0016 the freeze lives here, in the spec — a study JSON has no
 hypothesis field, and nothing mechanical compares a result to it.
 
-**Hypothesis.** The cold and the uniformity have three separable causes
-(§2.3) and are not an attractor. Correcting the insolation baseline, the
-latitude profile, and the hypsometry will move the census population to span
-glacial→temperate→warm with no biome class dominating, and Earth will become an
-ordinary draw rather than a 12th-percentile one.
+### 4.0 Why this section was superseded once, and on what authority
 
-**Success criteria**, measured on a post-change 1000-world census:
+The criteria below in **§4.1 are the ones in force**. The original set is
+preserved verbatim in **§4.2**, superseded rather than edited.
 
-1. `mean-land-temperature-c` median within **5 K of Earth's +8.6 °C**.
-2. **Spread retained**: p95 − p5 of `mean-land-temperature-c` **≥ 15 K**. This
-   is the criterion that fails a lazy fix — a strong thermostat can satisfy (1)
-   while flattening the population.
-3. **No biome class exceeds 50%** of worlds (from 65.1%).
-4. `dominant-soil-order` **no longer frozen** at a single value (from 100%).
+Two of the original six were written against **estimated** baselines and turned
+out to be far weaker than intended. Stage A then measured the real before-arm on
+the committed 1000-world census:
+
+```
+  r(insolation-rel,        mean-land-temperature-c) = +0.9227
+  r(zone-position,         mean-land-temperature-c) = -0.9243
+  r(mean-land-elevation-m, mean-land-temperature-c) = -0.0440
+  mean-land-temperature-c  median -11.99   p5 -30.61   p95 +13.98
+  spread (p95 - p5)        44.59 K
+  insolation-rel           median 0.7419   (analytic prediction 0.743)
+  zone-position            median 0.5023   (uniform-in-radius draw confirmed)
+```
+
+Against that, the original criteria 2 and 6 were nearly vacuous:
+
+- **Original 6** demanded `r(S,T)` fall below **0.90** — but the true baseline is
+  **+0.9227**, a mere 0.023 away. It had been written against **+0.980**, an
+  ad-hoc read over 142 *spinning* worlds; the census holds all 1000, and the 48
+  tidally-locked worlds (median −25.9 °C) weaken the correlation. A different
+  population, so a different number.
+- **Original 2** demanded spread **≥ 15 K** — but the baseline is **44.59 K**,
+  so it was already satisfied by 3×. A fix could compress the population by 66%
+  and still pass, which is the exact failure the criterion existed to catch. No
+  baseline spread had ever been measured.
+
+**Why superseding is legitimate here, and where the line is.** Decision 0016's
+freeze exists to stop a prediction being rescued *after* its outcome is known.
+No outcome exists: Stage A changed no physics (read-side instrumentation only,
+byte-identity verified by regeneration and `cmp`), and Stage B has not begun. What
+is being corrected is a **baseline arithmetic error**, discovered by the very
+measurement Stage A was built to take — not a result. Authorised by Nathan,
+2026-08-12, on that reasoning.
+
+**The line:** this supersession is spent. Once Stage B changes a physics constant,
+§4.1 is frozen for good — a second revision after any outcome is visible would be
+the retuning 0016 forbids, and `CLAUDE.md`'s rule against retuning to rescue a
+prediction after unblinding applies with full force.
+
+### 4.1 In force
+
+**Hypothesis.** The cold and the uniformity have three separable causes (§2.3) and
+are not an attractor. Correcting the insolation baseline, the latitude profile, and
+the hypsometry will move the census population to span glacial→temperate→warm with
+no biome class dominating, and Earth will become an ordinary draw rather than a
+12th-percentile one.
+
+**Success criteria**, measured on a post-change 1000-world census, each stated
+against its **measured** baseline:
+
+1. `mean-land-temperature-c` median within **5 K of Earth's +8.6 °C**
+   (baseline −11.99 °C).
+2. **Spread retained**: p95 − p5 of `mean-land-temperature-c` is **≥ 31.2 K**,
+   i.e. at least **70% of the measured 44.59 K baseline**. This is the criterion
+   that fails a lazy fix — a strong thermostat can satisfy (1) while flattening
+   the population — and unlike its predecessor it can actually be violated.
+3. **No biome class exceeds 50%** of worlds (baseline: `ice` 65.1%).
+4. `dominant-soil-order` **no longer frozen** at a single value
+   (baseline: `leptosol` 100.0%).
 5. Earth's insolation (`S=1`) lands between the **25th and 75th percentile** of
    the population's temperature distribution.
-6. `r(S, mean-land-temperature-c)` **falls below 0.90** — evidence the drawn
-   residual actually decoupled temperature from orbit. Today it is +0.980.
+6. `r(insolation-rel, mean-land-temperature-c)` **falls below 0.75** — evidence
+   the drawn residual actually decoupled temperature from orbit. Measured baseline
+   **+0.9227** over 1000 worlds. Report the same correlation over the **spinning
+   subset** alongside it, since that subset is what the original +0.980 measured
+   and mixing the two populations is what produced the original error.
 
 **Falsification is a result.** If (2) and (3) prove incompatible — if every
-parameterization that spreads temperature also keeps a class dominant — that is
-the finding, and it says the biome specials are an independent defect after all
-(§3.4's second branch). Report it; do not retune to rescue the prediction.
+parameterization that spreads temperature also keeps a class dominant — that is the
+finding, and it says the biome specials are an independent defect after all (§3.4's
+second branch). Report it; do not retune to rescue the prediction.
+
+**A bound criterion 1 does not license.** §3.3 establishes that only ~450–700 m of
+land elevation (3–4.5 K) is recoverable from the datum route, against a −14.7 K
+hypsometry contribution. Criterion 1 is therefore expected to be carried mostly by
+the greenhouse thermostat, not by terrain; if terrain alone is asked to close the
+gap it will fail, and that failure would not be evidence against the hypothesis.
+
+### 4.2 Superseded (original, 2026-08-12, preserved verbatim)
+
+> **Success criteria**, measured on a post-change 1000-world census:
+>
+> 1. `mean-land-temperature-c` median within **5 K of Earth's +8.6 °C**.
+> 2. **Spread retained**: p95 − p5 of `mean-land-temperature-c` **≥ 15 K**. This
+>    is the criterion that fails a lazy fix — a strong thermostat can satisfy (1)
+>    while flattening the population.
+> 3. **No biome class exceeds 50%** of worlds (from 65.1%).
+> 4. `dominant-soil-order` **no longer frozen** at a single value (from 100%).
+> 5. Earth's insolation (`S=1`) lands between the **25th and 75th percentile** of
+>    the population's temperature distribution.
+> 6. `r(S, mean-land-temperature-c)` **falls below 0.90** — evidence the drawn
+>    residual actually decoupled temperature from orbit. Today it is +0.980.
 
 ## 5. Task order
 
