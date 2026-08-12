@@ -1599,7 +1599,7 @@ mod tests {
             x: -120.25,
             y: 45.5,
         };
-        let time = hornvale_kernel::WorldTime { day: 3.0 };
+        let time = hornvale_kernel::WorldTime::new(3.0).expect("a day value is finite");
         let (lat, lon) = (45.5f64.to_radians(), (-120.25f64).to_radians());
         let p = [
             math::cos(lat) * math::cos(lon),

@@ -114,5 +114,24 @@
       "to": 4060664944
     }
   ],
-  "cave": null
+  "cave": null,
+  "channel_distance": 0.04164611,
+  "channel_bands": [
+    0.000033755706,
+    0.000067511411,
+    0.0013073977,
+    0.0019610966
+  ],
+  "resolution": {
+    "grid_level": 6,
+    "depth_below_grid": 6,
+    "grid_resolution_fields": [
+      "biome",
+      "cave",
+      "fields.water"
+    ],
+    "channel_resolution_fields": [
+      "channel_bands"
+    ]
+  }
 }

@@ -9,7 +9,8 @@ them.
 
 `regenerate-artifacts.sh` regenerates **every** committed generated artifact
 (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
-studies, the type-audit report, the digest's decision index + delta report
+studies, the type-audit report, the seam-guard roster
+(`docs/audits/seam-guard-roster.md`), the digest's decision index + delta report
 under `docs/digest/`, and the committed `vessel/session/v2` client fixtures
 under `clients/game/core/tests/fixtures/` — one walk-band (turn 0), one
 chamber-band, reached via `scripts/possession-chamber.txt`) — and `make
@@ -49,8 +50,13 @@ Key knobs:
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits
   docs/digest book/src/domesday clients/game/core/tests/fixtures` — note
-  **`docs/audits/`** is in the list (the type-audit report drifts on
-  pub-boundary changes; a common miss), and so is **`docs/digest/`** (the
+  **`docs/audits/`** is in the list, and it now holds TWO drift-checked
+  reports: the type-audit report (drifts on any pub-boundary change — a common
+  miss) and **`seam-guard-roster.md`** (drifts whenever a `seam-guard:` tag is
+  added, retagged, or has its `expect(survives: …)` declaration changed or
+  deleted — which is the point: it puts every acknowledged-unguarded seam in
+  front of a reviewer instead of leaving it buried in a doc comment). So is
+  **`docs/digest/`** (the
   in-force decision index drifts when a decision is added or superseded, the
   delta report when the idea registry moves) and **`book/src/domesday/`**
   (2026-08-08, The Domesday): it is a pure read over the committed census,
@@ -141,7 +147,7 @@ confirmation-gated in the Makefile.
   fixture, and the duplication went stale twice (2026-07-13, 2026-07-20)
   because nothing forced it back into sync — this closes the gap by
   construction rather than by memory.
-- **The board lane rule** (B13, decision 0128): `tools/board/` is a `.rs`
+- **The board lane rule** (B13, decision 0129): `tools/board/` is a `.rs`
   tree but not a workspace member (`members = ["kernel", "domains/*",
   "windows/*", "cli"]`), so the Rust-relevant filter above would otherwise
   run a full `make quick` that cannot see it, while skipping the 24.4s

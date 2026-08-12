@@ -3254,6 +3254,167 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(v.terrain.globe().carve_reroute_fraction)
             }),
         },
+        // --- The Ford (spec §10): the channel network's three preregistered
+        // axes. The estimators, and why they are not per-cell samples, are
+        // documented at `LAB_FORD_TRANSECT_STEPS`. ---
+        Metric {
+            name: "channel-land-fraction",
+            doc: "H1's axis (The Ford, spec §10): the fraction of LAND AREA \
+                  the channel network occupies — the area of the river tube \
+                  (every polyline segment's arc length times its channel \
+                  width) over the land area (land cells over all cells, times \
+                  4π). Preregistered interval [0.005%, 0.5%]; below it rivers \
+                  are invisible at room scale, above it a river is still \
+                  effectively as wide as the cell carrying it. NOT a per-cell \
+                  reading: the polylines run THROUGH cell centres, so \
+                  sampling at them overstates this by ~127x. ABSENT ONLY ON A \
+                  WORLD WITH NO LAND: unlike its four Ford siblings, which go \
+                  Absent whenever the network is empty, this column reads a \
+                  true Number(0.0) on a land-bearing world that happens to \
+                  have no channels. The asymmetry is deliberate — zero \
+                  channel area over positive land area is a measurement, \
+                  while a connectivity or monotonicity fraction over zero \
+                  transects has no denominator to divide by — but a consumer \
+                  reading the five columns together must not treat a 0.0 here \
+                  as the same state as an Absent there",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0e-5, 1.0e-4, 2.0e-4, 5.0e-4, 1.0e-3],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let land = v
+                    .terrain
+                    .geosphere()
+                    .cells()
+                    .filter(|&c| !v.terrain.is_ocean(c))
+                    .count();
+                if land == 0 {
+                    return MetricValue::Absent;
+                }
+                let land_area = 4.0 * std::f64::consts::PI * land as f64
+                    / v.terrain.geosphere().cell_count() as f64;
+                MetricValue::Number(lab_channel_area(v.terrain.channels()) / land_area)
+            }),
+        },
+        Metric {
+            name: "channel-connectivity",
+            doc: "H2's axis (The Ford, spec §10): the fraction of downstream \
+                  walks — one per channel run, each starting at a headwater — \
+                  that reach the sea or a terminal sink without ever leaving \
+                  the `channel` band. Preregistered floor 0.95: a river you \
+                  fall out of is not a river. Travelling along a run is \
+                  in-channel by construction, so this measures the JOINS. It \
+                  first read 0.862-0.953 (falsified; 4 of 64 probe worlds \
+                  cleared the floor), which diagnosed an anchoring asymmetry: \
+                  a tributary's mouth sat at its cell's undisplaced position \
+                  while the trunk's vertex for that same cell was \
+                  meander-displaced. **Since the confluence repair this \
+                  column is a CONSTANT: 1.0 on every world with a channel \
+                  network, Absent on every world without one.** Both of its \
+                  failure branches are unreachable — a join is now a \
+                  zero-length crossing, and the walk can no longer leave the \
+                  network because `build` pushes a cell onto its claiming run \
+                  BEFORE testing whether it was already claimed, so any cell \
+                  with a river downhill is necessarily a non-final vertex of \
+                  a kept run and always has an owner. Read a 1.0 here as a \
+                  tripwire that the repair is still in place, never as a \
+                  measurement of the world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_channel_connectivity(&v.terrain) {
+                    Some(f) => MetricValue::Number(f),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "channel-band-monotonicity",
+            doc: "H4's axis (The Ford, spec §10), the position-continuous-\
+                  noise guard stated as a measurement: the fraction of \
+                  transects walked outward from a channel centreline whose \
+                  transverse-band sequence is monotone with no re-entry. \
+                  Preregistered floor 0.99; falsification means address-hashed \
+                  noise leaked into a band edge. Scored over the prefix for \
+                  which the originating polyline is still the nearest one — \
+                  past that the ray has entered a DIFFERENT river's valley and \
+                  is no longer a transect of this channel. Absent on a world \
+                  with no channels",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => MetricValue::Number(t.monotone as f64 / t.transects as f64),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "channel-band-monotonicity-untruncated",
+            doc: "`channel-band-monotonicity` over the SAME transects with the \
+                  nearest-line truncation switched off — the whole sweep \
+                  scored, including the stretch where a different river has \
+                  become the nearest and its band legitimately falls back to \
+                  `channel`. Published because a rule that changes a verdict \
+                  must have the reading it changes on the record beside it \
+                  rather than in a campaign report — and the record now runs \
+                  both ways. Before the confluence repair the truncation was \
+                  load-bearing (47 of 64 probe worlds read below H4's 0.99 \
+                  floor un-truncated, and none reached 1.0); with tributary \
+                  mouths placed on their trunks all 64 read 1.0 on BOTH \
+                  columns. That is the measured evidence that the gap was the \
+                  confluence separation and never band-edge speckle: two \
+                  lines meeting at a point share their distance minimum AT \
+                  that point, so a transect leaving a join recedes from both \
+                  at once and cannot descend into the partner, while two \
+                  lines held 4.5 half-widths apart have no shared minimum and \
+                  did. Absent on a world with no channels",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => {
+                        MetricValue::Number(t.monotone_untruncated as f64 / t.transects as f64)
+                    }
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "channel-transect-dry-reach",
+            doc: "The anti-vacuity companion to `channel-band-monotonicity` \
+                  (The Ford, spec §10): the fraction of the SAME transects \
+                  whose own-channel prefix reached the `dry` band before a \
+                  different river became the nearest and truncated it. \
+                  Monotonicity scores a truncated transect as a success \
+                  however short its prefix, so without this column a world \
+                  where truncation fired immediately everywhere would report \
+                  a perfect 1.0 with nothing to show it. Read the two \
+                  together: monotonicity near 1 is only a claim about full \
+                  transverse profiles while this stays high. Absent on a \
+                  world with no channels",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
+            },
+            domain: Domain::Hydrology,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                match lab_band_transects(v.terrain.channels()) {
+                    Some(t) => MetricValue::Number(t.reached_dry as f64 / t.transects as f64),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
         // --- The Branches (Task 10): the family battery, seed-swept —
         // regularity, monophyly, clean outgroup, inventory closure,
         // divergence magnitude/reality, and merger-induced homophony over
@@ -6569,6 +6730,382 @@ fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
     true
 }
 
+// --- The Ford (spec §10): the channel network's three preregistered axes.
+//
+// H1 is an AREA fraction, and the estimator is the part that has to be got
+// right rather than the arithmetic. A channel is deliberately sub-cell — a
+// tube of order 1e-4 rad across a mesh whose cells are 1.9e-2 rad apart — so
+// the mesh cannot resolve it and CELL-CENTRE SAMPLING IS NOT A NEUTRAL
+// INSTRUMENT HERE: the polylines are built THROUGH cell centres, so a
+// per-cell sample lands the sample point on the very feature whose area it is
+// trying to estimate. Measured on seed 42 at level 6, that reading is 3.29%
+// of land — 127x the tube's actual 0.0259% — and it would be 127x wrong in
+// the same direction on every world. A mesh-independent uniform-area sample
+// is no better a tool: at a target of 1e-4 it needs ~1e6 points to see a
+// handful of hits, against an O(vertices) band query.
+//
+// So the channel area is integrated over the tube itself — the exact quantity
+// the sampling would be a noisy estimate OF. `channel_transect_width` is the
+// positive control that keeps this honest: it measures the same tube through
+// the SHIPPED `transverse_at` predicate by stepping across it, and
+// `the_analytic_channel_area_matches_the_sampled_one` asserts the two agree.
+// A re-derivation that has drifted from the predicate fails there.
+const LAB_FORD_TRANSECT_STEPS: usize = 48;
+
+/// At most this many vertices are transected for
+/// `channel-band-monotonicity`, so a large world does not cost more than a
+/// small one. The stride is derived from it, never the count truncated —
+/// taking the first N vertices would sample only the lowest-`CellId` rivers.
+const LAB_FORD_MAX_TRANSECTS: usize = 256;
+
+fn lab_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+fn lab_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn lab_normalize(v: [f64; 3]) -> [f64; 3] {
+    let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if n == 0.0 {
+        v
+    } else {
+        [v[0] / n, v[1] / n, v[2] / n]
+    }
+}
+
+/// Angular separation of two unit vectors, radians.
+fn lab_angle(a: [f64; 3], b: [f64; 3]) -> f64 {
+    hornvale_kernel::math::acos(lab_dot(a, b).clamp(-1.0, 1.0))
+}
+
+/// The unit left-normal at vertex `j` — the direction a transect walks.
+fn lab_left_normal(line: &hornvale_kernel::SphericalPolyline, j: usize) -> [f64; 3] {
+    let n = line.points.len();
+    let a = line.points[j.saturating_sub(1)];
+    let b = line.points[(j + 1).min(n - 1)];
+    let tangent = lab_normalize([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
+    lab_normalize(lab_cross(line.points[j], tangent))
+}
+
+/// `offset` radians to the left of vertex `j`, on the unit sphere.
+fn lab_offset(
+    line: &hornvale_kernel::SphericalPolyline,
+    j: usize,
+    left: [f64; 3],
+    offset: f64,
+) -> [f64; 3] {
+    let p = line.points[j];
+    lab_normalize([
+        p[0] + left[0] * offset,
+        p[1] + left[1] * offset,
+        p[2] + left[2] * offset,
+    ])
+}
+
+/// The area of the channel tube, steradians: every segment's arc length times
+/// the mean of its two endpoints' channel widths. Exact to first order in
+/// `w/L`, and `w/L` here is of order 1e-2.
+fn lab_channel_area(net: &hornvale_terrain::channel::ChannelNetwork) -> f64 {
+    let mut area = 0.0;
+    for (i, line) in net.polylines.iter().enumerate() {
+        for j in 1..line.points.len() {
+            // `edges[_][0]` is the channel HALF-width, so the two summed are
+            // one full width — no factor of two belongs here.
+            let w = net.band_edges[i][j - 1][0] + net.band_edges[i][j][0];
+            area += lab_angle(line.points[j - 1], line.points[j]) * w;
+        }
+    }
+    area
+}
+
+/// The channel's width at vertex `j` of line `i` as the SHIPPED predicate
+/// reports it: step across the centreline and total the offsets that read
+/// `Channel`. The positive control for [`lab_channel_area`].
+#[cfg(test)]
+fn lab_channel_transect_width(
+    net: &hornvale_terrain::channel::ChannelNetwork,
+    i: usize,
+    j: usize,
+    steps: usize,
+) -> f64 {
+    // Four half-widths either side: wide enough that the whole channel is
+    // inside the swept window whatever the band geometry, narrow enough that
+    // the steps resolve it.
+    let outer = net.band_edges[i][j][0] * 4.0;
+    if outer <= 0.0 {
+        return 0.0;
+    }
+    let line = &net.polylines[i];
+    let left = lab_left_normal(line, j);
+    let step = 2.0 * outer / steps as f64;
+    let mut inside = 0usize;
+    for s in 0..steps {
+        let offset = -outer + (s as f64 + 0.5) * step;
+        if net.transverse_at(lab_offset(line, j, left, offset)).0
+            == hornvale_terrain::channel::Transverse::Channel
+        {
+            inside += 1;
+        }
+    }
+    inside as f64 * step
+}
+
+/// For each cell, the `(line, vertex)` of the run that CLAIMED it — the run
+/// it is an interior or head vertex of, never the run it merely terminates.
+/// That distinction is the whole of confluence topology: a tributary's last
+/// cell is also the trunk's, and only the trunk continues downstream from it.
+fn lab_run_owner(
+    net: &hornvale_terrain::channel::ChannelNetwork,
+    cell_count: usize,
+) -> Vec<Option<(usize, usize)>> {
+    let mut owner = vec![None; cell_count];
+    for (i, run) in net.run_cells.iter().enumerate() {
+        for (j, &c) in run.iter().enumerate() {
+            if j + 1 < run.len() {
+                owner[c.0 as usize] = Some((i, j));
+            }
+        }
+    }
+    owner
+}
+
+/// H2's axis: the fraction of downstream walks that reach the sea or a sink
+/// without leaving `Channel`.
+///
+/// One walk per polyline (every polyline starts at a head — `build`'s pass 0
+/// takes heads only, and its pass 1 is a totality backstop that finds nothing
+/// on an acyclic downhill graph). Travelling ALONG a polyline is in-channel
+/// by construction — every point of a segment is at distance zero from the
+/// line it belongs to — so the entire content of this measurement is at the
+/// **joins**, which is where the design put its risk: a tributary's mouth
+/// vertex was anchored at its cell's undisplaced position while the trunk's
+/// vertex for that same cell was meander-displaced, so two runs joined in the
+/// drainage graph were separated in space. The walk crosses that separation
+/// the only way a walker could, and reads the band along the way.
+///
+/// **SINCE THE CONFLUENCE REPAIR THIS FUNCTION IS CONSTANT.** It returns
+/// `Some(1.0)` for every world with a non-empty network and `None` for every
+/// world without one — a function of "has channels", nothing more. Both ways
+/// it could return less than 1.0 are unreachable:
+///
+/// - *The join crossing.* The repair (`ChannelNetwork::build`) places a
+///   tributary's mouth ON the trunk vertex it joins, so `from == to` exactly
+///   and all seven interpolated samples land on a point at distance zero from
+///   a polyline. Measured at level 6: seed 42 has 15 joins across 144 walks,
+///   seed 7 has 52 across 295, every one at exactly zero separation.
+/// - *Falling out of the network.* This was never reachable, before the
+///   repair either. In `build` the claiming run does `run.push(target)`
+///   **before** testing `claimed.insert(target)`, so a cell with a river
+///   downhill is necessarily a non-final vertex of the run that first claimed
+///   it, that run necessarily has `len() >= 2` and is kept, and `owner[c]` is
+///   therefore always `Some`. Measured `continues_but_unowned == 0` on seed
+///   42 level 6, seed 7 level 6 and seed 42 level 5, in **both** arms.
+///
+/// So the column is a regression tripwire on the repair and nothing else —
+/// disabling the repair does drop seed 42 to 0.92361 — and it must not be
+/// read as evidence about a world. The walk is kept rather than deleted
+/// because it is the thing that fails if the repair is ever undone.
+fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
+    let net = terrain.channels();
+    if net.polylines.is_empty() {
+        return None;
+    }
+    let globe = terrain.globe();
+    let owner = lab_run_owner(net, terrain.geosphere().cell_count());
+    let mut walks = 0usize;
+    let mut intact = 0usize;
+    for start in 0..net.polylines.len() {
+        walks += 1;
+        let mut line = start;
+        let mut good = true;
+        // The downhill graph is acyclic, so a walk visits each run at most
+        // once; the bound is a belt-and-braces stop, not a real limit.
+        for _ in 0..=net.polylines.len() {
+            let last_cell = *net.run_cells[line].last().expect("a run has cells");
+            let continues = match *globe.downhill.get(last_cell) {
+                Some(next) => matches!(
+                    *globe.water_kind.get(next),
+                    hornvale_terrain::WaterKind::River
+                ),
+                None => false,
+            };
+            if !continues {
+                break; // reached the sea or a terminal sink: the walk is done
+            }
+            let Some((trunk, vertex)) = owner[last_cell.0 as usize] else {
+                // The run stopped on a river cell no run owns (a dropped
+                // singleton). The walk falls out of the network.
+                good = false;
+                break;
+            };
+            let from = *net.polylines[line].points.last().expect("a run has points");
+            let to = net.polylines[trunk].points[vertex];
+            for s in 1..8 {
+                let t = f64::from(s) / 8.0;
+                let q = lab_normalize([
+                    from[0] + (to[0] - from[0]) * t,
+                    from[1] + (to[1] - from[1]) * t,
+                    from[2] + (to[2] - from[2]) * t,
+                ]);
+                if net.transverse_at(q).0 != hornvale_terrain::channel::Transverse::Channel {
+                    good = false;
+                    break;
+                }
+            }
+            if !good {
+                break;
+            }
+            line = trunk;
+        }
+        if good {
+            intact += 1;
+        }
+    }
+    Some(intact as f64 / walks as f64)
+}
+
+/// One sweep of the channel network's transects, counted four ways.
+///
+/// **All four counts come from a single sampling design**, which is the point
+/// of the struct existing rather than three functions. Task 6 first reported
+/// the un-truncated figures from a separate ad-hoc probe whose stride and
+/// window differed from the shipped metric's, and the two disagreed enough to
+/// swap which seed cleared H4's floor. Numbers that reach a chronicle have to
+/// be the shipped instrument's numbers, so there is now exactly one instrument.
+struct LabBandTransects {
+    /// Transects swept.
+    transects: usize,
+    /// Transects monotone over the own-channel prefix — H4's axis.
+    monotone: usize,
+    /// Transects monotone over the WHOLE sweep, truncating nothing. Reported
+    /// alongside H4 so the truncation rule is never the only reading on offer.
+    monotone_untruncated: usize,
+    /// Own-channel prefixes that reached `Dry` before truncation — the
+    /// anti-vacuity companion. A truncated transect counts as monotone however
+    /// short its prefix, so without this a world where truncation fired
+    /// immediately everywhere would report a perfect 1.0000 with no trace.
+    reached_dry: usize,
+}
+
+/// Sweep transects outward from a strided sample of channel vertices, both
+/// sides, and count them four ways.
+///
+/// **A transect is a transect of ONE channel, and stops being one where a
+/// different river becomes the nearest.** `transverse_at` answers from
+/// whichever polyline is nearest, so a ray walked far enough out of one
+/// valley enters another and the band legitimately falls back to `Channel` —
+/// that is two rivers being close together, not a band edge speckling. H4's
+/// scored sequence is therefore the prefix over which
+/// [`hornvale_terrain::channel::ChannelNetwork::nearest_line`] still names the
+/// originating line.
+///
+/// **The attribution is not asserted here — it is readable off the two
+/// columns.** A transect monotone over its whole sweep is monotone over every
+/// prefix of it, so `monotone_untruncated <= monotone` always
+/// (`untruncated_monotonicity_is_a_subset_of_truncated` pins that). Therefore
+/// whenever a world reports `monotone == transects` while
+/// `monotone_untruncated < transects`, **every** violation it has necessarily
+/// occurred after a different river became the nearest — none can have
+/// happened while the originating line still was. That is the "no speckle"
+/// claim H4 actually asks about, derived rather than measured by hand, and it
+/// is what the readout observed on all 64 probe worlds.
+///
+/// The truncation was load-bearing, not cosmetic, which is why the reading it
+/// changes ships as its own column instead of living in a campaign report —
+/// and that column is now the evidence for what the gap between the two
+/// actually was. Before the confluence repair, no probe world at all was
+/// clean un-truncated (min 0.9636, 47 of 64 below H4's floor); after it, all
+/// 64 read 1.0 on both columns. The geometry: two polylines that meet at a
+/// common point both attain their minimum distance to that point AT it, so a
+/// transect walking away from the join recedes from BOTH lines together and
+/// cannot descend into the partner. Two polylines separated by 4.5 channel
+/// half-widths have no such shared minimum — walking away from one is walking
+/// toward the other — and that is what produced a falling `|d|`. (The naive
+/// version of this argument, that continuity at the nearest-line switch
+/// forbids the reversal, is a non-sequitur: continuity at the switch says
+/// nothing about `|d|` after it, and in 11 of the 14 measured violations the
+/// winner had already changed several steps before the reversal.) So the
+/// violations the truncation was hiding were the SAME defect H2 measured, not
+/// the neighbouring rivers Task 6 attributed them to.
+fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option<LabBandTransects> {
+    let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
+    if vertices == 0 {
+        return None;
+    }
+    let stride = vertices.div_ceil(LAB_FORD_MAX_TRANSECTS).max(1);
+    let mut out = LabBandTransects {
+        transects: 0,
+        monotone: 0,
+        monotone_untruncated: 0,
+        reached_dry: 0,
+    };
+    let mut index = 0usize;
+    for (i, line) in net.polylines.iter().enumerate() {
+        for j in 0..line.points.len() {
+            let take = index.is_multiple_of(stride);
+            index += 1;
+            if !take {
+                continue;
+            }
+            // Half again past the terrace so the sweep can reach `Dry`.
+            let outer = net.band_edges[i][j][3] * 1.5;
+            if outer <= 0.0 {
+                continue;
+            }
+            let left = lab_left_normal(line, j);
+            for side in [1.0_f64, -1.0] {
+                out.transects += 1;
+                let mut previous = 0u8;
+                let mut own_previous = 0u8;
+                let mut still_own = true;
+                let mut good = true;
+                let mut good_untruncated = true;
+                let mut reached_dry = false;
+                for s in 0..=LAB_FORD_TRANSECT_STEPS {
+                    let offset = side * outer * s as f64 / LAB_FORD_TRANSECT_STEPS as f64;
+                    let q = lab_offset(line, j, left, offset);
+                    if net.nearest_line(q).map(|(k, _)| k) != Some(i) {
+                        still_own = false;
+                    }
+                    let band = net.transverse_at(q).0.index();
+                    if band < previous {
+                        good_untruncated = false;
+                    }
+                    previous = band;
+                    if still_own {
+                        if band < own_previous {
+                            good = false;
+                        }
+                        own_previous = band;
+                        if band == hornvale_terrain::channel::Transverse::Dry.index() {
+                            reached_dry = true;
+                        }
+                    }
+                }
+                if good {
+                    out.monotone += 1;
+                }
+                if good_untruncated {
+                    out.monotone_untruncated += 1;
+                }
+                if reached_dry {
+                    out.reached_dry += 1;
+                }
+            }
+        }
+    }
+    if out.transects == 0 {
+        return None;
+    }
+    Some(out)
+}
+
 /// The seven toponymic terrain gates (Task 4) and the concept each steeps
 /// when satisfied — declared once, here, so [`independently_steeped_concepts`]
 /// and [`steepable_concept_roster`] read the same table instead of each
@@ -8277,7 +8814,165 @@ mod tests {
         // studies and be paid on every census forever; both readings are taken
         // instead in `windows/worldgen/tests/radiation_language.rs`, where they
         // cost no column. See that file's header and the campaign chronicle.
-        assert_eq!(registry().len(), 195);
+        //
+        // +5 for THE FORD. Three are spec §10's preregistered axes
+        // (channel-land-fraction, channel-connectivity,
+        // channel-band-monotonicity), retiring nothing: they are the first
+        // readings of a feature that did not exist before, not a second
+        // opinion on one that did. The other two exist because H4's scoring
+        // rule needed defending with data rather than with prose, and both
+        // are free — the same sweep already computes them:
+        // channel-band-monotonicity-untruncated is the reading WITHOUT the
+        // nearest-line truncation (the rule changes the verdict, so the
+        // reading it changes belongs on the record), and
+        // channel-transect-dry-reach is the anti-vacuity companion, since a
+        // truncated transect scores as monotone however short its prefix.
+        // Both must travel with the SAME population monotonicity is read
+        // over, which a gate test on one world cannot do.
+        assert_eq!(registry().len(), 200);
+    }
+
+    // --- The Ford (spec §10): the estimators behind the three channel
+    // metrics, checked against the shipped band predicate. ---
+
+    /// A real (small) world's channel network. Level 5, not the canonical 6:
+    /// level 4 accumulates no river cells at all on seed 42, and level 6 is
+    /// the READOUT's grid, not a gate test's.
+    fn ford_test_terrain() -> hornvale_terrain::GeneratedTerrain {
+        let geo = hornvale_kernel::Geosphere::new(5);
+        let outcome =
+            hornvale_terrain::generate(Seed(42), &geo, &hornvale_terrain::TerrainPins::default())
+                .expect("seed 42 generates terrain");
+        hornvale_terrain::GeneratedTerrain::new(geo, outcome)
+    }
+
+    /// THE POSITIVE CONTROL for `channel-land-fraction`. The metric
+    /// integrates the channel tube from `band_edges` rather than sampling it,
+    /// which is only legitimate while that integral is what the SHIPPED
+    /// `transverse_at` predicate would report. So: measure the same tube by
+    /// stepping across it with `transverse_at`, over the same vertices, and
+    /// require the two to agree. A width law that drifted away from the band
+    /// predicate — or a `transverse_at` that stopped reading `band_edges[0]`
+    /// as the channel border — separates them.
+    #[test]
+    fn the_analytic_channel_area_matches_the_sampled_one() {
+        let terrain = ford_test_terrain();
+        let net = terrain.channels();
+        assert!(!net.polylines.is_empty(), "no channels to compare");
+        let mut sampled = 0.0_f64;
+        let mut analytic = 0.0_f64;
+        let mut vertices = 0usize;
+        for (i, line) in net.polylines.iter().enumerate() {
+            for j in 0..line.points.len() {
+                vertices += 1;
+                // The representative arc length of vertex `j`: half of each
+                // adjacent segment, so the vertex sum telescopes to the same
+                // total `lab_channel_area` accumulates segment-wise.
+                let mut length = 0.0;
+                if j > 0 {
+                    length += 0.5 * lab_angle(line.points[j - 1], line.points[j]);
+                }
+                if j + 1 < line.points.len() {
+                    length += 0.5 * lab_angle(line.points[j], line.points[j + 1]);
+                }
+                sampled += length * lab_channel_transect_width(net, i, j, 400);
+                analytic += length * 2.0 * net.band_edges[i][j][0];
+            }
+        }
+        // Seed 42 at level 5 carries 46 channel vertices; the floor is a
+        // tripwire for a world that stopped producing rivers at all, which
+        // would make the ratio below vacuous (0/0).
+        assert!(
+            vertices > 30,
+            "only {vertices} vertices — too few to be a real comparison"
+        );
+        let ratio = sampled / analytic;
+        assert!(
+            (0.9..1.1).contains(&ratio),
+            "the integrated channel tube ({analytic}) and the same tube measured through \
+             transverse_at ({sampled}) disagree by {ratio}x — the metric's estimator has \
+             drifted from the band predicate it stands in for"
+        );
+    }
+
+    /// The monotonicity reading must not be bought by truncating the transect
+    /// into nothing. If the prefix rule were doing the work, prefixes would
+    /// stop before reaching `Dry`; require most of them to get all the way
+    /// out, so the 1.0 the metric reports is a claim about full profiles.
+    ///
+    /// This runs on ONE world, so it is a floor on the mechanism, not on the
+    /// population — a review finding, and the reason the same quantity also
+    /// ships as `channel-transect-dry-reach`. A gate test cannot see the 64
+    /// worlds the readout is scored over; a census column can.
+    ///
+    /// It reads the shipped [`lab_band_transects`] rather than re-sweeping,
+    /// so it is a guard on the code path the metric actually takes — a second
+    /// copy of the sweep here could drift away from the metric and still pass.
+    #[test]
+    fn most_band_transects_reach_dry_before_they_are_truncated() {
+        let terrain = ford_test_terrain();
+        let t = lab_band_transects(terrain.channels()).expect("this world has channels");
+        assert!(t.transects > 50, "too few transects to be a real check");
+        let share = t.reached_dry as f64 / t.transects as f64;
+        assert!(
+            share > 0.8,
+            "only {}/{} ({share}) transect prefixes reached Dry — the nearest-line \
+             truncation is cutting profiles short, so a monotonicity of 1.0 would be \
+             measuring almost nothing",
+            t.reached_dry,
+            t.transects
+        );
+    }
+
+    /// The load-bearing half of H4's attribution, as an invariant rather than
+    /// an observation: a transect monotone over its WHOLE sweep is monotone
+    /// over every prefix of it, so the un-truncated count can never exceed the
+    /// truncated one. That ordering is what licenses reading "no speckle" off
+    /// the pair of columns — a world with `monotone == transects` and
+    /// `monotone_untruncated < transects` can only have violated after a
+    /// different river took over. If this ever inverts, that inference is void
+    /// and every H4 verdict drawn from it has to be re-derived.
+    #[test]
+    fn untruncated_monotonicity_is_a_subset_of_truncated() {
+        let terrain = ford_test_terrain();
+        let t = lab_band_transects(terrain.channels()).expect("this world has channels");
+        assert!(
+            t.monotone_untruncated <= t.monotone,
+            "{} transects were monotone un-truncated but only {} truncated — a whole-sweep \
+             monotone sequence cannot fail on its own prefix",
+            t.monotone_untruncated,
+            t.monotone
+        );
+        assert!(t.monotone <= t.transects && t.reached_dry <= t.transects);
+    }
+
+    /// The connectivity walk must be able to FAIL, and must be reading the
+    /// joins rather than the runs. Both halves are asserted on a real world:
+    /// travelling along a run is in-channel by construction, so if the metric
+    /// ever reports less than 1.0 it can only be a join that did it.
+    #[test]
+    fn connectivity_is_a_reading_of_the_joins() {
+        let terrain = ford_test_terrain();
+        let net = terrain.channels();
+        // Every point of a polyline is at distance zero from its own line, so
+        // the run itself cannot be where a walk leaves the channel. Sample
+        // segment midpoints to show it.
+        for line in &net.polylines {
+            for w in line.points.windows(2) {
+                let mid = lab_normalize([
+                    0.5 * (w[0][0] + w[1][0]),
+                    0.5 * (w[0][1] + w[1][1]),
+                    0.5 * (w[0][2] + w[1][2]),
+                ]);
+                assert_eq!(
+                    net.transverse_at(mid).0,
+                    hornvale_terrain::channel::Transverse::Channel,
+                    "a point ON a channel run did not read Channel"
+                );
+            }
+        }
+        let value = lab_channel_connectivity(&terrain).expect("this world has channels");
+        assert!((0.0..=1.0).contains(&value));
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---

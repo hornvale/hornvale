@@ -8,7 +8,7 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
+use hornvale_kernel::{CellId, EntityId, KindId, Seed, World, WorldTime};
 use hornvale_worldgen::{
     BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
     occupation_records, occupations_at, occupations_by_cell, ruins_of_people, territories,
@@ -205,7 +205,9 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
         .expect("the relation must be committed");
     assert_eq!(
         fact.day,
-        Some(120.0),
+        // The Ell: `TributeRelation::since` is a bake YEAR and `Fact.day` is a
+        // standard DAY, so the stamp is the crossing of the two.
+        Some(WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(120.0)).expect("finite")),
         "dated by the day the relation was established, not by `now`"
     );
     assert!(
@@ -242,43 +244,89 @@ fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     assert_eq!(ruins.len(), 1);
     let ruin_id = ruins[0];
 
-    // End-of-life facts are stamped at `ended` (900.0), not `founded`
-    // (100.0) — the day each of these actually became true.
+    // End-of-life facts are stamped at `ended` (bake year 900), not `founded`
+    // (bake year 100) — the day each of these actually became true.
+    //
+    // The Ell: the record's years cross into standard days at the emit
+    // boundary, so the stamps are those years crossed. Written as the crossing
+    // rather than as 328725.0/36525.0 so the two claims stay separable — this
+    // test is about WHICH event dates a fact, and the unit is stated, not
+    // baked into a literal.
+    let ended_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+        .expect("a bake year crosses to a finite day");
+    let founded_day = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(100.0))
+        .expect("a bake year crosses to a finite day");
+
     let is_ruin = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == IS_RUIN)
         .expect("IS_RUIN must be committed for a dead occupation");
-    assert_eq!(is_ruin.day, Some(900.0));
+    assert_eq!(is_ruin.day, Some(ended_day));
 
     let occ_ended = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_ENDED)
         .expect("OCC_ENDED must be committed for a dead occupation");
-    assert_eq!(occ_ended.day, Some(900.0));
+    assert_eq!(occ_ended.day, Some(ended_day));
 
     let occ_cause = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_CAUSE)
         .expect("OCC_CAUSE must be committed for a dead occupation");
-    assert_eq!(occ_cause.day, Some(900.0));
+    assert_eq!(occ_cause.day, Some(ended_day));
 
-    // Founding facts stay stamped at `founded` (100.0).
+    // Founding facts stay stamped at `founded`.
     let occ_founded = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_FOUNDED)
         .expect("OCC_FOUNDED must be committed");
-    assert_eq!(occ_founded.day, Some(100.0));
+    assert_eq!(occ_founded.day, Some(founded_day));
 
     let occ_site = w
         .ledger
         .facts_about(ruin_id)
         .find(|f| f.predicate == hornvale_history::OCC_SITE)
         .expect("OCC_SITE must be committed");
-    assert_eq!(occ_site.day, Some(100.0));
+    assert_eq!(occ_site.day, Some(founded_day));
+}
+
+/// `present_year`'s **fallback** arm — the one a world with no committed
+/// `history-now` takes (a pre-T8 save, or a synthetic Lab world that never ran
+/// the composition-root bake) — reads back in bake years like the primary arm.
+///
+/// It has to be tested here rather than in `history_units.rs`, because it is
+/// only reachable on a world that `emit_now` never touched, and every real
+/// world commits `history-now`. `emit_history` alone is exactly that world.
+///
+/// The arm is a `max` over `occ-founded`/`occ-ended`, which is why it needs its
+/// own guard at all: the max is taken on the ledger's day axis and crossed once
+/// on the winner, so it shares no code with the primary read and no test of the
+/// primary read can reach it. Drop the crossing and every consumer of a
+/// bake-less world's present is 365× out, silently.
+#[test]
+fn the_present_fallback_reads_back_in_years_too() {
+    let mut w = test_world();
+    let mut ruin = base_record(1, "goblin", 0, 100.0);
+    ruin.core.ended = Some(900.0);
+    let h = History::new(vec![ruin], 1000.0);
+    emit_history(&mut w, &h).unwrap();
+    assert!(
+        w.ledger
+            .find(hornvale_history::HISTORY_NOW)
+            .next()
+            .is_none(),
+        "this fixture must NOT commit history-now, or it tests the primary arm"
+    );
+    assert_eq!(
+        hornvale_worldgen::present_year(&w),
+        900.0,
+        "with no committed present, the latest occupation event is the present \
+         — as a bake YEAR, not as the day it is stored as"
+    );
 }
 
 #[test]

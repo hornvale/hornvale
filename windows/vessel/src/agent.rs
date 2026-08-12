@@ -172,7 +172,7 @@ mod tests {
         let ctx = LocaleContext::build(&world).unwrap();
         let agent = mint_flagship(&world, &ctx).unwrap();
         let locale = ctx
-            .describe(&agent.position, hornvale_kernel::WorldTime { day: 0.0 })
+            .describe(&agent.position, hornvale_kernel::WorldTime::GENESIS)
             .unwrap();
         assert!(!locale.biome.is_empty());
     }

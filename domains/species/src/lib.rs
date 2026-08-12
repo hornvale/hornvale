@@ -17,7 +17,7 @@ use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
     ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, Ledger, LedgerError, MARINE_FORAGE,
     MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    Void, World,
+    Void, World, WorldTime,
 };
 // `perception_registry()` is keyed by `KindId`, so a caller resolving a
 // species by name (worldgen's `observer_named`, campaign "The Beholding")
@@ -2637,12 +2637,82 @@ impl Component for BiomeAffinity {}
 /// 193): the ladder had been calibrated on a store holding one settling people
 /// in nine, and it now holds seven of fifteen.
 ///
-/// "Level is gauge" is what made a bare constant look safe, and it is true only
-/// of RANKING. Genesis and `best_home` rank cells in the kind's own units, so a
-/// constant factor reorders nothing *for that kind* — but the same factor
-/// multiplies the capacity that becomes a settlement's POPULATION, and the
-/// history bake's volume is a function of population. A level is gauge for one
-/// consumer and load-bearing for the next.
+/// "Level is gauge" is what made a bare constant look safe, and the sentence
+/// that states its exemption has to be written carefully, because the obvious
+/// version of it is false. **A UNIFORM rescale of a whole row cannot reorder
+/// that kind's own ranking** — genesis and `best_home` rank cells in the kind's
+/// own units, so a constant factor reorders nothing for it. That is true, and it
+/// is what The Radiation's chronicle says.
+///
+/// **A change to the LEVEL is not a uniform rescale, so it does not inherit
+/// that exemption.** [`BiomeAffinity::from_preferences`] maps each preference to
+/// `floor + (1 - floor) * p`, which holds a stronghold at exactly `1.00` while
+/// pulling every lower rung down: it changes the ladder's CONTRAST, not its
+/// scale. The factor then multiplies the capacity field per cell, keyed on that
+/// cell's biome, so it reweights biome against every other condition in the
+/// product — and cells reorder. Measured, seed 42, the seven authored rows moved
+/// from their shipped level to `0.6 x` their gap to `1.0`, with every shape held
+/// fixed: **all seven row-carrying kinds have their own cell ranking changed**,
+/// and gnoll's argmax — the cell `best_home` would pick — moves from 30312 to
+/// 2276 with only 5 of its top 50 cells surviving. All eleven row-LESS kinds are
+/// bit-identical, which is the control: for them the factor is `1.0` at every
+/// level and the level genuinely is gauge.
+///
+/// So the exemption is narrow and it is about the *shape*, not the consumer:
+/// within-kind ranking is invariant under a uniform rescale of a whole row, and
+/// under any level change for a kind carrying no row at all — and under nothing
+/// else. For a kind with a shaped row, **the level is load-bearing in all four
+/// consumers**, and here they are with the evidence for each.
+///
+/// 1. **Within-kind cell ranking** (genesis's founding pool, `best_home`'s
+///    choice of ground) — the consumer this paragraph used to exempt.
+///    Evidence: the seven-of-seven reordering measured above.
+/// 2. **`per_species_capacity`** — the factor multiplies the headcount that
+///    becomes a settlement's POPULATION, and the history bake's volume is a
+///    function of population. Evidence, immediately above: at the abandoned
+///    `0.25` the six elf rows took seed 42's tithe census from 552 occupation
+///    records to 193 and breached four deliberate fidelity floors.
+/// 3. **`coexist::pack`, the per-kind share** — a cell's share is `K^β`
+///    normalized **across** kinds (`hornvale_worldgen`'s
+///    `demography_report_with_beta_from` hands `per_species_k` to
+///    `hornvale_demography::coexist::pack`), so rescaling ONE kind's level
+///    moves EVERY kind's share in that cell, not only its own. Evidence: The
+///    Muster's positive control, recorded in full in the module doc of
+///    `windows/worldgen/tests/beta_calibration_freeze.rs` — a level-only
+///    change, every authored shape carried through unchanged, takes the mean
+///    per-claimed-cell diversity from 2.5789 to 1.4155 and reddens a
+///    preregistered band. It takes a roster where every kind carries a row to
+///    do it; at today's seven rows in eighteen kinds the level moves that
+///    quantity by 0.9 without ever crossing an edge, which is a statement
+///    about the guard's sensitivity and not about the level's reach. Full
+///    reach is necessary and not sufficient: whether the crossing happens
+///    also depends on which kind holds which ground, and the test file's
+///    record gives three arrangements that move the mean by −0.94 to −1.22
+///    of which only one crosses. Cite it as an existence proof. (Re-measured
+///    after The Ell, 2026-08-12: every figure in that record — the 2.5789 →
+///    1.4155 pair and all three arrangements among them — reproduces
+///    bit-identically. Retyping `Fact.day` and moving the bake from years to
+///    days does not reach this path; the test file's module doc says why.)
+/// 4. **`coexist::pack`, the cell's capacity** — that same cell's total is a
+///    plain **sum** of the present kinds' `K`, so the level moves the total,
+///    and with it the wilderness fraction and the emigration pressure derived
+///    from it, even where it moves no ordering at all.
+///
+/// For a kind carrying a shaped row, then, the level is load-bearing in all
+/// four and gauge in none. That is why the phrase survived two campaigns: it
+/// was a true statement about a UNIFORM rescale, restated as a statement about
+/// the level and then applied to every consumer — and the one consumer it was
+/// still believed to exempt turns out not to be exempt either. When a quantity
+/// is described as gauge, name the transformation it is gauge under; "level is
+/// gauge" names none, which is exactly how it stayed unfalsified for two
+/// campaigns while being wrong about four consumers out of four.
+///
+/// What the level is **not** is two quantities. The Muster asked exactly that,
+/// preregistered, and the sweep answered it: `level_k = λ · floor_k` satisfies
+/// every band simultaneously at λ ∈ {0.25, 0.50, 1.00, 1.20} with the shipped
+/// configuration interior to the grid, and λ = 1.0 reproduces the shipped world
+/// byte-identically across five seeds. One quantity, in force — the freeze and
+/// both result sets are in `book/src/chronicle/the-muster.md`.
 ///
 /// Note what the derivation is **not**: it is not `0.50`, the value measured to
 /// restore those floors. Restoring them was not the criterion, and whether the
@@ -4956,7 +5026,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "species".to_string(),
     }
 }
@@ -5255,7 +5325,7 @@ mod tests {
                     predicate: SPECIES_NAME.to_string(),
                     object: Value::Text("kobold".to_string()),
                     place: None,
-                    day: Some(0.0),
+                    day: Some(WorldTime::GENESIS),
                     provenance: "species".to_string(),
                 },
                 &w.registry,

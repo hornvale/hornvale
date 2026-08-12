@@ -50,8 +50,16 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match world_builder::sky_report(world, WorldTime { day }) {
-                    Ok(report) => writeln!(output, "{}", report.description)?,
+                match WorldTime::new(day) {
+                    Ok(time) => match world_builder::sky_report(world, time) {
+                        Ok(report) => writeln!(output, "{}", report.description)?,
+                        Err(e) => writeln!(output, "error: {e}")?,
+                    },
+                    // A non-finite day is user-typed input from repl stdin
+                    // (`sky inf`, `sky nan` — `f64::from_str` accepts both),
+                    // so it must fail through the same `error: {e}` path
+                    // every other bad-input arm uses, not `.expect()`. See
+                    // The Ell's Task 1 fix round: this arm used to panic.
                     Err(e) => writeln!(output, "error: {e}")?,
                 }
             }
@@ -405,7 +413,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             }
             "possess" => {
                 let opts = hornvale_vessel::PossessOpts {
-                    day: WorldTime { day: 0.0 },
+                    day: WorldTime::GENESIS,
                     echo: false,
                     wild_agents: true,
                     eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -698,6 +706,35 @@ mod tests {
     #[test]
     fn sky_reports_the_constant_sun() {
         assert!(drive("sky\nquit\n").contains("zenith"));
+    }
+
+    /// `f64::from_str` accepts `inf`/`-inf`/`nan`/`infinity`, which are not
+    /// finite days — a value typed at repl stdin, not a bug in any caller.
+    /// Before the fix round this reached `WorldTime::new(day).expect(...)`
+    /// and panicked the process; it must instead fail through the same
+    /// `error: {e}` path every other malformed-input arm uses.
+    #[test]
+    fn sky_reports_an_error_instead_of_panicking_on_a_non_finite_day() {
+        let out = drive("sky inf\nquit\n");
+        assert!(
+            out.contains("error:"),
+            "a non-finite day must report an error line, not panic: {out}"
+        );
+    }
+
+    /// The `phenomena` arm (no `--as`) parses its day argument the same
+    /// unguarded way `sky` does and hands it straight to
+    /// `world_builder::observed_phenomena`, which used to `.expect()` a
+    /// finite `WorldTime` internally — a second repl-reachable panic behind
+    /// the same `f64::from_str` gap, caught by sweeping for `observed_
+    /// phenomena`'s other production caller during the fix round.
+    #[test]
+    fn phenomena_reports_an_error_instead_of_panicking_on_a_non_finite_day() {
+        let out = drive("phenomena inf\nquit\n");
+        assert!(
+            out.contains("error:"),
+            "a non-finite day must report an error line, not panic: {out}"
+        );
     }
 
     #[test]

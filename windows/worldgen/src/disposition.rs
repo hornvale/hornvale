@@ -396,7 +396,15 @@ pub fn settlement_disposition(world: &World, settlement: EntityId) -> Option<Min
         .ledger
         .value_of(settlement, hornvale_history::OCC_FOUNDED)?
     {
-        Value::Number(n) => *n,
+        // The unit boundary (The Ell). `occ-founded` is a standard DAY on the
+        // ledger; [`occupation_draw_key`] rounds a bake YEAR, and the key it
+        // produces becomes a frozen leg-string in a seed derivation. The
+        // bake-side caller ([`people_disposition`] from the raid gate) passes
+        // the bake's own year, and the two paths are contracted to agree — see
+        // `the_two_disposition_paths_agree_on_a_real_world` in
+        // `windows/worldgen/tests/history_units.rs`. Drop this crossing and
+        // every settlement in every world draws a different mind, silently.
+        Value::Number(n) => crate::history_emit::bake_year_of_ledger_day(*n),
         _ => return None,
     };
     let people = world

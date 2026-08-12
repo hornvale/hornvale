@@ -14,7 +14,7 @@
 //! ```
 //!
 //! `scripts/hooks/pre-commit` runs this crate's suite on a board-only commit
-//! (B13, decision 0128), so every `git -C <tempdir>` in every test inherited
+//! (B13, decision 0129), so every `git -C <tempdir>` in every test inherited
 //! that and operated on the developer's real repository instead: `git init`
 //! re-initialised it (and, because a worktree gitdir does not end in
 //! `/.git`, guessed *bare* and set `core.bare = true`), `git config` rewrote

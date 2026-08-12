@@ -21,6 +21,7 @@ fn every_person_is_born_before_they_die_and_after_their_community() {
     let people: Vec<&hornvale_kernel::Fact> = w.ledger.find(hornvale_person::IS_PERSON).collect();
     assert!(!people.is_empty(), "seed 42 should remember some founders");
 
+    let mut deaths_seen = 0usize;
     for p in &people {
         let born = w
             .ledger
@@ -31,19 +32,22 @@ fn every_person_is_born_before_they_die_and_after_their_community() {
                 _ => None,
             })
             .expect("every person has a birth day");
-        // THIS ARM IS CURRENTLY UNREACHABLE, and the test is green without it.
-        // `person-died` is committed by no world: promotion derives the death
-        // day by subtracting a maturity in DAYS from a founding day in YEARS
-        // (`occ-founded` is a year — see `descent.rs::founded_year`), adding a
-        // lifespan in DAYS, and comparing the sum against a present in YEARS.
-        // The earliest death any species in the roster reaches is 14,379.2
-        // against `now = 2000`, so the `<= now` filter never passes and every
-        // founder is recorded as still living. Measured zero `Some` entries
-        // across five seeds and 587 promoted founders.
+        // THIS ARM WAS UNREACHABLE UNTIL THE ELL, and the test was green
+        // without it. `person-died` was committed by no world: promotion
+        // derived the death day by subtracting a maturity in DAYS from a
+        // founding day in YEARS (`occ-founded` was a year), adding a lifespan
+        // in DAYS, and comparing the sum against a present in YEARS. The
+        // earliest death any species in the roster reached was 14,379.2 against
+        // `now = 2000`, so the `<= now` filter never passed and every founder
+        // was recorded as still living — measured zero `Some` entries across
+        // five seeds and 587 promoted founders.
         //
-        // Whoever repairs that unit mismatch should also assert that SOME
-        // person in the world carries a death fact, so this test cannot
-        // silently lose its subject again (The Particular, F9/F10).
+        // The Ell moved the unit boundary to the ledger, and this arm now runs.
+        // `deaths_seen` is counted and asserted below rather than left implicit,
+        // so the test cannot silently lose its subject again the way it did for
+        // a whole campaign (The Particular, F9/F10): a `Some` arm that never
+        // fires proves nothing, and nothing about the shape of `if let` says
+        // which of the two it is.
         if let Some(died) = w
             .ledger
             .facts_about(p.subject)
@@ -54,6 +58,7 @@ fn every_person_is_born_before_they_die_and_after_their_community() {
             })
         {
             assert!(died > born, "death must follow birth: {died} vs {born}");
+            deaths_seen += 1;
         }
         assert!(
             w.ledger
@@ -62,6 +67,20 @@ fn every_person_is_born_before_they_die_and_after_their_community() {
             "every person founded something"
         );
     }
+
+    // The two-sided form (spec E1): a gate that fires for everyone is as wrong
+    // as one that fires for nobody, and a bare `> 0` cannot tell them apart.
+    assert!(
+        deaths_seen > 0,
+        "the death arm above did not execute once in {} founders — it is \
+         vacuous again and every assertion inside it is asserting nothing",
+        people.len()
+    );
+    assert!(
+        deaths_seen < people.len(),
+        "every founder died: {deaths_seen} of {}",
+        people.len()
+    );
 }
 
 #[test]

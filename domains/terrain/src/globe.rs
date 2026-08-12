@@ -49,6 +49,11 @@ pub struct TectonicGlobe {
     /// Salt/fresh water classification per cell (The Freshet). Recomputed at
     /// genesis, never serialized; a pure projection over drainage/endorheic.
     pub water_kind: CellMap<WaterKind>,
+    /// Post-carve downhill target per cell — the flow graph `water_field`
+    /// classifies against, retained so the channel network can read it on
+    /// every query. `None` on ocean cells and at terminal sinks. Recomputed
+    /// at genesis, never serialized.
+    pub downhill: CellMap<Option<CellId>>,
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Majors only — microcontinents live in
     /// `microcontinents` instead, so `continental_supply`, `--continents`
@@ -151,6 +156,15 @@ pub struct TectonicGlobe {
     pub lithology_seed: Seed,
     /// Hash-noise seed for the subsurface-features point process (The Lode).
     pub features_seed: Seed,
+    /// Hash-noise seed for the channel network's meander displacement field
+    /// (The Ford, Task 4/5): `terrain_seed.derive(streams::CHANNEL_MEANDER)`,
+    /// already the derived leg — a leaf exactly like `lithology_seed`/
+    /// `features_seed`, not the terrain-root seed itself.
+    /// `ChannelNetwork::build` uses it directly rather than deriving it
+    /// again. Hash-noise only — never consumed as a `Stream`, so it carries
+    /// no draw-order/save-format contract, and (being a leaf, not the root)
+    /// it cannot be used to derive any other terrain stream.
+    pub channel_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -168,6 +182,12 @@ impl TectonicGlobe {
     /// The hash-noise seed for the subsurface features point process.
     pub fn features_noise_seed(&self) -> Seed {
         self.features_seed
+    }
+
+    /// The already-derived `streams::CHANNEL_MEANDER` hash-noise seed
+    /// `ChannelNetwork::build` uses directly for the meander field.
+    pub fn channel_noise_seed(&self) -> Seed {
+        self.channel_seed
     }
 }
 
@@ -440,6 +460,11 @@ pub fn generate(
         sea_level,
         crate::carve::REROUTE_TOP_RIVERS,
     );
+    // Retained so the channel network can read the post-carve flow graph on
+    // every query, instead of every consumer re-deriving it. Shadows the
+    // pre-carve `downhill` local above — its last reader was the
+    // `rerouted_flow_fraction` call just above this line.
+    let downhill = CellMap::from_fn(geosphere, |c| post_downhill[c.0 as usize]);
 
     let mut populated = vec![false; plate_list.len()];
     for (_, plate) in plate_of.iter() {
@@ -463,6 +488,12 @@ pub fn generate(
     // only (`streams::FEATURES`) — never consumed as a `Stream`, so this is
     // not a new draw-order contract.
     let features_seed = terrain_seed.derive(streams::FEATURES);
+    // The channel network's meander field (The Ford, spec §5.2). Stores the
+    // ALREADY-DERIVED leg, mirroring lithology_seed/features_seed above —
+    // a leaf, not the terrain root — so this field can never be used to
+    // derive any other terrain stream. Hash-noise only, no new draw-order
+    // contract.
+    let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -488,6 +519,7 @@ pub fn generate(
         drainage,
         endorheic,
         water_kind,
+        downhill,
         cratons,
         terranes,
         microcontinents: micro,
@@ -508,6 +540,7 @@ pub fn generate(
         lithology: placeholder_lithology,
         lithology_seed,
         features_seed,
+        channel_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
@@ -555,6 +588,38 @@ mod tests {
     use super::*;
     use crate::pins::{GenesisError, TerrainPins};
     use hornvale_kernel::{Geosphere, Seed};
+
+    #[test]
+    fn the_globe_retains_the_post_carve_downhill_graph() {
+        let geo = Geosphere::new(4);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        // Every land cell either has a downhill target or is a terminal sink.
+        let mut with_target = 0usize;
+        for c in geo.cells() {
+            if *g.elevation.get(c) < g.sea_level {
+                // ocean: no downhill target
+                assert!(g.downhill.get(c).is_none(), "ocean cell {c:?} has a target");
+            } else if g.downhill.get(c).is_some() {
+                with_target += 1;
+            }
+        }
+        assert!(with_target > 0, "no land cell has a downhill target");
+    }
+
+    #[test]
+    fn the_retained_downhill_matches_a_fresh_derivation() {
+        // The retained field must be the SAME graph water_field consumed, not a
+        // re-derivation on a different surface. Recomputing on the final
+        // elevation/sea level must reproduce it exactly.
+        let geo = Geosphere::new(4);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        let fresh = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+        for c in geo.cells() {
+            assert_eq!(*g.downhill.get(c), fresh[c.0 as usize], "cell {c:?}");
+        }
+    }
 
     #[test]
     fn induration_field_matches_the_assembled_buffer() {

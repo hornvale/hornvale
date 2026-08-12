@@ -552,14 +552,17 @@ mod tests {
     use hornvale_kernel::EntityId;
 
     fn ctx(day: f64) -> ObserverContext {
-        ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
+        ObserverContext::at(
+            EntityId::new(1).unwrap(),
+            WorldTime::new(day).expect("a day value is finite"),
+        )
     }
 
     #[test]
     fn the_sky_never_changes() {
         let sun = ConstantSun;
-        let a = sun.sky_at(WorldTime { day: 0.0 });
-        let b = sun.sky_at(WorldTime { day: 9999.5 });
+        let a = sun.sky_at(WorldTime::GENESIS);
+        let b = sun.sky_at(WorldTime::new(9999.5).expect("a day value is finite"));
         assert_eq!(a.description, b.description);
         assert_eq!(a.bodies, b.bodies);
         assert!(a.description.contains("zenith"));

@@ -152,7 +152,7 @@ fn generation_length_of_is_none_for_a_species_outside_the_roster() {
 /// going through a full world build.
 #[test]
 fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
-    use hornvale_kernel::{Fact, Value, World};
+    use hornvale_kernel::{Fact, Value, World, WorldTime};
 
     fn commit(
         world: &mut World,
@@ -168,7 +168,7 @@ fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
                     predicate: predicate.to_string(),
                     object,
                     place: None,
-                    day: Some(0.0),
+                    day: Some(WorldTime::GENESIS),
                     provenance: "descent_graph test fixture".to_string(),
                 },
                 &world.registry,
@@ -397,7 +397,7 @@ fn a_long_lived_people_founds_by_siblings_where_a_short_lived_one_founds_by_desc
 /// differing only in their founding coordinates, must yield different handles.
 #[test]
 fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
-    use hornvale_kernel::{EntityId, Fact, Value, World};
+    use hornvale_kernel::{EntityId, Fact, Value, World, WorldTime};
 
     let mut world = World::new(Seed(42));
     hornvale_worldgen::register_all(&mut world.registry).expect("registry registers");
@@ -423,7 +423,7 @@ fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
                         predicate: predicate.to_string(),
                         object,
                         place: Some(id),
-                        day: Some(day),
+                        day: Some(WorldTime::new(day).expect("test fixture day is finite")),
                         provenance: "test-fixture".to_string(),
                     },
                     &world.registry,

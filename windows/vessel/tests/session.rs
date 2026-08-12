@@ -19,7 +19,7 @@ fn seam_world() -> World {
 
 fn opts() -> PossessOpts {
     PossessOpts {
-        day: WorldTime { day: 0.0 },
+        day: WorldTime::GENESIS,
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -278,7 +278,7 @@ fn the_stitch_law_end_to_end() {
     let (mut s, _) = Session::start(
         &world,
         &PossessOpts {
-            day: WorldTime { day: 0.0 },
+            day: WorldTime::GENESIS,
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -333,7 +333,7 @@ fn the_stitch_law_end_to_end() {
     let (mut wrong, _) = Session::start(
         &world,
         &PossessOpts {
-            day: WorldTime { day: 0.0 },
+            day: WorldTime::GENESIS,
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -417,7 +417,7 @@ fn run_drives_a_script_deterministically() {
     run(
         &world,
         PossessOpts {
-            day: WorldTime { day: 0.0 },
+            day: WorldTime::GENESIS,
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
@@ -431,7 +431,7 @@ fn run_drives_a_script_deterministically() {
     run(
         &world,
         PossessOpts {
-            day: WorldTime { day: 0.0 },
+            day: WorldTime::GENESIS,
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,

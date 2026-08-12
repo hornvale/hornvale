@@ -5,7 +5,7 @@
 
 use crate::strata::PaleoRecord;
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, RegistryError, Value, World,
+    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, RegistryError, Value, World, WorldTime,
 };
 
 /// Predicate: the standard day of peak ice (functional, Number).
@@ -52,7 +52,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "paleoclimate".to_string(),
     }
 }

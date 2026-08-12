@@ -51,7 +51,9 @@
 //! through the one shared `occupation_draw_key`, and the tests below pin that.
 
 use hornvale_kernel::test_lineage;
-use hornvale_kernel::{CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World};
+use hornvale_kernel::{
+    CellId, ComponentStore, EntityId, Fact, KindId, Seed, Value, World, WorldTime,
+};
 use hornvale_species::{Dispersion, MindVector};
 use std::collections::BTreeMap;
 
@@ -89,6 +91,12 @@ fn synthetic_settlement(
     let id = world
         .ledger
         .mint_entity(test_lineage(world.ledger.entity_count() as u16));
+    // `founded` is a bake YEAR, the unit the bake side of every test below
+    // holds it in. The Ell: the real emit boundary crosses it into standard
+    // days before it reaches the ledger, so this fixture must too — a fixture
+    // that keeps writing years would make `settlement_disposition` read a
+    // founding 365× too early and quietly stop testing the production path.
+    let founded_day = hornvale_worldgen::ledger_day_of_bake_year(founded);
     for (predicate, object) in [
         (hornvale_history::IS_OCCUPATION, Value::Flag(true)),
         (
@@ -96,7 +104,7 @@ fn synthetic_settlement(
             Value::Text(people.to_string()),
         ),
         (hornvale_history::OCC_SITE, Value::Number(f64::from(site.0))),
-        (hornvale_history::OCC_FOUNDED, Value::Number(founded)),
+        (hornvale_history::OCC_FOUNDED, Value::Number(founded_day)),
         (hornvale_settlement::IS_SETTLEMENT, Value::Flag(true)),
         (
             hornvale_settlement::CELL_ID,
@@ -111,7 +119,7 @@ fn synthetic_settlement(
                     predicate: predicate.to_string(),
                     object,
                     place: None,
-                    day: Some(founded),
+                    day: Some(WorldTime::new(founded_day).expect("test fixture day is finite")),
                     provenance: "tolerance-draw-test".to_string(),
                 },
                 &world.registry,
@@ -179,11 +187,17 @@ fn the_draw_moves_with_both_halves_of_its_key() {
 }
 
 /// The bake side holds a raw `f64` founding year; the ledger side holds that
-/// year after `Ledger::commit` quantized it to 8 significant digits. If the
-/// two reduce it differently they derive different streams — silently. Pinned
-/// across the whole default bake grid.
+/// year scaled into standard days and then quantized to 8 significant digits by
+/// `Ledger::commit`. If the two reduce it differently they derive different
+/// streams — silently. Pinned across the whole default bake grid.
+///
+/// The Ell widened what this measures. It used to be quantization alone; the
+/// round trip is now year → day → quantize → year → key, and the middle two
+/// steps are exactly where a coarser bake would start losing the founding. If
+/// this ever reddens, the losslessness `history_emit::bake_year_of_ledger_day`
+/// documents has stopped holding and every settlement's drawn mind has moved.
 #[test]
-fn the_year_key_survives_the_ledgers_quantization() {
+fn the_year_key_survives_the_ledger_crossing_and_its_quantization() {
     let mut year = BAKE_START_YEAR;
     while year <= BAKE_END_YEAR {
         let (world, id) = synthetic_settlement(0, CellId(1234), year, "human");
@@ -192,10 +206,10 @@ fn the_year_key_survives_the_ledgers_quantization() {
             other => panic!("occ-founded must commit as a number, got {other:?}"),
         };
         assert_eq!(
-            occupation_draw_key(committed),
+            occupation_draw_key(hornvale_worldgen::bake_year_of_ledger_day(committed)),
             occupation_draw_key(year),
             "founding year {year} reduced to a different key after the ledger \
-             quantized it (committed as {committed})"
+             crossed it into days and quantized it (committed as {committed})"
         );
         year += BAKE_EPOCH_YEARS;
     }

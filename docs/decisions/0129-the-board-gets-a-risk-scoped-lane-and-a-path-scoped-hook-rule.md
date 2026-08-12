@@ -1,4 +1,4 @@
-# 0128. The board gets a risk-scoped lane and a path-scoped hook rule
+# 0129. The board gets a risk-scoped lane and a path-scoped hook rule
 
 **Status:** Accepted (2026-08-12) · **Decider:** Nathan · **Relates:**
 [0118](0118-the-board-is-an-orphan-ref-of-immutable-posts-never-rerooted.md),

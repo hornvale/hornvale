@@ -18,11 +18,45 @@ pub struct Position {
 
 /// Simulated time in fractional days since world genesis. There is no
 /// wall-clock time anywhere in Hornvale.
-/// type-audit: pending(wave-1)
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+///
+/// The field is private and the constructor validates, because this type's
+/// whole job is that a value in some *other* unit cannot be stored here.
+/// A year stamped into a day-typed slot is what made `person-died`
+/// uncommittable in every world (The Ell); decision 0014 declined this
+/// wrapper on the grounds it bought no safety, and 0126 supersedes it.
+///
+/// **Negative is legal.** A day is a *point on an axis*, not a duration:
+/// a founder born before the history record begins has a negative birth
+/// day. Do not copy `Years`'s non-negative rule here.
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct WorldTime {
+    day: f64,
+}
+
+impl WorldTime {
+    /// World genesis — day zero.
+    pub const GENESIS: WorldTime = WorldTime { day: 0.0 };
+
+    /// Validating constructor: rejects only non-finite values. Negative days
+    /// are legal and deliberate (see the type's doc).
+    /// type-audit: bare-ok(constructor-edge: day)
+    pub fn new(day: f64) -> Result<WorldTime, crate::units::UnitError> {
+        if !day.is_finite() {
+            return Err(crate::units::UnitError {
+                unit: "days",
+                value: day,
+                reason: "must be finite",
+            });
+        }
+        Ok(WorldTime { day })
+    }
+
     /// Fractional days since world genesis.
-    pub day: f64,
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn day(self) -> f64 {
+        self.day
+    }
 }
 
 /// A typed field over (space × time). Implementations must be pure:
@@ -75,6 +109,31 @@ mod tests {
 
     const NOON: WorldTime = WorldTime { day: 0.5 };
 
+    // This is also the sole coverage for the claim
+    // `kernel::ledger::tests::non_finite_day_is_rejected` used to make at the
+    // ledger boundary (Task 2, The Ell, fix round 1): once `Fact.day` became
+    // `Option<WorldTime>`, that test's assertion was word-for-word this one —
+    // a `Fact` can no longer be BUILT with a non-finite day, so there was
+    // nothing left for `Ledger::check`/`commit` to reject, and the duplicate
+    // was deleted rather than kept under a name that still promised
+    // ledger-level rejection.
+    #[test]
+    fn a_world_time_cannot_be_built_from_a_non_finite_value() {
+        assert!(
+            WorldTime::new(f64::NAN).is_err(),
+            "NaN is not a point on the time axis"
+        );
+        assert!(WorldTime::new(f64::INFINITY).is_err());
+        assert!(WorldTime::new(f64::NEG_INFINITY).is_err());
+    }
+
+    #[test]
+    fn a_world_time_may_be_negative_because_a_day_is_a_point_not_a_duration() {
+        // The Particular's founders are born before the history record begins.
+        let t = WorldTime::new(-20_164.663).expect("a negative day is legal");
+        assert_eq!(t.day(), -20_164.663);
+    }
+
     #[test]
     fn constant_field_returns_its_value_everywhere() {
         let f = ConstantField(18.0_f64);
@@ -124,5 +183,25 @@ mod tests {
         let p2: Position = serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
         let t2: WorldTime = serde_json::from_str(&serde_json::to_string(&t).unwrap()).unwrap();
         assert_eq!((p2.x, p2.y, t2.day), (p.x, p.y, t.day));
+    }
+
+    /// The direct wire-shape assertion `#[serde(transparent)]` exists for.
+    /// A round-trip test alone cannot tell "bare scalar" from "single-field
+    /// object" apart — both round-trip identically — and no `Serialize`-
+    /// deriving struct in this repo holds a `WorldTime` field yet, so no
+    /// committed artifact drift check can catch a lost attribute either.
+    /// Task 2 stores a `WorldTime` directly in `Fact`; losing this attribute
+    /// then would silently rewrite every world's save format from a bare
+    /// `12.25` to `{"day":12.25}`. Mutation-proved in the fix-round report:
+    /// deleting `#[serde(transparent)]` reddens this test.
+    #[test]
+    fn world_time_serializes_as_a_bare_scalar_not_an_object() {
+        let t = WorldTime::new(12.25).expect("a day value is finite");
+        let json = serde_json::to_string(&t).unwrap();
+        assert_eq!(
+            json, "12.25",
+            "WorldTime must serialize as the bare day scalar, not a \
+             {{\"day\":...}} object — #[serde(transparent)] is what keeps it that way"
+        );
     }
 }

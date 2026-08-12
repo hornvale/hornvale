@@ -23,7 +23,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post board-redact board-sync
+.PHONY: help quick gate gate-run gate-fast gate-full seam-guard seam-guard-list ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -50,7 +50,18 @@ gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`ma
 
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
 	@bash scripts/gate-full-heavy.sh
+	@$(MAKE) --no-print-directory seam-guard
 	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+
+# Deliberately NOT in the commit gate: each registered call site costs a full
+# scoped test run, so cost scales with the roster. gate-full is the evidence
+# tier, which is where a check this expensive belongs (the same argument that
+# put the heavy batteries there).
+seam-guard: ## Neutralise each registered seam and report the ones no test notices
+	cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- run
+
+seam-guard-list: ## Print the registered seams and their call sites (cheap, no build)
+	@cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- list
 
 # The CI entry point. A WRAPPER: every decision it makes lives in Rust
 # (windows/lab/src/timings.rs, cli/tests/timings_alarm.rs). Raw output is

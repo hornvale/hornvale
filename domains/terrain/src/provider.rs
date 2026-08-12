@@ -2,6 +2,7 @@
 
 use crate::boundaries::CellBoundary;
 use crate::carve::Provenance;
+use crate::channel::{ChannelNetwork, Transverse};
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
 use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
@@ -14,6 +15,7 @@ pub struct GeneratedTerrain {
     geosphere: Geosphere,
     globe: TectonicGlobe,
     notes: Vec<String>,
+    channels: ChannelNetwork,
 }
 
 /// Winning-craton age above which crust counts as ancient enough to have
@@ -78,10 +80,20 @@ impl GeneratedTerrain {
             outcome.globe.elevation.len(),
             "GeneratedTerrain: geosphere and globe disagree on cell count"
         );
+        // Built once here, beside the other genesis-time derivations, not
+        // lazily per call (The Ford, Task 5). A pure read over already-
+        // committed state plus one hash-noise field — see `ChannelNetwork`'s
+        // own doc comment for why this makes no seed draws.
+        let channels = ChannelNetwork::build(
+            &outcome.globe,
+            &geosphere,
+            outcome.globe.channel_noise_seed(),
+        );
         GeneratedTerrain {
             geosphere,
             globe: outcome.globe,
             notes: outcome.notes,
+            channels,
         }
     }
 
@@ -469,6 +481,23 @@ impl GeneratedTerrain {
     /// [`Self::waterfall_provenance`].
     pub fn playa_provenance(&self) -> Provenance {
         Provenance::Process
+    }
+
+    /// The river channel network (The Ford, spec §5.2/§5.3): the world's
+    /// rivers as polylines, with the discharge-derived band geometry each
+    /// vertex implies. Built once at construction — see [`Self::new`].
+    pub fn channels(&self) -> &ChannelNetwork {
+        &self.channels
+    }
+
+    /// The transverse band at `position`, and the signed great-circle
+    /// distance to the nearest channel in radians (The Ford, spec §5.3) —
+    /// see [`ChannelNetwork::transverse_at`], which this delegates to
+    /// directly. `position` is O(total channel vertices) per call; a hot
+    /// caller should batch queries rather than call this per-pixel.
+    /// type-audit: pending(wave-1: position), pending(wave-1: return)
+    pub fn transverse_at(&self, position: [f64; 3]) -> (Transverse, f64) {
+        self.channels.transverse_at(position)
     }
 }
 

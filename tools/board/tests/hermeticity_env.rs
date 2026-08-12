@@ -6,7 +6,7 @@
 //!
 //! `scripts/hooks/pre-commit` runs `cargo test --manifest-path
 //! tools/board/Cargo.toml` when every staged path is under `tools/board/`
-//! (B13, decision 0128). Git runs a hook with `GIT_DIR` and `GIT_INDEX_FILE`
+//! (B13, decision 0129). Git runs a hook with `GIT_DIR` and `GIT_INDEX_FILE`
 //! **exported**, and from a linked worktree — which is where all campaign
 //! work happens — they are *absolute* paths into the real repository:
 //!

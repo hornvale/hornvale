@@ -115,10 +115,11 @@ pub use history_bake::{
     bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,
 };
 pub use history_emit::{
-    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
-    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
-    occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
-    sundered_landmasses, territories,
+    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
+    collapse_events, emit_history, emit_now, goblinoid_overlap, goblinoid_region_overlap,
+    ledger_day_of_bake_year, migration_events, occupation_records, occupations_at,
+    occupations_by_cell, present_year, ruins_of_people, stratigraphy, sundered_landmasses,
+    territories,
 };
 /// The demography fit's result, re-exported so a caller that only depends on
 /// the composition root can NAME what [`demography_report_from`] hands back
@@ -385,7 +386,7 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         predicate: predicate.to_string(),
         object,
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "scenario".to_string(),
     }
 }
@@ -429,7 +430,7 @@ fn settlement_descriptor_facts(
         predicate: predicate.to_string(),
         object,
         place: Some(id),
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     };
     world.ledger.commit(
@@ -465,7 +466,7 @@ fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
         predicate: hornvale_kernel::NAME_GLOSS.to_string(),
         object: Value::Text(gloss.to_string()),
         place: None,
-        day: Some(0.0),
+        day: Some(WorldTime::GENESIS),
         provenance: "worldgen".to_string(),
     }
 }
@@ -3918,11 +3919,17 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     let position = place_coord(world, place);
     let boxed = phenomena_sources(world)?;
     let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    // `day` reaches here from the REPL's `phenomena` command, which parses it
+    // straight off stdin (`cli/src/repl.rs`) — unlike the sibling internal
+    // callers below, which always pass a literal. A non-finite value must
+    // fail through this function's existing `Result`, not panic (The Ell's
+    // Task 1 fix round: this used to be an `.expect()`).
+    let time = WorldTime::new(day).map_err(|e| BuildError::Pins(e.to_string()))?;
     Ok(observe(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time,
             lens: PerceptionLens::identity(),
             position,
         },
@@ -3956,7 +3963,7 @@ fn observed_phenomena_occluded(
         &sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time: WorldTime::new(day).expect("a day value is finite"),
             lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
@@ -4288,7 +4295,7 @@ fn observe_with_sources(
         sources,
         &ObserverContext {
             place,
-            time: WorldTime { day },
+            time: WorldTime::new(day).expect("a day value is finite"),
             // NO occlusion here, deliberately. This is the observation GENESIS
             // derives from — settlement name glosses and the deities a people
             // believe in (`derived-from-phenomenon` is a committed predicate).
@@ -5739,6 +5746,11 @@ pub fn deity_site_concepts(
 /// cannot occur — two occupations of one cell founded on the identical day
 /// would be the same layer.
 ///
+/// The `occ-founded` object is read **raw** here and is not crossed back into
+/// bake years (The Ell): its only role is to order candidates, and the
+/// year↔day map is monotone, so the winner is the same number of conversions
+/// later. Nothing about the value itself reaches the name.
+///
 /// Returns `None` when the cell has no foreign occupation, exactly as a
 /// settlement away from water carries no hydrology concept. A people whose
 /// kind concept is unregistered also yields `None` rather than an invented
@@ -6645,7 +6657,7 @@ fn build_to(
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
-    // scenario constant. `present_day` (windows/almanac) reads it back.
+    // scenario constant. `present_year` (windows/almanac) reads it back.
     let cfg = history_bake::BakeConfig::default_millennia();
     history_emit::emit_now(&mut world, world_entity, cfg.end_year)?;
 
@@ -7432,7 +7444,7 @@ pub fn planet_entity(world: &World) -> Option<EntityId> {
 /// order (`registry().into_values()` is `KindId`-ascending) and is single-
 /// element for Lab's synthetic rosters — so it reproduces `genesis_in`'s mint
 /// sequence in every real case. Every fact (predicate, value, order,
-/// `provenance="species"`, `day=Some(0.0)`) mirrors `genesis_in` exactly.
+/// `provenance="species"`, `day=Some(WorldTime::GENESIS)`) mirrors `genesis_in` exactly.
 /// type-audit: bare-ok(identifier-text)
 fn species_genesis(
     world: &mut World,
@@ -7446,7 +7458,7 @@ fn species_genesis(
             predicate: predicate.to_string(),
             object,
             place: None,
-            day: Some(0.0),
+            day: Some(WorldTime::GENESIS),
             provenance: "species".to_string(),
         }
     }
@@ -7654,13 +7666,13 @@ pub fn build_world(
 ///
 /// `lineage` is the caller's, not this function's, to choose: only the caller
 /// knows what the instance belongs to and which sibling it is (spec §2).
-/// type-audit: bare-ok(identifier-text: kind), waiver(decision-0014: day), bare-ok(prose: provenance)
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: provenance)
 pub fn mint_instance_of_kind(
     world: &mut World,
     wc: &WorldComponents,
     lineage: Lineage<'_>,
     kind: &str,
-    day: Option<f64>,
+    day: Option<WorldTime>,
     provenance: &str,
 ) -> Result<EntityId, BuildError> {
     if !wc.kinds().iter().any(|k| k.0 == kind) {
@@ -7917,8 +7929,8 @@ pub fn sky_report_from(
     let Some(cell) = at else {
         return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
     };
-    let state = climate.weather_at(cell, time.day);
-    let cloud = climate.cloud_type_at(cell, time.day);
+    let state = climate.weather_at(cell, time.day());
+    let cloud = climate.cloud_type_at(cell, time.day());
     let (_, vis) = occlusion(state, cloud);
     let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
@@ -8576,7 +8588,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         common_vocab: common_vocabulary(&world.registry),
         sky: sky_report_from(
             world,
-            WorldTime { day: 0.0 },
+            WorldTime::GENESIS,
             &terrain,
             &climate,
             flagship_cell(world, &terrain),
@@ -9115,7 +9127,7 @@ mod tests {
         let world = vigil_world();
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_from(&world, &terrain).unwrap();
-        let day = WorldTime { day: 0.0 };
+        let day = WorldTime::GENESIS;
         let mut seen = std::collections::BTreeSet::new();
         for cell in terrain.geosphere().cells().take(400) {
             let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
@@ -9132,7 +9144,7 @@ mod tests {
         let world = vigil_world();
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_from(&world, &terrain).unwrap();
-        let r = sky_report_from(&world, WorldTime { day: 0.0 }, &terrain, &climate, None).unwrap();
+        let r = sky_report_from(&world, WorldTime::GENESIS, &terrain, &climate, None).unwrap();
         assert!(
             !r.description.contains("The sky is"),
             "a placeless observation must not borrow a cell's weather: {}",
@@ -10662,7 +10674,7 @@ mod tests {
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
         let world = constant(42);
-        let sky = sky_report(&world, hornvale_kernel::WorldTime { day: 0.0 }).unwrap();
+        let sky = sky_report(&world, hornvale_kernel::WorldTime::GENESIS).unwrap();
         assert!(sky.description.contains("zenith"));
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
@@ -10674,7 +10686,11 @@ mod tests {
     #[test]
     fn the_sky_report_names_the_weather() {
         let world = generated(42);
-        let report = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let report = sky_report(
+            &world,
+            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+        )
+        .unwrap();
         let text = &report.description;
         assert!(
             ["clear", "fair", "overcast", "rain", "storm"]
@@ -10683,7 +10699,11 @@ mod tests {
             "the sky report must narrate the weather: {text}"
         );
 
-        let again = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let again = sky_report(
+            &world,
+            hornvale_kernel::WorldTime::new(10.0).expect("a day value is finite"),
+        )
+        .unwrap();
         assert_eq!(report, again, "the weather clause is deterministic");
     }
 
@@ -10704,10 +10724,10 @@ mod tests {
     #[test]
     fn generated_sky_round_trips_through_save_and_load() {
         let world = generated(42);
-        let before = sky_report(&world, WorldTime { day: 0.0 }).unwrap();
+        let before = sky_report(&world, WorldTime::GENESIS).unwrap();
         let reloaded = World::from_json(&world.to_json()).unwrap();
         assert!(matches!(sky_of(&reloaded).unwrap(), Sky::Generated(_)));
-        let after = sky_report(&reloaded, WorldTime { day: 0.0 }).unwrap();
+        let after = sky_report(&reloaded, WorldTime::GENESIS).unwrap();
         assert_eq!(before, after);
     }
 
@@ -11008,7 +11028,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(sky_report(&world, WorldTime { day: 0.0 }).is_err());
+        assert!(sky_report(&world, WorldTime::GENESIS).is_err());
         // No place exists on this hand-built world, so observed_phenomena
         // short-circuits to Ok(empty) before ever touching sky_of — the
         // existing "no place, no phenomena" contract, not a panic risk.

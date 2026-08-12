@@ -268,7 +268,13 @@ mod tests {
         let world = seam_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let agent = mint_flagship(&world, &ctx).unwrap();
-        observable(&world, &ctx, &agent, WorldTime { day }).unwrap()
+        observable(
+            &world,
+            &ctx,
+            &agent,
+            WorldTime::new(day).expect("a day value is finite"),
+        )
+        .unwrap()
     }
 
     #[test]

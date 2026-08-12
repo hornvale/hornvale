@@ -5,7 +5,7 @@
 //! part of the review — the c4 signed-zero lesson).
 
 use hornvale_kernel::test_lineage;
-use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
+use hornvale_kernel::{EntityId, KindId, Seed, Value, World, WorldTime};
 use hornvale_species::{
     BiosphereTraits, SPECIES_MASS_KG, SPECIES_POTENCY, biosphere_registry, instance_biosphere,
 };
@@ -22,7 +22,7 @@ fn override_fact(e: EntityId, pred: &str, n: f64) -> hornvale_kernel::Fact {
         predicate: pred.to_string(),
         object: Value::Number(n),
         place: None,
-        day: Some(1.0),
+        day: Some(WorldTime::new(1.0).expect("finite")),
         provenance: "test".to_string(),
     }
 }
@@ -94,7 +94,13 @@ fn overrides_survive_kind_change() {
         .commit(override_fact(e, SPECIES_MASS_KG, 900.0), &w.registry)
         .unwrap();
     w.ledger
-        .change_kind(e, "woolly-mammoth", Some(2.0), "test", &w.registry)
+        .change_kind(
+            e,
+            "woolly-mammoth",
+            Some(WorldTime::new(2.0).expect("finite")),
+            "test",
+            &w.registry,
+        )
         .unwrap();
     let eff = instance_biosphere(&w.ledger, e, &reg).unwrap();
     assert_eq!(
@@ -287,7 +293,13 @@ fn lens_demo_world_fact_count_is_pinned() {
         .commit(override_fact(e, SPECIES_MASS_KG, 900.0), &w.registry)
         .unwrap();
     w.ledger
-        .change_kind(e, "woolly-mammoth", Some(2.0), "budget", &w.registry)
+        .change_kind(
+            e,
+            "woolly-mammoth",
+            Some(WorldTime::new(2.0).expect("finite")),
+            "budget",
+            &w.registry,
+        )
         .unwrap();
     assert_eq!(w.ledger.len(), 3); // instance-of, override, kind-change
 }
