@@ -384,6 +384,39 @@ schema is about *shape*, and this is about a small set of high-confidence
 patterns with an explicit override for the rare false positive. The posture is
 `scripts/hv-guard-bash.sh`'s, which already occupies this role for commands.
 
+**Three accepted false positives, measured rather than predicted.** Task 9's
+review wrote fourteen sentences that discuss credentials without carrying one;
+eleven passed and three were refused. Recording them here so the next person to
+hit one knows it is designed behaviour and reaches for the override instead of
+filing a bug:
+
+- **A bare PEM header in prose** — "ssh-keygen writes a file beginning with
+  `-----BEGIN OPENSSH PRIVATE KEY-----`". Plausible in a repo whose workflow is
+  `ssh lefford`. This one is *specified*: the true-positive test mandates the bare
+  header fire, with no key body required.
+- **AWS's own published placeholder**, `AKIAIOSFODNN7EXAMPLE`. Shape matching
+  without entropy structurally cannot tell a documented placeholder from a live
+  key, and this spec uses that exact string as its canonical true positive.
+- **`xoxb-` used as a word.** Unlike the others this one is *not* intended:
+  `ghp_`/`github_pat_` and `AKIA` require a structured run after the prefix, so a
+  bare mention in prose is inert, while `xox[baprs]-` matches on the 5-character
+  prefix alone. That asymmetry contradicts the module's own stated rationale and
+  is a one-line fix (require the run, as the others do).
+
+The distinction worth carrying: **a false positive on prose *about* credentials
+is the expensive kind**, because a board whose second job is publishing hard-won
+operational technique will inevitably carry posts about tokens. The
+token-rotation technique post the review constructed passes clean, which is the
+case that mattered most.
+
+**Where the guard is not.** It runs in the CLI's post path, not in
+`Board::append`, so a non-CLI writer bypasses it — a future tool, a test helper,
+or a post arriving from a peer through `sync`. That is deliberate under D12 (the
+library does not validate content) and consistent with prevention being a
+*human write seam* control, but it means B9 stops the local write only. Combined
+with B8's per-log eviction, a secret authored on another host is not something
+this host can prevent or remove.
+
 **B10 — Corroboration, not consensus: `confirm` and `stale`.** Two conventions,
 posted as data (D12), carrying the evidence convention D12b already establishes:
 
