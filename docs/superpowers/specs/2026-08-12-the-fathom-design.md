@@ -202,6 +202,39 @@ The last clause is the ceiling: a degenerate depth field would pin nearly every
 cell at one height, and a floor-only prediction could not tell that apart from
 a healthy world. Falsified if any clause fails.
 
+**Measured on seed 42** (`BuildDepth::Terrain`, `windows/worldgen/tests/
+fathom_column_probe.rs`), over 29,896 `Realm::WATERWORLD` cells — column
+height → cell count: `{1: 1,749, 2: 6,669, 3: 21,478}`.
+
+| clause | requirement | measured | verdict |
+|---|---|---|---|
+| 1 (distinct heights) | ≥ 3 | 3 | CONFIRMED |
+| 2 (median height) | ≥ 3 | 3 | CONFIRMED |
+| 3 (single-rung share) | < 5% | 1,749 / 29,896 = 5.85% | **PREREGISTERED, NOT MET** |
+| 4 (ceiling, tallest bucket) | ≤ 90% | 21,478 / 29,896 = 71.8% | CONFIRMED |
+
+Clauses 1, 2 and 4 confirm: the column is not degenerate — three distinct
+heights occur, the median cell is three strata deep, and no single height
+dominates. Clause 3 measured 5.85% against its <5% ceiling — narrowly over,
+and preregistered-not-met rather than weakened. Nathan's ruling: **the world
+is not wrong, the clause was.** A single-rung column is a floor shallower than
+200 m — a continental-shelf cell — and Earth's own shelf is roughly 7-8% of
+ocean area, so 5.85% is physically unremarkable; the 5% ceiling was authored
+before anyone measured a real world's shelf fraction against it. The
+threshold is not being moved (a threshold moved after unblinding is worth less
+than a falsification kept on the record); clause 3 is carried under the
+repo's `PREREGISTERED, not met:` idiom
+(`h1_clause_3_single_rung_share_preregistered_not_met`), filed to
+[`CLIM-shelf-single-rung-threshold`](https://github.com/hornvale/hornvale/blob/main/book/src/frontier/idea-registry.md)
+for a successor to re-derive the ceiling from a measured seed set.
+
+Separately: the all-or-nothing bundling of four clauses under one stop
+condition was itself a preregistration-design defect, independent of clause
+3's miscalibration — the intent behind clause 3 (catch a degenerate column)
+is amply met by this distribution (94.15% multi-rung cells, 3 distinct
+heights, no bucket over 71.8%), which is why clauses 1/2/4 were split into
+their own heavy-tier test rather than staying gated behind clause 3's result.
+
 **H-2 — sea ice occurs below the epipelagic.** `classify_marine_expr` selects
 `Formation::SeaIce` in its **first** arm, on sea-surface temperature alone,
 with no depth condition, while `stratum` is derived from the floor. So a polar
@@ -216,6 +249,16 @@ already depth-consistent and campaign 1 inherits one fewer problem.
 
 This is the honest shape: H-2 is a prediction *about a defect*, and either
 outcome is a finding.
+
+**Measured on seed 42** (same build as H-1): 9,695 `Formation::SeaIce` cells
+total (a non-empty denominator, so H-2 is measurable rather than a null), and
+**8,916 of them (91.96%) sit below the epipelagic** — example cell `CellId(4)`
+at `Stratum::Bathypelagic`. **CONFIRMED, strongly** — this is not a marginal
+artifact: nearly all sea ice the model places is filed at depth, because
+`classify_marine_expr` reads only surface temperature while `stratum` is read
+from the floor, and the column Task 1's accessors expose is what made the
+mismatch visible for the first time. Recorded as an artifact for campaign 1;
+**not repaired here**, per spec §2.
 
 ## 7. Acceptance criteria
 
