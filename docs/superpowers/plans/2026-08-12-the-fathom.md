@@ -45,7 +45,7 @@ re-keyed.
 |---|---|
 | `domains/climate/src/provider.rs` | **Modify.** Add `strata_at` and `biome_expr_at_stratum` to `GeneratedClimate`, beside the existing `biome_at` / `biome_expr_at`, which are untouched. Add the direction-naming doc lines to sites 1 and 3. |
 | `domains/climate/src/biome.rs` | **Modify.** One doc line on `is_marine()` naming what it answers. No signature or body change. |
-| `domains/climate/src/provider.rs` (test module) | **Modify.** The column's tests go in the existing `#[cfg(test)] mod tests`, beside the private `inputs(..)` helper every other `GeneratedClimate` test there already uses. Not an integration test: `ClimateInputs` is `pub` but assembling one duplicates that helper for no gain. |
+| `domains/climate/tests/column.rs` | **Create.** AMENDED AT EXECUTION: `provider::test_support` is `#[cfg(test)]`-gated and therefore invisible to an integration test (proven with an E0432 during Task 1), and ungating it would pull it into the type-audit's pub surface. So the column's tests are an integration test carrying a ~15-line local fixture, documented at the top of the file. |
 | `windows/worldgen/tests/fathom_column_probe.rs` | **Create.** The H-1 / H-2 measurement over a real seed-42 world. Heavy-tier. |
 | `windows/vessel/src/vantage.rs` | **Modify.** `submerged` asks the medium, not the stratum. |
 | `windows/vessel/tests/submerged.rs` | **Create.** The failing-first test that a rock stratum is not submerged. |
