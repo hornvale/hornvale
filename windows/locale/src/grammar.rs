@@ -404,7 +404,7 @@ mod tests {
                 face: 3,
                 path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, last],
             };
-            let micro = crate::micro::micro_field(addr.seed(Seed(42)));
+            let micro = crate::micro::micro_field(addr.seed(Seed(42)), None);
             let r = derived_regime(
                 Seed(42),
                 &addr,

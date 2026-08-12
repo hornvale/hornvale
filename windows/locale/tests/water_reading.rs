@@ -67,11 +67,27 @@ fn room_of(line: &str) -> RoomAddr {
 /// H2-2 — appending is byte-clean. A document is byte-identical to its
 /// pre-stage-2 form up to the first new key. This is the no-epoch claim,
 /// asserted rather than assumed.
+///
+/// # Two values are excused, by name, and only two
+///
+/// The Rill grounded `regime.micro.wetness` in the world (the climate supply a
+/// room's cells receive, allocated by its distance to its own watercourse) and
+/// the descriptor is rendered from it, so those two values legitimately moved
+/// after this fixture was captured. They are substituted out of the comparison
+/// **individually and by key**, leaving every other byte of the prefix — key
+/// order included, and `descriptor_noun` included, which reads the same pools
+/// and did not move — under the original assertion.
+///
+/// This is the narrowest amendment that keeps the claim true. Recapturing the
+/// fixture instead would have destroyed what it is *for*: it is The Ford's
+/// before-arm, and a before-arm re-rendered by later code proves nothing about
+/// the change it was captured for.
 #[test]
 fn the_document_is_byte_identical_up_to_the_first_new_key() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
+    let mut substituted = 0usize;
     for old in FIXTURE.lines() {
         let room = room_of(old);
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
@@ -79,6 +95,9 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
         let cut = json
             .find(",\"channel_distance\"")
             .expect("the new key is present");
+        let (old, moved) = with_the_rills_two_values(old, &json);
+        substituted += moved;
+        let old = old.as_str();
         // The old document minus its closing brace IS the new document's
         // prefix, if and only if nothing before the appended keys moved.
         // `strip_suffix` rather than `&old[..old.len() - 1]` so the assumption
@@ -96,6 +115,41 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
         checked += 1;
     }
     assert_eq!(checked, 200, "the whole committed fixture was checked");
+    // Printed, not written down: how much of the fixture The Rill actually
+    // moved. A drop to zero would mean the substitution had gone vacuous.
+    println!("{substituted} of {checked} rooms needed a Rill substitution");
+    assert!(substituted > 0, "the substitution below is doing nothing");
+}
+
+/// Replace `regime.micro.wetness` and `regime.descriptor` in a captured
+/// document with the values the live one carries, and report whether either
+/// actually differed.
+///
+/// String surgery rather than a parse-and-re-serialize, because re-serializing
+/// a `serde_json::Value` would reorder the keys and quietly destroy the very
+/// property this test exists to check.
+fn with_the_rills_two_values(old: &str, now: &str) -> (String, usize) {
+    /// The value that follows `key` in `doc`, as a slice — from the first byte
+    /// after `key` to the delimiter that closes it.
+    fn value_after<'a>(doc: &'a str, key: &str, end: char) -> (usize, &'a str) {
+        let at = doc.find(key).unwrap_or_else(|| panic!("{key} is present")) + key.len();
+        let len = doc[at..].find(end).expect("the value is terminated");
+        (at, &doc[at..at + len])
+    }
+    let mut out = old.to_string();
+    let mut moved = 0usize;
+    // `"descriptor":"` and not `"descriptor"`, so the search cannot land on
+    // `descriptor_noun` — which reads the variety pools, not the micro-field,
+    // and is deliberately still compared.
+    for (key, end) in [("\"wetness\":", ','), ("\"descriptor\":\"", '"')] {
+        let (at, was) = value_after(&out, key, end);
+        let (_, is) = value_after(now, key, end);
+        if was != is {
+            moved += 1;
+        }
+        out.replace_range(at..at + was.len(), is);
+    }
+    (out, moved.min(1))
 }
 
 /// The schema tag did NOT move. If this fails, an epoch happened by accident.

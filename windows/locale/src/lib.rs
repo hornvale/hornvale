@@ -5,6 +5,7 @@ mod streams;
 pub use streams::stream_labels;
 
 mod regime;
+pub use micro::grounded_wetness;
 pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 
 mod substrate;
@@ -17,11 +18,12 @@ mod budget;
 pub use budget::StrangeSite;
 use budget::StrangenessBudget;
 
-use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
+use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Medium, Realm, Stratum};
 use hornvale_kernel::{
     CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, band, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
+use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 pub use hornvale_terrain::channel::Transverse;
 pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
@@ -787,11 +789,35 @@ impl LocaleContext {
         };
 
         let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
-        let micro = crate::micro::micro_field(addr.seed(self.seed));
         let expr = match stratum {
             Some(st) => self.expr_at_stratum(best.0, st),
             None => self.climate.biome_expr_at(best.0),
         };
+        // Wetness is a budget and an allocation (The Rill, R-7/R-8): the
+        // climate supply this room's cells receive, redistributed by where the
+        // room sits relative to its own sub-cell watercourse. Grounded only
+        // where the axis means ground wetness — at sea the same axis is the
+        // set of the current, on ice it is snow cover, and in the rock column
+        // it is seep, and a river's proximity governs none of those.
+        let grounded = (expr.realm.medium == Medium::AirOverRock
+            && expr.formation != Formation::Ice)
+            .then(|| {
+                let globe = self.terrain.globe();
+                crate::micro::grounded_wetness(
+                    fields.moisture,
+                    rill_reading(
+                        addr.centroid(),
+                        self.terrain.channels(),
+                        globe,
+                        self.terrain.geosphere(),
+                        &self.index,
+                        // `Drawn`, never `Even`: `Even` is R-5's falsification
+                        // arm and is not a production partition.
+                        &CatchmentCut::Drawn(globe.rill_partition_seed()),
+                    ),
+                )
+            });
+        let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
         let mut regime = crate::grammar::derived_regime(self.seed, addr, expr, substrate, micro);
         if let Some(placed) = self.budget.regime_at(best.0) {
             let negations = Negations {
