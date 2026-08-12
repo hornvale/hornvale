@@ -2842,9 +2842,12 @@ mod tests {
             let _ = tx.send(result);
         });
 
-        let result = rx.recv_timeout(std::time::Duration::from_secs(10)).expect(
-            "cat_file_batch did not return within 10s -- this is the write-before-read \
-             pipe deadlock regressing, not a slow call",
+        let result = rx.recv_timeout(std::time::Duration::from_secs(120)).expect(
+            "cat_file_batch did not return within 120s -- the regression this test guards \
+             against is an INFINITE hang, so any generous finite bound is equally diagnostic. \
+             The bound is loose on purpose: wall-clock on a loaded box is not the signal, only \
+             non-termination is. Exceeding it indicates the write-before-read pipe deadlock has \
+             returned, not that the box was merely slow.",
         );
         let got = result.expect("batch");
         assert_eq!(

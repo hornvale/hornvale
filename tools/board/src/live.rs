@@ -1045,6 +1045,42 @@ mod tests {
     }
 
     #[test]
+    fn is_reapable_never_drops_a_notice_authored_by_main() {
+        // The reap-side mirror `a_notice_authored_by_main_is_live_because_
+        // main_is_never_superseded` never had: `liveness` saying Live is only
+        // half the guarantee B11 promises -- without this, a self-ancestry
+        // regression could leave the render correct while `reap` still
+        // deletes the post out from under it.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        commit_empty(&repo, "root");
+        let post = Post::new("notice", "main").with("note", json!("main is red"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            !is_reapable(&stored, &ctx),
+            "main's own notice must never be permanently dropped"
+        );
+    }
+
+    #[test]
+    fn is_reapable_never_drops_a_notice_from_a_newborn_branch() {
+        // Same mirror, for `a_notice_from_a_branch_with_no_commits_of_its_own_
+        // is_live`: a campaign's very first notice must survive `reap`, not
+        // merely render, for as long as its tip still equals main's.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        commit_empty(&repo, "root");
+        repo.git(&["checkout", "-b", "campaign/newborn"])
+            .expect("branch");
+        let post = Post::new("notice", "campaign/newborn").with("note", json!("starting"));
+        let stored = stored_notice(&post, 0);
+        let ctx = LiveContext::probe(&repo, std::slice::from_ref(&stored)).expect("probe");
+        assert!(
+            !is_reapable(&stored, &ctx),
+            "a newborn branch's first notice must never be permanently dropped"
+        );
+    }
+
+    #[test]
     fn a_notice_from_a_genuinely_merged_branch_still_stops_rendering() {
         // The arm that keeps the fix honest: D9's decay must still work, or this
         // is not a fix, it is a removal.

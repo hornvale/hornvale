@@ -217,3 +217,64 @@ the board itself, that reached a concurrent session working in the same
 vulnerable configuration before that session could be bitten by the same
 defect — the first time this campaign observed the board doing the job its
 own design papers name as the harder, more valuable half.
+
+## 7. Bound the WRITE, not the read
+
+The write-before-read pipe deadlock in §2's round 2 was found by a reviewer's
+own probe harness — but the harness itself was wrong in a way worth keeping
+separate from the bug it found. It wrapped a timeout around
+`communicate()`, on the reasonable-looking theory that `communicate()` is
+where a subprocess call blocks. It is not, for this call shape: the actual
+blocking operation was the batching helper's `stdin.write()` of the whole
+request, which happens *before* `communicate()` is ever reached when the
+input is large enough to fill the child's stdout pipe before the parent
+starts draining it. A timeout wrapped around a call the code never gets to
+cannot fire. The harness hung for 42 minutes before anyone noticed, not
+because the timeout was too generous, but because it was watching the wrong
+call.
+
+The generalizable lesson: when bounding a call that might deadlock,
+identify the specific blocking operation first, and put the bound on that
+operation, not on whichever wrapper call looks like "the point where we wait
+for the subprocess." A `write()` into a full pipe blocks exactly as
+unboundedly as a `read()` from an empty one, and a harness built to catch one
+direction of that class silently has no coverage of the other. This is the
+same shape as the deadlock it found — one blocking syscall no test bounded —
+one level up, in the tool meant to find exactly that shape of bug. Item 1 of
+the final review's fix wave applied the same principle to the regression
+test this incident produced: bound the call that can hang (`cat_file_batch`,
+run on its own thread with `recv_timeout`, not a bare join), not a wrapper
+around it.
+
+## 8. The convention shipped unexercised
+
+Two post kinds — `confirm` and `stale` — were designed and shipped this
+campaign as the corroboration mechanism for board techniques: a way to mark
+a technique as re-verified or as no longer trustworthy, surfaced only in
+`make board-digest` (root `CLAUDE.md`'s digest-only paragraph explains why
+the ambient render excludes them). Spec assumption 6 asked directly whether
+corroboration would get used, naming the null result as reportable on its
+own terms if it did not.
+
+It did not. At close, the board carries zero *genuine* `confirm` posts and
+zero *genuine* `stale` posts — including from this campaign's own sessions,
+which designed, implemented, and documented the mechanism without ever once
+using it on a technique they themselves posted. The qualifier is deliberate
+and checked, not hedging: `board digest`'s full-history tally currently
+counts one of each, but both are 2026-08-12 GIT_DIR-incident fixture
+contamination (`{"kind":"confirm","by":"main","post":"…"}` against a
+technique literally named `"some technique"`) already identified and dropped
+from the tip by that morning's cleanup commit, "board: drop 31 test-fixture
+posts from the tip" — `digest` still surfaces it because it walks full
+history by design (D13), not because anyone corroborated anything for real.
+Net genuine usage: zero. That is the honest status of B10: a
+convention that compiles, is tested, and is documented, sitting completely
+unexercised in the one place — real campaign use — that would show whether
+the design solves the problem it was built for. Shipping the mechanism was
+not wasted work; the assumption was preregistered specifically so a null
+result would be legible as a finding rather than quietly buried by success
+framing. The standing question it leaves open is not "does the code work" —
+it does — but whether corroboration needs a nudge (a `make board-post`
+convenience, a render hint) to get its first real use, or whether nobody
+independently re-verifies technique posts often enough for the mechanism to
+matter regardless of friction.

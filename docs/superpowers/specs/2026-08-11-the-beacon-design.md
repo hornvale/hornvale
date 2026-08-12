@@ -644,7 +644,7 @@ cursor's `git_path` helper does *not* give.
 
 Failure is always non-fatal: the local append already succeeded, so an
 unreachable `origin` degrades to exactly the single-box behaviour that ships
-today. Invocation points, none of them a render path:
+today. Invocation points as designed, none of them a render path:
 
 - after `board post`, best-effort — a warning travels at the moment its value is
   highest, which is 0118's stated reason for the whole design ("a post's whole
@@ -652,6 +652,26 @@ today. Invocation points, none of them a render path:
 - `make board-sync`, explicitly;
 - inside `make preflight`, the pre-merge moment a peer's `hold-off` matters most;
 - inside the remote-dispatch paths that already cross the wire.
+
+**What actually shipped is two of the four, and the missing one carries the
+whole rationale.** `make board-sync` shipped as designed, and `preflight-merge.sh:122`
+calls `bash scripts/board-sync.sh || true` before the merge check. The
+**first** bullet — sync-after-`board post` — did not ship: `tools/board/src/main.rs`'s
+`post` command (around line 19) appends and returns; nothing in it calls
+`sync`. The fourth did not ship either: neither `scripts/heavy-run.sh` nor
+`scripts/census-run.sh` contains any board call, so a remote-dispatched job
+never syncs on its own.
+
+The consequence is not cosmetic, because the bullet that did not ship is the
+one whose stated reason is "a post's whole value is that it arrives before
+the merge it warns about." Without it, a `hold-off` does not cross hosts
+until a human runs `make board-sync` or `make preflight` — and `preflight`
+is a **pre-merge** gate, so the cross-host warning arrives at the moment you
+are about to merge, not the moment you started the work it would have
+changed. On lefford specifically, which runs neither path in its scripted
+routines (no interactive `board post`, and neither heavy-run nor census-run
+syncs), a warning posted there may never travel to another host at all
+unless someone runs `make board-sync` by hand.
 
 ### 4c. Reads
 
@@ -767,9 +787,21 @@ once, and that stays exactly once.
 
    Two things this is *not*. It is not F14's unresolved-author term: measured at
    the close, **U = 0** — every notice author resolves, so nothing pays the
-   uncached two-`rev-parse` penalty. And it is not an operational failure — the
-   seam's real ceiling is the hook's **2 s timeout**, which 1.29–1.51 s clears
-   comfortably. What is missed is this spec's own self-imposed target, which was
+   uncached two-`rev-parse` penalty. And the timeout it clears is not the
+   pre-commit hook's — the pre-commit hook carries no timeout at all. The real
+   ceiling is `scripts/board-render.sh`'s **`SessionStart` timeout, 2 s**, and
+   it does not clear it comfortably: the 1.29–1.51 s figures above were taken
+   on a quiet box, and CPU time (~0.92 s) is the honest measure of the render's
+   own work, not the ceiling that judges it. Under the parallel load this
+   project treats as normal, wall-clock is what the timeout judges, and
+   wall-clock is worse: measured against the real 40-post union at
+   loadavg 24–30, `board render` took **2.06 / 2.10 / 2.19 / 2.58 / 2.79 /
+   3.49 s wall** — every run over the 2 s ceiling, so the render is *killed*
+   and the session gets no board, exactly when 2–3 campaigns are running,
+   which is when the board has something to say. The falsification recorded
+   here is therefore worse than first stated: not merely a miss of a
+   self-imposed 1 s target, but a miss of the operational ceiling under
+   ordinary conditions. What is missed is this spec's own self-imposed target, which was
    written as a *budget* rather than derived from the cross-host call count.
 
    The honest reading: **≤ 1 s was the wrong number, set before the union and

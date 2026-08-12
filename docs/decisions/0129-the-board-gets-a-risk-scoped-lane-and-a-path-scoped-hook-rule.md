@@ -78,7 +78,7 @@ the same campaign invites wiring them together.
   commit keeps exactly the coverage it had before — the hook rule can only
   add a check on a narrower path, never remove one from a broader one.
 - **The hook rule is not a running gate.** It fires only on a commit that
-  happens to be staged; nothing runs the board's 189 tests automatically on
+  happens to be staged; nothing runs the board's 194 tests automatically on
   a mixed commit, and there has been no CI at all since decision 0125. The
   only defense against a board regression riding in on a workspace-touching
   commit is a human running `cargo test --manifest-path tools/board/

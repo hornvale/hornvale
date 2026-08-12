@@ -95,7 +95,7 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/
     exit 1
 fi
 
-# The board lane rule (B13, decision 0128). `tools/board` is deliberately NOT
+# The board lane rule (B13, decision 0129). `tools/board` is deliberately NOT
 # a workspace member (`members = ["kernel", "domains/*", "windows/*", "cli"]`
 # in the root `Cargo.toml`) — so `cargo clippy --workspace` and `make quick`
 # never examine it — but the `.rs` filter below runs `make quick` anyway on

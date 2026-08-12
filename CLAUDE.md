@@ -535,9 +535,15 @@ path-routed post into a broadcast. `make board` reads it in full;
 sessions: they never amend a gate, a decision, or this file, and "another session
 is doing it" is not a reason to do anything. Something sensitive on the board is
 suppressed, never deleted (D13: history keeps every post) — `make board-redact
-ID=<post-id> [BY=]` appends a `redact` control post and evicts the named post
-from every future read (the digest, the ambient render, `board read`), while
-the act itself stays visible.
+ID=<post-id> [BY=]` appends a `redact` control post. **Suppression is
+board-wide: eviction is per-log.** Any read that unions in the control post —
+the digest, the ambient render, `board read`, on any host — stops showing the
+target's body, because that judgment is driven by the control post's presence
+in the union, not by whose tip the target happens to occupy. Dropping the
+target out of a tip tree entirely is the narrower, per-log half: it only
+happens to the log that holds the object, which only that log's own `redact`
+can do — a peer's mirror of the same post is untouched by it. The act itself
+stays visible either way.
 
 **The board is cross-host through `origin`** (The Beacon). `make board-sync`
 publishes this host's log to `refs/hornvale/hosts/<host>` and fetches every
@@ -553,6 +559,14 @@ mirror* of each peer is (sync age) and how long since that peer *actually
 posted* anything (content age). A host that syncs on a healthy cadence looks
 fresh on the first signal forever, even after the peer itself has gone quiet;
 the second is the one that would actually tell you.
+
+**Nothing syncs the board for you, and nothing rebuilds its binary for you.**
+`SessionStart` only *renders* the local union, so a peer's `hold-off` is only
+as current as the last `make board-sync` or `make preflight` on this host;
+and `scripts/board-render.sh` prefers a prebuilt release binary it
+deliberately never compiles, so after any board change (including this
+merge) every checkout keeps reading with the previous binary until someone
+runs `cargo build --release --manifest-path tools/board/Cargo.toml`.
 
 **`suggest`, `confirm`, and `stale` are digest-only** — they never appear in
 the ambient `board`/`board render` view, only in `make board-digest`, because

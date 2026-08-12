@@ -122,8 +122,17 @@ roughly four more calls on top. It is explicitly **not** the term the
 predecessor campaign's F14 finding aimed at — measured directly with a
 throwaway invocation-logging shim, the unresolved-author term came in at
 **U = 0** at close, every notice author resolving cleanly. And it is not an
-operational failure either: the seam's real ceiling is the pre-commit hook's
-2 s timeout, which 1.29–1.51 s clears with room. What missed is the spec's own
+operational failure in the sense of a broken command: the seam's real ceiling
+is `scripts/board-render.sh`'s `SessionStart` timeout, 2 s — the pre-commit
+hook itself carries no timeout at all. And that ceiling is not cleared with
+room the way the quiet-box figures suggest: measured at HEAD against the real
+40-post union at loadavg 24–30, `board render` took **2.06 / 2.10 / 2.19 /
+2.58 / 2.79 / 3.49 s wall**, against roughly **0.92 s CPU** every time — the
+2 s timeout fires and the session gets no board, exactly when 2–3 campaigns
+are running, which is when the board has something to say. The 1.29–1.51 s
+figures above are real, but they are CPU-bound-on-a-quiet-box numbers; under
+the parallel load this project treats as normal, wall-clock is what the
+timeout judges, and wall-clock is the one that misses. What missed is the spec's own
 self-imposed number, written before the shape of the cost that would end up
 dominating was known. The honest read, stated in the spec itself rather than
 adjusted after the fact: ≤ 1 s was the wrong target, set before the union and
