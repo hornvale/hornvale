@@ -205,6 +205,35 @@ fn line(stored: &StoredPost, max_chars: usize) -> String {
     prefix + &truncated + "…"
 }
 
+/// A short header naming each known peer's sync age, one line per peer,
+/// sorted by hostname.
+///
+/// B6, and shipped WITH the sync (not after it) for the reason recorded
+/// against [`crate::sync::peer_ages`]: Task 6 established that a foreign
+/// post cannot decay locally, and a `notice` — the kind carrying
+/// `polarity=hold-off` — carries no `ttl_s` at all, so for a frozen or
+/// retired peer, sync age is the only remaining signal that its content
+/// might be stale. A peer that has never synced says so explicitly (0119:
+/// an instrument's silence must never read as "nothing is happening over
+/// there") rather than being omitted.
+///
+/// Deliberately **not** framed inside [`DELIMITER_OPEN`]/[`DELIMITER_CLOSE`]:
+/// this is computed from this repository's own ref timestamps, not content
+/// written by another session, so D7b's untrusted-data framing (which
+/// exists for *that*) does not apply here. Empty when there are no known
+/// peers at all, so an ordinary single-box repository costs nothing extra
+/// to render.
+pub fn peer_status(ages: &[(String, Option<u64>)]) -> String {
+    let mut out = String::new();
+    for (host, age) in ages {
+        match age {
+            Some(secs) => out.push_str(&format!("peer {host}: synced {secs}s ago\n")),
+            None => out.push_str(&format!("peer {host}: never synced\n")),
+        }
+    }
+    out
+}
+
 /// Format `posts` — already chosen and already capped by a caller — into
 /// the text a reading session sees.
 ///
@@ -698,6 +727,25 @@ mod tests {
             line(&stored, usize::MAX),
             "  [claim] campaign/live (lefford, unverifiable here) — host=lefford pid=4242 ttl_s=900"
         );
+    }
+
+    #[test]
+    fn peer_status_names_a_never_synced_peer_explicitly() {
+        // 0119: a peer with no recorded sync must say so, not vanish.
+        let ages = vec![("lefford".to_string(), None)];
+        assert_eq!(peer_status(&ages), "peer lefford: never synced\n");
+    }
+
+    #[test]
+    fn peer_status_reports_a_synced_peers_age() {
+        let ages = vec![("lefford".to_string(), Some(42))];
+        assert_eq!(peer_status(&ages), "peer lefford: synced 42s ago\n");
+    }
+
+    #[test]
+    fn peer_status_is_empty_with_no_known_peers() {
+        // A single-box repository must cost nothing extra to render.
+        assert_eq!(peer_status(&[]), "");
     }
 
     #[test]

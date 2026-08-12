@@ -111,6 +111,16 @@ echo "    preflight after every time main moves"
 echo "  - if any subagent was killed mid-run, sweep its worktree for orphaned"
 echo "    scaffolding before trusting the gate"
 
+# The Beacon: publish this host's board and fetch the peers' BEFORE the
+# hold-off read below, so a peer's notice reaches this preflight instead of
+# sitting unfetched in refs/hornvale/hosts/* on origin. Non-fatal (B6: a
+# push/fetch failure is best-effort by design and must never change this
+# script's verdict, any more than the read below does) but NOT silenced —
+# a rejected push here is worth a human's attention (0118 part 3's hostname-
+# collision hazard), so its report stays visible rather than swallowed.
+section "The Beacon: syncing with origin (best-effort, never changes the verdict)"
+bash scripts/board-sync.sh || true
+
 # The Cairn: other live branches' HOLD-OFF notices. Advisory only — this never
 # changes the verdict (D7), because the board has no standing to block a merge.
 board_bin=""

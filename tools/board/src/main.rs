@@ -4,8 +4,9 @@ use board::git::Repo;
 use board::live::LiveContext;
 use board::post::Post;
 use board::relevance::{Cursor, Displayed, changed_paths, unseen};
-use board::render::{RenderOptions, live_posts, render};
+use board::render::{RenderOptions, live_posts, peer_status, render};
 use board::store::{Board, ReapPlan};
+use board::sync::{peer_ages, sync};
 use std::collections::BTreeSet;
 
 fn main() {
@@ -79,11 +80,17 @@ fn main() {
                 }
             };
             let live = live_posts(&posts, &ctx);
+            // B6: ships WITH the render, not after it -- a `notice` carries
+            // no `ttl_s`, so once its authoring host goes quiet, sync age is
+            // the only local signal left that its content might be stale.
+            // Same wall clock the liveness probe already read, so this
+            // never disagrees with the render it accompanies about "now".
+            let peer_header = peer_status(&peer_ages(&repo, ctx.now_unix));
 
             if cmd == "read" {
                 // `full()` has no real cap (its post budget is effectively
                 // unbounded), so nothing is ever elided here.
-                print!("{}", render(&live, 0, &RenderOptions::full()));
+                print!("{peer_header}{}", render(&live, 0, &RenderOptions::full()));
                 return; // an explicit full read must not advance the cursor
             }
 
@@ -106,7 +113,7 @@ fn main() {
                 let all: BTreeSet<String> = live.iter().map(|s| s.id.clone()).collect();
                 let displayed = Displayed::filter(&live, &all, &changed);
                 let (shown, elided) = displayed.cap(opts.post_budget());
-                print!("{}", render(shown.posts(), elided, &opts));
+                print!("{peer_header}{}", render(shown.posts(), elided, &opts));
                 return;
             };
             let fresh = match unseen(&board, &cursor) {
@@ -124,7 +131,7 @@ fn main() {
             let changed = changed_paths(&repo).unwrap_or_default();
             let displayed = Displayed::filter(&live, &fresh, &changed);
             let (shown, elided) = displayed.cap(opts.post_budget());
-            print!("{}", render(shown.posts(), elided, &opts));
+            print!("{peer_header}{}", render(shown.posts(), elided, &opts));
             if let Err(e) = cursor.record(&board, &shown) {
                 eprintln!("board: could not record the read cursor: {e}");
             }
@@ -205,8 +212,34 @@ fn main() {
                 }
             }
         }
+        // board sync [remote] — The Beacon: publish this host's log to
+        // `remote` (default `origin`), then fetch every peer's.
+        //
+        // NEVER FAILS THE PROCESS (B6): the local append this session cares
+        // about has already succeeded by the time sync ever runs, so an
+        // unreachable remote degrades to exactly the single-box behaviour
+        // that shipped before this campaign. Both halves are reported on
+        // whatever channel fits their outcome; the exit code stays 0
+        // either way, or `make board-sync` would look broken merely
+        // because the network is down.
+        Some("sync") => {
+            let remote = args.get(2).map(String::as_str).unwrap_or("origin");
+            let report = sync(&repo, remote);
+            match report.pushed {
+                Ok(()) => println!("board: pushed to {remote} (refs/hornvale/hosts/<host>)"),
+                Err(e) => eprintln!("board: push to {remote} failed: {e}"),
+            }
+            match report.fetched {
+                Ok(peers) => println!(
+                    "board: fetched from {remote} ({} peer mirror{})",
+                    peers.len(),
+                    if peers.len() == 1 { "" } else { "s" }
+                ),
+                Err(e) => eprintln!("board: fetch from {remote} failed: {e}"),
+            }
+        }
         _ => {
-            eprintln!("usage: board <post|read|render|digest|retract|reap>");
+            eprintln!("usage: board <post|read|render|digest|retract|reap|sync>");
             std::process::exit(2);
         }
     }

@@ -23,7 +23,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -198,6 +198,9 @@ board: ## The Cairn: read the board (full, unfiltered)
 
 board-digest: ## The Cairn: the human digest over the board's history (default 14 days)
 	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- digest $(DAYS)
+
+board-sync: ## The Beacon: publish this host's board and fetch the peers' (B2)
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- sync
 
 # BY defaults to the current branch: attribution is mandatory (decision 0118) and
 # a default that is always right beats one a session has to remember.

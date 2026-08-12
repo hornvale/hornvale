@@ -197,16 +197,32 @@ impl LiveContext {
 
         let mut live_pids = BTreeSet::new();
         for s in posts.iter().filter(|s| s.post.kind == "claim") {
-            // B4, symmetric with the branch-resolution skip below: a foreign
-            // claim's `host` FIELD is self-reported and could collide with
-            // this host's OWN short name (duplicate short hostnames are not
-            // hypothetical in this repo -- see CLAUDE.md's `MacBookPro` vs
-            // `ambrose` timing-baseline fork). Without this, such a
-            // collision would spawn `ps` for a pid this host never claimed,
-            // and could admit that pid into `live_pids`, where it might then
-            // coincidentally match a genuinely dead LOCAL claim's pid and
-            // read it as live. `Origin` cannot collide the way a self-
-            // reported field can, so it is checked first.
+            // B4, symmetric with the branch-resolution skip below: `Origin`
+            // cannot collide the way a self-reported field can (duplicate
+            // short hostnames are not hypothetical in this repo -- see
+            // CLAUDE.md's `MacBookPro` vs `ambrose` timing-baseline fork),
+            // so it is checked first rather than the claim's own `host`
+            // field.
+            //
+            // What this skip actually buys, measured rather than assumed
+            // (Task 7's review carry from Task 6): it saves a `ps` spawn per
+            // peer claim per render, and it is defence-in-depth against
+            // `liveness`'s own ordering ever changing. It is NOT closing a
+            // reachable hazard today -- `live_pids` is read only inside
+            // `liveness`'s `"claim"` arm, and only AFTER that arm's own
+            // `Origin::Peer(_) => Live` short-circuit, gated on
+            // `host == ctx.host && pid == P`: the same two conditions this
+            // insert requires. So a peer claim that collides on hostname can
+            // only ever admit a pid that is genuinely alive on THIS host --
+            // and a local claim naming that same pid would be judged live on
+            // its own probe regardless of whether this set contains it. An
+            // earlier version of this comment claimed the skip prevented a
+            // dead local claim from being read as live via a colliding
+            // peer's pid; that path is not reachable, and this rewrite says
+            // what the skip demonstrably does instead (see
+            // `a_hostname_colliding_peer_claims_pid_cannot_rescue_a_dead_local_claim`
+            // below, which pins the guarantee rather than merely asserting it
+            // in prose).
             if matches!(s.origin, crate::store::Origin::Peer(_)) {
                 continue;
             }
@@ -1218,6 +1234,50 @@ mod tests {
             "the genuinely unmerged branch must render as live despite the \
              same-named merged tag: {:?}",
             ctx.live_branches
+        );
+    }
+
+    // --- Task 7 review carry #2 (optional, pinned because it is cheap) ---
+
+    #[test]
+    fn a_hostname_colliding_peer_claims_pid_cannot_rescue_a_dead_local_claim() {
+        // Pins the guarantee the peer-skip in `probe`'s pid-collection loop
+        // is defence-in-depth FOR, not a currently reachable hazard (see the
+        // skip's own updated comment, above). Even with a genuinely dead
+        // pid shared between a LOCAL claim and a foreign claim self-
+        // reporting the SAME host name -- the exact collision the comment
+        // names -- the local claim must still expire: `live_pids` is only
+        // ever consulted inside `liveness`'s `"claim"` arm, and only AFTER
+        // that arm's own `Origin::Peer(_) => Live` short-circuit, so a peer
+        // claim's pid can never be read back out for a LOCAL verdict,
+        // admitted into this set or not. This holds with the skip present
+        // (as exercised here) and would hold identically if the skip in
+        // `probe` were ever reverted -- the whole suite staying green on
+        // that revert is the hazard-free finding this test makes visible
+        // rather than merely asserted in a comment.
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+        let dead_pid = 999_999u32; // never a real pid on this machine
+        let local = stored(
+            Post::new("claim", "campaign/live")
+                .with("host", json!("ambrose"))
+                .with("pid", json!(dead_pid))
+                .with("ttl_s", json!(900)),
+            "local",
+            0,
+        );
+        let mut peer = local.clone();
+        peer.id = "peer".to_string();
+        peer.origin = crate::store::Origin::Peer("ambrose".to_string()); // colliding host name
+        let ctx = LiveContext::probe(&repo, &[local.clone(), peer]).expect("probe");
+        assert!(
+            !ctx.live_pids.contains(&dead_pid),
+            "a dead pid must not enter live_pids no matter which post named it: {:?}",
+            ctx.live_pids
+        );
+        assert!(
+            matches!(liveness(&local, &ctx), Liveness::Expired(_)),
+            "the local claim naming a dead pid must still expire"
         );
     }
 }

@@ -147,6 +147,30 @@ impl Repo {
             name,
         ])?))
     }
+
+    /// Resolve a path under the repository's **common** dir — shared by
+    /// every worktree, unlike [`git_path`](Self::git_path)'s per-worktree
+    /// answer. A `git fetch` serves every worktree at once (there is one
+    /// remote-tracking state, not one per worktree), so anything that
+    /// records "when did we last sync" belongs here: verified empirically
+    /// that from inside a linked worktree, `--git-path` returns
+    /// `/…/.git/worktrees/<name>` while `--git-common-dir` returns the
+    /// shared `/…/.git` — recording sync times under the former would report
+    /// nine different ages for one fetch, one per worktree.
+    ///
+    /// Always absolute, for the same reason `git_path` is: a relative path
+    /// resolves against the *process* cwd on the `std::fs` calls a caller
+    /// makes with it, not the repo root.
+    pub fn git_common_path(&self, name: &str) -> Result<PathBuf, BoardError> {
+        Ok(
+            PathBuf::from(self.git(&[
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-common-dir",
+            ])?)
+            .join(name),
+        )
+    }
 }
 
 /// Hermetic test scaffolding: a throwaway repository per test.
