@@ -625,13 +625,32 @@ unnecessary path is harmless — a *missing* one is not.)
 ## PART A OUTCOME — recorded 2026-08-11, because the campaign parks here
 
 Tasks 1 and 2 are **complete and reviewed** (commits `9831539c..92e6b53a`;
-suite 3377/3377, artifacts clean, preflight GO). **Part B is HELD** for
-`campaign/the-ell`, which retypes `Fact.day` and moves the history bake from
-years to days — the units `founder_handle` keys on. Landing Part B first would
-rename every founder handle and let The Ell rename them all again.
+suite 3377/3377, artifacts clean, preflight GO).
+
+**Part B was held for `campaign/the-ell`, and The Ell then shipped it.** The
+hold was correct in its reasoning — The Ell retypes `Fact.day` (decision 0126,
+superseding 0014) and moves the history bake from years to days, the units
+`founder_handle` keys on, so landing Part B first would have renamed every
+founder handle and let The Ell rename them all again. What happened is that
+The Ell did the widening itself rather than handing the tree back: decision
+0127 (identity keys and discrimination keys are different kinds) names the
+split, `MEM-founder-handle-epoch` is `shipped`, and Tasks 3–5 below are
+superseded by it — the controller settles scope at the merge stop, so they are
+left standing here rather than deleted.
+
+It honoured the constraint this campaign's spec made non-negotiable. **The drop
+backstop stays** (`windows/worldgen/src/person_promote.rs`, the
+"Indistinguishable occupations are dropped, not fatal" section): The Ell's own
+plan called for restoring the fatal assert, and building the residual seeds
+showed what that would cost, so the drop is retained as the honest handling of
+a residual rather than removed as the cost of a bad key. The census range 0–999
+is now clean — **0 worlds collide and 0 founders are dropped**, against 2 and 2
+before — and the residual over 0–2999 is exactly {2634, 2898}, one founder
+each, where the colliding pair's two *parents* are themselves twins so the
+ancestry hop folds identically.
 
 This section exists because the SDD scratch is git-ignored and dies with the
-worktree, and the pause is open-ended. Read it before starting Task 3 or Task 6.
+worktree, and the pause was open-ended. Read it before starting Task 6.
 
 ### What Part A established
 
@@ -674,6 +693,60 @@ worktree, and the pause is open-ended. Read it before starting Task 3 or Task 6.
   the **level** preserves ranking* (false). **The level is load-bearing in all
   four consumers, with no exemption.** The rule generalises: **when a quantity is
   called gauge, name the transformation it is gauge under.**
+
+### Re-verified after The Ell (2026-08-12) — every figure above still holds
+
+Part A's numbers live in **doc comments, not assertions**, so the guard passing
+after the absorption said nothing about whether the figures it documents still
+reproduce. They were therefore re-measured rather than restated, with an
+independent probe that rebuilt every arm from scratch
+(`windows/worldgen/tests/zz_muster_reverify.rs`, nine tests, written and
+deleted; ~180 world builds at `BuildDepth::Terrain`, 219 s).
+
+| figure | recorded | re-measured | verdict |
+|---|---|---|---|
+| store census | affinity 7 of 8, realm 1 of 3 | 7 of 8, 1 of 3 | **held** |
+| BLIND | 2.3734235460211663 | identical | **held** |
+| REALM_ONLY | 2.3678005458279160 | identical | **held** |
+| AFFINITY_ONLY | 2.2024420744011466 (−0.170981, 7.2%) | identical | **held** |
+| PEOPLED / shipped | 2.1127601185602627 (−0.260663, 11.0%; 32.2% interaction) | identical | **held** |
+| FULL biosphere | 1.5063123260334543, 2 of 5 seeds below the floor (1.3784, 1.3483) | identical, per-seed array included | **held** |
+| A2's mechanism | both arms derive `[1.5, 13.5]` because the ceiling reads `psyche.len()` | `psyche.len()` is 18 in both arms | **held** |
+| level-only null | 2.3678005458279161 / 2.1127601185602627 / 2.0817935086273343 / 2.0691689632978352 / 2.9734723549133930 | identical | **held** |
+| fired arrangement | 2.5789073591583951 / 1.5473196487276366 / 1.4155085834088321 | identical | **held** |
+| repaired arrangement | 2.7441247810223062 / 1.5222025802564441 | identical | **held** |
+| fully distinct | 2.7514058715031107 / 1.8150142892666530, and 1.6876 / 1.7626 / 1.6945 out to `d=2.20` | identical | **held** |
+| the assignment table | 11 rows, 9 biomes, `ice` and `tundra` collisions | reproduced kind-for-kind | **held** |
+| common-shape sweep | all seven points, `d=0.00` … `level 0` = 5.4146996869217450 | identical | **held** |
+| clamp onsets | common-shape `d ≈ 1.45` (kobold) | kobold binds at `d = 1.445` | **held** |
+| clamped vs unclamped | agree to the last digit at `d = 1.60` and `d = 1.70` on the fired arm | identical, both arms | **held** |
+| the ceiling argument | 177 336 claimed cells, 6.4351 kinds per claimed cell | identical | **held** |
+| the Critical correction | seed 42, `d=1.00 → 1.40`: 7 of 7 reorder, 11 of 11 bit-identical, gnoll argmax 30312 → 2276 | identical, including every per-kind top-50 overlap | **held** |
+
+Two entries need their own sentence rather than a row.
+
+- **The 61.2% carrier density share holds under one averaging convention and
+  not the other.** The mean of the per-claimed-cell carrier shares is **0.6118**;
+  the pooled ratio Σ carrier density / Σ total density over the same cells is
+  **0.1435**. The recorded figure is the former. This is precisely the deferred
+  Minor the Task-2 review raised ("which average the 61.2% is") — it is now
+  answered in this ledger and **deliberately not closed in the doc**.
+- **The shared-world attribution figures (1.414 / 1.738 / 2.436) are reproduced
+  to the precision the doc itself declares, and no further.** Re-measured on a
+  shared world built at the fired `d = 1.00` set: 1.4155 / 1.7375 / 2.4370,
+  interaction 15.5% against the recorded ≈15%. The original probe's base world
+  is not recorded, and the doc already says to read the third digit as
+  approximate — so this is construction-dependence, not drift, and the numbers
+  are left as they stand.
+
+**Why nothing moved, stated so it says which future change *would* move it.**
+The guard builds only to `BuildDepth::Terrain` and reads `byproducts.strife`.
+The quantities The Ell retyped are a fact's day — committed at
+`WorldTime::GENESIS` on this rung — and a founding's and an ending's year,
+authored by the history bake at `BuildDepth::Settlements` and above, strictly
+downstream of every figure here. A units change reaches these tables only
+through terrain, climate, the affinity/realm stores or the packer; The Ell
+touched none of the four. That sentence is now in the guard's module doc.
 
 ### Owed to Task 6, and nothing mechanical will catch these
 

@@ -350,6 +350,29 @@
 //! published figure for this bound does not state which instrument produced it.
 //! Hence the roster in the failure message.
 //!
+//! **Re-verified after The Ell (2026-08-12): every figure above still
+//! reproduces to the last digit.** The Ell retyped `Fact.day` as an enforcing
+//! [`hornvale_kernel::WorldTime`] (decision 0126, superseding 0014) and moved
+//! the history bake from years to days. That is an epoch, and it is the obvious
+//! candidate to have moved these numbers, so they were re-measured rather than
+//! restated: an independent probe on the post-absorption tree rebuilt every arm
+//! recorded above — the four-arm store decomposition, the biosphere arm and its
+//! per-seed array, the level-only null, all three full-reach arrangements, the
+//! common-shape sweep, the clamp onsets, the clamped-versus-unclamped pair, the
+//! 177 336 claimed cells at 6.4351 kinds each, and seed 42's 7-of-7 / 11-of-11
+//! ranking split — and every one is **bit-identical** to what is written here.
+//!
+//! The reason is structural rather than lucky, and it is worth stating because
+//! it says which future changes *would* reach these tables. This guard builds
+//! only to [`BuildDepth::Terrain`] and reads `byproducts.strife`. The
+//! quantities The Ell retyped are a fact's day — committed at
+//! `WorldTime::GENESIS` on this rung, so a retyping that preserves day zero
+//! preserves the world — and a founding's and an ending's year, which are
+//! authored by the history bake at [`BuildDepth::Settlements`] and above,
+//! strictly downstream of everything recorded here. A units change lands on
+//! these numbers only if it reaches terrain, climate, the affinity/realm stores
+//! or the packer; The Ell reached none of the four.
+//!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
 //! carrying capacities, β only moves claimed-cell diversity across a narrow

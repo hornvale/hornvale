@@ -2688,7 +2688,11 @@ impl Component for BiomeAffinity {}
 ///    reach is necessary and not sufficient: whether the crossing happens
 ///    also depends on which kind holds which ground, and the test file's
 ///    record gives three arrangements that move the mean by −0.94 to −1.22
-///    of which only one crosses. Cite it as an existence proof.
+///    of which only one crosses. Cite it as an existence proof. (Re-measured
+///    after The Ell, 2026-08-12: every figure in that record — the 2.5789 →
+///    1.4155 pair and all three arrangements among them — reproduces
+///    bit-identically. Retyping `Fact.day` and moving the bake from years to
+///    days does not reach this path; the test file's module doc says why.)
 /// 4. **`coexist::pack`, the cell's capacity** — that same cell's total is a
 ///    plain **sum** of the present kinds' `K`, so the level moves the total,
 ///    and with it the wilderness fraction and the emigration pressure derived
