@@ -266,12 +266,34 @@ stuck alarm in another organ.
 worth knowing why the argument changed.** B4 means a foreign post cannot decay
 locally — the authoring host decides, and `reap` is single-ref. For a `notice`,
 which carries no `ttl_s`, that means *nothing local bounds its lifetime at all*
-(§10 question 2). So for a frozen or retired peer, **sync-age is the only
-remaining signal that its content is stale.** That makes it load-bearing rather
-than informative, and it must ship with the sync, not after it.
+(§10 question 2). So a reader needs some signal that a peer's content is stale,
+and it must ship with the sync rather than after it.
 
-It is also, by itself, **not enough** — a stale-but-rendering hold-off still
-competes for the ambient budget forever. Sync-age is the signal; the bound is
+**Two different ages, and the first draft of this paragraph confused them.** As
+originally amended, this section claimed "sync-age is the only remaining signal
+that its content is stale." That is wrong, and Task 7's review caught it:
+
+- **Mirror age** — how long since *this host* last fetched. Reports that our copy
+  may be behind. On a host that syncs regularly it reads a few seconds forever,
+  **including when the peer has been frozen for a month**, so in exactly the
+  retired-peer scenario this section argues from, it is flat.
+- **Peer content age** — how long since the peer itself last posted, read from
+  its mirror ref's own last commit. *This* is the signal the argument needs.
+
+Both are reported. The distinction matters because they fail in opposite
+directions: a stale mirror with a busy peer means *we* are out of touch, while a
+fresh mirror with a silent peer means *they* are gone. Only the second is the
+retired-box hazard.
+
+One implementation constraint worth recording, because it looks like an
+arbitrary choice: peer content age is read per-ref (`git log -1 --format=%ct`),
+not through a dereferencing `for-each-ref` format. `read_refs` deliberately uses
+`%(refname)`, because a dereferencing format makes the *whole listing* exit 128
+on a single dangling mirror — which would blank the ambient render for that host.
+A per-ref call fails only the ref it names, which the read path already tolerates.
+
+Even with both ages, this is **not a bound** — a stale-but-rendering hold-off
+still competes for the ambient budget forever. These are signals; the bound is
 §10 question 2's obligation, which is dated rather than open.
 
 **B7 — Fixing the read cost is a prerequisite task, not a followup, and F14
@@ -886,6 +908,21 @@ The current cost is not merely high, it is spent in the wrong place.
    an explicit retire-a-host operation; or a TTL convention for `notice` — but
    the answer is not in scope here, and leaving it unanswered while adding hosts
    is what would make it expensive.
+
+   **Two adjacent problems belong to the same obligation**, both surfaced by Task
+   7's review and both keyed on the same weakness: the self-mirror exclusion, and
+   every other per-host identity here, is keyed on `hostname -s`.
+
+   - **Renaming a host** leaves `peers/<oldname>` behind as a phantom peer — and,
+     the worse half, re-admits it to the union read, which is precisely the
+     reaped-post resurrection B1's own-mirror exclusion exists to prevent. This is
+     not hypothetical: this repository has already lived through one rename
+     (`MacBookPro` → `ambrose`, recorded in CLAUDE.md's timing-baseline note).
+   - **Retiring a host** is the same operation seen from the other end.
+
+   So "retire a host" and "rename a host" are one feature, not two, and B3's
+   hostname-collision rejection is the third face of it. Whatever answers this
+   should answer all three.
 3. **Does the census/heavy claim move onto the board now?** F3 deferred it
    pending the board proving reliable; cross-host claims are the capability that
    made it interesting, and B5's unverifiable-here rendering is the honest form
