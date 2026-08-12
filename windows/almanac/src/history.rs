@@ -321,6 +321,9 @@ fn number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
 /// is the one the module docs already record for the decoders: this window
 /// cannot depend on that one and the constant is the kernel's, so what is
 /// shared is `Years::DAYS_PER_YEAR` rather than the function.
+///
+/// Not registered with `tools/seam-guard`: it shares a name with worldgen's
+/// helper, which the tool cannot disambiguate. See that function's doc.
 fn bake_year_of_ledger_day(day: f64) -> f64 {
     day / hornvale_kernel::Years::DAYS_PER_YEAR
 }
@@ -666,20 +669,39 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// through the same quantizing boundary, so they compare exactly, and bare
 /// float equality is banned.
 ///
-/// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
-///             expect(survives: only the gallery drift check pins this, and
-///             `make gate` does not run it; the almanac assertion that would
-///             close it is in flight elsewhere)
+/// seam-guard: returns(Option::<EntityId>::None) scope(hornvale)
 ///
 /// This function decides whether a settlement's ending reads as conquest or
-/// as climate migration. Neutralised, all of `hornvale-almanac`'s tests stay
-/// green while rendered lines flip from conquest to climate-migration — the
-/// finding `tools/seam-guard` was built to make, and the reason the
-/// declaration above carries a reason rather than silencing it.
+/// as climate migration. Neutralised, rendered lines flip from conquest to
+/// climate-migration — the finding `tools/seam-guard` was built to make.
 ///
-/// **When the guard lands, delete the `expect(survives: …)` clause.** The run
+/// **The declaration used to carry `expect(survives: …)` and `scope(
+/// hornvale-almanac)`, and the second is why it carried the first.** The
+/// assertions that close this seam are
+/// `hornvale::history_render::a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere`
+/// and `…::a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure`
+/// — one crate *up*, and both in `make gate` all along. Scoped to
+/// `hornvale-almanac` the probe could not see them, reported the seam as an
+/// accepted survivor, and the acknowledgement then outlived the gap it
+/// described: its reason said the closing assertion was "in flight
+/// elsewhere", naming a campaign (The Ell) that landed without adding one,
+/// because one was never needed.
+///
+/// Two things generalise from that, and they are why this paragraph is long.
+/// **A scope is a claim about where a guard could live**, so a scope that is
+/// too narrow manufactures a false survivor exactly as a missing test would
+/// — and `STALE-DECL` cannot fire while the scope hides the guard, so the
+/// mechanism designed to expire this declaration was disabled by the same
+/// field that made it wrong. **And a human review made the identical
+/// mistake independently**: The Ell's whole-branch reviewer mutated this
+/// function, ran `hornvale-almanac`, saw 78 green tests and reported the
+/// seam unguarded. Crate-scoped mutation is blind in one specific way —
+/// upward. Prefer the widest scope whose runtime you can afford.
+///
+/// **When a guard lands, delete the `expect(survives: …)` clause.** The run
 /// goes red on a declared seam that a test now catches, precisely so the
-/// acknowledgement cannot outlive the gap it describes.
+/// acknowledgement cannot outlive the gap it describes — which is how this
+/// one was finally caught, once the scope let it look in the right place.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
     if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;

@@ -34,6 +34,14 @@ use std::collections::{BTreeMap, BTreeSet};
 /// `start_year` by `epoch_years`), never parsed text, and a finite year times a
 /// finite constant is finite. The `WorldTime::new(...).expect(...)` in [`fact`]
 /// is the assertion of that.
+/// seam-guard: identity(0) scope(hornvale-worldgen)
+///
+/// `identity(0)` is exactly "drop the conversion" — the mutation The Ell ran
+/// by hand at every crossing, now standing. Scoped narrowly on purpose: a
+/// too-narrow scope can only manufacture a false SURVIVOR, never a false
+/// GUARDED, so a GUARDED verdict here is true whatever a wider run would say.
+/// If this ever reports UNGUARDED, widen the scope before declaring it — that
+/// is the failure `conquest_victim`'s declaration made for two campaigns.
 /// type-audit: bare-ok(count: year), bare-ok(count: return)
 pub fn ledger_day_of_bake_year(year: f64) -> f64 {
     year * hornvale_kernel::Years::DAYS_PER_YEAR
@@ -59,6 +67,19 @@ pub fn ledger_day_of_bake_year(year: f64) -> f64 {
 /// `reading_a_founding_back_out_of_the_ledger_is_lossless` asserts that
 /// property on a real world, because if it ever stops holding, every founder
 /// handle and every flesh seed in every world moves and nothing else says so.
+/// **Deliberately NOT registered with `tools/seam-guard`, and the reason is
+/// a tool limitation worth knowing.** seam-guard keys a seam by function
+/// NAME, and `windows/almanac` defines a function of this same name on
+/// purpose — the mirror three paragraphs up, which exists because that window
+/// cannot depend on this crate. So a tag here claims the almanac's call sites
+/// too, and any single `scope(...)` covers only one of the two crates: the
+/// other crate's sites would be neutralised and then checked against tests
+/// that cannot see them, reporting FALSE SURVIVORS. That is the same failure
+/// `conquest_victim`'s `scope(hornvale-almanac)` made, and registering this
+/// seam would manufacture it deliberately. [`ledger_day_of_bake_year`] has a
+/// unique name and every call site in this crate, so it IS registered.
+/// The crossings here are guarded by hand instead — five of them were found
+/// unguarded and closed in The Ell, each watched to fail.
 /// type-audit: bare-ok(count: day), bare-ok(count: return)
 pub fn bake_year_of_ledger_day(day: f64) -> f64 {
     day / hornvale_kernel::Years::DAYS_PER_YEAR
