@@ -138,6 +138,9 @@ fn nothing_exists_below_the_floor() {
 /// cell has floor stratum `Bathypelagic` and a three-rung column — there is
 /// exactly one column height in this world, and a multi-rung cell must
 /// exist.
+///
+/// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+/// a Stratum walked over one fixed synthetic world's column, not a seed.
 #[test]
 fn water_above_the_floor_is_open_water_at_its_own_depth() {
     let (geo, climate) = sample_world();

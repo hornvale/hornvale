@@ -91,6 +91,9 @@ fn the_before_arm_holds() {
 /// `expr_at_stratum(cell, s)` equals `climate.biome_expr_at_stratum(cell,
 /// s).unwrap()`. Exhaustive over the whole 40,962-cell globe, not just the
 /// fixture's sample.
+///
+/// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+/// Stratum walked over one fixed world's column, not a seed.
 #[test]
 fn expr_at_stratum_agrees_with_climate_in_column() {
     let world = world();
