@@ -13,12 +13,15 @@ causes is hypsometry: **54.5% of land stands above 2000 m** against Earth's
 ~11%, with **mean land elevation 2266.87 m** (median over the 1000-seed census
 range, Task 3) against Earth's ~840 m. At the lapse rate the sim actually
 applies — `LAPSE_C_PER_M = 6.5 / 1000`
-(`domains/climate/src/temperature.rs:16`), an environmental rate, *not* the dry
+(`domains/climate/src/temperature.rs:23`), an environmental rate, *not* the dry
 adiabatic 9.8 K/km — that is a near-constant **−14.7 K**, and it is what drives
 the biome/soil uniformity, since `classify_land` evaluates elevation-gated
 specials before the Whittaker lookup. Every temperature figure in this
 document uses that 6.5 K/km; §3.5 explains why the rate has to be named rather
-than assumed.
+than assumed. (The spec's own budget states this same penalty as **−14.3 K**;
+the two figures use the same 6.5 K/km rate but different methods — the spec's
+came from a regression intercept over 142 spinning worlds, this document's
+from 2266.87 m × 6.5 K/km directly — so neither is wrong.)
 
 Fixing it needed a target. Two candidates were ruled out analytically before
 this measurement:
@@ -167,7 +170,7 @@ DERIVED READING (the same means, in crust-thickness terms)
   => sea level sits 1112.96 m BELOW the shelf break, i.e. 6.18 km of crust below it
 
 WHY SEA LEVEL LANDS THERE (sphere fractions, mean over the sweep)
-  analytic continental supply (majors, the rescale's budget)   0.2592
+  analytic continental supply (majors, realised post-clamp)    0.2592
   cells actually at or above the continental threshold         0.2724
   land the sea-level percentile granted                        0.3731
   =>   0.1007 of the sphere is land standing on SUB-threshold crust
@@ -340,7 +343,7 @@ the assumption. An independent review estimate put it nearer **650 m**. Both
 are far from 1113 m, which is the load-bearing point.
 
 In temperature, using the rate the sim itself applies —
-`LAPSE_C_PER_M = 6.5 / 1000` (`domains/climate/src/temperature.rs:16`), the
+`LAPSE_C_PER_M = 6.5 / 1000` (`domains/climate/src/temperature.rs:23`), the
 same rate that turns 2266.87 m into the campaign's −14.7 K:
 
 | elevation recovered | ΔT at 6.5 K/km |
@@ -437,37 +440,78 @@ of consequences — every default world's coastline moves — not a tuning nudge
 Worth ~450–700 m (3–4.5 K) on its own, per §3.5 — **not** the 1113 m the cut
 depth suggests.
 
-**Route 3 — the craton rescale misses its own budget by ~37%, and nobody knows
-why.** This is the route this document nearly lost, and it may be the cheapest
-of the three, because unlike the other two it is a candidate *defect* rather
-than a re-decision: if the rescale delivered what it aims at, the coastline
-would already sit at or above the shelf break and the hypsometry would already
-be roughly Earth-like. The pipeline's stated intent is not the problem;
-something downstream of the intent defeats it.
+**Route 3 — the craton rescale misses its own budget by 34.4%, and the miss is
+fully explained, not a research question.** This is the route this document
+nearly lost, and it is the *strongest* of the three, not merely the cheapest,
+because unlike the other two it is a candidate defect rather than a
+re-decision: **the rescale's own budget (≈0.4125, mean drawn) already exceeds
+the land quota (0.375)**, so a rescale that delivered what it aims at would
+already put the coastline at or above the shelf break, and the hypsometry
+would already be roughly Earth-like. The pipeline's stated intent is not the
+problem, and the defeating mechanism is **one line, not a research
+question**.
 
 The apples-to-apples comparison is between the budget the rescale targets and
-the supply it achieves, both in the same analytic units:
+the supply it achieves, both in the same analytic units. Decomposing the
+rescale's own formulas over 20,000 simulated draws (re-implementing
+`draw_cratons_unrepelled`'s and `craton_continental_steradians`'s exact
+arithmetic and independently reproducing every figure below) gives:
 
 | quantity | value | what it is |
 |---|---|---|
-| `budget` (`crust.rs:615`) | **≈ 0.41** | `(1 − ocean_target) · (1 + margin)`, margin 0.05–0.15; at the mean drawn target 0.625 that is 0.375 × 1.10 |
-| realised `continental_supply` | **0.2592** | the same `craton_continental_steradians`, summed over the *post-clamp* radii |
-| **the miss** | **≈ 37%** | |
+| `budget` (`crust.rs:615`) | **0.4123** | `(1 − ocean_target) · (1 + margin)`, mean over the drawn ranges (analytically 0.375 × 1.10 = 0.4125; the two agree) |
+| `clamp-off` (scaled, unclamped) | **0.3966** | the same steradian sum after applying `scale`, *before* the `.min(0.6)` |
+| `clamp-on` (realised `continental_supply`) | **0.2706** | after the clamp — what the pipeline actually delivers |
+| **the miss** | **34.4%** | `(budget − clamp-on) / budget` — not ~37% |
 
-The mechanism is visible in four lines (`crust.rs:634–641`): the rescale solves
-`scale` so the summed continental steradians hit `budget × 4π`, and then
+(The probe's own 12-world measurement (§2) reads realised supply at
+**0.2592** — close to but not identical to the 0.2706 above; the 12-seed
+probe sample and the 20,000-trial decomposition are two different samples of
+the same mechanism, and the gap is ordinary sampling scatter over the drawn
+ranges, not a discrepancy to explain.)
 
-```rust
-c.radius_rad = (c.radius_rad * scale).min(0.6);
-```
+The miss decomposes into two mechanisms, visible in the same four lines
+(`crust.rs:634–641`), and **nothing is left over**:
 
-**clamps every radius at 0.6 rad**, discarding whatever area the clamp cuts —
-while `continental_supply` sums the same function over those clamped radii. A
-review estimate attributes roughly half the miss to that clamp; the remainder
-is **unexplained** and worth an hour before either other route is chosen. The
-second candidate is that `craton_continental_steradians` does not deduct cap
-overlaps (its own doc calls itself an upper estimate), which would make the
-realised area smaller still.
+- **The `.min(0.6)` clamp accounts for 30.6 of the 34.4 percentage points of
+  budget — 89% of the miss.** `scale = sqrt(budget · 4π / continental_area)`
+  averages **2.22** over the drawn ranges, and at that scale **roughly half of
+  all cratons on an average world** exceed the 0.6 rad clamp and get
+  truncated:
+
+  ```rust
+  c.radius_rad = (c.radius_rad * scale).min(0.6);
+  ```
+
+  discarding whatever area the truncation cuts, while `continental_supply`
+  sums the same function over those already-clamped radii.
+
+- **The residual 3.8 points is fully explained — not unexplained.**
+  `craton_continental_steradians` uses the *exact* spherical-cap area
+  `2π(1 − cos r)` (`crust.rs:583–585`), but the rescale's `scale` is solved
+  from `sqrt(budget · 4π / continental_area)` — a formula that is exact only
+  if cap area scaled as `r²`. The true cap area is **sub-quadratic** in `r`
+  (`1 − cos r` grows more slowly than `r²`), so scaling every radius by a
+  factor derived under that quadratic assumption systematically
+  **under-delivers** area, even before any clamp fires. `clamp-off` above —
+  the scaled, unclamped supply — already falls 3.8 points short of `budget`,
+  which is the whole residual, to within simulation noise.
+
+So an earlier draft's claim that roughly half the miss was unexplained and
+"worth an hour" is **retracted**: the clamp is 89% of the miss, the
+sub-quadratic rescale is the other 11%, and both were visible in the same
+four lines the earlier estimate already pointed at.
+
+A separate, smaller effect this decomposition does not capture:
+`craton_continental_steradians` does not deduct cap overlaps (its own doc
+calls itself an upper estimate), so the *true* realised continental area —
+after overlap — is smaller still than 0.2706/0.2592. This matters for what
+Stage B can do about the clamp, not for what caused the miss: **relaxing the
+clamp is gated on deducting cap overlaps first.** Raising or removing `0.6`
+without an overlap deduction would let two majors' caps double-count wherever
+they intersect, inflating the *reported* supply past what the sphere's
+geometry actually grants — so "just raise the clamp" is not by itself a safe
+fix; the overlap deduction has to land with it or before it.
 
 For the same reason, **do not read the 0.2592-vs-0.2724 pair as evidence that
 the rescale is working.** An earlier draft of this finding glossed it that way
@@ -480,11 +524,13 @@ was aiming at.
 
 Which route Stage B takes is a design decision, not a measurement one, and this
 document deliberately does not make it — but **route 3 should be investigated
-first**, because its answer changes what routes 1 and 2 are even for. What the
-measurement settles is that the lever is on the *crust-and-coastline* side of
-the pipeline and that the boundary, hotspot and relief terms are not worth
-touching for hypsometry: together they contribute 3.5% of the variance and
-+149 m of the 2257 m.
+first**, because its answer changes what routes 1 and 2 are even for, and
+because — uniquely among the three routes — its defeating mechanism is
+already fully diagnosed rather than merely located: one clamp, gated on one
+overlap deduction. What the measurement settles is that the lever is on the
+*crust-and-coastline* side of the pipeline and that the boundary, hotspot and
+relief terms are not worth touching for hypsometry: together they contribute
+3.5% of the variance and +149 m of the 2257 m.
 
 A caution for whichever route is taken: **all three move sea level on every
 world**, so all three are byte-identity epochs for the whole terrain pipeline —

@@ -1231,8 +1231,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "insolation-rel",
             doc: "Top-of-atmosphere stellar flux at the anchor, relative to Earth \
-                   (L/a², Earth = 1) — the driver of the temperature baseline. The \
-                   shared SKY-15 definition, not a re-derivation",
+                   (L/a², Earth = 1, the shared SKY-15 definition, not a \
+                   re-derivation) — the driver of the temperature baseline",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1],
             },
@@ -1251,8 +1251,9 @@ pub fn registry() -> Vec<Metric> {
                    (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 \
                    the cold outer edge. This is the DRAWN variable — the orbit is \
                    placed uniform in radius across the zone — and it is what \
-                   temperature actually tracks; `anchor-orbit-au` is 95% collinear \
-                   with luminosity and so reads as uninformative on its own",
+                   temperature actually tracks; the ledger's `anchor-orbit-au` fact \
+                   predicate (not a lab metric — there is no metric of that name) is \
+                   95% collinear with luminosity and so reads as uninformative on its own",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
@@ -1320,9 +1321,11 @@ pub fn registry() -> Vec<Metric> {
             name: "mean-land-elevation-m",
             doc: "Mean elevation above sea level over land cells, m — the term the \
                   lapse rate turns into a temperature penalty. Land is `e >= sea`, \
-                  matching `mountain-coverage` so the two are directly comparable \
-                  (the registry also carries an `is_ocean` land definition; this is \
-                  deliberately not that one); Absent on a landless world",
+                  matching `mountain-coverage`'s land definition; `mean-land-temperature-c` \
+                  uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is \
+                  `e < sea`), so the two metrics ARE mutually comparable — this is the \
+                  coupling the campaign's lapse-rate regression rests on. Absent on a \
+                  landless world",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0],
             },

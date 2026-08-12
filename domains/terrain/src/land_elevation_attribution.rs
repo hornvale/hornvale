@@ -262,9 +262,11 @@ fn the_land_elevation_terms_attribute_their_variance() {
     let (mut crust_sum, mut crust_n) = (0.0_f64, 0_usize);
     let mut sea_levels: Vec<f64> = Vec::new();
     // The three areas that decide where the sea-level percentile lands: the
-    // analytic continental budget `draw_cratons` rescaled the majors to, the
-    // grid area that actually clears the continental threshold, and the land
-    // area the percentile ended up granting.
+    // analytic continental supply the majors' final (post-rescale,
+    // post-clamp) radii realise — not the budget the rescale aimed at, which
+    // this probe does not compute — the grid area that actually clears the
+    // continental threshold, and the land area the percentile ended up
+    // granting.
     let (mut supply_sum, mut threshold_sum, mut land_sum) = (0.0_f64, 0.0_f64, 0.0_f64);
     for seed in 0..SEED_COUNT {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
@@ -389,7 +391,7 @@ fn the_land_elevation_terms_attribute_their_variance() {
     let n = SEED_COUNT as f64;
     println!("\nWHY SEA LEVEL LANDS THERE (sphere fractions, mean over the sweep)");
     println!(
-        "  analytic continental supply (majors, the rescale's budget) {:>8.4}",
+        "  analytic continental supply (majors, realised post-clamp)  {:>8.4}",
         supply_sum / n
     );
     println!(

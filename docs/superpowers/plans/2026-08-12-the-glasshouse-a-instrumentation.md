@@ -899,8 +899,13 @@ the rule against prescribing a signature from outside the code.
 
 **Type consistency:** `solo_study(&str) -> Study` is defined once in Task 1 and
 reused in Tasks 2 and 3. `e >= sea` is the land definition in Tasks 3 and 4;
-`mean-land-temperature-c`'s differing `is_ocean` definition is called out rather
-than silently mixed. `GeneratedTerrain` accessors (`geosphere`, `elevation_at`,
+`mean-land-temperature-c` uses `!is_ocean(cell)`, which **is the same
+condition** (`GeneratedTerrain::is_ocean` is literally `e < sea`,
+`domains/terrain/src/provider.rs:141`) — not a second, incompatible
+definition as an earlier draft of this plan claimed. `mean-land-elevation-m`
+and `mean-land-temperature-c` are therefore mutually comparable, which is the
+coupling the campaign's land-elevation-drives-land-temperature regression
+rests on. `GeneratedTerrain` accessors (`geosphere`, `elevation_at`,
 `sea_level`, `is_ocean`) were read off `domains/terrain/src/provider.rs:101-141`,
 not guessed.
 
