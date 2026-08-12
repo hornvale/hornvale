@@ -232,6 +232,47 @@ fn digest_fails_loud_against_an_unreadable_local_ref() {
 }
 
 #[test]
+fn render_stays_quiet_against_the_same_unreadable_local_ref_the_digest_dies_on() {
+    // The other half of the asymmetry the sibling test above pins. `main.rs`'s
+    // `render` arm deliberately SWALLOWS this exact `BoardError` and stays
+    // quiet (D7 -- the ambient render must never break a session), while
+    // `board digest` -- the human seam, D14 -- fails loud on the identical
+    // defect. Nothing pinned that CHOICE before this test existed: changing
+    // `render`'s arm in `main.rs` to `std::process::exit(1)` on the same
+    // error left the whole suite green, because the loud half was pinned
+    // twice over and the quiet half was never asserted at all.
+    let (_d, repo) = temp_repo("render-unreadable-local");
+    let tree = repo.git(&["write-tree"]).expect("write-tree");
+    repo.git(&["update-ref", board::store::BOARD_REF, &tree])
+        .expect("point the local board ref at a tree");
+
+    let (render_code, render_stdout, render_stderr) = run(&repo, &["render"]);
+    assert_eq!(
+        render_code,
+        Some(0),
+        "the ambient render must stay quiet on the same defect the digest dies on: \
+         stdout={render_stdout:?} stderr={render_stderr:?}"
+    );
+    assert!(
+        render_stdout.is_empty(),
+        "and print nothing to stdout: {render_stdout:?}"
+    );
+    assert!(
+        !render_stderr.is_empty(),
+        "but still SAY something on stderr rather than swallowing it silently: \
+         {render_stderr:?}"
+    );
+
+    let (digest_code, digest_stdout, digest_stderr) = run(&repo, &["digest", "3650"]);
+    assert_ne!(
+        digest_code,
+        Some(0),
+        "the digest must fail loud on the identical defect the render arm just stayed \
+         quiet on: stdout={digest_stdout:?} stderr={digest_stderr:?}"
+    );
+}
+
+#[test]
 fn reap_refuses_to_run_rather_than_reap_against_an_unreadable_board() {
     // C2's second half. `posts_at_tip().unwrap_or_default()` used to turn a
     // read failure into an empty post set, which probes as "nothing is live"

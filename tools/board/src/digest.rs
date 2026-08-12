@@ -206,12 +206,45 @@ pub fn digest(posts: &[StoredPost]) -> String {
             } else {
                 out.push_str("      (no evidence — weaker claim)\n");
             }
-            let confirmed = confirms.get(s.id.as_str()).copied().unwrap_or(0);
-            let stale = stales.get(s.id.as_str()).copied().unwrap_or(0);
-            if confirmed > 0 || stale > 0 {
+        }
+    }
+
+    // B10, corrected on review: corroboration must surface for ANY target,
+    // not just a `technique`. This used to be printed only inside the
+    // `technique` loop above, which made the convention's OWN headline
+    // example -- "the post most likely to draw a stale is an inconvenient
+    // hold-off" -- silently invisible here: three `stale` posts against a
+    // `notice` produced nothing but a bare `stale 3` in the `by kind`
+    // histogram above, with no indication of what was staled. One section
+    // over every id either map names, so a target's kind/author/note comes
+    // back into view right beside the tally regardless of what kind of post
+    // it is -- looked up fresh from `posts` rather than assumed to be a
+    // `technique`, and respecting the same redaction set every other
+    // body-bearing section already does.
+    let mut corroborated_ids: BTreeSet<&str> = BTreeSet::new();
+    corroborated_ids.extend(confirms.keys().copied());
+    corroborated_ids.extend(stales.keys().copied());
+    if !corroborated_ids.is_empty() {
+        out.push_str("\ncorroboration (confirm/stale against a target post):\n");
+        for id in corroborated_ids {
+            let confirmed = confirms.get(id).copied().unwrap_or(0);
+            let stale = stales.get(id).copied().unwrap_or(0);
+            if redacted_ids.contains(id) {
                 out.push_str(&format!(
-                    "      corroboration: confirmed {confirmed}, stale {stale}\n"
+                    "  {id} (redacted): confirmed {confirmed}, stale {stale}\n"
                 ));
+                continue;
+            }
+            match posts.iter().find(|s| s.id == id) {
+                Some(target) => out.push_str(&format!(
+                    "  [{}] ({}) {}\n      corroboration: confirmed {confirmed}, stale {stale}\n",
+                    target.post.by,
+                    target.post.kind,
+                    target.post.str_field("note").unwrap_or("(no note)")
+                )),
+                None => out.push_str(&format!(
+                    "  {id} (not in this window): confirmed {confirmed}, stale {stale}\n"
+                )),
             }
         }
     }
@@ -341,17 +374,58 @@ mod tests {
             .parse()
             .expect("timestamp");
         let text = digest(&history(&board, 14, now_unix).expect("history"));
-        assert!(
-            text.contains('2'),
-            "the corroboration count is the measurement; got {text}"
-        );
         // Pinned against the corroboration line itself, not merely the
-        // digest as a whole: the `by kind` table already prints a bare "2"
-        // for two `confirm` posts, which would satisfy the assertion above
-        // even with no corroboration tally implemented at all.
+        // digest as a whole: `text.contains('2')` -- the brief's original
+        // assertion -- cannot fail against ANY non-empty board (the `by
+        // kind: confirm 2` line, the `N posts` header, and any 40-hex post
+        // id containing a `2` all satisfy it independently of whether a
+        // corroboration tally exists at all), so it was deleted rather than
+        // kept for fidelity to a brief that was wrong.
         assert!(
             text.contains("corroboration: confirmed 2, stale 0"),
             "the tally must attach to the technique it corroborates: {text}"
+        );
+    }
+
+    #[test]
+    fn a_stale_post_against_a_notice_is_not_silently_invisible() {
+        // The convention's OWN headline example: "the post most likely to
+        // draw a stale is an inconvenient hold-off". Before this fix, the
+        // corroboration line was printed only inside the `technique` loop,
+        // so three `stale` posts against a `notice` produced nothing here
+        // at all -- just a bare `stale 3` in the `by kind` histogram, with
+        // no indication of what was staled. This is the board's own
+        // statement of its protocol, so a gap here matters more than an
+        // ordinary rendering gap.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let n = board
+            .append(
+                &Post::new("notice", "main")
+                    .with("polarity", json!("hold-off"))
+                    .with("note", json!("do not touch domains/terrain/")),
+            )
+            .expect("notice");
+        for who in ["campaign/a", "campaign/b", "campaign/c"] {
+            board
+                .append(&Post::new("stale", who).with("post", json!(n.clone())))
+                .expect("stale");
+        }
+
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let text = digest(&history(&board, 14, now_unix).expect("history"));
+        assert!(
+            text.contains("do not touch domains/terrain/"),
+            "the target's own content must be visible right beside its corroboration: {text}"
+        );
+        assert!(
+            text.contains("confirmed 0, stale 3"),
+            "the tally must be attached where it is actually visible: {text}"
         );
     }
 

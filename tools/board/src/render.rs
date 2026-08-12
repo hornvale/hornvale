@@ -78,20 +78,31 @@ const CONTROL_KINDS: [&str; 2] = ["retract", "redact"];
 
 /// Kinds that exist for the digest (D14) only, and never for a live view.
 ///
-/// `suggest` is B12's example: it is not actionable by the session that
-/// would read it ambiently, and it is the lowest-effort post kind and so the
-/// likeliest flood source. Excluding it here — inside [`live_posts`], the
+/// `suggest` is B12's original example: it is not actionable by the session
+/// that would read it ambiently, and it is the lowest-effort post kind and so
+/// the likeliest flood source. Excluding it here — inside [`live_posts`], the
 /// shared foundation both `board render` and `board read` build on — means
 /// it is gone *before* a caller ever applies a post-count budget
 /// ([`RenderOptions::post_budget`]) or a relevance cut
 /// ([`crate::relevance::Displayed`]): a kind excluded only from the printed
-/// text but still counted toward a budget would let suggestions elide real
-/// posts, which is exactly the failure this ordering avoids. [`digest`]'s
-/// own read is over `history`, not `live_posts`, so a suggestion still
+/// text but still counted toward a budget would let it elide real posts,
+/// which is exactly the failure this ordering avoids. [`digest`]'s own read
+/// is over `history`, not `live_posts`, so a member of this list still
 /// reaches the one seam it is meant for.
 ///
+/// `confirm` and `stale` joined this list after B10 shipped, on review: they
+/// are consumed **only** by [`digest`]'s corroboration tally, so ambiently
+/// they render as content-free pointers at a target id —
+/// `[stale] campaign/a — post=<id>` names nothing a reader can act on
+/// without going and looking the target up, and a handful of corroborations
+/// of one technique cost that many ambient lines for zero legible content.
+/// That is a narrower case of the exact budget-dilution channel `suggest`
+/// was excluded to close, and unlike `suggest` there is no readable note to
+/// lose by moving them here — the whole point of a `confirm`/`stale` is the
+/// tally, and the tally is legible only in the digest (target, and counts).
+///
 /// [`digest`]: crate::digest::digest
-const DIGEST_ONLY_KINDS: [&str; 1] = ["suggest"];
+const DIGEST_ONLY_KINDS: [&str; 3] = ["suggest", "confirm", "stale"];
 
 /// The live subset of `posts` — nothing expired, withdrawn, or redacted, no
 /// control posts, and no digest-only posts.
@@ -485,17 +496,69 @@ mod tests {
     #[test]
     fn a_suggest_post_does_not_consume_the_ambient_post_budget() {
         // The cost half of B12: if suggestions merely rendered as nothing
-        // but still counted, they would elide real posts.
+        // but still counted TOWARD THE POST-COUNT BUDGET, they would elide
+        // a real post -- and `render()` itself never truncates by post
+        // count (only by per-post character cap), so a test that stops at
+        // `render(&live_posts(...), 0, opts)` never exercises the budget at
+        // all and cannot see this defect. This drives the real pipeline
+        // `main.rs`'s no-cursor ambient path uses -- `live_posts`, then
+        // `Displayed::filter`/`cap`, then `render` -- so a change that moves
+        // the digest-only exclusion to anywhere other than "upstream of the
+        // cap" is exercised, not merely assumed.
+        //
+        // The real post is posted FIRST, the flood AFTER it: `Displayed::
+        // cap` drops the OLDEST post when over budget (`relevance.rs`'s
+        // `cap`, `drain(..elided)`), so a real post posted after a flood
+        // would survive regardless of whether the flood is excluded at all
+        // -- that ordering is what let an earlier version of this test pass
+        // even with the exclusion moved downstream of the cap. This is also
+        // the realistic shape of the hazard: a flood of new suggestions
+        // pushing an OLDER post -- a still-live hold-off, say -- out of the
+        // budget.
         let (_dir, repo) = crate::git::test_support::temp_repo();
         let board = crate::store::Board::new(repo.clone());
+        board
+            .append(&Post::new("notice", "main").with("note", json!("REAL NOTICE")))
+            .expect("n");
         for i in 0..20 {
             board
                 .append(&Post::new("suggest", "main").with("note", json!(format!("idea {i}"))))
                 .expect("s");
         }
+
+        let posts = board.posts_at_tip().expect("read");
+        let ctx = ctx_for(&posts);
+        let live = live_posts(&posts, &ctx);
+        let opts = RenderOptions::session_start();
+        let all: BTreeSet<String> = live.iter().map(|s| s.id.clone()).collect();
+        let (shown, elided) =
+            crate::relevance::Displayed::filter(&live, &all, &[]).cap(opts.post_budget());
+        let ambient = render(shown.posts(), elided, &opts);
+        assert!(
+            ambient.contains("REAL NOTICE"),
+            "a flood of suggestions posted AFTER a real post must not push it out of \
+             the ambient budget: {ambient}"
+        );
+    }
+
+    #[test]
+    fn confirm_and_stale_are_also_digest_only() {
+        // The decision behind B10's fix wave: `confirm`/`stale` are
+        // consumed only by the digest's corroboration tally, so ambiently
+        // they render as content-free pointers -- worse than `suggest`,
+        // which at least carries a readable note. Both join
+        // `DIGEST_ONLY_KINDS` alongside it.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = crate::store::Board::new(repo.clone());
+        let t = board
+            .append(&Post::new("technique", "main").with("note", json!("some technique")))
+            .expect("t");
         board
-            .append(&Post::new("notice", "main").with("note", json!("REAL NOTICE")))
-            .expect("n");
+            .append(&Post::new("confirm", "main").with("post", json!(t.clone())))
+            .expect("c");
+        board
+            .append(&Post::new("stale", "main").with("post", json!(t.clone())))
+            .expect("s");
 
         let posts = board.posts_at_tip().expect("read");
         let ctx = ctx_for(&posts);
@@ -505,8 +568,12 @@ mod tests {
             &RenderOptions::session_start(),
         );
         assert!(
-            ambient.contains("REAL NOTICE"),
-            "suggestions elided a real post"
+            !ambient.contains("confirm"),
+            "a bare confirm pointer must not render ambiently: {ambient}"
+        );
+        assert!(
+            !ambient.contains("stale"),
+            "a bare stale pointer must not render ambiently: {ambient}"
         );
     }
 
