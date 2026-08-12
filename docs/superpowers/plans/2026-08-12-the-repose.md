@@ -9,7 +9,8 @@ whether settlements over-occupy violent ground, with a counterfactual arm that
 makes a null decidable.
 
 **Architecture:** Everything composes at `windows/worldgen` (the composition
-root). `domains/terrain` gains nothing; `domains/language` gains exactly one
+root). `domains/terrain` gains one derived read (see the amendment below);
+`domains/language` gains exactly one
 `NameKind` variant on its own seed path. C0 is a **pure read**: nothing is
 committed to the ledger, nothing draws from an existing stream, so no existing
 world moves a byte. Volcano identity, the event stream, and knownness are all
@@ -143,6 +144,32 @@ Every task's requirements implicitly include this section.
 | path | change |
 |---|---|
 | `domains/language/src/naming.rs` | `NameKind::Landform` + its `label()` and syllable-draw arms |
+| `domains/terrain/src/` | one derived read publishing island-arc edifice presence — see the amendment under Task 4 |
+
+> **AMENDMENT, 2026-08-12, made at Task 4's pre-dispatch verification.**
+> The Architecture header originally read "`domains/terrain` gains nothing."
+> That is **wrong about edifices**, and the error is mine.
+>
+> There is no edifice accessor on `GeneratedTerrain`. The gate is computed
+> transiently inside `elevation.rs`'s sculpt closure
+> (`arc_gate_fbm.sample(geo.position(source))`, `elevation.rs:464`),
+> thresholded at `ARC_DUTY = 0.45`, sampled per **source** boundary cell so a
+> whole edifice shares one value, and evaluated **only** for
+> `BoundaryKind::IslandArc`. Nothing retains it and nothing publishes it.
+>
+> So `domains/terrain` **does** gain a read, and that is the correct layering
+> outcome rather than a concession: an edifice is terrain's own concept, and
+> re-deriving the gate inside `windows/worldgen` would duplicate a derivation
+> that could then silently drift from the elevation it is meant to describe.
+> It matches the shape terrain already publishes in `waterfalls()`,
+> `prospectivity_at` and `cave_at` — derived reads over its own globe.
+>
+> **Two properties the accessor must have, and they are the whole risk:**
+> it may not consume a draw (the gate is hash-noise with no draw-order
+> contract, so re-sampling is free — but touching a `Stream` is an epoch), and
+> it must agree with the elevation that shipped rather than becoming a second
+> opinion about where edifices are. The mechanism is the implementer's to
+> choose; those two properties are not.
 | `windows/worldgen/src/streams.rs` | `VOLCANO` and `HAZARD_EVENT` stream labels |
 | `windows/worldgen/src/lib.rs` | `mod` declarations and re-exports; `per_species_suitability` delegation for Task 2 |
 | `book/src/reference/streams.md` (generated) | new stream labels, via `make rebaseline` |
