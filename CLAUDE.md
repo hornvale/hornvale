@@ -532,7 +532,7 @@ commit and the board's own test suite still gate every change on it.
 
 **Nothing automatically runs the board's tests.** Its suite lives outside
 `make gate` (`tools/board` is not a workspace member) and there has been no
-CI since decision 0125, so the only thing that runs those 189 tests is
+CI since decision 0125, so the only thing that runs those 194 tests is
 someone remembering to. `scripts/hooks/pre-commit`'s board-lane hook rule
 (see `scripts/CLAUDE.md`) helps only for a board-**only** commit — a mixed
 commit that touches `tools/board/` alongside workspace code still runs

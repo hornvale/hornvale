@@ -19,6 +19,13 @@ use std::path::{Path, PathBuf};
 /// *unscrubbed* control that proves the guard's poisoned environment is
 /// actually hostile — a guard whose control also scrubbed would assert
 /// nothing.
+/// **Two limits, so this is not over-trusted.** It matches source *text*, so
+/// indirection defeats it — `const G: &str = "git"; Command::new(G)` counts
+/// zero — and it exempts its own file wholesale (see `THE_SCANNER`), so a
+/// spawn added here is invisible to it. It is a tripwire against the ordinary
+/// case of someone reaching for `Command::new("git")` out of habit, not a
+/// proof that no unscrubbed spawn exists. The runtime guard in
+/// `hermeticity_env.rs` is what actually observes behaviour.
 const SANCTIONED_GIT_SPAWNS: &[(&str, usize)] =
     &[("src/git.rs", 1), ("tests/hermeticity_env.rs", 1)];
 
@@ -157,22 +164,36 @@ fn every_git_spawn_in_the_crate_routes_through_the_scrubbing_constructor() {
 
 #[test]
 fn the_scrub_list_covers_the_variables_git_actually_exports_to_a_hook() {
-    // Measured against git 2.50.1: a pre-commit hook run from a linked
-    // worktree receives GIT_DIR, GIT_INDEX_FILE, GIT_PREFIX and the
-    // GIT_AUTHOR_* trio. Every one of them must be on a scrub list, or the
-    // fix is narrower than the thing it is fixing.
+    // Measured against git 2.50.1. What a pre-commit hook receives depends on
+    // HOW the outer command was invoked, and the first version of this comment
+    // only described the plain case:
+    //
+    //   * a PLAIN `git commit` from a linked worktree exports GIT_DIR,
+    //     GIT_INDEX_FILE, GIT_PREFIX and the GIT_AUTHOR_* trio;
+    //   * `git -c <key>=<value> commit` ALSO exports GIT_CONFIG_PARAMETERS,
+    //     carrying that `-c` onward — e.g. `git -c user.name=Injected commit`
+    //     gives the hook `GIT_CONFIG_PARAMETERS='user.name'='Injected'`.
+    //
+    // Every one of them must be on a scrub list, or the fix is narrower than
+    // the thing it is fixing.
     let scrubbed: Vec<&str> = board::git::GIT_LOCATION_VARS
         .iter()
         .chain(board::git::GIT_IDENTITY_VARS)
+        .chain(board::git::GIT_CONFIG_VARS)
         .copied()
         .collect();
     for exported in [
+        // Exported by a plain commit from a linked worktree.
         "GIT_DIR",
         "GIT_INDEX_FILE",
         "GIT_PREFIX",
         "GIT_AUTHOR_NAME",
         "GIT_AUTHOR_EMAIL",
         "GIT_AUTHOR_DATE",
+        // Exported additionally when the outer command used `-c`. It cannot
+        // redirect the repository (see GIT_CONFIG_VARS' docs) but it outranks
+        // repo-local config, so it decides who a board commit says it is.
+        "GIT_CONFIG_PARAMETERS",
         // Not exported by a hook, but each redirects git just as effectively,
         // and a partial list is the failure mode worth pinning.
         "GIT_WORK_TREE",
@@ -183,10 +204,60 @@ fn the_scrub_list_covers_the_variables_git_actually_exports_to_a_hook() {
     ] {
         assert!(
             scrubbed.contains(&exported),
-            "{exported} can point git at another repository but is on neither \
+            "{exported} can redirect git or override its config but is on no \
              scrub list: {scrubbed:?}"
         );
     }
+}
+
+/// Injected config must not move the repository the binary reads.
+///
+/// The *good news* half of the review's `GIT_CONFIG_PARAMETERS` finding, pinned
+/// so the severity claim in `GIT_CONFIG_VARS`' docs is enforced rather than
+/// merely asserted: even injecting `core.worktree` cannot redirect git once
+/// `GIT_DIR` is scrubbed.
+///
+/// The *identity* half cannot live here. `.env` on a child only poisons that
+/// child, so asserting on a commit made by this test process would pass for
+/// free; it is checked in `hermeticity_env.rs`, where the process environment
+/// is genuinely poisoned.
+#[test]
+fn injected_config_cannot_move_the_repository_the_binary_reads() {
+    let base = std::env::temp_dir().join(format!("hv-board-cfginject-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let here = base.join("here");
+    let elsewhere = base.join("elsewhere");
+    repo_with_post(&here, "HERE-IS-THE-CWD");
+    repo_with_post(&elsewhere, "ELSEWHERE-VIA-INJECTED-CONFIG");
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_board"))
+        .current_dir(&here)
+        .env(
+            "GIT_CONFIG_PARAMETERS",
+            format!(
+                "'user.name'='Injected Identity' 'core.worktree'='{}' 'core.bare'='false'",
+                elsewhere.display()
+            ),
+        )
+        .env("GIT_CONFIG_COUNT", "1")
+        .env("GIT_CONFIG_KEY_0", "core.worktree")
+        .env("GIT_CONFIG_VALUE_0", elsewhere.to_string_lossy().as_ref())
+        .arg("render")
+        .output()
+        .expect("spawn board");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("HERE-IS-THE-CWD"),
+        "injected config must not move the repository the binary reads.\n\
+         stdout: {stdout}\nstderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        !stdout.contains("ELSEWHERE-VIA-INJECTED-CONFIG"),
+        "and must not reach the injected worktree at all: {stdout}"
+    );
+
+    let _ = std::fs::remove_dir_all(&base);
 }
 
 /// A throwaway repository with a board post whose text identifies it.

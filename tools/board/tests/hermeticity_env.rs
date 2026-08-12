@@ -180,12 +180,24 @@ fn a_hooks_inherited_git_dir_cannot_redirect_this_crate_at_another_repository() 
     // repository. The variables a hook does not export are covered instead by
     // `hermeticity.rs`'s scrub-list test.
     //
+    // `GIT_CONFIG_PARAMETERS` is included because it IS hook-exported whenever
+    // the outer command used `-c` (`git -c user.name=… commit`), and it
+    // outranks repo-local config. It cannot redirect the repository, so it does
+    // not change what the fingerprint below proves — it is here so the
+    // identity assertion further down is made against a genuinely poisoned
+    // process, which is something `hermeticity.rs` cannot do (`.env` on a child
+    // poisons only that child).
+    //
     // SAFETY: this is the only `#[test]` in this test binary (see the module
     // docs), so no other thread is reading the environment concurrently.
     unsafe {
         std::env::set_var("GIT_DIR", &poisoned_git_dir);
         std::env::set_var("GIT_INDEX_FILE", poisoned_git_dir.join("index"));
         std::env::set_var("GIT_PREFIX", "");
+        std::env::set_var(
+            "GIT_CONFIG_PARAMETERS",
+            "'user.name'='Injected Identity' 'user.email'='injected@evil'",
+        );
         std::env::set_var("GIT_AUTHOR_NAME", "Real Developer");
         std::env::set_var("GIT_AUTHOR_EMAIL", "dev@example.invalid");
     }
@@ -302,6 +314,7 @@ fn a_hooks_inherited_git_dir_cannot_redirect_this_crate_at_another_repository() 
             "GIT_DIR",
             "GIT_INDEX_FILE",
             "GIT_PREFIX",
+            "GIT_CONFIG_PARAMETERS",
             "GIT_AUTHOR_NAME",
             "GIT_AUTHOR_EMAIL",
         ] {
@@ -324,10 +337,13 @@ fn a_hooks_inherited_git_dir_cannot_redirect_this_crate_at_another_repository() 
 
     // (4) AND THE WRITES MUST HAVE LANDED — in the work repository, positively
     // asserted, so a path that quietly did nothing cannot masquerade as a path
-    // that was correctly contained. Every read here is soft (`unwrap_or_else`
-    // rather than `expect`) for the same reason the ordering above matters: a
+    // that was correctly contained. The `soft` reads below use `unwrap_or_else`
+    // rather than `expect` for the same reason the ordering above matters: a
     // leak destroys the work repo, and a panic from that wreckage would be a
-    // less legible failure than the assertion actually describing it.
+    // less legible failure than the assertion actually describing it. Not every
+    // read here is soft — `post_ids_at_tip()` below still panics on failure,
+    // which is acceptable because the fingerprint has already been compared by
+    // then, so the informative assertion cannot be preempted.
     //
     // `--branches`, not `--all`: the dangling peer ref planted above makes
     // `--all` fail outright ("fatal: bad object …"), which is precisely the
@@ -349,6 +365,20 @@ fn a_hooks_inherited_git_dir_cannot_redirect_this_crate_at_another_repository() 
         soft(&["config", "--get", "user.name"]),
         "board test",
         "the identity write must have landed in the work repo"
+    );
+    // And the identity must be the one the repo's own config names, not the one
+    // the poisoned `GIT_CONFIG_PARAMETERS` tried to inject. Those three commits
+    // were made while the process carried
+    // `'user.name'='Injected Identity'`, which outranks repo-local config
+    // unless it is scrubbed — so before `GIT_CONFIG_VARS` existed this read
+    // `Injected Identity <injected@evil>`. This is the mislabeling half of the
+    // review's finding; the "cannot move the repository" half is pinned in
+    // `hermeticity.rs`.
+    let committers = soft(&["log", "--branches", "--format=%cn <%ce>"]);
+    assert!(
+        !committers.is_empty() && committers.lines().all(|l| l == "board test <board@test>"),
+        "every work-repo commit must carry the repo's CONFIGURED identity, not \
+         an environment-injected one:\n{committers}"
     );
     assert_eq!(
         reaped, 1,

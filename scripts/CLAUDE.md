@@ -152,7 +152,7 @@ confirmation-gated in the Makefile.
   falls through to the ordinary filter unchanged, so this only ever adds
   coverage and never drops the workspace gate on a change that needs it.
   This rule covers board-only *commits*; it is not a substitute for a gate
-  that runs the board's 193 tests on every push — nothing does that (see
+  that runs the board's 194 tests on every push — nothing does that (see
   root `CLAUDE.md`'s board paragraph), so a mixed commit still needs `make
   quick` to catch a workspace regression, and neither arm catches a board
   regression introduced by a change that never gets committed at all.

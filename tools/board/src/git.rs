@@ -72,6 +72,37 @@ pub const GIT_IDENTITY_VARS: &[&str] = &[
     "GIT_COMMITTER_DATE",
 ];
 
+/// Every environment variable that can inject *config* into a git invocation.
+///
+/// **Severity: mislabeling, not corruption.** These cannot redirect the
+/// repository, and that was verified rather than assumed — injecting
+/// `core.worktree` through both `GIT_CONFIG_PARAMETERS` and the
+/// `GIT_CONFIG_COUNT`/`_KEY_0`/`_VALUE_0` trio still left
+/// `rev-parse --show-toplevel` and `--absolute-git-dir` answering the `-C`
+/// repository, because git ignores `core.worktree` once `GIT_DIR` is scrubbed
+/// (and it is, above). Nothing here opens a path to another repository's
+/// objects or refs.
+///
+/// `GIT_CONFIG_PARAMETERS` is the one that is actually **hook-exported**, and
+/// only when the outer command used `-c`: `git -c user.name=Injected commit`
+/// hands the hook `GIT_CONFIG_PARAMETERS='user.name'='Injected'`. It outranks
+/// repo-local config, so before this list existed a board commit in a repo
+/// configured `board test` came out stamped `Injected Identity` — which
+/// falsified [`GIT_IDENTITY_VARS`]' promise that a board commit reads the same
+/// whether or not a hook is in the call stack. It holds now.
+///
+/// The rest are **not** hook-exported and are inert here; they are listed for
+/// uniformity, so that "config cannot come from the environment" is the whole
+/// rule rather than a rule with one member. Scrubbing `GIT_CONFIG_COUNT` alone
+/// disarms any `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_VALUE_<n>` pairs, since git
+/// reads the count to know how many to apply — so those need no enumeration.
+pub const GIT_CONFIG_VARS: &[&str] = &[
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_SYSTEM",
+];
+
 /// A handle to a git repository, identified by its root directory.
 #[derive(Debug, Clone)]
 pub struct Repo {
@@ -133,7 +164,11 @@ impl Repo {
     /// `GIT_DIR`. See the module docs for what that cost once.
     fn command(&self) -> Command {
         let mut cmd = Command::new("git");
-        for var in GIT_LOCATION_VARS.iter().chain(GIT_IDENTITY_VARS) {
+        for var in GIT_LOCATION_VARS
+            .iter()
+            .chain(GIT_IDENTITY_VARS)
+            .chain(GIT_CONFIG_VARS)
+        {
             cmd.env_remove(var);
         }
         cmd.arg("-C").arg(&self.root);
