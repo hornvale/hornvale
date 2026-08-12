@@ -614,36 +614,54 @@ impl LocaleContext {
     /// A cell's floor decides how deep its water goes — 50 m of water over a
     /// reef holds only the epipelagic, while 3,000 m holds three layers. This
     /// is the list a diver descends.
+    ///
+    /// Delegates to [`GeneratedClimate::strata_at`] for the water case (the
+    /// same take-the-ladder-up-to-the-floor derivation this method used to
+    /// hand-roll — collapsed to one implementation, The Fathom, so the two
+    /// could not silently diverge). The non-water guard stays here rather
+    /// than moving into `strata_at`: this method answers "what water is
+    /// there to descend through", so on land the answer is `Vec::new()`, not
+    /// climate's `[Surface]` (its answer for a *land* cell's own one-stratum
+    /// ladder — a different question this method never asks).
     pub fn water_column_at(&self, cell: CellId) -> Vec<Stratum> {
-        let expr = self.climate.biome_expr_at(cell);
-        if expr.realm != Realm::WATERWORLD {
+        if self.climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
             return Vec::new();
         }
-        let floor = expr.stratum;
-        Realm::WATERWORLD
-            .strata()
-            .iter()
-            .copied()
-            .take_while(|s| *s != floor)
-            .chain(std::iter::once(floor))
-            .collect()
+        self.climate.strata_at(cell)
     }
 
     /// The biome expression at `cell` as seen from `stratum`. At the sea floor
     /// this is the cell's own community — a reef, a vent, a kelp forest. Above
     /// it there is only open water: the community lives on the floor, and
     /// floating a thousand metres over a reef is not being at the reef.
+    ///
+    /// Delegates to [`GeneratedClimate::biome_expr_at_stratum`] for every
+    /// stratum on the cell's own realm ladder at or above its floor (the
+    /// in-column cases). **The fallback below is live, not dead code**: the
+    /// stratum a caller passes here does not provably always resolve to a
+    /// cell whose column it is in-bounds for — `windows/vessel/src/
+    /// session.rs`'s `column_here()` (the source of a possessed session's
+    /// `submerged` stratum) picks its cell via
+    /// `corners.iter().max_by_key(|c| c.weight)`, which is Rust's
+    /// last-element-wins tie-break, while this window's own
+    /// `dominant_corner` (used by the two `describe_*` callers at `:763`/
+    /// `:792` that ultimately reach this method) tie-breaks to the *lowest*
+    /// `CellId` — and `RoomAddr::corner_weights` does not sort its three
+    /// corners by id, so the two selections are not provably identical on an
+    /// exact corner-weight tie. **BELOW-FLOOR FALLBACK, PRESERVED VERBATIM
+    /// AND KNOWN WRONG:** a rung beneath the seabed (or, on land, any
+    /// stratum but `Surface`) is rock, and this answers open water. Kept
+    /// byte-for-byte because The Fathom may not move behaviour; see
+    /// followup F-10.
     pub fn expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> BiomeExpr {
         let expr = self.climate.biome_expr_at(cell);
-        if stratum == expr.stratum {
-            expr
-        } else {
-            BiomeExpr {
+        self.climate
+            .biome_expr_at_stratum(cell, stratum)
+            .unwrap_or(BiomeExpr {
                 realm: expr.realm,
                 formation: Formation::OpenWater,
                 stratum,
-            }
-        }
+            })
     }
 
     /// [`LocaleContext::describe`], optionally as seen from a stratum within
