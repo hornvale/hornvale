@@ -40,6 +40,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Proto-mathematics — relational reasoning over already-known quantities](#proto-mathematics--relational-reasoning-over-already-known-quantities)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
   - [The encodability cascade — why the unprecedented cannot be reported](#the-encodability-cascade--why-the-unprecedented-cannot-be-reported)
+  - [The partial view — where a deterministic world keeps its doubt](#the-partial-view--where-a-deterministic-world-keeps-its-doubt)
   - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
   - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
   - [The biogeography of coexistence — how the weak persist](#the-biogeography-of-coexistence--how-the-weak-persist)
@@ -1486,6 +1487,114 @@ boldness sometimes right — then the model does not derive institutional
 failure, it merely asserts that highborn officers are fools. That is the
 same discipline the no-alignment stance already imposes, arriving one level
 up.
+
+---
+
+## The partial view — where a deterministic world keeps its doubt
+
+*(High confidence on the constraint, which is a consequence of the
+Constitution rather than a proposal; medium on the placement it argues for.
+The falsifiability blocker at the end is the load-bearing part — it says a
+neighbouring cluster cannot yet be tested, which is a stronger claim than any
+feature request.)*
+
+The section above derives why a true claim cannot move an institution. This
+one asks a question the substrate forces and the cascade left open: **where
+does a world this deterministic keep the doubt?**
+
+Start from the Constitution rather than from a wish. Same seed plus same pins
+gives byte-identical worlds; nothing consults a wall clock; every draw comes
+from a labelled stream. So the world is a **total function**, and an observer
+is a **partial evaluation** of it. That has a consequence which is easy to
+state and easy to violate:
+
+> In a deterministic simulation there is no aleatory uncertainty available.
+> *Every* doubt a creature has must be modelled as incomplete observation.
+> A dice roll is not available, because the dice were rolled at genesis.
+
+The violation is tempting precisely where doubt feels most natural. A ranger
+saying *if it snows we could be a fortnight getting back* is not naming a
+probability the world holds — the world already knows whether it snows, and
+`weather_state` will say so for that cell on that day. The ranger is naming a
+**forecast from signs**, which is a fact about the ranger. Build it as a
+random variable and the world acquires a second, contradictory account of its
+own weather; build it as a partial view and it costs nothing the substrate
+does not already guarantee.
+
+**Three unrelated fields hit this exact shape and all three answered it the
+same way.** Cryptography faces a deterministic function under an unknown key,
+and made the *adversary's view* the object of study rather than adding
+randomness to the cipher. Chess engines face perfect information under
+bounded search, and separated *evaluation* from truth. Git holds a fixed
+history and a partial working copy, and made the index a first-class object
+sitting between them. The common move is not "model uncertainty" — it is
+**give the partial view its own name and its own storage, distinct from the
+truth it approximates.**
+
+**Hornvale has already made that move, once, at the wrong scale.** The vessel
+holds `Knowledge` as an explicit per-agent store, and the possession chart
+distinguishes what is *sensed* from what is *remembered* — a cell known from
+having been there and no longer in view. That is a partial view as a
+first-class object, complete with a subset contract. It exists for one
+possessed individual, game-side, and for nothing else. No domain has an
+equivalent. Nothing in the culture or religion layers holds *what this people
+believes about its world, as distinct from what is true of it.*
+
+**That absence is exactly where the cascade's fourth gate lives.** Model
+adequacy — whether an institution's account of the world holds a category the
+claim could fall under — is not a property of a speaker or a hearer. It is a
+property of a *people's stored account*, which is to say: it is a
+culture-scale `Knowledge` object. The gate the cascade could not place is
+therefore not a missing mechanism at all. It is an existing mechanism one
+layer down, and the interesting design work is the promotion, not the
+invention. The same object would carry the cascade's two mirrored gate-4
+failures without new machinery: lacking a true category is an absent key, and
+holding an empty one is a key whose extension is nowhere in the ledger.
+
+**The back-edge gets a mechanism too, once doctrine is a store.** A category
+entering a people's vocabulary by having survived the thing it now has a word
+for is a *write* to that store, and borrowing across a sailing lane is a
+*copy between two of them*. Both are ordinary operations on an object that
+holds beliefs; neither is expressible while the only account of the world is
+the world.
+
+**And now the blocker, which is why this section exists.** The cascade sets
+itself a discipline: competence and correctness must be drawn **separately**,
+so the veteran's caution is sometimes superstition and the young lord's
+boldness sometimes right — otherwise the model does not derive institutional
+failure, it merely asserts that highborn officers are fools. Drawing them
+separately requires a per-individual competence to draw. There is none.
+`domains/person` is a seed and an empty marker struct; per-species vectors
+exist and per-person ones do not; no skill, expertise, or trained competence
+is modelled anywhere in the workspace.
+
+So the cascade **cannot currently be falsified in simulation**, and that is a
+more useful thing to know than any row proposing to extend it. Its own
+anti-moral test is unrunnable until individuals can differ in what they are
+good at. A cluster whose central claim is about *whose knowledge gets used*
+needs, first, knowledge that varies by person — which makes per-individual
+competence a precondition of the cluster rather than a sibling of it.
+
+**Provenance.** This came from reading the *A Game of Thrones* prologue a
+second time, for **representable phenomena** rather than for political
+economy, through the concept manifest's three correspondence ledgers. The
+method is worth keeping: the manifest read **forward** yields *words without a
+model* (`eye`, `hand`, `bone`, `blood` are registered and nothing computes
+them), and read **in reverse** yields *model without words* — a fully
+implemented vantage that no concept names, and a fire whose visibility at
+distance is already a theorem of the light-and-sight symmetry rather than a
+feature anyone would have to build. The manifest audits four reverse
+directions and declares the fifth unaudited, pending a design line between a
+nameable thing and mere texture. The prologue argues for drawing it at
+**affordance**: what a creature can act on earns a concept, what only colours
+a sentence is texture.
+
+The trap this section must avoid is the mirror of the cascade's. That one
+risked authoring a moral; this one risks authoring an *epistemology* — a
+belief store so expressive that a people's account of the world stops being
+derivable and becomes a place to write fiction by hand. The discipline that
+prevents it is the one the vessel already obeys: the store is a **projection**
+with a subset contract against ground truth, never a parallel world.
 
 ---
 
