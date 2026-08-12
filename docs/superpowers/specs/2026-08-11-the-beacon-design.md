@@ -913,11 +913,23 @@ The current cost is not merely high, it is spent in the wrong place.
    7's review and both keyed on the same weakness: the self-mirror exclusion, and
    every other per-host identity here, is keyed on `hostname -s`.
 
-   - **Renaming a host** leaves `peers/<oldname>` behind as a phantom peer — and,
-     the worse half, re-admits it to the union read, which is precisely the
-     reaped-post resurrection B1's own-mirror exclusion exists to prevent. This is
-     not hypothetical: this repository has already lived through one rename
-     (`MacBookPro` → `ambrose`, recorded in CLAUDE.md's timing-baseline note).
+   - **A host's name changing** — by rename, or by a *second machine* appearing —
+     leaves `peers/<oldname>` behind as a phantom peer, and, the worse half,
+     re-admits it to the union read, which is precisely the reaped-post
+     resurrection B1's own-mirror exclusion exists to prevent.
+
+     Not hypothetical, though the precedent is not the one first cited here. An
+     earlier draft claimed a rename `MacBookPro` → `ambrose`; the Whetstone
+     retrospective §3 says the opposite — *"the baseline is keyed `MacBookPro` at
+     10. **Same ledger, different box.**"* It was a second machine, not a rename.
+
+     That correction strengthens the point rather than weakening it. A **host
+     fork** is the sharper precedent, because it is exactly this failure: a new
+     host key appears, the old one persists in a shared per-host ledger, and
+     nothing reconciles them. It has already happened once to
+     `docs/timings/test-baseline-<host>.tsv`, which is keyed on `hostname -s` for
+     the same reason `refs/hornvale/hosts/<host>` is — and there the consequence
+     was a silently-recorded baseline that *could not alarm*.
    - **Retiring a host** is the same operation seen from the other end.
 
    So "retire a host" and "rename a host" are one feature, not two, and B3's
