@@ -363,10 +363,26 @@ pub struct ChannelNetwork {
     /// Per polyline, per vertex, the four [`band_edges`] borders for that
     /// vertex's discharge, gradient and cell spacing. Parallel to
     /// `polylines`: `band_edges[i].len() == polylines[i].points.len()`.
+    ///
+    /// **One vertex per line does not read its own cell's values: the
+    /// terminal one**, where that cell is the non-river outlet the run drains
+    /// into. It carries the last *river* cell's edges instead, because the
+    /// sea's drainage is 0 (a zero-width mouth) and a salt basin's is its
+    /// whole catchment's at zero gradient (a mouth flared into a valley an
+    /// order of magnitude too broad). See the comment at the borrow in
+    /// [`ChannelNetwork::build`] for both measured on seed 42.
     pub band_edges: Vec<Vec<[f64; 4]>>,
     /// Per polyline, per vertex, the cell that vertex was placed from — the
     /// downhill run the polyline is a rendering of. Parallel to `polylines`:
     /// `run_cells[i].len() == polylines[i].points.len()`.
+    ///
+    /// **The last cell of a run is usually not a river cell.** A run includes
+    /// the cell it drains into, so its final entry is normally the ocean or
+    /// salt-basin outlet at its mouth (or, at a confluence, the trunk cell it
+    /// joins). A consumer reading a per-cell field off these — drainage, say —
+    /// must expect the sea's value there, and should read the reach's
+    /// discharge off the *previous* cell, which is the same borrow
+    /// `band_edges` makes.
     ///
     /// Published because a polyline's *geometry* alone cannot say where two
     /// lines meet. Since the confluence repair a tributary's mouth vertex is
@@ -424,7 +440,10 @@ pub struct BankReading {
     /// terrace/dry.
     pub band_edges: [f64; 4],
     /// The canonical grid cell that vertex was placed from — the reach whose
-    /// discharge and gradient produced `band_edges`.
+    /// discharge and gradient produced `band_edges`, **except at a run's
+    /// terminal vertex**, where the cell is the non-river outlet and the
+    /// edges are the last river cell's (see [`ChannelNetwork::band_edges`]).
+    /// A caller reading this cell's own drainage at a mouth reads the sea's.
     pub cell: CellId,
     /// The winning polyline's index in [`ChannelNetwork::polylines`] — the
     /// same index [`ChannelNetwork::nearest_line`] reports. An in-process
@@ -439,8 +458,16 @@ impl ChannelNetwork {
     /// Walks every `WaterKind::River` cell in ascending `CellId` order,
     /// starting runs at *heads* (river cells no other river cell drains into)
     /// and following `downhill` to the sea, a terminal sink, or an
-    /// already-claimed trunk. Runs of a single cell are dropped: one isolated
-    /// river cell has no direction, and a one-point polyline is not a line.
+    /// already-claimed trunk. **A run includes the cell it drains into**, so a
+    /// run's last cell is the outlet (an ocean or salt-basin cell), the trunk
+    /// cell it joins, or — the one case where the last cell is a river with
+    /// nowhere to go — a terminal sink.
+    ///
+    /// Runs of a single cell are dropped: one isolated river cell has no
+    /// direction, and a one-point polyline is not a line. Since the walk keeps
+    /// its outlet, that filter now excludes only a river cell with **no
+    /// downhill target at all** and no river inflow, which is a real and much
+    /// rarer case — seed 42 at level 6 has none.
     ///
     /// A final pass moves every **confluence mouth** onto the trunk vertex it
     /// joins, so runs that meet in the drainage graph also meet in space; see
@@ -488,10 +515,29 @@ impl ChannelNetwork {
                 claimed.insert(c);
                 let mut current = c;
                 while let Some(target) = *globe.downhill.get(current) {
+                    // EVERY TERMINATION KEEPS THE CELL IT STOPPED ON (The
+                    // Rill, Task 2). A run must include the cell it drains
+                    // into, and the two ways a run ends are the same rule:
+                    // push the shared cell, then stop.
+                    //
+                    // This loop used to `break` BEFORE pushing a non-river
+                    // target, which ended every run one cell short of its
+                    // mouth. Two consequences, both measured on seed 42 at
+                    // level 6: the outlet cell carried no channel, and a
+                    // river cell whose downhill target is not a river and
+                    // which has no river inflow became a ONE-cell run and was
+                    // dropped by the length filter below — 39 river cells with
+                    // no polyline at all, exactly the 39 that read `Dry` at
+                    // their own centres. Under a network that renders every
+                    // land cell the deficit grows, because the number of runs
+                    // terminating at a non-river cell rises with it.
+                    run.push(target);
                     if !is_river(target) {
+                        // The outlet this run drains into — the sea or a salt
+                        // basin. The walk follows river cells, so it stops
+                        // here; the vertex stays.
                         break;
                     }
-                    run.push(target);
                     if !claimed.insert(target) {
                         // Joined a trunk another run already owns: keep the
                         // shared vertex so the lines meet, then stop.
@@ -514,7 +560,33 @@ impl ChannelNetwork {
             for (i, &c) in run.iter().enumerate() {
                 let spacing = cell_spacing(geo, c);
                 let slope = local_slope(globe, geo, c);
-                edges.push(band_edges(*globe.drainage.get(c), slope, spacing));
+                if is_river(c) {
+                    edges.push(band_edges(*globe.drainage.get(c), slope, spacing));
+                } else {
+                    // THE BORROWED TERMINAL VERTEX. A non-river cell is a
+                    // run's LAST cell by construction — the walk above stops
+                    // the moment it pushes one — so this is the outlet, and
+                    // the outlet's own hydraulics are not this reach's.
+                    // Measured on seed 42 at level 6, over the 129 runs that
+                    // gained a mouth: 105 outlets are ocean, where drainage is
+                    // 0 and `channel_half_width` is therefore EXACTLY 0.0 —
+                    // the mouth would render as a zero-width channel with no
+                    // bank, no floodplain and no terrace, `[0, 0, 0, 0]`. The
+                    // other 24 are salt basins, which are worse than useless
+                    // rather than merely empty: a basin accumulates its whole
+                    // catchment and is a terminal sink, so it reads a larger
+                    // drainage at zero gradient — cell 10666 gives
+                    // `[7.59e-5, 1.52e-4, 3.19e-3, 4.78e-3]` against the
+                    // feeding reach's `[5.28e-5, 1.06e-4, 2.47e-4, 3.71e-4]`,
+                    // a mouth 1.4x as wide inside a valley 12.9x as broad.
+                    // So the terminal vertex carries the last river cell's
+                    // band geometry: the mouth is as wide as the river that
+                    // arrives at it.
+                    edges.push(*edges.last().expect(
+                        "a non-river cell is never a run's first cell, so an earlier vertex \
+                         has already pushed its edges",
+                    ));
+                }
                 if i == 0 || i + 1 == base.len() {
                     // A source and a mouth are anchored: the head must stay in
                     // its own cell and the mouth must stay on the coast. A
@@ -563,6 +635,17 @@ impl ChannelNetwork {
         // on, so a cell is a non-final vertex of at most one run. A mouth
         // whose cell no run continues from is a REAL mouth — the sea or a
         // terminal sink — and stays anchored where it is.
+        //
+        // THE TERMINAL VERTEX (Task 2) IS INERT HERE, and the reason is the
+        // same rule rather than a new exception. `owner` records only
+        // NON-FINAL vertices; a non-river outlet is a run's last cell by
+        // construction, so it can never be one, and `owner[outlet]` is
+        // therefore always `None`. Every run that gained a mouth falls into
+        // the `else { continue }` arm below and keeps that mouth anchored on
+        // its outlet cell — which is what a real mouth wants. Two runs
+        // draining into the same sea cell both end there and neither is moved
+        // onto the other, exactly as before; they are not a confluence,
+        // because neither continues past it.
         //
         // Order-independent by construction: only final vertices are moved and
         // only non-final vertices are read, so no relocation can be the source

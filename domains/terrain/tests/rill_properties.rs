@@ -16,12 +16,18 @@
 //! and the count never appears on its own. See `channel_half_width`'s own doc
 //! comment for the measurement, the trap, and what Tier 2 inherits.
 //!
-//! **Both tests are pure-function tests: no world is generated here.** The
-//! fixture holds the law's *inputs*, captured once from a real network, so
-//! nothing in this file pays for genesis and nothing in it pins a topology. A
-//! later task that adds or removes a channel vertex leaves both tests
-//! untouched — which is the whole reason the witness is a triple table rather
-//! than a network dump.
+//! **The width-law tests are pure-function tests: they generate no world.**
+//! The fixture holds the law's *inputs*, captured once from a real network, so
+//! none of them pays for genesis and none of them pins a topology. A later task
+//! that adds or removes a channel vertex leaves them untouched — which is the
+//! whole reason the witness is a triple table rather than a network dump, and
+//! it is what let Task 2 add a vertex to nearly every run in the world without
+//! touching a single pinned edge.
+//!
+//! Task 2 (R-2) then adds the one test here that *does* build worlds:
+//! `every_run_reaches_its_outlet`. It is a claim about run construction rather
+//! than about the width law, and it lives here because R-2 is this campaign's
+//! requirement; it is the only thing in this file that pays for genesis.
 //!
 //! **Why the invariance is asserted on exact bits rather than a tolerance.**
 //! Not strictness for its own sake: it is exact by construction, and saying so
@@ -35,7 +41,11 @@
 //! relative difference, so the failure distinguishes "no longer scale-free"
 //! from "scale-free, no longer bit-exact".
 
-use hornvale_terrain::{RIVER_MIN_DRAINAGE, band_edges, channel_half_width};
+use hornvale_kernel::{CellId, Geosphere, Seed};
+use hornvale_terrain::{
+    ChannelNetwork, RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, channel_half_width,
+    generate,
+};
 
 /// The committed pre-change witness (`70967bc4`): the width law's inputs and
 /// outputs on the seed-42 canonical `Geosphere::new(6)` network, captured on
@@ -215,6 +225,128 @@ fn the_width_law_is_scale_free_across_six_doublings() {
         comparisons,
         FIXTURE_ROWS * DOUBLINGS as usize * 4,
         "the sweep did not run over every row, doubling and edge"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// R-2 (Task 2): a run includes the cell it drains into.
+// ---------------------------------------------------------------------------
+
+/// The seeds the outlet sweep runs over — the campaign's usual trio. Three
+/// rather than one because the claim is universal over run construction, not a
+/// fact about seed 42's drainage.
+const OUTLET_SEEDS: [u64; 3] = [42, 7, 1234];
+
+/// The canonical grid. Level 5 will not serve here: it carries 13 runs on seed
+/// 42, so the per-seed floor below could not be met and the assertion would run
+/// over a population too small to distinguish "every run reaches its outlet"
+/// from "the handful of runs this world has happen to".
+const OUTLET_LEVEL: u32 = 6;
+
+/// Per-seed run floor, so a world that stopped producing rivers is visible on
+/// its own rather than absorbed by the other two.
+const MIN_RUNS_PER_SEED: usize = 25;
+
+/// Sweep-wide run floor: a riverless world cannot pass this test by having
+/// nothing to check.
+const MIN_RUNS_TOTAL: usize = 300;
+
+/// Sweep-wide floor on runs that actually END on a non-river outlet — the
+/// vertex Task 2 adds. The universal assertion above is satisfied by a
+/// confluence or a terminal sink too, so without this a build that stopped
+/// emitting outlet vertices entirely could still pass by ending every run on a
+/// trunk. Measured after the change: 163 / 289 / 164 across the three seeds
+/// (616 of 734 runs); the floor is half of that, which leaves room for terrain
+/// drift and none for the phenomenon disappearing.
+const MIN_OUTLET_RUNS: usize = 308;
+
+/// claim: invariant(forall-seed) — the last cell of every run, over three
+/// worlds on the canonical grid, is the cell that run drains into.
+///
+/// **R-2.** A run must include the cell it drains into. `build` walks a run
+/// down `downhill` and can stop for exactly three reasons, so the last cell of
+/// every run must be one of exactly three things:
+///
+/// 1. it has no downhill target at all (a terminal sink), or
+/// 2. it is not a river — it is the outlet the run drains into, the sea or a
+///    salt basin, and the run reached it, or
+/// 3. some *other* run carries it as a non-final vertex, which is a confluence:
+///    this run joined a trunk another run had already claimed and stopped on
+///    the shared cell.
+///
+/// Anything else — a run ending on a river cell that has a downhill target and
+/// that no other run continues past — is a run that **stopped short**, which is
+/// precisely the defect this task repairs. Before the fix `build` broke *before*
+/// pushing a non-river target, so every run draining straight to the sea ended
+/// one cell early and its mouth sat inland; the 39 seed-42 river cells that
+/// carried no polyline were exactly the 39 that read `Dry` at their own
+/// centres.
+///
+/// The third clause reads the *owner* map — a cell some run carries as a
+/// non-final vertex — rather than "a cell that appears in two runs". The
+/// distinction is load-bearing: two runs that both stopped short on the same
+/// cell would each appear in the other's cell list and would satisfy the weaker
+/// form, so the weaker form is blind to the defect wherever it happens twice.
+#[test]
+fn every_run_reaches_its_outlet() {
+    let geo = Geosphere::new(OUTLET_LEVEL);
+    let mut total_runs = 0usize;
+    let mut outlet_runs = 0usize;
+    for seed in OUTLET_SEEDS {
+        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
+        let globe = &outcome.globe;
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+
+        // The run that CLAIMED each cell and continued past it, rebuilt from
+        // the published `run_cells` rather than from anything private — the
+        // same map `build`'s confluence repair keys on.
+        let mut owner: Vec<Option<usize>> = vec![None; geo.cell_count()];
+        for (i, cells) in net.run_cells.iter().enumerate() {
+            for (j, &c) in cells.iter().enumerate() {
+                if j + 1 < cells.len() {
+                    owner[c.0 as usize] = Some(i);
+                }
+            }
+        }
+
+        assert!(
+            net.run_cells.len() >= MIN_RUNS_PER_SEED,
+            "seed {seed} at level {OUTLET_LEVEL} has only {} runs — too few for this \
+             assertion to have run on anything",
+            net.run_cells.len()
+        );
+        total_runs += net.run_cells.len();
+
+        for (i, cells) in net.run_cells.iter().enumerate() {
+            let last: CellId = *cells.last().expect("a run has at least two cells");
+            if !matches!(*globe.water_kind.get(last), WaterKind::River) {
+                outlet_runs += 1;
+                continue;
+            }
+            if globe.downhill.get(last).is_none() {
+                continue;
+            }
+            assert!(
+                owner[last.0 as usize].is_some_and(|trunk| trunk != i),
+                "seed {seed}, run {i}: it ends on river cell {last:?}, which has a downhill \
+                 target ({:?}) and which no other run continues past. The run stopped short of \
+                 the cell it drains into, so its mouth is inland and the outlet cell carries no \
+                 channel",
+                *globe.downhill.get(last)
+            );
+        }
+    }
+    assert!(
+        total_runs >= MIN_RUNS_TOTAL,
+        "only {total_runs} runs across {} seeds — the assertion above ran on far less than \
+         the population it was calibrated against",
+        OUTLET_SEEDS.len()
+    );
+    assert!(
+        outlet_runs >= MIN_OUTLET_RUNS,
+        "only {outlet_runs} of {total_runs} runs end on the non-river cell they drain into \
+         (measured 616) — the terminal vertex is no longer being emitted, and the assertion \
+         above cannot see that because a confluence satisfies it too"
     );
 }
 
