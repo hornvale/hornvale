@@ -163,7 +163,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 21] = [
+const EXPECTED_UNTOKENISED: [&str; 22] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
@@ -179,6 +179,7 @@ const EXPECTED_UNTOKENISED: [&str; 21] = [
     "probe: measurement only, run explicitly",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
+    "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
