@@ -868,12 +868,23 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   `the_width_clause_binds_when_the_step_shrinks` is the positive control
 ///   that exercises it at a depth where it does bind.
 /// - **The conjunction is not the fraction.** The clauses hold on **99.75%** of
-///   transects (394 of 395) while **22.28%** are Fordable and only **96**
-///   transects have any crossing at all; the gap is the crossing gate itself —
+///   transects (394 of 395) while **22.28%** are Fordable and only **88**
+///   transects have any crossing at all (88 Fordable + 0 Impassable, printed as
+///   `crossings (F + I)`); the gap is the crossing gate itself —
 ///   the same-channel clause, the sign change, and §5.3's requirement that a
 ///   room stand inside its own bank edge — not §8's criterion. (It was 95.0%,
 ///   33.7% and 123 of 341 at The Ford, so the gap has WIDENED: the criterion
-///   admits nearly everything and the geometry refuses more of it.) Where the
+///   admits nearly everything and the geometry refuses more of it.)
+///
+///   **The crossing count belongs to THIS test's population and nothing
+///   else.** It read 96 for one round, which is `CROSSINGS_FLOOR`'s figure and
+///   belongs to the *enriched* population
+///   `the_discharge_clause_makes_the_strongest_crossing_impassable` assembles —
+///   these 395 strided transects plus 25 injected extremes. Two populations,
+///   two numbers, and the wrong one was transcribed while reconciling the
+///   figure that preceded it. It is a printed local now.
+///
+///   Where the
 ///   channel is wider than every step available, both rooms sit on one bank and
 ///   the verdict is `NotACrossing` rather than `Impassable`: the geometry
 ///   refuses before the criterion is consulted.
@@ -924,21 +935,40 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// it here is DECLINED ON COST rather than impossible.** At walk depth the
 /// width clause is inert (395/395), so `Impassable` requires a LOUD reach
 /// (`Q >= WATERFALL_MIN_DRAINAGE`) that is also a crossing. The network holds
-/// 91 loud vertices of 14,606; a uniform stride of 395 samples 2.7% of them, an
-/// expectation of **0.67** loud vertices — measured, exactly one, and it reads
-/// `NotACrossing`. (The pre arm sampled 33% of 883 and caught ~30 loud
-/// vertices, of which 8 were `Impassable`.) Recovering equal power needs about
-/// **4,800 transects — a 12x sample**, which on a per-query cost that is itself
-/// 16x higher would put one test in the tens of seconds. That is the trade, not
-/// a barrier. Enriching the sample instead would fix the branch and destroy the
-/// thing this test reports — an UNBIASED fordable fraction — so the branch is
-/// exercised elsewhere, which is the better home for a rare-branch positive
-/// control in any case:
-/// `the_discharge_clause_makes_the_strongest_crossing_impassable` asserts every
-/// loud crossing reads `Impassable` over a deliberately enriched population,
-/// and `LOUD_REACH_CELLS_FLOOR` guards that the world still has 34 loud cells
-/// to enrich from. The count is printed below so this is visible in the log
-/// rather than only here.
+/// **91 loud vertices of 14,606** (0.62%), so a uniform 395-transect stride
+/// expects **2.46** of them — printed by this test as `network loud vertices`
+/// rather than typed, because it was typed wrong once: 0.67 is what you get by
+/// substituting the 25 injected extremes for the 91 loud vertices, and it
+/// contradicted the sample-size arithmetic two sentences later. Measured:
+/// exactly **one** loud vertex, and it reads `NotACrossing`.
+///
+/// **The cost of restoring it, from printed numbers on both arms.** The pre arm
+/// sampled 295 of 883 vertices and its `drainage clause` read 281, so **14**
+/// loud vertices were sampled and 8 of them were `Impassable`. Reaching 14
+/// again at 91-in-14,606 needs `14 × 14606/91 ≈ **2,247** transects — a **5.7x**
+/// sample`, which would take this test from ~8 s to roughly 45 s on the commit
+/// gate. (Not the 12x an earlier draft of this paragraph claimed; that figure
+/// was derived from the wrong expectation.) So the branch is **closer to
+/// recoverable than first stated**, and it is still declined — but the ordering
+/// of the reasons matters and the first one is not cost:
+///
+/// 1. **Enrichment is ruled out on correctness, not price.** Injecting loud
+///    reaches biases the very fraction this test exists to report.
+/// 2. **Enlargement is unbiased and merely expensive** — 5.7x for one gate
+///    test — and it is not even guaranteed to work: the conversion from "loud
+///    vertex sampled" to "`Impassable` verdict" was 8 of 14 pre, and the one
+///    loud vertex sampled post read `NotACrossing`, so 2,247 transects buys the
+///    sample, not the branch.
+/// 3. **A rare-branch positive control does not belong in an unbiased-fraction
+///    witness anyway.** It is exercised elsewhere, which is the better home:
+///    `the_discharge_clause_makes_the_strongest_crossing_impassable` asserts
+///    every loud crossing reads `Impassable` over a deliberately enriched
+///    population, and `LOUD_REACH_CELLS_FLOOR` guards that the world still has
+///    34 loud cells to enrich from.
+///
+/// The loud count, the network total and the stride's expectation are all
+/// printed by this test, so the log carries the arithmetic rather than only
+/// this paragraph.
 ///
 /// **The 12x jump in cross-line pairs is the other half of the same fact.** The
 /// same-channel clause now refuses twelve times as many comparisons as the
@@ -1112,6 +1142,26 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     // Three bullets in this doc block went stale across The Rill's Task 3 and
     // had to be reconciled by hand; a number the test emits cannot.
     let widest_full = net.widest_half_width() * 2.0;
+    // Crossings, computed rather than quoted. The doc block above stated 96
+    // here for one round — `CROSSINGS_FLOOR`'s number, which belongs to the
+    // ENRICHED population `the_discharge_clause_…` assembles (395 strided plus
+    // 25 injected extremes), not to this test's unenriched 395. A figure
+    // transcribed from a neighbouring population is exactly the defect this
+    // whole doc block was rewritten to remove, so this one is a local too.
+    let crossings = fordable + impassable;
+    // What a UNIFORM STRIDE can expect to catch of the network's loud reaches —
+    // the arithmetic behind declining to restore the `Impassable` branch here.
+    // Printed because it was typed wrong once: 91 loud of 14,606 at a 395
+    // sample is 2.46, and 0.67 is what you get by substituting the 25 injected
+    // extremes for the 91 loud vertices.
+    let network_vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
+    let network_loud = net
+        .run_cells
+        .iter()
+        .flatten()
+        .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
+        .count();
+    let loud_expected = usable as f64 * network_loud as f64 / network_vertices.max(1) as f64;
     let mut discharges: Vec<f64> = transects
         .iter()
         .map(|t| ctx.terrain().drainage_at(t.cell))
@@ -1168,8 +1218,12 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
          sign-flip step pairs      = {sign_flip_pairs}\n  \
          of which CROSS-LINE       = {cross_line_pairs} ({cross_line_admitted} also inside a \
          bank edge, i.e. admitted before the same-channel clause)\n  \
+         crossings (F + I)         = {crossings}  (this test's UNENRICHED population; the \
+         discharge test's is larger because it injects extremes)\n  \
          widest full channel       = {widest_full:e} rad (vs one room edge above)\n  \
-         transect discharge        = min {q_min}, median {q_med}, max {q_max}",
+         transect discharge        = min {q_min}, median {q_med}, max {q_max}\n  \
+         network loud vertices     = {network_loud} of {network_vertices}; a uniform \
+         {usable}-transect stride expects {loud_expected:.2} of them",
         ctx.globe_level(),
         walk_depth(&ctx),
         room_edge(&transects[0].home),

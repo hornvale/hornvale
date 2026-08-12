@@ -232,6 +232,32 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 ///
 /// ## What Tier 2 inherits
 ///
+/// **The measured size of the problem, so a subdivision knows what it is for**
+/// (The Rill, Task 3; decision 0129 carries the same table with its
+/// denominator). Tier 1 made every land cell carry a channel, which put a
+/// polyline through **1.237%** of the walk-depth rooms over seed 42's land, up
+/// from 0.0845% — a 14.6x gain that tracks the count of rendered cells. But
+/// only **0.1716%** of those rooms read [`Transverse::Channel`] at their own
+/// centroid, which is the only question any consumer asks: `windows/locale`'s
+/// `describe`, `crossing_between` and `transverse_of` all query
+/// `bank_reading(addr.centroid())`. So **86% of the rooms a channel passes
+/// through do not read as water where a walker stands**, against 66% before
+/// Tier 1 — rendering more reaches made each one harder to notice.
+///
+/// The reason is the ratio this whole doc is about. A headwater half-width is
+/// **7.35e-6 rad** at level 6 against a **2.83e-4 rad** walk-depth room edge:
+/// **one thirty-eighth of a room**. Rendering a reach is not resolving it, and
+/// no change to the width law closes that gap without making creeks wrong.
+/// **1.237% is the number a sub-cell subdivision is trying to recover, not
+/// 0.1716%** — a prediction stated against the centroid figure sets the target
+/// an order of magnitude low.
+///
+/// Mind the denominators when re-measuring: a [`hornvale_kernel::RoomAddr`] is
+/// a **face** of the icosphere (`20·4^depth` of them) while
+/// [`Geosphere::cell_count`] is its **dual** (`10·4^level + 2`), so the two
+/// counts differ by ~2x and mixing them has already produced one spurious
+/// factor-of-two disagreement between two measurements of this quantity.
+///
 /// Scale-freeness holds **only when the count and the spacing are at the same
 /// level**. There is no [`Geosphere`] to ask below cell scale — level 12 would
 /// be `10·4¹² + 2 = 167,772,162` cells — so a subdivision cannot obtain its
