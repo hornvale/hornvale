@@ -319,6 +319,13 @@ key is what it is. It was kept and relabelled as a tripwire for a future
 narrowing — the honest description of what it can do — rather than deleted or
 left claiming more than it holds.
 
+**No bet in the map below moved.** The Ell repairs a unit boundary and a derived
+key; it resolves no open question about the world, raises nothing from taste-gated
+to self-scorable, and leaves every score in this chapter where it stood. Recorded
+explicitly, because a campaign that changes the save format and every founder's
+name looks from the outside like it should have moved something, and decision
+0030's sweep is answered by a statement either way rather than by silence.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

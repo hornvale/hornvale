@@ -8,7 +8,7 @@ registered predicate **no world could ever commit** because one producer
 stamped years into a field every consumer read as days, we decided to
 **retype `Fact.day` to `Option<WorldTime>`, with `WorldTime`'s inner `f64`
 private behind a validating constructor**, accepting that the change reaches
-all 445 existing `WorldTime` uses rather than the 94 write sites alone, and
+all ~445 existing `WorldTime` uses rather than the ~94 write sites alone, and
 that the type defends *construction* and not *deserialization*.
 
 **What 0014 said, and on what grounds.** 0014 kept `Fact.day` bare because
@@ -37,7 +37,8 @@ different for one writer, and no reader could see the writer.
 
 **The type 0014 declined already existed.** `kernel/src/field.rs` has defined
 `WorldTime { day: f64 }` — "fractional days since world genesis" — throughout,
-used **445 times** by fields, phenomena and observers. The fact envelope was
+used **~445 times** by fields, phenomena and observers (measured on the
+absorbed tree; 435 when the spec was drafted). The fact envelope was
 the one time-carrying surface in the kernel that opted out. The churn 0014
 weighed was never the cost of *introducing* a type; it was the cost of making
 one surface agree with the rest of the kernel.

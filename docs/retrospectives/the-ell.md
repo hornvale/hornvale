@@ -114,7 +114,8 @@ seeds:
   shipped (founding + hop + ended + peak)      0/1000                  0
 ```
 
-790× worse by founders, 366× by worlds, at the defect it existed to fix. It was
+791× worse by founders lost (1582/2) and 366× by colliding worlds (732/2), at
+the defect it existed to fix — both axes named, because they differ. It was
 escalated rather than silently corrected, because the narrow key's 1,582 "drops"
 are only drops if a failed founding and its same-year successor are two
 foundings — and that is a world-model question, not a key-selection one.
@@ -137,9 +138,71 @@ Three process points, in descending order of transferability:
    the reviewer went further and transcribed the superseded key from the
    parent commit into its own harness rather than calling the implementer's
    function, and got exact agreement on all three arms. That is what makes the
-   790× a finding rather than a claim.
+   791× a finding rather than a claim.
 
-## 5. Three vacuities this campaign exposed but did not create
+## 5. Overriding a scope recommendation, and how it turned out
+
+The founder-key widening was not part of this campaign's thesis. It arrived
+from the board, it is unrelated to the unit defect, and **the controller
+recommended against bundling it** on the standard grounds: one campaign, one
+thesis, and adding an unrelated root fix makes a reviewable diff unreviewable.
+Nathan overruled that on the epoch economics — the campaign was already paying
+for an epoch that renames every founder, so the marginal cost of widening the
+key inside it was zero, and the window closed when the campaign landed.
+
+**The override was right, and it is worth recording as a calibration datum
+rather than as a compliment.** The widening became roughly half the campaign's
+value: it produced the second falsification, the identity/discrimination
+taxonomy, decision 0127, and the finding that a ratified design was 791x worse
+than what it replaced. Deferring it would have cost a second epoch and would
+almost certainly have shipped the narrow key, because the narrow key's defect is
+invisible without the thousand-world sweep that only a campaign already inside
+that code would think to run.
+
+What separates this from ordinary scope creep is a testable property, and that
+is the transferable part: **the bundled work rode a cost the campaign was
+already paying, and the window was closing.** "One campaign, one thesis" is a
+rule about *reviewability*, and reviewability is a cost that can be paid —
+separate tasks, separate commits, a measurement instead of an argument — where a
+second epoch cannot be un-paid. When those two conditions hold (shared
+irreversible cost, closing window), override the scope recommendation and pay
+the reviewability price explicitly.
+
+## 6. Two preregistered numbers written without an inventory behind them
+
+**"587 founders" was 45% wrong by the time it was read.** The spec opened on
+*587 promoted founders, zero deaths* across five seeds. That figure came from
+the prior campaign's tree; on this branch the same five seeds carry **854**.
+Nothing was wrong when it was written and nothing had broken since — the roster
+had grown, and a count of founders is a function of the roster. The implementer
+measured its own before-arm rather than quoting the spec, which is the only
+reason the acceptance table is trustworthy: a before-arm quoted from a document
+is not a measurement of the tree under test.
+
+**A committed baseline is a claim with a date**, and this project has now been
+bitten by that shape from both directions — a previous campaign's size bound was
+falsified because its *denominator* had moved while the campaign was parked.
+Same lesson: a number frozen in a spec ages against a tree that keeps moving, so
+what a freeze must fix is a **definition** ("the count of promoted founders on
+seeds 42/7/1000/3/99") rather than a value.
+
+**E4's "only three values move" was written without an inventory, and it
+undercounted.** The spec named three moved values and required any fourth to be
+reported as a finding rather than re-pinned over. Seven moved. Four are entailed
+rather than surprising — the person facts follow from the spec's own §4, and one
+bullet reading "the day stamp of every occupation fact" expands to about
+fourteen predicates. **The one in nobody's list is `pays-tribute-to`.**
+`TributeRelation::since` is a bake year written straight into `Fact.day` at
+`windows/worldgen/src/history_emit.rs:315`; it appears in neither the spec's
+list nor the controller's reader table, and it was found by grepping the emit
+path rather than the predicate list. The conversion is correctly applied and
+guarded, so there is no live defect — what would otherwise be lost is the
+lesson: **a preregistered containment claim needs an enumeration behind it,
+produced by walking the writer, not by listing the values the author happened to
+be thinking of.** E4 passing "on the spirit" is the honest score, and it reads
+as a finding only because the criterion demanded a report rather than a re-pin.
+
+## 7. Three vacuities this campaign exposed but did not create
 
 Each was green, each had been green for a long time, and each was found by a
 different instrument.
@@ -166,7 +229,7 @@ different instrument.
   detector of a new collision shape — and it is now labelled as one, with the
   patch that makes it fire recorded beside it.
 
-## 6. Three stdin-reachable panics, and why the third was structurally invisible
+## 8. Three stdin-reachable panics, and why the third was structurally invisible
 
 The retype put a validating constructor between ~445 call sites and a value.
 Three of those sites were reachable from a person typing at a prompt:
@@ -189,7 +252,7 @@ argument, examined ~26, and changed exactly one — with the reasoning for each
 site left alone written down. A sweep that changes one site and documents
 twenty-five is a stronger result than one that changes five and explains none.
 
-## 7. The decision-number warning fired in flight
+## 9. The decision-number warning fired in flight
 
 The spec said the next free decision number was 0125 and warned — in the same
 sentence — that it must be re-derived at the moment the record is written,
@@ -208,7 +271,7 @@ $ ls docs/decisions/ | grep -oE '^0[0-9]{3}' | sort -n | awk 'NR!=$1+0 {print "G
 $   # (silent: contiguous 0001..0125)
 ```
 
-## 8. Two sizing facts that were forced rather than chosen
+## 10. Two sizing facts that were forced rather than chosen
 
 - **A signature change and its call sites cannot be separate commits** under a
   workspace-wide pre-commit hook: the intermediate state does not compile, so
@@ -222,16 +285,27 @@ $   # (silent: contiguous 0001..0125)
   first began compiling and exposed ~35 read sites at once. A "how many errors
   left" progress reading is meaningless mid-sweep; only zero means anything.
 
-## 9. Operational notes worth carrying
+## 11. Operational notes worth carrying
 
 - **`git stash pop` is not safe here.** The stash stack is shared across
   worktrees, and another session's work-in-progress was sitting under this one's
   entry. Use `git stash push -m`, `git stash list --format`, `git stash apply
   <sha>`, and drop by verified position.
-- **Gate timings landed under host `MacBookPro`, not `ambrose`.** Five runs
-  across the campaign: 848.5, 986.6, 490.8, 490.8 and 353.4 s, against the
-  `ambrose` baseline's 460.8 s. Per the known baseline-forking blind spot,
-  `hostname -s` first, and do not rank this suite against another host's file.
+- **Gate timings landed under host `MacBookPro`, not `ambrose`.** The ledger
+  carries **seven** `gate` rows for this branch, of which five are real suite
+  runs — 848.5, 986.6, 490.8, 490.8 and 353.4 s — against the `ambrose`
+  baseline's 460.8 s. Per the known baseline-forking blind spot, `hostname -s`
+  first, and do not rank this suite against another host's file. **The two
+  anomalies are worth naming rather than dropping**, because a timings ledger
+  read as a list of suite durations will mislead:
+  - `3.582 s` at `39badb3a`, `cpu_ratio` 1.29 — nothing ran; not a suite timing.
+  - `478.048 s` at `0e7ef367`, `cpu_ratio` **0.89** — 478 s of wall for 427 s of
+    CPU, i.e. essentially serial. Whatever that run spent its time on, it was
+    **not** the parallel test phase, which reaches `cpu_ratio` 6.3–8.2 on this
+    box. The ledger does not record enough to say what it was, and guessing is
+    how a timing datum becomes a story. It is left as an open reading, and it
+    is the strongest single hint that the suite's wall-clock is dominated by
+    something other than test execution.
 - **The close broke "run once, inspect many" and paid for it.** The gate's tail
   was captured with `| tail -30`, which is below nextest's summary line, so the
   suite was re-run purely to read `3397 tests run: 3397 passed` — 353 s for one
@@ -244,8 +318,19 @@ $   # (silent: contiguous 0001..0125)
   re-pinning another campaign's fixture inside an epoch commit.
 - **A census refresh is owed.** No census ran, correctly — but the ledger those
   metrics read changed shape, and person deaths exist for the first time.
+- **`wait 1e308` takes about five minutes of wall-clock** — 39,684 stirred NPCs
+  × `MAX_STEPS = 10_000`. Pre-existing wait-scaling, not introduced here; the
+  panic it used to end in is fixed, the cost is not. Relevant to the
+  test-duration follow-up, because it is a live example of the shape that
+  question is about: cost that lives inside the work, not in the scheduling.
+- **The handle change moved exactly two worlds' remembered casts.** Seeds 283
+  and 705, both `+1`, symmetric difference 1, and **no world saw a
+  substitution** — nobody was swapped for anybody. The ranking key's *value*
+  moved for everyone, which is inherent to the epoch, and the *selection* it
+  drives barely moved at all. Worth a line because "the key changed" and "the
+  cast changed" are different claims and the second one was measured.
 
-## 10. The board's post was right about the defect and stale about the symptom
+## 12. The board's post was right about the defect and stale about the symptom
 
 The founder-key collision entered this campaign from a board post, which is the
 medium working as designed — it carried a defect nobody had scheduled, and the
@@ -262,7 +347,7 @@ and would have passed vacuously. **A board post is a pointer to a defect, not a
 description of its current symptom** — symptoms are the half that other
 campaigns change.
 
-## 11. The Confidence Gradient
+## 13. The Confidence Gradient
 
 **No bet moved.** This campaign resolves no open question about the world; it
 repairs a unit boundary and a key. The chapter's *floor* gained an entry, which
@@ -271,7 +356,7 @@ instance, because five of sixteen unit crossings in this campaign had no guard
 at all and the most consequential of them reaches a committed census value that
 the commit gate never rebuilds.
 
-## 12. Follow-ups, each with a number attached
+## 14. Follow-ups, each with a number attached
 
 Recorded as registry rows so they are grep-able; repeated here because a
 retrospective is where the reasoning survives.
@@ -303,7 +388,18 @@ retrospective is where the reasoning survives.
    scheduling is not the lever and another `#[ignore]` tier buys nothing.
    `make ci` already writes per-test durations to `target/nextest/ci/run.json`,
    and the committed per-host baseline's history is an unread time series.
-6. **Three stale figures in the descent path**, all pre-existing: seed 42's
+6. **`WorldTime` derives `PartialOrd` and has no `total_cmp` companion.**
+   `ReferenceElevation` — the kernel newtype this one was built from — pairs
+   `PartialOrd` with an explicit `total_cmp` plus `min`/`max` built on it, and
+   `grep total_cmp kernel/src/field.rs` returns nothing. The project rule is
+   that float sorting uses `total_cmp` with deterministic tie-breaks, and this
+   campaign introduced a **new kernel float newtype** without one. **Nothing
+   sorts a `WorldTime` today** — no `sort`, `cmp`, `min` or `max` call site
+   exists anywhere in the workspace — so this is a shape of risk rather than a
+   live defect: the hazard is that the first consumer to want an ordering
+   reaches for the derived `PartialOrd`, gets `Option<Ordering>`, and unwraps
+   it. Deferred at Task 1 and nearly lost with the scratch.
+7. **Three stale figures in the descent path**, all pre-existing: seed 42's
    maximum generations-removed was measured at 52 while `descent.rs:81` and
    `history_units.rs:128` both say 32; the new guard's ceiling of 400 is ~4×
    looser than the roster implies (~92); and `generation_length_of`'s
