@@ -334,6 +334,38 @@ becomes coordinated force-pushes plus a garbage-collect on every clone, and an
 offline clone keeps the bytes indefinitely. **Distributed redaction is not
 achievable in the general case.**
 
+**Redaction's two halves have different scopes, and the boundary is worth stating
+because this is the command someone reaches for in an emergency.** Found in Task
+8's review, once the union existed:
+
+- **Suppression is board-wide.** The `redact` control post propagates like any
+  other post, and every read seam computes suppression over the union — so once
+  the control post reaches a host, that host stops displaying the body.
+- **Eviction is per-log.** `redact` removes the post from *this host's* tip.
+  Where the post also lives in another host's log — a peer-only post, or the
+  content-addressed duplicate case where two hosts independently authored
+  identical bytes, so one id sits in two logs — the bytes remain in that log
+  until its own host acts.
+
+Task 8 shipped with the ambient seam depending *entirely* on eviction, which
+produced a failure worse than not redacting at all: the control post rendered
+beside the body it was meant to suppress and named it by id — a signpost. Fixed
+by admitting `redact` into the same read-time suppression `retract` already used.
+
+The residual limit stands and is deliberate: **a genuinely board-wide eviction
+would require every host to act on the control post during its own sync**, which
+is a design this campaign did not take. `redact` reports which case it landed in
+(`Evicted` / `LostRace` / `NotHere`) and every variant says suppression still
+applies board-wide, because the dangerous misreading of "nothing was evicted" is
+"nothing happened".
+
+**`retract` and `redact` share a mechanism and must not share a meaning.**
+`retract` says *I withdraw this claim — the post is wrong*; `redact` says *this
+content must stop being displayed — and the post may be perfectly true*. They are
+kept distinct in the reason a post is suppressed, in what the digest reports (a
+redaction is an act done *to* the board and is recorded as one; a withdrawal is
+not), and in `is_reapable`'s two separate tests rather than one disjunction.
+
 *Deferred (registry row):* crypto-shredding — store a sensitive body as
 ciphertext and destroy the key to delete it. It is the only construction that
 achieves irrecoverability *without* touching 0118 part 3: history intact, pushes
