@@ -96,5 +96,17 @@ hornvale_kernel::stream_labels! {
         /// POSITION and never by room address: address-hashed noise cannot
         /// form a connected watercourse (see `windows/locale/src/micro.rs`).
         CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field (hash-noise only; no stream draws)";
+        /// Which of the two children on a room's outflow edge carries the
+        /// sub-cell outlet. Named for the choice it makes, not for the campaign
+        /// that added it: the coarse flow graph fixes the *edge* a room's water
+        /// leaves by, and exactly two of the four children touch that edge
+        /// along a segment (`domains/terrain/tests/rill_properties.rs`
+        /// `a_parent_edge_is_shared_by_two_corner_children`), so this is the one
+        /// degree of freedom subdivision has. Hash-noise only: the label is
+        /// derived once per world, then sub-derived per room ADDRESS, and no
+        /// `Stream` is ever consumed — so it carries no draw-order/save-format
+        /// contract, exactly like `CHANNEL_MEANDER`. A NEW label; existing
+        /// consumption order is untouched.
+        SUBCELL_OUTLET = "subcell-outlet" => "which of the two children on a room's outflow edge carries the sub-cell outlet (hash-noise only; no stream draws)";
     }
 }

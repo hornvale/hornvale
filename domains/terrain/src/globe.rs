@@ -165,6 +165,12 @@ pub struct TectonicGlobe {
     /// no draw-order/save-format contract, and (being a leaf, not the root)
     /// it cannot be used to derive any other terrain stream.
     pub channel_seed: Seed,
+    /// Hash-noise seed for the sub-cell outlet choice (The Rill, Task 4):
+    /// `terrain_seed.derive(streams::SUBCELL_OUTLET)`, already the derived leg
+    /// — a leaf exactly like `channel_seed`, for exactly the same reason.
+    /// `subdivide::flow_at` takes it directly rather than deriving it again, so
+    /// a caller holding it cannot reach any other terrain stream through it.
+    pub subcell_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -188,6 +194,12 @@ impl TectonicGlobe {
     /// `ChannelNetwork::build` uses directly for the meander field.
     pub fn channel_noise_seed(&self) -> Seed {
         self.channel_seed
+    }
+
+    /// The already-derived `streams::SUBCELL_OUTLET` hash-noise seed
+    /// `subdivide::flow_at` uses directly for the sub-cell outlet choice.
+    pub fn subcell_flow_seed(&self) -> Seed {
+        self.subcell_seed
     }
 }
 
@@ -494,6 +506,9 @@ pub fn generate(
     // derive any other terrain stream. Hash-noise only, no new draw-order
     // contract.
     let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
+    // A NEW labeled leg. `derive` is a pure hash and consumes no `Stream`, so
+    // adding it perturbs no existing draw and no existing world.
+    let subcell_seed = terrain_seed.derive(streams::SUBCELL_OUTLET);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -541,6 +556,7 @@ pub fn generate(
         lithology_seed,
         features_seed,
         channel_seed,
+        subcell_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);

@@ -21,6 +21,7 @@ pub mod rift;
 pub mod shape;
 pub mod strata;
 pub mod streams;
+pub mod subdivide;
 pub mod water;
 
 pub use streams::stream_labels;
@@ -50,6 +51,7 @@ pub use strata::{
     BandKind, BandSample, Era, GeothermalGradient, StratigraphicColumn, column, depth_to_basement,
     geothermal_gradient, temperature_at_depth, unconformity,
 };
+pub use subdivide::{SubFlow, floor_flow, flow_at, room_spacing};
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
 
 use hornvale_kernel::{
@@ -317,7 +319,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 24);
+        assert_eq!(labels.len(), 25);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
