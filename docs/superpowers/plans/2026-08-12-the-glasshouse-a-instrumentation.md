@@ -635,14 +635,31 @@ from several additive terms; which of them dominates the variance of
 `elevation - sea_level` over land selects the hypsometry fix, and no other task
 can be specified until this reports.
 
-The candidate terms, read off `domains/terrain/src/elevation.rs`:
+**Controller-verified: the terms are purely additive.** `assemble_elevation`
+(`elevation.rs:499-500`) closes with exactly:
 
-| term | site | constants |
-|---|---|---|
-| isostatic base | `isostatic_m(thickness_km)` | `ISOSTASY_M_PER_KM = 180.0`, `ISOSTASY_REF_KM = 30.0` |
-| boundary profile | `boundary_profile_m(...)`, `profile_scale(...)` | `FORELAND_DEPTH_M`, `TRENCH_DEPTH_M`, `ARC_*`, `*_DECAY_CELLS`, `FOOTHILLS_*`, `FAR_FIELD_*` |
-| micro-relief | `relief_scale(...)` | `RELIEF_AMPLITUDE_M = 240.0`, `RELIEF_FREQUENCY`, `RELIEF_OCTAVES` |
-| hotspots / trails | `dome_m`, `trail_seamounts` | `HOTSPOT_SIGMA_RAD`, `TRAIL_*` |
+```rust
+let metres =
+    base + boundary_term + hotspot_term + relief_term + CELL_EPSILON_M * f64::from(cell.0);
+```
+
+So a variance decomposition is well-posed and each term can be zeroed
+independently without perturbing the others. The plan originally hedged that they
+might not be additive; they are, and there are **five**, not four:
+
+| term | site | constants | note |
+|---|---|---|---|
+| `base` | `isostatic_m(*crust.get(cell))` | `ISOSTASY_M_PER_KM = 180.0`, `ISOSTASY_REF_KM = 30.0` | driven by the crust-thickness field; the prime suspect for both mean and variance |
+| `boundary_term` | `boundary_profile_m(...)` × `profile_scale(...)` | `FORELAND_DEPTH_M`, `TRENCH_DEPTH_M`, `ARC_*`, `*_DECAY_CELLS`, `FOOTHILLS_*`, `FAR_FIELD_*` | signed — `Uplift` positive, `Trough` negative |
+| `hotspot_term` | `dome_m` summed over `trail_seamounts` | `HOTSPOT_SIGMA_RAD`, `TRAIL_*` | sum of positive domes, so it raises the mean |
+| `relief_term` | `RELIEF_AMPLITUDE_M · relief_scale(...) · (fbm − 0.5) · 2` | `RELIEF_AMPLITUDE_M = 240.0`, `RELIEF_FREQUENCY`, `RELIEF_OCTAVES` | **zero-mean by construction** — adds variance, not mean |
+| epsilon | `CELL_EPSILON_M · cell.0` | `CELL_EPSILON_M = 1e-6` | ~0.04 m total at level 6; a tie-breaker, not physics. Include it so the decomposition sums to the total, then ignore it |
+
+Two consequences worth carrying into the analysis: `relief_term` cannot be
+responsible for the elevated *mean* (it is zero-mean), and `base` is the only
+term whose scale is set by a `physics` constant that §3.3 already ruled out as a
+knob — so if `base` dominates, the fix lies in the **crust-thickness field**
+that feeds it, not in `isostatic_m`.
 
 **Files:**
 - Create: `docs/audits/land-elevation-attribution.md` (a committed finding)
@@ -660,9 +677,13 @@ The candidate terms, read off `domains/terrain/src/elevation.rs`:
 sed -n '421,515p' domains/terrain/src/elevation.rs
 ```
 
-Do not skim. The decomposition must match how the terms actually combine — if
-they are not additive, the plan's framing is wrong and that is itself the
-finding. Record what you find at the top of the audit document.
+Do not skim. The additivity above is controller-verified, so the open question is
+not *whether* the terms sum but **how each is reachable for zeroing**: which are
+computed from arguments you can neutralise at the call site, and which are
+computed inline from loop-local state. That determines the shape of the probe, and
+it is what Step 2 needs.
+
+Record at the top of the audit document which terms are reachable how.
 
 - [ ] **Step 2: Write the probe**
 
