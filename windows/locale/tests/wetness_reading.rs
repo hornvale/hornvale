@@ -53,10 +53,10 @@
 //! whole record naming its own room, so the sampled set cannot drift between
 //! capture and check.
 
+use hornvale_climate::BiomeExpr;
 use hornvale_climate::variants::{GroundKind, Variant, variant_pool};
-use hornvale_climate::{BiomeExpr, Formation, Medium};
 use hornvale_kernel::{RoomAddr, Seed, World, WorldTime};
-use hornvale_locale::{Locale, LocaleContext, grounded_wetness};
+use hornvale_locale::{Locale, LocaleContext, grounded_wetness, wetness_is_grounded};
 use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 use serde_json::Value;
 
@@ -276,37 +276,77 @@ fn the_walks_still_descend() {
 /// reference is the elevation the walk descends. `micro_field` reads moisture
 /// and the channel network; it does not read elevation, so nothing in the
 /// wetness computation can satisfy this by construction — and nothing does.
-/// Measured on seed 42, over the fixture's 28 descending walks:
+/// Every arm below is printed by this test on seed 42 over the fixture's
+/// descending walks; none is written down here.
 ///
-/// | arm | non-decreasing steps |
-/// |---|---|
-/// | the emitted axis, before this campaign (pure address noise) | 210/420 |
-/// | the emitted axis, as shipped | printed below |
-/// | [`grounded_wetness`] alone, without the retained draw | printed below |
+/// # Two populations, because the arms are not comparable on all of them
 ///
-/// **Two findings, and they point opposite ways.** The grounded value *does*
-/// get damper as a walk descends, well above the 1/2 a coin gives — the model
-/// works. The *emitted* axis does not, because the `LOCALE_MICRO` draw that
-/// the save-format contract forbids removing (see
-/// [`the_micro_draw_order_is_unchanged`]) is three orders of magnitude larger
-/// than the signal it sits on: the median step moves the grounded value by
-/// about 2.2e-4 on a two-unit axis, while the retained draw moves the emitted
-/// one by up to 0.2.
+/// The emitted axis can only move where the grounding writes to it
+/// ([`wetness_is_grounded`] — bare ground under open air), and some of the
+/// fixture's walks run over sea or ice for their whole length. Scoring the
+/// grounded arm on those steps compares it against an axis that is *by
+/// construction* unchanged there, and it flatters the result. So **the in-scope
+/// fraction — both endpoints of the step grounded — is the headline**, and the
+/// all-steps fraction is printed beside it rather than instead of it. The
+/// direction survives the restriction; the effect shrinks.
 ///
-/// **Nothing was retuned to rescue this.** `LOCAL_VARIATION` is where it was
-/// before the first measurement. Three alternatives were measured and none
-/// reaches the 0.80 floor either: including the coarse trunk's own
-/// `channel_distance`/`channel_bands` in the allocation changes nothing at all
-/// (0 of 448 walk rooms fall inside a trunk band), and lengthening the walks to
-/// 64, 256 and 1,024 rooms gives 0.4906, 0.4937 and 0.5018. The obstacle is
-/// physical, not a choice of constant: a sub-cell valley's terrace/dry edge has
-/// median 2.78e-6 rad against a walk-depth room edge of 2.83e-4 rad, so the
-/// rill geometry is about a hundred times finer than the room that must report
-/// it, and the cell-scale moisture field barely moves across a walk.
+/// # What the null actually says
 ///
-/// The assertions below are therefore the two that the measurement supports: a
-/// pinned witness on the emitted fraction, and the real, non-vacuous claim that
-/// the grounded value beats chance. R-7's own floor is reported, not asserted.
+/// Not "the model works". Precisely:
+///
+/// - **The climate-supply term beats chance.** `grounded_wetness` with no
+///   watercourse at all — the budget alone — is non-decreasing well above 1/2
+///   as a walk descends.
+/// - **The allocation reverses step verdicts, but buys no fraction.** It is
+///   active on a printed, asserted non-zero count of walk rooms, and it does
+///   reverse a printed number of individual step verdicts — so it is
+///   emphatically not inert. What it does not do is move the *fraction*: the
+///   reversals cancel almost exactly, leaving the all-steps figure identical
+///   with and without the term, and the in-scope figure a shade **worse** than
+///   the supply alone. The direction R-7 predicts is carried entirely by the
+///   climate-supply term, which predates this campaign. That converges with the
+///   scale measurement below: the valley is about a hundred times finer than
+///   the room, so the term is 0 on the overwhelming majority of rooms and its
+///   few interventions are as likely to reverse a step the wrong way as the
+///   right one.
+/// - **The emitted axis shows neither.** The `LOCALE_MICRO` draw that the
+///   save-format contract forbids removing (see
+///   [`the_micro_draw_order_is_unchanged`]) is three orders of magnitude larger
+///   than the signal it sits on: the median descending step moves the grounded
+///   value by about 2.2e-4 on a two-unit axis, while the retained draw moves
+///   the emitted one by up to 0.2.
+///
+/// # Nothing was retuned to rescue this
+///
+/// `LOCAL_VARIATION` is where it was before the first measurement. Three
+/// alternatives were measured afterwards and none reaches the 0.80 floor:
+/// lengthening the walks to 64, 256 and 1,024 rooms gives 0.4906, 0.4937 and
+/// 0.5018, and adding the coarse trunk's own `channel_distance`/`channel_bands`
+/// to the allocation changes nothing.
+///
+/// **That trunk result is conditional on this walk population, and the
+/// condition is not incidental.** The walks are seeded at rill polyline *heads*,
+/// so they sample headwater terrain, where a trunk is exactly what one does not
+/// expect to find. This test therefore prints how many rooms fall inside a
+/// trunk band in the walk sample *and* in the fixture's independent `land`
+/// sample, and asserts the two disagree — the world does contain rooms inside a
+/// trunk's floodplain (seed 42's flagship room 750518284 has a
+/// `channel_distance` of 5.27e-4 rad against a terrace/dry edge of 2.30e-3),
+/// and the walks simply do not visit them. The honest claim is "adding the
+/// trunk changes nothing **on walks seeded at rill heads**", not "the trunk is
+/// inert".
+///
+/// # The obstacle is a scale measurement, not a choice of constant
+///
+/// A sub-cell valley's terrace/dry edge has median 2.78e-6 rad against a
+/// walk-depth room edge of 2.83e-4 rad, so the rill geometry is about a hundred
+/// times finer than the room that must report it, and the cell-scale moisture
+/// field barely moves across a walk.
+///
+/// The assertions are therefore the ones the measurement supports: pinned
+/// witnesses on both fractions, the claim that the supply term beats chance and
+/// beats the emitted axis, and a guard that dies if the allocation term ever
+/// goes inert on this population. R-7's own floor is reported, not asserted.
 #[test]
 fn a_walk_gets_damper_as_it_descends() {
     let world = world();
@@ -316,14 +356,36 @@ fn a_walk_gets_damper_as_it_descends() {
     let rows = rows();
     let walks = walks(&rows);
 
-    let (mut total, mut emitted, mut ground, mut before) = (0usize, 0usize, 0usize, 0usize);
+    /// One sampled room, read four ways along the same axis.
+    struct Reading {
+        /// What the document emits.
+        emitted: f64,
+        /// The model's own value: budget and allocation.
+        grounded: f64,
+        /// The budget alone — this campaign's allocation term deleted.
+        supply_only: f64,
+        /// What the axis was before this campaign (pure address noise).
+        before: f64,
+        /// Whether the grounding writes to this room at all.
+        in_scope: bool,
+    }
+
+    // Rooms where the allocation term actually moves the value away from the
+    // supply. If this is zero the "supply beats chance" assertion below is
+    // being satisfied by a term that predates this campaign entirely.
+    let mut allocation_active = 0usize;
+    let mut trunk_in_walks = 0usize;
+    let mut per_walk: Vec<Vec<Reading>> = Vec::new();
     for w in &walks {
-        let mut pairs: Vec<(f64, f64, f64)> = Vec::new();
+        let mut readings = Vec::new();
         for r in w {
             let loc = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
             // The same wiring `describe_with_weights` does, calling the same
-            // model function rather than a copy of it.
-            let g = grounded_wetness(
+            // model function rather than a copy of it. `None` for the rill is
+            // that function's own "no watercourse" arm, so the supply-only
+            // value is the model with this campaign's allocation deleted and
+            // not a restatement of its formula.
+            let grounded = grounded_wetness(
                 loc.fields.moisture,
                 rill_reading(
                     r.room.centroid(),
@@ -334,46 +396,159 @@ fn a_walk_gets_damper_as_it_descends() {
                     &cut,
                 ),
             );
-            pairs.push((loc.regime.micro.wetness, g, r.wetness));
+            let supply_only = grounded_wetness(loc.fields.moisture, None);
+            if grounded != supply_only {
+                allocation_active += 1;
+            }
+            if inside_a_trunk_band(&loc) {
+                trunk_in_walks += 1;
+            }
+            readings.push(Reading {
+                emitted: loc.regime.micro.wetness,
+                grounded,
+                supply_only,
+                before: r.wetness,
+                in_scope: wetness_is_grounded(BiomeExpr::for_legacy(loc.biome_kind)),
+            });
         }
-        for p in pairs.windows(2) {
-            total += 1;
-            if p[1].0 >= p[0].0 {
-                emitted += 1;
+        per_walk.push(readings);
+    }
+    let walk_rooms: usize = per_walk.iter().map(Vec::len).sum();
+
+    // (kept, total) per arm, over all steps and over in-scope steps only.
+    let mut all = [(0usize, 0usize); 4];
+    let mut scoped = [(0usize, 0usize); 4];
+    let mut allocation_flips = 0usize;
+    for w in &per_walk {
+        for p in w.windows(2) {
+            let arms = [
+                p[1].emitted >= p[0].emitted,
+                p[1].grounded >= p[0].grounded,
+                p[1].supply_only >= p[0].supply_only,
+                p[1].before >= p[0].before,
+            ];
+            // Does deleting the allocation reverse this step's verdict?
+            if arms[1] != arms[2] {
+                allocation_flips += 1;
             }
-            if p[1].1 >= p[0].1 {
-                ground += 1;
-            }
-            if p[1].2 >= p[0].2 {
-                before += 1;
+            for (i, kept) in arms.iter().enumerate() {
+                all[i].1 += 1;
+                all[i].0 += usize::from(*kept);
+                if p[0].in_scope && p[1].in_scope {
+                    scoped[i].1 += 1;
+                    scoped[i].0 += usize::from(*kept);
+                }
             }
         }
     }
-    let f_emitted = emitted as f64 / total as f64;
-    let f_ground = ground as f64 / total as f64;
+    let f = |(k, t): (usize, usize)| k as f64 / t as f64;
+    let names = [
+        "emitted axis   ",
+        "grounded value ",
+        "supply only    ",
+        "before (noise) ",
+    ];
     println!(
-        "R-7 (seed 42, walk depth 12, {} walks, {total} descending steps), \
-         steps that do not get drier:\n  \
-         before this campaign  {before}/{total} = {:.4}\n  \
-         emitted axis          {emitted}/{total} = {f_emitted:.4}\n  \
-         grounded value alone  {ground}/{total} = {f_ground:.4}\n  \
-         preregistered floor   {R7_FLOOR:.4} — NOT MET by the emitted axis",
-        walks.len(),
-        before as f64 / total as f64,
+        "R-7 (seed 42, walk depth 12, {} walks, {walk_rooms} rooms), \
+         steps that do not get drier:",
+        walks.len()
     );
-    // The pinned witness: the emitted fraction is deterministic, so it is a
-    // change detector on a number this campaign now owns.
-    assert_eq!(
-        (emitted, total),
-        (215, 420),
-        "the emitted R-7 fraction moved from the value The Rill measured"
+    for i in 0..4 {
+        println!(
+            "  {}  in-scope {:>3}/{:<3} = {:.4}   all steps {:>3}/{:<3} = {:.4}",
+            names[i],
+            scoped[i].0,
+            scoped[i].1,
+            f(scoped[i]),
+            all[i].0,
+            all[i].1,
+            f(all[i]),
+        );
+    }
+    println!(
+        "  preregistered floor {R7_FLOOR:.4} — NOT MET by the emitted axis on either population"
     );
-    // The real claim: the grounded value is damper downhill more often than a
-    // coin would be, and more often than the emitted axis manages.
+    println!(
+        "  allocation: active on {allocation_active} of {walk_rooms} walk rooms, \
+         and flips {allocation_flips} of {} step verdicts",
+        all[0].1
+    );
+
+    // How many rooms sit inside the COARSE trunk's own bands, in the walk
+    // sample and in the fixture's independent land sample. The trunk null was
+    // measured on the first; the second is what says the first is a property of
+    // the population and not of the world.
+    let trunk_in_land = rows
+        .iter()
+        .filter(|r| r.kind == "land")
+        .filter(|r| inside_a_trunk_band(&ctx.describe(&r.room, WorldTime::GENESIS).unwrap()))
+        .count();
+    let land_rooms = rows.iter().filter(|r| r.kind == "land").count();
+    println!(
+        "  inside a coarse trunk band: {trunk_in_walks} of {walk_rooms} walk rooms \
+         (seeded at rill heads), {trunk_in_land} of {land_rooms} land-sample rooms"
+    );
+
+    // PREMISES FIRST, because a witness pinned on a sample that does not
+    // exercise the term is a witness on the wrong thing.
+    //
+    // The allocation must be doing something to these rooms, or every arm above
+    // is measuring moisture alone and this campaign is invisible to the
+    // measurement. This is the guard that dies if the allocation is deleted.
     assert!(
-        f_ground > 0.5 && f_ground > f_emitted,
-        "the grounding does not beat chance: grounded {f_ground:.4}, emitted {f_emitted:.4}"
+        allocation_active > 0,
+        "the allocation term is inert on all {walk_rooms} walk rooms — every arm \
+         above is measuring moisture alone"
     );
+    // The trunk null is conditional on the walk population, and this is what
+    // makes that conditionality checkable rather than a caveat in prose: the
+    // world does contain rooms inside a trunk's valley, and these walks — seeded
+    // at rill heads — do not visit them.
+    assert!(
+        trunk_in_land > trunk_in_walks,
+        "the land sample has no more trunk-band rooms than the rill-head walks \
+         ({trunk_in_land} vs {trunk_in_walks}), so the trunk null cannot be \
+         attributed to the walk population"
+    );
+
+    // Pinned witnesses: both fractions are deterministic, so they are change
+    // detectors on numbers this campaign now owns.
+    assert_eq!(
+        (all[0].0, all[0].1),
+        (215, 420),
+        "the all-steps emitted R-7 fraction moved from the value The Rill measured"
+    );
+    assert_eq!(
+        (scoped[0].0, scoped[0].1),
+        (177, 345),
+        "the in-scope emitted R-7 fraction moved from the value The Rill measured"
+    );
+    assert_eq!(
+        (scoped[1].0, scoped[1].1),
+        (214, 345),
+        "the in-scope grounded R-7 fraction moved from the value The Rill measured"
+    );
+    // The claim the data supports: the supply term is damper downhill more
+    // often than a coin would be, and more often than the emitted axis manages.
+    // Stated on the SUPPLY arm rather than the grounded one, because the
+    // allocation flips no step verdicts and claiming it for the full model
+    // would credit this campaign with a term that predates it.
+    assert!(
+        f(scoped[2]) > 0.5 && f(scoped[2]) > f(scoped[0]),
+        "the climate supply does not beat chance in scope: supply {:.4}, emitted {:.4}",
+        f(scoped[2]),
+        f(scoped[0]),
+    );
+}
+
+/// Whether a room stands inside the **coarse trunk's** valley — the reading the
+/// document already carries, as distinct from the sub-cell branch
+/// [`rill_reading`] finds. `channel_bands[3]` is the terrace/dry edge.
+fn inside_a_trunk_band(loc: &Locale) -> bool {
+    matches!(
+        (loc.channel_distance, loc.channel_bands),
+        (Some(d), Some(e)) if d.abs() < e[3]
+    )
 }
 
 /// The wetness clause a descriptor renders, across all four grammars — the
@@ -434,10 +609,7 @@ fn the_habitat_clause_movement_is_attributable() {
     let mut supplies: Vec<f64> = rows
         .iter()
         .map(|r| ctx.describe(&r.room, WorldTime::GENESIS).unwrap())
-        .filter(|l| {
-            let e = BiomeExpr::for_legacy(l.biome_kind);
-            e.realm.medium == Medium::AirOverRock && e.formation != Formation::Ice
-        })
+        .filter(|l| wetness_is_grounded(BiomeExpr::for_legacy(l.biome_kind)))
         .map(|l| l.fields.moisture)
         .collect();
     supplies.sort_by(|a, b| a.total_cmp(b));
@@ -639,11 +811,9 @@ fn only_the_ground_is_grounded() {
     let mut checked = 0usize;
     for r in &rows {
         let loc = ctx.describe(&r.room, WorldTime::GENESIS).unwrap();
-        let expr = BiomeExpr::for_legacy(loc.biome_kind);
-        // The grounded arm, and only it: bare ground under open air. Ice is
-        // land too, but its clause is drift and scour rather than damp and
-        // dry, so a river's proximity has nothing to say about it.
-        if expr.realm.medium == Medium::AirOverRock && expr.formation != Formation::Ice {
+        // The grounded arm, and only it — the same predicate `describe`
+        // itself branches on, not a restatement of it.
+        if wetness_is_grounded(BiomeExpr::for_legacy(loc.biome_kind)) {
             continue;
         }
         assert_eq!(

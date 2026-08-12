@@ -117,8 +117,17 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
     assert_eq!(checked, 200, "the whole committed fixture was checked");
     // Printed, not written down: how much of the fixture The Rill actually
     // moved. A drop to zero would mean the substitution had gone vacuous.
+    // PINNED, not a floor of one. `substituted > 0` would stay green if this
+    // decayed to a single room, which is the shape a vacuous guard takes: the
+    // substitution would then be excusing two values on 199 rooms that no
+    // longer need excusing. The count is deterministic, so it is a change
+    // detector — and if The Rill's grounding is ever reverted it goes to 0 and
+    // this fails loudly instead of quietly excusing nothing.
     println!("{substituted} of {checked} rooms needed a Rill substitution");
-    assert!(substituted > 0, "the substitution below is doing nothing");
+    assert_eq!(
+        substituted, 178,
+        "the number of rooms whose wetness/descriptor The Rill moved has changed"
+    );
 }
 
 /// Replace `regime.micro.wetness` and `regime.descriptor` in a captured

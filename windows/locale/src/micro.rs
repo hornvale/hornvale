@@ -9,8 +9,24 @@
 
 use crate::regime::MicroField;
 use crate::streams::LOCALE_MICRO;
+use hornvale_climate::{BiomeExpr, Formation, Medium};
 use hornvale_kernel::{Seed, quantize};
 use hornvale_terrain::branch::RillReading;
+
+/// Whether a room's wetness axis is grounded in the world at all: bare ground
+/// under open air, and not permanent ice.
+///
+/// **The one copy of this predicate.** At sea the same axis is the set of the
+/// current, on ice it is snow cover, and in the rock column it is seep, and a
+/// river's proximity governs none of those — so those rooms keep the address
+/// draw unchanged. It is `pub` because a *measurement* of the wetness axis has
+/// to score the same population the grounding writes to; a second copy of this
+/// test is exactly how an emitted arm and a grounded arm quietly stop
+/// describing the same rooms.
+/// type-audit: bare-ok(flag: return)
+pub fn wetness_is_grounded(expr: BiomeExpr) -> bool {
+    expr.realm.medium == Medium::AirOverRock && expr.formation != Formation::Ice
+}
 
 /// How much of the wetness axis the room's own address draw may still move,
 /// as a share of the headroom the grounded value leaves.
@@ -36,10 +52,17 @@ const LOCAL_VARIATION: f64 = 0.1;
 /// its rivers, which is the riparian corridor a desert actually has.
 ///
 /// `moisture` is deliberately the **already-quantized** blend the document
-/// carries, for the reason `height_asl_m` is derived from the quantized
-/// `elevation_m` one screen away in `describe_with_weights`: a consumer
-/// re-deriving this from the emitted document must land on the same number,
-/// and there is no chaotic amplification here to make a lossy input unsafe.
+/// carries. The reason is *not* the one `height_asl_m` gives one screen away in
+/// `describe_with_weights` — that precedent rests on a consumer re-deriving the
+/// value from the emitted document, and no consumer can re-derive this one:
+/// [`RillReading`]'s `distance` and `band_edges` are never serialized, so the
+/// allocation half is invisible outside the process. The reason here is that
+/// the choice is **determinism-neutral and precision-immaterial**: the blend is
+/// quantized at emit either way, so taking it is one fewer recomputation of the
+/// same three-corner mean rather than a second, differently-rounded copy of it,
+/// and the model is a bounded monotone map with no chaotic amplification, so
+/// eight significant digits of supply cannot move the emitted axis by more than
+/// its own quantization.
 /// type-audit: bare-ok(ratio: moisture), bare-ok(ratio: return)
 pub fn grounded_wetness(moisture: f64, rill: Option<RillReading>) -> f64 {
     let supply = moisture.clamp(0.0, 1.0);
