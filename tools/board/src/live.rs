@@ -233,6 +233,15 @@ impl LiveContext {
             BTreeSet::new()
         });
         for s in posts.iter() {
+            // B4: `liveness` never consults `live_branches`/`merged_branches`
+            // for a foreign post (see its doc comment), so resolving one
+            // here would be two `rev_parse`/`rev-list` calls per foreign
+            // post that nothing ever reads -- a cost that grows with the
+            // peer population for no benefit. Skipped entirely, not merely
+            // deprioritised.
+            if matches!(s.origin, crate::store::Origin::Peer(_)) {
+                continue;
+            }
             let by = s.post.by.clone();
             if live_branches.contains(&by) || merged_branches.contains(&by) {
                 continue;
@@ -313,6 +322,28 @@ impl LiveContext {
 }
 
 /// Judge one post. Retraction wins over everything; `technique` never decays.
+///
+/// **B4/B5 — a foreign post is judged by TTL alone.** [`Origin::Peer`] short-
+/// circuits both decaying-kind arms below, *after* the TTL check (which is
+/// physical and needs no local authority) but *before* either liveness
+/// predicate that only the authoring host can decide: process liveness
+/// (`pid` against this host's OWN `ps` table) and branch liveness (`by`
+/// resolving in THIS clone at all, plus the worktree check `probe` adds).
+/// This generalises a rule this function already had for one of those two —
+/// `a_claim_from_another_host_is_not_judged_by_our_process_table` skips the
+/// pid check when the claim's `host` FIELD differs from `ctx.host` — from
+/// `pid` to branches, and from a self-reported, optional convention to
+/// [`Origin`], which cannot be omitted, forged, or mistyped by a posting
+/// session (see `Origin`'s own doc comment).
+///
+/// Without this, importing a peer's log would judge every one of its
+/// notices by ancestry in a clone that never had the branch to begin with —
+/// unresolved forever, not merely today — and `is_reapable`'s grace period
+/// would eventually treat that as durable absence and drop a live hold-off
+/// out of the local view for good. It also makes a foreign post CHEAPER to
+/// judge than a local one: see `LiveContext::probe`'s matching skip, which
+/// is what stops the unresolved-author cost from growing with the peer
+/// population.
 pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
     if ctx.retracted.contains(&stored.id) {
         return Liveness::Retracted("retracted by a later post".to_string());
@@ -345,6 +376,13 @@ pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
                     return Liveness::Expired(format!("ttl_s {ttl} elapsed ({age}s old)"));
                 }
             }
+            // B4: past this point only this host's own process table could
+            // say more, and a foreign claim's pid means nothing to it --
+            // TTL alone is the whole verdict (B5: rendered as unverifiable,
+            // never as equivalent to a local claim; see render.rs).
+            if matches!(stored.origin, crate::store::Origin::Peer(_)) {
+                return Liveness::Live;
+            }
             // Only this host's process table is authoritative for this host's
             // claims (D8).
             if stored.post.str_field("host") == Some(ctx.host.as_str())
@@ -356,6 +394,12 @@ pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
             Liveness::Live
         }
         "notice" => {
+            // B4: this clone may never have held `by` at all (a peer's
+            // campaign branch), so "does not resolve" cannot mean "dead" for
+            // a notice this host did not author -- see the function doc.
+            if matches!(stored.origin, crate::store::Origin::Peer(_)) {
+                return Liveness::Live;
+            }
             if ctx.live_branches.contains(&stored.post.by) {
                 Liveness::Live
             } else {
@@ -544,6 +588,107 @@ mod tests {
             Liveness::Expired(why) => assert!(why.contains("branch"), "reason: {why}"),
             other => panic!("expected expired, got {other:?}"),
         }
+    }
+
+    // --- B4/B5: a foreign post is judged by TTL alone ---
+
+    /// A [`Liveness::Live`] `notice` authored on a branch that has NEVER
+    /// existed in this clone -- `ctx()` on its own would resolve this the
+    /// same way a real union read resolves one of lefford's campaign
+    /// branches: never in `live_branches`, never in `merged_branches`.
+    /// Read as [`Origin::Peer`], the way a union read actually tags it.
+    fn peer_notice(by: &str, host: &str, note: &str) -> StoredPost {
+        StoredPost {
+            id: "peer-notice".to_string(),
+            post: Post::new("notice", by).with("note", json!(note)),
+            committed_at: 1_000,
+            origin: crate::store::Origin::Peer(host.to_string()),
+        }
+    }
+
+    /// A `claim` read as [`Origin::Peer`], `age_s` seconds after
+    /// `committed_at` relative to `ctx()`'s fixed `now_unix` (1,000).
+    fn peer_claim(host: &str, pid: u32, ttl_s: u64, age_s: u64) -> StoredPost {
+        StoredPost {
+            id: "peer-claim".to_string(),
+            post: Post::new("claim", "campaign/live")
+                .with("host", json!(host))
+                .with("pid", json!(pid))
+                .with("ttl_s", json!(ttl_s)),
+            committed_at: 1_000 - age_s,
+            origin: crate::store::Origin::Peer(host.to_string()),
+        }
+    }
+
+    /// The [`Origin::Local`] control: a claim this host DID author, on ITS
+    /// own host name (`ctx()`'s `"ambrose"`), so the pre-existing pid check
+    /// still applies in full.
+    fn local_claim(pid: u32, ttl_s: u64, age_s: u64) -> StoredPost {
+        StoredPost {
+            id: "local-claim".to_string(),
+            post: Post::new("claim", "campaign/live")
+                .with("host", json!("ambrose"))
+                .with("pid", json!(pid))
+                .with("ttl_s", json!(ttl_s)),
+            committed_at: 1_000 - age_s,
+            origin: crate::store::Origin::Local,
+        }
+    }
+
+    /// `ctx()` plus whatever `posts` themselves imply about retraction --
+    /// the same derivation `LiveContext::probe` does, kept a hand-built
+    /// value here (as `ctx()` already is) so these tests need no git.
+    fn ctx_for(posts: &[StoredPost]) -> LiveContext {
+        let mut c = ctx();
+        c.retracted = posts
+            .iter()
+            .filter(|s| s.post.kind == "retract")
+            .filter_map(|s| s.post.str_field("post").map(str::to_string))
+            .collect();
+        c
+    }
+
+    #[test]
+    fn a_foreign_notice_renders_even_though_its_branch_does_not_resolve_here() {
+        // The silent-suppression guard. lefford's campaign branches do not
+        // exist in this clone, so an ancestry-derived predicate judges every
+        // one of its notices dead -- and a reap would then drop a LIVE
+        // hold-off out of the local view. B4.
+        let stored = peer_notice("campaign/only-on-lefford", "lefford", "do not pin heights");
+        let ctx = ctx_for(std::slice::from_ref(&stored));
+        assert!(matches!(liveness(&stored, &ctx), Liveness::Live));
+    }
+
+    #[test]
+    fn a_foreign_claim_inside_its_ttl_is_live_but_never_locally_verified() {
+        // B5: this host cannot check another host's process table, and must
+        // not present a claim it cannot check as one it can.
+        let stored = peer_claim(
+            "lefford", /* pid */ 999_999, /* ttl_s */ 900, /* age_s */ 10,
+        );
+        let ctx = ctx_for(std::slice::from_ref(&stored));
+        assert!(matches!(liveness(&stored, &ctx), Liveness::Live));
+        let text = crate::render::render(&[stored], 0, &crate::render::RenderOptions::full());
+        assert!(
+            text.contains("unverifiable"),
+            "a foreign claim must say this host cannot check it; got {text}"
+        );
+    }
+
+    #[test]
+    fn a_foreign_claim_past_its_ttl_expires() {
+        let stored = peer_claim("lefford", 999_999, 900, /* age_s */ 1_000);
+        let ctx = ctx_for(std::slice::from_ref(&stored));
+        assert!(!matches!(liveness(&stored, &ctx), Liveness::Live));
+    }
+
+    #[test]
+    fn a_local_claim_is_still_judged_against_this_hosts_process_table() {
+        // The arm that keeps the fix from being a removal: local pid
+        // checking must survive. A dead pid inside its TTL still expires.
+        let stored = local_claim(/* pid */ 999_999, 900, 10);
+        let ctx = ctx_for(std::slice::from_ref(&stored));
+        assert!(!matches!(liveness(&stored, &ctx), Liveness::Live));
     }
 
     #[test]

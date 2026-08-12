@@ -332,7 +332,12 @@ impl Board {
     }
 
     /// The origin of a post read from this board's own ref.
-    pub fn own_origin(&self) -> Origin {
+    ///
+    /// Private: `snapshot` is its only caller. It was `pub` while
+    /// `history_in`'s ancestor needed a way to tag its own reads, but that
+    /// justification died once `history_in` (and every other reader) took
+    /// `origin` as a parameter instead of deriving it locally.
+    fn own_origin(&self) -> Origin {
         self.origin_of(&self.refname)
     }
 
@@ -2232,7 +2237,10 @@ mod tests {
         // right order whether or not anything sorts them -- the test passed with
         // the sort deleted entirely. Real ids are content hashes, so their order
         // is random with respect to time; counter-sorting is the cheapest way to
-        // make this test see that.
+        // make this test see that. `100 - n` assumes every call site passes
+        // n <= 100 -- true of the three calls below (10, 20, 30), but not
+        // enforced, so a future `post(150)` would underflow-panic in debug
+        // rather than fail the assertion it was meant to check.
         let post = |n: u64| StoredPost {
             id: format!("{:040}", 100 - n),
             post: Post::new("technique", "main"),
