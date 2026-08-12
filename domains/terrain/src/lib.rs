@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod branch;
 pub mod carve;
 pub mod channel;
 pub mod crust;
@@ -21,12 +22,15 @@ pub mod rift;
 pub mod shape;
 pub mod strata;
 pub mod streams;
-pub mod subdivide;
 pub mod water;
 
 pub use streams::stream_labels;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
+pub use branch::{
+    CatchmentCut, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX, Rill, RillReading,
+    cell_catchment, rill_reading, rills_of, room_spacing,
+};
 pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
@@ -51,7 +55,6 @@ pub use strata::{
     BandKind, BandSample, Era, GeothermalGradient, StratigraphicColumn, column, depth_to_basement,
     geothermal_gradient, temperature_at_depth, unconformity,
 };
-pub use subdivide::{SubFlow, floor_flow, flow_at, room_spacing};
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
 
 use hornvale_kernel::{

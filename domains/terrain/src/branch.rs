@@ -1,0 +1,981 @@
+//! Sub-cell tributaries (The Rill, Tier 2): the branches that **attach** to
+//! the trunks Tier 1 renders, and the area partition that says how much water
+//! each of them carries.
+//!
+//! # The keystone: subdivide the scalar, never the direction
+//!
+//! Drainage is a **scalar** — a number on a node — and refining it means
+//! partitioning it by area. That is canonical, conserves by construction, and
+//! cannot disagree with the coarse answer because the parts sum to the whole.
+//! Flow is a **direction** — an arrow on an edge — and moving it from the
+//! grid's cells onto anything finer needs a transfer operator, of which there
+//! is no canonical one. So a branch's direction is never computed: **it is
+//! inherited from what it is attached to.** A branch joins the line it drains
+//! into at a point, and flows into it because it is joined to it.
+//!
+//! ## Why this module does not route flow, stated as the measurement that
+//! settled it
+//!
+//! An earlier Tier 2 lifted the coarse flow graph onto the room mesh and
+//! routed a direction out of every room. `Geosphere` cells are the icosphere's
+//! **vertices** and a [`RoomAddr`] is a **face**; a `downhill` edge joins two
+//! adjacent vertices and an edge is shared by exactly two faces, so a coarse
+//! flow edge runs **along a room's boundary and never through it**. That lift
+//! had to be invented, and what it cost was measured on three worlds: 26-31%
+//! of land delivered to the sea where the coarse graph delivers 74-82%, the
+//! basin count doubled, and 6.0-7.5% of basin-interior faces terminating in a
+//! *different* coarse basin — while every one of its one-step invariants
+//! passed. It also saturated: a direction out of every face gives every face a
+//! channel, so ~74% of land rooms carried a reach and ~5-6% of all land sat
+//! inside one against a preregistered ceiling of 0.5%. **Saturation is the
+//! signature of refining the wrong quantity.**
+//!
+//! Nothing here reads [`crate::globe::TectonicGlobe::elevation`], recomputes
+//! accumulation, or asks where a room's water goes. The only questions this
+//! module answers are *how much of a cell's own catchment is in this part of
+//! it* and *which line does that part drain into*, and the second has a
+//! one-word answer: its parent's.
+//!
+//! # What is partitioned, and against what
+//!
+//! Coarse `drainage` counts land cells upstream of and including a cell, so
+//! `drainage(c) − Σ drainage(u)` over the cells `u` that drain into `c` is
+//! **exactly 1**: the cell's own area, the one unit of catchment that reaches
+//! the trunk at `c` without passing through another cell. The trunk already
+//! carries everything else. So the object partitioned here is that single
+//! unit — [`cell_catchment`] steradians of it — and it is partitioned by
+//! repeated bisection.
+//!
+//! **The partitioned scalar is an INTEGER, and that is what makes conservation
+//! structural rather than merely careful.** A part carries a
+//! [`Rill::share`] of [`RILL_WHOLE`]; a bisection computes the first part's
+//! share as an exact `u128` product and the second's as `share − first`, so
+//! the two sum to their parent with no rounding at all, and the shares of the
+//! parts a cell finally divides into sum to `RILL_WHOLE` **exactly, in any
+//! order**. The area in steradians is a *rendering* of that share, one
+//! multiplication away, and it is the share the conservation claim is made
+//! about (`tests/rill_properties.rs`, R-3).
+//!
+//! An f64 partition would have been structural too — a part defined as its
+//! parent minus its sibling cannot drift — but not exact, and the difference
+//! showed up the moment R-3 was written to ask for bits: `a·f + (a − a·f)`
+//! misses `a` by an ulp whenever the subtraction is inexact. The integer is
+//! what lets the guard demand equality rather than a tolerance, and a
+//! tolerance is what would have absorbed a partition that leaked.
+//!
+//! # The one invention, named as one
+//!
+//! Where the partition cuts is not derivable from committed state, so it is
+//! **drawn** ([`crate::streams::RILL_PARTITION`], hash-noise per cell and per
+//! path — no `Stream` is consumed, so no draw order and no save-format
+//! contract beyond the label). The cut is bounded to
+//! `[CUT_FLOOR, 1 − CUT_FLOOR]` so that no part is smaller than a quarter of
+//! its parent: a geometric bound that keeps a catchment from degenerating into
+//! a sliver, chosen and stated before anything was measured.
+//!
+//! **The branching is therefore driven by the partition and not by a fixed
+//! ratio**, which is what keeps Horton's bifurcation ratio (R-5) a claim about
+//! something rather than an arithmetic property of the rule. The falsification
+//! is a first-class arm rather than a source edit: [`CatchmentCut::Even`]
+//! holds the drawn freedom constant at one half, and the campaign's
+//! instruction is to re-measure under it and report the two side by side.
+//!
+//! # Geometry: planar in the cell's own tangent frame
+//!
+//! A catchment is a rectangle in the tangent plane at its cell, the root being
+//! a square of the cell's own area with one axis along the trunk. A part's
+//! branch runs from its own centre to the nearest point on its parent's
+//! branch — the trunk stretch itself, for the two parts the cell first divides
+//! into. Everything is planar and lifted to the sphere only at the boundary.
+//!
+//! **The projection is gnomonic, and the reason is attachment.** A gnomonic
+//! projection maps great circles to straight lines exactly, so a mouth placed
+//! on a 2D segment lifts *onto* the arc it was placed on. An orthographic
+//! projection does not, and the first version of this module used one: mouths
+//! landed 5.2e-6 rad off the line they drain into — most of a headwater
+//! half-width, which is the scale of The Ford's H2 defect, where a tributary
+//! joined its trunk in the graph and missed it in space. The guard measured
+//! it; the projection change took it to 1e-16. What gnomonic costs instead is
+//! scale: distances are stretched by `sec²θ`, which over a cell's own 0.019
+//! rad is 4 parts in 10,000 — four orders of magnitude below the room this
+//! network resolves to, and it distorts no topology.
+//!
+//! Two consequences worth stating rather than discovering:
+//!
+//! - every branch lies inside the convex hull of the cell's own square and its
+//!   trunk stretch, so **a branch cannot cross a coarse divide** — it is
+//!   bounded by the catchment it is a share of, by construction;
+//! - the square is a same-area proxy for the cell's real region, so
+//!   neighbouring cells' squares overlap slightly at their corners. The
+//!   partitioned **scalar** is exact; the geometry is an approximation, and
+//!   `tests/rill_probe.rs` measures the spill.
+//!
+//! # Units
+//!
+//! [`Rill::catchment`] is an area in **steradians** — the scale-free form, and
+//! deliberately not a count. A count is a statement about a grid: refine the
+//! grid and it quadruples, which is exactly why
+//! [`crate::water::RIVER_MIN_DRAINAGE`] could not be inherited below cell
+//! scale. [`RILL_MIN_CATCHMENT`], the resolution the network stops at, is an
+//! area for the same reason.
+//!
+//! The width law is fed a **count in cell units** (`catchment / cell area`)
+//! paired with the **cell's own spacing**, so both of its arguments come from
+//! the same level, which is the pairing
+//! [`crate::channel::channel_half_width`]'s own doc names as the trap. The
+//! level-free form of that pairing — the half-width divided by the square root
+//! of the drained area is a constant of the law, whatever level expresses
+//! it — is asserted absolutely in `tests/rill_properties.rs`.
+
+use crate::channel::{ChannelNetwork, band_edges, cell_spacing, local_slope};
+use crate::globe::TectonicGlobe;
+use hornvale_kernel::seed::StreamLabel;
+use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed, math};
+
+/// The finest catchment the branch network resolves, in steradians: the mean
+/// area of one walk-depth room, `4π / (20·4¹²)`.
+///
+/// **The resolution is chosen, absolutely, as "the finest thing that can ask a
+/// question".** `windows/locale` places a walker in a depth-12 room, so a
+/// partition finer than one room draws line no observer can be positioned to
+/// distinguish. Stated as an area rather than as a depth or a count because
+/// the network has no grid: an area is the same quantity at every level, which
+/// a count is not.
+///
+/// This is the constant that replaces [`crate::water::RIVER_MIN_DRAINAGE`]
+/// below cell scale — not by inheriting it (it compares a count, so a trickle
+/// that is no channel at one level is one at the next) but by asking a
+/// different question: not *is this a channel* but *is this catchment still
+/// worth dividing*.
+/// type-audit: pending(wave-1)
+pub const RILL_MIN_CATCHMENT: f64 = 4.0 * std::f64::consts::PI / 335_544_320.0;
+
+/// A cell's whole catchment as an integer share — the unit the partition
+/// conserves. A power of two below `2^53`, so every share is exactly
+/// representable as an `f64` and the area a share renders to is one rounding
+/// from the share rather than an accumulation of them.
+/// type-audit: bare-ok(count)
+pub const RILL_WHOLE: u64 = 1 << 50;
+
+/// The smallest share a cut may leave to either part. A geometric bound, not a
+/// tuned one: without it a uniform cut draws slivers, and a catchment shaped
+/// like a sliver is not a catchment. Fixed before any measurement.
+const CUT_FLOOR: f64 = 0.25;
+
+/// The cut's fixed-point precision, in bits: fine enough that the drawn
+/// fraction is not visibly quantized, coarse enough that a `u64` share times a
+/// cut fits a `u128` with room to spare.
+const CUT_BITS: u32 = 32;
+
+/// `2^CUT_BITS`, as the divisor the cut is expressed over.
+const CUT_SCALE: u64 = 1 << CUT_BITS;
+
+/// Hard bound on partition depth, so a defect in the stopping rule fails
+/// visibly rather than hanging. Not reachable: a part is at most
+/// `1 − CUT_FLOOR` of its parent, so `0.75^d · cell area < RILL_MIN_CATCHMENT`
+/// forces `d ≤ 32` at the canonical level, and the depth is asserted below the
+/// bound in `tests/rill_properties.rs`.
+const MAX_PARTITION_DEPTH: u32 = 40;
+
+/// One tributary: a great-circle segment from its head to the point where it
+/// enters the line it drains into, and the share of its cell's catchment it
+/// carries.
+///
+/// **Never serialized, and it carries no index that could be.** A branch's
+/// identity is its cell plus its position in the partition, and neither is a
+/// save-format quantity; a consumer wanting the network at a position asks
+/// [`rill_reading`], which resolves it from the seed.
+/// type-audit: pending(wave-1: head), pending(wave-1: mouth), pending(wave-1: catchment), bare-ok(ratio: share), bare-ok(count: depth), bare-ok(index: parent)
+#[derive(Clone, Debug, PartialEq)]
+pub struct Rill {
+    /// The upstream end: the centre of the catchment this branch drains.
+    pub head: [f64; 3],
+    /// The downstream end: the point on the parent line this branch enters.
+    /// For the two branches a cell first divides into, that line is the trunk
+    /// stretch itself, so the mouth lies **on** the rendered polyline.
+    pub mouth: [f64; 3],
+    /// The area this branch drains, in steradians — its share of its cell's
+    /// own one unit of catchment, and the scale-free discharge the width law
+    /// is fed. A rendering of `share`, and inexact in the last bit for that
+    /// reason; the conserved quantity is `share`.
+    pub catchment: f64,
+    /// The same area as an exact fraction of [`RILL_WHOLE`] — **the quantity
+    /// the partition conserves.** Two siblings' shares sum to their parent's
+    /// with no rounding, and a cell's leaves sum to `RILL_WHOLE` in any order,
+    /// which is what makes R-3 an equality rather than a tolerance.
+    pub share: u64,
+    /// The coarse cell whose catchment this is a share of. The branch is
+    /// attached, directly or through its ancestors, to this cell's trunk, so
+    /// the coarse cell its water ultimately reaches is the one this cell's
+    /// trunk chain reaches (R-4).
+    pub cell: CellId,
+    /// How many bisections deep in the partition this branch is; `0` for the
+    /// two parts the cell's own catchment first divides into.
+    pub depth: u32,
+    /// The branch this one drains into, as an index into the slice
+    /// [`rills_of`] returned — `None` for the two parts the cell first divides
+    /// into, which drain into the trunk itself.
+    ///
+    /// **An index into one call's own output, and never serialized**, for the
+    /// reason [`crate::channel::BankReading::line`] gives. It is published
+    /// because a branch set without its edges is not a tree, and Horton's laws
+    /// are a claim about the tree.
+    pub parent: Option<usize>,
+}
+
+/// What [`rill_reading`] found at a position: the nearest sub-cell branch, and
+/// the transverse geometry that branch implies.
+///
+/// Unsigned, unlike [`crate::channel::BankReading::signed_distance`]. A left
+/// bank facing downstream is meaningful for a rendered polyline a walker can
+/// follow; for a rill it would be an invention on top of an invention, and
+/// nothing downstream asks for it.
+/// type-audit: pending(wave-1: distance), pending(wave-1: band_edges), pending(wave-1: catchment)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RillReading {
+    /// Angular distance to the nearest branch, radians.
+    pub distance: f64,
+    /// That branch's four [`band_edges`] borders — channel/bank,
+    /// bank/floodplain, floodplain/terrace, terrace/dry — computed from its
+    /// catchment and its cell's own gradient and spacing, exactly as a trunk
+    /// vertex's are.
+    pub band_edges: [f64; 4],
+    /// The winning branch's drained area in steradians.
+    pub catchment: f64,
+    /// The coarse cell whose catchment the winning branch is a share of. Not
+    /// necessarily the cell nearest the query position: a cell's square region
+    /// is a same-area proxy for its real one, so the two disagree near a
+    /// shared corner.
+    pub cell: CellId,
+}
+
+/// Where a catchment divides between its two parts.
+///
+/// Two arms, and the second exists so that R-5's falsification is a committed,
+/// re-runnable measurement rather than a source edit somebody has to describe
+/// afterwards.
+#[derive(Clone, Copy, Debug)]
+pub enum CatchmentCut {
+    /// The shipped partition: the cut is drawn from
+    /// [`crate::streams::RILL_PARTITION`], per cell and per path through the
+    /// partition, bounded to `[CUT_FLOOR, 1 − CUT_FLOOR]`. Hash-noise only —
+    /// the seed is sub-derived per key and no `Stream` is consumed, so there
+    /// is no draw order to preserve.
+    Drawn(Seed),
+    /// **The falsification arm.** Every catchment halves, so the partition
+    /// tree is balanced and its branching statistics are whatever the rule
+    /// alone implies. If Horton's ratios do not move between this and
+    /// [`CatchmentCut::Drawn`], they are the rule's and not the partition's,
+    /// and R-5 is untestable as posed — which is exactly what happened to the
+    /// quadrisecting construction this design replaces.
+    Even,
+}
+
+impl CatchmentCut {
+    /// The share of a catchment that goes to the first part, in
+    /// `2^-32` units — the cut, before it is applied to anything.
+    ///
+    /// `code` identifies the part being divided: a leading `1` followed by one
+    /// bit per bisection, so it is the *path* through the partition rather
+    /// than a serial number, and it is stable under any change to the order
+    /// the partition is walked in.
+    fn cut(&self, cell: CellId, code: u64) -> u64 {
+        let fraction = match self {
+            CatchmentCut::Even => 0.5,
+            CatchmentCut::Drawn(seed) => {
+                let key = format!("{}-{}", cell.0, code);
+                let drawn = seed.derive(StreamLabel::dynamic(&key)).stream().next_f64();
+                CUT_FLOOR + drawn * (1.0 - 2.0 * CUT_FLOOR)
+            }
+        };
+        (fraction * CUT_SCALE as f64) as u64
+    }
+
+    /// Divide `share` in two, exactly. The first part is an exact `u128`
+    /// product shifted back down — the shift is by a power of two, so it is a
+    /// truncation and not a rounding — and the second is the remainder, so
+    /// nothing is created or lost at any depth.
+    fn divide(&self, cell: CellId, code: u64, share: u64) -> (u64, u64) {
+        let first = (((share as u128) * (self.cut(cell, code) as u128)) >> CUT_BITS) as u64;
+        // `share − first`, and never `share`: the second part is the REMAINDER.
+        // Returning the parent's whole share here is the defect this comment
+        // now guards — it made two siblings sum to more than their parent, so
+        // the partition stopped conserving, and the second part never shrank,
+        // so the recursion ran to MAX_PARTITION_DEPTH spawning a full subtree
+        // at every level (269 million nodes, 23.7 GB, a kernel panic).
+        (first, share - first)
+    }
+}
+
+/// The mean area of one cell of `geo`, in steradians — the one unit of
+/// catchment a cell contributes to its own trunk, and the denominator that
+/// turns a branch's area into the count the width law takes.
+///
+/// The **mean** rather than the cell's own polygon area, matching what coarse
+/// `drainage` counts: an accumulation of unit cells, not of measured ones.
+/// Pairing it with the cell's **local** spacing is the same pairing every
+/// trunk vertex already makes.
+/// type-audit: pending(wave-1: return)
+pub fn cell_catchment(geo: &Geosphere) -> f64 {
+    4.0 * std::f64::consts::PI / geo.cell_count() as f64
+}
+
+/// The room's own angular spacing, radians: the mean of the three arc lengths
+/// of its own triangle at its own depth.
+///
+/// **Carried forward from the construction this module replaces, because the
+/// obligation it serves is unchanged**: a room's corners are mesh *vertices*,
+/// so at a `Geosphere`'s own level a room's three edges are three
+/// cell-to-cell separations — the same quantity `channel.rs`'s `cell_spacing`
+/// averages, taken around a face instead of around a cell. Below cell scale
+/// there is no `Geosphere` to ask (level 12 would be `10·4¹² + 2` cells), so
+/// this is how a room-scale area or spacing is obtained. `tests/` anchors it
+/// absolutely against [`Geosphere::position`], because a parent/child ratio
+/// cannot see a spacing derived one level off — the factor cancels.
+/// type-audit: pending(wave-1: return)
+pub fn room_spacing(addr: &RoomAddr) -> f64 {
+    let [a, b, c] = addr.corners();
+    (angle(a, b) + angle(b, c) + angle(c, a)) / 3.0
+}
+
+/// Dot product of two 3-vectors.
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// Cross product of two 3-vectors.
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+/// Normalize a 3-vector; returns the input unchanged if its norm is zero.
+fn normalize(v: [f64; 3]) -> [f64; 3] {
+    let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if n == 0.0 {
+        v
+    } else {
+        [v[0] / n, v[1] / n, v[2] / n]
+    }
+}
+
+/// Angular separation of two unit vectors, radians.
+fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
+    math::acos(dot(a, b).clamp(-1.0, 1.0))
+}
+
+/// The point halfway along the great circle between two unit vectors.
+fn midpoint(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    normalize([a[0] + b[0], a[1] + b[1], a[2] + b[2]])
+}
+
+/// A cell's local tangent frame: orthographic coordinates in radians, with
+/// `e1` along the trunk's own direction of travel.
+struct Frame {
+    /// The cell's position on the unit sphere.
+    origin: [f64; 3],
+    /// Downstream, in the tangent plane.
+    e1: [f64; 3],
+    /// Left of downstream, in the tangent plane.
+    e2: [f64; 3],
+}
+
+impl Frame {
+    /// A unit-sphere position in local coordinates. Gnomonic: the radial
+    /// component divides out, which is what makes a great circle a straight
+    /// line here. Points more than a right angle from the origin project
+    /// behind the observer; nothing in a cell's own catchment is remotely
+    /// that far, and a caller that reached one would see a sign flip rather
+    /// than a wrong answer quietly.
+    fn project(&self, q: [f64; 3]) -> [f64; 2] {
+        let radial = dot(q, self.origin);
+        [dot(q, self.e1) / radial, dot(q, self.e2) / radial]
+    }
+
+    /// Local coordinates back onto the unit sphere.
+    fn lift(&self, p: [f64; 2]) -> [f64; 3] {
+        normalize([
+            self.origin[0] + p[0] * self.e1[0] + p[1] * self.e2[0],
+            self.origin[1] + p[0] * self.e1[1] + p[1] * self.e2[1],
+            self.origin[2] + p[0] * self.e1[2] + p[1] * self.e2[2],
+        ])
+    }
+}
+
+/// A catchment's region: a rectangle in local coordinates.
+#[derive(Clone, Copy)]
+struct Patch {
+    /// Lower bound along `e1`.
+    x0: f64,
+    /// Upper bound along `e1`.
+    x1: f64,
+    /// Lower bound along `e2`.
+    y0: f64,
+    /// Upper bound along `e2`.
+    y1: f64,
+}
+
+impl Patch {
+    /// The rectangle's centre — where the branch draining it starts.
+    fn centre(&self) -> [f64; 2] {
+        [0.5 * (self.x0 + self.x1), 0.5 * (self.y0 + self.y1)]
+    }
+
+    /// Divide the longer side at `f`, so the two parts' areas are in the same
+    /// ratio as the scalar the caller splits alongside this.
+    fn split(&self, f: f64) -> (Patch, Patch) {
+        if self.x1 - self.x0 >= self.y1 - self.y0 {
+            let cut = self.x0 + (self.x1 - self.x0) * f;
+            (Patch { x1: cut, ..*self }, Patch { x0: cut, ..*self })
+        } else {
+            let cut = self.y0 + (self.y1 - self.y0) * f;
+            (Patch { y1: cut, ..*self }, Patch { y0: cut, ..*self })
+        }
+    }
+
+    /// Whether a local point is inside the rectangle.
+    fn contains(&self, p: [f64; 2]) -> bool {
+        p[0] >= self.x0 && p[0] <= self.x1 && p[1] >= self.y0 && p[1] <= self.y1
+    }
+}
+
+/// One node of the partition: its region, its share of the catchment, its path
+/// through the partition, and the line its own parts will attach to.
+#[derive(Clone, Copy)]
+struct Node {
+    /// The region this node drains.
+    patch: Patch,
+    /// Its share of the cell's catchment, in `RILL_WHOLE` units.
+    share: u64,
+    /// A leading `1` then one bit per bisection: the path, not a serial.
+    code: u64,
+    /// Bisections above this node.
+    depth: u32,
+    /// The line this node's own parts drain into — its branch, or for the root
+    /// the cell's own bent stretch of trunk.
+    line: Chain,
+}
+
+/// A line a part may drain into: two segments, given as three points.
+///
+/// **Three and not two, because the trunk BENDS at the cell it belongs to.** A
+/// cell's stretch of trunk runs from the midpoint of the vertex above to the
+/// midpoint of the vertex below, and the rendered polyline turns at the cell's
+/// own vertex in between. Treating that stretch as one straight segment cuts
+/// the corner, and the guard measured what it cost: mouths 5.2e-6 rad off the
+/// line they drain into, most of a headwater half-width. A branch's own line
+/// has no bend, so it repeats its last point.
+type Chain = [[f64; 2]; 3];
+
+/// The point of `chain` nearest `p`, in local coordinates.
+fn nearest_on(chain: Chain, p: [f64; 2]) -> [f64; 2] {
+    let mut best = chain[0];
+    let mut best_gap = f64::INFINITY;
+    for seg in [[chain[0], chain[1]], [chain[1], chain[2]]] {
+        let d = [seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]];
+        let len2 = d[0] * d[0] + d[1] * d[1];
+        let q = if len2 <= 0.0 {
+            seg[0]
+        } else {
+            let t =
+                (((p[0] - seg[0][0]) * d[0] + (p[1] - seg[0][1]) * d[1]) / len2).clamp(0.0, 1.0);
+            [seg[0][0] + t * d[0], seg[0][1] + t * d[1]]
+        };
+        let (dx, dy) = (p[0] - q[0], p[1] - q[1]);
+        let gap = dx * dx + dy * dy;
+        if gap < best_gap {
+            best_gap = gap;
+            best = q;
+        }
+    }
+    best
+}
+
+/// Distance from `p` to `chain`, in local coordinates (radians).
+fn distance_to(chain: Chain, p: [f64; 2]) -> f64 {
+    let q = nearest_on(chain, p);
+    let (dx, dy) = (p[0] - q[0], p[1] - q[1]);
+    (dx * dx + dy * dy).sqrt()
+}
+
+/// The two parts a node divides into, or `None` where the partition stops.
+///
+/// **The conservation is here, in two lines**: the second part's share is the
+/// parent's *minus* the first's, so the parts sum to the parent bit-exactly
+/// and no rounding accumulates down the partition. Each part's branch runs
+/// from its own centre to the nearest point on its parent's line, which is
+/// what "the direction is inherited" means concretely — nothing computes a
+/// direction for a part; it flows into the thing it is joined to.
+fn parts(node: &Node, cell: CellId, unit: f64, cut: &CatchmentCut) -> Option<[Node; 2]> {
+    if area_of(node.share, unit) <= RILL_MIN_CATCHMENT || node.depth >= MAX_PARTITION_DEPTH {
+        return None;
+    }
+    let (first, second) = cut.divide(cell, node.code, node.share);
+    // The GEOMETRY FOLLOWS THE SCALAR, not the other way round: the rectangle
+    // is cut at the share the scalar was cut at, so a part's region is the
+    // part's own area to the precision the projection allows.
+    let (lo, hi) = node.patch.split(first as f64 / node.share as f64);
+    let make = |patch: Patch, share: u64, bit: u64| {
+        let head = patch.centre();
+        let mouth = nearest_on(node.line, head);
+        Node {
+            patch,
+            share,
+            code: node.code * 2 + bit,
+            depth: node.depth + 1,
+            line: [head, mouth, mouth],
+        }
+    };
+    Some([make(lo, first, 0), make(hi, second, 1)])
+}
+
+/// The area a share renders to, steradians.
+fn area_of(share: u64, unit: f64) -> f64 {
+    unit * (share as f64 / RILL_WHOLE as f64)
+}
+
+/// The stretch of trunk that belongs to `cell`, and the local frame it sets —
+/// `None` for a cell no polyline runs through (an ocean cell, a coastal or
+/// salt-basin outlet, anything the coarse graph gives no outflow).
+///
+/// The stretch runs from the midpoint of the vertex before to the midpoint of
+/// the vertex after, so consecutive cells' stretches tile the polyline without
+/// overlapping, and the whole of it is the part of the line this cell's own
+/// catchment can reach. It is read off the **rendered** polyline rather than
+/// off `Geosphere::position`, so a branch's mouth lands on the meander-
+/// displaced line a walker actually finds — the same lesson The Ford's
+/// confluence repair paid for, where a shared cell was mistaken for a shared
+/// point.
+fn trunk_stretch(cell: CellId, net: &ChannelNetwork, geo: &Geosphere) -> Option<(Frame, Chain)> {
+    let (line, j) = net.trunk_vertex(cell)?;
+    let points = &net.polylines[line].points;
+    let here = points[j];
+    let below = points[j + 1];
+    let start = if j > 0 {
+        midpoint(points[j - 1], here)
+    } else {
+        here
+    };
+    let end = midpoint(here, below);
+    let origin = geo.position(cell);
+    let travel = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
+    let radial = dot(travel, origin);
+    let tangent = normalize([
+        travel[0] - radial * origin[0],
+        travel[1] - radial * origin[1],
+        travel[2] - radial * origin[2],
+    ]);
+    // A degenerate stretch (a zero-length trunk step) would leave `tangent`
+    // unnormalizable; fall back to any tangent direction rather than emitting
+    // a frame whose axes are not orthonormal.
+    let e1 = if dot(tangent, tangent) > 0.5 {
+        tangent
+    } else {
+        normalize(cross(origin, [0.0, 0.0, 1.0]))
+    };
+    let e2 = cross(origin, e1);
+    let frame = Frame { origin, e1, e2 };
+    let stretch = [
+        frame.project(start),
+        frame.project(here),
+        frame.project(end),
+    ];
+    Some((frame, stretch))
+}
+
+/// The root of a cell's partition: a square of the cell's own catchment area,
+/// centred on the cell and squared to its trunk, whose parts drain into the
+/// trunk stretch.
+fn root(stretch: Chain, unit: f64) -> Node {
+    let half = 0.5 * unit.sqrt();
+    Node {
+        patch: Patch {
+            x0: -half,
+            x1: half,
+            y0: -half,
+            y1: half,
+        },
+        share: RILL_WHOLE,
+        code: 1,
+        depth: 0,
+        line: stretch,
+    }
+}
+
+/// The stated ceiling on what [`rills_of`] materialises for one cell at the
+/// canonical level-6 grid, in branches.
+///
+/// **Derived, then measured, and the two are reconciled here rather than left
+/// as two different numbers in two different prose comments.** A cell's
+/// catchment is `4π/40962 = 3.068e-4` sr and the partition stops at
+/// [`RILL_MIN_CATCHMENT`] `= 4π/335544320 = 3.745e-8` sr, a ratio of
+/// **8191.6**. Under [`CatchmentCut::Even`] every leaf is the same size, so
+/// the depth is `⌈log₂ 8191.6⌉ = 13` and there are exactly `2¹³ = 8192`
+/// leaves and `2·8192 − 2 = 16382` branches. Under [`CatchmentCut::Drawn`] the
+/// leaves are unequal and there are *more* of them: a leaf overshoots the
+/// threshold rather than landing on it. Picking a leaf size-biased by mass
+/// makes the chosen fraction's density `4v` on `[0.25, 0.75]` — size-biasing
+/// favours the larger part — so the mean log-step is `0.6504` and renewal
+/// theory's stationary overshoot gives `E[e^R] = 1.5376`. That predicts
+/// `1.5376 × 8191.6 = 12,596` leaves and `2·12,596 − 2 = 25,190` branches;
+/// the probe measures 12,570–12,602 leaves and 25,138–25,202 branches, which
+/// is agreement to better than a part in a thousand. This bound is `2¹⁵`,
+/// about 30% above the drawn arm's measured worst.
+///
+/// Of the two numbers this replaces, `tests/rill_probe.rs`'s "~25,000" was
+/// **right** and [`rills_of`]'s own "about 14,000" was not — it is not the
+/// branch count (25,190) and not the leaf count either (12,596), so nothing
+/// it could have meant was true. Held by `branch.rs`'s own bounded probe, in
+/// nodes.
+/// type-audit: bare-ok(count)
+pub const RILLS_PER_CELL_MAX: usize = 1 << 15;
+
+/// Every branch of `cell`'s catchment, in partition order.
+///
+/// The whole partition, so this is `O(cell catchment / RILL_MIN_CATCHMENT)` —
+/// at most [`RILLS_PER_CELL_MAX`] branches per cell at the canonical level,
+/// and about 25,190 of them under the drawn cut (16,382 under the even one).
+/// It exists for the property tests and the probes, which need the population
+/// rather than an answer; a consumer asking about a *position* wants
+/// [`rill_reading`], which descends the same partition in `O(depth)` and never
+/// builds this.
+///
+/// **The bound is asserted, in node count, by the probe at the foot of this
+/// file** — the discipline a materialised recursion carries, and the one this
+/// function was shipped without: its second part was returned as the parent's
+/// whole share, so the partition neither shrank nor conserved, and one call
+/// reached 269 million nodes and 23.7 GB before the kernel killed the box.
+pub fn rills_of(
+    cell: CellId,
+    net: &ChannelNetwork,
+    geo: &Geosphere,
+    cut: &CatchmentCut,
+) -> Vec<Rill> {
+    let Some((frame, stretch)) = trunk_stretch(cell, net, geo) else {
+        return Vec::new();
+    };
+    let unit = cell_catchment(geo);
+    let mut out = Vec::new();
+    let mut stack = vec![(root(stretch, unit), None)];
+    while let Some((node, index)) = stack.pop() {
+        let Some(children) = parts(&node, cell, unit, cut) else {
+            continue;
+        };
+        for child in children {
+            out.push(Rill {
+                head: frame.lift(child.line[0]),
+                mouth: frame.lift(child.line[1]),
+                catchment: area_of(child.share, unit),
+                share: child.share,
+                cell,
+                depth: child.depth - 1,
+                parent: index,
+            });
+            stack.push((child, Some(out.len() - 1)));
+        }
+    }
+    out
+}
+
+/// The nearest branch of `cell`'s own partition to `position`, as
+/// `(distance, catchment)` in local coordinates — `None` where the cell has no
+/// trunk to attach to.
+///
+/// Descends the partition instead of enumerating it: at each bisection both
+/// parts' branches are measured and then the part whose region holds the query
+/// point is entered, so the cost is `O(depth)` — about thirty segment tests —
+/// with nothing stored. The winner is therefore the nearest branch **on the
+/// descent**, which is the nearest branch outright except where a sibling
+/// subtree reaches back across a region boundary; the probe measures how often
+/// that matters rather than leaving it as an assumption.
+fn nearest_rill(
+    cell: CellId,
+    position: [f64; 3],
+    net: &ChannelNetwork,
+    geo: &Geosphere,
+    cut: &CatchmentCut,
+) -> Option<(f64, f64)> {
+    let (frame, stretch) = trunk_stretch(cell, net, geo)?;
+    let unit = cell_catchment(geo);
+    let target = frame.project(position);
+    let mut node = root(stretch, unit);
+    let mut best: Option<(f64, f64)> = None;
+    while let Some(children) = parts(&node, cell, unit, cut) {
+        let mut chosen = 0usize;
+        let mut chosen_gap = f64::INFINITY;
+        for (i, child) in children.iter().enumerate() {
+            let distance = distance_to(child.line, target);
+            if best.is_none_or(|(d, _)| distance < d) {
+                best = Some((distance, area_of(child.share, unit)));
+            }
+            // Descend into the region that holds the point; where the point is
+            // outside both (the square is a proxy for a real cell region, so
+            // this happens near a corner), descend toward the nearer centre.
+            let centre = child.patch.centre();
+            let gap = if child.patch.contains(target) {
+                0.0
+            } else {
+                let (dx, dy) = (target[0] - centre[0], target[1] - centre[1]);
+                (dx * dx + dy * dy).sqrt()
+            };
+            if gap < chosen_gap {
+                chosen_gap = gap;
+                chosen = i;
+            }
+        }
+        node = children[chosen];
+    }
+    best
+}
+
+/// The sub-cell network at a position: the nearest branch, and the transverse
+/// geometry it implies.
+///
+/// Scans the nearest cell and its neighbours, because a cell's square region
+/// is a same-area proxy for its real one and a position near a shared corner
+/// can be inside a neighbour's. `None` where no cell in that neighbourhood
+/// carries a trunk — open ocean, and the coastal and salt-basin faces the
+/// coarse graph gives no outflow, which is how the fine network ends at a
+/// coast with no special case for one.
+///
+/// **This is the "more line" Tier 2 exists to produce**, queryable the way
+/// [`ChannelNetwork::bank_reading`] is. It is deliberately *not* a per-room
+/// flow direction: nothing downstream consumes a direction, and inventing one
+/// is what the design this replaces was falsified for.
+/// type-audit: pending(wave-1: position)
+pub fn rill_reading(
+    position: [f64; 3],
+    net: &ChannelNetwork,
+    globe: &TectonicGlobe,
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+    cut: &CatchmentCut,
+) -> Option<RillReading> {
+    let here = index.nearest_to_position(geo, position);
+    let unit = cell_catchment(geo);
+    let mut best: Option<(f64, f64, CellId)> = None;
+    let mut consider = |c: CellId| {
+        if let Some((distance, catchment)) = nearest_rill(c, position, net, geo, cut)
+            && best.is_none_or(|(d, _, _)| distance < d)
+        {
+            best = Some((distance, catchment, c));
+        }
+    };
+    consider(here);
+    for &neighbor in geo.neighbors(here) {
+        consider(neighbor);
+    }
+    let (distance, catchment, cell) = best?;
+    Some(RillReading {
+        distance,
+        band_edges: band_edges(
+            catchment / unit,
+            local_slope(globe, geo, cell),
+            cell_spacing(geo, cell),
+        ),
+        catchment,
+        cell,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The canonical grid the bound is stated for, matching
+    /// `tests/rill_properties.rs`.
+    const PROBE_LEVEL: u32 = 6;
+
+    /// The hard ceiling the probe aborts at, in emitted nodes — generous
+    /// against the derived bound (about 27,000) and small enough that a
+    /// broken stopping rule reports a number instead of exhausting the box.
+    ///
+    /// **This constant is the reason the probe is safe to run at all.** The
+    /// defect it was written against reached 269 million nodes and 23.7 GB of
+    /// resident memory before the kernel killed the process; a walk that
+    /// cannot allocate past a ceiling turns that into a printed count.
+    const PROBE_NODE_CAP: usize = 400_000;
+
+    /// What one cell's partition costs, measured by walking it under
+    /// [`PROBE_NODE_CAP`].
+    struct Partition {
+        /// Emitted nodes — every node but the root, which is what
+        /// [`rills_of`] returns one [`Rill`] for.
+        nodes: usize,
+        /// Nodes the partition declined to divide.
+        leaves: usize,
+        /// The deepest emitted node's [`Rill::depth`].
+        max_depth: u32,
+        /// The smallest leaf area, steradians.
+        min_leaf_area: f64,
+        /// The largest leaf area, steradians.
+        max_leaf_area: f64,
+        /// The leaves' shares summed in `u128`, so an overflow of the `u64`
+        /// they are held in cannot hide a partition that creates catchment.
+        leaf_share_total: u128,
+        /// Whether the ceiling was hit, in which case every other field is a
+        /// floor and not a measurement.
+        capped: bool,
+    }
+
+    /// Walk one cell's partition with a ceiling, counting rather than
+    /// materialising.
+    ///
+    /// **This is the same recursion [`rills_of`] materialises**, driven by the
+    /// same [`root`] and the same [`parts`]: the partition of a cell's scalar
+    /// depends only on the cell, the cut and the unit area, never on the
+    /// trunk geometry, which enters only as the line a branch's mouth is
+    /// projected onto. So a synthetic stretch measures the real node count.
+    fn walk(cell: CellId, unit: f64, cut: &CatchmentCut) -> Partition {
+        let half = 0.5 * unit.sqrt();
+        let stretch: Chain = [[-half, 0.0], [0.0, 0.0], [half, 0.0]];
+        let mut out = Partition {
+            nodes: 0,
+            leaves: 0,
+            max_depth: 0,
+            min_leaf_area: f64::INFINITY,
+            max_leaf_area: 0.0,
+            leaf_share_total: 0,
+            capped: false,
+        };
+        let mut stack = vec![root(stretch, unit)];
+        while let Some(node) = stack.pop() {
+            let Some(children) = parts(&node, cell, unit, cut) else {
+                out.leaves += 1;
+                let area = area_of(node.share, unit);
+                out.min_leaf_area = out.min_leaf_area.min(area);
+                out.max_leaf_area = out.max_leaf_area.max(area);
+                out.leaf_share_total += node.share as u128;
+                continue;
+            };
+            for child in children {
+                out.nodes += 1;
+                out.max_depth = out.max_depth.max(child.depth - 1);
+                stack.push(child);
+            }
+            if out.nodes > PROBE_NODE_CAP {
+                out.capped = true;
+                break;
+            }
+        }
+        out
+    }
+
+    /// claim: bound(one cell's partition, in nodes) — the recursion
+    /// [`rills_of`] materialises terminates inside [`RILLS_PER_CELL_MAX`] on
+    /// the canonical grid, under both cut arms.
+    ///
+    /// **The bound is asserted in node count, not stated in prose**, because
+    /// prose is what failed: `rills_of`'s doc claimed "about 14,000 branches
+    /// per cell" while `tests/rill_probe.rs` said "~25,000", and a stopping
+    /// rule that produced 269 million contradicted both without anything
+    /// going red. A materialised recursion states its bound and is held to it.
+    #[test]
+    fn one_cells_partition_is_bounded_in_nodes() {
+        let geo = Geosphere::new(PROBE_LEVEL);
+        let unit = cell_catchment(&geo);
+        let cells = [CellId(0), CellId(1), CellId(4_099), CellId(20_481)];
+        let mut worst = 0usize;
+        for cell in cells {
+            for (name, cut) in [
+                ("even ", CatchmentCut::Even),
+                ("drawn", CatchmentCut::Drawn(Seed(42))),
+            ] {
+                let p = walk(cell, unit, &cut);
+                assert!(
+                    !p.capped,
+                    "{name} {cell:?}: the walk hit its {PROBE_NODE_CAP}-node ceiling. The \
+                     stopping rule does not terminate, and the count below the ceiling is a \
+                     floor rather than a measurement"
+                );
+                println!(
+                    "{name} {cell:?}: {} nodes, {} leaves, max depth {}, leaf area \
+                     {:.4e}..{:.4e} sr ({:.3}..{:.3} of RILL_MIN_CATCHMENT)",
+                    p.nodes,
+                    p.leaves,
+                    p.max_depth,
+                    p.min_leaf_area,
+                    p.max_leaf_area,
+                    p.min_leaf_area / RILL_MIN_CATCHMENT,
+                    p.max_leaf_area / RILL_MIN_CATCHMENT,
+                );
+                assert_eq!(
+                    p.nodes,
+                    2 * p.leaves - 2,
+                    "{name} {cell:?}: {} nodes for {} leaves — every internal node divides in \
+                     two, so a full binary tree's emitted nodes are 2·leaves − 2 and anything \
+                     else means a node was emitted without its sibling",
+                    p.nodes,
+                    p.leaves
+                );
+                assert!(
+                    p.nodes <= RILLS_PER_CELL_MAX,
+                    "{name} {cell:?}: {} nodes against a stated bound of {RILLS_PER_CELL_MAX}. \
+                     Either the bound in `rills_of`'s doc is wrong or the partition is",
+                    p.nodes
+                );
+                assert!(
+                    p.max_depth < MAX_PARTITION_DEPTH,
+                    "{name} {cell:?}: depth {} reached the {MAX_PARTITION_DEPTH} guard, which \
+                     is supposed to be unreachable — the partition is being stopped by the \
+                     backstop rather than by area",
+                    p.max_depth
+                );
+                worst = worst.max(p.nodes);
+            }
+        }
+        // The bound in BYTES as well as nodes, because the failure this test
+        // exists against was a memory one: what a caller pays for one cell is
+        // the number every sweep multiplies by its cell count.
+        let rill = std::mem::size_of::<Rill>();
+        println!(
+            "worst over {} cells x 2 arms: {worst} nodes = {} bytes at {rill} B/Rill; the \
+             stated ceiling of {RILLS_PER_CELL_MAX} is {} bytes",
+            cells.len(),
+            worst * rill,
+            RILLS_PER_CELL_MAX * rill,
+        );
+    }
+
+    /// claim: invariant(the scalar partition conserves, exactly) — one cell's
+    /// leaves hold [`RILL_WHOLE`] between them, in integers, with no
+    /// tolerance.
+    ///
+    /// **This is the keystone, and it is checkable only because the walk is
+    /// bounded.** The defect that motivated the bound returned the parent's
+    /// whole share as the second part, so two siblings summed to *more* than
+    /// their parent and "subdivide the scalar" stopped conserving — but the
+    /// test that would have said so died before its assertion. A cheap,
+    /// geometry-free walk says it in milliseconds.
+    #[test]
+    fn one_cells_leaves_hold_the_whole_exactly() {
+        let geo = Geosphere::new(PROBE_LEVEL);
+        let unit = cell_catchment(&geo);
+        for cell in [CellId(0), CellId(4_099), CellId(20_481)] {
+            for cut in [CatchmentCut::Even, CatchmentCut::Drawn(Seed(42))] {
+                let p = walk(cell, unit, &cut);
+                assert!(!p.capped, "{cell:?}: the walk hit its ceiling");
+                assert_eq!(
+                    p.leaf_share_total, RILL_WHOLE as u128,
+                    "{cell:?}: the leaves hold {} of {RILL_WHOLE}. Summed in `u128` so a \
+                     partition that CREATES catchment shows as a surplus rather than wrapping",
+                    p.leaf_share_total
+                );
+                // A leaf is a part small enough to stop at, and no part is
+                // under a quarter of its parent, so every leaf sits inside one
+                // factor of CUT_FLOOR below the resolution.
+                assert!(
+                    p.max_leaf_area <= RILL_MIN_CATCHMENT
+                        && p.min_leaf_area > CUT_FLOOR * RILL_MIN_CATCHMENT,
+                    "{cell:?}: leaf areas {:.4e}..{:.4e} fall outside \
+                     ({CUT_FLOOR}·RILL_MIN_CATCHMENT, RILL_MIN_CATCHMENT]",
+                    p.min_leaf_area,
+                    p.max_leaf_area
+                );
+            }
+        }
+    }
+}

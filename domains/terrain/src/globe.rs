@@ -165,12 +165,12 @@ pub struct TectonicGlobe {
     /// no draw-order/save-format contract, and (being a leaf, not the root)
     /// it cannot be used to derive any other terrain stream.
     pub channel_seed: Seed,
-    /// Hash-noise seed for the sub-cell outlet choice (The Rill, Task 4):
-    /// `terrain_seed.derive(streams::SUBCELL_OUTLET)`, already the derived leg
+    /// Hash-noise seed for the sub-cell catchment partition (The Rill, Tier 2):
+    /// `terrain_seed.derive(streams::RILL_PARTITION)`, already the derived leg
     /// — a leaf exactly like `channel_seed`, for exactly the same reason.
-    /// `subdivide::flow_at` takes it directly rather than deriving it again, so
+    /// `branch::rills_of` takes it directly rather than deriving it again, so
     /// a caller holding it cannot reach any other terrain stream through it.
-    pub subcell_seed: Seed,
+    pub rill_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -196,10 +196,10 @@ impl TectonicGlobe {
         self.channel_seed
     }
 
-    /// The already-derived `streams::SUBCELL_OUTLET` hash-noise seed
-    /// `subdivide::flow_at` uses directly for the sub-cell outlet choice.
-    pub fn subcell_flow_seed(&self) -> Seed {
-        self.subcell_seed
+    /// The already-derived `streams::RILL_PARTITION` hash-noise seed
+    /// `branch.rs` uses directly for the sub-cell catchment partition.
+    pub fn rill_partition_seed(&self) -> Seed {
+        self.rill_seed
     }
 }
 
@@ -508,7 +508,7 @@ pub fn generate(
     let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
     // A NEW labeled leg. `derive` is a pure hash and consumes no `Stream`, so
     // adding it perturbs no existing draw and no existing world.
-    let subcell_seed = terrain_seed.derive(streams::SUBCELL_OUTLET);
+    let rill_seed = terrain_seed.derive(streams::RILL_PARTITION);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -556,7 +556,7 @@ pub fn generate(
         lithology_seed,
         features_seed,
         channel_seed,
-        subcell_seed,
+        rill_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);

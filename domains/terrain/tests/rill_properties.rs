@@ -43,8 +43,9 @@
 
 use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, RoomAddr, Seed};
 use hornvale_terrain::{
-    ChannelNetwork, RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, channel_half_width,
-    floor_flow, flow_at, generate, room_spacing,
+    CatchmentCut, ChannelNetwork, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX,
+    RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, cell_catchment, channel_half_width,
+    generate, rills_of,
 };
 use std::collections::BTreeSet;
 
@@ -723,643 +724,700 @@ fn the_width_law_is_scale_free_below_the_river_threshold_too() {
 }
 
 // ---------------------------------------------------------------------------
-// R-4 groundwork (Task 4): the room mesh's child/neighbour incidence.
+// R-4 (Task 4): THE COMPOSED BASIN CLAIM.
+//
+// This is the guard whose absence let Task 4's first attempt ship a falsified
+// keystone. That construction satisfied three separate ONE-STEP invariants —
+// every child leaves its parent where the parent leaves, the floor is monotone
+// in coarse accumulation, each face's sub-network is a tree ending at that
+// face's own outlet — while the network it produced delivered 26-31% of land
+// to the sea against the coarse graph's 74-82%, and sent 6.0-7.5% of
+// basin-interior faces to a terminus in a DIFFERENT coarse basin. Every local
+// invariant can hold while the global one fails.
+//
+// So the reference here is the coarse graph's COMPOSED answer — follow
+// `downhill` to a terminus — and the subject is the network's own composed
+// answer, followed through the run structure the polylines are a rendering of.
+// Written and watched green on the pre-Tier-2 network before Tier 2 existed.
 // ---------------------------------------------------------------------------
 
-/// Every room this file's incidence claims are checked over: five base faces
-/// crossed with six paths, chosen to include a base face itself (empty path), a
-/// corner child, the central child, and mixtures of the two down to depth four.
-/// Stated as data so the assertion count below is a fact about the table rather
-/// than a number somebody typed.
-fn incidence_rooms() -> Vec<RoomAddr> {
-    let mut out = Vec::new();
-    for face in [0u8, 3, 7, 12, 19] {
-        for path in [
-            vec![],
-            vec![0u8],
-            vec![3],
-            vec![1, 2],
-            vec![2, 3, 0],
-            vec![0, 1, 2, 3],
-        ] {
-            out.push(RoomAddr { face, path });
+/// Sweep-wide floor on the reaches R-4 composes, so the claim cannot be
+/// satisfied by a world with nothing to compose. Measured over the three
+/// seeds: printed by the assertion below when it trips.
+const MIN_COMPOSED_REACHES: usize = 20_000;
+
+/// Follow `step` from `start` until it has no successor, and return where it
+/// stopped. Panics rather than looping if the relation cycles — both relations
+/// this is applied to are strictly descending and therefore acyclic, and a
+/// cycle would otherwise hang the suite rather than fail it.
+fn terminus(start: CellId, bound: usize, step: impl Fn(CellId) -> Option<CellId>) -> CellId {
+    let mut current = start;
+    for _ in 0..bound {
+        match step(current) {
+            None => return current,
+            Some(next) => current = next,
         }
     }
-    out
+    panic!("the relation composed from {start:?} did not terminate within {bound} hops");
 }
 
-/// claim: structural(the room mesh's child/neighbour incidence) — asserted from
-/// `RoomAddr` itself over a table of rooms, not read off a doc comment.
+/// claim: invariant(forall-seed) — over three worlds, the coarse cell every
+/// reach's RENDERED chain terminates in is the coarse cell its `downhill`
+/// chain terminates in.
 ///
-/// **The three facts Tier 2's whole algorithm rests on**, verified here before
-/// any of it was designed:
+/// **R-4, stated as the composed claim.** A Tier 2 branch is a share of one
+/// coarse cell's catchment and is attached to that cell's trunk, so the coarse
+/// cell it drains to is the one that cell's trunk chain reaches. That makes
+/// R-4 a claim about the *trunk network*, which is why this test can be — and
+/// was — watched green before Tier 2 was written: it is the reference the
+/// attachment inherits, and if it were false here no attachment rule could
+/// rescue it.
 ///
-/// 1. `neighbors()[i]` is across the edge **opposite corner `i`** — so the
-///    "edge `i`" of a room means the edge joining corners `(i+1)%3` and
-///    `(i+2)%3`. Checked structurally rather than geometrically: the room
-///    across edge `i` must be a neighbour of both children that keep those two
-///    corners, and must not be a neighbour of the third.
-/// 2. `child(d)` for `d` in `0..3` keeps parent corner `d`; `child(3)` is the
-///    central inverted triangle, adjacent to all three corner children and
-///    touching no parent edge along a segment.
-/// 3. **Therefore the parent's edge `e` is shared by TWO corner children** —
-///    `(e+1)%3` and `(e+2)%3` — and not by one. The campaign spec's §4.2 says
-///    the outflow edge *forces* the outlet child; it does not. It constrains it
-///    to a choice of two, which is where Tier 2's one seeded draw lives.
-///
-/// The two exit indices are the part an implementation actually consumes, and
-/// they are asserted rather than derived: corner child `(e+1)%3` leaves the
-/// parent across edge `e` through its OWN local neighbour index **2**, and
-/// corner child `(e+2)%3` through its own index **1**.
+/// The rendered successor of a cell is the next cell of the run that CLAIMED
+/// it, read from the published `run_cells`. A cell no run continues past is a
+/// terminus: either the non-reach outlet a run drains into, or — the defect
+/// this can see — a reach that some run stopped short on, which would compose
+/// to itself while the coarse graph composes onward to the sea.
 #[test]
-fn a_parent_edge_is_shared_by_two_corner_children() {
-    let rooms = incidence_rooms();
-    let mut edges_checked = 0usize;
-    for parent in &rooms {
-        let children: Vec<RoomAddr> = (0..4u8)
-            .map(|d| parent.child(d).expect("depth is far below the cap"))
-            .collect();
-        let outside = parent.neighbors();
+fn the_rendered_network_composes_to_the_coarse_graphs_terminus() {
+    let geo = Geosphere::new(OUTLET_LEVEL);
+    let mut total = 0usize;
+    let mut agreed = 0usize;
+    for seed in OUTLET_SEEDS {
+        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
+        let globe = &outcome.globe;
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+        let is_reach = |c: CellId| {
+            !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
+        };
 
-        // Fact 2, structurally: the central child is adjacent to all three
-        // corner children, and each corner child's neighbour 0 is the central
-        // one. This is what makes the four children a STAR — corner children
-        // are pairwise non-adjacent — which is why the internal drainage tree
-        // below the cell floor has no freedom left once the outlet is chosen.
-        let central = children[3].neighbors();
-        for k in 0..3usize {
-            // MEASURED, NOT ASSUMED, AND THE FIRST DRAFT HAD IT WRONG. The
-            // central child's corners are the three parent midpoints in the
-            // order `[m01, m12, m20]`, so its neighbour ACROSS THE EDGE
-            // OPPOSITE ITS OWN CORNER `k` is the corner child that keeps parent
-            // corner `(k+2)%3` — a rotation, not the identity. The first
-            // version of this test asserted `central[k] == children[k]` and was
-            // refuted immediately (`central[0]` is child 2). The rotation is
-            // load-bearing: it is how `subdivide.rs` addresses the central
-            // child's outflow toward a chosen outlet child.
-            assert_eq!(
-                central[k],
-                children[(k + 2) % 3],
-                "child 3's neighbour {k} is not child {}: the central child is not the \
-                 inverted middle triangle in the corner order this design assumes",
-                (k + 2) % 3
-            );
-            assert_eq!(
-                children[k].neighbors()[0],
-                children[3],
-                "corner child {k}'s neighbour 0 is not the central child"
-            );
-            for other in 0..3usize {
-                if other == k {
+        // The rendered relation, from the published run structure alone.
+        let mut next: Vec<Option<CellId>> = vec![None; geo.cell_count()];
+        for (i, run) in net.run_cells.iter().enumerate() {
+            for (j, &c) in run.iter().enumerate() {
+                if j + 1 == run.len() {
                     continue;
                 }
                 assert!(
-                    !children[k].neighbors().contains(&children[other]),
-                    "corner children {k} and {other} are edge-adjacent — they are supposed \
-                     to meet only at a midpoint, and a spanning tree over the four children \
-                     would then have a choice this design does not make"
+                    next[c.0 as usize].is_none(),
+                    "seed {seed}: run {i} continues past {c:?}, and so does another run — \
+                     the rendered relation is not a function and the composition below \
+                     would depend on which run was read last"
                 );
+                next[c.0 as usize] = Some(run[j + 1]);
             }
         }
 
-        // Facts 1 and 3: for each parent edge `e`, exactly the two corner
-        // children (e+1)%3 and (e+2)%3 have a child ACROSS it, and they reach
-        // it through local indices 2 and 1 respectively.
-        for e in 0..3usize {
-            let across = &outside[e];
-            let near = (e + 1) % 3;
-            let far = (e + 2) % 3;
-            let near_exit = children[near].neighbors()[2].clone();
-            let far_exit = children[far].neighbors()[1].clone();
-            assert_eq!(
-                near_exit.parent().expect("a child has a parent"),
-                *across,
-                "child {near} of a room does not leave across parent edge {e} through its \
-                 own neighbour index 2"
-            );
-            assert_eq!(
-                far_exit.parent().expect("a child has a parent"),
-                *across,
-                "child {far} of a room does not leave across parent edge {e} through its \
-                 own neighbour index 1"
-            );
-            // The third corner child touches edge `e` at a single point at
-            // most, so none of ITS neighbours may lie across it.
-            for n in children[e].neighbors() {
-                assert_ne!(
-                    n.parent().expect("a child has a parent"),
-                    *across,
-                    "corner child {e} has a neighbour across parent edge {e}, which it is \
-                     supposed to touch at no point at all"
-                );
+        let bound = geo.cell_count();
+        let mut seed_total = 0usize;
+        let mut seed_agreed = 0usize;
+        for c in geo.cells() {
+            if !is_reach(c) {
+                continue;
             }
-            // ...and neither may any neighbour of the central child.
-            for n in children[3].neighbors() {
-                assert_ne!(
-                    n.parent().expect("a child has a parent"),
-                    *across,
-                    "the central child has a neighbour across parent edge {e}: it touches a \
-                     parent edge along a segment after all, and could be an outlet"
-                );
+            seed_total += 1;
+            let coarse = terminus(c, bound, |x| *globe.downhill.get(x));
+            let rendered = terminus(c, bound, |x| next[x.0 as usize]);
+            if coarse == rendered {
+                seed_agreed += 1;
             }
-            edges_checked += 1;
         }
+        println!(
+            "R-4 (pre-Tier-2 network): seed {seed}: {seed_agreed} / {seed_total} reaches \
+             compose to the coarse terminus = {:.4}%",
+            100.0 * seed_agreed as f64 / seed_total as f64
+        );
+        total += seed_total;
+        agreed += seed_agreed;
     }
-    assert_eq!(
-        edges_checked,
-        rooms.len() * 3,
-        "the sweep did not run over every room and edge"
+    assert!(
+        total >= MIN_COMPOSED_REACHES,
+        "only {total} reaches composed across {} seeds — far below the population this \
+         claim was calibrated against",
+        OUTLET_SEEDS.len()
+    );
+    assert!(
+        agreed * 100 >= total * 99,
+        "only {agreed} of {total} reaches ({:.4}%) reach the coarse graph's own terminus \
+         through the rendered network — R-4's floor is 99%",
+        100.0 * agreed as f64 / total as f64
     );
 }
 
 // ---------------------------------------------------------------------------
-// R-4 and R-3 (Task 4): subdivision under the coarse graph's boundary
-// conditions.
+// Tier 2 (Task 4): the branches that attach to the trunks Tier 1 renders.
+//
+// THE ORDER THESE WERE WRITTEN IN IS PART OF WHAT THEY ARE WORTH. R-4's
+// composed claim above was written and watched green on the pre-Tier-2 network
+// before `branch.rs` existed, and R-3 below was written against the API it was
+// about to have and watched fail to build. What follows is therefore a
+// reference the construction had to satisfy, not a description of what the
+// construction turned out to do.
 // ---------------------------------------------------------------------------
 
-/// The room at `index` in the level-`level` face ordering: the base face is the
-/// high digit and each refinement digit follows, most significant first. The
-/// face ordering is `Geosphere`'s own subdivision order (`child k` of face `i`
-/// is face `4i + k`), so striding over this enumerates the mesh evenly instead
-/// of walking one corner of one base face.
-fn face_room(index: u64, level: u32) -> RoomAddr {
-    let span = 1u64 << (2 * level);
-    let mut path = Vec::with_capacity(level as usize);
-    for step in (0..level).rev() {
-        path.push(((index % span) >> (2 * step) & 0b11) as u8);
-    }
-    RoomAddr {
-        face: (index / span) as u8,
-        path,
-    }
+/// Coarse cells sampled per seed, by stride over the whole `CellId` ordering so
+/// the sample crosses every latitude rather than one cap. Each carries the
+/// whole of its own partition — about 14,000 branches — so this is a real cost
+/// and the number is chosen to keep the sweep inside a commit gate.
+const CELL_SAMPLE: usize = 120;
+
+/// Floor on the cells that actually carry a partition across the sweep, so
+/// none of these claims can pass on an empty population. A cell partitions
+/// only if a run continues past it, so this tracks the land fraction.
+const MIN_PARTITIONED_CELLS: usize = 100;
+
+/// How deep the exhaustive attachment check goes. Every branch is checked
+/// against its cell's bound; the *incidence* check — a branch's mouth lies on a
+/// branch one bisection shallower — is quadratic in the population, so it runs
+/// over the top seven levels, which is 127 branches per cell and includes the
+/// attachment to the trunk itself.
+const ATTACHMENT_DEPTH: u32 = 6;
+
+/// The reach cells of one seed, sampled by stride.
+fn sampled_cells(globe: &hornvale_terrain::TectonicGlobe, geo: &Geosphere) -> Vec<CellId> {
+    let stride = (geo.cell_count() / CELL_SAMPLE).max(1);
+    (0..geo.cell_count())
+        .step_by(stride)
+        .map(|i| CellId(i as u32))
+        .filter(|&c| {
+            !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
+        })
+        .collect()
 }
 
-/// Globe-level faces sampled per seed. A stride over the whole `20·4⁶ = 81,920`
-/// face ordering rather than a prefix, so the sample crosses every base face
-/// and every latitude instead of one corner of one.
-const FACE_SAMPLE: u64 = 600;
-
-/// The measured share of sampled faces that carry sub-cell flow at all, as a
-/// reciprocal: a face flows only when all three of its corner cells are reaches,
-/// so this tracks the land fraction and is well below it. **Measured 25.0% —
-/// 450 flowing of the 1,800 faces this file samples** (600 per seed × 3),
-/// giving 9,450 subdivisions and 28,800 walks. The floor is a fifth, which
-/// terrain drift will not reach and a collapse of the floor lift would. Every
-/// assertion in this section runs only on flowing faces, so without it they
-/// could all pass on an empty sweep.
-const MIN_FLOWING_RECIPROCAL: usize = 5;
-
-/// How far below the cell floor the exhaustive sub-tree checks descend. Three
-/// levels is `4³ = 64` rooms per face — enough that the star motif recurses
-/// twice inside the sample rather than only once, and small enough that the
-/// whole sub-tree of every sampled face is enumerated rather than sampled.
-const SUB_DEPTH: u32 = 3;
-
-/// claim: invariant(forall-seed) — over three worlds, the sub-cell network
-/// inside every sampled globe-level face has exactly one outlet, and it is the
-/// face the COARSE accumulation sends that face's water to.
+/// claim: invariant(forall-seed) — over three worlds, the branches within a
+/// coarse cell partition exactly the one unit of catchment the coarse
+/// accumulation credits that cell with.
 ///
-/// **R-4.** Three separate statements, each asserted:
+/// **R-3's conservation half, and it is STRUCTURAL rather than checked after
+/// the fact.** `branch.rs` splits a share as `first = area·f` and
+/// `second = area − first`, so the two parts sum to their parent in bits, and
+/// no rounding can accumulate down the partition. This test says so in the
+/// strongest available form: for every sibling pair, the sum of the two shares
+/// is *bit-identical* to some share the partition also produced — its parent —
+/// or to the cell's whole catchment for the first cut. A partition that
+/// conserved only to a tolerance would fail this.
 ///
-/// 1. **The floor is monotone in the coarse graph's own accumulation.** A face
-///    drains only into a face whose corner `drainage` sum is strictly greater.
-///    This is the one claim with a reference genuinely outside the module: it
-///    is read straight off `globe.drainage`, and it is what "the fine network
-///    flows the way the coarse graph says the water goes" means when the coarse
-///    flow lives on mesh *vertices* and the fine flow lives on *faces*. Strict
-///    increase also makes the floor graph acyclic, which every claim below
-///    needs and none of them would notice the absence of.
-/// 2. **Exactly one child leaves its parent, and it leaves where the parent
-///    does.** Applied at every level from the floor down: of a room's four
-///    children, at most one has an outlet outside the room, and that outlet's
-///    ancestor is the room the parent's own flow goes to. No child drains
-///    across any other parent edge — inlet or otherwise. This is the recursive
-///    form of the constitutional claim, and it is the assertion that would fail
-///    if the descent ever recomputed a direction instead of inheriting one.
-/// 3. **The sub-network of a face is a tree that terminates at that face's own
-///    outlet.** Walking `flow_at` from any of the face's 64 depth-9 rooms
-///    leaves the face in bounded steps and leaves it into the face the floor
-///    chose — never into a different one, and never in a cycle.
-///
-/// The reference for (2) and (3) is the level above, which is the correct
-/// reference: the floor's answer is a lift and cannot be checked against a
-/// coarse room flow that does not exist (see `subdivide.rs`'s module doc), but
-/// **nothing below the floor may move it**, and that is exactly what is
-/// checkable and exactly what R-4 is for.
+/// **The reference is the coarse graph, not a constant this module chose.**
+/// `drainage` counts land cells upstream of and including a cell, so
+/// `drainage(c) − Σ drainage(u)` over the cells draining into `c` is exactly
+/// **1**: the cell's own contribution, the only part of the catchment the
+/// trunk does not already carry. That identity is asserted here on the same
+/// cells, which is what ties the partitioned quantity to the coarse answer.
 #[test]
-fn the_sub_network_has_one_outlet_and_the_coarse_graph_chose_it() {
+fn a_cells_branches_partition_its_own_unit_of_catchment() {
     let geo = Geosphere::new(OUTLET_LEVEL);
-    let index = NearestCellIndex::new(&geo);
-    let faces = 20u64 << (2 * OUTLET_LEVEL);
-    let stride = faces / FACE_SAMPLE;
-    let mut flowing_faces = 0usize;
-    let mut exits_checked = 0usize;
-    let mut walks = 0usize;
+    let unit = cell_catchment(&geo);
+    let mut partitioned = 0usize;
+    let mut worst_total = 0.0_f64;
+    let mut leaves = 0usize;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
-        let sub_seed = globe.subcell_flow_seed();
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+        let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
 
-        for step in 0..FACE_SAMPLE {
-            let face = face_room(step * stride, OUTLET_LEVEL);
-            let Some((floor, coarse_outlet)) = floor_flow(&face, globe, &geo, &index) else {
-                continue;
-            };
-            assert_eq!(floor, face, "floor_flow returned a different face");
-            flowing_faces += 1;
-
-            // (1) monotone in the coarse accumulation, read off `drainage`.
-            let potential = |room: &RoomAddr| -> f64 {
-                room.corner_weights(&geo, &index)
-                    .expect("a globe-level room has corner cells")
-                    .iter()
-                    .map(|(cell, _)| *globe.drainage.get(*cell))
-                    .sum()
-            };
-            assert!(
-                potential(&coarse_outlet) > potential(&face),
-                "seed {seed}: face {face:?} drains into {coarse_outlet:?}, whose corner \
-                 drainage sum {} is not strictly greater than its own {}. The floor lift is \
-                 not monotone in the coarse graph's accumulation, so it can circulate and \
-                 the sub-network is not a tree",
-                potential(&coarse_outlet),
-                potential(&face)
-            );
-            assert!(
-                face.neighbors().contains(&coarse_outlet),
-                "the coarse outlet is not even edge-adjacent to the face"
-            );
-
-            // (2) at every level from the floor down, at most one child leaves,
-            // and it leaves where its parent does.
-            let mut parents = vec![face.clone()];
-            for _ in 0..SUB_DEPTH {
-                let mut next = Vec::with_capacity(parents.len() * 4);
-                for parent in &parents {
-                    let parent_flow = flow_at(parent, globe, &geo, &index, sub_seed)
-                        .expect("a descendant of a flowing face has flow");
-                    let depth = parent.depth();
-                    let mut leaving = 0usize;
-                    for digit in 0..4u8 {
-                        let child = parent.child(digit).expect("depth is below the cap");
-                        let flow = flow_at(&child, globe, &geo, &index, sub_seed)
-                            .expect("a descendant of a flowing face has flow");
-                        let outside = flow.outlet.ancestor(depth).expect("an ancestor exists");
-                        if outside == *parent {
-                            next.push(child);
-                            continue;
-                        }
-                        leaving += 1;
-                        assert_eq!(
-                            outside, parent_flow.outlet,
-                            "seed {seed}: child {digit} of {parent:?} drains into {outside:?}, \
-                             which is not the room its parent drains into \
-                             ({:?}). A child crossed a parent edge that is neither the \
-                             outflow edge nor anything the coarse graph sanctioned",
-                            parent_flow.outlet
-                        );
-                        assert_ne!(
-                            digit, 3,
-                            "the central child left its parent — it touches no parent edge \
-                             along a segment and cannot be an outlet"
-                        );
-                        next.push(child);
-                        exits_checked += 1;
-                    }
-                    assert_eq!(
-                        leaving, 1,
-                        "seed {seed}: {leaving} of {parent:?}'s four children leave it. \
-                         Exactly one may: the sub-network of a room has one outlet"
-                    );
-                }
-                parents = next;
-            }
-
-            // (3) every one of the face's 64 depth-9 rooms walks out of the
-            // face, in bounded steps, into the face the floor chose.
-            for room in &parents {
-                let mut current = room.clone();
-                let mut steps = 0usize;
-                loop {
-                    let flow = flow_at(&current, globe, &geo, &index, sub_seed)
-                        .expect("a descendant of a flowing face has flow");
-                    let host = flow
-                        .outlet
-                        .ancestor(OUTLET_LEVEL)
-                        .expect("an ancestor exists");
-                    if host != face {
-                        assert_eq!(
-                            host, coarse_outlet,
-                            "seed {seed}: the sub-network of {face:?} leaves it into \
-                             {host:?}, not into the face the coarse accumulation chose \
-                             ({coarse_outlet:?})"
-                        );
-                        break;
-                    }
-                    current = flow.outlet;
-                    steps += 1;
-                    assert!(
-                        steps <= 1 << (2 * SUB_DEPTH),
-                        "seed {seed}: the walk from {room:?} has taken {steps} steps without \
-                         leaving {face:?}, which has only {} rooms at this depth — the \
-                         sub-network contains a cycle",
-                        1u32 << (2 * SUB_DEPTH)
-                    );
-                }
-                walks += 1;
+        // Who drains into whom, for the coarse identity below.
+        let mut inflow = vec![0.0_f64; geo.cell_count()];
+        for c in geo.cells() {
+            if let Some(t) = *globe.downhill.get(c) {
+                inflow[t.0 as usize] += *globe.drainage.get(c);
             }
         }
+
+        for cell in sampled_cells(globe, &geo) {
+            let rills = rills_of(cell, &net, &geo, &cut);
+            if rills.is_empty() {
+                continue;
+            }
+            partitioned += 1;
+
+            // THE BOUND, on the real function rather than on a probe of its
+            // recursion, and in NODE COUNT. `rills_of` materialises a
+            // recursive structure, so its size is a claim its doc makes and
+            // this holds it to; the campaign's own defect was a stopping rule
+            // that reached 269 million nodes and 23.7 GB while every
+            // assertion in this file agreed with it, because none of them
+            // ever ran.
+            assert!(
+                rills.len() <= RILLS_PER_CELL_MAX,
+                "seed {seed}, {cell:?}: {} branches against the stated bound of \
+                 {RILLS_PER_CELL_MAX}. Either the partition no longer terminates where its \
+                 doc says or the bound is stale — do not raise it without redoing the \
+                 arithmetic on `RILLS_PER_CELL_MAX`",
+                rills.len()
+            );
+
+            // THE COARSE IDENTITY. The cell's own contribution to its own
+            // accumulation is one cell, exactly — which is the quantity the
+            // partition below divides, expressed as an area.
+            let own = *globe.drainage.get(cell) - inflow[cell.0 as usize];
+            assert_eq!(
+                own, 1.0,
+                "seed {seed}, {cell:?}: the coarse accumulation credits this cell with {own} \
+                 of its own area, not 1. The partition divides one cell's worth of catchment, \
+                 so if this is not one the object being divided is not what `drainage` says \
+                 the trunk collects here"
+            );
+
+            // THE PAIRWISE IDENTITY, in bits. `rills_of` emits a node's two
+            // parts consecutively, so consecutive pairs are siblings; their
+            // shares must sum to a share the partition also holds — their
+            // parent's, or the whole for the first cut.
+            let mut shares: BTreeSet<u64> = BTreeSet::new();
+            shares.insert(RILL_WHOLE);
+            for rill in &rills {
+                shares.insert(rill.share);
+            }
+            assert_eq!(rills.len() % 2, 0, "branches are emitted in sibling pairs");
+            for pair in rills.chunks(2) {
+                let sum = pair[0].share + pair[1].share;
+                assert!(
+                    shares.contains(&sum),
+                    "seed {seed}, {cell:?}: two sibling shares {} and {} sum to {sum}, which is \
+                     not a share the partition holds. The split is losing or inventing \
+                     catchment, which a tolerance-based check would have absorbed",
+                    pair[0].share,
+                    pair[1].share
+                );
+            }
+
+            // THE COMPOSED SUM, also in bits and ORDER-INDEPENDENT because the
+            // conserved quantity is an integer: a leaf is a part the partition
+            // declined to divide, and the leaves tile the cell's catchment.
+            let leaf = |r: &&hornvale_terrain::Rill| r.catchment <= RILL_MIN_CATCHMENT;
+            let total: u64 = rills.iter().filter(leaf).map(|r| r.share).sum();
+            leaves += rills.iter().filter(leaf).count();
+            assert_eq!(
+                total, RILL_WHOLE,
+                "seed {seed}, {cell:?}: the leaves of the partition hold {total} of \
+                 {RILL_WHOLE} — the parts no longer tile the whole"
+            );
+
+            // And the rendering of that share is the area the width law is
+            // fed, so it is worth knowing how far the f64 rendering drifts
+            // from the exact scalar even though nothing depends on it.
+            let rendered: f64 = rills.iter().filter(leaf).map(|r| r.catchment).sum();
+            worst_total = worst_total.max((rendered - unit).abs() / unit);
+        }
     }
-    let sampled = FACE_SAMPLE as usize * OUTLET_SEEDS.len();
     assert!(
-        flowing_faces * MIN_FLOWING_RECIPROCAL >= sampled,
-        "only {flowing_faces} of {sampled} sampled faces across three seeds carry sub-cell \
-         flow at all (measured 24.2%) — the assertions above ran on far less than the \
-         population they were calibrated against"
+        partitioned >= MIN_PARTITIONED_CELLS,
+        "only {partitioned} sampled cells carry a partition — below the population these \
+         assertions were calibrated against"
     );
-    assert_eq!(
-        exits_checked,
-        flowing_faces * ((1 << (2 * SUB_DEPTH)) - 1) / 3,
-        "the exit check did not run once per room at every level of every sampled face"
-    );
-    assert_eq!(
-        walks,
-        flowing_faces * (1 << (2 * SUB_DEPTH)),
-        "the walk did not run from every deepest room of every sampled face"
+    println!(
+        "R-3: {partitioned} cells partitioned, {leaves} leaves; the share partition is exact \
+         in integers, and the worst drift of its f64 area rendering is {worst_total:.3e}"
     );
 }
 
-/// claim: invariant(forall-seed) — drained area is conserved across every
-/// subdivision step of every sampled room, over three worlds.
+/// claim: invariant(forall-seed) — over three worlds, every branch is attached
+/// to the line one bisection above it, the first pair to the trunk of its own
+/// cell, and no branch leaves the catchment it is a share of.
 ///
-/// **R-3.** A parent's four children own four sub-triangles between them, and
-/// the parent's inherited inflow is `4·(upstream − 1)` in those same units. The
-/// accumulation leaving through the outlet child must be the sum: `4 + 4·(U−1)`,
-/// which is `4·U` — the parent's own accumulation converted to child units, and
-/// nothing lost or invented on the way down.
+/// **R-4's Tier 2 half.** The composed claim above establishes that a cell's
+/// trunk chain reaches the coarse graph's own terminus. This establishes the
+/// other link: that a branch is joined to *that* trunk and to nothing else,
+/// and cannot wander out of the cell whose catchment it divides. Together they
+/// are the composed statement R-4 asks for — the coarse cell a branch's water
+/// ultimately reaches is the one the coarse graph sends its cell's water to —
+/// and it holds by construction rather than by margin, which is the whole
+/// difference between this design and the routed one it replaces.
 ///
-/// Written before the subdivision existed, and it is the guard on the unit
-/// half of Task 1's finding: if `upstream` were ever left as a raw count that
-/// did not quadruple per level, the outlet child's accumulation would not be
-/// `4·U` and this fails loudly rather than producing plausible-looking widths.
-///
-/// The three internal identities are asserted too, because the total alone is
-/// satisfied by a build that dumped all the inflow straight into the outlet
-/// child and gave the interior none of it — which would render a trunk with no
-/// tributaries and pass a conservation check.
-///
-/// Equality is exact rather than toleranced everywhere the arithmetic is:
-/// `4·U` and `4 + 4·(U−1)` are scalings and sums of dyadic rationals here, so
-/// they agree bit for bit until `U` grows past `2⁵³`, which six levels below a
-/// level-6 face does not approach. The assertion reports the relative
-/// difference so a future law that conserves in real arithmetic but not in
-/// bits is distinguishable from one that does not conserve.
+/// The bound is stated in the cell's own terms: no point of any branch is
+/// further from the cell than the diagonal of the square its catchment is, so
+/// a branch cannot reach a neighbouring cell's trunk even in principle.
 #[test]
-fn drained_area_is_conserved_under_subdivision() {
+fn every_branch_is_attached_to_the_line_above_it() {
     let geo = Geosphere::new(OUTLET_LEVEL);
-    let index = NearestCellIndex::new(&geo);
-    let faces = 20u64 << (2 * OUTLET_LEVEL);
-    let stride = faces / FACE_SAMPLE;
-    let mut subdivisions = 0usize;
-    let mut distinct_totals = BTreeSet::new();
+    let unit = cell_catchment(&geo);
+    // The furthest a branch may be from its cell: the half-diagonal of the
+    // cell's own square, plus the half-stretch of trunk it may attach to. The
+    // half-diagonal of a square of side `s` is `s/\u221a2` exactly, so the
+    // constant is named rather than typed to five places.
+    let bound = std::f64::consts::FRAC_1_SQRT_2 * unit.sqrt() + 0.6 * 0.0189;
+    let mut partitioned = 0usize;
+    let mut checked = 0usize;
+    let mut worst_reach = 0.0_f64;
+    let mut worst_gap = 0.0_f64;
     for seed in OUTLET_SEEDS {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
-        let sub_seed = globe.subcell_flow_seed();
-        for step in 0..FACE_SAMPLE {
-            let face = face_room(step * stride, OUTLET_LEVEL);
-            if floor_flow(&face, globe, &geo, &index).is_none() {
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+        let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
+        for cell in sampled_cells(globe, &geo) {
+            let rills = rills_of(cell, &net, &geo, &cut);
+            if rills.is_empty() {
                 continue;
             }
-            let mut parents = vec![face];
-            for _ in 0..SUB_DEPTH {
-                let mut next = Vec::with_capacity(parents.len() * 4);
-                for parent in &parents {
-                    let parent_flow = flow_at(parent, globe, &geo, &index, sub_seed)
-                        .expect("a descendant of a flowing face has flow");
-                    let depth = parent.depth();
-                    let mut outlet = None;
-                    let mut interior = Vec::new();
-                    let mut central = None;
-                    for digit in 0..4u8 {
-                        let child = parent.child(digit).expect("depth is below the cap");
-                        let flow = flow_at(&child, globe, &geo, &index, sub_seed)
-                            .expect("a descendant of a flowing face has flow");
-                        let host = flow.outlet.ancestor(depth).expect("an ancestor exists");
-                        if host != *parent {
-                            outlet = Some(flow.upstream);
-                        } else if digit == 3 {
-                            central = Some(flow.upstream);
-                        } else {
-                            interior.push(flow.upstream);
-                        }
-                        next.push(child);
-                    }
-                    let leaving = outlet.expect("exactly one child leaves — R-4 asserts it");
-                    let centre = central.expect("the central child never leaves");
-                    assert_eq!(interior.len(), 2, "two corner children stay behind");
+            partitioned += 1;
 
-                    let own_areas = 4.0;
-                    let inflow = 4.0 * (parent_flow.upstream - 1.0);
-                    let relative = |got: f64, want: f64| (got - want).abs() / want.abs();
-                    assert!(
-                        relative(leaving, own_areas + inflow) == 0.0,
-                        "seed {seed}: {parent:?}'s outlet child carries {leaving} against the \
-                         {own_areas} sub-triangles its four children own plus the {inflow} \
-                         flowing in — relative {:.3e}. Drained area is not conserved across \
-                         the subdivision, which is what happens when a count is carried down \
-                         without converting units",
-                        relative(leaving, own_areas + inflow)
-                    );
-                    assert!(
-                        relative(leaving, 4.0 * parent_flow.upstream) == 0.0,
-                        "seed {seed}: the outlet child carries {leaving} against the parent's \
-                         own {} converted to child units",
-                        4.0 * parent_flow.upstream
-                    );
-                    assert!(
-                        relative(centre, 1.0 + interior[0] + interior[1]) == 0.0,
-                        "seed {seed}: the central child carries {centre} against its own one \
-                         sub-triangle plus its two upstream siblings' {} — the interior tree \
-                         does not accumulate, so the inflow is being dumped straight into the \
-                         outlet and the sub-network has no tributaries",
-                        interior[0] + interior[1]
-                    );
-                    assert!(
-                        relative(leaving, 1.0 + centre) == 0.0,
-                        "seed {seed}: the outlet child carries {leaving} against the central \
-                         child's {centre} plus its own one"
-                    );
-                    assert_eq!(
-                        interior[0].to_bits(),
-                        interior[1].to_bits(),
-                        "seed {seed}: the two inflow children carry different accumulations, \
-                         so the even split this module documents is not what it does"
-                    );
-                    distinct_totals.insert(leaving.to_bits());
-                    subdivisions += 1;
-                }
-                parents = next;
+            // DETERMINISM, asserted where the population already exists: the
+            // partition is a pure function of the seed and the address, so a
+            // second enumeration is the same list.
+            assert_eq!(
+                rills,
+                rills_of(cell, &net, &geo, &cut),
+                "seed {seed}, {cell:?}: the partition is not reproducible"
+            );
+
+            let here = geo.position(cell);
+            for rill in &rills {
+                worst_reach = worst_reach
+                    .max(arc(here, rill.head))
+                    .max(arc(here, rill.mouth));
+            }
+            assert!(
+                worst_reach < bound,
+                "seed {seed}, {cell:?}: a branch reaches {worst_reach} from its own cell, \
+                 past the {bound} its own catchment spans. A branch that far out is in a \
+                 neighbouring cell's catchment, which is a coarse divide crossed"
+            );
+
+            // THE TRUNK ITSELF, rebuilt from the published polyline rather
+            // than from `branch.rs`'s idea of it. The cell's stretch of trunk
+            // spans the midpoints either side of its own vertex, so it lies
+            // across TWO polyline segments and the reference is the nearer of
+            // them. The first version of this test used only `[j, j+1]` and
+            // reddened at 3.6e-3 rad on the first cell it reached — the mouths
+            // of parts on the upstream side of the vertex, which are on the
+            // trunk and not on that one segment of it.
+            let (line, j) = net
+                .trunk_vertex(cell)
+                .expect("a cell with a partition has a trunk");
+            let points = &net.polylines[line].points;
+            let mut trunk = vec![[points[j], points[j + 1]]];
+            if j > 0 {
+                trunk.push([points[j - 1], points[j]]);
+            }
+
+            for rill in rills.iter().filter(|r| r.depth <= ATTACHMENT_DEPTH) {
+                checked += 1;
+                let gap = match rill.parent {
+                    // The first pair attaches to the trunk itself.
+                    None => trunk
+                        .iter()
+                        .map(|&seg| segment_gap(seg, rill.mouth))
+                        .fold(f64::INFINITY, f64::min),
+                    Some(parent) => {
+                        // Against the branch it NAMES as its parent, not
+                        // against the nearest branch one bisection up: the
+                        // weaker form is satisfied by a branch attached to the
+                        // wrong sibling, and a wrong sibling is a tributary
+                        // joining the wrong stream.
+                        assert_eq!(
+                            rills[parent].depth + 1,
+                            rill.depth,
+                            "seed {seed}, {cell:?}: a branch's parent is not one bisection above it"
+                        );
+                        segment_gap([rills[parent].head, rills[parent].mouth], rill.mouth)
+                    }
+                };
+                worst_gap = worst_gap.max(gap);
+                assert!(
+                    gap < 1e-6,
+                    "seed {seed}, {cell:?}: a depth-{} branch's mouth is {gap} from the line it \
+                     names as its parent. A branch whose mouth is not ON what it drains \
+                     into is joined to the network in the graph and separated from it in space \
+                     — the defect The Ford's confluence repair exists for",
+                    rill.depth
+                );
             }
         }
     }
     assert!(
-        subdivisions * MIN_FLOWING_RECIPROCAL >= FACE_SAMPLE as usize * OUTLET_SEEDS.len() * 21,
-        "only {subdivisions} subdivisions checked across three seeds — a flowing face \
-         contributes 1 + 4 + 16 = 21 of them, so this is far below the calibrated population"
+        partitioned >= MIN_PARTITIONED_CELLS,
+        "only {partitioned} sampled cells carry a partition"
     );
-    assert!(
-        distinct_totals.len() > 100,
-        "only {} distinct outlet accumulations across {subdivisions} subdivisions — the \
-         equalities above would hold just as well for a constant accumulation",
-        distinct_totals.len()
+    println!(
+        "R-4 (Tier 2 half): {partitioned} cells, {checked} attachments checked, worst mouth \
+         gap {worst_gap:.3e} rad, furthest branch point {worst_reach:.5} rad against a bound \
+         of {bound:.5}"
     );
 }
 
-/// claim: invariant(the width law's caller-side pairing, over the sub-cell
-/// network of three worlds) — with a mispairing control that must move.
+/// Angular separation of two unit vectors, radians.
+fn arc(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    hornvale_kernel::math::acos(d.clamp(-1.0, 1.0))
+}
+
+/// Angular distance from `p` to the great-circle arc through `seg`, radians.
+///
+/// **The arc, not the chord, and the difference is not pedantry.** A straight
+/// chord between two points 0.01 rad apart sits 1.2e-5 rad inside the sphere
+/// at its midpoint, so a mouth lying exactly ON the rendered line reads
+/// 2.1e-5 rad away from the chord — three headwater half-widths, which is the
+/// scale of the very defect this assertion exists to catch. Measured with the
+/// chord, the first version of this test could not tell the sagitta from a
+/// mouth that had genuinely come off the line.
+fn segment_gap(seg: [[f64; 3]; 2], p: [f64; 3]) -> f64 {
+    let d = [
+        seg[1][0] - seg[0][0],
+        seg[1][1] - seg[0][1],
+        seg[1][2] - seg[0][2],
+    ];
+    let len2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    let t = if len2 <= 0.0 {
+        0.0
+    } else {
+        (((p[0] - seg[0][0]) * d[0] + (p[1] - seg[0][1]) * d[1] + (p[2] - seg[0][2]) * d[2]) / len2)
+            .clamp(0.0, 1.0)
+    };
+    let q = [
+        seg[0][0] + t * d[0],
+        seg[0][1] + t * d[1],
+        seg[0][2] + t * d[2],
+    ];
+    let n = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2]).sqrt();
+    arc(p, [q[0] / n, q[1] / n, q[2] / n])
+}
+
+/// The hexagonal packing constant of the mesh: `cell_spacing / √(4π/N)`,
+/// measured at **1.078208 / 1.078231 / 1.078237 / 1.078238** across levels
+/// 4-7 (Task 1). It is what makes `a·edge·√count` equal `a·1.0782·√area`, and
+/// therefore what makes the width law's constant of proportionality below a
+/// property of the law rather than of the level.
+const PACKING: f64 = 1.07824;
+
+/// The levels the anchor below is measured at. Two is the whole point: a
+/// constant that is level-free cannot be checked at one level.
+const ANCHOR_LEVELS: [u32; 2] = [5, 6];
+
+/// claim: invariant(the width law's caller-side pairing, absolutely and over
+/// two grid levels) — with a mispairing control that must move.
 ///
 /// **THE CALLER-SIDE UNITS ASSERTION, WHICH IS TIER 2'S TO MAKE.** Task 1's
 /// invariance test is over the pure function and both of its arguments come
-/// from one level by construction, so it cannot see a sub-cell count paired
-/// with the *parent* cell's spacing — the trap `channel_half_width`'s doc names
-/// and which nothing tested until here, because Tier 2 is the first code that
-/// could commit it.
+/// from one level by construction, so it cannot see a drained area paired with
+/// the wrong level's spacing — the trap `channel_half_width`'s doc names, and
+/// which nothing tested until Tier 2 was the first code that could commit it.
 ///
-/// So this asserts the pairing on the real network: for a room and its outlet
-/// child — the two ends of one subdivision step of one trunk — the channel the
-/// width law describes is the SAME channel, to within the sphere's own
-/// departure from exact halving.
+/// Stated **absolutely** rather than as a ratio between two levels of the same
+/// network. That is the lesson the construction this replaces paid for: a
+/// parent/child ratio cannot see a spacing derived one level off *everywhere*,
+/// because the same factor appears on both sides and cancels, and mutating the
+/// spacing function to answer for the wrong depth left three ratio-based tests
+/// green. So the quantity asserted here is
 ///
-/// **The control is the load-bearing half.** The correct pairing and the
-/// mispairing differ by exactly the factor the count/spacing cancellation is
-/// worth: `√4 / 2 = 1` against `√4 = 2`. So the test asserts both that the
-/// correct pairing holds within a few percent AND that the mispairing lands
-/// near two — without the second, a width law that had become constant in
-/// `drainage` would satisfy the first perfectly.
+/// ```text
+///   half_width / √(drained area)  =  ½·CHANNEL_WIDTH_COEFF·(spacing/√A_cell)
+///                                 =  ½·CHANNEL_WIDTH_COEFF·PACKING
+/// ```
 ///
-/// **The absolute anchor is why this test is not blind to a uniform shift.**
-/// A parent/child ratio cannot see `room_spacing` answering one level off
-/// everywhere, because the same factor appears on both sides and cancels — and
-/// that is precisely the mispairing this test exists for. Proved rather than
-/// reasoned: mutating `room_spacing` to return `addr.parent()`'s spacing left
-/// all three of this section's tests green in their first form. So the first
-/// assertion below pins the spacing's DEPTH absolutely, against the
-/// `Geosphere`'s own cell positions: at the globe level a room's three edges
-/// join its three corner cells, so `room_spacing` there must equal the mean of
-/// those three cell-to-cell separations, computed without `RoomAddr::corners`
-/// entering it at all.
+/// a number with no level in it at all, checked on the real branch population
+/// at **two different grid levels**. A branch whose area was expressed in one
+/// level's units and whose spacing came from another lands a factor of two per
+/// level away from it.
 ///
-/// The tolerance is not slack, and it is deliberately far above what the
-/// network produces. A room's three edges do not all halve exactly under
-/// subdivision: the corner-to-midpoint arcs do (a `slerp_mid` midpoint lies on
-/// the great circle at the arc's midpoint) but the midpoint-to-midpoint arcs of
-/// the central child do not, so `room_spacing` halves to within a small
-/// fraction rather than in bits. **Measured over the 9,450 subdivision steps
-/// this file sweeps: the worst correct-pairing drift is 1.335e-5 and the worst
-/// mispairing ratio is 2.0000.** The bound stays at 5e-2 rather than being
-/// tightened onto that measurement, because a bound set at the observed worst
-/// case is a tripwire that reddens on ordinary terrain drift instead of on the
-/// defect it names — and the defect it names is worth a factor of two, five
-/// orders of magnitude away.
+/// **The control is the load-bearing half**, for the same reason it was
+/// before: without it, a width law that had stopped depending on discharge
+/// would satisfy the anchor at a single point and fail nothing. The control
+/// pairs the same drained area with a **walk-depth room's** spacing, six
+/// levels down, and must land at ~1/64.
 #[test]
-fn a_sub_cell_count_is_paired_with_its_own_depths_spacing() {
-    let geo = Geosphere::new(OUTLET_LEVEL);
-    let index = NearestCellIndex::new(&geo);
-    let faces = 20u64 << (2 * OUTLET_LEVEL);
-    let stride = faces / FACE_SAMPLE;
-    let mut steps = 0usize;
-    let mut worst_correct = 0.0_f64;
+fn a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level() {
+    let expected = 0.5 * hornvale_terrain::CHANNEL_WIDTH_COEFF * PACKING;
+    let mut sampled = 0usize;
+    let mut worst = 0.0_f64;
+    let mut mean = 0.0_f64;
     let mut worst_mispaired = f64::INFINITY;
-    let mut anchored = 0usize;
-    for seed in OUTLET_SEEDS {
-        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
+    let mut readings = 0usize;
+    let mut reading_worst = 0.0_f64;
+    for level in ANCHOR_LEVELS {
+        let geo = Geosphere::new(level);
+        let index = NearestCellIndex::new(&geo);
+        let unit = cell_catchment(&geo);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
         let globe = &outcome.globe;
-        let sub_seed = globe.subcell_flow_seed();
-        for step in 0..FACE_SAMPLE {
-            let face = face_room(step * stride, OUTLET_LEVEL);
-            if floor_flow(&face, globe, &geo, &index).is_none() {
-                continue;
-            }
-            // THE ABSOLUTE ANCHOR. A globe-level room's three corners ARE three
-            // cells, so its three edges are three cell-to-cell separations —
-            // read here off `Geosphere::position` alone, so a `room_spacing`
-            // that answered for any other depth cannot agree with it.
-            let cells = face
-                .corner_weights(&geo, &index)
-                .expect("a globe-level room has corner cells");
-            let arc = |a: CellId, b: CellId| {
-                let (p, q) = (geo.position(a), geo.position(b));
-                let d = p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
-                hornvale_kernel::math::acos(d.clamp(-1.0, 1.0))
-            };
-            let mesh = (arc(cells[0].0, cells[1].0)
-                + arc(cells[1].0, cells[2].0)
-                + arc(cells[2].0, cells[0].0))
-                / 3.0;
-            let drift = (room_spacing(&face) - mesh).abs() / mesh;
-            assert!(
-                drift < 1e-9,
-                "seed {seed}: at the globe level, room_spacing({face:?}) is {} against the \
-                 {mesh} the mesh's own cell positions give — relative {drift:.3e}. The \
-                 spacing is being derived at the wrong DEPTH, which a parent/child ratio \
-                 cannot see because the factor cancels",
-                room_spacing(&face)
-            );
-            anchored += 1;
-            let mut parents = vec![face];
-            for _ in 0..SUB_DEPTH {
-                let mut next = Vec::with_capacity(parents.len() * 4);
-                for parent in &parents {
-                    let parent_flow = flow_at(parent, globe, &geo, &index, sub_seed)
-                        .expect("a descendant of a flowing face has flow");
-                    let depth = parent.depth();
-                    for digit in 0..4u8 {
-                        let child = parent.child(digit).expect("depth is below the cap");
-                        let flow = flow_at(&child, globe, &geo, &index, sub_seed)
-                            .expect("a descendant of a flowing face has flow");
-                        next.push(child.clone());
-                        if flow.outlet.ancestor(depth).expect("an ancestor exists") == *parent {
-                            continue;
-                        }
-                        // The outlet child: the same water as its parent, so
-                        // the same channel width, paired at its OWN depth.
-                        let here = channel_half_width(flow.upstream, room_spacing(&child));
-                        let above = channel_half_width(parent_flow.upstream, room_spacing(parent));
-                        let drift = (here - above).abs() / above;
-                        worst_correct = worst_correct.max(drift);
-                        // The control: the child's count against the PARENT's
-                        // spacing — the trap, which must be near 2x.
-                        let mispaired = channel_half_width(flow.upstream, room_spacing(parent));
-                        worst_mispaired = worst_mispaired.min(mispaired / above);
-                        steps += 1;
-                    }
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+        let cut = CatchmentCut::Drawn(globe.rill_partition_seed());
+
+        // THE ABSOLUTE DEPTH ANCHOR on `room_spacing` itself, carried forward
+        // from the construction this replaces because the hazard is unchanged:
+        // a spacing that answered for the wrong depth is invisible to every
+        // ratio. A globe-level room's three corners ARE three cells, so its
+        // three edges are three cell-to-cell separations — read here off
+        // `Geosphere::position` alone, with `RoomAddr::corners` nowhere in it.
+        let face = RoomAddr {
+            face: 3,
+            path: vec![1; level as usize],
+        };
+        let cells = face
+            .corner_weights(&geo, &index)
+            .expect("a globe-level room has corner cells");
+        let mesh = (arc(geo.position(cells[0].0), geo.position(cells[1].0))
+            + arc(geo.position(cells[1].0), geo.position(cells[2].0))
+            + arc(geo.position(cells[2].0), geo.position(cells[0].0)))
+            / 3.0;
+        let drift = (hornvale_terrain::room_spacing(&face) - mesh).abs() / mesh;
+        assert!(
+            drift < 1e-9,
+            "at level {level}, room_spacing({face:?}) is {} against the {mesh} the mesh's own \
+             cell positions give — relative {drift:.3e}. The spacing is being derived at the \
+             wrong DEPTH, which no parent/child ratio can see because the factor cancels",
+            hornvale_terrain::room_spacing(&face)
+        );
+
+        for cell in sampled_cells(globe, &geo) {
+            // The same mean-of-neighbours spacing `channel.rs` uses, rebuilt
+            // here from `Geosphere::position`. A single neighbour's arc is not
+            // the same quantity — it carries the mesh's local anisotropy, and
+            // using one widened the residual below from 3% to 9%.
+            let neighbors = geo.neighbors(cell);
+            let spacing = neighbors
+                .iter()
+                .map(|&n| arc(geo.position(cell), geo.position(n)))
+                .sum::<f64>()
+                / neighbors.len() as f64;
+            let room = room_of_depth(&face, 12);
+            for rill in rills_of(cell, &net, &geo, &cut).iter().take(64) {
+                let half = channel_half_width(rill.catchment / unit, spacing);
+                let k = half / rill.catchment.sqrt();
+                worst = worst.max((k - expected).abs() / expected);
+                mean += k / expected;
+                let mispaired = channel_half_width(
+                    rill.catchment / unit,
+                    hornvale_terrain::room_spacing(&room),
+                );
+                worst_mispaired = worst_mispaired.min(mispaired / half);
+                sampled += 1;
+
+                // THE SHIPPED PATH'S OWN PAIRING. Everything above reads
+                // `Rill::catchment` and does the arithmetic here, so it says
+                // nothing about the call a consumer actually makes:
+                // `rill_reading` pairs the count and the spacing itself, and
+                // nothing else in the suite watches it do so.
+                if sampled.is_multiple_of(8)
+                    && let Some(reading) =
+                        hornvale_terrain::rill_reading(rill.head, &net, globe, &geo, &index, &cut)
+                {
+                    let k = reading.band_edges[0] / reading.catchment.sqrt();
+                    reading_worst = reading_worst.max((k - expected).abs() / expected);
+                    readings += 1;
                 }
-                parents = next;
             }
         }
     }
     assert!(
-        steps * MIN_FLOWING_RECIPROCAL >= FACE_SAMPLE as usize * OUTLET_SEEDS.len() * 21,
-        "only {steps} subdivision steps sampled — one per parent room, so this is far below \
-         the calibrated population"
+        sampled > 2_000,
+        "only {sampled} branches anchored — below the population this was calibrated against"
+    );
+    mean /= sampled as f64;
+    // TWO BOUNDS, AND THE REASON THERE ARE TWO. A single cell's spacing
+    // departs from the mesh's mean by up to ~9% — the icosphere is not
+    // uniform, and the packing constant is a global average, so a per-branch
+    // bound tight enough to be interesting would redden on the twelve
+    // pentagons rather than on a units error. The per-branch bound is
+    // therefore set well above that local variation and well below the factor
+    // of two a wrong level is worth; the POPULATION MEAN is where the tight
+    // statement lives, because the local variation averages out of it and a
+    // units error does not.
+    assert!(
+        worst < 0.25,
+        "a branch's half-width per √(drained area) is {worst:.4} away from the law's own \
+         level-free constant {expected}, past the mesh's own ~9% local spacing variation. The \
+         drained area and the spacing are no longer coming from the same level, which is \
+         worth a factor of two per level"
     );
     assert!(
-        worst_correct < 0.05,
-        "the width of one trunk moved by up to {worst_correct:.4} across a single \
-         subdivision step. The count and the spacing are no longer coming from the same \
-         depth — a depth-d count paired with a depth-(d-1) spacing is exactly the trap \
-         `channel_half_width`'s doc names, and it is worth a factor of two"
+        (mean - 1.0).abs() < 0.03,
+        "over {sampled} branches at two grid levels the mean half-width per √(drained area) is \
+         {mean:.5} of the law's level-free constant. The mesh's local spacing variation \
+         averages out of this; a level in the pairing does not"
     );
     assert!(
-        anchored * MIN_FLOWING_RECIPROCAL >= FACE_SAMPLE as usize * OUTLET_SEEDS.len(),
-        "the absolute depth anchor ran on only {anchored} faces"
+        worst_mispaired < 1.0 / 32.0,
+        "pairing a branch's drained area with a WALK-DEPTH room's spacing changed the width by \
+         {worst_mispaired:.5}x — it should be ~1/64 at level 6 and ~1/128 at level 5, and this \
+         is the smaller of the two. The anchor above is therefore not \
+         discriminating: it would pass for a width law that had stopped depending on the \
+         spacing at all"
     );
     assert!(
-        worst_mispaired > 1.9,
-        "pairing a child's count with its PARENT's spacing changed the width by only \
-         {worst_mispaired:.4}x — it should be ~2x. The assertion above is therefore not \
-         discriminating: it would pass for a width law that had stopped depending on \
-         drainage at all"
+        readings > 200,
+        "only {readings} readings taken — the shipped path's pairing is barely covered"
+    );
+    assert!(
+        reading_worst < 0.25,
+        "a `rill_reading`'s own channel half-width per √(drained area) is {reading_worst:.4} \
+         away from the law's level-free constant. The reading pairs the count and the spacing \
+         itself, so this is the only assertion that watches the SHIPPED call site do it"
+    );
+    println!(
+        "the width-law anchor: {sampled} branches over levels {ANCHOR_LEVELS:?}; mean \
+         half-width per √(drained area) is {mean:.5} of the level-free constant \
+         {expected:.6e}, worst per-branch departure {worst:.4} (the mesh's own local spacing \
+         variation); the mispairing control lands at {worst_mispaired:.5}x. Over {readings} \
+         `rill_reading` calls the same anchor is off by at most {reading_worst:.4}"
+    );
+}
+
+/// A room of `depth` inside `face`, by taking child 0 the rest of the way
+/// down — any descendant will do, since only its spacing is read.
+fn room_of_depth(face: &RoomAddr, depth: u32) -> RoomAddr {
+    let mut room = face.clone();
+    while room.depth() < depth {
+        room = room.child(0).expect("depth is below the cap");
+    }
+    room
+}
+
+/// claim: invariant(seed: 42) — the partition's branching is a property of the
+/// draw, not of the rule, which is R-5's precondition.
+///
+/// **A generator that splits *k* ways by rule makes Horton's bifurcation ratio
+/// an arithmetic property of *k*, and a pass under one is worthless.** The
+/// construction this replaces quadrisected every element, and `R_b` duly
+/// landed on 4.0 to three significant figures across three worlds — inside the
+/// preregistered `[3, 5]` for reasons having nothing to do with hydrology.
+///
+/// So this asserts the discriminator directly, on the object rather than on
+/// the ratios: under [`CatchmentCut::Even`] every leaf of a cell's partition is
+/// at the same depth (the tree is balanced and its shape is the rule's alone),
+/// and under [`CatchmentCut::Drawn`] the leaves are spread across several
+/// depths. If this ever stopped holding, R-5 would have become untestable
+/// again and the probe's numbers would mean nothing — which is a thing worth
+/// finding out from a gate rather than from a reader.
+#[test]
+fn the_branching_follows_the_partition_and_not_a_fixed_rule() {
+    let geo = Geosphere::new(OUTLET_LEVEL);
+    let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed generates");
+    let globe = &outcome.globe;
+    let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+    let cell = *sampled_cells(globe, &geo)
+        .iter()
+        .find(|&&c| net.trunk_vertex(c).is_some())
+        .expect("some sampled cell carries a trunk");
+    let spread = |cut: &CatchmentCut| {
+        let rills = rills_of(cell, &net, &geo, cut);
+        let depths: Vec<u32> = rills
+            .iter()
+            .filter(|r| r.catchment <= RILL_MIN_CATCHMENT)
+            .map(|r| r.depth)
+            .collect();
+        let lo = *depths.iter().min().expect("the partition has leaves");
+        let hi = *depths.iter().max().expect("the partition has leaves");
+        (lo, hi, depths.len())
+    };
+    let (even_lo, even_hi, even_leaves) = spread(&CatchmentCut::Even);
+    let (drawn_lo, drawn_hi, drawn_leaves) =
+        spread(&CatchmentCut::Drawn(globe.rill_partition_seed()));
+    println!(
+        "the branching discriminator on {cell:?}: Even gives {even_leaves} leaves at depths \
+         {even_lo}..={even_hi}; Drawn gives {drawn_leaves} leaves at depths {drawn_lo}..={drawn_hi}"
+    );
+    assert_eq!(
+        even_lo, even_hi,
+        "under the even cut the partition is not balanced ({even_lo}..={even_hi}) — the \
+         falsification arm is supposed to hold the drawn freedom constant, so anything it \
+         still varies by is a second source this test cannot see"
+    );
+    assert!(
+        drawn_hi - drawn_lo >= 4,
+        "the drawn partition's leaves span depths {drawn_lo}..={drawn_hi} — too narrow for the \
+         branching to be carrying any information the rule does not already fix. R-5 would be \
+         measuring the rule"
     );
 }

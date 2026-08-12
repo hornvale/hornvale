@@ -345,7 +345,13 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 
 /// Mean angular separation of a cell from its neighbours — the local cell
 /// spacing every width in this module is a fraction of.
-fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
+///
+/// `pub(crate)` for `branch.rs`: a Tier 2 branch's width is fed the **same**
+/// spacing as the trunk vertex it attaches to, because its discharge is
+/// expressed in the same cell units. Two definitions of "the local spacing"
+/// would be two levels, which is exactly the pairing trap
+/// [`channel_half_width`]'s doc names.
+pub(crate) fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
     let neighbors = geo.neighbors(c);
     if neighbors.is_empty() {
         return 0.0;
@@ -358,7 +364,11 @@ fn cell_spacing(geo: &Geosphere, c: CellId) -> f64 {
 /// Local gradient at `c`, metres of fall per radian toward its downhill
 /// target. `0.0` where there is no target (a terminal sink), which reads as
 /// perfectly unconfined — the wide, flat margin of a playa.
-fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
+///
+/// `pub(crate)` for `branch.rs`, for the reason [`cell_spacing`] is: a branch
+/// takes its confinement from the cell it is a share of, so that a rill in a
+/// gorge has no floodplain for the same reason the trunk beside it has none.
+pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
     let Some(target) = *globe.downhill.get(c) else {
         return 0.0;
     };
@@ -435,6 +445,17 @@ pub struct ChannelNetwork {
     /// field at all — **continuous in position**, so a walker crosses a band
     /// edge once instead of flickering across it room by room.
     meander: SphereFbm,
+    /// Per cell, the `(polyline, vertex)` of the run that **claimed** it and
+    /// continued past it — the inverse of `run_cells`, as a dense `Vec` over
+    /// the `CellId` index. `None` for a cell no run continues past: an ocean
+    /// cell, or the outlet at a real mouth.
+    ///
+    /// Private and read through [`ChannelNetwork::trunk_vertex`]. It is an
+    /// index over build order, so it is subject to the same rule as
+    /// `BankReading::line`: **never serialized**. Kept rather than recomputed
+    /// because the alternative is an `O(network)` scan per query, and Tier 2
+    /// asks this question once per cell per reading.
+    trunk_vertex: Vec<Option<(u32, u32)>>,
 }
 
 /// One channel reading at one position: what
@@ -725,12 +746,47 @@ impl ChannelNetwork {
             }
         }
 
+        // The same `owner` relation, kept: it is what a Tier 2 branch attaches
+        // to. Built from `runs` rather than from `owner` above so that this
+        // survives a future change to the confluence pass, and asserted
+        // functional (one claiming run per cell) by
+        // `tests/rill_properties.rs`'s R-4 rather than here, where a panic in
+        // genesis would be the wrong instrument.
+        let mut trunk_vertex: Vec<Option<(u32, u32)>> = vec![None; geo.cell_count()];
+        for (i, run) in runs.iter().enumerate() {
+            for (j, &c) in run.iter().enumerate() {
+                if j + 1 < run.len() && trunk_vertex[c.0 as usize].is_none() {
+                    trunk_vertex[c.0 as usize] = Some((i as u32, j as u32));
+                }
+            }
+        }
+
         ChannelNetwork {
             polylines,
             band_edges: all_edges,
             run_cells: runs,
             meander,
+            trunk_vertex,
         }
+    }
+
+    /// The `(polyline, vertex)` of the run that carries `cell` and continues
+    /// past it — where a Tier 2 branch of `cell`'s catchment attaches, and
+    /// `None` for a cell no run continues past.
+    ///
+    /// The vertex is never the polyline's last, so `points[vertex + 1]` is
+    /// always the next one downstream. **An in-process handle, never
+    /// serialized**, for the reason [`BankReading::line`] gives.
+    /// type-audit: bare-ok(index: return)
+    pub fn trunk_vertex(&self, cell: CellId) -> Option<(usize, usize)> {
+        // `get` rather than an index: a network built by hand for a test
+        // carries no index at all, and "this cell has no trunk" is the right
+        // answer there rather than a panic.
+        self.trunk_vertex
+            .get(cell.0 as usize)
+            .copied()
+            .flatten()
+            .map(|(line, vertex)| (line as usize, vertex as usize))
     }
 
     /// The transverse band at `position`, and the **signed** great-circle
@@ -1040,6 +1096,9 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
+            // These hand-built networks have no `CellId` domain to index, and
+            // nothing in this module's own tests asks about a trunk vertex.
+            trunk_vertex: Vec::new(),
         }
     }
 
@@ -1216,6 +1275,9 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
+            // These hand-built networks have no `CellId` domain to index, and
+            // nothing in this module's own tests asks about a trunk vertex.
+            trunk_vertex: Vec::new(),
         };
         assert_eq!(empty.bank_signed_distance(unit(1.0, 0.0, 0.0)), None);
     }
@@ -1379,6 +1441,9 @@ mod tests {
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
+            // These hand-built networks have no `CellId` domain to index, and
+            // nothing in this module's own tests asks about a trunk vertex.
+            trunk_vertex: Vec::new(),
         };
         let head_half = net.band_edges[0][0][0];
         let mouth_half = net.band_edges[0][2][0];

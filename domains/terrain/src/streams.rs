@@ -96,17 +96,21 @@ hornvale_kernel::stream_labels! {
         /// POSITION and never by room address: address-hashed noise cannot
         /// form a connected watercourse (see `windows/locale/src/micro.rs`).
         CHANNEL_MEANDER = "channel-meander" => "channel meander displacement field (hash-noise only; no stream draws)";
-        /// Which of the two children on a room's outflow edge carries the
-        /// sub-cell outlet. Named for the choice it makes, not for the campaign
-        /// that added it: the coarse flow graph fixes the *edge* a room's water
-        /// leaves by, and exactly two of the four children touch that edge
-        /// along a segment (`domains/terrain/tests/rill_properties.rs`
-        /// `a_parent_edge_is_shared_by_two_corner_children`), so this is the one
-        /// degree of freedom subdivision has. Hash-noise only: the label is
-        /// derived once per world, then sub-derived per room ADDRESS, and no
-        /// `Stream` is ever consumed — so it carries no draw-order/save-format
-        /// contract, exactly like `CHANNEL_MEANDER`. A NEW label; existing
-        /// consumption order is untouched.
-        SUBCELL_OUTLET = "subcell-outlet" => "which of the two children on a room's outflow edge carries the sub-cell outlet (hash-noise only; no stream draws)";
+        /// Where a sub-cell catchment divides between its two branches (The
+        /// Rill, Tier 2). Named for what it draws: the partition of a cell's
+        /// own unit of catchment into shares, from which the branching
+        /// follows. Hash-noise only — the label is derived once per world and
+        /// then sub-derived per cell and per path through the partition, and
+        /// no `Stream` is ever consumed, so it carries no draw-order or
+        /// save-format contract beyond the label itself, exactly like
+        /// `CHANNEL_MEANDER`. A NEW label; existing consumption order is
+        /// untouched.
+        ///
+        /// It replaces `subcell-outlet`, declared by the falsified first Tier
+        /// 2 and never merged to main: that label named a choice between two
+        /// children of a room, an object this design does not have. A label
+        /// that never shipped is not a save-format contract, so this is a
+        /// replacement rather than an epoch.
+        RILL_PARTITION = "rill-partition" => "where a sub-cell catchment divides between its two branches (hash-noise only; no stream draws)";
     }
 }
