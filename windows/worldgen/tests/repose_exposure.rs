@@ -57,35 +57,64 @@
 //! (`kobold`, `sea-elf` especially) produce individually noisy per-stratum
 //! ratios because a single settlement moves their share by tens of percent.
 //!
-//! **Both heavy-tier guards below FAIL against this baseline, and neither
-//! failure looks like a bug in this probe** (each traced to a specific,
-//! reproducible cause below; see the task-1 report for the full
-//! investigation):
+//! **As first encoded (Task 1, 2026-08-12), both heavy-tier guards below
+//! FAILED against this baseline, and neither failure looked like a bug in
+//! this probe** (each traced to a specific, reproducible cause):
 //!
-//! - `unrest_deciles_differ_in_andosol_share`: andosol_share runs the
-//!   OPPOSITE direction from the guard's assumption — 0.92% at decile 0
-//!   falling monotonically to 0.00% at decile 9, and monotonically
-//!   decreasing within EVERY band checked separately (not merely in the
-//!   pooled mix). `SoilOrder::Andosol` requires volcanic parent rock AND
-//!   `mean_temp_c > 5.0`; high-unrest ground in this terrain model runs
-//!   colder within a band than low-unrest ground does, which is enough to
-//!   gate Andosol out even where the parent rock qualifies. The guard's
-//!   premise (unrest positively predicts andosol share) does not hold in
-//!   today's terrain/soil model — a genuine finding, not degeneracy or a
-//!   probe defect (the deciles above are demonstrably NOT uniform; they
-//!   just disagree with this guard's assumed sign).
+//! - `unrest_deciles_differ_in_andosol_share`: andosol_share ran the
+//!   OPPOSITE direction from the guard's original directional assumption —
+//!   0.92% at decile 0 falling monotonically to 0.00% at decile 9, and
+//!   monotonically decreasing within EVERY band checked separately (not
+//!   merely in the pooled mix). `SoilOrder::Andosol` requires volcanic
+//!   parent rock AND `mean_temp_c > 5.0`; high-unrest ground in this terrain
+//!   model runs colder within a band than low-unrest ground does, which is
+//!   enough to gate Andosol out even where the parent rock qualifies. A
+//!   genuine finding, not degeneracy or a probe defect (the deciles are
+//!   demonstrably NOT uniform; they just disagreed with the original
+//!   encoding's assumed sign).
 //! - `exposure_ratios_are_within_absurdity_bounds`: `sea-elf` (4 total
-//!   settlements across the whole 30-seed sweep) reads exposure ratios up
+//!   settlements across the whole 30-seed sweep) read exposure ratios up
 //!   to 22.95, over the 20.0 ceiling, at three separate (decile, lowland)
 //!   strata. A single coastal-specialist settlement moves its own share by
-//!   25%; the ceiling was not calibrated against a per-people denominator
+//!   25%; the ceiling was never calibrated against a per-people denominator
 //!   this small. `pooled`'s own ratios all stay under 8.
 //!
-//! Per this task's brief: do not tune the world or the thresholds to move
-//! these numbers. Both guards are left exactly as specified (module-level,
-//! `heavy:` tier, unmodified thresholds) but their current outcome —
-//! failing — is recorded here rather than hidden, because it is itself
-//! information Task 2 needs before extending this file.
+//! # Post-unblinding repair (2026-08-12, fix round 1)
+//!
+//! Nathan ruled on both findings above; recorded here per decision 0016 and
+//! this project's standing rule ("don't retune a constant to rescue a
+//! prediction after unblinding without saying so"). **Both are repairs of
+//! the plan text's encoding, not rescues of a falsified prediction** — in
+//! neither case did the measured baseline change, and in neither case was a
+//! threshold loosened to make a specific number pass.
+//!
+//! - **Discrimination guard.** Originally asserted `hi > lo * 2.0` — a
+//!   DIRECTIONAL claim spec §6.7's own text never made ("assert the unrest
+//!   deciles genuinely differ in andosol share" — DIFFER, not "differ in a
+//!   specific direction"). The deciles do differ, enormously (0.0092 to
+//!   0.0000 is a bigger relative move than the original 2× threshold
+//!   demanded) — only the encoding's assumed sign was wrong. Repaired to a
+//!   direction-free `(hi - lo).abs() > 0.002`. A `hi/lo` ratio form was not
+//!   available regardless of direction, because the top decile measures
+//!   exactly `0.0` and any ratio divides by zero; `0.002` is roughly a
+//!   quarter of the observed `0.00915` spread, chosen to leave headroom
+//!   against ordinary noise while still failing if the field ever went
+//!   genuinely flat. The measured DIRECTION (andosol decreasing with
+//!   unrest) is unchanged and still recorded above exactly as found.
+//! - **Ceiling guard.** Originally bounded every row regardless of `people`.
+//!   Spec §6.3 asks for per-people dispersion to be REPORTED; spec §6.7 asks
+//!   for a ceiling but never names the population it bounds against. Scoped
+//!   to `pooled` rows only — per-people rows are still computed and written
+//!   to the fixture completely unchanged, they are simply no longer
+//!   asserted on. `sea-elf`'s n=4 sampling noise (not a runaway) no longer
+//!   trips a ceiling that was never meant to bound it.
+//!
+//! Both guards now PASS against the unchanged committed fixture — confirmed
+//! by re-running the drift check without regenerating it (see the task-1
+//! report's fix-round-1 addendum for the exact commands and output). Per
+//! this task's brief: do not tune the world to move these numbers, and
+//! neither repair does — both are corrections to what the guard code
+//! asserts, not to what the probe measures.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -456,8 +485,33 @@ fn repose_exposure_readout_matches_the_committed_fixture() {
 /// `andosol_share` across the four bands within a decile — a proper `[0, 1]`
 /// share of that decile's land, guarded against a zero denominator (a decile
 /// that happens to carry no land at all, e.g. under decile collapse — see
-/// this file's dated measurement note above). The test name, ignore string,
-/// `hi > lo * 2.0` shape and failure message are unchanged from the brief.
+/// this file's dated measurement note above).
+///
+/// **Post-unblinding repair (2026-08-12, fix round 1), recorded per decision
+/// 0016 and this project's standing rule against retuning a prediction after
+/// unblinding without saying so:** the ORIGINAL encoding asserted a directional
+/// `hi > lo * 2.0` (top decile at LEAST double the bottom). Run for real
+/// against the committed baseline, it FAILED: `unrest_deciles_differ_in_andosol_share`
+/// panicked with `(bottom 0.0092, top 0.0000)` — andosol share runs the
+/// OPPOSITE direction from what that encoding assumed (see this file's dated
+/// measurement note above for why: `SoilOrder::Andosol` requires
+/// `mean_temp_c > 5.0`, and high-unrest ground runs colder within a band).
+/// Spec §6.7's own words are "assert the unrest deciles genuinely differ in
+/// andosol share" — DIFFER, not "differ in a specific direction". The deciles
+/// plainly do differ (enormously: 0.0092 to 0.0000 is a bigger relative move
+/// than the original `2×` threshold demanded), so the guard's INTENT was
+/// already satisfied; only the plan text's directional encoding was wrong.
+/// This is a repair of that encoding error, not a rescue of a falsified
+/// prediction — the direction found (andosol decreasing with unrest) is left
+/// exactly as measured and reported in the module doc above, unchanged by
+/// this fix. Repaired as an absolute, direction-free separation: a plain
+/// `hi/lo` RATIO is not available here regardless of direction, because the
+/// top decile measures exactly `0.0` and any ratio form divides by zero — an
+/// absolute difference is the only shape that survives that. The `0.002`
+/// threshold is roughly a quarter of the observed `0.00915` spread between
+/// deciles 0 and 9: enough headroom that ordinary sweep-to-sweep noise won't
+/// trip it, while still failing if the field ever went genuinely flat. Test
+/// name and the verbatim `heavy:` ignore string are unchanged.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn unrest_deciles_differ_in_andosol_share() {
@@ -482,21 +536,40 @@ fn unrest_deciles_differ_in_andosol_share() {
     let lo = weighted_mean_andosol_share(0);
     let hi = weighted_mean_andosol_share(DECILES - 1);
     assert!(
-        hi > lo * 2.0,
-        "top and bottom unrest deciles do not separate on andosol share \
+        (hi - lo).abs() > 0.002,
+        "unrest deciles do not separate on andosol share \
          (bottom {lo:.4}, top {hi:.4}) — the probe is measuring nothing and \
          would pass green regardless"
     );
 }
 
-/// FLOOR AND CEILING (spec §6.7). Enforces BOTH directions: an absurdly LOW
-/// exposure ratio and an absurdly HIGH one both fail. A floor alone cannot
-/// catch a runaway, and a bound asserted only against the side you expect to
-/// move is not a bound.
+/// FLOOR AND CEILING (spec §6.7). Enforces BOTH directions on the POOLED row
+/// only: an absurdly LOW exposure ratio and an absurdly HIGH one both fail. A
+/// floor alone cannot catch a runaway, and a bound asserted only against the
+/// side you expect to move is not a bound.
+///
+/// **Post-unblinding repair (2026-08-12, fix round 1), recorded per decision
+/// 0016 and this project's standing rule against retuning a prediction after
+/// unblinding without saying so:** the ORIGINAL encoding iterated every row
+/// regardless of `people`, so `sea-elf` (4 total settlements across the whole
+/// 30-seed sweep) tripped the `20.0` ceiling at three strata (up to 22.95) —
+/// a single settlement moving a 4-settlement kind's own stratum share by 25%,
+/// not a runaway. Spec §6.3 asks for per-people dispersion to be REPORTED;
+/// spec §6.7 asks for a ceiling but never names the population it bounds.
+/// Per-people rows are still computed and written to the fixture completely
+/// unchanged by this fix — they remain the §6.3 deliverable — they are simply
+/// no longer asserted on here. **This guard now covers `pooled` rows only**;
+/// a later reader must not mistake it for coverage of the whole fixture. Test
+/// name and the verbatim `heavy:` ignore string are unchanged; the `20.0`/
+/// `is_finite()` thresholds are unchanged, only the population they run over.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn exposure_ratios_are_within_absurdity_bounds() {
-    for r in exposure_rows(1..=30).iter().filter(|r| r.land_cells > 0) {
+    for r in exposure_rows(1..=30)
+        .iter()
+        .filter(|r| r.people == "pooled")
+        .filter(|r| r.land_cells > 0)
+    {
         assert!(
             r.exposure_ratio < 20.0,
             "absurd-HIGH exposure ratio {:.2} at decile {} band {} people {} \
