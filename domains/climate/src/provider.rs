@@ -747,6 +747,9 @@ pub struct ClimateSummary {
 pub fn summarize(climate: &GeneratedClimate) -> ClimateSummary {
     let mut land: Vec<&'static str> = Vec::new();
     let mut marine: Vec<&'static str> = Vec::new();
+    // Buckets CELLS BY SURFACE MEDIUM (`is_marine()`, a per-cell biome read).
+    // A per-realm census of the water/rock column beneath a cell would be a
+    // companion to this count, not a correction of it.
     for (_, b) in climate.biome.iter() {
         let list = if b.is_marine() {
             &mut marine
@@ -1262,6 +1265,9 @@ mod tests {
     fn marine_cells_are_in_the_waterworld_and_land_cells_are_not() {
         use crate::facets::{Realm, Stratum};
         let c = sample_climate();
+        // Quantified over CELL EXPRESSIONS (`biome_expr_at`), which stay
+        // OVERWORLD/WATERWORLD — a cell has no notion of an underworld
+        // beneath it. Not a claim about strata.
         for cell in c.geosphere().cells() {
             let e = c.biome_expr_at(cell);
             assert_eq!(
