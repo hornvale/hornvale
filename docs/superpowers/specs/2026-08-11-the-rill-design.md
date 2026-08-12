@@ -159,11 +159,19 @@ Two consequences the rest of the design depends on:
    `15.0` would exceed every discharge in the world and zero every channel.
 2. **Tier 2 must supply LOCAL units.** Scale-freeness holds only when the
    accumulated count and the spacing are at the *same* level. Below cell scale
-   there is no `Geosphere` to ask (level 12 would be ~671 million cells), so
-   the subdivision must derive its spacing from `RoomAddr::corners()` and
-   accumulate counts in its own sub-triangle units. Mixing a sub-cell count
-   with a cell-scale spacing reintroduces exactly the error this section
-   originally imagined.
+   there is no `Geosphere` to ask — `10·4^L + 2` cells makes level 12
+   **167,772,162** — so the subdivision must derive its spacing from
+   `RoomAddr::corners()` and accumulate counts in its own sub-triangle units.
+   Mixing a sub-cell count with a cell-scale spacing reintroduces exactly the
+   error this section originally imagined.
+3. **`RIVER_MIN_DRAINAGE` is the one part that is NOT scale-free**, and Tier 2
+   must not inherit it unchanged. It compares a **count**, so a trickle that is
+   no channel at level 6 *is* one at level 7, and a subdivision carrying the
+   constant down will sprout new headwaters at every level — a plausible-looking
+   way to fail R-5 while every individual width is correct. Whatever gates
+   "is this a channel" below cell scale must be expressed in a scale-free
+   quantity or derived per level; deciding which is Task 4's, and it is called
+   out there rather than left to be discovered.
 
 The invariant is therefore promoted from an assumption to an asserted property
 (R-3), because Tier 2's correctness rests on it.
