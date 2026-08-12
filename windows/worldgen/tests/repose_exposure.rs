@@ -14,52 +14,89 @@
 //! World-building idiom reused verbatim from `occupancy_readout.rs` and
 //! `demesne.rs`.
 //!
-//! # Dated measurement (2026-08-12, Task 1 — the baseline reading)
+//! # Dated measurement (2026-08-12, Task 1 baseline, CORRECTED in fix round 2)
+//!
+//! **This section states the CURRENT, corrected reading only.** The
+//! population-filter defect fix round 2 repaired (below) invalidated every
+//! number originally recorded here; none of the original Task-1 figures are
+//! repeated in this section; where they matter historically they are kept,
+//! clearly labelled superseded, in the fix-round-1 and fix-round-2 sections
+//! that follow.
 //!
 //! Committed fixture: `fixtures/repose-exposure.csv`, seeds 1..=30, 440,715
-//! settleable land cells and 59,690 settlements pooled over the sweep.
+//! settleable land cells and **26,146** settlements pooled over the sweep
+//! (population 1,467,398) — spec §6.2's population applied correctly to
+//! both sides of the readout (land AND settlements).
 //!
-//! **Deciles are NOT degenerate.** Land splits almost exactly evenly across
-//! the ten unrest deciles — 44,044 to 44,149 cells each (a spread under
-//! 0.25%), despite unrest being a smooth field with a real mass of cells
-//! near zero on calm interiors. Tied values did not collapse the low
-//! deciles; `decile_of`'s rank-based partition handles them cleanly.
+//! **Deciles are NOT degenerate.** Unaffected by the fix (land accounting was
+//! never the buggy side): land splits almost exactly evenly across the ten
+//! unrest deciles — 44,044 to 44,149 cells each (a spread under 0.25%),
+//! despite unrest being a smooth field with a real mass of cells near zero
+//! on calm interiors. Tied values did not collapse the low deciles;
+//! `decile_of`'s rank-based partition handles them cleanly.
 //!
 //! **Pooled exposure ratio (settlement share ÷ land-area share), by band ×
-//! decile (0 = calmest, 9 = most unrest):**
+//! decile (0 = calmest, 9 = most unrest), corrected baseline:**
 //!
 //! | band | decile 0 | decile 4 | decile 9 | direction across deciles |
 //! |---|---|---|---|---|
-//! | lowland | 7.74 | 7.40 | 7.25 | flat, slightly falling |
-//! | upland | 0.448 | 0.519 | 0.721 | rising, ×1.6 |
-//! | highland | 0.151 | 0.155 | 0.382 | rising, ×2.5 |
-//! | montane | 0.033 | 0.051 | 0.182 | rising, ×5.5 |
+//! | lowland | 5.59 | 5.81 | 5.46 | flat, no clear trend (range 5.46-5.97) |
+//! | upland | 0.992 | 1.109 | 1.559 | rising, ×1.57 (minor wobble at d3, d5) |
+//! | highland | 0.321 | 0.345 | 0.827 | rising, ×2.58 (one flat step d0→d1) |
+//! | montane | 0.073 | 0.116 | 0.392 | rising, ×5.39 (minor wobble at d1, d7) |
 //!
-//! **The confound the header names is visible in the data, not merely
-//! theorized.** Lowland settlements sit at ~7× the land-area base rate
-//! regardless of unrest (fertile/coastal pull swamps any unrest signal
-//! there), while upland/highland/montane settlements climb steadily WITH
-//! unrest — monotonically in every one of the three higher bands, calmest
-//! to most-unrest decile. An unstratified pooled ratio would have averaged
-//! these opposed trends together and read close to flat; stratifying by
-//! band is what surfaces the rising exposure at altitude. This is the
-//! reading spec §6.5's three outcomes anticipate, not a null: settlements
+//! **The confound the header names is still visible in the corrected data,
+//! and the headline SURVIVES the correction essentially unchanged in
+//! shape**, though every absolute number moved. Lowland settlements sit at
+//! ~5.5-6× the land-area base rate with no clear trend across deciles
+//! (fertile/coastal pull swamps any unrest signal there); upland/highland/
+//! montane settlements climb broadly WITH unrest from calmest to
+//! most-unrest decile (not perfectly monotonic step-to-step, but the first-
+//! to-last rise is large and one-directional in all three: ×1.57, ×2.58,
+//! ×5.39). These three rise factors are close to the ORIGINAL contaminated
+//! reading's (×1.6, ×2.5, ×5.5) — expected, and explained below in the
+//! fix-round-2 section: the excluded settlements were entirely absent from
+//! upland/highland/montane already (their true elevation could never band
+//! them there), so those three bands' RATIOS moved only by the common
+//! rescale of the shared pooled-total denominator, which preserves a
+//! band's shape across deciles even as its absolute level shifts. Lowland's
+//! absolute level and pattern changed more, since that is where the
+//! excluded settlements had been silently counted. Spec §6.5's three
+//! outcomes anticipate exactly this kind of reading, not a null: settlements
 //! DO measurably over-occupy high-unrest ground, but only outside the
-//! lowland band.
+//! lowland band — the same qualitative headline as originally reported,
+//! now resting on the correct population.
 //!
-//! **Per-people dispersion is dominated by sample size, not signal.**
-//! Totals across the sweep: `pooled` 59,690 settlements / 1,523,644
-//! population; `giant-squid` 30,971 / 39,690; `twig-blight` 25,510 /
-//! 1,454,060; `reef-shark` 2,121 / 13,706; `shrieker` 719 / 10,323;
-//! `drow` 175 / 2,328; `rust-monster` 163 / 2,846; `kobold` 27 / 667;
-//! `sea-elf` 4 / 24. The two high-count kinds (`giant-squid`,
-//! `twig-blight`) track the pooled pattern closely; the low-count kinds
-//! (`kobold`, `sea-elf` especially) produce individually noisy per-stratum
-//! ratios because a single settlement moves their share by tens of percent.
+//! **Per-people dispersion, corrected — dominated by ONE land-dwelling
+//! kind, not by sample size.** Totals across the sweep: `pooled` 26,146
+//! settlements / 1,467,398 population; `twig-blight` 25,510 / 1,454,060
+//! (97.6% of the corrected pooled settlement total on its own);
+//! `shrieker` 352 / 8,100; `rust-monster` 104 / 2,367; `drow` 153 / 2,204;
+//! `kobold` 27 / 667. `giant-squid`, `reef-shark` and `sea-elf` no longer
+//! appear at all — every settlement they had was excluded (see fix round
+//! 2). `twig-blight` alone now tracks the pooled pattern almost exactly
+//! (its own band × decile table is within a few settlements of pooled's at
+//! every stratum); the remaining four kinds are low-count enough that a
+//! single settlement still moves their own share by several percent.
+//!
+//! # Fix round 1 (2026-08-12): guard-encoding repairs
+//!
+//! **The numbers quoted in this section were measured against the
+//! ORIGINAL, marine-contaminated Task-1 fixture, before fix round 2's
+//! population-filter correction (below) — kept here as the historical
+//! record of what was found and repaired, not as current fact.** The
+//! discrimination-guard numbers happen to be byte-identical in the
+//! corrected fixture too (land/soil accounting was never the buggy side —
+//! reconfirmed in fix round 2 below), so that half is still accurate as
+//! stated. The ceiling-guard numbers are NOT: `sea-elf` (the kind that
+//! triggered the original ceiling breach) no longer exists in the corrected
+//! fixture at all, because its four settlements were entirely marine. The
+//! repair itself (scoping the ceiling to `pooled` rows) remains correct and
+//! necessary regardless.
 //!
 //! **As first encoded (Task 1, 2026-08-12), both heavy-tier guards below
-//! FAILED against this baseline, and neither failure looked like a bug in
-//! this probe** (each traced to a specific, reproducible cause):
+//! FAILED against the original baseline, and neither failure looked like a
+//! bug in this probe** (each traced to a specific, reproducible cause):
 //!
 //! - `unrest_deciles_differ_in_andosol_share`: andosol_share ran the
 //!   OPPOSITE direction from the guard's original directional assumption —
@@ -73,13 +110,12 @@
 //!   demonstrably NOT uniform; they just disagreed with the original
 //!   encoding's assumed sign).
 //! - `exposure_ratios_are_within_absurdity_bounds`: `sea-elf` (4 total
-//!   settlements across the whole 30-seed sweep) read exposure ratios up
-//!   to 22.95, over the 20.0 ceiling, at three separate (decile, lowland)
-//!   strata. A single coastal-specialist settlement moves its own share by
-//!   25%; the ceiling was never calibrated against a per-people denominator
-//!   this small. `pooled`'s own ratios all stay under 8.
-//!
-//! # Post-unblinding repair (2026-08-12, fix round 1)
+//!   settlements across the whole 30-seed sweep, ALL of them marine — see
+//!   fix round 2) read exposure ratios up to 22.95, over the 20.0 ceiling,
+//!   at three separate (decile, lowland) strata. A single coastal-specialist
+//!   settlement moves its own share by 25%; the ceiling was never
+//!   calibrated against a per-people denominator this small. `pooled`'s own
+//!   ratios all stayed under 8.
 //!
 //! Nathan ruled on both findings above; recorded here per decision 0016 and
 //! this project's standing rule ("don't retune a constant to rescue a
@@ -99,22 +135,99 @@
 //!   exactly `0.0` and any ratio divides by zero; `0.002` is roughly a
 //!   quarter of the observed `0.00915` spread, chosen to leave headroom
 //!   against ordinary noise while still failing if the field ever went
-//!   genuinely flat. The measured DIRECTION (andosol decreasing with
-//!   unrest) is unchanged and still recorded above exactly as found.
+//!   genuinely flat.
 //! - **Ceiling guard.** Originally bounded every row regardless of `people`.
 //!   Spec §6.3 asks for per-people dispersion to be REPORTED; spec §6.7 asks
 //!   for a ceiling but never names the population it bounds against. Scoped
 //!   to `pooled` rows only — per-people rows are still computed and written
 //!   to the fixture completely unchanged, they are simply no longer
-//!   asserted on. `sea-elf`'s n=4 sampling noise (not a runaway) no longer
-//!   trips a ceiling that was never meant to bound it.
+//!   asserted on.
 //!
-//! Both guards now PASS against the unchanged committed fixture — confirmed
-//! by re-running the drift check without regenerating it (see the task-1
-//! report's fix-round-1 addendum for the exact commands and output). Per
-//! this task's brief: do not tune the world to move these numbers, and
-//! neither repair does — both are corrections to what the guard code
-//! asserts, not to what the probe measures.
+//! Both guards passed against the (still marine-contaminated) fixture as it
+//! stood at the end of fix round 1 — see the task-1 report's fix-round-1
+//! addendum for the exact commands and output. Both are RE-VERIFIED against
+//! the corrected baseline in fix round 2 below.
+//!
+//! # Fix round 2 (2026-08-12): the population-filter defect
+//!
+//! **Critical finding, independently confirmed from the committed fixture
+//! before this fix**: the settlement side of this readout never applied
+//! the `is_settleable` predicate the land side already used. A marine
+//! settlement's attractor cell is ocean — negative elevation-above-sea-level
+//! — so `band_of`'s loop never satisfied any threshold and fell through to
+//! its `BANDS[0]` ("lowland") default, and its decile was computed against
+//! `sorted_unrest`, a distribution built ONLY from settleable land: a
+//! meaningless lookup for a cell that was never in that distribution. The
+//! fingerprint was unmistakable: `giant-squid` (30,971 settlements),
+//! `reef-shark` (2,121) and `sea-elf` (4) each read EXACTLY 100.0% lowland
+//! with zero everywhere else — not an ecological distribution — and
+//! `giant-squid` alone was 51.9% of the original pooled total.
+//!
+//! **The fix applies the SAME `is_settleable` closure — the identical
+//! object already bound once per seed for the land tally, not a re-derived
+//! copy — to the settlement loop.** Per spec §6.2's exact definition
+//! (settleable land = not ocean AND non-zero carrying capacity), this
+//! excludes both true marine settlements and the much smaller residual of
+//! non-ocean cells with zero carrying capacity (e.g. a founder-floor
+//! settlement placed at a barren cell by [`hornvale_demography::stack_condense`]'s
+//! floor mechanism, which bypasses the normal density threshold and can
+//! land anywhere with nonzero inflow) — the same reason the small residual
+//! of excluded settlements is not purely 100%/0% split by kind; see the
+//! per-kind counts below.
+//!
+//! **Excluded per people (old total → new total, excluded count and
+//! share):**
+//!
+//! | people | old settlements | new settlements | excluded | excluded share |
+//! |---|---|---|---|---|
+//! | `giant-squid` | 30,971 | 0 | 30,971 | 100.0% |
+//! | `reef-shark` | 2,121 | 0 | 2,121 | 100.0% |
+//! | `sea-elf` | 4 | 0 | 4 | 100.0% |
+//! | `shrieker` | 719 | 352 | 367 | 51.0% |
+//! | `rust-monster` | 163 | 104 | 59 | 36.2% |
+//! | `drow` | 175 | 153 | 22 | 12.6% |
+//! | `kobold` | 27 | 27 | 0 | 0.0% |
+//! | `twig-blight` | 25,510 | 25,510 | 0 | 0.0% |
+//! | **pooled** | **59,690** | **26,146** | **33,544** | **56.2%** |
+//!
+//! Pooled population fell from 1,523,644 to 1,467,398 (56,246 excluded) —
+//! a smaller *proportional* drop than the settlement count's, because the
+//! excluded settlements were disproportionately small (marine specialists
+//! at low individual headcount) next to `twig-blight`'s large, entirely-
+//! land-based population, which the fix does not touch at all.
+//!
+//! **Regression guard**: `no_settlement_in_the_readout_sits_outside_the_settleable_land_population`
+//! (below) independently re-derives the settleable-land-only settlement
+//! count per seed and asserts it equals `exposure_rows`' own pooled total.
+//! Verified to actually catch the regression, not just describe it: with
+//! the `is_settleable` check temporarily removed from the settlement loop,
+//! the guard failed with `left: 59690, right: 26146` — exactly the old
+//! (contaminated) and new (corrected) pooled totals, confirmed against each
+//! other independently of the fixture. Restored before commit; full output
+//! pasted in the task-1 report's fix-round-2 addendum.
+//!
+//! **Both fix-round-1 guards RE-VERIFIED against the corrected baseline —
+//! same no-tuning rule, reported honestly:**
+//!
+//! - **Discrimination guard.** The land-cell-weighted andosol-share spread
+//!   the `0.002` threshold was calibrated against is BYTE-IDENTICAL to
+//!   before this fix (decile 0: 0.009151, decile 9: 0.000000 — land and
+//!   soil accounting were never the buggy side, so this could not have
+//!   moved). The `0.002` threshold's headroom is therefore unchanged
+//!   (`0.009151 - 0.002 = 0.007151` of margin) and needed no re-picking.
+//!   Guard PASSES.
+//! - **Ceiling guard.** Re-run against `pooled` rows only in the corrected
+//!   fixture: the maximum pooled `exposure_ratio` is now 5.97 (down from
+//!   the pre-fix-round-2 maximum of ~8, since the removed settlements had
+//!   been inflating `pooled`'s own lowland numbers too), comfortably under
+//!   the 20.0 ceiling. Guard PASSES.
+//!
+//! **Re-derived headline**: whether settlements over-occupy high-unrest
+//! ground was reopened by this defect and re-measured, not assumed to
+//! survive. It DOES survive, with the same qualitative shape reported
+//! above under "Dated measurement" — flat lowland, broadly rising
+//! upland/highland/montane — now measured against the population spec §6.2
+//! actually specifies.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -314,6 +427,20 @@ fn exposure_rows(seeds: impl IntoIterator<Item = u64>) -> Vec<ExposureRow> {
         let report = demography_report_from(&world, &wc, &terrain, &climate)
             .expect("demography report reconstructs");
         for s in &report.stack_settlements {
+            // FIX ROUND 2 (2026-08-12): spec §6.2 fixes the population as
+            // settleable land only. A marine settlement's cell fails
+            // `is_settleable` (it's ocean), so it must be excluded here with
+            // the SAME predicate object the land tally above already used —
+            // not a re-derived copy. Before this fix the settlement loop
+            // applied no filter at all: a marine settlement's negative
+            // elevation-above-sea-level fell through `band_of`'s loop to the
+            // `BANDS[0]` ("lowland") default, and its decile was computed
+            // against `sorted_unrest`, a distribution built ONLY from
+            // settleable land — meaningless for a cell that was never in it.
+            // See this file's module doc for the measured blast radius.
+            if !is_settleable(s.cell) {
+                continue;
+            }
             let decile = decile_of(&sorted_unrest, terrain.unrest_at(s.cell));
             let band = band_of(&terrain, s.cell);
             let population: f64 = s
@@ -587,6 +714,69 @@ fn exposure_ratios_are_within_absurdity_bounds() {
             r.people
         );
     }
+}
+
+/// POPULATION GUARD (spec §6.2, fix round 2, 2026-08-12). Direction: this
+/// catches a settlement entering the readout from a cell the land tally
+/// never counted. It cannot catch a settleable-land cell being misbanded.
+///
+/// **Regression guard for the fix-round-2 defect**: the settlement loop
+/// once applied no `is_settleable` filter at all, so a marine settlement's
+/// cell (ocean, negative elevation-above-sea-level) fell through `band_of`'s
+/// loop to the `BANDS[0]` ("lowland") default and was counted against a
+/// decile distribution built only from settleable land. 52% of the pooled
+/// sweep (three kinds reading exactly 100.0% lowland with zero everywhere
+/// else) was contaminated this way before the fix — see the module doc's
+/// fix-round-2 paragraph for the measured blast radius.
+///
+/// Deliberately does NOT call `exposure_rows` and trust its internal
+/// filter — that would be circular, proving only that the function agrees
+/// with itself. Instead it INDEPENDENTLY re-derives, per seed, the
+/// settleable-land-only settlement count (the same `is_settleable` shape,
+/// written out again here on purpose: this guard's whole job is to notice
+/// if the two ever disagree) and asserts it equals `exposure_rows`' own
+/// pooled settlement total. If the filter in the settlement loop is ever
+/// removed or weakened, the independently-counted total stays fixed while
+/// the readout's pooled total rises by however many marine settlements
+/// leaked back in, and this assertion fails.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let mut settleable_only_total: u64 = 0;
+    for seed in 1..=30u64 {
+        let world = world_of(seed, &wc);
+        let terrain = terrain_of(&world).expect("terrain reconstructs");
+        let climate = climate_from(&world, &terrain).expect("climate reconstructs");
+        let geo = terrain.geosphere();
+        let capacity = hornvale_demography::carrying_capacity(
+            geo,
+            &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
+        );
+        let is_settleable = |cell: CellId| !terrain.is_ocean(cell) && capacity.at(cell) > 0.0;
+        let report = demography_report_from(&world, &wc, &terrain, &climate)
+            .expect("demography report reconstructs");
+        settleable_only_total += report
+            .stack_settlements
+            .iter()
+            .filter(|s| is_settleable(s.cell))
+            .count() as u64;
+    }
+
+    let rows = exposure_rows(1..=30);
+    let readout_pooled_total: u64 = rows
+        .iter()
+        .filter(|r| r.people == "pooled")
+        .map(|r| r.settlements)
+        .sum();
+
+    assert_eq!(
+        readout_pooled_total, settleable_only_total,
+        "the readout's pooled settlement total ({readout_pooled_total}) does not \
+         equal the independently-counted settleable-land-only settlement total \
+         ({settleable_only_total}) — a settlement outside spec §6.2's population \
+         (settleable land) has entered the readout"
+    );
 }
 
 /// Rewrites the committed fixture. Deliberately NOT part of any gate: it
