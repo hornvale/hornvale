@@ -14,19 +14,48 @@
 //! World-building idiom reused verbatim from `occupancy_readout.rs` and
 //! `demesne.rs`.
 //!
-//! # Dated measurement (2026-08-12, Task 1 baseline, CORRECTED in fix round 2)
+//! # Dated measurement (2026-08-12, Task 1 baseline, CORRECTED in fix round 2,
+//! band labels RELABELLED in fix round 3)
 //!
 //! **This section states the CURRENT, corrected reading only.** The
 //! population-filter defect fix round 2 repaired (below) invalidated every
 //! number originally recorded here; none of the original Task-1 figures are
 //! repeated in this section; where they matter historically they are kept,
 //! clearly labelled superseded, in the fix-round-1 and fix-round-2 sections
-//! that follow.
+//! that follow. Fix round 3 renamed the four elevation-band labels (see
+//! `BANDS`'s doc comment and the land-share table just below) — a pure
+//! relabelling that moved no number; the fix-round-3 section at the end of
+//! this doc proves that byte-for-byte.
 //!
 //! Committed fixture: `fixtures/repose-exposure.csv`, seeds 1..=30, 440,715
 //! settleable land cells and **26,146** settlements pooled over the sweep
 //! (population 1,467,398) — spec §6.2's population applied correctly to
 //! both sides of the readout (land AND settlements).
+//!
+//! **The band labels are datum-neutral metre ranges, and land share by band
+//! is the context every reader needs before reading the table below.**
+//! `elevation_at` is relative to an isostatic reference datum, not to sea
+//! level: sea level itself sits far below zero on that datum
+//! (`terrain.sea_level()` on seed 42 is -2,936.17 m — `waterline_probe.rs`'s
+//! correction header). So height-above-sea-level on ordinary continental
+//! land routinely reaches several kilometres, and an absolute 2500 m cut
+//! captures nearly half of all settleable land — not a mountain fringe:
+//!
+//! | band | land cells | land share | settlement share |
+//! |---|---|---|---|
+//! | `0-250m` | 50,792 | 11.5% | 65.5% |
+//! | `250-1000m` | 55,764 | 12.7% | 14.4% |
+//! | `1000-2500m` | 140,937 | 32.0% | 13.0% |
+//! | `2500m+` | 193,222 | 43.8% | 7.0% |
+//!
+//! `2500m+` is the LARGEST band by land area of the four, at 43.8% — a
+//! sentence like "the effect is strongest in mountain terrain" would be a
+//! claim about mountains this data does not support. The stratification
+//! itself is unaffected by any of this: it still separates land
+//! monotonically by elevation, exactly what spec §6.4 asks for as confound
+//! control. What was wrong, and is fixed as of this section, is only that
+//! the ORIGINAL labels (`lowland`/`upland`/`highland`/`montane`) imported an
+//! Earth intuition this world's datum does not support.
 //!
 //! **Deciles are NOT degenerate.** Unaffected by the fix (land accounting was
 //! never the buggy side): land splits almost exactly evenly across the ten
@@ -40,32 +69,32 @@
 //!
 //! | band | decile 0 | decile 4 | decile 9 | direction across deciles |
 //! |---|---|---|---|---|
-//! | lowland | 5.59 | 5.81 | 5.46 | flat, no clear trend (range 5.46-5.97) |
-//! | upland | 0.992 | 1.109 | 1.559 | rising, ×1.57 (minor wobble at d3, d5) |
-//! | highland | 0.321 | 0.345 | 0.827 | rising, ×2.58 (one flat step d0→d1) |
-//! | montane | 0.073 | 0.116 | 0.392 | rising, ×5.39 (minor wobble at d1, d7) |
+//! | `0-250m` | 5.59 | 5.81 | 5.46 | flat, no clear trend (range 5.46-5.97) |
+//! | `250-1000m` | 0.992 | 1.109 | 1.559 | rising, ×1.57 (minor wobble at d3, d5) |
+//! | `1000-2500m` | 0.321 | 0.345 | 0.827 | rising, ×2.58 (one flat step d0→d1) |
+//! | `2500m+` | 0.073 | 0.116 | 0.392 | rising, ×5.39 (minor wobble at d1, d7) |
 //!
 //! **The confound the header names is still visible in the corrected data,
 //! and the headline SURVIVES the correction essentially unchanged in
-//! shape**, though every absolute number moved. Lowland settlements sit at
+//! shape**, though every absolute number moved. `0-250m` settlements sit at
 //! ~5.5-6× the land-area base rate with no clear trend across deciles
-//! (fertile/coastal pull swamps any unrest signal there); upland/highland/
-//! montane settlements climb broadly WITH unrest from calmest to
-//! most-unrest decile (not perfectly monotonic step-to-step, but the first-
-//! to-last rise is large and one-directional in all three: ×1.57, ×2.58,
-//! ×5.39). These three rise factors are close to the ORIGINAL contaminated
-//! reading's (×1.6, ×2.5, ×5.5) — expected, and explained below in the
-//! fix-round-2 section: the excluded settlements were entirely absent from
-//! upland/highland/montane already (their true elevation could never band
-//! them there), so those three bands' RATIOS moved only by the common
-//! rescale of the shared pooled-total denominator, which preserves a
-//! band's shape across deciles even as its absolute level shifts. Lowland's
-//! absolute level and pattern changed more, since that is where the
-//! excluded settlements had been silently counted. Spec §6.5's three
-//! outcomes anticipate exactly this kind of reading, not a null: settlements
-//! DO measurably over-occupy high-unrest ground, but only outside the
-//! lowland band — the same qualitative headline as originally reported,
-//! now resting on the correct population.
+//! (fertile/coastal pull swamps any unrest signal there); the three higher
+//! bands climb broadly WITH unrest from calmest to most-unrest decile (not
+//! perfectly monotonic step-to-step, but the first-to-last rise is large
+//! and one-directional in all three: ×1.57, ×2.58, ×5.39). These three rise
+//! factors are close to the ORIGINAL contaminated reading's (×1.6, ×2.5,
+//! ×5.5) — expected, and explained below in the fix-round-2 section: the
+//! excluded settlements were entirely absent from the three higher bands
+//! already (their true elevation could never band them there), so those
+//! three bands' RATIOS moved only by the common rescale of the shared
+//! pooled-total denominator, which preserves a band's shape across deciles
+//! even as its absolute level shifts. `0-250m`'s absolute level and pattern
+//! changed more, since that is where the excluded settlements had been
+//! silently counted. Spec §6.5's three outcomes anticipate exactly this
+//! kind of reading, not a null: settlements DO measurably over-occupy
+//! high-unrest ground, but only above the coastal fringe — the same
+//! qualitative headline as originally reported, now resting on the correct
+//! population.
 //!
 //! **Per-people dispersion, corrected — dominated by ONE land-dwelling
 //! kind, not by sample size.** Totals across the sweep: `pooled` 26,146
@@ -76,8 +105,25 @@
 //! appear at all — every settlement they had was excluded (see fix round
 //! 2). `twig-blight` alone now tracks the pooled pattern almost exactly
 //! (its own band × decile table is within a few settlements of pooled's at
-//! every stratum); the remaining four kinds are low-count enough that a
+//! every stratum, and it is the only one of the five surviving kinds present
+//! in all four bands); the remaining four kinds are low-count enough that a
 //! single settlement still moves their own share by several percent.
+//!
+//! **Those four low-count kinds sit at EXACTLY 100% of the `2500m+` band —
+//! and this is a real preference, not a repeat of the fix-round-2 artifact.**
+//! `kobold` (n=27), `rust-monster` (n=104), `drow` (n=153) and `shrieker`
+//! (n=352) each place every one of their settlements in `2500m+` and none
+//! anywhere else. Two things distinguish this from the marine-default
+//! artifact fix round 2 removed: `band_of`'s fallback is the FIRST band
+//! (`0-250m`), never the last, so a default-branch bug would read as
+//! spurious `0-250m` concentration, not `2500m+` — the opposite band from
+//! what these four kinds show; and the probability of landing 100% in
+//! `2500m+` by chance is vanishingly small given that band's own 43.8% land
+//! share — for `kobold`'s smallest sample, `0.438^27 ≈ 2.1×10⁻¹⁰` (the other
+//! three kinds' probabilities are smaller still, by many more orders of
+//! magnitude, since they have larger n). This reads as a genuine niche
+//! preference for high ground, not an artifact of either defect this file
+//! has already found and fixed.
 //!
 //! # Fix round 1 (2026-08-12): guard-encoding repairs
 //!
@@ -112,7 +158,7 @@
 //! - `exposure_ratios_are_within_absurdity_bounds`: `sea-elf` (4 total
 //!   settlements across the whole 30-seed sweep, ALL of them marine — see
 //!   fix round 2) read exposure ratios up to 22.95, over the 20.0 ceiling,
-//!   at three separate (decile, lowland) strata. A single coastal-specialist
+//!   at three separate (decile, `0-250m`) strata. A single coastal-specialist
 //!   settlement moves its own share by 25%; the ceiling was never
 //!   calibrated against a per-people denominator this small. `pooled`'s own
 //!   ratios all stayed under 8.
@@ -155,11 +201,11 @@
 //! the `is_settleable` predicate the land side already used. A marine
 //! settlement's attractor cell is ocean — negative elevation-above-sea-level
 //! — so `band_of`'s loop never satisfied any threshold and fell through to
-//! its `BANDS[0]` ("lowland") default, and its decile was computed against
-//! `sorted_unrest`, a distribution built ONLY from settleable land: a
+//! its `BANDS[0]` (the `0-250m` band) default, and its decile was computed
+//! against `sorted_unrest`, a distribution built ONLY from settleable land: a
 //! meaningless lookup for a cell that was never in that distribution. The
 //! fingerprint was unmistakable: `giant-squid` (30,971 settlements),
-//! `reef-shark` (2,121) and `sea-elf` (4) each read EXACTLY 100.0% lowland
+//! `reef-shark` (2,121) and `sea-elf` (4) each read EXACTLY 100.0% `0-250m`
 //! with zero everywhere else — not an ecological distribution — and
 //! `giant-squid` alone was 51.9% of the original pooled total.
 //!
@@ -219,14 +265,14 @@
 //! - **Ceiling guard.** Re-run against `pooled` rows only in the corrected
 //!   fixture: the maximum pooled `exposure_ratio` is now 5.97 (down from
 //!   the pre-fix-round-2 maximum of ~8, since the removed settlements had
-//!   been inflating `pooled`'s own lowland numbers too), comfortably under
+//!   been inflating `pooled`'s own `0-250m` numbers too), comfortably under
 //!   the 20.0 ceiling. Guard PASSES.
 //!
 //! **Re-derived headline**: whether settlements over-occupy high-unrest
 //! ground was reopened by this defect and re-measured, not assumed to
 //! survive. It DOES survive, with the same qualitative shape reported
-//! above under "Dated measurement" — flat lowland, broadly rising
-//! upland/highland/montane — now measured against the population spec §6.2
+//! above under "Dated measurement" — flat `0-250m`, broadly rising through
+//! the three higher bands — now measured against the population spec §6.2
 //! actually specifies.
 #![allow(clippy::disallowed_methods)]
 
@@ -243,14 +289,31 @@ use hornvale_worldgen::{
 const DECILES: usize = 10;
 
 /// Elevation bands, in metres above sea level, as (label, lower-inclusive
-/// bound). The top band is open. Chosen to separate coastal plain from the
-/// arc-and-edifice high ground that spec §6.4 names as the repelling half of
-/// the confound.
+/// bound). The top band is open. Chosen to separate the coastal fringe from
+/// the higher ground that spec §6.4 names as the repelling half of the
+/// confound.
+///
+/// **Labels are explicit, datum-neutral metre ranges (fix round 3,
+/// 2026-08-12), not terrain names.** They originally read `lowland`/
+/// `upland`/`highland`/`montane` — Earth-intuitive names this world's
+/// numbers do not support: `elevation_at` is relative to an isostatic
+/// datum, not sea level, and sea level itself sits far below zero on that
+/// datum (`terrain.sea_level()` on seed 42 is -2,936.17 m — see
+/// `waterline_probe.rs`'s correction header). So height-above-sea-level
+/// routinely runs to several kilometres on ordinary continental land, and
+/// the top band (`2500m+`, née "montane") turns out to hold 43.8% of all
+/// settleable land — the LARGEST of the four bands, not a mountain fringe.
+/// See this file's module doc for the full land-share table and its
+/// implications. The stratification itself — separating land monotonically
+/// by elevation, spec §6.4's confound control — is unchanged: only the
+/// labels moved, never the thresholds, order, or semantics. Renaming is
+/// PROVEN not to move a number in the task-1 report's fix-round-3 addendum
+/// (a byte-for-byte diff of every non-label column, before vs. after).
 const BANDS: [(&str, f64); 4] = [
-    ("lowland", 0.0),
-    ("upland", 250.0),
-    ("highland", 1000.0),
-    ("montane", 2500.0),
+    ("0-250m", 0.0),
+    ("250-1000m", 250.0),
+    ("1000-2500m", 1000.0),
+    ("2500m+", 2500.0),
 ];
 
 /// One stratum's readout: a (decile, band, people) cell of the design.
@@ -434,7 +497,7 @@ fn exposure_rows(seeds: impl IntoIterator<Item = u64>) -> Vec<ExposureRow> {
             // not a re-derived copy. Before this fix the settlement loop
             // applied no filter at all: a marine settlement's negative
             // elevation-above-sea-level fell through `band_of`'s loop to the
-            // `BANDS[0]` ("lowland") default, and its decile was computed
+            // `BANDS[0]` (the `0-250m` band) default, and its decile was computed
             // against `sorted_unrest`, a distribution built ONLY from
             // settleable land — meaningless for a cell that was never in it.
             // See this file's module doc for the measured blast radius.
@@ -723,10 +786,10 @@ fn exposure_ratios_are_within_absurdity_bounds() {
 /// **Regression guard for the fix-round-2 defect**: the settlement loop
 /// once applied no `is_settleable` filter at all, so a marine settlement's
 /// cell (ocean, negative elevation-above-sea-level) fell through `band_of`'s
-/// loop to the `BANDS[0]` ("lowland") default and was counted against a
-/// decile distribution built only from settleable land. 52% of the pooled
-/// sweep (three kinds reading exactly 100.0% lowland with zero everywhere
-/// else) was contaminated this way before the fix — see the module doc's
+/// loop to the `BANDS[0]` (the `0-250m` band) default and was counted
+/// against a decile distribution built only from settleable land. 52% of the
+/// pooled sweep (three kinds reading exactly 100.0% `0-250m` with zero
+/// everywhere else) was contaminated this way before the fix — see the module doc's
 /// fix-round-2 paragraph for the measured blast radius.
 ///
 /// Deliberately does NOT call `exposure_rows` and trust its internal
