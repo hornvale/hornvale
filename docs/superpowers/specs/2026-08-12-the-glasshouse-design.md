@@ -29,8 +29,16 @@ Over the committed 1000-world census
 ```
 
 Earth's reference values: land annual mean **+8.6 °C**, global mean **+14 °C**,
-land above 2000 m **~11%**. So the median world is **~19 K colder than Earth**
-and its land is **five times more mountainous**.
+land above 2000 m **~11%**. So the median world is **~19 K colder than Earth**,
+and its land stands **five times more often above 2000 m**.
+
+**Read that second figure carefully — this spec originally glossed it as "five
+times more mountainous", and that gloss is wrong.** Stage A measured the cause:
+Hornvale's land is not uplifted. Mean land crust is *thinner* than the isostatic
+reference, so the base over land is **negative**; the land reads high because the
+ocean-fraction percentile puts **sea level 2913 m below the datum**. It is a datum
+defect, not a relief defect, and the distinction changes the fix entirely — see
+§3.3, which is corrected in place.
 
 Two of these are already-registered observations —
 `CLIM-cold-attractor` (raw, high) recorded the −11.9 °C / 651-ice read from The
@@ -103,11 +111,23 @@ residual sd 2.56 K. Decomposing that intercept:
   --------------------------------------------- ------------------ ------------------
   1 insolation draw mis-centred (Earth at p12)  -19 K vs Earth     no (but r=0.98)
   2 latitude term area-mean is +10 K, not 0     +10 K  MASKS (1)   no
-  3 hypsometry: 54.5% of land above 2000 m      -14 K, near-const  YES
+  3 the sea-level datum sits 2913 m below the   -14.7 K, near-      YES
+    reference, so land reads 2267 m above it    constant
+    (NOT uplifted land — see 3.3)
 ```
 
 Budget: `-4.2` (insolation at median S) `+10` (latitude) `-14.3` (lapse)
 `= -8.5`, against an observed spinning median of `-7.8` on the same 142 worlds.
+
+Cause 3's row is **corrected from the original** ("hypsometry: 54.5% of land above
+2000 m"), which named a symptom as the cause. The −14.7 K figure is measured land
+elevation × the lapse rate directly (2266.87 m × 6.5 K/km); the −14.3 K in the
+budget line above is the same quantity read off the regression intercept over 142
+spinning worlds. Same rate, two methods, 0.4 K apart.
+
+Note also what cause 3 does **not** license: because Route 2 shrinks the land set
+as it lowers it, only **~450–700 m / 3–4.5 K** of that −14.7 K is recoverable
+(§3.3). The size of a defect is not the size of its fix.
 
 **Cause 2 is currently the only thing keeping worlds as warm as they are.**
 `temperature.rs:58-60` documents the latitude term as making the "area-mean
@@ -219,19 +239,67 @@ implementer selects the functional form; the three bounds are the contract.
 The Earth zonal dataset used must be cited in the source comment — an
 uncited fit is the §6 red-flag cell again.
 
-### 3.3 Hypsometry
+### 3.3 Hypsometry — CORRECTED BY STAGE A'S MEASUREMENT
 
-Bring the elevation distribution toward Earth's. Target, as a decision rule:
+**This section's original framing was wrong, and the correction changes the
+target.** It is preserved as a correction rather than a silent edit because the
+error is instructive: it was inferred confidently from two agreeing estimates and
+survived into an approved spec.
 
-- `mountain-coverage` median falls from **0.545** to within **0.05 of Earth's
-  ~0.11**;
-- implied mean land elevation falls from **~2200 m** toward Earth's **~840 m**.
+**Superseded claim.** The section said Hornvale's land is "five times more
+mountainous than Earth's" and set the target as reducing relief, with mean land
+elevation "~2200 m" inferred twice — from the regression intercept
+(`14.26 K / 0.0065 = 2194 m`) and from `mountain-coverage = 0.545`.
 
-The ~2200 m figure is **inferred twice, never measured directly**: once from the
-regression intercept (`lapse = 14.26 K / 0.0065 = 2194 m`) and once from
-`mountain-coverage = 0.545`. The two agree, which is why it is stated — but the
-first implementation task is to **measure mean land elevation directly** and
-add it as a census metric, because no committed metric reports it today.
+**What Stage A measured.** The elevation figure was right; the *diagnosis* was
+backwards. `mean-land-elevation-m` reads **2266.87 m** median / 2234.85 mean over
+1000 worlds (within 3% of the inference — the arithmetic was sound). But the
+attribution (`docs/audits/land-elevation-attribution.md`) shows **land is not
+uplifted at all**:
+
+```
+  mean land crust             25.73 km   THINNER than the 30 km reference
+  mean base over land          -769 m    i.e. BELOW the datum
+  mean sea level              -2913 m    at crust 13.82 km
+                              -------
+  the 2257 m of land elevation IS THAT GAP
+```
+
+Sea level sits **1113 m below the isostatic shelf break**. The ocean-fraction
+percentile grants **0.3731** of the sphere as land (the drawn quota) while only
+**0.2724** clears the continental threshold, so **~27% of all land stands on
+sub-threshold crust**. `effective_ocean_target`'s shelf-break fallback exists for
+exactly this and **does not fire**: supply/quota **0.6948** against a trigger
+requiring `< 0.5`.
+
+Land elevation is 91.4% `base` variance, so relief is not the lever: the boundary,
+hotspot and relief terms together are 3.5% of variance and +149 m of 2257 m.
+**Do not touch them.**
+
+**The corrected target** is the crust-and-datum side, and Stage A found a third
+route cheaper than either this section contemplated:
+
+- **Route 3 (do this first).** The craton rescale targets a budget of **0.4123**
+  and delivers **0.2706** — a 34.4% miss, of which the `.min(0.6)` clamp is
+  **89%**; the residual 11% is fully explained by `scale = sqrt(target/area)`
+  assuming cap area scales as `r²` when a spherical cap's is `2π(1 − cos r)`,
+  which is sub-quadratic. Nothing is unexplained. Since budget **0.4125** already
+  exceeds the land quota **0.375**, a rescale delivering its budget would put the
+  coastline at or above the shelf break by itself. Relaxing the clamp is gated on
+  deducting cap overlaps.
+- **Routes 1 and 2** (the crust ramp's shape, or `SUPPLY_SHORTFALL_FACTOR`) each
+  cost a full terrain byte-identity epoch, and may be unnecessary if Route 3
+  delivers.
+
+**Revised expectation, and it is smaller than this spec assumed.** Route 2 shrinks
+the land set as well as lowering it, so the recoverable elevation is
+**~450–700 m / 3–4.5 K** at `LAPSE_C_PER_M = 6.5 K/km` — **not** the full 14.7 K
+the hypsometry cause currently contributes. Any Stage B success criterion must be
+written against that range, not against the size of the defect.
+
+Validation caveat: the attribution ran on **default pins only**, and the
+single-craton population is where the shelf-break fallback *does* fire — so a
+`SUPPLY_SHORTFALL_FACTOR` change must not be validated on default worlds alone.
 
 This is the workstream that touches `domains/terrain/`, and therefore the
 byte-identity sculpting discipline in `domains/terrain/CLAUDE.md`.
