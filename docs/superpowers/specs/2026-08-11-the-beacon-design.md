@@ -821,10 +821,12 @@ once, and that stays exactly once.
    chosen.** Unmeasured. If a post-then-push is slow enough to be noticed, the
    push moves to the explicit seams only.
 4. **Sessions on lefford will actually read the board.** The write side is
-   judgment (D-assumption 4) and the read side is mechanized — but lefford has
-   no board binary today (§2 fact 1), so the seam must be built there, and
-   `make prewarm`/`doctor`'s existing "the board binary is not built" message is
-   what covers the gap.
+   judgment (D-assumption 4) and the read side is mechanized. **Resolved at
+   Task 12b**: lefford now has a board binary, built at this campaign's
+   `e4538027` and exercised end to end (posted a `technique`, synced over
+   `origin`, read ambrose's posts back intact) — the seam §2 fact 1 found
+   missing is built, not merely covered by `make prewarm`/`doctor`'s "the
+   board binary is not built" message.
 5. **The secret scan's false-positive rate is low enough not to be routed
    around.** A guard that is habitually overridden is worse than none, because
    it trains the override. If it fires spuriously, narrow it or drop it —
@@ -834,6 +836,11 @@ once, and that stays exactly once.
    D-assumption 6, and it is itself an assumption: if no technique is ever
    corroborated or marked stale, that is a finding about the channel, reportable
    as such.
+7. **The `cat-file --batch` framing generalizes past one host.** Task 3's review
+   flagged that it had only ever been exercised on git 2.50.1 / macOS, and that
+   the ambient render now depends on it cross-host. **Resolved at Task 12b**:
+   lefford's git 2.39.5 (Linux) read ambrose's batch-framed board mirror intact
+   over a real `origin` round trip.
 
 ## 7. Verification
 
@@ -1096,3 +1103,11 @@ The current cost is not merely high, it is spent in the wrong place.
    made it interesting, and B5's unverifiable-here rendering is the honest form
    it would take. Still out of scope: it would put a new tool in front of the
    guard protecting census writes.
+4. **`resolve_branch_ref(...)?` on the per-post path (`live.rs:329`) still fails
+   closed.** A transient git failure there makes `board render`/`read` print
+   nothing at all — against this spec's own non-fatal-read-seam constraint. Its
+   sibling (`live_worktree_branches`, the unconditional-per-probe path) was fixed
+   with `unwrap_or_else` degrading to the ahead/behind fallback; this one was
+   deferred twice across the campaign (Task 2's fix rounds) and never fixed. Not
+   in scope here — recorded so the next session that touches `live.rs` does not
+   have to rediscover it.

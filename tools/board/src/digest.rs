@@ -584,8 +584,7 @@ mod tests {
         // post that arrived from a clone or a hand write reaches this parse
         // exactly as it reaches `posts_in`'s -- and the digest is the human's
         // only read seam, so one bad post silencing it is the worst outcome
-        // available. Replacing this arm with `?` keeps every other test green
-        // (see the mutation check in the fix-wave report).
+        // available. Replacing this arm with `?` keeps every other test green.
         let (_d, repo) = temp_repo();
         let board = Board::new(repo.clone());
         board

@@ -25,7 +25,10 @@ const MAX_ATTEMPTS: u32 = 24;
 /// `256 * 41 = 10,496` bytes, against a measured 65,536-byte pipe capacity
 /// on this host — roughly a 6x margin. Check any change to this constant
 /// against that margin (the argument needs staying UNDER it), not against
-/// an unrelated floor.
+/// an unrelated floor. Measured threshold, for scale: probing the deadlock
+/// directly found `n=2000` (82,000 B of stdin) completes, `n=4000`
+/// (164,000 B) blocks forever — this constant's chunk is well inside that
+/// gap, but the gap itself is how much slack there is to lose.
 const CAT_FILE_BATCH_CHUNK: usize = 256;
 
 /// True if `id` is a full, unabbreviated git object id: exactly 40 lowercase
@@ -2190,7 +2193,7 @@ mod tests {
         // never break a session's render". The skip-and-warn arm in
         // `posts_in` was entirely unexercised: replacing it with `?` kept the
         // whole suite green, which would have made D7 false with nothing to
-        // say so (see the mutation check in the fix-wave report).
+        // say so.
         let (_d, repo) = temp_repo();
         let board = Board::new(repo.clone());
         let good = board

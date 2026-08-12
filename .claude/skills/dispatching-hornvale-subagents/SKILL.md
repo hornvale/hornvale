@@ -61,7 +61,13 @@ the controller than dispatched at all.
 6. **After any kill, sweep.** If a subagent was killed or abandoned
    mid-run, sweep its worktree for orphaned scaffolding (temporary test
    files, partial artifact regens) before running the suite — one orphaned
-   census test turned a 90-second suite into 12+ minutes.
+   census test turned a 90-second suite into 12+ minutes. **Before killing a
+   subagent that stalled mid-edit, preserve its partial diff (`git diff` to
+   a scratch file, or `git stash`) rather than discarding it, and never hand
+   a half-applied edit to a successor agent** — The Beacon killed a stalled
+   fix agent and started the next one fresh from the last clean commit,
+   which was safe but threw away a correct shape the agent had already
+   found, costing the next round the same reasoning over again.
 
 ## Step 1 in full: verify the brief against the code
 

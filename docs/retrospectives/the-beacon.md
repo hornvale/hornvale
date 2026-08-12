@@ -278,3 +278,76 @@ it does — but whether corroboration needs a nudge (a `make board-post`
 convenience, a render hint) to get its first real use, or whether nobody
 independently re-verifies technique posts often enough for the mechanism to
 matter regardless of friction.
+
+One concrete near-miss, rather than the abstract case above: Task 3's fix
+round 3 corroborated an existing board technique about repo guards scanning
+the whole command string, and the campaign's own ledger noted at the time
+that it was "worth a `confirm` post once Task 10 ships the convention." Task
+10 shipped the convention. The post was never made.
+
+## 9. Two findings that exist nowhere, and that fact is the finding
+
+Task 2's opus-dispatched review returned quality approved-with-reservations:
+2 Important findings and 3 Minor. The fix loop addressed both Importants
+plus one Minor (three stale "ancestry check" comments); that Minor survives
+because the implementer's own report for the round documents the fix
+(`task-2-report.md`). The other two Minors were "explicitly deferred," in
+the controller's own contemporaneous words — and that disposition is now the
+entire surviving record. Nothing anywhere says what they were about.
+
+The cause is not particular to Task 2. Across the campaign's eleven review
+dispatches, no review agent ever wrote its findings to a file. Implementers
+wrote reports before returning DONE, the same discipline `dispatching-
+hornvale-subagents` requires of them; reviewers reported straight into the
+conversation, and the controller's own notes toward the ledger paraphrased
+each verdict only tersely enough to route the fix loop — sufficient to know
+*that* something was deferred, not to reconstruct *what*. That ledger
+(`.superpowers/sdd/2026-08-11-the-beacon/progress.md`) is git-ignored and
+dies with this worktree, so what it never captured is gone with it.
+
+The two findings are unrecoverable without re-reviewing commits
+`1554bb8e..8174c0a8` from scratch — the range the two fix rounds covered —
+and even that would only find what exists in the code today, not
+necessarily recover what the original reviewer saw before those fixes
+landed. The fix for next time is the discipline already in place for the
+other role in this loop: a reviewer writes its findings to a report file
+before returning its verdict, exactly as an implementer writes one before
+returning DONE. Nothing about the review step required this. The campaign
+simply never asked for it.
+
+## 10. "Minors never enter the fix loop" wants an exception clause
+
+The standing process rule is that a review's Minor findings never trigger
+their own fix-loop round; only Critical and Important findings do. The
+campaign's ledger records nine deliberate controller deviations from
+process, each with a stated reason — none of that ledger survives this
+worktree, and `grep -i deviation` over the committed branch returns zero
+hits, because a ledgered deviation is exactly the kind of reasoning this
+retrospective exists to promote before it disappears. Two of the nine
+overrode the Minors rule specifically, and the pattern across them, not the
+list, is the durable part.
+
+Both happened inside Task 3. In fix round 1, a Minor riding along beside two
+Importants was folded into the same round rather than deferred, because it
+was a two-character fix against a panic on an unchecked-cast overflow in a
+path the spec says must never break a session — correctness-adjacent to the
+round already running. A second Minor in the same round was folded in for a
+different reason: git echoes the *resolved* object id from `cat-file
+--batch`, so unresolved input keys the result map under a different string
+and silently misses — and Task 4 was about to build directly on that
+behavior, so leaving it as a Minor would have let the very next task walk
+into it. In fix round 4, a third Minor (a whitelist disagreeing with `man
+git-cat-file`) was folded in for the same second reason: leaving it would
+have meant pruning it back out of a file Tasks 4 and 5 were about to extend
+further, when fixing it now made it visible at a glance instead.
+
+Both overrides were vindicated rather than merely defensible after the
+fact: the ambiguous-oid hazard was real, and the whitelist Minor was
+independently confirmed against git's own documentation before it was
+fixed. The rule as written treats every Minor identically regardless of
+context; what actually happened twice is narrower and more defensible than
+"the controller ignored the rule when convenient" — both overrides fired on
+one of two legible conditions: a Minor correctness-adjacent to the Important
+already driving the round, or a Minor the very next task is scheduled to
+walk into. That is an exception clause worth writing into the rule, not
+just two ad hoc calls that happened to work out.

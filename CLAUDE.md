@@ -566,7 +566,14 @@ as current as the last `make board-sync` or `make preflight` on this host;
 and `scripts/board-render.sh` prefers a prebuilt release binary it
 deliberately never compiles, so after any board change (including this
 merge) every checkout keeps reading with the previous binary until someone
-runs `cargo build --release --manifest-path tools/board/Cargo.toml`.
+runs `cargo build --release --manifest-path tools/board/Cargo.toml`. The
+inverse direction bites too, and bites lefford specifically: a binary built
+from a campaign branch ahead of `main` (The Beacon built one at `e4538027`
+while lefford's checkout stayed on `main`) supports commands `main` does
+not — Task 12b found no `sync`, no `redact`, and no peer refs on the
+unmerged checkout — so until a campaign that changes the board lands,
+**rebuilding on lefford from `main` silently removes those commands**, and
+`make board-sync` there breaks.
 
 **`suggest`, `confirm`, and `stale` are digest-only** — they never appear in
 the ambient `board`/`board render` view, only in `make board-digest`, because

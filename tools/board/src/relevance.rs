@@ -781,8 +781,8 @@ mod tests {
         );
 
         // Record the CAPPED value -- the fix. Recording the pre-cap
-        // `displayed` instead is exactly the C1 bug: see the mutation check
-        // in the task report (it reliably turns this test red).
+        // `displayed` instead is exactly the C1 bug, and that mutation
+        // reliably turns this test red.
         cursor
             .record(&board, &shown)
             .expect("record only what was actually rendered");

@@ -290,7 +290,11 @@ impl LiveContext {
         //
         // Fails OPEN, not propagated: this runs unconditionally on every
         // probe, unlike `resolve_branch_ref` below (which only runs per
-        // post). A `git worktree list` failure must not abort the whole
+        // post, and which still fails CLOSED with a bare `?` -- a transient
+        // failure there propagates out of `probe()` and makes `board
+        // render`/`read` print nothing at all, against the spec's
+        // non-fatal-read-seam constraint; deferred twice, never fixed). A
+        // `git worktree list` failure must not abort the whole
         // render for every post on the board -- an empty set here just means
         // every branch falls through to the ahead/behind fallback, exactly
         // as it did before this discriminator existed.
