@@ -141,3 +141,18 @@ confirmation-gated in the Makefile.
   fixture, and the duplication went stale twice (2026-07-13, 2026-07-20)
   because nothing forced it back into sync — this closes the gap by
   construction rather than by memory.
+- **The board lane rule** (B13, decision 0128): `tools/board/` is a `.rs`
+  tree but not a workspace member (`members = ["kernel", "domains/*",
+  "windows/*", "cli"]`), so the Rust-relevant filter above would otherwise
+  run a full `make quick` that cannot see it, while skipping the 24.4s
+  `cargo test --manifest-path tools/board/Cargo.toml` suite that can. When
+  the **entire** staged set is under `tools/board/`, the hook runs that
+  suite instead of `make quick`; any other staged path — including a
+  **mixed** commit that touches `tools/board/` alongside workspace code —
+  falls through to the ordinary filter unchanged, so this only ever adds
+  coverage and never drops the workspace gate on a change that needs it.
+  This rule covers board-only *commits*; it is not a substitute for a gate
+  that runs the board's 189 tests on every push — nothing does that (see
+  root `CLAUDE.md`'s board paragraph), so a mixed commit still needs `make
+  quick` to catch a workspace regression, and neither arm catches a board
+  regression introduced by a change that never gets committed at all.

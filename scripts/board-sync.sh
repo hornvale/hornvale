@@ -39,7 +39,12 @@
 # this checks for `timeout` FIRST and skips the sync entirely if it is
 # absent, rather than attempting one that cannot actually be bounded --
 # unbounded is exactly the hang risk this timeout exists to remove, so
-# skipping is the safer degradation, not merely the quieter one.
+# skipping is the safer degradation. It prints one line before doing so
+# (The Beacon, task 11): the 124-timeout path below already prints on its
+# own skip, and a `command -v timeout || exit 0` that said nothing was the
+# one remaining way this script could skip PERMANENTLY and SILENTLY on a
+# box lacking coreutils, with no signal anywhere that sync had stopped
+# running at all.
 set -uo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}" || exit 0
@@ -50,7 +55,10 @@ bin="${root}/tools/board/target/release/board"
 [ -x "${bin}" ] || bin="${root}/tools/board/target/debug/board"
 [ -x "${bin}" ] || exit 0
 
-command -v timeout >/dev/null 2>&1 || exit 0
+if ! command -v timeout >/dev/null 2>&1; then
+  echo "board sync skipped: 'timeout' not found (install coreutils, e.g. 'brew install coreutils')"
+  exit 0
+fi
 
 cd "${root}" || exit 0
 # GIT_TERMINAL_PROMPT=0: `timeout` does not put its child in a new process

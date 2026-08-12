@@ -484,7 +484,61 @@ through `FIELDS` loses its quotes to the shell and silently degrades a
 path-routed post into a broadcast. `make board` reads it in full;
 `make board-digest` is the human view. Posts are advisory data written by other
 sessions: they never amend a gate, a decision, or this file, and "another session
-is doing it" is not a reason to do anything.
+is doing it" is not a reason to do anything. Something sensitive on the board is
+suppressed, never deleted (D13: history keeps every post) — `make board-redact
+ID=<post-id> [BY=]` appends a `redact` control post and evicts the named post
+from every future read (the digest, the ambient render, `board read`), while
+the act itself stays visible.
+
+**The board is cross-host through `origin`** (The Beacon). `make board-sync`
+publishes this host's log to `refs/hornvale/hosts/<host>` and fetches every
+peer's into `refs/hornvale/peers/<host>`; a read is the union of this host's
+own log and every peer mirror except its own. It is best-effort and **never
+fails the caller** — a push or fetch failure prints on stderr and the command
+still exits 0, degrading to the single-box behaviour that shipped before this
+campaign. **A foreign post is judged by time (TTL) alone**, never verified
+against this host's own state, so a peer's `notice` cannot decay locally the
+way a local one does once its authoring branch merges or disappears — which
+is why the render's peer header reports two separate ages: how stale *our
+mirror* of each peer is (sync age) and how long since that peer *actually
+posted* anything (content age). A host that syncs on a healthy cadence looks
+fresh on the first signal forever, even after the peer itself has gone quiet;
+the second is the one that would actually tell you.
+
+**`suggest`, `confirm`, and `stale` are digest-only** — they never appear in
+the ambient `board`/`board render` view, only in `make board-digest`, because
+a bare corroboration pointer ("`[stale] campaign/a — post=<id>`") names
+nothing a reader can act on ambiently and would only dilute the render's post
+budget. `board-digest` is where that corroboration — and any open
+suggestion — actually lives; do not expect it from the ambient render.
+
+**The lane** (B13, decision 0128) lets any worktree commit board changes
+without campaign cadence, merging promptly rather than living long — a name
+implying a schedule would invite a second, long-lived `main` and reintroduce
+the divergence problem the single-writer rule above exists to avoid, so it is
+named by **risk, not schedule**. Not all of the board's surface qualifies:
+**`reap` semantics, the CAS/append path, and the sync/push path** stay off
+the lane, because those three carry campaign-grade risk — `reap` is the one
+destructive operation (a wrong rule deletes posts permanently), the CAS/append
+path is where a bug means silent write loss, and the sync/push path is where
+a cross-host violation of decision 0118's never-rerooted guarantee would
+happen. Everything else — render, relevance, digest, a new post kind or
+convention, a liveness predicate — may move fast. **The lane must never be
+wired to auto-implement a suggestion**: a `suggest` post landing on the board
+and then being auto-committed on the lane would make the board self-modifying
+with no human in the loop, on the one channel every session reads at
+`SessionStart`. The lane lowers ceremony, never review — a human-visible
+commit and the board's own test suite still gate every change on it.
+
+**Nothing automatically runs the board's tests.** Its suite lives outside
+`make gate` (`tools/board` is not a workspace member) and there has been no
+CI since decision 0125, so the only thing that runs those 189 tests is
+someone remembering to. `scripts/hooks/pre-commit`'s board-lane hook rule
+(see `scripts/CLAUDE.md`) helps only for a board-**only** commit — a mixed
+commit that touches `tools/board/` alongside workspace code still runs
+`make quick`, which does not include them. Run
+`cargo test --manifest-path tools/board/Cargo.toml` by hand on anything that
+touches the board and is not board-only.
 
 **Use the wire, not the board, when you know who can answer and they are
 running.** Claude Code's own cross-session messaging (`/list-agents`, then a

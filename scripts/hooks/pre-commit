@@ -95,6 +95,32 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/
     exit 1
 fi
 
+# The board lane rule (B13, decision 0128). `tools/board` is deliberately NOT
+# a workspace member (`members = ["kernel", "domains/*", "windows/*", "cli"]`
+# in the root `Cargo.toml`) — so `cargo clippy --workspace` and `make quick`
+# never examine it — but the `.rs` filter below runs `make quick` anyway on
+# any board change, since a board source file still matches `\.rs$`. Measured
+# (The Beacon): the suite that actually tests the board
+# (`cargo test --manifest-path tools/board/Cargo.toml`) takes 24.4s and runs
+# in no gate at all, so a board-only commit today pays for a gate that cannot
+# see it and skips the one that can.
+#
+# The fix is narrow on purpose: only when EVERY staged path is under
+# `tools/board/` does this replace `make quick` outright. Any other staged
+# path — including a MIXED commit that touches `tools/board/` alongside
+# workspace code — falls through to the ordinary filter below unchanged, so
+# a filter this narrow can never silently drop the workspace gate on a
+# change that needs it.
+board_staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [[ -n "$board_staged" ]] && ! grep -qvE '^tools/board/' <<<"$board_staged"; then
+    echo "pre-commit: staged set is entirely under tools/board/ -- running its own suite instead of 'make quick' (B13)..." >&2
+    if ! cargo test --manifest-path tools/board/Cargo.toml; then
+        echo "pre-commit: 'cargo test --manifest-path tools/board/Cargo.toml' failed." >&2
+        exit 1
+    fi
+    exit 0
+fi
+
 # `make quick`, and the docs-only fast path.
 #
 # The repo commits a great many docs-only changes — chronicles, retrospectives,
