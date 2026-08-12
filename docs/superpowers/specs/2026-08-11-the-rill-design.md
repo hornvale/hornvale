@@ -358,11 +358,11 @@ is labelled a **witness**, not a hypothesis test.
   it. **This is a preregistered interval this campaign has already breached
   once; a second breach is a finding to ship, not a reason to retune
   `CHANNEL_WIDTH_COEFF`.**
-- **R-6 — a walk gets damper as it descends.** Over sampled descending walks
+- **R-7 — a walk gets damper as it descends.** Over sampled descending walks
   of ≥ 8 rooms at walk depth, `wetness` is non-decreasing in at least **80%**
   of steps. Reference: the elevation the walk descends, outside the wetness
   computation.
-- **R-7 — the contradiction is unreachable.** No sampled room renders a
+- **R-8 — the contradiction is unreachable.** No sampled room renders a
   riparian variety clause together with a "dry" habitat clause. **0
   occurrences** — a **witness**, since both read the same number once §4.4
   lands; it exists to catch a regression that reintroduces two sources.
@@ -389,7 +389,7 @@ is labelled a **witness**, not a hypothesis test.
 3. **Tier 1: render the whole tree** — the width law below threshold, the
    decision record, R-1.
 4. **Tier 2: subdivision under boundary conditions** — §4.2, R-4, R-5.
-5. **Wetness reads the network** — §4.4, R-6, R-7. Prose moves only here,
+5. **Wetness reads the network** — §4.4, R-7, R-8. Prose moves only here,
    which is what makes its effect attributable.
 6. **Close** — gate, drift, census refresh, The Ford's H1/H2/H4 re-measured,
    chronicle, retrospective, Confidence Gradient.
