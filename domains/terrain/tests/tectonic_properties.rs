@@ -722,6 +722,44 @@ fn features_seed_is_derived_and_perturbs_no_existing_draw() {
     assert_ne!(a.features_noise_seed(), a.lithology_noise_seed());
 }
 
+/// The Ford, Task 5 review finding 2: `channel_seed` must be the already-
+/// derived `streams::CHANNEL_MEANDER` LEAF, not the terrain-root seed — a
+/// leaf like `lithology_seed`/`features_seed`, never a value a caller could
+/// derive any other terrain stream from. This is also the byte-identity
+/// check for that fix: `ChannelNetwork::build` used to receive the raw
+/// terrain-root seed and derive `CHANNEL_MEANDER` from it internally; now
+/// `generate()` derives it once and `build` uses the result directly. Both
+/// orderings must produce the exact same `Seed` value into
+/// `SphereFbm::new`, which this asserts directly by re-deriving the leg
+/// from the public root the same way the OLD internal call would have.
+#[test]
+fn channel_seed_is_the_derived_leaf_and_matches_the_old_internal_derivation() {
+    let geo = Geosphere::new(4);
+    let a = generate(Seed(42), &geo, &TerrainPins::default())
+        .unwrap()
+        .globe;
+    let b = generate(Seed(42), &geo, &TerrainPins::default())
+        .unwrap()
+        .globe;
+    // Deterministic.
+    assert_eq!(a.channel_noise_seed(), b.channel_noise_seed());
+    // Distinct from its siblings (different labels).
+    assert_ne!(a.channel_noise_seed(), a.lithology_noise_seed());
+    assert_ne!(a.channel_noise_seed(), a.features_noise_seed());
+    // The byte-identity claim: re-deriving CHANNEL_MEANDER from the public
+    // root the way `ChannelNetwork::build` used to do it INTERNALLY (before
+    // this fix) yields exactly the value now stored on the globe and passed
+    // to `build` directly.
+    let terrain_root = Seed(42).derive(streams::ROOT);
+    let old_style_derivation = terrain_root.derive(streams::CHANNEL_MEANDER);
+    assert_eq!(
+        a.channel_noise_seed(),
+        old_style_derivation,
+        "channel_seed must equal terrain_seed.derive(CHANNEL_MEANDER) — the \
+         same value ChannelNetwork::build derived internally before this fix"
+    );
+}
+
 #[test]
 fn features_are_a_pure_pin_invariant_projection() {
     let geo = Geosphere::new(4);

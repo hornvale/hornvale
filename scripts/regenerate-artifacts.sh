@@ -514,6 +514,14 @@ run -p hornvale -- lab domesday
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
+# The seam-guard roster. STATIC by design — registrations, declarations and
+# call sites, never verdicts (those cost a scoped test run per site, so an
+# artifact carrying them could not be regenerated cheaply). Its job is to put
+# every `expect(survives: …)` declaration under review pressure: a diff is
+# harder to leave lying around than a doc comment.
+echo "regenerate-artifacts: seam-guard roster" >&2
+run --manifest-path tools/seam-guard/Cargo.toml -- report > docs/audits/seam-guard-roster.md
+
 echo "regenerate-artifacts: trope coverage report" >&2
 run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
 run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
