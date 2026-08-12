@@ -262,6 +262,18 @@ that an instrument's silence means the claim held, so a peer unsynced for three
 days must not read as "nothing is happening over there" — that is decision 0080's
 stuck alarm in another organ.
 
+**Task 6 promoted this from a rendering detail to a hard requirement, and it is
+worth knowing why the argument changed.** B4 means a foreign post cannot decay
+locally — the authoring host decides, and `reap` is single-ref. For a `notice`,
+which carries no `ttl_s`, that means *nothing local bounds its lifetime at all*
+(§10 question 2). So for a frozen or retired peer, **sync-age is the only
+remaining signal that its content is stale.** That makes it load-bearing rather
+than informative, and it must ship with the sync, not after it.
+
+It is also, by itself, **not enough** — a stale-but-rendering hold-off still
+competes for the ambient budget forever. Sync-age is the signal; the bound is
+§10 question 2's obligation, which is dated rather than open.
+
 **B7 — Fixing the read cost is a prerequisite task, not a followup, and F14
 optimizes the wrong term.** Batch the per-post object reads into a single
 `git cat-file --batch`.
@@ -835,9 +847,45 @@ The current cost is not merely high, it is spent in the wrong place.
 
 1. **Does a third host ever appear?** The design is N-host by construction, but
    only two are real. Nothing here assumes two except the measurement budgets.
-2. **Does `origin` want a `hosts/` cleanup policy?** A retired box leaves its
-   ref behind forever. It reads fine (a union just includes it) and it is
-   history, so B1 says leave it; a future session may disagree.
+2. **A retired box's `hosts/` ref needs a cleanup policy, and this is no longer
+   an open question — it is a dated obligation.** Originally filed as "it reads
+   fine and it is history, so B1 says leave it; a future session may disagree."
+   Measured during Task 6, that framing is wrong, and the correction is the
+   sharpest consequence the campaign found:
+
+   **A foreign `notice` is unbounded in local time.** A local notice decays when
+   its branch dies (D9). B4 correctly removes that predicate for foreign posts,
+   because only the authoring host can judge it — and puts nothing in its place,
+   because the `notice` convention has no `ttl_s` to fall back on. Verified: of
+   the 32 posts on the board, **zero carry `ttl_s`, `host`, or `pid`**.
+
+   The other kinds are unaffected for reasons that make this narrower and worse
+   rather than broader and milder. `technique`, `convention`, `reply` and
+   `retract` already render unconditionally regardless of origin — they were
+   unbounded before B4. A real `claim` does carry `ttl_s` by convention, so
+   foreign claims genuinely expire. **`notice` is the only kind whose decay B4
+   removes — and it is the kind that carries `polarity=hold-off`, the one post
+   that asks other sessions to wait.** So the exposure is a permanent hold-off
+   from a machine nobody is running any more.
+
+   Two things bound a peer and both die with it: its own `reap` (the correct
+   authority, but it requires a live peer), and retraction, which does propagate
+   cross-origin — `retracted` is built over the whole union and checked *before*
+   the origin short-circuit, so a live peer can withdraw its own post and this
+   host honours it. A retired host posts no more retracts.
+
+   **B6's sync-age reporting is therefore necessary but NOT sufficient**, and
+   this is the part worth stating precisely: sync-age tells a reader the mirror
+   is stale, while the posts still render as current. A frozen peer's hold-off
+   keeps competing for the ambient line budget, and because an elided post is
+   never recorded as seen, it re-qualifies whenever the board is quiet. It never
+   dies. Sync-age is a *signal*, not a bound.
+
+   The obligation: answer this **before the peer population grows beyond two**.
+   Candidate shapes — a max-staleness after which a peer's posts stop rendering;
+   an explicit retire-a-host operation; or a TTL convention for `notice` — but
+   the answer is not in scope here, and leaving it unanswered while adding hosts
+   is what would make it expensive.
 3. **Does the census/heavy claim move onto the board now?** F3 deferred it
    pending the board proving reliable; cross-host claims are the capability that
    made it interesting, and B5's unverifiable-here rendering is the honest form
