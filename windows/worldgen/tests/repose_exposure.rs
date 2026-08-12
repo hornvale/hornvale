@@ -283,15 +283,19 @@
 //! above is byte-identical after the threading.
 //!
 //! **Instrument sensitivity (the calibration a later reader needs before
-//! judging any future null).** Attractor-cell symmetric difference against
-//! the unmasked baseline, 30 seeds, 59,690 settlements total of which 26,146
-//! are on settleable land (that figure matching Task 1's corrected pooled
-//! total exactly, independently re-derived):
+//! judging any future null).** 30 seeds, 59,690 settlements total of which
+//! 26,146 are on settleable land (that figure matching Task 1's corrected
+//! pooled total exactly, independently re-derived).
 //!
-//! | arm | moved (all) | moved (settleable land) | share of the 26,146 |
-//! |---|---|---|---|
-//! | A — hostility penalty ablated | 3,042 | 3,036 | 11.6% |
-//! | B — mineral unrest term ablated | 430 | 399 | 1.5% |
+//! **UNITS, because the first encoding of this table got them wrong.** It
+//! reported a SYMMETRIC DIFFERENCE over a denominator of SETTLEMENTS. Those
+//! are different things: a settlement that RELOCATES contributes TWO cells to
+//! a symmetric difference, the one it left and the one it took, so the
+//! original "3,036 of 26,146 = 11.6%" was inflated by up to 2×. The figure to
+//! quote is **`vacated`** — baseline attractor cells that hold no settlement
+//! under the arm — which is 1:1 with baseline settlements. See [`Movement`]
+//! for the full definition; measured values are in the fix-round-2 section at
+//! the end of this doc.
 //!
 //! Both positive controls fire, so the harness is NOT blind and arm C's null
 //! is decidable. Arm C is green: no siting-path source reads a soil order or
@@ -299,26 +303,61 @@
 //!
 //! **A movement count cannot attribute, so the gradient was re-taken under
 //! each arm** (`which_channel_carries_the_exposure_gradient`). Pooled
-//! exposure ratio, decile 0 → decile 9 rise factor, denominators
-//! byte-identical across arms by construction:
+//! exposure ratio, decile 0 → decile 9 rise factor. The rise factor is a
+//! ratio of two ratios within one arm, so the arm-dependent
+//! `total_settlements_of(people)` denominator cancels exactly; the land-share
+//! denominator is byte-identical across arms by construction. Compare rise
+//! factors, not absolute `d0`/`d9` levels.
 //!
-//! | band | base | arm A (hostility off) | arm B (mineral unrest off) |
-//! |---|---|---|---|
-//! | `0-250m` | ×0.978 | ×1.109 | ×0.976 |
-//! | `250-1000m` | ×1.572 | ×1.880 | ×1.554 |
-//! | `1000-2500m` | ×2.578 | ×2.751 | ×2.506 |
-//! | `2500m+` | ×5.395 | ×5.836 | ×5.125 |
+//! | band | base | arm A (hostility off) | arm B (mineral unrest off) | **arm AB (BOTH off)** |
+//! |---|---|---|---|---|
+//! | `0-250m` | ×0.978 | ×1.109 | ×0.976 | **×1.109** |
+//! | `250-1000m` | ×1.572 | ×1.880 | ×1.554 | **×1.873** |
+//! | `1000-2500m` | ×2.578 | ×2.751 | ×2.506 | **×2.660** |
+//! | `2500m+` | ×5.395 | ×5.836 | ×5.125 | **×5.459** |
 //!
-//! **THE HEADLINE IS THE RESIDUAL: the gradient is explained by none of the
-//! three channels, and the three arms between them DO NOT DECOMPOSE IT.**
-//! Task 1 established that soil never reaches siting and that andosol is
-//! anti-correlated with unrest, and concluded that the mineral/prospectivity
-//! channel was therefore "the only remaining candidate explanation". After
-//! Task 2 the position is: hostility OPPOSES the effect, soil is
-//! disconnected and anti-correlated, and minerals cannot be tested on this
-//! roster. Something else co-varying with unrest is siting these
-//! settlements, and identifying it is OPEN. The campaign must not claim the
-//! arms decomposed the effect; they did not.
+//! **THE COMBINED ARM IS THE DECISIVE READING, and it is a post-hoc addition
+//! (fix round 2, 2026-08-12) declared as such.** Arms A and B were measured
+//! and read before it existed. Without it the residual is a SUBTRACTION over
+//! two separately measured ablations, which silently assumes the two channels
+//! are ADDITIVE. `{hostility, mineral_unrest}` severs unrest from siting
+//! through BOTH wires at once and reads the residual directly.
+//!
+//! **Severing both channels does not reduce the gradient. It leaves it at or
+//! ABOVE baseline in every band.** Measured as excess over unity, the
+//! combined arm retains 101.5% of the baseline gradient in `2500m+`
+//! (4.459 vs 4.395), 105.2% in `1000-2500m`, and 152.6% in `250-1000m`. So
+//! the residual is no longer an inference from two subtractions — it is
+//! **directly measured**: with unrest disconnected from siting through every
+//! wire this campaign could find, the settlement pattern still over-occupies
+//! high-unrest ground by essentially the same factor.
+//!
+//! **The additivity assumption was in fact wrong, which is why this arm was
+//! worth running.** In `2500m+`, subtraction predicts
+//! `5.395 + 0.441 - 0.270 = ×5.566`; the direct reading is ×5.459. The
+//! channels are SUB-additive, so the inferred residual was not the measured
+//! one. The qualitative conclusion is unchanged, but it now rests on a
+//! reading rather than on an assumption the file elsewhere warns against.
+//!
+//! **THE HEADLINE IS THE RESIDUAL, AND IT IS NOW DIRECTLY MEASURED: on the
+//! shipped roster, essentially ALL of the observed gradient is UNATTRIBUTED.
+//! Severing unrest from siting through BOTH of its channels at once leaves
+//! the gradient at or above baseline in every band (`2500m+` ×5.459 against a
+//! baseline ×5.395). Hostility opposes the effect, soil is disconnected, and
+//! the mineral channel is untestable here. The arms DO NOT DECOMPOSE the
+//! effect.** Task 1 established that soil never reaches siting
+//! and that andosol is anti-correlated with unrest, and concluded that the
+//! mineral/prospectivity channel was therefore "the only remaining candidate
+//! explanation". After Task 2 that conclusion is not available, and neither
+//! is its negation.
+//!
+//! **The scope clause "on the shipped roster" is load-bearing and must not be
+//! dropped when this is restated.** An unscoped "explained by none of the
+//! three channels" would be a negative claim about the mineral channel —
+//! exactly what the arm-B paragraph below forbids, since that arm cannot test
+//! it. What is claimed is that the gradient is unattributed BY THIS
+//! INSTRUMENT ON THIS ROSTER. Something else co-varying with unrest is siting
+//! these settlements, and identifying it is OPEN.
 //!
 //! Arm by arm, with each arm's evidential weight stated rather than implied:
 //!
@@ -364,6 +403,37 @@
 //! channel is intrinsically weak" or as evidence against the mineral
 //! hypothesis. A roster with a mineral-weighted PEOPLE in it would have to
 //! re-take this reading — the same shelf life spec §6.6 declares for arm C.
+//!
+//! # Task 2, fix round 2 (2026-08-12): movement in the right units
+//!
+//! **The instrument-sensitivity table originally reported a SYMMETRIC
+//! DIFFERENCE against a denominator of SETTLEMENTS.** Those are different
+//! units: one settlement that relocates contributes TWO cells to a symmetric
+//! difference. Superseded figures, kept so the correction is legible: "arm A
+//! moved 3,036 of 26,146 = 11.6%" and "arm B moved 399 = 1.5%". Both were
+//! inflated, arm A's by exactly 2×.
+//!
+//! **Corrected, decomposed** (30 seeds, settleable-land population, base
+//! 26,146 of 59,690 total attractor cells). `vacated` is the quotable
+//! share-of-baseline figure; see [`Movement`]:
+//!
+//! | arm | vacated | share of 26,146 | newly occupied | net | changed cells |
+//! |---|---|---|---|---|---|
+//! | A — hostility off | 1,518 | **5.81%** | 1,518 | +0 | 3,036 |
+//! | B — mineral unrest off | 193 | **0.74%** | 206 | +13 | 399 |
+//! | AB — both off | 1,555 | **5.95%** | 1,533 | −22 | 3,088 |
+//!
+//! **The decomposition earns its keep immediately: arm A is PURE
+//! RELOCATION.** 1,518 vacated against 1,518 newly occupied, net exactly
+//! zero — ablating the hostility penalty moves settlements without creating
+//! or destroying a single one. Arm B is nearly so, with a small net gain of
+//! 13; the combined arm loses 22. None of that was visible in a symmetric
+//! difference, which sums the two halves and cannot tell relocation from
+//! creation.
+//!
+//! Everything else in the Task-2 section above is measured in the corrected
+//! units, and the positive controls are unaffected (both arms still move
+//! settlements, which is all they assert).
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -994,12 +1064,22 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
 /// **The CHAIN-level identity is carried by a different, older guard**, and
 /// deliberately: `repose_exposure_readout_matches_the_committed_fixture`
 /// above re-renders 26,146 settlements over 30 seeds through
-/// `demography_report_from` — and that fixture was authored in Task 1, before
-/// any mask existed. If any rung of the four-deep threading delegated with
-/// something other than the identity, or dropped the mask, that fixture
-/// drifts. A pre-existing golden authored against the pre-mask code is a
-/// stronger statement about the whole pipeline than any assertion this test
-/// could make about it, and it costs nothing extra.
+/// [`demography_report_from_masked`] at [`ChannelMask::NONE`] — and that
+/// fixture was authored in Task 1, before any mask existed. If any rung of
+/// the four-deep threading delegated with something other than the identity,
+/// or dropped the mask, that fixture drifts.
+///
+/// **It goes through the MASKED entry point, and that makes the guard
+/// STRONGER than the un-masked wording it replaced (corrected fix round 2,
+/// 2026-08-12).** `exposure_rows` now delegates to
+/// `exposure_rows_masked(seeds, ChannelMask::NONE)`, so the fixture exercises
+/// the mask-carrying code path end to end rather than a parallel unmasked
+/// one. A guard that ran the OLD path could only prove the old path still
+/// works; this one proves the path every arm uses is byte-identical to
+/// pre-mask reality at the identity. A pre-existing golden authored against
+/// the pre-mask code, re-rendered through the post-mask code, is a stronger
+/// statement about the whole pipeline than any assertion this test could
+/// make about it, and it costs nothing extra.
 ///
 /// claim: structural(seed: [1, 42, 30]) — bit-identity of two arithmetics
 /// over three named worlds, every cell of each. Three seeds, not thirty:
@@ -1029,20 +1109,31 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
         }
 
         // Application point 2: the unrest term inside mineral prospectivity.
-        let scale = 1.0_f64;
-        let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, scale);
-        for cell in geo.cells() {
-            let expected = if terrain.is_ocean(cell) {
-                0.0
-            } else {
-                terrain.prospectivity_at(cell) * scale
-            };
-            assert_eq!(
-                mineral.get(cell).to_bits(),
-                expected.to_bits(),
-                "seed {seed}, cell {cell:?}: mineral supply at ChannelMask::NONE \
-                 diverged from the formula it replaced"
-            );
+        //
+        // TWO SCALES, and the non-unit one is the load-bearing case (fix
+        // round 2, 2026-08-12). `x * 1.0` is an exact IEEE-754 no-op, so a
+        // single pass at `scale = 1.0` — which is what
+        // `MINERAL_SUPPLY_SCALE` happens to be today — cannot distinguish
+        // the shipped `prospectivity * scale` from a path that dropped,
+        // reordered or misapplied `scale` entirely. `2.5` is an ordinary
+        // non-power-of-two multiplier chosen to make the operand actually
+        // participate; the shipped constant's own value is checked by the
+        // `1.0` pass.
+        for scale in [1.0_f64, 2.5] {
+            let mineral = hornvale_worldgen::mineral_supply_field(geo, &terrain, scale);
+            for cell in geo.cells() {
+                let expected = if terrain.is_ocean(cell) {
+                    0.0
+                } else {
+                    terrain.prospectivity_at(cell) * scale
+                };
+                assert_eq!(
+                    mineral.get(cell).to_bits(),
+                    expected.to_bits(),
+                    "seed {seed}, cell {cell:?}, scale {scale}: mineral supply at \
+                 ChannelMask::NONE diverged from the formula it replaced"
+                );
+            }
         }
     }
 }
@@ -1119,19 +1210,31 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     //
     // Clause 1: the demography domain, where the whole siting ARITHMETIC
     // lives (carrying capacity, the coexistence pack, both condensations).
-    // Whole files, because the correct reading here is that the domain does
-    // not know soil exists at all.
-    let demography_siting = [
-        include_str!("../../../domains/demography/src/carrying_capacity.rs"),
-        include_str!("../../../domains/demography/src/coexist.rs"),
-        include_str!("../../../domains/demography/src/condense.rs"),
-        include_str!("../../../domains/demography/src/stack_condense.rs"),
-    ];
-    for src in demography_siting {
+    // The claim being made is "this domain does not know soil exists at
+    // all", so the scan must cover the WHOLE domain.
+    //
+    // ENUMERATED AT RUNTIME, not by a list of `include_str!` paths (fix
+    // round 2, 2026-08-12). The first encoding named four files —
+    // carrying_capacity, coexist, condense, stack_condense — while claiming
+    // the domain, leaving niche.rs (home of `ConditionNiche`, the natural
+    // place a soil axis would be added), founder.rs, flow.rs, footprint.rs,
+    // render.rs, byproducts.rs and lib.rs unscanned. A hand-written path
+    // list cannot make a whole-domain claim, because a file added tomorrow
+    // is not in it; reading the directory can.
+    let demography_src = concat!(env!("CARGO_MANIFEST_DIR"), "/../../domains/demography/src");
+    let sources = rust_sources_under(std::path::Path::new(demography_src));
+    assert!(
+        sources.len() >= 11,
+        "expected the demography domain to have at least the 11 sources it \
+         had when this clause was written, found {} — if the domain shrank \
+         that is fine, but check this scan is still pointed at it",
+        sources.len()
+    );
+    for (path, src) in &sources {
         for spelling in SOIL_SPELLINGS {
             assert!(
                 !src.contains(spelling),
-                "a demography siting source now mentions `{spelling}` — The \
+                "the demography source {path} now mentions `{spelling}` — The \
                  Ground has been wired into the siting arithmetic, and this \
                  probe's arm-C null is STALE. Re-take the reading and rewrite \
                  this assertion."
@@ -1170,12 +1273,27 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
         ..ChannelMask::NONE
     };
 
+    // POST-HOC ADDITION (fix round 2, 2026-08-12), declared as such because
+    // this campaign preregisters its measurements. The first three arms were
+    // measured and read BEFORE this fourth mask existed; it was added after
+    // seeing them. It strengthens the INSTRUMENT rather than rescuing a
+    // prediction — the residual was previously a SUBTRACTION over two
+    // separately-measured ablations, which silently assumes the channels are
+    // additive, and this reads it directly instead — but the distinction
+    // between "added to measure better" and "added to get a better number"
+    // is exactly what preregistration exists to keep visible, so it is
+    // stated here and in the module doc rather than left to be inferred.
+    let combined_mask = ChannelMask {
+        hostility: true,
+        mineral_unrest: true,
+        ..ChannelMask::NONE
+    };
+
     let mut base_all = 0usize;
     let mut base_settleable = 0usize;
-    let mut moved_a_all = 0usize;
-    let mut moved_b_all = 0usize;
-    let mut moved_a_settleable = 0usize;
-    let mut moved_b_settleable = 0usize;
+    let mut move_a = Movement::default();
+    let mut move_b = Movement::default();
+    let mut move_ab = Movement::default();
     for seed in 1..=30u64 {
         let world = world_of(seed, &wc);
         let terrain = terrain_of(&world).expect("terrain reconstructs");
@@ -1199,29 +1317,35 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
         let base = attractor_cells_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
         let a = attractor_cells_of(&world, &wc, &terrain, &climate, arm_a_mask);
         let b = attractor_cells_of(&world, &wc, &terrain, &climate, arm_b_mask);
+        let ab = attractor_cells_of(&world, &wc, &terrain, &climate, combined_mask);
 
         base_all += base.len();
         base_settleable += base.iter().filter(|c| is_settleable(c)).count();
-        moved_a_all += base.symmetric_difference(&a).count();
-        moved_b_all += base.symmetric_difference(&b).count();
-        // SAME predicate on BOTH sides of the difference — the fix-round-2
+        // SAME predicate on BOTH sides of every difference — the fix-round-2
         // lesson from this file's module doc, applied to a set difference
         // rather than a ratio: filtering one side only would count every
         // marine settlement as "moved".
-        moved_a_settleable += base
-            .symmetric_difference(&a)
-            .filter(|c| is_settleable(c))
-            .count();
-        moved_b_settleable += base
-            .symmetric_difference(&b)
-            .filter(|c| is_settleable(c))
-            .count();
+        move_a += movement_of(&base, &a, &is_settleable);
+        move_b += movement_of(&base, &b, &is_settleable);
+        move_ab += movement_of(&base, &ab, &is_settleable);
     }
-    println!(
-        "REPOSE ARMS: base attractor cells {base_all} (settleable {base_settleable}); \
-         moved_a {moved_a_all} (settleable {moved_a_settleable}); \
-         moved_b {moved_b_all} (settleable {moved_b_settleable})"
-    );
+    let pct = |n: usize| 100.0 * n as f64 / base_settleable as f64;
+    println!("REPOSE ARMS: base attractor cells {base_all} (settleable {base_settleable})");
+    for (label, m) in [
+        ("A hostility", move_a),
+        ("B mineral", move_b),
+        ("AB combined", move_ab),
+    ] {
+        println!(
+            "REPOSE ARMS: arm {label:12} vacated {} ({:.2}% of base) | newly-occupied {} | \
+             net {:+} | changed cells {}",
+            m.vacated,
+            pct(m.vacated),
+            m.newly_occupied,
+            m.net(),
+            m.changed_cells()
+        );
+    }
 
     // POSITIVE CONTROLS, asserted on the SETTLEABLE-LAND population — the one
     // the exposure readout above measures, and therefore the one arm C's null
@@ -1229,18 +1353,87 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     // mask does something, but not that it does something where the effect
     // under investigation lives. If either of these is zero, the harness is
     // blind and arm C's null above means nothing.
+    //
+    // Asserted on `vacated` rather than on the symmetric difference the first
+    // encoding used. That is a STRENGTHENING, not a change of intent:
+    // `vacated > 0` implies `changed_cells > 0`, and `vacated` is the figure
+    // this test tells a reader to quote (see [`Movement`]).
     assert!(
-        moved_a_settleable > 0,
-        "arm A (hostility ablated) moved NO settleable-land settlement across \
-         30 seeds — the ablation harness cannot see movement in the population \
-         spec §6.2 measures, so arm C proves nothing"
+        move_a.vacated > 0,
+        "arm A (hostility ablated) vacated NO settleable-land baseline \
+         settlement cell across 30 seeds — the ablation harness cannot see \
+         movement in the population spec §6.2 measures, so arm C proves nothing"
     );
     assert!(
-        moved_b_settleable > 0,
-        "arm B (mineral unrest ablated) moved NO settleable-land settlement \
-         across 30 seeds — the ablation harness cannot see movement in the \
-         population spec §6.2 measures, so arm C proves nothing"
+        move_b.vacated > 0,
+        "arm B (mineral unrest ablated) vacated NO settleable-land baseline \
+         settlement cell across 30 seeds — the ablation harness cannot see \
+         movement in the population spec §6.2 measures, so arm C proves nothing"
     );
+}
+
+/// One arm's movement against the baseline, **in units a reader can safely
+/// divide by the baseline settlement count**.
+///
+/// **The distinction this type exists to enforce (fix round 2, 2026-08-12).**
+/// The first encoding of the arms summed
+/// `base.symmetric_difference(&arm).count()` and reported it as "settlements
+/// moved", against a denominator of baseline SETTLEMENTS. Those are different
+/// units. A settlement that RELOCATES contributes TWO cells to a symmetric
+/// difference — the one it left and the one it took — so the figure is
+/// inflated by up to 2× against that denominator, and the module doc's
+/// original "3,036 of 26,146 = 11.6%" was a count of changed CELLS over a
+/// count of SETTLEMENTS.
+///
+/// **Which figure to quote: `vacated`, as a share of the baseline.** It is
+/// 1:1 with baseline settlements (baseline attractor cells are 1:1 with
+/// settlements — 26,146 matches Task 1's total exactly), and it answers the
+/// question the arms are asked: how much of the settlement pattern this
+/// readout measures does the channel account for. `newly_occupied` and `net`
+/// are reported because a channel can also create or destroy settlements
+/// rather than only relocate them, and a reader cannot tell relocation from
+/// creation without both.
+#[derive(Debug, Clone, Copy, Default)]
+struct Movement {
+    /// Baseline attractor cells holding no settlement under the arm — 1:1
+    /// with baseline settlements, so this is the share-quotable figure.
+    vacated: usize,
+    /// Cells holding a settlement under the arm but not at baseline.
+    newly_occupied: usize,
+}
+
+impl Movement {
+    /// Cells whose occupancy CHANGED either way. This is exactly what a
+    /// symmetric difference counts — kept, named honestly, so the old figure
+    /// remains comparable and nobody re-derives it by accident.
+    fn changed_cells(self) -> usize {
+        self.vacated + self.newly_occupied
+    }
+
+    /// Signed change in occupied cells. Zero means pure relocation.
+    fn net(self) -> i64 {
+        self.newly_occupied as i64 - self.vacated as i64
+    }
+}
+
+impl std::ops::AddAssign for Movement {
+    fn add_assign(&mut self, rhs: Self) {
+        self.vacated += rhs.vacated;
+        self.newly_occupied += rhs.newly_occupied;
+    }
+}
+
+/// One seed's [`Movement`] of `arm` against `base`, both sides filtered by
+/// the same `keep` predicate.
+fn movement_of(
+    base: &BTreeSet<CellId>,
+    arm: &BTreeSet<CellId>,
+    keep: &impl Fn(&CellId) -> bool,
+) -> Movement {
+    Movement {
+        vacated: base.difference(arm).filter(|c| keep(c)).count(),
+        newly_occupied: arm.difference(base).filter(|c| keep(c)).count(),
+    }
 }
 
 /// The spellings arm C treats as "a soil term has reached here". Coarse by
@@ -1255,21 +1448,64 @@ const SOIL_SPELLINGS: [&str; 4] = [
 
 /// Every function in `windows/worldgen/src/lib.rs` whose output reaches a
 /// species' per-cell K, and therefore reaches settlement condensation: the
-/// four rungs of The Repose's mask threading plus the five supply/substrate
-/// fields `per_species_suitability_masked` reads. Named by their exact
-/// signature line so [`body_of`] fails loudly rather than silently scanning
-/// nothing if one is renamed.
-const SITING_CHAIN: [&str; 9] = [
+/// four rungs of The Repose's mask threading plus the supply/substrate fields
+/// `per_species_suitability_masked` reads. Named by their exact signature
+/// line so [`body_of`] fails loudly rather than silently scanning nothing if
+/// one is renamed.
+///
+/// **THE LIST PINS BODIES, NOT ENTRY POINTS, and the difference is the whole
+/// value of the clause (fix round 2, 2026-08-12).** [`body_of`] slices one
+/// function's own text; it does not follow calls. So naming a DELEGATOR pins
+/// a wrapper and leaves the arithmetic unscanned. `substrate_field` is
+/// exactly that shape — a 16-line wrapper that builds the insolation field
+/// and immediately hands off to `substrate_field_at`, which is where the
+/// per-cell `Substrate` is actually assembled from terrain and climate, and
+/// therefore the single most plausible place a future campaign would add a
+/// soil axis. The first encoding named only the wrapper: someone could have
+/// added a soil term to `Substrate` in `substrate_field_at`, and arm C would
+/// have stayed green while its null silently rotted.
+///
+/// Swept the other eight entries for the same wrapper/body shape when this
+/// was fixed. `substrate_field` was the only delegator: `forage_supply_field`,
+/// `prey_supply_field`, `detritus_supply_field` and
+/// `marine_forage_supply_field` each hold their own `CellMap::from_fn` body,
+/// and the four mask rungs hold theirs. **Re-run that sweep if you add an
+/// entry** — a name here is worth only the body it actually points at.
+const SITING_CHAIN: [&str; 10] = [
     "pub(crate) fn demography_report_with_beta_from(",
     "pub fn per_species_suitability_masked(",
     "pub fn carrying_inputs_at(",
     "pub fn mineral_supply_field_masked(",
     "pub fn substrate_field(",
+    "pub fn substrate_field_at(",
     "pub fn forage_supply_field(",
     "pub fn prey_supply_field(",
     "pub fn detritus_supply_field(",
     "pub fn marine_forage_supply_field(",
 ];
+
+/// Every `.rs` source under `dir`, as `(display path, contents)`, sorted by
+/// path so the scan order is deterministic. Recurses, so a domain that grows
+/// a submodule directory is still covered whole.
+fn rust_sources_under(dir: &std::path::Path) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let entries = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("read {}: {e}", dir.display()))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("read every directory entry");
+    let mut paths: Vec<std::path::PathBuf> = entries.iter().map(|e| e.path()).collect();
+    paths.sort();
+    for path in paths {
+        if path.is_dir() {
+            out.extend(rust_sources_under(&path));
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            let text =
+                std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
+            out.push((path.display().to_string(), text));
+        }
+    }
+    out
+}
 
 /// The source text of one top-level function in a rustfmt-formatted file:
 /// from its signature line to the first line that is exactly `}` at column
@@ -1300,9 +1536,26 @@ fn body_of(src: &str, signature: &str) -> String {
 /// by band, decile 0 vs decile 9) under each ablation and reports how the
 /// RISE FACTOR moves.
 ///
-/// Denominators are byte-identical across arms by construction — see
-/// [`exposure_rows_masked`] — so a change in a rise factor can only come from
-/// settlements relocating.
+/// **What is and is not arm-invariant here (corrected fix round 2,
+/// 2026-08-12; the earlier wording claimed a blanket byte-identity that is
+/// not true).** `exposure_ratio` is `settlement_share / land_area_share`, and
+/// the two halves behave differently under a mask:
+///
+/// - `land_area_share`'s denominator — total settleable land over the sweep —
+///   IS byte-identical across arms, because [`exposure_rows_masked`] derives
+///   the land tally, the deciles, the bands and the `is_settleable`
+///   population from the UNMASKED `carrying_inputs_of`.
+/// - `settlement_share`'s denominator is `total_settlements_of(people)`, and
+///   that is **arm-dependent**: an arm may create or destroy settlements, not
+///   only relocate them, so a people's sweep total can differ between arms.
+///
+/// The statistic reported below is immune to that anyway, because it is a
+/// RATIO OF TWO RATIOS within a single arm: `rise = ratio(d9) / ratio(d0)`,
+/// and both strata divide by the same per-arm `total_settlements_of(people)`,
+/// so that denominator **cancels exactly**. What a rise factor cannot absorb
+/// is settlements moving BETWEEN deciles — which is precisely the signal.
+/// Read the rise factors, not the absolute `d0`/`d9` levels, when comparing
+/// arms.
 ///
 /// **This test asserts only that the instrument is not blind**, never a
 /// direction or a magnitude. The measured numbers go in the module doc, where
@@ -1317,6 +1570,25 @@ fn body_of(src: &str, signature: &str) -> String {
 /// population — so a small arm-B row is a fact about the roster, and this
 /// readout CANNOT test the mineral hypothesis on the shipped roster. A row
 /// near the baseline here is UNTESTED, never refuted.
+///
+/// **The COMBINED arm is a POST-HOC addition (fix round 2, 2026-08-12),
+/// declared as such.** The first three arms were measured and read before it
+/// existed. Without it the residual is a SUBTRACTION over two separately
+/// measured ablations, which silently assumes the two channels are ADDITIVE —
+/// an assumption this file warns against elsewhere and has no evidence for.
+/// `{hostility, mineral_unrest}` severs unrest from siting through both wires
+/// at once, converting the residual from an inference into a direct reading.
+/// It strengthens the instrument rather than rescuing a prediction, but the
+/// distinction between those two is exactly what preregistration exists to
+/// keep visible, so it is stated rather than left to be inferred.
+///
+/// claim: readout(seed: 1..=30, off-gate heavy:) — reports the pooled
+/// exposure-ratio rise factor per band under four masks over one fixed sweep,
+/// and asserts only that each arm perturbs the settlement distribution.
+/// `claim_shape` does NOT flag this test — it detects a literal seed-binding
+/// loop and this one passes `1..=30` straight to a helper — so the tag is
+/// here by choice. It is the readout carrying the most interpretive load in
+/// the file, which is exactly the kind that should declare its quantifier.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn which_channel_carries_the_exposure_gradient() {
@@ -1328,11 +1600,20 @@ fn which_channel_carries_the_exposure_gradient() {
         mineral_unrest: true,
         ..ChannelMask::NONE
     };
+    let combined_mask = ChannelMask {
+        hostility: true,
+        mineral_unrest: true,
+        ..ChannelMask::NONE
+    };
 
-    let arms: [(&str, Vec<ExposureRow>); 3] = [
+    let arms: [(&str, Vec<ExposureRow>); 4] = [
         ("base", exposure_rows_masked(1..=30, ChannelMask::NONE)),
         ("armA-hostility", exposure_rows_masked(1..=30, arm_a_mask)),
         ("armB-mineral", exposure_rows_masked(1..=30, arm_b_mask)),
+        (
+            "armAB-combined",
+            exposure_rows_masked(1..=30, combined_mask),
+        ),
     ];
 
     let ratio_at = |rows: &[ExposureRow], band: &str, decile: usize| -> f64 {

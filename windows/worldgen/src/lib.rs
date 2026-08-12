@@ -706,6 +706,7 @@ pub fn carrying_inputs_at(
     adjust: &EraAdjust,
     mask: ChannelMask,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
 
     // The Confluence: freshwater rides proximity to the real river network,
@@ -1058,6 +1059,7 @@ pub fn mineral_supply_field_masked(
     scale: f64,
     mask: ChannelMask,
 ) -> hornvale_kernel::CellMap<f64> {
+    debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     hornvale_kernel::CellMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
@@ -1383,6 +1385,7 @@ pub fn per_species_suitability_masked(
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
     mask: ChannelMask,
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+    debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     debug_assert_eq!(
         species_realm.len(),
         species_biosphere.len(),
@@ -2195,6 +2198,7 @@ pub fn demography_report_from_masked(
     climate: &GeneratedClimate,
     mask: ChannelMask,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    debug_assert!(!mask.andosol, "{}", ablation::ANDOSOL_HAS_NO_SEAM);
     demography_report_with_beta_from(
         world,
         wc,
