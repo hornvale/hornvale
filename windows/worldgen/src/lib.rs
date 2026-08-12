@@ -79,6 +79,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
     out
 }
 
+pub mod ablation;
 pub mod alchemy;
 pub mod chamber;
 pub mod chorus;
@@ -97,6 +98,7 @@ pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
 pub mod vestige;
+pub use ablation::ChannelMask;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
     accounts_from, beta_of, chorus_ground, crisis_from, cyclic_beliefs_from, day_schema_from,
@@ -659,7 +661,13 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
-    carrying_inputs_at(geo, terrain, climate, &EraAdjust::present(terrain))
+    carrying_inputs_at(
+        geo,
+        terrain,
+        climate,
+        &EraAdjust::present(terrain),
+        ChannelMask::NONE,
+    )
 }
 
 /// [`carrying_inputs_of`] at one era (The Tense §3.1).
@@ -682,12 +690,21 @@ pub fn carrying_inputs_of(
 /// At [`EraAdjust::present`] this is bit-identical to the unparameterised form —
 /// `is_ocean` is defined as `elevation_at < sea_level`, which is exactly what the
 /// era comparison reduces to when the era's sea level is today's.
+///
+/// **The Repose: `mask` is the ablation seam, and it takes the mask DIRECTLY
+/// rather than through a `_masked` sibling** — unlike every other rung of the
+/// threading (see [`per_species_suitability_masked`]), because this function
+/// has exactly two call sites and both are in this file, so a direct
+/// parameter costs no churn at any consumer. At [`ChannelMask::NONE`] the
+/// `hostility` term below is read from `unrest_at` exactly as before, an
+/// IEEE-754 no-op (pinned by `repose_exposure.rs`).
 /// type-audit: bare-ok(count: return)
 pub fn carrying_inputs_at(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     adjust: &EraAdjust,
+    mask: ChannelMask,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
     let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
 
@@ -713,7 +730,16 @@ pub fn carrying_inputs_at(
         // ground. Lieth's saturating precipitation term now carries the water
         // signal on its own, so `hostility` keeps only what it was named for:
         // tectonic unrest.
-        let hostility = terrain.unrest_at(cell).clamp(0.0, 1.0);
+        //
+        // THE REPOSE's ablation seam (arm A): `hostility` is the unrest
+        // PENALTY channel — `carrying_capacity` applies it as
+        // `k *= 1.0 - hostility`. Suppressing it here zeroes the repelling
+        // half of the confound and leaves the mineral reward intact.
+        let hostility = if mask.hostility {
+            0.0
+        } else {
+            terrain.unrest_at(cell).clamp(0.0, 1.0)
+        };
         hornvale_demography::CarryingInput {
             // LAND, not habitability (step B): the habitability mask conflated
             // land with a temperate band and a moisture floor, and the latter two
@@ -1005,9 +1031,42 @@ pub fn mineral_supply_field(
     terrain: &GeneratedTerrain,
     scale: f64,
 ) -> hornvale_kernel::CellMap<f64> {
+    mineral_supply_field_masked(geo, terrain, scale, ChannelMask::NONE)
+}
+
+/// [`mineral_supply_field`] with The Repose's ablation seam (arm B).
+///
+/// A `_masked` SIBLING rather than an extra parameter on
+/// [`mineral_supply_field`] itself: that function has six call sites across
+/// this crate and its test batteries, and a signature change to a `pub`
+/// function and its call sites cannot be separated into two commits here (the
+/// pre-commit hook runs `make quick` workspace-wide, so the intermediate
+/// state does not compile). The delegation above is the identity, proved
+/// bit-for-bit by `repose_exposure.rs`.
+///
+/// When `mask.mineral_unrest` is set, prospectivity is recomputed with its
+/// unrest term at `0.0` — **only** that term. [`hornvale_terrain::prospectivity`]
+/// is `0.6 * setting + 0.3 * unrest + 0.1 * metamorphic_grade`, and the
+/// boundary-setting and metamorphic weights are left exactly as they are, so
+/// this ablates the CHANNEL (unrest reaching the `MINERAL` supply axis) and
+/// not the whole axis. Ablating the axis would confound "unrest attracts
+/// settlement through minerals" with "minerals attract settlement at all".
+/// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
+pub fn mineral_supply_field_masked(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    scale: f64,
+    mask: ChannelMask,
+) -> hornvale_kernel::CellMap<f64> {
     hornvale_kernel::CellMap::from_fn(geo, |c| {
         if terrain.is_ocean(c) {
             0.0
+        } else if mask.mineral_unrest {
+            hornvale_terrain::prospectivity(
+                &terrain.material_at(c),
+                terrain.boundary_at(c).map(|b| b.kind),
+                0.0,
+            ) * scale
         } else {
             terrain.prospectivity_at(c) * scale
         }
@@ -1279,6 +1338,51 @@ pub fn per_species_suitability(
     species_realm: &[hornvale_species::HabitatRealm],
     species_affinity: &[Option<hornvale_species::BiomeAffinity>],
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+    per_species_suitability_masked(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        regime,
+        species_biosphere,
+        species_realm,
+        species_affinity,
+        ChannelMask::NONE,
+    )
+}
+
+/// [`per_species_suitability`] with The Repose's ablation seam (spec §6.6).
+///
+/// A `_masked` SIBLING rather than an extra parameter on
+/// [`per_species_suitability`] itself: that function has ~15 call sites
+/// across this crate's test batteries, and a `pub` signature change plus its
+/// call sites cannot be split across commits here (the pre-commit hook runs
+/// `make quick` workspace-wide, so the intermediate state does not compile).
+/// The delegation above is the identity, proved bit-for-bit by
+/// `repose_exposure.rs`.
+///
+/// The mask reaches TWO application points from here, and both are one level
+/// down: `mask.hostility` through [`carrying_inputs_at`] (which takes the
+/// mask directly — two call sites, both in this file) and
+/// `mask.mineral_unrest` through [`mineral_supply_field_masked`].
+/// `mask.andosol` has NO application point in this path and deliberately
+/// none is invented: soil never reaches siting, which is the null arm C
+/// measures rather than assumes.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+#[allow(clippy::too_many_arguments)]
+pub fn per_species_suitability_masked(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    regime: &RotationRegime,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
+    species_affinity: &[Option<hornvale_species::BiomeAffinity>],
+    mask: ChannelMask,
+) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
     debug_assert_eq!(
         species_realm.len(),
         species_biosphere.len(),
@@ -1289,7 +1393,10 @@ pub fn per_species_suitability(
         species_biosphere.len(),
         "species_affinity must be parallel to species_biosphere — same order, same length"
     );
-    let base_inputs = carrying_inputs_of(geo, terrain, climate);
+    // The Repose: the masked form of `carrying_inputs_of` — identical to it
+    // by construction at `ChannelMask::NONE`, since that is exactly the call
+    // `carrying_inputs_of` makes.
+    let base_inputs = carrying_inputs_at(geo, terrain, climate, &EraAdjust::present(terrain), mask);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
     let substrate = substrate_field(
         geo,
@@ -1308,7 +1415,7 @@ pub fn per_species_suitability(
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
-    let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
+    let mineral = mineral_supply_field_masked(geo, terrain, MINERAL_SUPPLY_SCALE, mask);
     let forage = forage_supply_field(geo, base_carrying.as_cell_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
@@ -1592,7 +1699,9 @@ pub fn per_species_capacity_at(
     );
     let base_carrying = hornvale_demography::carrying_capacity(
         geo,
-        &carrying_inputs_at(geo, terrain, climate, adjust),
+        // The Repose: the era/capacity path is not the siting path this
+        // campaign ablates, so it stays at the identity mask.
+        &carrying_inputs_at(geo, terrain, climate, adjust, ChannelMask::NONE),
     );
     let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
     // The Warren, carried to the capacity path: the subterranean reading of
@@ -1708,6 +1817,14 @@ pub fn per_species_capacity_at(
 /// `terrain_of`/`climate_of`, since the report is pure over the committed
 /// world (no seed draws).
 ///
+///
+/// **The Repose: `mask` is threaded DIRECTLY here, not as a `_masked`
+/// sibling** — this function is `pub(crate)` with exactly one call site
+/// ([`demography_report_from`]), so a parameter costs nothing outside this
+/// file. It is the rung that matters: the arms measure whether SETTLEMENTS
+/// move, and settlements come from `stack_settlements` below, so a mask that
+/// reached only [`per_species_suitability_masked`] would never touch the
+/// quantity under measurement.
 /// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
 pub(crate) fn demography_report_with_beta_from(
     world: &World,
@@ -1716,6 +1833,7 @@ pub(crate) fn demography_report_with_beta_from(
     floor: f64,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &GeneratedClimate,
+    mask: ChannelMask,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
@@ -1753,7 +1871,7 @@ pub(crate) fn demography_report_with_beta_from(
         .map(|(kind, _)| wc.biome_affinity.get(kind).cloned())
         .collect();
 
-    let per_species_k = per_species_suitability(
+    let per_species_k = per_species_suitability_masked(
         geo,
         terrain,
         climate,
@@ -1763,6 +1881,7 @@ pub(crate) fn demography_report_with_beta_from(
         &species_biosphere,
         &species_realm,
         &species_affinity,
+        mask,
     );
     // `tag as u32` here is the same build-local dense index documented on
     // `per_species_suitability` — never serialized, never identity.
@@ -2054,6 +2173,28 @@ pub fn demography_report_from(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_from_masked(world, wc, terrain, climate, ChannelMask::NONE)
+}
+
+/// [`demography_report_from`] with The Repose's ablation seam (spec §6.6) —
+/// the entry point the counterfactual arms measure through.
+///
+/// A `_masked` SIBLING rather than an extra parameter on
+/// [`demography_report_from`]: that function has ~15 call sites across three
+/// windows, the CLI's identity battery and the lab's metrics, and a `pub`
+/// signature change plus its call sites cannot be split across commits here.
+/// The delegation above is the identity, proved bit-for-bit by
+/// `repose_exposure.rs` over `per_species_k` AND `stack_settlements`.
+///
+/// Nothing in a shipped world path calls this with anything but
+/// [`ChannelMask::NONE`]; the probe is its only non-identity caller.
+pub fn demography_report_from_masked(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+    mask: ChannelMask,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
     demography_report_with_beta_from(
         world,
         wc,
@@ -2061,6 +2202,7 @@ pub fn demography_report_from(
         hornvale_demography::FLOOR,
         terrain,
         climate,
+        mask,
     )
 }
 
