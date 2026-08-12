@@ -141,6 +141,197 @@ impl Post {
     }
 }
 
+/// High-confidence, prefixed credential shapes this scanner refuses a post
+/// for (B9).
+///
+/// **Why prevention, and why here.** Task 8 shipped `board redact`, and its
+/// own measurement is why this module exists: byte removal from history is
+/// prohibited *and does not work* — a canary force-pushed out of a probe ref
+/// was still served by GitHub, commit and blob plaintext both. Task 8's
+/// review also found that redaction's two halves have different scopes
+/// (suppression is board-wide, eviction is per-log), so a secret that
+/// reaches another host's log stays in that host's bytes until someone acts
+/// there. Prevention is the only control that fully works, because it acts
+/// **before there is anything to propagate** — before `canonical_bytes()`
+/// is even called on the post that would carry it.
+///
+/// **Why so narrow.** `PROC-claim-shape-s-heuristic` is this crate's own
+/// standing example of a predicate broad enough to produce three false
+/// positives in one week across two campaigns — and a guard that is
+/// habitually overridden trains the override, which is worse than no guard
+/// at all. Board prose is full of the shapes a looser scanner would trip
+/// on: environment-variable names (`HV_CENSUS_CLAIM_PATH`), assignments
+/// (`REBASELINE=1`), flags (`--format=%ct`), and the word "token" used to
+/// describe a token, not to leak one. So this checks only high-confidence,
+/// *structured and prefixed* shapes that do not occur in ordinary technical
+/// prose: `ghp_`/`github_pat_` (GitHub PATs), `AKIA` + 16 (AWS access key
+/// ids), a PEM private-key header, and `xox[baprs]-` (Slack tokens). No
+/// entropy heuristics, no generic `password=`/`token=`/`secret=` matching —
+/// deliberately, because those are exactly the shapes ordinary board prose
+/// contains.
+///
+/// Scans every string field of `post`, not only `note`: `kind`, `by`, and
+/// every string reachable inside `extra` (recursing through nested arrays
+/// and objects). Returns the names of the patterns that matched, empty when
+/// clean.
+pub fn credential_shapes(post: &Post) -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = credential_shape_matches(post)
+        .into_iter()
+        .map(|(_, pattern)| pattern)
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    names
+}
+
+/// [`credential_shapes`]'s per-field detail: which field, and which pattern
+/// it matched, as `(field name, pattern name)` pairs.
+///
+/// Split out from `credential_shapes` because a refusal must be
+/// diagnosable, not merely present: naming *which field* tripped the guard
+/// is what turns a false positive into a two-minute fix instead of a
+/// mystery. The field name is the top-level key (`kind`, `by`, or an
+/// `extra` key) — nested JSON under a key is scanned but reported under
+/// that key's name, which is precise enough to point a human at the right
+/// spot without this becoming a JSON-path implementation.
+pub fn credential_shape_matches(post: &Post) -> Vec<(String, &'static str)> {
+    let mut out = Vec::new();
+    for (field, value) in string_fields(post) {
+        for pattern in matched_patterns(value) {
+            out.push((field.clone(), pattern));
+        }
+    }
+    out
+}
+
+/// Every string field of `post`, paired with the top-level name it is
+/// reported under.
+fn string_fields(post: &Post) -> Vec<(String, &str)> {
+    let mut out = vec![
+        ("kind".to_string(), post.kind.as_str()),
+        ("by".to_string(), post.by.as_str()),
+    ];
+    for (key, value) in &post.extra {
+        collect_strings(key, value, &mut out);
+    }
+    out
+}
+
+/// Recurse through a JSON value, collecting every string leaf under `field`'s
+/// name — arrays and objects are walked, everything else is skipped.
+fn collect_strings<'a>(
+    field: &str,
+    value: &'a serde_json::Value,
+    out: &mut Vec<(String, &'a str)>,
+) {
+    match value {
+        serde_json::Value::String(s) => out.push((field.to_string(), s.as_str())),
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_strings(field, item, out);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for v in map.values() {
+                collect_strings(field, v, out);
+            }
+        }
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
+    }
+}
+
+/// Which of the high-confidence patterns `s` matches, in a fixed order.
+fn matched_patterns(s: &str) -> Vec<&'static str> {
+    let mut hits = Vec::new();
+    if contains_prefixed_run(s, "ghp_", 20) || contains_prefixed_run(s, "github_pat_", 20) {
+        hits.push("github-pat");
+    }
+    if contains_aws_akid(s) {
+        hits.push("aws-akid");
+    }
+    if contains_pem_private_key_header(s) {
+        hits.push("private-key");
+    }
+    if contains_slack_token(s) {
+        hits.push("slack-token");
+    }
+    hits
+}
+
+/// True if `s` contains `prefix` immediately followed by at least `min_run`
+/// ASCII alphanumeric-or-underscore characters — a GitHub PAT's *shape*
+/// (`ghp_<36 base62>`, `github_pat_<82 base62-and-underscore>`), not merely
+/// its prefix. Requiring the run is what keeps a bare mention of "ghp_" in
+/// prose (there is none in the corpus this was checked against, but there
+/// could be) from tripping this.
+fn contains_prefixed_run(s: &str, prefix: &str, min_run: usize) -> bool {
+    let bytes = s.as_bytes();
+    let mut start = 0;
+    while let Some(rel) = s[start..].find(prefix) {
+        let after = start + rel + prefix.len();
+        let run = bytes[after..]
+            .iter()
+            .take_while(|b| b.is_ascii_alphanumeric() || **b == b'_')
+            .count();
+        if run >= min_run {
+            return true;
+        }
+        // Advance past this occurrence's prefix, not past the whole run, so
+        // an overlapping second prefix later in the string is still found.
+        start = after;
+    }
+    false
+}
+
+/// True if `s` contains `AKIA` immediately followed by at least 16 uppercase
+/// ASCII letters or digits — an AWS access key id's shape (`AKIA` + 16
+/// chars, 20 total).
+fn contains_aws_akid(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    let mut start = 0;
+    while let Some(rel) = s[start..].find("AKIA") {
+        let after = start + rel + 4;
+        let run = bytes[after..]
+            .iter()
+            .take_while(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+            .count();
+        if run >= 16 {
+            return true;
+        }
+        start = after;
+    }
+    false
+}
+
+/// True if `s` contains a PEM private-key header: `-----BEGIN ` followed,
+/// within a short window, by `PRIVATE KEY-----` — matches `RSA`, `EC`,
+/// `DSA`, `OPENSSH`, and the bare `PRIVATE KEY` header forms alike without
+/// enumerating every key-type word.
+fn contains_pem_private_key_header(s: &str) -> bool {
+    const BEGIN: &str = "-----BEGIN ";
+    const TAIL: &str = "PRIVATE KEY-----";
+    let mut start = 0;
+    while let Some(rel) = s[start..].find(BEGIN) {
+        let after = start + rel + BEGIN.len();
+        let window_end = (after + 40).min(s.len());
+        // `.get()` (not slicing) so a multi-byte char straddling `window_end`
+        // yields `None` rather than panicking on a non-boundary index.
+        if s.get(after..window_end).is_some_and(|w| w.contains(TAIL)) {
+            return true;
+        }
+        start = after;
+    }
+    false
+}
+
+/// True if `s` contains a Slack token's shape: `xox` + one of `b`/`a`/`p`/
+/// `r`/`s` + `-`.
+fn contains_slack_token(s: &str) -> bool {
+    ["xoxb-", "xoxa-", "xoxp-", "xoxr-", "xoxs-"]
+        .iter()
+        .any(|p| s.contains(p))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -355,6 +546,42 @@ mod tests {
             "a negative ttl_s is not a u64 either, so the check is skipped and \
              the reader must be told"
         );
+    }
+
+    #[test]
+    fn an_ordinary_technique_post_is_not_refused() {
+        // Deliberately adversarial: real board prose full of the words a naive
+        // scanner would trip on.
+        for note in [
+            "git mktree rejects any path containing a slash; use a temp index",
+            "the census claim key is HV_CENSUS_CLAIM_PATH and it defaults to /tmp/hv-census.claim",
+            "set REBASELINE=1 to accept drifted goldens",
+            "ssh lefford and check the token count in the run log",
+        ] {
+            let post = Post::new("technique", "main").with("note", json!(note));
+            assert!(
+                credential_shapes(&post).is_empty(),
+                "false positive on ordinary prose: {note:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_post_carrying_a_credential_shape_is_refused() {
+        for (name, note) in [
+            (
+                "github-pat",
+                "use ghp_0123456789abcdefghijklmnopqrstuvwxyzAB to auth",
+            ),
+            ("aws-akid", "AKIAIOSFODNN7EXAMPLE is the key"),
+            ("private-key", "-----BEGIN OPENSSH PRIVATE KEY-----"),
+        ] {
+            let post = Post::new("technique", "main").with("note", json!(note));
+            assert!(
+                !credential_shapes(&post).is_empty(),
+                "missed {name} in {note:?}"
+            );
+        }
     }
 
     #[test]

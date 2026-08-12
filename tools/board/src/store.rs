@@ -313,24 +313,31 @@ impl RedactOutcome {
     ///
     /// Every variant says suppression still applies board-wide, because the
     /// dangerous misreading of "nothing was evicted" is "nothing happened,
-    /// the secret is still on display" — which invites re-posting it.
+    /// the secret is still on display" — which invites re-posting it. Each
+    /// sentence also carries the qualifier the CLI previously dropped:
+    /// "board-wide" means every read that has *fetched* the control post,
+    /// not every read, full stop — a peer that has not synced yet keeps
+    /// rendering the body regardless of what happened here, which is exactly
+    /// the quiet-sync-failure this campaign is about.
     pub fn diagnostic(&self, id: &str) -> String {
         match self {
             Self::Evicted => format!(
                 "board: redacted {id} -- evicted from this host's log; the body is suppressed \
-                 board-wide on every read, and history still holds it (D13)"
+                 board-wide on every read that has fetched this control post, and history \
+                 still holds it (D13)"
             ),
             Self::LostRace => format!(
                 "board: redacted {id} -- the control post landed, but the eviction lost a \
                  compare-and-swap race and this host's tip STILL carries the post; run the \
                  same command again to retry it. The body is suppressed board-wide on every \
-                 read regardless"
+                 read that has fetched this control post, regardless"
             ),
             Self::NotHere => format!(
                 "board: redacted {id} -- NOT in this host's log, so nothing was evicted here \
                  (it may live only in a peer's log, or only as an identical-bytes copy \
-                 another host authored). The body is suppressed board-wide on every read; \
-                 run this on the authoring host to take its copy off that host's tip too"
+                 another host authored). The body is suppressed board-wide on every read that \
+                 has fetched this control post; run this on the authoring host to take its \
+                 copy off that host's tip too"
             ),
         }
     }
@@ -1076,6 +1083,20 @@ impl Board {
             // panicked on.
             return Ok((redact_id, RedactOutcome::NotHere));
         };
+        let outcome = self.evict_target(&snapshot, id)?;
+        Ok((redact_id, outcome))
+    }
+
+    /// The eviction half of [`redact`](Self::redact): drop `id` from
+    /// `snapshot`'s tip tree, single-shot.
+    ///
+    /// Extracted so the `LostRace` arm can be held directly rather than only
+    /// through `redact`, which always re-snapshots immediately after its own
+    /// append (see `redact`'s doc comment) and so never hands itself a
+    /// snapshot that is already stale by the time this runs. A test can:
+    /// hold a snapshot, append past it (moving the tip out from under that
+    /// snapshot), then call this with the now-stale snapshot directly.
+    fn evict_target(&self, snapshot: &TipSnapshot, id: &str) -> Result<RedactOutcome, BoardError> {
         let posts = snapshot.posts();
         let keep: Vec<&StoredPost> = posts.iter().filter(|s| s.id != id).collect();
         if keep.len() == posts.len() {
@@ -1084,17 +1105,15 @@ impl Board {
             // as an identical-bytes copy authored there, D11). The control
             // post above still recorded the act either way, and suppression
             // is board-wide because of it.
-            return Ok((redact_id, RedactOutcome::NotHere));
+            return Ok(RedactOutcome::NotHere);
         }
         // Single-shot, exactly as `reap`'s is: reporting the loss is the fix
         // here, not retrying against a moving target.
-        let outcome =
-            if self.evict_and_swap(snapshot.tip(), &keep, &format!("board: redact {id}"))? {
-                RedactOutcome::Evicted
-            } else {
-                RedactOutcome::LostRace
-            };
-        Ok((redact_id, outcome))
+        if self.evict_and_swap(snapshot.tip(), &keep, &format!("board: redact {id}"))? {
+            Ok(RedactOutcome::Evicted)
+        } else {
+            Ok(RedactOutcome::LostRace)
+        }
     }
 
     /// Build a tree containing only `keep`, commit it as a forward child of
@@ -1947,6 +1966,46 @@ mod tests {
             board.tip().expect("tip").expect("some"),
             current,
             "and must leave the tip exactly where it found it"
+        );
+    }
+
+    #[test]
+    fn evict_target_loses_the_swap_on_a_stale_snapshot_and_leaves_the_tip_untouched() {
+        // The `LostRace` arm of `evict_target`, held directly rather than
+        // only through `redact` -- `redact` always re-snapshots immediately
+        // after its own append (see its doc comment), so nothing in
+        // `redact`'s own tests can hand it a snapshot that is already stale.
+        // `evict_target` is the seam Task 9's review extracted precisely so
+        // this could be held: hold a snapshot, append PAST it (moving the
+        // tip out from under that snapshot), then call `evict_target` with
+        // the now-stale snapshot directly. Mirrors
+        // `a_stale_baseline_loses_the_swap_rather_than_overwriting_the_tip`
+        // one level down -- same race, at the level above `evict_and_swap`.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let id = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("first")))
+            .expect("first");
+        let stale = board.snapshot().expect("snapshot").expect("some");
+        // The ref moves out from under `stale`.
+        board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("second")))
+            .expect("second");
+        let current = board.tip().expect("tip").expect("some");
+
+        let outcome = board
+            .evict_target(&stale, &id)
+            .expect("a lost CAS is control flow, never an error");
+        assert_eq!(
+            outcome,
+            RedactOutcome::LostRace,
+            "the snapshot's baseline is no longer the ref's value, so the CAS must lose \
+             deterministically"
+        );
+        assert_eq!(
+            board.tip().expect("tip").expect("some"),
+            current,
+            "a lost race must leave the tip exactly where it found it"
         );
     }
 

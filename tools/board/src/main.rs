@@ -2,7 +2,7 @@
 
 use board::git::Repo;
 use board::live::{LiveContext, current_host};
-use board::post::Post;
+use board::post::{Post, credential_shape_matches};
 use board::relevance::{Cursor, Displayed, changed_paths, unseen};
 use board::render::{RenderOptions, live_posts, peer_status, render, with_peer_header};
 use board::store::{Board, ReapPlan};
@@ -44,6 +44,37 @@ fn main() {
                     "board: WARNING `{field}` is not a number, so its decay check will be \
                      skipped on every read -- a claim with a non-numeric ttl_s never expires. \
                      Numbers must be bare (ttl_s=900, not ttl_s=900s)."
+                );
+            }
+            // B9: refuse a post carrying a credential shape BEFORE the bytes
+            // exist. Task 8 measured why prevention is the only control that
+            // actually works here -- byte removal from history is prohibited
+            // AND does not work (a canary force-pushed out of a probe ref was
+            // still served by GitHub, commit and blob plaintext both), and
+            // its own review found redaction's two halves have different
+            // scopes: suppression is board-wide, but eviction is per-log, so
+            // a secret that reaches another host's log stays in that host's
+            // bytes until someone acts there. Only stopping the write closes
+            // that gap. `BOARD_ALLOW_CREDENTIAL_SHAPE` is the override, named
+            // in the refusal so a false positive is a two-minute unblock, not
+            // a mystery -- see `credential_shapes`'s doc comment for why the
+            // patterns stay this narrow (PROC-claim-shape-s-heuristic).
+            let matches = credential_shape_matches(&post);
+            if !matches.is_empty() {
+                for (field, pattern) in &matches {
+                    eprintln!("board: field `{field}` matches the credential shape `{pattern}`");
+                }
+                let allowed = std::env::var_os("BOARD_ALLOW_CREDENTIAL_SHAPE")
+                    .is_some_and(|v| !v.is_empty() && v != "0");
+                if !allowed {
+                    eprintln!(
+                        "board: refusing to post: it carries a credential shape (B9). If this \
+                         is a false positive, override with BOARD_ALLOW_CREDENTIAL_SHAPE=1."
+                    );
+                    std::process::exit(1);
+                }
+                eprintln!(
+                    "board: BOARD_ALLOW_CREDENTIAL_SHAPE is set -- posting despite the match above"
                 );
             }
             match board.append(&post) {
