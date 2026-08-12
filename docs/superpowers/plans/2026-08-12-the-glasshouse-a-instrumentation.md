@@ -601,13 +601,19 @@ Metric {
 cargo nextest run -p hornvale-lab --test rung_selection
 ```
 
-- [ ] **Step 5: Add to the census selection and check the inference**
+- [ ] **Step 5: Check the inference — and do NOT edit the study JSON**
 
-Add `"mean-land-elevation-m"` to `studies/the-census.study.json`, then compare
-the measured value against the two independent inferences:
+**Corrected after Task 2 (controller):** `studies/the-census.study.json` uses
+`"metrics": "all"`, so there is **no array to add a name to**. Registering the
+metric in `metrics.rs` is sufficient — the census picks it up automatically. Do
+not edit the study file. There is also a metric-count pin
+(`registry_metric_count_is_pinned`) which Task 2 moved 200 → 202; bump it **in
+this commit**, as the precedent commit `71ed4eeb` did.
+
+Measure the value with a narrow study (which Task 1's fix now makes possible):
 
 ```bash
-cargo run -p hornvale -- lab run studies/the-census.study.json
+cargo run -p hornvale -- lab run /tmp/hv-elev.study.json   # 200 seeds, this metric alone
 ```
 
 Record the median in the commit message. **This is a measurement, not a
@@ -615,13 +621,41 @@ prediction** — whatever it reads is the number, and if it lands far from ~2200
 then §3.3's inference chain was wrong and Stage B must be re-derived from the
 measured value. Say so in the commit either way.
 
-- [ ] **Step 6: Regenerate and commit**
+- [ ] **Step 6: Commit — expect the census fixtures to stay red**
+
+**Corrected after Task 2 (controller).** Adding a registry metric grows the
+registry-derived census schema while the committed `rows.csv` fixtures still
+carry the old column count, so nine `"metrics": "all"` studies cannot be
+reconstructed and the lab calibration tests die. This is **precedented and
+deliberate** — commit `71ed4eeb` did exactly this and its message says so — and
+`make rebaseline` will exit non-zero at the schema-backfill step, taking four
+later steps with it.
+
+Do not write a code workaround. Instead:
+
+1. Run the regen steps `rebaseline` skipped **by hand**, and confirm all seven
+   generated-artifact drift paths diff clean.
+2. **Classify every failure programmatically** — the discipline that separates a
+   known-red from a regression hiding in it:
+
+   ```bash
+   cargo nextest run -p hornvale-lab --no-fail-fast > /tmp/hv-lab.txt 2>&1
+   grep -c "^        FAIL" /tmp/hv-lab.txt      # note: nextest prints FAIL twice per test
+   grep -c "rows.csv header does not match study" /tmp/hv-lab.txt
+   ```
+
+   Every failure must carry `rows.csv header does not match study`. Task 2's
+   count was 43 of 43, and the precedent's was 42 of 42. **If even one failure
+   does not carry it, stop and report** — that one is yours, not the census's.
+3. Paste both counts in the report.
+
+The census refresh on lefford clears these, and it is the controller's job and a
+carve-out requiring Nathan's explicit authorization. Do not attempt it.
 
 ```bash
-make rebaseline
 cargo fmt
 git add windows/lab/src/metrics.rs windows/lab/tests/rung_selection.rs \
-        studies/the-census.study.json book/src/laboratory/ docs/audits/
+        book/src/laboratory/ docs/audits/
 git commit -m "feat(lab): measure mean land elevation instead of inferring it
 
 The Glasshouse spec put mean land elevation at ~2200 m from two independent
