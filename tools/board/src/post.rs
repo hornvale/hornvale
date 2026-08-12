@@ -325,11 +325,23 @@ fn contains_pem_private_key_header(s: &str) -> bool {
 }
 
 /// True if `s` contains a Slack token's shape: `xox` + one of `b`/`a`/`p`/
-/// `r`/`s` + `-`.
+/// `r`/`s` + `-`, immediately followed by a structured run -- not merely the
+/// five-character prefix.
+///
+/// The bare-prefix version this replaced contradicted
+/// [`contains_prefixed_run`]'s own doc comment: `ghp_`/`github_pat_` and
+/// `AKIA` all require a run after the prefix specifically so a bare mention
+/// in prose ("the Slack bot token prefix is xoxb-") is inert, but
+/// `xox[baprs]-` matched on the prefix alone, refusing exactly that
+/// sentence. A real Slack token is `xoxb-<11 digits>-<12 digits>-<24
+/// alnum>`, so requiring a run of at least 10 alphanumeric-or-underscore
+/// characters (comfortably shorter than the 11-digit first segment, and
+/// consistent with the run lengths its siblings already require) makes this
+/// pattern behave like the other three instead of being the one exception.
 fn contains_slack_token(s: &str) -> bool {
     ["xoxb-", "xoxa-", "xoxp-", "xoxr-", "xoxs-"]
         .iter()
-        .any(|p| s.contains(p))
+        .any(|p| contains_prefixed_run(s, p, 10))
 }
 
 #[cfg(test)]
@@ -557,6 +569,10 @@ mod tests {
             "the census claim key is HV_CENSUS_CLAIM_PATH and it defaults to /tmp/hv-census.claim",
             "set REBASELINE=1 to accept drifted goldens",
             "ssh lefford and check the token count in the run log",
+            // The carry this test gained: a bare mention of the Slack
+            // token's prefix, with nothing structured after it, must be as
+            // inert as a bare "ghp_" mention already was.
+            "the Slack bot token prefix is xoxb-",
         ] {
             let post = Post::new("technique", "main").with("note", json!(note));
             assert!(
@@ -575,6 +591,13 @@ mod tests {
             ),
             ("aws-akid", "AKIAIOSFODNN7EXAMPLE is the key"),
             ("private-key", "-----BEGIN OPENSSH PRIVATE KEY-----"),
+            // A real Slack token's shape: xoxb-<11 digits>-<12 digits>-<24
+            // alnum>. Must still fire once the bare-prefix false positive
+            // above is fixed.
+            (
+                "slack-token",
+                "xoxb-12345678901-123456789012-abcdefghijklmnopqrstuvwx",
+            ),
         ] {
             let post = Post::new("technique", "main").with("note", json!(note));
             assert!(

@@ -1933,6 +1933,18 @@ mod tests {
                  operator who reads `nothing evicted` as `nothing happened` would post \
                  the secret again: {d}"
             );
+            // Task 10's carry: the qualifier is what makes "board-wide" true
+            // rather than misleading -- it means every read that has
+            // FETCHED this control post, not every read, full stop. All
+            // three sentences say "board-wide" on their own; only this
+            // checks the qualifier survives on EVERY variant, not just the
+            // two the old assertions happened to cover (`id` and, for
+            // `LostRace` alone, "again").
+            assert!(
+                d.contains("on every read that has fetched this control post"),
+                "the board-wide qualifier must survive on every variant, not just \
+                 the ones an existing assertion happens to cover: {d}"
+            );
         }
         assert!(
             lost.contains("again"),

@@ -76,8 +76,25 @@ impl RenderOptions {
 /// kind is filtered against — anything else still renders generically.
 const CONTROL_KINDS: [&str; 2] = ["retract", "redact"];
 
-/// The live subset of `posts` — nothing expired, withdrawn, or redacted, and
-/// no control posts.
+/// Kinds that exist for the digest (D14) only, and never for a live view.
+///
+/// `suggest` is B12's example: it is not actionable by the session that
+/// would read it ambiently, and it is the lowest-effort post kind and so the
+/// likeliest flood source. Excluding it here — inside [`live_posts`], the
+/// shared foundation both `board render` and `board read` build on — means
+/// it is gone *before* a caller ever applies a post-count budget
+/// ([`RenderOptions::post_budget`]) or a relevance cut
+/// ([`crate::relevance::Displayed`]): a kind excluded only from the printed
+/// text but still counted toward a budget would let suggestions elide real
+/// posts, which is exactly the failure this ordering avoids. [`digest`]'s
+/// own read is over `history`, not `live_posts`, so a suggestion still
+/// reaches the one seam it is meant for.
+///
+/// [`digest`]: crate::digest::digest
+const DIGEST_ONLY_KINDS: [&str; 1] = ["suggest"];
+
+/// The live subset of `posts` — nothing expired, withdrawn, or redacted, no
+/// control posts, and no digest-only posts.
 ///
 /// This is the liveness half of selection, kept apart from [`render`] itself
 /// so a caller cannot format a post that has expired, been explicitly
@@ -85,11 +102,13 @@ const CONTROL_KINDS: [&str; 2] = ["retract", "redact"];
 /// [`liveness`] (board-wide, via [`LiveContext::redacted`]) rather than from
 /// tip eviction, because eviction is per-log and a union read sees peers'
 /// logs too; dropping the control post is this function's own job, via
-/// [`CONTROL_KINDS`].
+/// [`CONTROL_KINDS`] — and dropping a digest-only post is the same job, via
+/// [`DIGEST_ONLY_KINDS`] (B12).
 pub fn live_posts(posts: &[StoredPost], ctx: &LiveContext) -> Vec<StoredPost> {
     posts
         .iter()
         .filter(|stored| !CONTROL_KINDS.contains(&stored.post.kind.as_str()))
+        .filter(|stored| !DIGEST_ONLY_KINDS.contains(&stored.post.kind.as_str()))
         .filter(|stored| matches!(liveness(stored, ctx), Liveness::Live))
         .cloned()
         .collect()
@@ -390,6 +409,105 @@ mod tests {
             committed_at: 900,
             origin: Origin::Peer(host.to_string()),
         }
+    }
+
+    /// `ctx()` plus whatever `posts` themselves imply — every author seen
+    /// among `posts` reads as a live branch, and retraction/redaction are
+    /// derived exactly as `LiveContext::probe` derives them (same
+    /// computation as `live::tests::ctx_for`, private to that module). These
+    /// two tests are about *selection* (digest-only exclusion, budget
+    /// accounting), not branch-liveness plumbing — that is `live.rs`'s own
+    /// suite — so this stands in for a real `git` round trip rather than
+    /// requiring every test post's `by` to name a branch this repo actually
+    /// has.
+    fn ctx_for(posts: &[StoredPost]) -> LiveContext {
+        let mut c = ctx();
+        c.live_branches = posts.iter().map(|s| s.post.by.clone()).collect();
+        c.retracted = posts
+            .iter()
+            .filter(|s| s.post.kind == "retract")
+            .filter_map(|s| s.post.str_field("post").map(str::to_string))
+            .collect();
+        c.redacted = crate::live::redacted_ids(posts)
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        c
+    }
+
+    #[test]
+    fn a_suggest_post_is_digest_only() {
+        // Both arms. Absent from the ambient view because it is not
+        // actionable by the reading session and is the likeliest flood
+        // source; present in the digest because that is where the reader
+        // who can act on it looks. B12.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = crate::store::Board::new(repo.clone());
+        board
+            .append(
+                &Post::new("suggest", "main").with("note", json!("render should show sync age")),
+            )
+            .expect("post");
+
+        let posts = board.posts_at_tip().expect("read");
+        let ctx = ctx_for(&posts);
+        let ambient = render(
+            &live_posts(&posts, &ctx),
+            0,
+            &RenderOptions::session_start(),
+        );
+        assert!(
+            !ambient.contains("sync age"),
+            "a suggestion must not render ambiently"
+        );
+
+        // Clock: read the tip's REAL commit time rather than a hardcoded
+        // constant. `2_000_000_000` is 2033-05-18, so a 14-day window opens
+        // seven years AFTER these posts are committed and `history`
+        // correctly returns nothing -- Task 4 hit exactly that.
+        // `SystemTime::now()` is not an option either: clippy's
+        // `disallowed_types` fires. This mirrors the sibling tests already
+        // in `digest.rs` (see ~line 460).
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let text =
+            crate::digest::digest(&crate::digest::history(&board, 14, now_unix).expect("history"));
+        assert!(
+            text.contains("sync age"),
+            "a suggestion must reach the digest"
+        );
+    }
+
+    #[test]
+    fn a_suggest_post_does_not_consume_the_ambient_post_budget() {
+        // The cost half of B12: if suggestions merely rendered as nothing
+        // but still counted, they would elide real posts.
+        let (_dir, repo) = crate::git::test_support::temp_repo();
+        let board = crate::store::Board::new(repo.clone());
+        for i in 0..20 {
+            board
+                .append(&Post::new("suggest", "main").with("note", json!(format!("idea {i}"))))
+                .expect("s");
+        }
+        board
+            .append(&Post::new("notice", "main").with("note", json!("REAL NOTICE")))
+            .expect("n");
+
+        let posts = board.posts_at_tip().expect("read");
+        let ctx = ctx_for(&posts);
+        let ambient = render(
+            &live_posts(&posts, &ctx),
+            0,
+            &RenderOptions::session_start(),
+        );
+        assert!(
+            ambient.contains("REAL NOTICE"),
+            "suggestions elided a real post"
+        );
     }
 
     #[test]

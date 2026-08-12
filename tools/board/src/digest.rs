@@ -168,6 +168,26 @@ pub fn digest(posts: &[StoredPost]) -> String {
         out.push_str(&format!("  {author:<28} {n}\n"));
     }
 
+    // B10's tally: corroboration, not consensus. `confirm` and `stale` are
+    // additive evidence naming a target post's id in a `post` field -- never
+    // an up/down vote, and never capable of suppressing anything (that
+    // property is the whole point: a `hold-off` is exactly the post most
+    // likely to attract a `stale`, and this tally must never read as a
+    // reason to hide it). Counted separately per target, so "confirmed 2,
+    // stale 1" says something a single combined number would flatten.
+    let mut confirms: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut stales: BTreeMap<&str, usize> = BTreeMap::new();
+    for s in posts {
+        let Some(target) = s.post.str_field("post") else {
+            continue;
+        };
+        match s.post.kind.as_str() {
+            "confirm" => *confirms.entry(target).or_default() += 1,
+            "stale" => *stales.entry(target).or_default() += 1,
+            _ => {}
+        }
+    }
+
     let techniques: Vec<&StoredPost> = posts
         .iter()
         .filter(|s| s.post.kind == "technique")
@@ -186,6 +206,36 @@ pub fn digest(posts: &[StoredPost]) -> String {
             } else {
                 out.push_str("      (no evidence — weaker claim)\n");
             }
+            let confirmed = confirms.get(s.id.as_str()).copied().unwrap_or(0);
+            let stale = stales.get(s.id.as_str()).copied().unwrap_or(0);
+            if confirmed > 0 || stale > 0 {
+                out.push_str(&format!(
+                    "      corroboration: confirmed {confirmed}, stale {stale}\n"
+                ));
+            }
+        }
+    }
+
+    // B12: digest-only. `suggest` never renders ambiently (see
+    // `crate::render::live_posts`'s `DIGEST_ONLY_KINDS`) -- it is the
+    // lowest-effort post kind and so the likeliest flood source, and it is
+    // not actionable by the session that would read it ambiently anyway.
+    // This section is the one seam it does reach, and its promotion path
+    // out of "merely suggested" is named right where the only reader who
+    // can act on it looks.
+    let suggestions: Vec<&StoredPost> = posts
+        .iter()
+        .filter(|s| s.post.kind == "suggest")
+        .filter(|s| !redacted_ids.contains(s.id.as_str()))
+        .collect();
+    if !suggestions.is_empty() {
+        out.push_str("\nsuggestions (promote via a PROC-* registry row):\n");
+        for s in suggestions {
+            out.push_str(&format!(
+                "  [{}] {}\n",
+                s.post.by,
+                s.post.str_field("note").unwrap_or("(no note)")
+            ));
         }
     }
 
@@ -250,6 +300,81 @@ mod tests {
     use crate::post::Post;
     use crate::store::{Board, Origin};
     use serde_json::json;
+
+    /// Point `refname` at a TREE rather than a commit -- the same
+    /// reproduction `tests/resilience.rs`'s CLI-level twin uses. `git
+    /// rev-parse --verify --quiet <ref>^{commit}` still writes to stderr and
+    /// returns a genuine `Err` for this shape ("expected commit type, but
+    /// the object dereferences to tree type"), not mere absence, which is
+    /// what makes it a fail-loud reproduction rather than an empty-board one.
+    fn corrupt_the_ref(repo: &crate::git::Repo, refname: &str) {
+        let tree = repo.git(&["write-tree"]).expect("write-tree");
+        repo.git(&["update-ref", refname, &tree])
+            .expect("point the ref at a tree, not a commit");
+    }
+
+    #[test]
+    fn the_digest_tallies_corroboration_per_technique() {
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let t = board
+            .append(&Post::new("technique", "main").with("note", json!("mktree rejects slashes")))
+            .expect("t");
+        board
+            .append(&Post::new("confirm", "campaign/x").with("post", json!(t.clone())))
+            .expect("c1");
+        board
+            .append(&Post::new("confirm", "campaign/y").with("post", json!(t.clone())))
+            .expect("c2");
+
+        // Clock: read the tip's REAL commit time rather than a hardcoded
+        // constant. `2_000_000_000` is 2033-05-18, so a 14-day window opens
+        // seven years AFTER these posts are committed and `history`
+        // correctly returns nothing -- Task 4 hit exactly that.
+        // `SystemTime::now()` is not an option either: clippy's
+        // `disallowed_types` fires. This mirrors the sibling tests already
+        // in this module.
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let text = digest(&history(&board, 14, now_unix).expect("history"));
+        assert!(
+            text.contains('2'),
+            "the corroboration count is the measurement; got {text}"
+        );
+        // Pinned against the corroboration line itself, not merely the
+        // digest as a whole: the `by kind` table already prints a bare "2"
+        // for two `confirm` posts, which would satisfy the assertion above
+        // even with no corroboration tally implemented at all.
+        assert!(
+            text.contains("corroboration: confirmed 2, stale 0"),
+            "the tally must attach to the technique it corroborates: {text}"
+        );
+    }
+
+    #[test]
+    fn the_digest_fails_loud_where_the_ambient_render_stays_quiet() {
+        // The asymmetry IS the property (B12): the digest is the instrument
+        // that would report the board being broken, so a quiet digest makes
+        // board defects invisible by construction. Asserted in one test so
+        // the next change to error handling cannot flatten them separately.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        corrupt_the_ref(&repo, board.refname()); // point the ref at a non-commit
+        assert!(history(&board, 14, 0).is_err(), "the digest must fail loud");
+        // and the ambient path must not lie about it either:
+        assert!(
+            Board::new(repo.clone()).posts_at_tip().is_err(),
+            "the read reports the error"
+        );
+        // main.rs's render arm swallows this Err and returns quietly rather
+        // than propagating it -- both library functions here still fail
+        // loud, which is what the CLI's ambient path relies on being able
+        // to *choose* to swallow, rather than never seeing the error at all.
+    }
 
     #[test]
     fn the_digest_reads_history_so_a_reaped_post_still_appears() {
