@@ -359,7 +359,7 @@ use std::collections::BTreeMap;
 /// more than 90% of ocean cells. The last clause is the ceiling — a floor-only
 /// prediction cannot tell a healthy world from a degenerate depth field.
 #[test]
-#[ignore = "heavy: builds a full seed-42 world to measure the sea's column distribution"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn h1_the_seas_column_is_non_degenerate() {
     // Build the seed-42 world using whatever constructor this crate's own
     // tests already use -- read windows/worldgen/tests/ first and reuse it.
@@ -410,7 +410,7 @@ fn h1_the_seas_column_is_non_degenerate() {
 /// recorded and NOT repaired here (repair changes world bytes, spec §2).
 /// Falsified: the marine classification is already depth-consistent.
 #[test]
-#[ignore = "heavy: builds a full seed-42 world to count sea-ice-below-epipelagic cells"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn h2_sea_ice_below_the_epipelagic() {
     // Count cells whose stored expression has formation == SeaIce and
     // stratum != Epipelagic; print that count, the SeaIce total, and one
@@ -469,8 +469,10 @@ was measured, not whether you are pleased with it.
 - [ ] **Step 4: Confirm the heavy-tier reason parses**
 
 Run: `cargo nextest run -p hornvale --test heavy_tier`
-Expected: PASS. The `heavy:` token is matched **verbatim**; if this reddens,
-the reason string is malformed, not the tier.
+Expected: PASS. `cli/tests/heavy_tier.rs:62` defines **one canonical reason
+string that every heavy-tier test must use verbatim** — not a `heavy:` prefix
+plus free prose. Both `#[ignore]` reasons above are that exact string. A custom
+reason reddens this test.
 
 - [ ] **Step 5: Commit**
 
