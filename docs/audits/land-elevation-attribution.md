@@ -11,10 +11,14 @@ decisions [0053](../decisions/0053-ocean-fraction-is-a-target-under-supply-limit
 Hornvale's worlds run ~19 K colder than Earth, and one of the three measured
 causes is hypsometry: **54.5% of land stands above 2000 m** against Earth's
 ~11%, with **mean land elevation 2266.87 m** (median over the 1000-seed census
-range, Task 3) against Earth's ~840 m. At the dry lapse rate that is a
-near-constant −14 K, and it is what drives the biome/soil uniformity, since
-`classify_land` evaluates elevation-gated specials before the Whittaker
-lookup.
+range, Task 3) against Earth's ~840 m. At the lapse rate the sim actually
+applies — `LAPSE_C_PER_M = 6.5 / 1000`
+(`domains/climate/src/temperature.rs:16`), an environmental rate, *not* the dry
+adiabatic 9.8 K/km — that is a near-constant **−14.7 K**, and it is what drives
+the biome/soil uniformity, since `classify_land` evaluates elevation-gated
+specials before the Whittaker lookup. Every temperature figure in this
+document uses that 6.5 K/km; §3.5 explains why the rate has to be named rather
+than assumed.
 
 Fixing it needed a target. Two candidates were ruled out analytically before
 this measurement:
@@ -215,23 +219,56 @@ essentially none of the spread, and within-world its share is slightly
 **negative** on 8 of 12 seeds — the domes sit where the surface is otherwise
 low.
 
-### 3.2 But the *mean* is a story about the datum, not about uplift
+### 3.2 But the *mean* is a story about where the coastline is cut, not about uplift
 
 The variance answer alone would be misleading, and this is the part of the
-finding that reframes the campaign's problem. Land does not stand 2257 m up
-because anything lifted it. Read the mean column:
+finding that reframes the campaign's problem: **land does not stand 2257 m up
+because anything lifted it.**
 
-- mean `base` over land is **−769.21 m** — *below* the isostatic datum. Mean
-  land crust is 25.73 km, thinner than `ISOSTASY_REF_KM`.
-- the assembled terms together average only about **−708 m**.
-- **sea level averages −2912.96 m**, and the whole 2257 m is that gap.
+Stating that gauge-invariantly matters, because this document's own opening
+rules `ISOSTASY_REF_KM` out as an unobservable gauge. Any sentence of the form "mean
+`base` is −769 m, *below the datum*" or "sea level is at −2913 m" is a
+statement about that arbitrary zero and would read differently if the constant
+were 25 or 35 — so those framings are not used here. Only **differences**
+survive a change of gauge, and the finding is entirely a difference:
 
-So the mechanism is not uplift; it is that **sea level is placed extremely
-deep in the elevation distribution**, and everything above it is then, by
-arithmetic, high. Restated in the units of the field that would have to
-change: sea level lands where crust is **13.82 km** thick, which is
-**6.18 km below `CONTINENTAL_THRESHOLD_KM`** — i.e. **1113 m below the
-isostatic shelf break**, the elevation of the crust = 20 km contour.
+| gauge-free quantity | value |
+|---|---|
+| crust thickness where the coastline is cut | 13.82 km |
+| mean crust thickness over land | 25.73 km |
+| **land stands above its own coastline by** | **11.91 km of crust × 180 m/km = 2144 m** |
+| crust at the isostatic shelf break (`CONTINENTAL_THRESHOLD_KM`) | 20 km |
+| **the coastline is cut below the shelf break by** | **6.18 km of crust = 1113 m** |
+
+The mechanism is therefore not uplift: it is that **the coastline is cut far
+down the crustal ramp**, and everything above the cut is then high by
+arithmetic.
+
+**The mean closes exactly.** For completeness, the pooled per-component means
+add up to the measured total — but only with the *cell-weighted* sea-level
+component (`+2964.30`, the mean of `−sea` over land cells), not the
+*per-world unweighted* mean sea level (`−2912.96`, which is what the DERIVED
+READING block prints and what the gauge-free table above uses). Mixing the two
+is what an earlier draft of this section did, and it left the arithmetic ~51 m
+short:
+
+```
+  base       boundary   hotspot   relief  epsilon    carve    -sea(weighted)   total
+  -769.21   +  77.82  +  70.62  + 0.80  + 0.02   -  87.14  +  2964.30      = 2257.21  ✓
+```
+
+Two labels are worth stating exactly, since both are easy to slip:
+**−619.95 m** is the mean of the five *assembled* terms (`elevation_pre` over
+land); **−707.09 m** is that plus the carve delta — the mean **final
+elevation** over land. Neither is "the assembled terms".
+
+The same total reached the gauge-free way, as a cross-check on the table above:
+**2143.75 m** of crust-thickness difference (the table's 2144 m, unrounded),
+plus **+62.12 m** from the four decoration and carve terms together, plus
+**+51.34 m** from the difference between the cell-weighted and unweighted sea
+levels, = **2257.21 m** — exactly the measured total, to the last printed
+digit. Both routes agree, which is the point: the 2257 m is a difference, not a
+position relative to a gauge.
 
 ### 3.3 Why sea level lands there — measured, not inferred
 
@@ -272,8 +309,54 @@ that default draws bottom out at supply/quota ≈ 0.554 over the frozen
 population and the ≲ 0.18 of a lone clamped craton, expressly so that
 **default worlds provably keep the exact-percentile path byte-identical**.
 That was the right call for the bimodality question 0053 was answering. Its
-cost, unmeasured until now, is that **every default world drowns ~1.1 km below
-its own shelf break**, and that cost is the campaign's −14 K.
+cost, unmeasured until now, is that **every default world's coastline is cut
+~1.1 km below its own shelf break** — which is the *mechanism* behind the
+campaign's −14.7 K, though not, as §3.5 shows, a −14.7 K refund.
+
+### 3.5 The 1113 m is not a budget — read this before quoting it
+
+**1113 m is the depth of the cut, not the elevation a fix recovers.** It is
+the most quotable number in this document and it will be misread as a
+recoverable amount unless the following is read with it.
+
+Raising sea level to the shelf break does not merely subtract 1113 m from
+every land cell's height. **It also shrinks the land set**: land would become
+the cells whose crust clears the threshold — 0.2724 of the sphere instead of
+0.3731 — and the 0.1007 that drops out is precisely the *lowest* band of the
+old land (crust 13.82–20 km, heights 0–1113 m above the old coastline).
+Removing a band that lies entirely below the mean **raises the mean of what
+remains**, so the reduction is strictly less than 1113 m. That inequality is
+rigorous; the size of the gap is not, and this probe does not measure it,
+because it never computes the conditional mean crust over the cells that would
+survive.
+
+An area-weighted estimate from the numbers this probe *does* have: if the
+dropped band averages ~16.5 km of crust, the retained set averages
+(0.3731 × 25.73 − 0.1007 × 16.5) / 0.2724 ≈ **29.1 km**, standing
+180 × (29.1 − 20) ≈ **1646 m** above the new coastline against 2144 m above
+the old — a recovery of about **500 m**. Sweeping the band average over
+16.0–17.0 km moves that only to 465–530 m, so the estimate is not sensitive to
+the assumption. An independent review estimate put it nearer **650 m**. Both
+are far from 1113 m, which is the load-bearing point.
+
+In temperature, using the rate the sim itself applies —
+`LAPSE_C_PER_M = 6.5 / 1000` (`domains/climate/src/temperature.rs:16`), the
+same rate that turns 2266.87 m into the campaign's −14.7 K:
+
+| elevation recovered | ΔT at 6.5 K/km |
+|---|---|
+| 1113 m (the cut depth — **not** achievable) | 7.2 K |
+| ~650 m (review estimate) | 4.2 K |
+| ~500 m (this document's estimate) | 3.3 K |
+
+So the realistic range for route 2 alone is roughly **450–700 m, or 3–4.5 K**
+— useful, and roughly a fifth to a third of the campaign's 14.7 K, but not a
+solution to it on its own. (A paired "~650 m / ~6 K" figure appears in review;
+6 K at 650 m implies a dry-adiabatic ~9.8 K/km rather than the 6.5 K/km the
+climate code actually applies, so the K column above is the one to plan
+against.) **Stage B must measure the conditional mean over the retained set
+before quoting any budget at all** — it is one extra accumulator in this
+probe.
 
 ---
 
@@ -335,43 +418,99 @@ Concretely, the plan's four candidates resolve as follows:
 | `relief_term` amplitude | not the target: 0.02% of variance, +0.8 m of mean |
 
 And since both isostasy constants are ruled out at the top of this document —
-one a gauge, one physics — "the crust-thickness field" means the two things
-that decide where the coastline cuts the ramp:
+one a gauge, one physics — "the crust-thickness field" means one of the three
+things that decide where the coastline cuts the ramp.
 
-1. **The shape of the ramp.** `crust.rs`'s craton profile: `PEAK_MIN_KM = 33`
-   / `PEAK_MAX_KM = 45` against `OCEANIC_KM = 7` and
-   `CONTINENTAL_THRESHOLD_KM = 20`, and the taper between them. A crust field
-   with a broad flat platform near `ISOSTASY_REF_KM` and a steep shelf-slope
-   drop would put mean land near Earth's 840 m *without* touching a single
-   decoration term.
-2. **Where the percentile is allowed to land.** `SUPPLY_SHORTFALL_FACTOR = 0.5`
-   in `elevation.rs` is the constant that currently permits a 31% shortfall to
-   be filled below the shelf break. It is a `hornvale-gauge`/`hornvale-choice`
-   constant with a documented measured basis (decision 0053), so moving it is
-   a deliberate re-decision with an epoch's worth of consequences — every
-   default world's coastline moves — not a tuning nudge.
+**Route 1 — the shape of the ramp.** `crust.rs`'s craton profile:
+`PEAK_MIN_KM = 33` / `PEAK_MAX_KM = 45` against `OCEANIC_KM = 7` and
+`CONTINENTAL_THRESHOLD_KM = 20`, and the taper between them. A crust field with
+a broad flat platform near the elevation of zero isostatic head, and a steep
+shelf-slope drop, would put mean land near Earth's 840 m *without* touching a
+single decoration term.
 
-Which of the two Stage B takes is a design decision, not a measurement one,
-and this document deliberately does not make it. What the measurement settles
-is that the lever is on the *crust-and-datum* side of the pipeline and that
-the boundary, hotspot and relief terms are not worth touching for hypsometry:
-together they contribute 3.5% of the variance and +149 m of the 2257 m.
+**Route 2 — where the percentile is allowed to land.**
+`SUPPLY_SHORTFALL_FACTOR = 0.5` in `elevation.rs` is the constant that
+currently permits a 31% shortfall to be filled below the shelf break. It is a
+`hornvale-gauge`/`hornvale-choice` constant with a documented measured basis
+(decision 0053), so moving it is a deliberate re-decision with an epoch's worth
+of consequences — every default world's coastline moves — not a tuning nudge.
+Worth ~450–700 m (3–4.5 K) on its own, per §3.5 — **not** the 1113 m the cut
+depth suggests.
 
-A caution for whichever route is taken: **both routes move sea level on every
-world**, so both are byte-identity epochs for the whole terrain pipeline — new
-coastlines, new biomes, new censuses — not local edits.
+**Route 3 — the craton rescale misses its own budget by ~37%, and nobody knows
+why.** This is the route this document nearly lost, and it may be the cheapest
+of the three, because unlike the other two it is a candidate *defect* rather
+than a re-decision: if the rescale delivered what it aims at, the coastline
+would already sit at or above the shelf break and the hypsometry would already
+be roughly Earth-like. The pipeline's stated intent is not the problem;
+something downstream of the intent defeats it.
+
+The apples-to-apples comparison is between the budget the rescale targets and
+the supply it achieves, both in the same analytic units:
+
+| quantity | value | what it is |
+|---|---|---|
+| `budget` (`crust.rs:615`) | **≈ 0.41** | `(1 − ocean_target) · (1 + margin)`, margin 0.05–0.15; at the mean drawn target 0.625 that is 0.375 × 1.10 |
+| realised `continental_supply` | **0.2592** | the same `craton_continental_steradians`, summed over the *post-clamp* radii |
+| **the miss** | **≈ 37%** | |
+
+The mechanism is visible in four lines (`crust.rs:634–641`): the rescale solves
+`scale` so the summed continental steradians hit `budget × 4π`, and then
+
+```rust
+c.radius_rad = (c.radius_rad * scale).min(0.6);
+```
+
+**clamps every radius at 0.6 rad**, discarding whatever area the clamp cuts —
+while `continental_supply` sums the same function over those clamped radii. A
+review estimate attributes roughly half the miss to that clamp; the remainder
+is **unexplained** and worth an hour before either other route is chosen. The
+second candidate is that `craton_continental_steradians` does not deduct cap
+overlaps (its own doc calls itself an upper estimate), which would make the
+realised area smaller still.
+
+For the same reason, **do not read the 0.2592-vs-0.2724 pair as evidence that
+the rescale is working.** An earlier draft of this finding glossed it that way
+and the gloss is wrong: the two numbers are not comparable. 0.2592 is
+majors-only, analytic, and overlap-blind; 0.2724 is grid-realised and includes
+the threshold-clearing area contributed by microcontinents and terranes, which
+`continental_supply` never counts. They land close by coincidence of two
+opposing errors, and their closeness says nothing about the budget the rescale
+was aiming at.
+
+Which route Stage B takes is a design decision, not a measurement one, and this
+document deliberately does not make it — but **route 3 should be investigated
+first**, because its answer changes what routes 1 and 2 are even for. What the
+measurement settles is that the lever is on the *crust-and-coastline* side of
+the pipeline and that the boundary, hotspot and relief terms are not worth
+touching for hypsometry: together they contribute 3.5% of the variance and
++149 m of the 2257 m.
+
+A caution for whichever route is taken: **all three move sea level on every
+world**, so all three are byte-identity epochs for the whole terrain pipeline —
+new coastlines, new biomes, new censuses — not local edits.
 
 ---
 
 ## 6. Probe cost and placement
 
 **In the commit gate, not the heavy tier.** Twelve level-6 terrain globes cost
-**4.755 s** under `cargo nextest run -p hornvale-terrain` on a moderately
-quiet box (whole-crate suite 5.618 s), rising to 14.792 s at loadavg ~28 with
-other sessions gating — the whole terrain suite scales by the same ~2.7×, so
-the cost is contention, not the probe. Both figures are inside the plan's
-~30 s threshold, so the probe carries no `#[ignore]` and the conservation
-assert of §1.2 runs on every gate rather than only under `make gate-full`.
+**roughly 3–6 s at ordinary load**, and the figure is **load-dependent rather
+than a single number** — which is why a range is recorded here instead of one value:
+
+| measurement | this probe | whole `hornvale-terrain` suite | conditions |
+|---|---|---|---|
+| `cargo test`, single test | 3.26–3.98 s | — | moderate load |
+| `cargo nextest run -p hornvale-terrain` | 4.755 s | 5.618 s | moderate load |
+| `cargo nextest run -p hornvale-terrain` | 5.702 s | 6.675 s | moderate load, later in the session |
+| independent review re-run | 3.80 s | 5.406 s | loadavg ~16 |
+| `cargo nextest run -p hornvale-terrain` | 14.792 s | 16.156 s | loadavg ~28, other sessions gating |
+
+The last row is contention, not the probe: the whole suite scales by the same
+~2.7×. Every figure is well inside the plan's ~30 s threshold, so the probe
+carries no `#[ignore]` and the conservation assert of §1.2 runs on every gate
+rather than only under `make gate-full`. The probe's own doc comment records
+the same range, so the two cannot drift apart.
 
 Worth recording: had it needed deferring, the plan's suggested reason string
 `heavy: 50-world elevation attribution probe` would have gone **red**.

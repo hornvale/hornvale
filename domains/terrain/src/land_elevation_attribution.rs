@@ -233,10 +233,15 @@ fn crust_km_at(elevation_m: f64) -> f64 {
 /// asserts the seven components reconstruct the pipeline's own elevation on
 /// every land cell, and prints the pooled and within-world decompositions.
 ///
-/// Cheap enough to stay in the commit gate: 3.3 s for twelve level-6 globes
-/// (terrain-only genesis, dev profile optimized since decision 0113), so it
-/// carries no `heavy:` deferral and the conservation assert below runs on
-/// every gate rather than only in `make gate-full`.
+/// Cheap enough to stay in the commit gate: **roughly 3–6 s at ordinary load**
+/// for twelve level-6 globes (terrain-only genesis, dev profile optimized since
+/// decision 0113) — 3.26–3.98 s bare, 4.755–5.702 s under nextest, 3.80 s on an
+/// independent re-run at loadavg ~16. The figure is load-dependent, not a
+/// single number: at loadavg ~28 it reads 14.8 s while the whole crate suite
+/// scales by the same ~2.7×. All of it is well inside the ~30 s gate
+/// threshold, so this carries no `heavy:` deferral and the conservation assert
+/// below runs on every gate rather than only in `make gate-full`. The table
+/// with conditions is in `docs/audits/land-elevation-attribution.md` §6.
 ///
 /// Read the numbers with
 /// `cargo test -p hornvale-terrain --lib the_land_elevation_terms_attribute_their_variance -- --nocapture`.
