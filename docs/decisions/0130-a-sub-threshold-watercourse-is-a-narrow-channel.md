@@ -1,4 +1,4 @@
-# 0129. A sub-threshold watercourse is a narrow channel, not an absent one
+# 0130. A sub-threshold watercourse is a narrow channel, not an absent one
 
 **Status:** Accepted (2026-08-12) · **Decider:** Nathan · **Relates to:**
 [0039](0039-epochs-replace-tiers-refine.md),

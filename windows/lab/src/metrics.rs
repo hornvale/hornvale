@@ -497,10 +497,16 @@ pub enum Extractor {
 }
 
 impl Extractor {
-    /// The build depth this extractor requires. Climate maps to
-    /// `BuildDepth::Terrain` because climate commits no facts — a
+    /// The underlying world-build depth this extractor requires. Climate
+    /// maps to `BuildDepth::Terrain` because climate commits no facts — a
     /// Climate-rung metric needs a Terrain-depth world plus the climate
-    /// reconstruction, which `ClimateView`'s constructor performs.
+    /// reconstruction, which `ClimateView`'s constructor performs. This
+    /// answers only "how deep must the world build" (worldgen's ladder); it
+    /// does not say which `BuiltView` variant should wrap the result — two
+    /// extractors can share a `rung()` (`Terrain` and `Climate` both need
+    /// `BuildDepth::Terrain`) while needing different views. That
+    /// distinction is [`ViewRung`] and [`Extractor::view_rung`], which is
+    /// what the runner uses to select the build.
     pub fn rung(&self) -> BuildDepth {
         match self {
             Extractor::Astronomy(_) => BuildDepth::Astronomy,
@@ -510,11 +516,26 @@ impl Extractor {
         }
     }
 
+    /// The `BuiltView` variant this extractor requires (see [`ViewRung`]).
+    /// Unlike `rung()`, this distinguishes a Climate-rung extractor from a
+    /// Terrain-rung one even though both build to `BuildDepth::Terrain`: a
+    /// Climate-rung extractor needs `BuiltView::Climate`, never
+    /// `BuiltView::Terrain`.
+    pub fn view_rung(&self) -> ViewRung {
+        match self {
+            Extractor::Astronomy(_) => ViewRung::Astronomy,
+            Extractor::Terrain(_) => ViewRung::Terrain,
+            Extractor::Climate(_) => ViewRung::Climate,
+            Extractor::Settlement(_) => ViewRung::Settlement,
+            Extractor::Full(_) => ViewRung::Full,
+        }
+    }
+
     /// Apply to a built view. The built view is always >= the extractor's
-    /// rung (the runner guarantees it by building to the max selected rung),
-    /// so the needed narrower view is reachable by `AsRef`. A shallower
-    /// built view than the extractor's rung is a runner bug and panics
-    /// loudly.
+    /// rung (the runner guarantees it by building to the max selected view
+    /// rung — see [`ViewRung`]), so the needed narrower view is reachable by
+    /// `AsRef`. A shallower built view than the extractor's rung is a runner
+    /// bug and panics loudly.
     pub fn apply(&self, view: &BuiltView) -> MetricValue {
         match (self, view) {
             (Extractor::Astronomy(f), v) => f(v.astronomy()),
@@ -527,6 +548,36 @@ impl Extractor {
     }
 }
 
+/// The lab's own rung over `BuiltView` variants — which view a metric's
+/// `Extractor` needs, not merely how deep the world under it was built.
+/// `BuildDepth` (worldgen's ladder over the fact-committing pipeline) cannot
+/// carry this: it has no `Climate` step, because climate commits no facts,
+/// so a Terrain-rung extractor and a Climate-rung extractor collapse onto
+/// the identical `BuildDepth::Terrain`. `ViewRung` keeps them distinct so the
+/// runner can select `BuiltView::Climate` — never `BuiltView::Terrain` — for
+/// a study that selects a Climate-rung metric. Ordered so `max()` over a
+/// study's selected metrics picks a rung deep enough for all of them: any
+/// rung dominates every strictly shallower one in the declaration order
+/// below, and `Climate` dominates `Terrain` (a Terrain-rung metric reads
+/// fine from a `BuiltView::Climate`, via `AsRef`) while being dominated by
+/// `Settlement`/`Full` (which also read fine from those, for the same
+/// reason).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ViewRung {
+    /// `BuiltView::Astronomy`, built to `BuildDepth::Astronomy`.
+    Astronomy,
+    /// `BuiltView::Terrain`, built to `BuildDepth::Terrain`.
+    Terrain,
+    /// `BuiltView::Climate`: a `BuildDepth::Terrain` build, reconstructed
+    /// with climate atop it in the same call
+    /// (`ClimateView::build_with_components`).
+    Climate,
+    /// `BuiltView::Settlement`, built to `BuildDepth::Settlements`.
+    Settlement,
+    /// `BuiltView::Full`, built to `BuildDepth::Full`.
+    Full,
+}
+
 /// The view a study was built to — the runner's single per-world artifact.
 /// Built once, at the study's deepest selected metric's rung, then every
 /// metric's `Extractor` reads its own narrower view out of it via `AsRef`.
@@ -535,8 +586,9 @@ pub enum BuiltView {
     Astronomy(AstronomyView),
     /// Built to `BuildDepth::Terrain`.
     Terrain(TerrainView),
-    /// A `Terrain`-depth build reconstructed with climate (Climate is a view
-    /// rung, not a build stop — see `Extractor::rung`).
+    /// A `Terrain`-depth build reconstructed with climate — `ViewRung::Climate`
+    /// is a view selection, not a `BuildDepth` build stop (see
+    /// `Extractor::view_rung`).
     Climate(ClimateView),
     /// Built to `BuildDepth::Settlements`.
     Settlement(SettlementView),
@@ -545,29 +597,34 @@ pub enum BuiltView {
 }
 
 impl BuiltView {
-    /// Build a world to `depth` and wrap the result in the matching
-    /// variant. `BuildDepth` has no `Climate` rung (climate commits no
-    /// facts — see `Extractor::rung`), so this always produces one of
-    /// `Astronomy`/`Terrain`/`Settlement`/`Full`; a `BuiltView::Climate` is
-    /// only ever constructed by widening the view of a `Terrain`-depth
-    /// build for a Climate-rung metric, never returned here.
+    /// Build a world at `rung` and wrap the result in the matching
+    /// `BuiltView` variant. `rung` selects the view directly — for
+    /// `ViewRung::Climate` this builds the world to `BuildDepth::Terrain`
+    /// and reconstructs the climate atop it in the very same call
+    /// (`ClimateView::build_with_components`), never as a separate widening
+    /// step performed on an already-built `BuiltView::Terrain` (there is no
+    /// such widening constructor, and adding one would re-sculpt the world
+    /// to get it — this builds it once).
     pub fn build_to(
         seed: Seed,
         pins: &SkyPins,
         wc: WorldComponents,
-        depth: BuildDepth,
+        rung: ViewRung,
     ) -> Result<BuiltView, BuildError> {
-        match depth {
-            BuildDepth::Astronomy => Ok(BuiltView::Astronomy(
-                AstronomyView::build_with_components(seed, pins, wc)?,
-            )),
-            BuildDepth::Terrain => Ok(BuiltView::Terrain(TerrainView::build_with_components(
+        match rung {
+            ViewRung::Astronomy => Ok(BuiltView::Astronomy(AstronomyView::build_with_components(
                 seed, pins, wc,
             )?)),
-            BuildDepth::Settlements => Ok(BuiltView::Settlement(
+            ViewRung::Terrain => Ok(BuiltView::Terrain(TerrainView::build_with_components(
+                seed, pins, wc,
+            )?)),
+            ViewRung::Climate => Ok(BuiltView::Climate(ClimateView::build_with_components(
+                seed, pins, wc,
+            )?)),
+            ViewRung::Settlement => Ok(BuiltView::Settlement(
                 SettlementView::build_with_components(seed, pins, wc)?,
             )),
-            BuildDepth::Full => Ok(BuiltView::Full(FullView::build_with_components(
+            ViewRung::Full => Ok(BuiltView::Full(FullView::build_with_components(
                 seed, pins, wc,
             )?)),
         }
@@ -772,6 +829,15 @@ impl Metric {
     /// rung (the tag *is* the metric's build-depth, spec MAP-25).
     pub fn rung(&self) -> BuildDepth {
         self.extract.rung()
+    }
+
+    /// The `BuiltView` variant this metric requires — delegates to its
+    /// extractor's [`ViewRung`] (see `Extractor::view_rung`). Distinct from
+    /// `rung()`: a Climate-rung metric shares `rung()`'s `BuildDepth::Terrain`
+    /// with a Terrain-rung metric, but needs `view_rung()`'s
+    /// `ViewRung::Climate`, not `ViewRung::Terrain`.
+    pub fn view_rung(&self) -> ViewRung {
+        self.extract.view_rung()
     }
 }
 
@@ -1163,6 +1229,45 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "insolation-rel",
+            doc: "Top-of-atmosphere stellar flux at the anchor, relative to Earth \
+                   (L/a², Earth = 1, the shared SKY-15 definition, not a \
+                   re-derivation) — the driver of the temperature baseline",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(hornvale_astronomy::insolation_rel(
+                    &v.system.star,
+                    &v.system.anchor,
+                ))
+            }),
+        },
+        Metric {
+            name: "zone-position",
+            doc: "Where in the habitable zone the anchor sits, normalized: \
+                   (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 \
+                   the cold outer edge. This is the DRAWN variable — the orbit is \
+                   placed uniform in radius across the zone — and it is what \
+                   temperature actually tracks; the ledger's `anchor-orbit-au` fact \
+                   predicate (not a lab metric — there is no metric of that name) is \
+                   95% collinear with luminosity and so reads as uninformative on its own",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                let inner = v.system.star.habitable_zone.inner().get();
+                let outer = v.system.star.habitable_zone.outer().get();
+                let a = v.system.anchor.orbit.get();
+                // HabitableZone::new enforces inner < outer, so the span is positive.
+                MetricValue::Number((a - inner) / (outer - inner))
+            }),
+        },
+        Metric {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
@@ -1210,6 +1315,38 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     high as f64 / land as f64
                 })
+            }),
+        },
+        Metric {
+            name: "mean-land-elevation-m",
+            doc: "Mean elevation above sea level over land cells, m — the term the \
+                  lapse rate turns into a temperature penalty. Land is `e >= sea`, \
+                  matching `mountain-coverage`'s land definition; `mean-land-temperature-c` \
+                  uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is \
+                  `e < sea`), so the two metrics ARE mutually comparable — this is the \
+                  coupling the campaign's lapse-rate regression rests on. Absent on a \
+                  landless world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let sea = v.terrain.sea_level();
+                let (mut sum, mut count) = (0.0_f64, 0_u32);
+                for cell in geo.cells() {
+                    let e = v.terrain.elevation_at(cell);
+                    if e >= sea {
+                        sum += e - sea;
+                        count += 1;
+                    }
+                }
+                if count == 0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(sum / f64::from(count))
+                }
             }),
         },
         Metric {
@@ -8850,7 +8987,24 @@ mod tests {
         // truncated transect scores as monotone however short its prefix.
         // Both must travel with the SAME population monotonicity is read
         // over, which a gate test on one world cannot do.
-        assert_eq!(registry().len(), 200);
+        //
+        // +2 for THE GLASSHOUSE (Task 2: insolation-rel, zone-position) — the
+        // census held 23 astronomy metrics and none of them was insolation,
+        // luminosity, or orbital distance, so the driver behind the
+        // temperature baseline was structurally invisible to it
+        // (CLIM-astronomy-unmeasured). insolation-rel is the shared SKY-15
+        // `L/a²` definition, not a re-derivation; zone-position is the DRAWN
+        // variable the orbit is placed on, and the two are related by the
+        // closed-form identity `S = 1/(0.95+0.42u)²` pinned in
+        // `windows/lab/tests/rung_selection.rs`.
+        //
+        // +1 for THE GLASSHOUSE (Task 3: mean-land-elevation-m) — §3.3's
+        // ~2200 m mean land elevation was inferred twice (the regression
+        // intercept and mountain-coverage = 0.545) and measured never; no
+        // committed metric read the thing itself. Land is `e >= sea`,
+        // matching mountain-coverage so the hypsometry target compares the
+        // two directly.
+        assert_eq!(registry().len(), 203);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

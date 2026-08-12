@@ -397,6 +397,176 @@ pub fn trail_seamounts(
     out
 }
 
+/// The additive terms one cell's pre-carve elevation is assembled from, in
+/// metres. [`assemble_elevation`] sums exactly these, in exactly the field
+/// order below; the attribution probe
+/// (`land_elevation_attribution::the_land_elevation_terms_attribute_their_variance`)
+/// reads them individually, so the decomposition can never drift from the
+/// elevation it decomposes. Crate-internal on purpose: every *input* is a
+/// public field on [`crate::TectonicGlobe`], but the per-term helpers
+/// (`isostatic_m`, `relief_scale`, `dome_m`, `crust::SphereFbm`) are not, so
+/// an out-of-crate reader would have to reimplement the arithmetic.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ElevationTerms {
+    /// Airy-isostatic base over the cell's crust thickness.
+    pub(crate) base: f64,
+    /// The nearest same-plate boundary's profile contribution (signed).
+    pub(crate) boundary: f64,
+    /// Every hotspot-trail seamount's Gaussian dome, summed (≥ 0).
+    pub(crate) hotspot: f64,
+    /// Induration- and belt-scaled fBm relief (zero-mean by construction).
+    pub(crate) relief: f64,
+    /// The strict-ordering micro-epsilon, `CELL_EPSILON_M * cell.0`.
+    pub(crate) epsilon: f64,
+}
+
+impl ElevationTerms {
+    /// The assembled elevation in metres — the summation
+    /// [`assemble_elevation`] performs, **in exactly its original order**
+    /// (`base + boundary + hotspot + relief + epsilon`, left-associative).
+    /// Float addition is not associative, so this order is a byte-identity
+    /// contract, not a formatting choice (`domains/terrain/CLAUDE.md`).
+    pub(crate) fn total(&self) -> f64 {
+        self.base + self.boundary + self.hotspot + self.relief + self.epsilon
+    }
+}
+
+/// One cell's [`ElevationTerms`]: the whole per-cell body of
+/// [`assemble_elevation`], extracted so the attribution probe reads the same
+/// arithmetic the pipeline runs instead of a copy of it. The two fBm samplers
+/// are passed in already built, because their construction is loop-invariant
+/// (see [`assemble_elevation`]).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn cell_elevation_terms(
+    geo: &Geosphere,
+    plates: &[Plate],
+    plate_of: &CellMap<u32>,
+    boundaries: &CellMap<Option<CellBoundary>>,
+    distances: &CellMap<Option<(u32, CellId)>>,
+    seamounts: &[TrailSeamount],
+    crust: &CellMap<f64>,
+    continental: &CellMap<bool>,
+    induration: &CellMap<f64>,
+    arc_gate_fbm: &crate::crust::SphereFbm,
+    relief_fbm: &crate::crust::SphereFbm,
+    cell: CellId,
+) -> ElevationTerms {
+    let plate = &plates[*plate_of.get(cell) as usize];
+    let cell_continental = *continental.get(cell);
+    let base = isostatic_m(*crust.get(cell));
+    let boundary_term = match *distances.get(cell) {
+        None => 0.0,
+        Some((distance, source)) => {
+            let contact = (*boundaries.get(source)).expect("BFS sources are boundary cells");
+            let arc_side = plate.id > contact.other_plate;
+            // Young plates (maturity 0): 1.5x amplitude, sharp 1.5-cell
+            // falloff. Old plates (maturity 1): 0.5x amplitude, worn
+            // 4.5-cell falloff. Only `ProfileScale::Unchanged` (rifts,
+            // ridges, transforms, and an off-continent collision cell)
+            // still uses `decay_cells` — the belt/arc anatomy bakes its
+            // own fixed decay lengths into `boundary_profile_m` instead.
+            let factor = 1.5 - plate.maturity;
+            let decay_cells = 1.5 + 3.0 * plate.maturity;
+            let magnitude_scale = contact.magnitude / MAX_CLOSING_SPEED;
+            // Along-strike gate: sampled once per SOURCE boundary cell
+            // (not per `cell`) so a whole edifice shares one value;
+            // only the island-arc edifice branch reads it (coastal
+            // ranges carry no offshore arc — Task 3 review fix), and
+            // it is hash-noise (no draw-order contract), so sampling
+            // is safely skipped everywhere else.
+            let gate = if contact.kind == BoundaryKind::IslandArc {
+                arc_gate_fbm.sample(geo.position(source))
+            } else {
+                0.0
+            };
+            let profile =
+                boundary_profile_m(contact.kind, cell_continental, arc_side, distance, gate);
+            match profile_scale(contact.kind, cell_continental, arc_side) {
+                ProfileScale::Unchanged => {
+                    profile
+                        * magnitude_scale
+                        * factor
+                        * math::exp(-f64::from(distance) / decay_cells)
+                }
+                ProfileScale::Uplift => profile * magnitude_scale * factor,
+                ProfileScale::Trough => profile * magnitude_scale,
+            }
+        }
+    };
+    let position = geo.position(cell);
+    let hotspot_term: f64 = seamounts
+        .iter()
+        .map(|s| dome_m(s.position, s.strength_m, position))
+        .sum();
+    // fBm relief (Sculpting, spec §3): zero-mean multi-octave detail,
+    // amplitude scaled by induration (hard rock stands craggy) and
+    // belt proximity (`relief_scale`). A cell with no reachable
+    // same-plate boundary (`None`) is treated as far from any belt
+    // (12 hops — already past `relief_scale`'s decay length).
+    let hops = (*distances.get(cell)).map_or(12, |(distance, _)| distance);
+    let relief_noise = relief_fbm.sample(position);
+    let relief_term =
+        RELIEF_AMPLITUDE_M * relief_scale(*induration.get(cell), hops) * (relief_noise - 0.5) * 2.0;
+    ElevationTerms {
+        base,
+        boundary: boundary_term,
+        hotspot: hotspot_term,
+        relief: relief_term,
+        epsilon: CELL_EPSILON_M * f64::from(cell.0),
+    }
+}
+
+/// Every cell's [`ElevationTerms`] for an already-generated globe, rebuilt
+/// from the globe's own retained fields and the same two derived hash-noise
+/// seeds [`generate_elevation`] used. Test-only (the attribution probe), so it
+/// is never compiled into a shipping build.
+///
+/// The one input the globe does not retain is the continental mask, so it is
+/// re-derived here from the retained crust field by the definitional
+/// comparison `globe::generate` itself uses (`CrustField::continental_at(p)`
+/// *is* `thickness_at(p) >= CONTINENTAL_THRESHOLD_KM`, and `crust` holds
+/// exactly that thickness). Nothing has to be trusted about that: the
+/// probe's conservation assert re-adds these terms and compares against the
+/// elevation the pipeline actually produced, so a wrong mask would show up as
+/// a failed reconstruction rather than as a plausible-looking number.
+#[cfg(test)]
+pub(crate) fn globe_elevation_terms(
+    geo: &Geosphere,
+    globe: &crate::globe::TectonicGlobe,
+    world_seed: Seed,
+) -> CellMap<ElevationTerms> {
+    let terrain_seed = world_seed.derive(streams::ROOT);
+    let arc_gate_fbm = crate::crust::SphereFbm::new(
+        terrain_seed.derive(streams::ARC_GATE),
+        ARC_SPACING,
+        ARC_GATE_OCTAVES,
+    );
+    let relief_fbm = crate::crust::SphereFbm::new(
+        terrain_seed.derive(streams::RELIEF),
+        RELIEF_FREQUENCY,
+        RELIEF_OCTAVES,
+    );
+    let continental = CellMap::from_fn(geo, |c| {
+        *globe.crust.get(c) >= crate::crust::CONTINENTAL_THRESHOLD_KM
+    });
+    CellMap::from_fn(geo, |cell| {
+        cell_elevation_terms(
+            geo,
+            &globe.plates,
+            &globe.plate_of,
+            &globe.boundary,
+            &globe.boundary_distance,
+            &globe.trail_seamounts,
+            &globe.crust,
+            &continental,
+            &globe.induration,
+            &arc_gate_fbm,
+            &relief_fbm,
+            cell,
+        )
+    })
+}
+
 /// Pure elevation assembly over explicit inputs (hotspot trail seamounts
 /// included), so tests can pin the seamount list. See the module doc for
 /// the formula. `crust` is each cell's crust thickness in km (the
@@ -438,66 +608,25 @@ fn assemble_elevation(
     let arc_gate_fbm = crate::crust::SphereFbm::new(arc_gate_seed, ARC_SPACING, ARC_GATE_OCTAVES);
     let relief_fbm = crate::crust::SphereFbm::new(relief_seed, RELIEF_FREQUENCY, RELIEF_OCTAVES);
     CellMap::from_fn(geo, |cell| {
-        let plate = &plates[*plate_of.get(cell) as usize];
-        let cell_continental = *continental.get(cell);
-        let base = isostatic_m(*crust.get(cell));
-        let boundary_term = match *distances.get(cell) {
-            None => 0.0,
-            Some((distance, source)) => {
-                let contact = (*boundaries.get(source)).expect("BFS sources are boundary cells");
-                let arc_side = plate.id > contact.other_plate;
-                // Young plates (maturity 0): 1.5x amplitude, sharp 1.5-cell
-                // falloff. Old plates (maturity 1): 0.5x amplitude, worn
-                // 4.5-cell falloff. Only `ProfileScale::Unchanged` (rifts,
-                // ridges, transforms, and an off-continent collision cell)
-                // still uses `decay_cells` — the belt/arc anatomy bakes its
-                // own fixed decay lengths into `boundary_profile_m` instead.
-                let factor = 1.5 - plate.maturity;
-                let decay_cells = 1.5 + 3.0 * plate.maturity;
-                let magnitude_scale = contact.magnitude / MAX_CLOSING_SPEED;
-                // Along-strike gate: sampled once per SOURCE boundary cell
-                // (not per `cell`) so a whole edifice shares one value;
-                // only the island-arc edifice branch reads it (coastal
-                // ranges carry no offshore arc — Task 3 review fix), and
-                // it is hash-noise (no draw-order contract), so sampling
-                // is safely skipped everywhere else.
-                let gate = if contact.kind == BoundaryKind::IslandArc {
-                    arc_gate_fbm.sample(geo.position(source))
-                } else {
-                    0.0
-                };
-                let profile =
-                    boundary_profile_m(contact.kind, cell_continental, arc_side, distance, gate);
-                match profile_scale(contact.kind, cell_continental, arc_side) {
-                    ProfileScale::Unchanged => {
-                        profile
-                            * magnitude_scale
-                            * factor
-                            * math::exp(-f64::from(distance) / decay_cells)
-                    }
-                    ProfileScale::Uplift => profile * magnitude_scale * factor,
-                    ProfileScale::Trough => profile * magnitude_scale,
-                }
-            }
-        };
-        let position = geo.position(cell);
-        let hotspot_term: f64 = seamounts
-            .iter()
-            .map(|s| dome_m(s.position, s.strength_m, position))
-            .sum();
-        // fBm relief (Sculpting, spec §3): zero-mean multi-octave detail,
-        // amplitude scaled by induration (hard rock stands craggy) and
-        // belt proximity (`relief_scale`). A cell with no reachable
-        // same-plate boundary (`None`) is treated as far from any belt
-        // (12 hops — already past `relief_scale`'s decay length).
-        let hops = (*distances.get(cell)).map_or(12, |(distance, _)| distance);
-        let relief_noise = relief_fbm.sample(position);
-        let relief_term = RELIEF_AMPLITUDE_M
-            * relief_scale(*induration.get(cell), hops)
-            * (relief_noise - 0.5)
-            * 2.0;
-        let metres =
-            base + boundary_term + hotspot_term + relief_term + CELL_EPSILON_M * f64::from(cell.0);
+        // The per-cell body lives in `cell_elevation_terms` so the
+        // attribution probe can read the terms individually; `total()` sums
+        // them in the original left-associative order, which is a
+        // byte-identity contract.
+        let metres = cell_elevation_terms(
+            geo,
+            plates,
+            plate_of,
+            boundaries,
+            distances,
+            seamounts,
+            crust,
+            continental,
+            induration,
+            &arc_gate_fbm,
+            &relief_fbm,
+            cell,
+        )
+        .total();
         ReferenceElevation::new(metres).expect("isostatic elevation is finite")
     })
 }

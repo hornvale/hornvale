@@ -13,6 +13,12 @@ pub mod elevation;
 pub mod facts;
 pub mod features;
 pub mod globe;
+/// The land-elevation attribution probe (The Glasshouse, Stage A Task 4).
+/// Test-only: it reads crate-internal per-term helpers, which is exactly why
+/// it lives in the crate instead of in an integration test that would have to
+/// reimplement them.
+#[cfg(test)]
+mod land_elevation_attribution;
 pub mod lithology;
 pub mod pins;
 pub mod plates;

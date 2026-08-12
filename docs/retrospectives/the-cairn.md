@@ -402,6 +402,18 @@ preventing expensive rediscovery nearly lost eight of its own findings this way.
   accumulate permanently while posts get reaped). One `for-each-ref` for the
   branch set, one cached `hostname`, and a negative cache for unresolved authors
   should collapse most of it. The 2 s budget makes this bounded, not fixed.
+  ***Amended by The Beacon:*** F14 aimed at the author axis (the **U** term —
+  unresolved authors needing a `resolve` plus `merge-base` each) because that
+  was the axis this campaign's own fix wave had just measured. The actual
+  population at the time was U = 2 against N = 26 posts, and the **post** axis
+  (one `cat-file -p` per post) was the dominant term by an order of magnitude:
+  batching it into one `git cat-file --batch` took the same 32-post render from
+  1.69–2.05 s to 0.60 s — a measured 20× on that term alone — while U, measured
+  properly at The Beacon's close with a throwaway invocation-logging shim, came
+  in at **U = 0** (every notice author resolved; zero of the feared uncached
+  `rev-parse` calls). F14's mitigation is not wrong, only secondary: it optimizes
+  a term that, at this board's actual size, was never the one costing the
+  budget.
 - **F15 — Render the census claim, once the dependency question is settled.**
   *Trigger:* spec §5 promised v1 reads `hornvale_lab::census_claim::current_holder()`
   and nothing does. The implementation is not the hard part — the **dependency
@@ -416,6 +428,15 @@ preventing expensive rediscovery nearly lost eight of its own findings this way.
   (technique in the digest only), or age-weight relevance so a durable post leaves
   the ambient render while staying in `board read`. The campaign's most
   interesting unresolved design question.
+  ***Amended by The Beacon:*** the tension this finding named turned out to be
+  mostly **dissolved rather than arbitrated**, and by the other term. Once B7's
+  batching stopped the render paying per-post per spawn, durable posts
+  accumulating no longer drove the budget the way F16 worried — the object-read
+  fix bought the headroom, not a cap on sources or an age-weighted eviction rule.
+  The open design question survives at cross-host volume (§6.1 there: the union
+  and peer-status reads roughly double the fixed cost and the ≤ 1 s budget was
+  missed), but the *local* half of F16, as measured at this campaign's close, is
+  closed by F14's sibling term rather than by anything F16 itself proposed.
 - **F17 — Automate compaction, after re-reading why it was not automated.**
   *Trigger:* nothing runs `board reap`, so the tip tree grows without bound and
   F14's costs worsen over time. The reap path is where the fourth silent-loss

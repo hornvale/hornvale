@@ -180,7 +180,7 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// the local angular `cell_edge`. Downstream hydraulic geometry
 /// `w = a·Q^b` with `a` a fraction of the cell edge, so the result stays
 /// angular. **Unconditional in `drainage`**: a creek carrying one cell's runoff
-/// is a narrow channel, not an absent one (The Rill, decision 0129).
+/// is a narrow channel, not an absent one (The Rill, decision 0130).
 ///
 /// This function used to return exactly `0.0` below
 /// [`crate::water::RIVER_MIN_DRAINAGE`], on the grounds that a sub-threshold
@@ -233,7 +233,7 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// ## What Tier 2 inherits
 ///
 /// **The measured size of the problem, so a subdivision knows what it is for**
-/// (The Rill, Task 3; decision 0129 carries the same table with its
+/// (The Rill, Task 3; decision 0130 carries the same table with its
 /// denominator). Tier 1 made every land cell carry a channel, which put a
 /// polyline through **1.237%** of the walk-depth rooms over seed 42's land, up
 /// from 0.0845% — a 14.6x gain that tracks the count of rendered cells. But
@@ -520,7 +520,7 @@ impl ChannelNetwork {
     /// salt-basin cell) or the trunk cell it joins.
     ///
     /// **THE REACH PREDICATE IS NOT `WaterKind::River`, AND THAT IS THE POINT**
-    /// (The Rill, Task 3, decision 0129). `downhill` and `drainage` are
+    /// (The Rill, Task 3, decision 0130). `downhill` and `drainage` are
     /// computed for every land cell; this used to render only the ~6.7% above
     /// `RIVER_MIN_DRAINAGE` and discard the rest, so the world computed a
     /// complete space-filling flow tree and drew one fifteenth of it. It now
@@ -1165,7 +1165,7 @@ mod tests {
     }
 
     /// A sub-threshold trickle is a NARROW channel, not an absent one — the
-    /// whole of decision 0129, as an assertion. This test used to be
+    /// whole of decision 0130, as an assertion. This test used to be
     /// `drainage_below_the_river_threshold_has_zero_width` and asserted the
     /// exact opposite; it is superseded rather than deleted so the reversal is
     /// visible where the old claim lived.

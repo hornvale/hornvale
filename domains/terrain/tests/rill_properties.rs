@@ -678,7 +678,7 @@ fn the_meander_field_is_pinned() {
 
 /// claim: behavior(the width law no longer has a scale-dependent part)
 ///
-/// **Superseded by decision 0129, and kept as the record of the reversal.**
+/// **Superseded by decision 0130, and kept as the record of the reversal.**
 /// This test was `the_river_threshold_is_the_one_part_that_is_not_scale_free`,
 /// and it asserted that `channel_half_width` returned exactly `0.0` below
 /// [`RIVER_MIN_DRAINAGE`] while the same drained area one level down cleared
