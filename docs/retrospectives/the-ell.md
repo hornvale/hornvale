@@ -228,10 +228,16 @@ $   # (silent: contiguous 0001..0125)
   worktrees, and another session's work-in-progress was sitting under this one's
   entry. Use `git stash push -m`, `git stash list --format`, `git stash apply
   <sha>`, and drop by verified position.
-- **Gate timings landed under host `MacBookPro`, not `ambrose`.** Three runs:
-  848.5 s, 986.6 s, 490.8 s, against the `ambrose` baseline's 460.8 s. Per the
-  known baseline-forking blind spot, `hostname -s` first, and do not rank this
-  suite against another host's file.
+- **Gate timings landed under host `MacBookPro`, not `ambrose`.** Five runs
+  across the campaign: 848.5, 986.6, 490.8, 490.8 and 353.4 s, against the
+  `ambrose` baseline's 460.8 s. Per the known baseline-forking blind spot,
+  `hostname -s` first, and do not rank this suite against another host's file.
+- **The close broke "run once, inspect many" and paid for it.** The gate's tail
+  was captured with `| tail -30`, which is below nextest's summary line, so the
+  suite was re-run purely to read `3397 tests run: 3397 passed` — 353 s for one
+  line that the first run had already produced and the pipe had discarded. The
+  rule exists because an expensive run must emit its own evidence; `tee` to a
+  file and grep the file, and never choose a tail depth by guess.
 - **`make vessel-check` is RED and was red before this campaign** —
   `pane_plan_marks_test.ts:42`, reproduced identically on `origin/main` in a
   throwaway checkout. It was deliberately not repaired: repairing it means
@@ -287,9 +293,14 @@ retrospective is where the reasoning survives.
    seed 447 holding two separate pairs. Every field in the tail is one a future
    campaign can recompute, and each recomputation is a forced epoch.
 5. **A profiling campaign for test duration**, pre-authorized for capture. The
-   figures that justify it: `make gate` at 848.5 / 986.6 / 490.8 s on this host,
-   and `cpu_ratio` 8.25–8.50 on ten cores, which says nextest already saturates
-   the box — so the remaining cost is work **inside** tests, not scheduling.
+   figures this campaign contributes, all on one host: `make gate` at 848.5,
+   986.6, 490.8, 490.8 and 353.4 s, against a 460.8 s baseline authored on a
+   different, 12-core Mac. **A 2.8× spread on one machine is the first finding**,
+   and it says the opening question is how much of the cost is build-cache state
+   rather than test work — a distinction the committed baseline cannot make,
+   because it records wall time and not what was already compiled. What does
+   hold on the fast end is saturation: `cpu_ratio` reaches 8.23 on ten cores, so
+   scheduling is not the lever and another `#[ignore]` tier buys nothing.
    `make ci` already writes per-test durations to `target/nextest/ci/run.json`,
    and the committed per-host baseline's history is an unread time series.
 6. **Three stale figures in the descent path**, all pre-existing: seed 42's
