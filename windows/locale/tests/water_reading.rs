@@ -428,9 +428,13 @@ const CROSSINGS_FLOOR: usize = 60;
 /// — the smallest population any assertion here runs on, and the reason the
 /// ordering claim rather than this count is the primary reference.
 const STRONG_CROSSINGS_FLOOR: usize = 4;
-/// Vertices that flip verdict on the step length alone. Measured **96 of 96**
-/// examined — every pair that reaches the assertion flips, which is what a
-/// clause deciding something looks like.
+/// Vertices that flip verdict on the step length alone. Measured **146 of 146**
+/// examined after The Rill's Task 3 (96 of 96 before it) — every pair that
+/// reaches the assertion flips, which is what a clause deciding something looks
+/// like. The rate at which a sampled vertex QUALIFIES fell from 24% to 9% when
+/// the network grew to the whole land flow tree, because a headwater creek is
+/// narrower than both step lengths and is filtered out; the test's own sample
+/// size absorbs that, and the note is at it.
 ///
 /// It read 98 of 98 until the precondition was restated over the step lengths
 /// the gate actually prices against (`min(home, step)` per step) instead of the
@@ -615,18 +619,71 @@ fn transects_at(ctx: &LocaleContext, wanted: usize, depth: u32) -> (Vec<Transect
                 continue;
             }
             seen += 1;
-            let home = RoomAddr::containing(line.points[j], depth);
-            if net.bank_reading(home.centroid()).is_none() {
-                drops.no_reading += 1;
-                continue;
+            match transect_at_vertex(ctx, i, j, depth) {
+                Some(t) => out.push(t),
+                None => drops.no_reading += 1,
             }
-            out.push(Transect {
-                vertex: (i, j),
-                steps: home.neighbors(),
-                home,
-                edges: net.band_edges[i][j],
-                cell: net.run_cells[i][j],
-            });
+        }
+    }
+    (out, drops, seen)
+}
+
+/// One transect at a named vertex — the body `transects_at` builds each of its
+/// samples from, factored out so a test can name a vertex the stride would not
+/// have reached.
+fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Option<Transect> {
+    let net = ctx.terrain().channels();
+    let home = RoomAddr::containing(net.polylines[i].points[j], depth);
+    net.bank_reading(home.centroid())?;
+    Some(Transect {
+        vertex: (i, j),
+        steps: home.neighbors(),
+        home,
+        edges: net.band_edges[i][j],
+        cell: net.run_cells[i][j],
+    })
+}
+
+/// [`network_transects`], plus the `extra` highest-discharge vertices in the
+/// whole network.
+///
+/// **Why the stride alone stopped being enough** (The Rill, Task 3). A uniform
+/// stride over vertices was a sample of *rivers* while the network rendered
+/// only cells above `RIVER_MIN_DRAINAGE`. It now renders the whole land flow
+/// tree — 14,606 vertices on this world against 883 — and the added reaches are
+/// overwhelmingly headwater creeks, so a 400-sample of it is a sample of
+/// creeks: the strongest reach it happened to contain carried `drainage` 48,
+/// against a `WATERFALL_MIN_DRAINAGE` of 80. The stride is not wrong; it is
+/// still the unbiased sample H2-4 is read over. It is that a claim about *the
+/// strongest water in the world* needs the strongest water in the world to be
+/// in its population, and naming it is not cherry-picking when the claim names
+/// it too.
+///
+/// Deterministic: `total_cmp` on discharge with a `(line, vertex)` tie-break,
+/// and the union is de-duplicated by that same identity.
+fn transects_with_strongest(
+    ctx: &LocaleContext,
+    wanted: usize,
+    extra: usize,
+) -> (Vec<Transect>, Drops, usize) {
+    let (mut out, drops, seen) = network_transects(ctx, wanted);
+    let depth = walk_depth(ctx);
+    let net = ctx.terrain().channels();
+    let mut ranked: Vec<(f64, usize, usize)> = Vec::new();
+    for (i, cells) in net.run_cells.iter().enumerate() {
+        for (j, &c) in cells.iter().enumerate() {
+            ranked.push((ctx.terrain().drainage_at(c), i, j));
+        }
+    }
+    ranked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let already: std::collections::BTreeSet<(usize, usize)> =
+        out.iter().map(|t| t.vertex).collect();
+    for &(_, i, j) in ranked.iter().take(extra) {
+        if already.contains(&(i, j)) {
+            continue;
+        }
+        if let Some(t) = transect_at_vertex(ctx, i, j, depth) {
+            out.push(t);
         }
     }
     (out, drops, seen)
@@ -996,6 +1053,13 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 /// by less than the interval's width — the suite stays green while half the
 /// task's named deliverable is gone.
 ///
+/// **The population is the strided sample PLUS the network's 25 strongest
+/// reaches** (The Rill, Task 3). Once every land cell is rendered, a uniform
+/// stride over 14,606 vertices is a sample of headwater creeks — its strongest
+/// reach carried `drainage` 48 against a threshold of 80, and this test went red
+/// for that reason and no other. See `transects_with_strongest` for why naming
+/// the extreme is not cherry-picking: the claim names it.
+///
 /// **The reference is the world's own discharge ORDERING, not the criterion's
 /// threshold.** Among the transects where a crossing exists at all, the one
 /// carrying the most water must not be wadeable and the one carrying the least
@@ -1008,7 +1072,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let (transects, _, _) = network_transects(&ctx, 400);
+    let (transects, _, _) = transects_with_strongest(&ctx, 400, 25);
 
     // Every transect where a crossing exists, paired with the discharge of the
     // reach it transects. `total_cmp` with an index tie-break, so the extremes
@@ -1082,7 +1146,11 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 ///
 /// At walk depth the clause is inert on seed 42: the widest full channel is
 /// 1.89e-4 rad against a 2.71e-4 room edge, so `2·b0 < step` holds at every
-/// vertex and deleting the clause changes nothing. That is a fact about this
+/// vertex and deleting the clause changes nothing. (The Rill's Task 3 widened
+/// the network to the whole land flow tree without moving that: the reaches it
+/// added are NARROWER than the ones already there, so the widest channel in the
+/// world is unchanged and the clause is inert at walk depth for the same
+/// reason.) That is a fact about this
 /// world at this depth, not about the criterion — and an unexercised clause is
 /// an unguarded one.
 ///
@@ -1104,8 +1172,18 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     let ctx = LocaleContext::build(&world).unwrap();
     let shallow_depth = walk_depth(&ctx);
     let deep_depth = shallow_depth + 3;
-    let (shallow, _, _) = transects_at(&ctx, 400, shallow_depth);
-    let (deep, _, _) = transects_at(&ctx, 400, deep_depth);
+    // 1600, not the 400 the other tests sample. Once the network renders the
+    // whole land flow tree, the qualifying population — reaches whose full
+    // width falls BETWEEN the deep step and the shallow one — is a shrinking
+    // fraction of a growing sample: 96 of 400 (24%) when only river cells were
+    // rendered, 37 of 400 (9%) now, because a headwater creek is narrower than
+    // both steps and is filtered out at the `wide >= longest_deep` clause. The
+    // rate is the measurement; the count is the anti-vacuity floor, and it is
+    // restored by sampling more rather than by lowering the floor. Both depths
+    // take the same `wanted` so the two strides agree and the vertices match.
+    let wanted = 1_600;
+    let (shallow, _, _) = transects_at(&ctx, wanted, shallow_depth);
+    let (deep, _, _) = transects_at(&ctx, wanted, deep_depth);
 
     let mut flipped = 0usize;
     let mut examined = 0usize;

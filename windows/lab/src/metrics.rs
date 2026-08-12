@@ -6827,33 +6827,48 @@ fn lab_channel_area(net: &hornvale_terrain::channel::ChannelNetwork) -> f64 {
 /// The channel's width at vertex `j` of line `i` as the SHIPPED predicate
 /// reports it: step across the centreline and total the offsets that read
 /// `Channel`. The positive control for [`lab_channel_area`].
+///
+/// Returns **two** widths, and the pair is the point (The Rill, Task 3). The
+/// first counts every offset reading `Channel` whichever line won it; the
+/// second counts only those `nearest_line` awards to line `i` itself. While the
+/// network rendered river cells only, the two were the same number to within a
+/// percent and one would have done. Rendering the whole land flow tree puts
+/// ~6400 confluences in a world that had ~90, so at a tributary's mouth the
+/// TRUNK owns the water — its band is wider, and it wins the nearest-line
+/// selection at the shared vertex. Measured on this world: the unrestricted
+/// total runs **1.19x** the integrated tube and the own-line total **0.83x** of
+/// it. Neither is the error bar of the other; they bracket it, which is what
+/// the caller asserts.
 #[cfg(test)]
 fn lab_channel_transect_width(
     net: &hornvale_terrain::channel::ChannelNetwork,
     i: usize,
     j: usize,
     steps: usize,
-) -> f64 {
+) -> (f64, f64) {
     // Four half-widths either side: wide enough that the whole channel is
     // inside the swept window whatever the band geometry, narrow enough that
     // the steps resolve it.
     let outer = net.band_edges[i][j][0] * 4.0;
     if outer <= 0.0 {
-        return 0.0;
+        return (0.0, 0.0);
     }
     let line = &net.polylines[i];
     let left = lab_left_normal(line, j);
     let step = 2.0 * outer / steps as f64;
     let mut inside = 0usize;
+    let mut own = 0usize;
     for s in 0..steps {
         let offset = -outer + (s as f64 + 0.5) * step;
-        if net.transverse_at(lab_offset(line, j, left, offset)).0
-            == hornvale_terrain::channel::Transverse::Channel
-        {
+        let p = lab_offset(line, j, left, offset);
+        if net.transverse_at(p).0 == hornvale_terrain::channel::Transverse::Channel {
             inside += 1;
+            if net.nearest_line(p).map(|(k, _)| k) == Some(i) {
+                own += 1;
+            }
         }
     }
-    inside as f64 * step
+    (inside as f64 * step, own as f64 * step)
 }
 
 /// For each cell, the `(line, vertex)` of the run that CLAIMED it — the run
@@ -8857,19 +8872,53 @@ mod tests {
     /// which is only legitimate while that integral is what the SHIPPED
     /// `transverse_at` predicate would report. So: measure the same tube by
     /// stepping across it with `transverse_at`, over the same vertices, and
-    /// require the two to agree. A width law that drifted away from the band
-    /// predicate — or a `transverse_at` that stopped reading `band_edges[0]`
-    /// as the channel border — separates them.
+    /// require the integral to sit inside what the predicate reports. A width
+    /// law that drifted away from the band predicate — or a `transverse_at`
+    /// that stopped reading `band_edges[0]` as the channel border — separates
+    /// them.
+    ///
+    /// **IT IS A BRACKET, NOT A RATIO, AND THE RILL'S TASK 3 IS WHY.** It used
+    /// to require `sampled / analytic` inside `[0.9, 1.1]`, which was a fair
+    /// statement while every line in the world was far from every other. It is
+    /// not one now: the network renders the whole land flow tree, so lines meet
+    /// at ~6400 confluences instead of ~90, and a transect taken at a
+    /// tributary's narrow mouth walks through water the TRUNK's wider band owns.
+    /// The unrestricted sampled width therefore over-states this vertex's tube
+    /// (1.19x measured) and the own-line-only width under-states it (0.83x),
+    /// for the same reason and in opposite directions. The integral must lie
+    /// between them.
+    ///
+    /// The bracket is two-sided on purpose, and each side catches a different
+    /// drift: if `transverse_at`'s channel border widened, the own-line total
+    /// grows past the integral and the LOWER bound fails; if it narrowed, the
+    /// unrestricted total drops below the integral and the UPPER bound fails.
+    /// A one-sided `analytic <= sampled` would be blind to the first, since
+    /// `own <= sampled` holds by construction.
+    ///
+    /// **Strided to 200 vertices.** At one transect per vertex this test cost
+    /// 159 s on the widened network (400 `transverse_at` probes per vertex,
+    /// each linear in the network's 3887 vertices) against ~2 s before it. The
+    /// stride costs nothing in signal — the ratio over 195 strided vertices is
+    /// 1.1935 against 1.2033 over all 3887 — and returns the test to ~9 s.
     #[test]
     fn the_analytic_channel_area_matches_the_sampled_one() {
         let terrain = ford_test_terrain();
         let net = terrain.channels();
         assert!(!net.polylines.is_empty(), "no channels to compare");
         let mut sampled = 0.0_f64;
+        let mut own_line = 0.0_f64;
         let mut analytic = 0.0_f64;
         let mut vertices = 0usize;
+        let total: usize = net.polylines.iter().map(|l| l.points.len()).sum();
+        let stride = total.div_ceil(200).max(1);
+        let mut index = 0usize;
         for (i, line) in net.polylines.iter().enumerate() {
             for j in 0..line.points.len() {
+                let take = index.is_multiple_of(stride);
+                index += 1;
+                if !take {
+                    continue;
+                }
                 vertices += 1;
                 // The representative arc length of vertex `j`: half of each
                 // adjacent segment, so the vertex sum telescopes to the same
@@ -8881,7 +8930,9 @@ mod tests {
                 if j + 1 < line.points.len() {
                     length += 0.5 * lab_angle(line.points[j], line.points[j + 1]);
                 }
-                sampled += length * lab_channel_transect_width(net, i, j, 400);
+                let (full, own) = lab_channel_transect_width(net, i, j, 400);
+                sampled += length * full;
+                own_line += length * own;
                 analytic += length * 2.0 * net.band_edges[i][j][0];
             }
         }
@@ -8893,11 +8944,35 @@ mod tests {
             "only {vertices} vertices — too few to be a real comparison"
         );
         let ratio = sampled / analytic;
+        let own_ratio = own_line / analytic;
+        println!(
+            "vertices={vertices} of {total} (stride {stride}) analytic={analytic:e} \
+             sampled={sampled:e} own_line={own_line:e} ratio={ratio} own_ratio={own_ratio}"
+        );
         assert!(
-            (0.9..1.1).contains(&ratio),
-            "the integrated channel tube ({analytic}) and the same tube measured through \
-             transverse_at ({sampled}) disagree by {ratio}x — the metric's estimator has \
-             drifted from the band predicate it stands in for"
+            own_ratio <= 1.0,
+            "the channel tube measured through transverse_at, counting ONLY the offsets this \
+             line itself wins ({own_line}), already exceeds the integrated tube ({analytic}) by \
+             {own_ratio}x. The predicate's channel border is wider than the `band_edges[0]` the \
+             metric integrates, so `channel-land-fraction` under-reports what a walker would \
+             actually stand in"
+        );
+        assert!(
+            ratio >= 1.0,
+            "the integrated channel tube ({analytic}) exceeds the same tube measured through \
+             transverse_at even counting every line's water ({sampled}), by {ratio}x. The \
+             predicate's channel border is narrower than the `band_edges[0]` the metric \
+             integrates, so `channel-land-fraction` over-reports"
+        );
+        // The bracket must stay a bracket rather than widening into a
+        // statement about nothing. Measured 0.831 and 1.194; a network whose
+        // lines had drifted into each other far more than this world's do would
+        // show up here before it showed up as a wrong verdict anywhere else.
+        assert!(
+            own_ratio > 0.6 && ratio < 1.6,
+            "the estimator bracket [{own_ratio}, {ratio}] has opened well past the measured \
+             [0.83, 1.19] — the channel network's lines are overlapping far more than the \
+             integral's per-line sum can stand in for"
         );
     }
 

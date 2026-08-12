@@ -18,7 +18,7 @@
 
 use crate::crust::SphereFbm;
 use crate::globe::TectonicGlobe;
-use crate::water::{RIVER_MIN_DRAINAGE, WaterKind};
+use crate::water::WaterKind;
 use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, band, math};
 use std::collections::BTreeSet;
 
@@ -179,9 +179,17 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// Half the channel width for a reach carrying `drainage`, in radians, given
 /// the local angular `cell_edge`. Downstream hydraulic geometry
 /// `w = a·Q^b` with `a` a fraction of the cell edge, so the result stays
-/// angular. Below [`RIVER_MIN_DRAINAGE`] — the same threshold
-/// [`crate::water::classify`] uses to call a cell a river at all — the width
-/// is exactly `0.0`: a sub-threshold trickle is not a channel.
+/// angular. **Unconditional in `drainage`**: a creek carrying one cell's runoff
+/// is a narrow channel, not an absent one (The Rill, decision 0129).
+///
+/// This function used to return exactly `0.0` below
+/// [`crate::water::RIVER_MIN_DRAINAGE`], on the grounds that a sub-threshold
+/// trickle is not a channel. That was right for a network that rendered only
+/// river cells — every band edge derives from this half-width, so a
+/// sub-threshold line would have read `Dry` at its own centre and carried no
+/// bank, floodplain or terrace — and it is wrong for one that renders the whole
+/// flow tree. See the decision record for what the short-circuit was protecting
+/// and why the protection is no longer needed.
 ///
 /// # THIS LAW IS ALREADY A FUNCTION OF DRAINED AREA. DO NOT "FIX" IT.
 ///
@@ -233,21 +241,23 @@ pub const MEANDER_AMPLITUDE_RATIO: f64 = 0.25;
 /// in those same sub-triangle units. Take the two from different depths and
 /// the cancellation above is exactly what breaks.
 ///
-/// ## The one part that is not scale-free
+/// ## The part that used to not be scale-free, and no longer exists
 ///
-/// [`RIVER_MIN_DRAINAGE`] compares against a **count**, so it is the single
-/// place where refining the grid changes the answer for a fixed physical
-/// drained area: a trickle that is not a channel here is a channel one level
-/// down, because its count quadrupled while the threshold did not. Deliberate
-/// and asserted, not overlooked — as a steradian area `15.0` exceeds every
-/// discharge in the world and would zero every channel, so making it an area
-/// is a real change with its own blast radius through
-/// [`crate::water::classify`].
+/// The zero-return compared against [`crate::water::RIVER_MIN_DRAINAGE`], which
+/// is a **count**, so it was the single place where refining the grid changed
+/// this function's answer for a fixed physical drained area: a trickle that was
+/// not a channel here was a channel one level down, because its count
+/// quadrupled while the threshold did not. Removing it makes the width law
+/// scale-free without qualification — Tier 2 no longer inherits an exception.
+///
+/// The threshold itself is untouched and still gates
+/// [`crate::water::classify`]'s `WaterKind::River`, which is a different
+/// question: whether a cell is *named* a river. A cell may carry a rendered
+/// watercourse and still classify `DryLand`, and that disagreement is
+/// deliberate — The Ford measured it at ~49.6% before this task and this task
+/// widens it on purpose.
 /// type-audit: bare-ok(count: drainage), pending(wave-1: cell_edge), pending(wave-1: return)
 pub fn channel_half_width(drainage: f64, cell_edge: f64) -> f64 {
-    if drainage.total_cmp(&RIVER_MIN_DRAINAGE).is_lt() {
-        return 0.0;
-    }
     0.5 * CHANNEL_WIDTH_COEFF * cell_edge * math::powf(drainage, CHANNEL_WIDTH_EXPONENT)
 }
 
@@ -343,7 +353,7 @@ fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: CellId) -> f64 {
 /// type-audit: pending(wave-1: band_edges)
 #[derive(Clone, Debug)]
 pub struct ChannelNetwork {
-    /// One polyline per maximal downhill run of river cells, in build order
+    /// One polyline per maximal downhill run of reaches, in build order
     /// (ascending head `CellId`). A tributary's run ends *on* the cell where
     /// it joins its trunk, and `build`'s explicit **confluence repair** pass
     /// then places that mouth vertex exactly on the trunk's own vertex for
@@ -376,7 +386,7 @@ pub struct ChannelNetwork {
     /// downhill run the polyline is a rendering of. Parallel to `polylines`:
     /// `run_cells[i].len() == polylines[i].points.len()`.
     ///
-    /// **The last cell of a run is usually not a river cell.** A run includes
+    /// **The last cell of a run is usually not a reach.** A run includes
     /// the cell it drains into, so its final entry is normally the ocean or
     /// salt-basin outlet at its mouth (or, at a confluence, the trunk cell it
     /// joins). A consumer reading a per-cell field off these — drainage, say —
@@ -455,19 +465,30 @@ pub struct BankReading {
 impl ChannelNetwork {
     /// Build the network from a generated globe.
     ///
-    /// Walks every `WaterKind::River` cell in ascending `CellId` order,
-    /// starting runs at *heads* (river cells no other river cell drains into)
-    /// and following `downhill` to the sea, a terminal sink, or an
-    /// already-claimed trunk. **A run includes the cell it drains into**, so a
-    /// run's last cell is the outlet (an ocean or salt-basin cell), the trunk
-    /// cell it joins, or — the one case where the last cell is a river with
-    /// nowhere to go — a terminal sink.
+    /// Walks every **reach** in ascending `CellId` order — a reach being a land
+    /// cell with somewhere to send its water — starting runs at *heads* (reaches
+    /// no other reach drains into) and following `downhill` to the sea, a
+    /// terminal sink, or an already-claimed trunk. **A run includes the cell it
+    /// drains into**, so a run's last cell is the outlet (an ocean or
+    /// salt-basin cell) or the trunk cell it joins.
     ///
-    /// Runs of a single cell are dropped: one isolated river cell has no
-    /// direction, and a one-point polyline is not a line. Since the walk keeps
-    /// its outlet, that filter now excludes only a river cell with **no
-    /// downhill target at all** and no river inflow, which is a real and much
-    /// rarer case — seed 42 at level 6 has none.
+    /// **THE REACH PREDICATE IS NOT `WaterKind::River`, AND THAT IS THE POINT**
+    /// (The Rill, Task 3, decision 0129). `downhill` and `drainage` are
+    /// computed for every land cell; this used to render only the ~6.7% above
+    /// `RIVER_MIN_DRAINAGE` and discard the rest, so the world computed a
+    /// complete space-filling flow tree and drew one fifteenth of it. It now
+    /// draws all of it. Nothing upstream changed — the branches were always
+    /// there — and `water::classify` is untouched, so a cell may carry a
+    /// rendered watercourse and still classify `DryLand`. That disagreement is
+    /// deliberate; do not "repair" it by widening `WaterKind::River`.
+    ///
+    /// A consequence worth naming: **the one-cell filter below is now
+    /// unreachable**. A reach has a downhill target by definition, so its run
+    /// pushes at least that target and is at least two cells long. The filter
+    /// is kept as a statement of what a polyline is, not because anything
+    /// reaches it — before this change it excluded a river cell with no
+    /// downhill target and no river inflow, which was already rare, and such a
+    /// cell is now not a reach at all and never starts a run.
     ///
     /// A final pass moves every **confluence mouth** onto the trunk vertex it
     /// joins, so runs that meet in the drainage graph also meet in space; see
@@ -483,17 +504,26 @@ impl ChannelNetwork {
     /// doc warns against.
     pub fn build(globe: &TectonicGlobe, geo: &Geosphere, meander_seed: Seed) -> ChannelNetwork {
         let meander = SphereFbm::new(meander_seed, MEANDER_FREQUENCY, MEANDER_OCTAVES);
-        let is_river = |c: CellId| matches!(*globe.water_kind.get(c), WaterKind::River);
+        // A REACH: land, with a downhill target to be a reach *of*. Land is
+        // read as "not ocean" off `water_kind` rather than re-tested against
+        // `sea_level`, so there is one definition of the shoreline in this
+        // crate and not two; `classify`'s first branch is exactly
+        // `elevation < sea_level`. The `downhill` half excludes terminal sinks,
+        // which is what keeps a salt basin an OUTLET a run drains into rather
+        // than a reach that drains onward — it has nowhere to drain onward to.
+        let is_reach = |c: CellId| {
+            !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
+        };
 
-        // In-degree within the river subgraph, as a dense Vec (CellId is a
+        // In-degree within the reach subgraph, as a dense Vec (CellId is a
         // dense 0..N index — kernel/CLAUDE.md).
-        let mut has_river_inflow = vec![false; geo.cell_count()];
+        let mut has_inflow = vec![false; geo.cell_count()];
         for c in geo.cells() {
-            if !is_river(c) {
+            if !is_reach(c) {
                 continue;
             }
             if let Some(t) = *globe.downhill.get(c) {
-                has_river_inflow[t.0 as usize] = true;
+                has_inflow[t.0 as usize] = true;
             }
         }
 
@@ -505,10 +535,10 @@ impl ChannelNetwork {
         // it is here so the walk is total regardless.
         for heads_only in [true, false] {
             for c in geo.cells() {
-                if !is_river(c) || claimed.contains(&c) {
+                if !is_reach(c) || claimed.contains(&c) {
                     continue;
                 }
-                if heads_only && has_river_inflow[c.0 as usize] {
+                if heads_only && has_inflow[c.0 as usize] {
                     continue;
                 }
                 let mut run = vec![c];
@@ -532,10 +562,11 @@ impl ChannelNetwork {
                     // land cell the deficit grows, because the number of runs
                     // terminating at a non-river cell rises with it.
                     run.push(target);
-                    if !is_river(target) {
-                        // The outlet this run drains into — the sea or a salt
-                        // basin. The walk follows river cells, so it stops
-                        // here; the vertex stays.
+                    if !is_reach(target) {
+                        // The outlet this run drains into — the sea, or a
+                        // terminal sink (a salt basin) with nowhere to send
+                        // what it receives. The walk follows reaches, so it
+                        // stops here; the vertex stays.
                         break;
                     }
                     if !claimed.insert(target) {
@@ -560,10 +591,10 @@ impl ChannelNetwork {
             for (i, &c) in run.iter().enumerate() {
                 let spacing = cell_spacing(geo, c);
                 let slope = local_slope(globe, geo, c);
-                if is_river(c) {
+                if is_reach(c) {
                     edges.push(band_edges(*globe.drainage.get(c), slope, spacing));
                 } else {
-                    // THE BORROWED TERMINAL VERTEX. A non-river cell is a
+                    // THE BORROWED TERMINAL VERTEX. A non-reach cell is a
                     // run's LAST cell by construction — the walk above stops
                     // the moment it pushes one — so this is the outlet, and
                     // the outlet's own hydraulics are not this reach's.
@@ -638,7 +669,7 @@ impl ChannelNetwork {
         //
         // THE TERMINAL VERTEX (Task 2) IS INERT HERE, and the reason is the
         // same rule rather than a new exception. `owner` records only
-        // NON-FINAL vertices; a non-river outlet is a run's last cell by
+        // NON-FINAL vertices; a non-reach outlet is a run's last cell by
         // construction, so it can never be one, and `owner[outlet]` is
         // therefore always `None`. Every run that gained a mouth falls into
         // the `else { continue }` arm below and keeps that mouth anchored on
@@ -1048,13 +1079,37 @@ mod tests {
         assert!(channel_half_width(2_000.0, e) > big);
     }
 
-    /// A sub-threshold trickle is not a channel at all.
+    /// A sub-threshold trickle is a NARROW channel, not an absent one — the
+    /// whole of decision 0129, as an assertion. This test used to be
+    /// `drainage_below_the_river_threshold_has_zero_width` and asserted the
+    /// exact opposite; it is superseded rather than deleted so the reversal is
+    /// visible where the old claim lived.
+    ///
+    /// The lower bound is the point. A creek carrying the runoff of one cell —
+    /// `drainage` is a land-cell count and every land cell drains at least
+    /// itself, so 1.0 is the floor the world can produce — must still have a
+    /// positive width, because every band edge derives from this half-width and
+    /// a zero here reads `Dry` at the channel's own centre.
     #[test]
-    fn drainage_below_the_river_threshold_has_zero_width() {
+    fn a_sub_threshold_trickle_is_a_narrow_channel_not_an_absent_one() {
         let e = CANONICAL_CELL_EDGE;
-        assert_eq!(
-            channel_half_width(crate::water::RIVER_MIN_DRAINAGE - 1.0, e),
-            0.0
+        let threshold = channel_half_width(crate::water::RIVER_MIN_DRAINAGE, e);
+        let trickle = channel_half_width(crate::water::RIVER_MIN_DRAINAGE - 1.0, e);
+        // The floor of the world's discharge range: one land cell's own runoff.
+        let headwater = channel_half_width(1.0, e);
+        assert!(headwater > 0.0, "a headwater creek has no channel at all");
+        assert!(trickle > headwater, "width is not monotone below threshold");
+        assert!(
+            trickle < threshold,
+            "a trickle is not narrower than a river"
+        );
+        // And it is narrow in the sense that matters: a headwater channel is
+        // orders of magnitude below the cell that carries it, which is the
+        // campaign's own claim extended to the smallest reach in the world.
+        assert!(
+            headwater * 2.0 < e / 1_000.0,
+            "a headwater channel {} rad is not << cell edge {e} rad",
+            headwater * 2.0
         );
     }
 

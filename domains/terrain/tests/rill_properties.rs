@@ -46,6 +46,7 @@ use hornvale_terrain::{
     ChannelNetwork, RIVER_MIN_DRAINAGE, TerrainPins, WaterKind, band_edges, channel_half_width,
     generate,
 };
+use std::collections::BTreeSet;
 
 /// The committed pre-change witness (`70967bc4`): the width law's inputs and
 /// outputs on the seed-42 canonical `Geosphere::new(6)` network, captured on
@@ -237,50 +238,64 @@ fn the_width_law_is_scale_free_across_six_doublings() {
 /// fact about seed 42's drainage.
 const OUTLET_SEEDS: [u64; 3] = [42, 7, 1234];
 
-/// The canonical grid. Level 5 will not serve here: it carries 13 runs on seed
-/// 42, so the per-seed floor below could not be met and the assertion would run
-/// over a population too small to distinguish "every run reaches its outlet"
-/// from "the handful of runs this world has happen to".
+/// The canonical grid. Level 5 remains the wrong grid for this even now that
+/// the network is fifteen times larger: it is the grid the byte golden pins,
+/// and a property test that shared it would move whenever that fixture did.
 const OUTLET_LEVEL: u32 = 6;
 
-/// Per-seed run floor, so a world that stopped producing rivers is visible on
-/// its own rather than absorbed by the other two.
-const MIN_RUNS_PER_SEED: usize = 25;
+/// Per-seed run floor, so a world that stopped producing channels is visible on
+/// its own rather than absorbed by the other two. Measured after Task 3: 3606 /
+/// 6086 / 3876 (was 183 / 359 / 192 when the network rendered river cells
+/// only).
+const MIN_RUNS_PER_SEED: usize = 1_500;
 
-/// Sweep-wide run floor: a riverless world cannot pass this test by having
-/// nothing to check.
-const MIN_RUNS_TOTAL: usize = 300;
+/// Sweep-wide run floor: a channel-less world cannot pass this test by having
+/// nothing to check. Measured 13,568 after Task 3, against 734 before it.
+const MIN_RUNS_TOTAL: usize = 6_500;
 
-/// Sweep-wide floor on runs that actually END on a non-river outlet — the
+/// Sweep-wide floor on runs that actually END on a non-reach outlet — the
 /// vertex Task 2 adds. The universal assertion above is satisfied by a
-/// confluence or a terminal sink too, so without this a build that stopped
-/// emitting outlet vertices entirely could still pass by ending every run on a
-/// trunk. Measured after the change: 163 / 289 / 164 across the three seeds
-/// (616 of 734 runs); the floor is half of that, which leaves room for terrain
-/// drift and none for the phenomenon disappearing.
-const MIN_OUTLET_RUNS: usize = 308;
+/// confluence too, so without this a build that stopped emitting outlet
+/// vertices entirely could still pass by ending every run on a trunk. Measured
+/// after Task 3: 2028 / 3113 / 2035 = **7176** of 13,568 runs (6090 ocean, 1086
+/// salt basin, and — checked, not assumed — zero of any other kind). The floor
+/// is half of that, which leaves room for terrain drift and none for the
+/// phenomenon disappearing.
+const MIN_OUTLET_RUNS: usize = 3_500;
 
 /// claim: invariant(forall-seed) — the last cell of every run, over three
 /// worlds on the canonical grid, is the cell that run drains into.
 ///
 /// **R-2.** A run must include the cell it drains into. `build` walks a run
-/// down `downhill` and can stop for exactly three reasons, so the last cell of
-/// every run must be one of exactly three things:
+/// down `downhill` and can stop for exactly two reasons, so the last cell of
+/// every run must be one of exactly two things:
 ///
-/// 1. it has no downhill target at all (a terminal sink), or
-/// 2. it is not a river — it is the outlet the run drains into, the sea or a
-///    salt basin, and the run reached it, or
-/// 3. some *other* run carries it as a non-final vertex, which is a confluence:
+/// 1. it is not a **reach** — it is the outlet the run drains into: an ocean
+///    cell, or a terminal sink (land with nowhere to send its water, which
+///    `water::classify` names a salt basin), and the run reached it; or
+/// 2. some *other* run carries it as a non-final vertex, which is a confluence:
 ///    this run joined a trunk another run had already claimed and stopped on
 ///    the shared cell.
 ///
-/// Anything else — a run ending on a river cell that has a downhill target and
-/// that no other run continues past — is a run that **stopped short**, which is
-/// precisely the defect this task repairs. Before the fix `build` broke *before*
-/// pushing a non-river target, so every run draining straight to the sea ended
-/// one cell early and its mouth sat inland; the 39 seed-42 river cells that
-/// carried no polyline were exactly the 39 that read `Dry` at their own
-/// centres.
+/// Anything else — a run ending on a reach that no other run continues past —
+/// is a run that **stopped short**, which is precisely the defect Task 2
+/// repaired. Before that fix `build` broke *before* pushing a non-river target,
+/// so every run draining straight to the sea ended one cell early and its mouth
+/// sat inland; the 39 seed-42 river cells that carried no polyline were exactly
+/// the 39 that read `Dry` at their own centres.
+///
+/// **The classification is `is_reach`, not `water_kind == River` — Task 3
+/// changed which of those is the right question, and the difference is not
+/// cosmetic.** It used to be three clauses because a terminal sink was a
+/// *river* cell with no downhill target, a case distinct from an outlet. Now
+/// the reach predicate excludes terminal sinks by construction, so clause 1
+/// absorbs them: `other_nonreach` was measured at exactly **0** across the
+/// three worlds — every non-reach terminal is Ocean or SaltBasin. And the test
+/// could not simply keep asking about `River`: once every land cell is
+/// rendered, most confluences happen on cells that classify `DryLand`, and the
+/// old first clause caught them and demanded borrowed geometry of a vertex
+/// that is entitled to its own. It failed on seed 42 run 76 at `CellId(12678)`
+/// for exactly that reason.
 ///
 /// The third clause reads the *owner* map — a cell some run carries as a
 /// non-final vertex — rather than "a cell that appears in two runs". The
@@ -323,9 +338,17 @@ fn every_run_reaches_its_outlet() {
         );
         total_runs += net.run_cells.len();
 
+        // A REACH: land with a downhill target, the same predicate `build`
+        // walks on — restated here from committed state rather than read off
+        // the network, so the classification below is not the object under
+        // test's own opinion of itself.
+        let is_reach = |c: CellId| {
+            !matches!(*globe.water_kind.get(c), WaterKind::Ocean) && globe.downhill.get(c).is_some()
+        };
+
         for (i, cells) in net.run_cells.iter().enumerate() {
             let last: CellId = *cells.last().expect("a run has at least two cells");
-            if !matches!(*globe.water_kind.get(last), WaterKind::River) {
+            if !is_reach(last) {
                 outlet_runs += 1;
                 // THE BORROWED MOUTH GEOMETRY, as a property. `band_edges` is
                 // per vertex from that vertex's own drainage, slope and
@@ -358,12 +381,9 @@ fn every_run_reaches_its_outlet() {
                 );
                 continue;
             }
-            if globe.downhill.get(last).is_none() {
-                continue;
-            }
             assert!(
                 owner[last.0 as usize].is_some_and(|trunk| trunk != i),
-                "seed {seed}, run {i}: it ends on river cell {last:?}, which has a downhill \
+                "seed {seed}, run {i}: it ends on reach {last:?}, which has a downhill \
                  target ({:?}) and which no other run continues past. The run stopped short of \
                  the cell it drains into, so its mouth is inland and the outlet cell carries no \
                  channel",
@@ -379,40 +399,325 @@ fn every_run_reaches_its_outlet() {
     );
     assert!(
         outlet_runs >= MIN_OUTLET_RUNS,
-        "only {outlet_runs} of {total_runs} runs end on the non-river cell they drain into \
-         (measured 616) — the terminal vertex is no longer being emitted, and the assertion \
+        "only {outlet_runs} of {total_runs} runs end on the non-reach cell they drain into \
+         (measured 7176) — the terminal vertex is no longer being emitted, and the assertion \
          above cannot see that because a confluence satisfies it too"
     );
 }
 
-/// claim: behavior(the one part of the width law that is NOT scale-free)
+// ---------------------------------------------------------------------------
+// R-1 (Task 3): the network renders the whole flow tree, not the top 6.7%.
+//
+// THE GUARD ORDER MATTERS AND IS THE POINT. Task 3 re-baselines
+// `tests/fixtures/channel-network-seed-42-level-5.txt`, which was the only
+// thing in the repo pinning network topology; a fixture regenerated after a
+// change witnesses the change rather than judging it. So the two tests below
+// were written and run BEFORE the widening, and
+// `the_network_renders_every_river_cells_downhill_edge` was watched PASSING on
+// the pre-change network. It is the durable statement that the widening was
+// ADDITIVE: every edge the old network drew, the new one still draws, in the
+// same direction, as a consecutive pair of the same run. Neither test reads a
+// fixture — both derive their reference from committed globe state
+// (`elevation`, `sea_level`, `downhill`, `water_kind`), so a re-baseline
+// cannot launder them.
+// ---------------------------------------------------------------------------
+
+/// The rendered edge set: every consecutive pair of cells in every run, as raw
+/// `CellId` values. This is the network's topology stated as a relation, which
+/// is the form the flow tree it is a rendering of also takes — so the two are
+/// directly comparable without either side re-deriving the other's
+/// construction.
+fn rendered_edges(net: &ChannelNetwork) -> BTreeSet<(u32, u32)> {
+    let mut edges = BTreeSet::new();
+    for run in &net.run_cells {
+        for pair in run.windows(2) {
+            edges.insert((pair[0].0, pair[1].0));
+        }
+    }
+    edges
+}
+
+/// Sweep-wide floor on river edges, so a world that stopped producing rivers
+/// cannot satisfy the containment claim by having nothing to contain.
+/// Measured on the pre-change network at level 6: 700 / 1533 / 803 = 3036.
+const MIN_RIVER_EDGES: usize = 1500;
+
+/// Sweep-wide floor on land flow-tree edges. Measured: 11000 / 18922 / 11493 =
+/// 41415. Half of that, which terrain drift will not reach and a collapse of
+/// the flow tree would.
+const MIN_LAND_EDGES: usize = 20000;
+
+/// claim: invariant(forall-seed) — every `WaterKind::River` cell's downhill
+/// edge is rendered, over three worlds on the canonical grid.
 ///
-/// `RIVER_MIN_DRAINAGE` compares against a **count**, so it is the single
-/// place where refining the grid changes the answer for a fixed physical
-/// drained area: the same trickle that is not a channel at level 6 is a
-/// channel at level 7, because its count quadrupled while the threshold did
-/// not. Asserted rather than merely noted, because it is the exception Tier 2
-/// has to carry — a subdivision that inherits this threshold unchanged will
-/// find channels appearing out of nothing as it descends.
+/// **THE PRE-CHANGE TOPOLOGY WITNESS.** Written and watched green on the
+/// network as it stood before Task 3's widening (183 / 359 / 192 polylines,
+/// 883 / 1892 / 995 vertices), and green on the widened one. That is its whole
+/// job: it says the widening only ever ADDED, so no river the old network drew
+/// was moved onto a different cell, dropped, or reversed.
 ///
-/// This is not a defect being enshrined. Making the threshold an area is a
-/// deliberate change with its own blast radius (`crate::water::classify` reads
-/// the same constant to decide what a river *is*), and it belongs to whichever
-/// task takes it on, with this assertion as the statement of what it changes.
+/// The claim is over EDGES rather than over cells because a cell can appear in
+/// a run for two different reasons — as a reach, or as the outlet a run merely
+/// terminates on — and only the edge form distinguishes them. It is also the
+/// form that carries direction: `(c, downhill(c))` renders as a consecutive
+/// pair in that order, so a build that collected runs upstream would fail here
+/// rather than pass on an undirected set.
+///
+/// The reference is computed from `water_kind` and `downhill` directly, so it
+/// lives outside the object under test and outside every fixture. The level-5
+/// byte golden pins the same topology and more, but it is re-baselined by this
+/// very task; this is what does not move.
 #[test]
-fn the_river_threshold_is_the_one_part_that_is_not_scale_free() {
-    // The canonical level-6 cell edge; the exact value is immaterial here.
-    let spacing = 0.018_886;
-    let trickle = RIVER_MIN_DRAINAGE - 1.0;
-    assert_eq!(
-        channel_half_width(trickle, spacing),
-        0.0,
-        "a sub-threshold trickle is not a channel"
+fn the_network_renders_every_river_cells_downhill_edge() {
+    let geo = Geosphere::new(OUTLET_LEVEL);
+    let mut checked = 0usize;
+    for seed in OUTLET_SEEDS {
+        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
+        let globe = &outcome.globe;
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+        let rendered = rendered_edges(&net);
+        for c in geo.cells() {
+            if !matches!(*globe.water_kind.get(c), WaterKind::River) {
+                continue;
+            }
+            let Some(target) = *globe.downhill.get(c) else {
+                continue;
+            };
+            assert!(
+                rendered.contains(&(c.0, target.0)),
+                "seed {seed}: river cell {c:?} drains to {target:?}, and no run carries that \
+                 edge. The network no longer contains the network it replaced — whatever else \
+                 changed, an existing river was dropped, rerouted or reversed"
+            );
+            checked += 1;
+        }
+    }
+    assert!(
+        checked >= MIN_RIVER_EDGES,
+        "only {checked} river edges across {} seeds (measured 3036) — the containment claim \
+         above ran on far less than the population it was calibrated against",
+        OUTLET_SEEDS.len()
+    );
+}
+
+/// claim: invariant(forall-seed) — the rendered edge set EQUALS the world's
+/// land flow tree, over three worlds on the canonical grid.
+///
+/// **R-1.** `downhill` and `drainage` are computed for every land cell; before
+/// Task 3 the network rendered only the ~6.7% above [`RIVER_MIN_DRAINAGE`] and
+/// discarded the rest. This asserts the rest is now drawn: the set of
+/// consecutive run-cell pairs is exactly `{(c, downhill(c)) : c is land}`.
+///
+/// **Equality, not containment, and the second half is the load-bearing one.**
+/// Containment alone ("every land edge is rendered") is satisfied by a build
+/// that also invents edges the flow tree does not have — a run that skipped a
+/// cell, or one assembled from something other than `downhill`. The reverse
+/// inclusion is what says the network is a rendering OF the flow tree rather
+/// than a superset of it, and it is the assertion that would catch a widened
+/// predicate that accidentally admitted ocean cells as reaches.
+///
+/// The coverage half — R-1 as the brief states it, every land cell with a
+/// downhill target appearing in some `run_cells` — follows from the equality
+/// (such a cell sources a rendered edge, so it is in a run), and is asserted
+/// separately anyway because the exception set is the interesting part: a land
+/// cell absent from the network can only be a **terminal sink** with no land
+/// cell draining into it. Terminal sinks are `endorheic && no downhill`, which
+/// `water::classify` reads as `SaltBasin`; there are 66 / 124 / 78 of them
+/// across the three worlds and only the inflow-less ones go unrendered.
+#[test]
+fn the_network_renders_the_whole_flow_tree() {
+    let geo = Geosphere::new(OUTLET_LEVEL);
+    let mut land_edges_checked = 0usize;
+    let mut sinks_total = 0usize;
+    let mut unrendered_sinks = 0usize;
+    for seed in OUTLET_SEEDS {
+        let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).expect("seed generates");
+        let globe = &outcome.globe;
+        let net = ChannelNetwork::build(globe, &geo, globe.channel_noise_seed());
+
+        let is_land = |c: CellId| *globe.elevation.get(c) >= globe.sea_level;
+        // The reference flow tree, straight off committed state. Not one cell
+        // of it comes from `net`.
+        let mut flow_tree: BTreeSet<(u32, u32)> = BTreeSet::new();
+        let mut land_cells: Vec<CellId> = Vec::new();
+        for c in geo.cells() {
+            if !is_land(c) {
+                continue;
+            }
+            land_cells.push(c);
+            if let Some(target) = *globe.downhill.get(c) {
+                flow_tree.insert((c.0, target.0));
+            }
+        }
+        let rendered = rendered_edges(&net);
+
+        let missing: Vec<(u32, u32)> = flow_tree.difference(&rendered).copied().collect();
+        assert!(
+            missing.is_empty(),
+            "seed {seed}: {} of {} land flow-tree edges are not rendered (first: {:?}). The \
+             network is still drawing a sub-tree of the flow graph rather than the whole of it",
+            missing.len(),
+            flow_tree.len(),
+            missing.first()
+        );
+        let invented: Vec<(u32, u32)> = rendered.difference(&flow_tree).copied().collect();
+        assert!(
+            invented.is_empty(),
+            "seed {seed}: {} rendered edges are not in the land flow tree (first: {:?}). A run \
+             is carrying a pair of cells that `downhill` does not join, so the polyline is not a \
+             rendering of the flow graph",
+            invented.len(),
+            invented.first()
+        );
+        land_edges_checked += flow_tree.len();
+
+        let covered: BTreeSet<CellId> = net.run_cells.iter().flatten().copied().collect();
+        for &c in &land_cells {
+            if covered.contains(&c) {
+                continue;
+            }
+            assert!(
+                globe.downhill.get(c).is_none(),
+                "seed {seed}: land cell {c:?} has a downhill target ({:?}) and appears in no \
+                 run — R-1's coverage claim fails on it",
+                *globe.downhill.get(c)
+            );
+            unrendered_sinks += 1;
+        }
+        sinks_total += land_cells
+            .iter()
+            .filter(|&&c| globe.downhill.get(c).is_none())
+            .count();
+    }
+    assert!(
+        land_edges_checked >= MIN_LAND_EDGES,
+        "only {land_edges_checked} land flow-tree edges across {} seeds (measured 41415)",
+        OUTLET_SEEDS.len()
+    );
+    // Not an assertion about a good number — a statement of the exception set's
+    // SIZE, so a future change that started leaving ordinary land cells out
+    // would have to move this too. Measured: 268 terminal sinks across the
+    // three worlds, of which the inflow-less ones are unrendered.
+    assert!(
+        unrendered_sinks <= sinks_total,
+        "{unrendered_sinks} unrendered land cells against {sinks_total} terminal sinks — the \
+         exception set is larger than the only thing allowed to be in it"
     );
     assert!(
-        channel_half_width(trickle * 4.0, spacing * 0.5) > 0.0,
-        "the threshold is stated in cells, so one level down the SAME drained \
-         area clears it — if this ever stops being true, the threshold became \
-         an area and this test is the note saying so"
+        sinks_total > 0 && sinks_total < land_edges_checked / 50,
+        "{sinks_total} terminal sinks against {land_edges_checked} land edges — the exception \
+         clause above is either vacuous or swallowing the population"
     );
+}
+
+/// claim: structural(seed: 42) — the meander field's own values at eight fixed
+/// positions, pinned to exact bits.
+///
+/// **THE NOISE-FIELD WITNESS, AND WHY IT IS SEPARATE FROM THE GOLDEN.**
+/// `tests/fixtures/channel-network-seed-42-level-5.txt` exists because a
+/// reviewer mutated the meander's seed label and the whole terrain suite stayed
+/// green; its displacement column is what caught that. But the displacement of
+/// a vertex depends on the run it sits in — the perpendicular is taken from the
+/// vertex's neighbours — so **any change to run construction moves that column
+/// wholesale**, and Task 3 moves it for nearly every vertex in the world. A
+/// re-baseline then absorbs a seed change and a topology change
+/// indistinguishably.
+///
+/// These values do not depend on the network's shape at all. They are the
+/// field, sampled directly, captured on the pre-change code and asserted bit
+/// for bit — so a change to `streams::CHANNEL_MEANDER`, to the derivation in
+/// `TectonicGlobe::channel_noise_seed`, to `MEANDER_FREQUENCY` or to
+/// `MEANDER_OCTAVES` reddens here no matter what the run construction does.
+///
+/// What it does NOT cover, stated plainly so nobody reads it as more than it
+/// is: the meander AMPLITUDE ratio, the head/mouth anchoring rule, and the
+/// perpendicular the displacement is taken along are still witnessed only by
+/// the level-5 golden.
+#[test]
+fn the_meander_field_is_pinned() {
+    // Level 5 seed 42: the cheapest world that produces a network at all. The
+    // field is a function of the derived seed and position, so the grid it was
+    // sampled through is immaterial to what is pinned.
+    let geo = Geosphere::new(5);
+    let outcome = generate(Seed(42), &geo, &TerrainPins::default()).expect("seed 42 generates");
+    let net = ChannelNetwork::build(&outcome.globe, &geo, outcome.globe.channel_noise_seed());
+    let third = 0.577_350_269_189_625_8_f64;
+    let pinned: [([f64; 3], u64); 8] = [
+        ([1.0, 0.0, 0.0], 0xbfd2_2227_19c5_c360),
+        ([0.0, 1.0, 0.0], 0x3fe0_655f_ca41_2a78),
+        ([0.0, 0.0, 1.0], 0xbf96_5cca_d2e5_c4a0),
+        ([-1.0, 0.0, 0.0], 0x3fc0_be1c_c94b_6768),
+        ([0.6, 0.8, 0.0], 0xbfa1_5f39_82cc_5900),
+        ([0.0, -0.6, 0.8], 0x3fb1_e076_1579_9070),
+        ([third, third, third], 0x3fcb_5012_deb5_0f40),
+        ([-third, third, -third], 0x3fb3_6045_9e36_c760),
+    ];
+    let mut distinct = BTreeSet::new();
+    for (position, bits) in pinned {
+        let got = net.meander_at(position);
+        assert_eq!(
+            got.to_bits(),
+            bits,
+            "the meander field moved at {position:?}: {got} against the pinned {}. The seed the \
+             field is drawn from, its frequency or its octave count changed — every river in \
+             every world has a different shape, and this says so independently of how the runs \
+             are built",
+            f64::from_bits(bits)
+        );
+        distinct.insert(bits);
+    }
+    // A field that returned one constant would satisfy every equality above
+    // had it always been constant, so say it is not.
+    assert_eq!(
+        distinct.len(),
+        8,
+        "the pinned field values are not distinct"
+    );
+}
+
+/// claim: behavior(the width law no longer has a scale-dependent part)
+///
+/// **Superseded by decision 0129, and kept as the record of the reversal.**
+/// This test was `the_river_threshold_is_the_one_part_that_is_not_scale_free`,
+/// and it asserted that `channel_half_width` returned exactly `0.0` below
+/// [`RIVER_MIN_DRAINAGE`] while the same drained area one level down cleared
+/// it — the one place where refining the grid changed the width law's answer,
+/// and the exception Tier 2 was told it would inherit.
+///
+/// Task 3 removed the zero-return, so the exception is gone: the law is now
+/// scale-free at **every** discharge, including the sub-threshold ones it
+/// previously refused, and a subdivision inherits no threshold at all. That is
+/// asserted here, at the same six doublings the fixture sweep uses, on the
+/// discharges the old short-circuit covered.
+///
+/// [`RIVER_MIN_DRAINAGE`] is untouched and still decides what
+/// `water::classify` calls a river. The point is that it no longer decides
+/// what gets *drawn*, so the two questions have come apart — which is exactly
+/// the ~49.6% `water_kind == River` / `transverse_at == Channel` disagreement
+/// the predecessor campaign documented, now deliberately wider.
+#[test]
+fn the_width_law_is_scale_free_below_the_river_threshold_too() {
+    // The canonical level-6 cell edge; the exact value is immaterial here.
+    let spacing = 0.018_886;
+    // The whole sub-threshold range the old zero-return swallowed, from a
+    // single land cell's own runoff up to the threshold itself.
+    for count in [1.0_f64, 2.0, 7.0, RIVER_MIN_DRAINAGE - 1.0] {
+        let base = channel_half_width(count, spacing);
+        assert!(
+            base > 0.0,
+            "drainage {count} still returns a zero width — the short-circuit is back"
+        );
+        let mut scaled = count;
+        let mut edge = spacing;
+        for doubling in 1..=DOUBLINGS {
+            scaled *= 4.0;
+            edge *= 0.5;
+            assert_eq!(
+                channel_half_width(scaled, edge).to_bits(),
+                base.to_bits(),
+                "a sub-threshold width is not scale-free at doubling {doubling} \
+                 (count {scaled}, spacing {edge}) against the level-6 {base}"
+            );
+        }
+    }
 }

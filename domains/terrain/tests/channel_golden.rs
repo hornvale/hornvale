@@ -22,6 +22,22 @@
 //! green (189 + 6 + 2 + 20), and reddens only this fixture. A guard on a
 //! derivation is not a guard on what the derivation produces.
 //!
+//! **THIS FIXTURE WAS RE-BASELINED BY THE RILL'S TASK 3, AND A RE-BASELINED
+//! FIXTURE JUDGES NOTHING.** It witnesses whatever it was regenerated from, so
+//! the guards that had to exist BEFORE the re-baseline live in
+//! `rill_properties.rs`: `the_network_renders_every_river_cells_downhill_edge`
+//! (watched green on the pre-change network — every edge the old network drew,
+//! the new one still draws, in the same direction) and
+//! `the_meander_field_is_pinned` (the noise field's own values at eight fixed
+//! positions, bit-exact, which no change to run construction can move). Neither
+//! reads a fixture. What this file still uniquely covers is the meander
+//! AMPLITUDE, the head/mouth anchoring rule and the perpendicular the
+//! displacement is taken along — and it covers them going forward, which is all
+//! a re-baselined witness can ever do. The migration itself was checked rather
+//! than assumed: all 54 non-terminal cells of the old fixture carry IDENTICAL
+//! band edges in the new one, and all 32 cells interior in both networks carry
+//! an identical displacement magnitude AND sign.
+//!
 //! **What is pinned, and why it is a witness rather than a restatement.**
 //! Not the meander formula, and not `SphereFbm`'s output — either would be
 //! this test agreeing with the code's own arithmetic, and a mutation that
@@ -72,8 +88,16 @@ use hornvale_kernel::{Geosphere, Seed, quantize::quantize};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 
 /// Level 5, not the canonical 6: the point of this fixture is the derivation,
-/// which is grid-independent, and level 5 keeps the commit gate cheap (46
-/// channel vertices, a sub-second world). Level 6 is the readout's grid.
+/// which is grid-independent, and level 5 keeps the commit gate cheap (a
+/// sub-second world; 3887 channel vertices since The Rill's Task 3, 46 before
+/// it). Level 6 is the readout's grid.
+///
+/// **The fixture is ~3900 rows and ~290 KB, and that is the price of the only
+/// topology witness in the repo.** Task 3 made the network render the whole
+/// land flow tree rather than the top 6.7% of it, so the row count grew by
+/// ~51x on this grid. Moving the fixture to level 4 to shrink it would break
+/// its continuity with everything measured against it and would pin a grid the
+/// campaign never reads.
 const LEVEL: u32 = 5;
 
 /// Signed magnitude of the displacement from `base` to `placed`, radians:
@@ -202,9 +226,15 @@ fn the_pinned_displacements_are_not_all_zero() {
     let rendered = render();
     // EVERY row is counted, anchored heads and mouths included — they are not
     // filtered out, and the threshold is set knowing they are in the
-    // denominator. A run has two anchored vertices out of a typical five, so a
-    // healthy network still clears a third comfortably: 21 of 46 rows carry a
-    // displacement.
+    // denominator. Measured on the Task 3 network: **1849 of 3887 rows (47.6%)**
+    // carry a displacement, so a third is cleared with room. The breakdown is
+    // worth having, because two of its three parts are counter-intuitive: 2234
+    // rows are anchored (two per run, and runs are short), of which **267 are
+    // non-zero anyway** — those are confluence mouths, which the repair
+    // relocates onto their trunk's vertex, so "anchored" does not imply
+    // "undisplaced"; and of the 1653 interior rows **71 read exactly zero**,
+    // which are gorge vertices, where `confinement` is 0 and the meander
+    // amplitude with it. (Before Task 3 the same figures were 21 of 46.)
     //
     // That reasoning only became true when `signed_displacement` started
     // reporting an anchored vertex as exactly 0. Before it, `acos(dot(p, p))`
