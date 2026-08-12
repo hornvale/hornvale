@@ -280,13 +280,17 @@ fn sample_positions_near_channels(net: &ChannelNetwork, wanted: usize) -> Vec<[f
 /// comes from outside the object under test, so it carries the durability
 /// guarantee by itself, and one seed makes that an anecdote about one world's
 /// drainage rather than a property of `build`. The five together contribute
-/// **539** segments (seed 42: 54, seed 7: 159, seed 1234: 76, seed 99: 128,
-/// seed 2024: 122), which is also the answer to "would this notice if a seed
-/// stopped producing rivers" — the per-seed floor below is what notices.
-/// Re-measured at The Rill's Task 2, which made every run reach the cell it
-/// drains into and so added a segment to most runs and restored runs the old
-/// length filter dropped; at The Ford the same five contributed 347 (33 / 104
-/// / 50 / 88 / 72). The floors below are unchanged and still have room.
+/// **19,186** segments (seed 42: 2770, seed 7: 4766, seed 1234: 2904, seed 99:
+/// 3990, seed 2024: 4756), which is also the answer to "would this notice if a
+/// seed stopped producing rivers" — the per-seed floor below is what notices.
+///
+/// **The floors were RAISED at The Rill's Task 3** (fix round 1), which made
+/// the network render the whole land flow tree: they had been 25 per seed and
+/// 300 in total against measurements of 539 and 128, and against the new
+/// population that is 110x and 64x of headroom — a floor that cannot fire until
+/// the world loses 99% of its rivers is not a floor. Earlier readings, kept
+/// because the ratios are the finding: 347 at The Ford (33 / 104 / 50 / 88 /
+/// 72), 539 after Task 2 (54 / 159 / 76 / 128 / 122).
 ///
 /// claim: invariant(forall-seed) — every polyline segment is a downhill step,
 /// so vertex order is downstream order and the bank sign has a referent
@@ -300,8 +304,8 @@ fn the_polyline_vertex_order_is_downstream_order() {
         total += downstream_segments_of(&terrain, seed);
     }
     assert!(
-        total >= 300,
-        "only {total} channel segments across {} seeds (measured 347) — the assertion ran on \
+        total >= 9_000,
+        "only {total} channel segments across {} seeds (measured 19,186) — the assertion ran on \
          far less than the population it was calibrated against",
         SWEEP_SEEDS.len()
     );
@@ -336,9 +340,10 @@ fn downstream_segments_of(terrain: &GeneratedTerrain, seed: u64) -> usize {
     // absorbed by the other four in the total. The measured minimum across the
     // sweep is seed 42's 54 (it was 33 before The Rill's Task 2).
     assert!(
-        edges >= 25,
-        "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} — too few for this \
-         assertion to have run on anything"
+        edges >= 1_300,
+        "only {edges} channel segments on seed {seed} at level {TEST_LEVEL} (the five sweep \
+         seeds measure 2770 / 4766 / 2904 / 3990 / 4756) — too few for this assertion to have \
+         run on anything"
     );
     edges
 }

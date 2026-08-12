@@ -59,10 +59,26 @@ cell scale, where a count-valued threshold has no defensible value.
 
 ## Costs accepted
 
-- **Query cost.** `ChannelNetwork::nearest_line` is linear in total vertices, so
-  every `transverse_at` gets ~16x more expensive on the canonical grid (883 →
-  14,606 vertices on seed 42 at level 6). No index was added; if the gate's
-  channel-reading tests become the suite's cost centre, that is the lever.
+- **Query cost, and it is the SHIPPED READ PATH, not only the gate.**
+  `ChannelNetwork::nearest_line` is linear in total vertices, so every
+  `transverse_at` / `bank_reading` gets ~16x more expensive on the canonical
+  grid (883 → 14,606 vertices on seed 42 at level 6). `windows/locale`'s
+  `describe` (`lib.rs:820`), `crossing_between` (`:941-942`, twice per query)
+  and `transverse_of` (`:1010`) each call `bank_reading` **per room**, so the
+  walk and possess loops pay it on every room a player enters — this is a
+  player-visible cost, not a test-suite one. An earlier draft of this record
+  named only "the gate's channel-reading tests", which was true and
+  incomplete; the incomplete form is the more durable error, because nothing
+  contradicts it.
+
+  **Nothing bounds it, and nothing can as things stand.** Wall-clock time is
+  banned workspace-wide including in test code, so no perf guard can exist to
+  catch a regression here; the only visible signal is `make ci`'s duration
+  alarm, which is whole-suite and per-test rather than per-query. Measured
+  proxy: `hornvale-locale::water_reading` went 1.53 s → 12.27 s. Tiers 2 and 3
+  multiply the vertex count again, so a spatial index over `polylines` — a
+  bounding-cone or cell-bucket prefilter before the linear scan — is the lever,
+  and it should be priced before the next widening rather than after.
 - **Fixture size.** `channel-network-seed-42-level-5.txt` goes 79 → 3,890 lines
   (~290 KB). It is the repo's only per-vertex topology witness and re-baselining
   it is what forced the guard order in Task 3: the pre-change witnesses

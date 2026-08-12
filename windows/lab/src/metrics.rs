@@ -8895,6 +8895,17 @@ mod tests {
     /// A one-sided `analytic <= sampled` would be blind to the first, since
     /// `own <= sampled` holds by construction.
     ///
+    /// **Both sides are pinned near their MEASURED values (+/-6%), not against
+    /// 1.0.** A bracket stated only as `own <= analytic <= sampled` is a much
+    /// weaker claim than the `[0.9, 1.1]` ratio window it replaced — it would
+    /// miss a uniform border scaling anywhere in `k` in [0.838, 1.204] — and,
+    /// worse, it LOOSENS as the network densifies, because more lines push
+    /// `sampled` up and `own_line` down without anything being wrong. That is
+    /// the wrong direction for a campaign whose next task densifies further.
+    /// Pinned, a densification reddens this and has to be re-measured on
+    /// purpose. Do not widen these numbers to make a red go away; re-measure
+    /// them and say in the commit what moved.
+    ///
     /// **Strided to 200 vertices.** At one transect per vertex this test cost
     /// 159 s on the widened network (400 `transverse_at` probes per vertex,
     /// each linear in the network's 3887 vertices) against ~2 s before it. The
@@ -8939,6 +8950,10 @@ mod tests {
         // Seed 42 at level 5 carries 46 channel vertices; the floor is a
         // tripwire for a world that stopped producing rivers at all, which
         // would make the ratio below vacuous (0/0).
+        // Cap-bounded, not network-bounded: the stride above pins `vertices`
+        // near 200 whatever the network does (measured 195 off 3887), so this
+        // can only fire on a collapse below 30 vertices. Raising it toward the
+        // cap would make it a guard on the cap.
         assert!(
             vertices > 30,
             "only {vertices} vertices — too few to be a real comparison"
@@ -8949,30 +8964,43 @@ mod tests {
             "vertices={vertices} of {total} (stride {stride}) analytic={analytic:e} \
              sampled={sampled:e} own_line={own_line:e} ratio={ratio} own_ratio={own_ratio}"
         );
+        // EACH SIDE IS PINNED NEAR ITS OWN MEASURED VALUE, not against 1.0.
+        // Asserting only `own_ratio <= 1.0 <= ratio` would leave a uniform
+        // scaling `k` of `transverse_at`'s channel border undetected across
+        // `k` in [0.838, 1.204] — about 1.8x looser than the [0.9, 1.1] window
+        // this replaced. Worse, that form gets EASIER as the network densifies:
+        // more lines raise `sampled` and lower `own_line`, so both bounds
+        // retreat from 1.0 on their own. Pinning to the measured values instead
+        // makes densification REDDEN this test and demand a deliberate
+        // re-measure, which is the behaviour worth having while Tier 2 is about
+        // to multiply the vertex count again.
+        //
+        // +/-6% around 0.8306 and 1.1935 leaves a `k` window of roughly
+        // [0.95, 1.05] on each side — tighter than the original ratio test —
+        // while absorbing ordinary terrain drift, which moves the network's
+        // geometry far less than it moves any single reach.
+        let own_lo = 0.780;
+        let own_hi = 0.881;
+        let full_lo = 1.122;
+        let full_hi = 1.265;
         assert!(
-            own_ratio <= 1.0,
-            "the channel tube measured through transverse_at, counting ONLY the offsets this \
-             line itself wins ({own_line}), already exceeds the integrated tube ({analytic}) by \
-             {own_ratio}x. The predicate's channel border is wider than the `band_edges[0]` the \
-             metric integrates, so `channel-land-fraction` under-reports what a walker would \
-             actually stand in"
+            own_line <= analytic && analytic <= sampled,
+            "the integrated tube ({analytic}) is outside the bracket the shipped predicate \
+             reports for it: own-line {own_line}, all-lines {sampled}. Below the lower bound the \
+             predicate's channel border is WIDER than the `band_edges[0]` the metric integrates \
+             (it under-reports); above the upper bound it is NARROWER (it over-reports)"
         );
         assert!(
-            ratio >= 1.0,
-            "the integrated channel tube ({analytic}) exceeds the same tube measured through \
-             transverse_at even counting every line's water ({sampled}), by {ratio}x. The \
-             predicate's channel border is narrower than the `band_edges[0]` the metric \
-             integrates, so `channel-land-fraction` over-reports"
+            (own_lo..=own_hi).contains(&own_ratio),
+            "own-line/analytic is {own_ratio}, outside the measured {own_lo}..={own_hi}. Either \
+             `transverse_at`'s channel border moved relative to `band_edges[0]`, or the network \
+             densified enough to change how much of a reach's own water another line wins — \
+             re-measure and re-pin deliberately, do not widen"
         );
-        // The bracket must stay a bracket rather than widening into a
-        // statement about nothing. Measured 0.831 and 1.194; a network whose
-        // lines had drifted into each other far more than this world's do would
-        // show up here before it showed up as a wrong verdict anywhere else.
         assert!(
-            own_ratio > 0.6 && ratio < 1.6,
-            "the estimator bracket [{own_ratio}, {ratio}] has opened well past the measured \
-             [0.83, 1.19] — the channel network's lines are overlapping far more than the \
-             integral's per-line sum can stand in for"
+            (full_lo..=full_hi).contains(&ratio),
+            "all-lines/analytic is {ratio}, outside the measured {full_lo}..={full_hi}. Same two \
+             causes as the bound above, and the same instruction: re-measure and re-pin"
         );
     }
 
@@ -8993,6 +9021,9 @@ mod tests {
     fn most_band_transects_reach_dry_before_they_are_truncated() {
         let terrain = ford_test_terrain();
         let t = lab_band_transects(terrain.channels()).expect("this world has channels");
+        // Also cap-bounded: `lab_band_transects` strides to
+        // `LAB_FORD_MAX_TRANSECTS` (256), so this number does not grow with the
+        // network and did not move at The Rill's Task 3.
         assert!(t.transects > 50, "too few transects to be a real check");
         let share = t.reached_dry as f64 / t.transects as f64;
         assert!(
