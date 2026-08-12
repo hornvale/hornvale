@@ -413,13 +413,30 @@ fn h1_the_seas_column_is_non_degenerate() {
 #[ignore = "heavy: builds a full seed-42 world to count sea-ice-below-epipelagic cells"]
 fn h2_sea_ice_below_the_epipelagic() {
     // Count cells whose stored expression has formation == SeaIce and
-    // stratum != Epipelagic; print the count and one example cell.
-    // Then assert nothing about which way it went -- print, and let the
-    // campaign record the number. A test that asserted the defect exists
-    // would go red the day it is fixed.
-    todo!("count and println!; see the doc comment for what to print")
+    // stratum != Epipelagic; print that count, the SeaIce total, and one
+    // example cell.
+    //
+    // ASSERT THE DENOMINATOR, NOT THE VERDICT. A test that asserted the
+    // defect is present goes red the day campaign 1 fixes it -- the wrong
+    // direction for a ratchet. But a probe that asserts nothing cannot tell
+    // "measured zero" from "measured nothing", and a null needs its
+    // denominator. So: assert the world has SeaIce cells at all, and print
+    // how many of them sit below the epipelagic.
+    let sea_ice_total = /* count formation == SeaIce over all cells */;
+    let below_epipelagic = /* of those, how many have stratum != Epipelagic */;
+    println!("H-2: {below_epipelagic} of {sea_ice_total} sea-ice cells sit below the epipelagic");
+    assert!(
+        sea_ice_total > 0,
+        "H-2 has no denominator: seed 42 has no sea-ice cells at all, so this \
+         probe measured nothing rather than measuring zero"
+    );
 }
 ```
+
+**If `sea_ice_total` is 0**, that is not a passing probe — it is a probe with
+no population, and the assertion above is what distinguishes the two. Report it
+as *H-2 not measurable on seed 42* rather than as *H-2 falsified*, and say so
+in the spec.
 
 **The `todo!()` is deliberate and must not survive Step 2** — it marks the one
 place where the plan cannot write the code, because the counting loop depends
