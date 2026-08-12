@@ -276,6 +276,66 @@ impl<'a> ReapPlan<'a> {
     }
 }
 
+/// What [`Board::redact`]'s tip eviction actually did **on this host**.
+///
+/// Redaction's two halves have different scopes, and this type exists
+/// because only one of them is per-host. The `redact` control post is a
+/// post like any other: it propagates through sync, and every reader
+/// computes suppression from it board-wide
+/// ([`crate::live::redacted_ids`]). Eviction, by contrast, rewrites the tip
+/// tree of the one ref this `Board` holds — so it can miss entirely, and an
+/// operator is owed the difference between "the bytes are off this host's
+/// tip" and "they are still on it".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RedactOutcome {
+    /// The target was in this host's tip tree and the swap won: the bytes
+    /// are off the tip here (history still holds them — D13).
+    Evicted,
+    /// The target was in this host's tip tree, but the single-shot
+    /// compare-and-swap lost a race, so the tip still carries it. Running
+    /// `redact` again retries against whatever landed, and is safe: the
+    /// identical control post is not re-appended (D11).
+    LostRace,
+    /// The target is not in this host's tip tree at all — already evicted,
+    /// or it lives only in a peer's log, or only as an identical-bytes copy
+    /// another host authored. Nothing was evicted here, and nothing could
+    /// be; the authoring host is where its copy comes off the tip.
+    NotHere,
+}
+
+impl RedactOutcome {
+    /// One operator-facing line: what happened to `id` here, and what — if
+    /// anything — to do next.
+    ///
+    /// A method rather than a `match` at the call site so all three
+    /// sentences are pinned by one test, and so a fourth outcome could not
+    /// be added with no words attached.
+    ///
+    /// Every variant says suppression still applies board-wide, because the
+    /// dangerous misreading of "nothing was evicted" is "nothing happened,
+    /// the secret is still on display" — which invites re-posting it.
+    pub fn diagnostic(&self, id: &str) -> String {
+        match self {
+            Self::Evicted => format!(
+                "board: redacted {id} -- evicted from this host's log; the body is suppressed \
+                 board-wide on every read, and history still holds it (D13)"
+            ),
+            Self::LostRace => format!(
+                "board: redacted {id} -- the control post landed, but the eviction lost a \
+                 compare-and-swap race and this host's tip STILL carries the post; run the \
+                 same command again to retry it. The body is suppressed board-wide on every \
+                 read regardless"
+            ),
+            Self::NotHere => format!(
+                "board: redacted {id} -- NOT in this host's log, so nothing was evicted here \
+                 (it may live only in a peer's log, or only as an identical-bytes copy \
+                 another host authored). The body is suppressed board-wide on every read; \
+                 run this on the authoring host to take its copy off that host's tip too"
+            ),
+        }
+    }
+}
+
 /// One board, on one ref, in one repository.
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -986,12 +1046,21 @@ impl Board {
     /// tree-build-and-CAS path ([`evict_and_swap`](Self::evict_and_swap))
     /// rather than a second copy of it.
     ///
-    /// Returns the id of the `redact` control post. A lost eviction race is
-    /// treated the same way `reap` treats one: control flow, not an error —
-    /// the control post is still recorded, and calling `redact` again is
-    /// safe (the same `redact` content is not re-appended, D11) and will
-    /// retry the eviction against whatever landed.
-    pub fn redact(&self, by: &str, id: &str) -> Result<String, BoardError> {
+    /// Returns the id of the `redact` control post **and** which of
+    /// [`RedactOutcome`]'s three cases this call landed in.
+    ///
+    /// The outcome is not decoration. A bare `Ok(id)` reported success
+    /// identically whether the eviction happened, lost its race, or never had
+    /// anything to evict on this host at all — so `board redact <an-id-this-
+    /// host-does-not-hold>` exited 0 saying nothing, which is the silent
+    /// success the brief ruled out. None of the three is an `Err`: a lost
+    /// race is control flow (see [`evict_and_swap`](Self::evict_and_swap)),
+    /// and a target absent from this host's log is not a failure of this call
+    /// — board-wide suppression applies regardless, because it is driven by
+    /// the control post landing in the union read, not by whose tip the
+    /// target happens to occupy. What the caller owes the operator is a
+    /// *diagnostic*, and [`RedactOutcome::diagnostic`] is it.
+    pub fn redact(&self, by: &str, id: &str) -> Result<(String, RedactOutcome), BoardError> {
         let redact_id = self.append(
             &Post::new("redact", by).with("post", serde_json::Value::String(id.to_string())),
         )?;
@@ -1005,18 +1074,27 @@ impl Board {
             // the ref exists. Guarded anyway rather than unwrapped, matching
             // this module's D7 stance that an absent read is reported, not
             // panicked on.
-            return Ok(redact_id);
+            return Ok((redact_id, RedactOutcome::NotHere));
         };
         let posts = snapshot.posts();
         let keep: Vec<&StoredPost> = posts.iter().filter(|s| s.id != id).collect();
         if keep.len() == posts.len() {
-            // Nothing to evict at this tip -- already redacted, or `id`
-            // never named a post here. The control post above still
-            // recorded the act either way.
-            return Ok(redact_id);
+            // Nothing to evict at this tip -- already redacted, or `id` never
+            // named a post in THIS log (it may live only in a peer's, or only
+            // as an identical-bytes copy authored there, D11). The control
+            // post above still recorded the act either way, and suppression
+            // is board-wide because of it.
+            return Ok((redact_id, RedactOutcome::NotHere));
         }
-        self.evict_and_swap(snapshot.tip(), &keep, &format!("board: redact {id}"))?;
-        Ok(redact_id)
+        // Single-shot, exactly as `reap`'s is: reporting the loss is the fix
+        // here, not retrying against a moving target.
+        let outcome =
+            if self.evict_and_swap(snapshot.tip(), &keep, &format!("board: redact {id}"))? {
+                RedactOutcome::Evicted
+            } else {
+                RedactOutcome::LostRace
+            };
+        Ok((redact_id, outcome))
     }
 
     /// Build a tree containing only `keep`, commit it as a forward child of
@@ -1743,9 +1821,132 @@ mod tests {
             root_before,
             "the ref was rerooted (0118 part 3)"
         );
+        // REACHABILITY, not mere existence. `cat-file -p <id>` succeeds for a
+        // loose object that nothing points at any more -- one `git gc` from
+        // being gone -- so it cannot distinguish "history holds the post"
+        // from "the object database has not been swept yet", which is the
+        // entire property D13 is about. `rev-list --objects <ref>` asks the
+        // question the comment above claims to be asking: is this blob
+        // reachable from the board's ref?
+        let reachable = repo
+            .git(&["rev-list", "--objects", board.refname()])
+            .expect("rev-list");
+        let listed = |oid: &str| {
+            reachable
+                .lines()
+                .any(|l| l.split_whitespace().next() == Some(oid))
+        };
+        assert!(
+            listed(&id),
+            "history lost the post: {id} is not reachable from {}:\n{reachable}",
+            board.refname()
+        );
+
+        // And prove it the hard way once, since the whole design rests on it:
+        // an aggressive prune that drops every unreachable object leaves this
+        // one exactly where it was.
+        repo.git(&["gc", "--aggressive", "--prune=now"])
+            .expect("gc");
         assert!(
             repo.git(&["cat-file", "-p", &id]).is_ok(),
-            "history lost the post"
+            "an aggressive gc took the post: reachability was not real"
+        );
+    }
+
+    #[test]
+    fn redact_reports_which_of_the_three_outcomes_it_landed_in() {
+        // The silent-success fix. `redact` used to return a bare `Ok(id)`
+        // whether it evicted, lost the CAS, or never had anything here to
+        // evict -- so `board redact <id-not-in-this-log>` exited 0 with no
+        // diagnostic, which is exactly the "must not silently claim success"
+        // the brief ruled out. `reap` already returns `Ok(0)` so its caller
+        // learns it lost; this is the same courtesy.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let id = board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("oops")))
+            .expect("id");
+
+        let (_, outcome) = board.redact("main", &id).expect("redact");
+        assert_eq!(
+            outcome,
+            RedactOutcome::Evicted,
+            "the target was in this host's tip and the swap won"
+        );
+
+        // A second call has nothing left to evict HERE. Not an error, and
+        // not "evicted" either -- the operator asked for something that did
+        // not happen on this host.
+        let (_, again) = board.redact("main", &id).expect("second redact");
+        assert_eq!(again, RedactOutcome::NotHere, "already gone from this tip");
+
+        // A post only a peer holds is the case that actually bites: the
+        // union read shows it, so an operator reasonably runs `redact` here.
+        let peer = peer_board(&repo, &foreign_host());
+        let theirs = peer
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("theirs")))
+            .expect("peer post");
+        let (_, foreign) = board.redact("main", &theirs).expect("redact a peer's post");
+        assert_eq!(
+            foreign,
+            RedactOutcome::NotHere,
+            "eviction is per-log and cannot reach a peer's tip"
+        );
+    }
+
+    #[test]
+    fn each_redact_outcome_says_something_different_and_says_suppression_still_applies() {
+        // The diagnostic is the whole point of the outcome, so it is pinned
+        // here rather than left to a caller: three outcomes that print the
+        // same sentence would be exactly as silent as returning `Ok(id)`.
+        let id = "abc123";
+        let evicted = RedactOutcome::Evicted.diagnostic(id);
+        let lost = RedactOutcome::LostRace.diagnostic(id);
+        let absent = RedactOutcome::NotHere.diagnostic(id);
+        assert_ne!(evicted, lost);
+        assert_ne!(lost, absent);
+        assert_ne!(evicted, absent);
+        for d in [&evicted, &lost, &absent] {
+            assert!(d.contains(id), "names the target: {d}");
+            assert!(
+                d.contains("board-wide"),
+                "every outcome must say suppression still applies board-wide -- an \
+                 operator who reads `nothing evicted` as `nothing happened` would post \
+                 the secret again: {d}"
+            );
+        }
+        assert!(
+            lost.contains("again"),
+            "a lost race is the one outcome with an action attached: {lost}"
+        );
+    }
+
+    #[test]
+    fn a_stale_baseline_loses_the_swap_rather_than_overwriting_the_tip() {
+        // The mechanism behind `RedactOutcome::LostRace`, pinned directly
+        // because `redact` reads its own snapshot and so offers no seam to
+        // inject a concurrent writer into deterministically. `Ok(false)`
+        // here, plus `redact`'s one-line mapping of it, is the whole path.
+        let (_dir, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("first")))
+            .expect("first");
+        let stale = board.tip().expect("tip").expect("some");
+        // The ref moves out from under `stale`.
+        board
+            .append(&Post::new("technique", "main").with("note", serde_json::json!("second")))
+            .expect("second");
+        let current = board.tip().expect("tip").expect("some");
+
+        let won = board
+            .evict_and_swap(&stale, &[], "board: a swap that must lose")
+            .expect("a lost CAS is control flow, never an error");
+        assert!(!won, "a stale baseline must not win the swap");
+        assert_eq!(
+            board.tip().expect("tip").expect("some"),
+            current,
+            "and must leave the tip exactly where it found it"
         );
     }
 
@@ -1761,10 +1962,15 @@ mod tests {
             .append(&Post::new("technique", "main").with("note", serde_json::json!("oops")))
             .expect("id");
 
-        let first = board.redact("main", &id).expect("first redact");
-        let second = board.redact("main", &id).expect("second redact");
+        let (first, first_outcome) = board.redact("main", &id).expect("first redact");
+        let (second, second_outcome) = board.redact("main", &id).expect("second redact");
         assert_eq!(first, second, "the same redact content is the same post");
         assert!(!board.post_ids_at_tip().expect("ids").contains(&id));
+        // The IDs match, but the outcomes must not: the second call had
+        // nothing left to evict, and reporting that as another eviction is
+        // the silent success this outcome type exists to end.
+        assert_eq!(first_outcome, RedactOutcome::Evicted);
+        assert_eq!(second_outcome, RedactOutcome::NotHere);
     }
 
     #[test]

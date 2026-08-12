@@ -203,17 +203,28 @@ fn main() {
         }
         // board redact <by> <post-id> — B8/D10: appends a `redact` control
         // post, then evicts the named post from the TIP tree. History keeps
-        // it (D13) and the digest suppresses its body while still reporting
-        // the act; see `Board::redact`'s doc comment for why this is a
-        // read-time judgment rather than a (prohibited, and measured not to
-        // work) history rewrite.
+        // it (D13); every read (the digest, and — since B8's fix wave — the
+        // ambient render and `board read` too) suppresses the body while
+        // still reporting the act. See `Board::redact`'s doc comment for why
+        // this is a read-time judgment rather than a (prohibited, and
+        // measured not to work) history rewrite.
+        //
+        // The outcome goes to STDERR and the control post's id to STDOUT, so
+        // `$(board redact ...)` keeps capturing exactly the id it always did
+        // while the operator still gets told what actually happened. Exit
+        // stays 0 for all three: none of them is an error (see
+        // `RedactOutcome`), and a `NotHere` in particular is the ordinary
+        // shape of redacting a post a peer authored.
         Some("redact") => {
             let (Some(by), Some(id)) = (args.get(2), args.get(3)) else {
                 eprintln!("usage: board redact <by> <post-id>");
                 std::process::exit(2);
             };
             match board.redact(by, id) {
-                Ok(new_id) => println!("{new_id}"),
+                Ok((new_id, outcome)) => {
+                    println!("{new_id}");
+                    eprintln!("{}", outcome.diagnostic(id));
+                }
                 Err(e) => {
                     eprintln!("board: {e}");
                     std::process::exit(1);

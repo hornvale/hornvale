@@ -13,8 +13,25 @@ pub enum Liveness {
     Live,
     /// Do not render it as current; the string is the physical reason.
     Expired(String),
-    /// Explicitly withdrawn by a later post.
+    /// Explicitly withdrawn by a later post: the claim it made is **wrong**,
+    /// and its author has said so. Distinct from [`Redacted`](Self::Redacted)
+    /// — see that variant.
     Retracted(String),
+    /// Its content must stop being displayed, per a `redact` post naming it
+    /// (B8/D10).
+    ///
+    /// **Deliberately not the same verdict as [`Retracted`](Self::Retracted),
+    /// even though both suppress.** `retract` means *I withdraw this claim —
+    /// the post is wrong*; `redact` means *this content must stop being
+    /// displayed*, and the post may be perfectly true. Sharing one
+    /// suppression mechanism is fine and is what makes redaction reach the
+    /// ambient seam at all; sharing one *word* would quietly turn every
+    /// redaction into a public statement that the author was mistaken, which
+    /// is a different claim about the world. The two also differ downstream:
+    /// [`crate::digest::digest`] gives redaction its own section reporting
+    /// the act and its author (a redaction is a recorded event), and gives
+    /// retraction none.
+    Redacted(String),
 }
 
 /// Everything liveness needs to know about the world right now.
@@ -24,8 +41,23 @@ pub struct LiveContext {
     pub now_unix: u64,
     /// `hostname -s` — claims from other hosts are not judged locally (D8).
     pub host: String,
-    /// Ids named by `retract` posts.
+    /// Ids named by `retract` posts — claims their authors have withdrawn.
     pub retracted: BTreeSet<String>,
+    /// Ids named by `redact` posts — content that must stop being displayed
+    /// (B8/D10), whether or not it was ever wrong.
+    ///
+    /// **Why this exists at all, given `Board::redact` already evicts.**
+    /// Eviction is per-log: it rewrites the tip tree of the one ref the
+    /// `Board` holds. A read is a UNION across this host's log and every
+    /// peer mirror, so a post that lives only in a peer's log — or one id
+    /// that sits in two logs because two hosts independently authored
+    /// identical bytes (D11) — survives eviction entirely. Without this
+    /// set the ambient render printed the surviving body *and* the `redact`
+    /// control post naming it by id, right next to each other: a signpost
+    /// to the secret, strictly worse than not redacting. Kept separate from
+    /// [`retracted`](Self::retracted) so the two judgments never collapse
+    /// into one meaning; see [`Liveness::Redacted`].
+    pub redacted: BTreeSet<String>,
     /// Live pids on this host.
     pub live_pids: BTreeSet<u32>,
     /// Branches that exist and are judged NOT merged into `main` — either
@@ -195,6 +227,14 @@ impl LiveContext {
             .filter_map(|s| s.post.str_field("post").map(str::to_string))
             .collect();
 
+        // Board-wide, because `posts` is the UNION read (B1) and a `redact`
+        // control post propagates through sync like any other post -- which
+        // is exactly what lets suppression reach a body eviction cannot.
+        let redacted = redacted_ids(posts)
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+
         let mut live_pids = BTreeSet::new();
         for s in posts.iter().filter(|s| s.post.kind == "claim") {
             // B4, symmetric with the branch-resolution skip below: `Origin`
@@ -343,6 +383,7 @@ impl LiveContext {
             now_unix,
             host,
             retracted,
+            redacted,
             live_pids,
             live_branches,
             merged_branches,
@@ -350,7 +391,32 @@ impl LiveContext {
     }
 }
 
-/// Judge one post. Retraction wins over everything; `technique` never decays.
+/// The ids every `redact` post in `posts` names, by its `post` field.
+///
+/// The single computation of "what is currently redacted", shared by
+/// [`LiveContext::probe`] (which drives the ambient render and `reap`) and
+/// [`crate::digest::digest`] (which drives the human read). Two copies could
+/// only ever disagree in the direction that matters — one seam suppressing a
+/// body the other prints — so there is one.
+pub fn redacted_ids(posts: &[StoredPost]) -> BTreeSet<&str> {
+    posts
+        .iter()
+        .filter(|s| s.post.kind == "redact")
+        .filter_map(|s| s.post.str_field("post"))
+        .collect()
+}
+
+/// Judge one post. Redaction and retraction each win over everything else;
+/// `technique` never decays.
+///
+/// **The two suppressing verdicts are checked separately and reported
+/// separately** (B8's review carry). Redaction is checked FIRST, not because
+/// it outranks retraction as a judgment but because it is the only one of
+/// the two with a stated consequence for the *display* of bytes: if a post
+/// is both withdrawn and redacted, the verdict a reader must be given is the
+/// one that says the content may not be shown. Neither collapses into the
+/// other — see [`Liveness::Redacted`] for why sharing the mechanism must not
+/// mean sharing the meaning.
 ///
 /// **B4/B5 — a foreign post is judged by TTL alone.** [`Origin::Peer`] short-
 /// circuits both decaying-kind arms below, *after* the TTL check (which is
@@ -383,6 +449,9 @@ impl LiveContext {
 /// is what stops the unresolved-author cost from growing with the peer
 /// population.
 pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
+    if ctx.redacted.contains(&stored.id) {
+        return Liveness::Redacted("redacted by a later post; body suppressed".to_string());
+    }
     if ctx.retracted.contains(&stored.id) {
         return Liveness::Retracted("retracted by a later post".to_string());
     }
@@ -492,7 +561,22 @@ pub const NOTICE_GRACE_PERIOD_S: u64 = 7 * 24 * 60 * 60;
 /// Retraction is unambiguous regardless of kind — an explicit later post
 /// naming this one — and is reaped immediately, exactly as `liveness`
 /// treats it.
+///
+/// So is redaction, for a different reason: dropping a redacted post from
+/// the tip tree is not a side effect here, it is precisely what
+/// [`Board::redact`](crate::store::Board::redact) already tried to do to
+/// this host's own log. Answering `true` finishes the job when redaction's
+/// single-shot CAS lost its race, and is a no-op when it won (the post is
+/// already gone from the tip). D13 is untouched either way: history keeps
+/// the bytes, which is the whole reason redaction is a read-time judgment.
 pub fn is_reapable(stored: &StoredPost, ctx: &LiveContext) -> bool {
+    // Two separate `if`s, not one `||`, and deliberately so: these are the
+    // same ANSWER for different REASONS -- "its author says it was wrong"
+    // and "its content may not be displayed" -- and collapsing them into one
+    // condition is the first step toward collapsing them into one meaning.
+    if ctx.redacted.contains(&stored.id) {
+        return true;
+    }
     if ctx.retracted.contains(&stored.id) {
         return true;
     }
@@ -535,6 +619,7 @@ mod tests {
             now_unix: 1_000,
             host: "ambrose".into(),
             retracted: BTreeSet::new(),
+            redacted: BTreeSet::new(),
             live_pids: BTreeSet::from([42]),
             live_branches: BTreeSet::from(["campaign/live".to_string()]),
             merged_branches: BTreeSet::new(),
@@ -673,9 +758,10 @@ mod tests {
         }
     }
 
-    /// `ctx()` plus whatever `posts` themselves imply about retraction --
-    /// the same derivation `LiveContext::probe` does, kept a hand-built
-    /// value here (as `ctx()` already is) so these tests need no git.
+    /// `ctx()` plus whatever `posts` themselves imply about retraction and
+    /// redaction -- the same derivations `LiveContext::probe` does, kept a
+    /// hand-built value here (as `ctx()` already is) so these tests need no
+    /// git.
     fn ctx_for(posts: &[StoredPost]) -> LiveContext {
         let mut c = ctx();
         c.retracted = posts
@@ -683,7 +769,63 @@ mod tests {
             .filter(|s| s.post.kind == "retract")
             .filter_map(|s| s.post.str_field("post").map(str::to_string))
             .collect();
+        c.redacted = redacted_ids(posts)
+            .into_iter()
+            .map(str::to_string)
+            .collect();
         c
+    }
+
+    #[test]
+    fn a_redacted_post_is_suppressed_and_is_not_reported_as_retracted() {
+        // B8's review carry, the half `retract` already had and `redact` did
+        // not: suppression must reach `liveness` itself, because the ambient
+        // render is built from it. And it must arrive under its OWN name --
+        // "retracted" would assert the author was wrong, which a redaction
+        // does not claim (a redacted post may be perfectly true).
+        let target = stored(
+            Post::new("technique", "campaign/live").with("note", json!("SECRET")),
+            "a",
+            900,
+        );
+        let control = stored(
+            Post::new("redact", "campaign/live").with("post", json!("a")),
+            "b",
+            900,
+        );
+        let ctx = ctx_for(&[target.clone(), control]);
+        assert!(
+            matches!(liveness(&target, &ctx), Liveness::Redacted(_)),
+            "a redacted post must not be Live: {:?}",
+            liveness(&target, &ctx)
+        );
+        assert!(
+            !matches!(liveness(&target, &ctx), Liveness::Retracted(_)),
+            "redaction and retraction are different judgments and must stay distinct"
+        );
+        assert!(
+            is_reapable(&target, &ctx),
+            "and the tip may drop it -- that is what redaction's own eviction wanted"
+        );
+    }
+
+    #[test]
+    fn a_retracted_post_is_not_reported_as_redacted() {
+        // The other direction of the same distinction: a withdrawal must not
+        // be reported as a suppression order, or the digest's redaction
+        // section would be describing acts nobody performed.
+        let target = stored(Post::new("technique", "campaign/live"), "a", 900);
+        let control = stored(
+            Post::new("retract", "campaign/live").with("post", json!("a")),
+            "b",
+            900,
+        );
+        let ctx = ctx_for(&[target.clone(), control]);
+        assert!(
+            matches!(liveness(&target, &ctx), Liveness::Retracted(_)),
+            "a retracted post is Retracted, not Redacted: {:?}",
+            liveness(&target, &ctx)
+        );
     }
 
     #[test]

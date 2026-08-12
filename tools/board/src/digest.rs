@@ -3,6 +3,7 @@
 //! and reads the ref's HISTORY rather than its tip.
 
 use crate::BoardError;
+use crate::live::redacted_ids;
 use crate::post::Post;
 use crate::store::{Board, Origin, StoredPost};
 use std::collections::{BTreeMap, BTreeSet};
@@ -134,8 +135,11 @@ fn history_in(
 /// from it, is never rewritten — so the target is still IN `posts` exactly
 /// as any other post is. What this function must not do is print its body:
 /// every `redact` post in the window names a target id
-/// ([`redacted_ids`]), and every body-bearing section below consults that
-/// set before printing anything the target carries. The act itself is still
+/// ([`crate::live::redacted_ids`], the same computation the ambient render's
+/// [`LiveContext`](crate::live::LiveContext) is built from — two copies could
+/// only ever disagree in the direction where one seam prints what the other
+/// suppresses), and every body-bearing section below consults that set before
+/// printing anything the target carries. The act itself is still
 /// reported, in its own section, by id and author — reporting the act
 /// without the body is the whole point of a read-time redaction instead of a
 /// (prohibited, and measured not to work) history rewrite.
@@ -219,6 +223,12 @@ pub fn digest(posts: &[StoredPost]) -> String {
         }
     }
 
+    // Reported, never suppressed: a redaction is an EVENT the ledger owes its
+    // readers, which is the whole difference between this and a (prohibited,
+    // and measured not to work) history rewrite. This is also where redaction
+    // and retraction visibly stay distinct kinds of act — retraction gets no
+    // section here, because "I withdraw this claim" is not a thing done TO
+    // the board that a later reader must be told about.
     let redactions: Vec<&StoredPost> = posts.iter().filter(|s| s.post.kind == "redact").collect();
     if !redactions.is_empty() {
         out.push_str("\nredacted (body suppressed -- see Board::redact, D10):\n");
@@ -231,19 +241,6 @@ pub fn digest(posts: &[StoredPost]) -> String {
         }
     }
     out
-}
-
-/// The ids every `redact` post in `posts` names, by its `post` field.
-///
-/// Split out of [`digest`] so every body-bearing section consults the exact
-/// same set — one place computing "what is currently redacted" is what
-/// keeps a future added section from forgetting to check.
-fn redacted_ids(posts: &[StoredPost]) -> BTreeSet<&str> {
-    posts
-        .iter()
-        .filter(|s| s.post.kind == "redact")
-        .filter_map(|s| s.post.str_field("post"))
-        .collect()
 }
 
 #[cfg(test)]
@@ -324,9 +321,60 @@ mod tests {
             text.contains("redacted"),
             "the act must still be recorded; got {text}"
         );
+        // Against the REDACTION LINE, not merely against the whole text.
+        // `text.contains("main")` was already satisfied by the `by author:`
+        // block, so it stayed green with the redaction line's author
+        // replaced by a literal -- an assertion that cannot fail is not
+        // testing the property it names.
         assert!(
-            text.contains("main"),
-            "who redacted it must be recorded: {text}"
+            text.contains(&format!("[main] redacted {id}")),
+            "the redaction line itself must name WHO redacted WHAT: {text}"
+        );
+    }
+
+    #[test]
+    fn a_redacted_ask_keeps_its_act_reported_but_loses_its_body() {
+        // The `ask` section has its own suppression filter, and deleting it
+        // left the whole suite green -- every other redaction test targets a
+        // `technique`. One test per body-bearing section, because
+        // `redacted_ids` being shared does not make a section that forgets
+        // to call it fail anywhere else.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        // No `thread` field: an ask that can never correlate a reply is
+        // always unanswered, so both of these are guaranteed to reach the
+        // section under test.
+        let secret = board
+            .append(&Post::new("ask", "campaign/x").with("note", json!("SENSITIVE-QUESTION")))
+            .expect("secret ask");
+        board
+            .append(&Post::new("ask", "campaign/y").with("note", json!("ORDINARY-QUESTION")))
+            .expect("ordinary ask");
+        board.redact("main", &secret).expect("redact");
+
+        let tip = board.tip().expect("tip").expect("some");
+        let now_unix: u64 = repo
+            .git(&["log", "-1", "--format=%ct", &tip])
+            .expect("commit time")
+            .parse()
+            .expect("timestamp");
+        let text = digest(&history(&board, 14, now_unix).expect("history"));
+
+        assert!(
+            text.contains("asks with no reply"),
+            "the section must actually render, or the assertion below is vacuous: {text}"
+        );
+        assert!(
+            text.contains("ORDINARY-QUESTION"),
+            "an unredacted ask still shows its body: {text}"
+        );
+        assert!(
+            !text.contains("SENSITIVE-QUESTION"),
+            "a redacted ask's body must not survive into the unanswered section: {text}"
+        );
+        assert!(
+            text.contains(&format!("[main] redacted {secret}")),
+            "and the act is still reported: {text}"
         );
     }
 

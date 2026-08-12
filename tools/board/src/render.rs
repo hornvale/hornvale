@@ -4,8 +4,8 @@
 //! D7c — every post names its author. D6 — the render is capped, because it
 //! is a permanent context cost on every session.
 //!
-//! Selection lives elsewhere: [`live_posts`] does the liveness-and-not-
-//! retract cut, and [`crate::relevance::Displayed`] does the unseen-and-
+//! Selection lives elsewhere: [`live_posts`] does the liveness-and-not-a-
+//! control-post cut, and [`crate::relevance::Displayed`] does the unseen-and-
 //! relevant cut for the ambient path. [`render`] itself is a pure formatter
 //! over posts a caller has already chosen — no git, no clock, no filters —
 //! which is what lets its tests skip both a temp repo and
@@ -62,16 +62,34 @@ impl RenderOptions {
     }
 }
 
-/// The live, not-retracted subset of `posts`.
+/// Kinds that are messages *about* other posts rather than content in their
+/// own right, and so are never rendered.
+///
+/// Both name a target id in a `post` field, which is what makes rendering
+/// them actively harmful rather than merely noisy: a rendered `redact` reads
+/// `[redact] campaign/a — post=<id>` directly beside the body it was meant to
+/// suppress, pointing at it. That was the ambient seam's actual behaviour
+/// before B8's fix wave (`tests/redaction.rs` pins both halves).
+///
+/// D12's openness rule is untouched: this is a two-name list of kinds this
+/// crate itself *writes* as control messages, not a schema an unrecognised
+/// kind is filtered against — anything else still renders generically.
+const CONTROL_KINDS: [&str; 2] = ["retract", "redact"];
+
+/// The live subset of `posts` — nothing expired, withdrawn, or redacted, and
+/// no control posts.
 ///
 /// This is the liveness half of selection, kept apart from [`render`] itself
-/// so a caller cannot format a post that has expired or been explicitly
-/// withdrawn. A `retract` post is a control message about another post, not
-/// content in its own right, so it is dropped here rather than rendered.
+/// so a caller cannot format a post that has expired, been explicitly
+/// withdrawn, or been redacted. Suppression of a redacted *body* comes from
+/// [`liveness`] (board-wide, via [`LiveContext::redacted`]) rather than from
+/// tip eviction, because eviction is per-log and a union read sees peers'
+/// logs too; dropping the control post is this function's own job, via
+/// [`CONTROL_KINDS`].
 pub fn live_posts(posts: &[StoredPost], ctx: &LiveContext) -> Vec<StoredPost> {
     posts
         .iter()
-        .filter(|stored| stored.post.kind != "retract")
+        .filter(|stored| !CONTROL_KINDS.contains(&stored.post.kind.as_str()))
         .filter(|stored| matches!(liveness(stored, ctx), Liveness::Live))
         .cloned()
         .collect()
@@ -340,6 +358,7 @@ mod tests {
             now_unix: 1_000,
             host: "ambrose".into(),
             retracted: BTreeSet::new(),
+            redacted: BTreeSet::new(),
             live_pids: BTreeSet::new(),
             live_branches: BTreeSet::from(["campaign/live".to_string()]),
             merged_branches: BTreeSet::new(),
@@ -460,6 +479,43 @@ mod tests {
         assert!(
             live.is_empty(),
             "a retract post is a control message, never rendered content: {live:?}"
+        );
+    }
+
+    #[test]
+    fn a_redact_post_is_dropped_by_live_posts_not_rendered() {
+        // B8's review carry. A `redact` renders as `[redact] by — post=<id>`,
+        // which names the very post it exists to suppress: rendering it puts
+        // a signpost where the secret used to be. Worse than a `retract`
+        // leaking, and the reason `CONTROL_KINDS` is a list rather than one
+        // literal.
+        let posts = vec![stored(
+            Post::new("redact", "campaign/live").with("post", json!("a")),
+            "b",
+        )];
+        let live = live_posts(&posts, &ctx());
+        assert!(
+            live.is_empty(),
+            "a redact post is a control message, never rendered content: {live:?}"
+        );
+    }
+
+    #[test]
+    fn a_redacted_body_is_dropped_even_though_nothing_evicted_it() {
+        // The union case in miniature, with no git: the target is still IN
+        // `posts` (a peer's log holds it, or eviction lost its CAS), so only
+        // the read-time filter can suppress it. `tests/redaction.rs` pins the
+        // same property through the real store.
+        let mut c = ctx();
+        c.redacted.insert("a".to_string());
+        let posts = vec![stored(
+            Post::new("technique", "campaign/live").with("note", json!("SECRET")),
+            "a",
+        )];
+        let out = render(&live_posts(&posts, &c), 0, &RenderOptions::full());
+        assert!(
+            !out.contains("SECRET"),
+            "the body survived the render: {out}"
         );
     }
 
