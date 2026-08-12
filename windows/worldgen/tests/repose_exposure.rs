@@ -291,7 +291,10 @@
 //! reported a SYMMETRIC DIFFERENCE over a denominator of SETTLEMENTS. Those
 //! are different things: a settlement that RELOCATES contributes TWO cells to
 //! a symmetric difference, the one it left and the one it took, so the
-//! original "3,036 of 26,146 = 11.6%" was inflated by up to 2×. The figure to
+//! original "3,036 of 26,146 = 11.6%" was inflated. **The inflation has no
+//! 2× ceiling** — an earlier draft claimed one, but 2× is the PURE-RELOCATION
+//! case; an arm that also creates settlements inflates further, and arm B's
+//! own row does exactly that at 399/193 = 2.07×. The figure to
 //! quote is **`vacated`** — baseline attractor cells that hold no settlement
 //! under the arm — which is 1:1 with baseline settlements. See [`Movement`]
 //! for the full definition; measured values are in the fix-round-2 section at
@@ -326,18 +329,63 @@
 //! **Severing both channels does not reduce the gradient. It leaves it at or
 //! ABOVE baseline in every band.** Measured as excess over unity, the
 //! combined arm retains 101.5% of the baseline gradient in `2500m+`
-//! (4.459 vs 4.395), 105.2% in `1000-2500m`, and 152.6% in `250-1000m`. So
+//! (4.459 vs 4.395), 105.2% in `1000-2500m`, and 152.6% in `250-1000m`.
+//! (`0-250m` is deliberately absent from that series: its baseline rise is
+//! BELOW unity, so "share of the excess over unity" divides by a negative
+//! number and is undefined as a share — completing the series there yields
+//! −495.5%, which means nothing. That band is read through the sign-reversal
+//! paragraph below instead.) So
 //! the residual is no longer an inference from two subtractions — it is
 //! **directly measured**: with unrest disconnected from siting through every
 //! wire this campaign could find, the settlement pattern still over-occupies
 //! high-unrest ground by essentially the same factor.
 //!
 //! **The additivity assumption was in fact wrong, which is why this arm was
-//! worth running.** In `2500m+`, subtraction predicts
-//! `5.395 + 0.441 - 0.270 = ×5.566`; the direct reading is ×5.459. The
-//! channels are SUB-additive, so the inferred residual was not the measured
-//! one. The qualitative conclusion is unchanged, but it now rests on a
-//! reading rather than on an assumption the file elsewhere warns against.
+//! worth running — and the failure is not even in a consistent DIRECTION.**
+//! Subtracting the two single-channel deltas from the baseline predicts a
+//! combined value; comparing that prediction against the direct reading, per
+//! band:
+//!
+//! | band | predicted by subtraction | direct (arm AB) | deviation | verdict |
+//! |---|---|---|---|---|
+//! | `0-250m` | ×1.107 | ×1.109 | +0.002 | super, WITHIN rounding noise |
+//! | `250-1000m` | ×1.862 | ×1.873 | **+0.011** | **SUPER-additive** |
+//! | `1000-2500m` | ×2.679 | ×2.660 | −0.019 | sub-additive |
+//! | `2500m+` | ×5.566 | ×5.459 | −0.107 | sub-additive |
+//!
+//! **Do not summarise this as "the channels are sub-additive".** An earlier
+//! draft did, generalising from the `2500m+` row alone; `250-1000m` runs the
+//! other way, and its +0.011 deviation exceeds the ±0.003 envelope implied by
+//! printing rise factors to three decimals, so it is a real reversal rather
+//! than noise. `0-250m` is also super-additive but by +0.002, inside that
+//! envelope, and is not resolvable either way.
+//!
+//! This makes the case AGAINST the subtraction stronger, not weaker: the two
+//! channels do not combine additively, and the sign of the error is not even
+//! stable across bands, so no correction factor could have rescued the
+//! inferred residual. Only the direct reading was ever going to answer it.
+//!
+//! **THE `0-250m` BAND CROSSES UNITY UNDER ABLATION — the gradient there does
+//! not merely rise, it REVERSES SIGN.** Baseline ×0.978, arm A ×1.109, arm AB
+//! ×1.109. A rise factor below 1 means low-elevation settlements slightly
+//! AVOID high-unrest ground as unrest climbs; above 1 means they prefer it.
+//! With the modelled unrest channels severed, the sign flips.
+//!
+//! What that licenses: in this band the modelled channels were **suppressing**
+//! a latent attraction — remove them and the underlying preference for
+//! high-unrest lowland ground becomes visible. It is the only band where an
+//! ablation changes the DIRECTION of the relationship rather than its
+//! magnitude, and it is arguably the most interesting single number in the
+//! table.
+//!
+//! What it does NOT license: any statement about magnitude or mechanism.
+//! ×0.978 and ×1.109 both sit close to unity, this is one pooled statistic
+//! over 30 seeds with no dispersion measured across them, and no
+//! preregistered prediction covered it. Arm B's power limit applies here as
+//! everywhere, so "the modelled channels" means hostility plus a mineral term
+//! 99.6% of the population does not read — in practice this is arm A's
+//! doing, which the near-identical arm A and arm AB values corroborate.
+//! Treat it as a lead worth its own measurement, not a result.
 //!
 //! **THE HEADLINE IS THE RESIDUAL, AND IT IS NOW DIRECTLY MEASURED: on the
 //! shipped roster, essentially ALL of the observed gradient is UNATTRIBUTED.
@@ -367,11 +415,13 @@
 //!   `250-1000m`), which is the physically correct sign: removing a term
 //!   that repels settlement from high-unrest ground lets more settlement
 //!   onto it. It reaches the whole population — `hostility` is a term in
-//!   `carrying_capacity` for every kind, and 3,042 settlements move — so
-//!   this can be stated plainly.
+//!   `carrying_capacity` for every kind, and it vacates 1,518 baseline
+//!   settlement cells, 5.81% of the settleable-land population — so this can
+//!   be stated plainly.
 //! - **Arm B (mineral) — a working POSITIVE CONTROL but UNDERPOWERED for
-//!   attribution. The mineral hypothesis is UNTESTED, not refuted.** 430
-//!   settlements move, so the harness demonstrably sees the channel; the
+//!   attribution. The mineral hypothesis is UNTESTED, not refuted.** It
+//!   vacates 193 baseline settlement cells (0.74%), so the harness
+//!   demonstrably sees the channel; the
 //!   gradient falls slightly in all four bands (×5.395 → ×5.125 in
 //!   `2500m+`, ~6% of the effect). That 6% is a fact about the ROSTER, not
 //!   about the channel, and the reason is quantified in the next paragraph.
@@ -410,8 +460,10 @@
 //! DIFFERENCE against a denominator of SETTLEMENTS.** Those are different
 //! units: one settlement that relocates contributes TWO cells to a symmetric
 //! difference. Superseded figures, kept so the correction is legible: "arm A
-//! moved 3,036 of 26,146 = 11.6%" and "arm B moved 399 = 1.5%". Both were
-//! inflated, arm A's by exactly 2×.
+//! moved 3,036 of 26,146 = 11.6%" and "arm B moved 399 = 1.5%". Arm A's was
+//! inflated by exactly 2× and arm B's by 2.07× — **2× is not an upper bound**,
+//! only the pure-relocation case; an arm that also creates settlements
+//! exceeds it, as arm B does.
 //!
 //! **Corrected, decomposed** (30 seeds, settleable-land population, base
 //! 26,146 of 59,690 total attractor cells). `vacated` is the quotable
@@ -423,13 +475,33 @@
 //! | B — mineral unrest off | 193 | **0.74%** | 206 | +13 | 399 |
 //! | AB — both off | 1,555 | **5.95%** | 1,533 | −22 | 3,088 |
 //!
-//! **The decomposition earns its keep immediately: arm A is PURE
-//! RELOCATION.** 1,518 vacated against 1,518 newly occupied, net exactly
-//! zero — ablating the hostility penalty moves settlements without creating
-//! or destroying a single one. Arm B is nearly so, with a small net gain of
-//! 13; the combined arm loses 22. None of that was visible in a symmetric
-//! difference, which sums the two halves and cannot tell relocation from
-//! creation.
+//! **The decomposition earns its keep immediately** — none of this was
+//! visible in a symmetric difference, which sums the two halves and cannot
+//! tell relocation from creation. Arm A vacates and re-occupies exactly
+//! 1,518 cells; arm B nets +13; the combined arm nets −22.
+//!
+//! **WITHDRAWN, and by measurement (fix round 3, 2026-08-12): arm A is NOT
+//! "pure relocation".** This paragraph read arm A's pooled `net == 0` as
+//! "moves settlements without creating or destroying a single one". That
+//! inference does not follow from a POOLED sum, so it was turned into a
+//! per-seed assertion — and the assertion went RED. Measured per seed:
+//!
+//! - Occupied-cell net is **nonzero in 29 of 30 seeds**, spanning **−21 to
+//!   +12**; only seed 29 nets zero. The pooled `+0` is these thirty values
+//!   cancelling, not an absence of change.
+//! - The settleable SETTLEMENT-count delta per seed is **identical to the
+//!   cell net at every seed** (same vector, −21..+12), so on this population
+//!   no arm-side cell hosts two settlements. That 1:1-ness is measured here,
+//!   not assumed — [`hornvale_demography::stack_condense`] can place two
+//!   settlements on one cell, so it had to be checked rather than inherited
+//!   from the baseline.
+//!
+//! Corrected statement: **arm A produces no net change in AGGREGATE
+//! settleable-land occupancy across the sweep, while creating and destroying
+//! settlements within individual worlds.** Nothing is asserted about how
+//! relocation-dominated it is: the honest guard would need a threshold, none
+//! was preregistered, and inventing one after seeing the numbers is the
+//! rescue this campaign forbids.
 //!
 //! Everything else in the Task-2 section above is measured in the corrected
 //! units, and the positive controls are unaffected (both arms still move
@@ -606,10 +678,28 @@ fn exposure_rows(seeds: impl IntoIterator<Item = u64>) -> Vec<ExposureRow> {
 /// **Only the SETTLEMENT side moves under a mask.** The land tally, the
 /// unrest deciles, the elevation bands and the `is_settleable` population are
 /// all derived from terrain and climate through the UNMASKED
-/// `carrying_inputs_of` below, so every arm is scored against a denominator
-/// byte-identical to the baseline's. That is deliberate: an arm that moved
-/// its own denominator could not be attributed, since a ratio would then
-/// shift for two reasons at once and neither could be separated.
+/// `carrying_inputs_of` below. That is deliberate: an arm that moved its own
+/// population could not be attributed, since a ratio would then shift for two
+/// reasons at once and neither could be separated.
+///
+/// **PRECISELY WHICH denominator that fixes, and which it does not (corrected
+/// fix round 3, 2026-08-12 — this doc previously claimed a blanket
+/// "byte-identical to the baseline's", and `which_channel_carries_the_exposure_gradient`
+/// cites THIS function as its authority, so the error propagated).**
+/// `exposure_ratio` is `settlement_share / land_area_share`:
+///
+/// - `land_area_share`'s denominator is `total_land`, summed from the land
+///   tally above. Arm-INVARIANT, byte-identical across arms.
+/// - `settlement_share`'s denominator is `total_settlements_of(people)`,
+///   which sums this arm's own per-stratum settlement counts. **It DOES move
+///   between arms** — an arm can create or destroy settlements, not only
+///   relocate them (measured: arm B nets +13, arm AB nets −22).
+///
+/// The consumer is safe anyway, but for a reason worth stating rather than
+/// assuming: it reads the `d9/d0` RISE FACTOR, and both strata divide by the
+/// same per-arm `total_settlements_of(people)`, so that denominator cancels
+/// exactly. Absolute `d0`/`d9` levels are NOT comparable across arms; rise
+/// factors are.
 fn exposure_rows_masked(
     seeds: impl IntoIterator<Item = u64>,
     mask: ChannelMask,
@@ -1138,15 +1228,26 @@ fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
     }
 }
 
-/// One seed's settlement attractor cells under one channel mask. Per-seed
-/// (never pooled across seeds) so that two different seeds' identical cell
-/// indices cannot cancel in the symmetric difference; the caller sums the
-/// per-seed differences.
+/// One seed's settlement attractor cells under one channel mask, **one entry
+/// per settlement, NOT deduplicated**. Per-seed (never pooled across seeds)
+/// so that two different seeds' identical cell indices cannot cancel; the
+/// caller derives the set and sums the per-seed differences.
 ///
-/// Takes an ALREADY-BUILT world/terrain/climate: the three arms differ only
+/// **Returns a `Vec`, not a `BTreeSet`, and the difference is load-bearing
+/// (fix round 3, 2026-08-12).** [`hornvale_demography::stack_condense`] can
+/// place TWO settlements on ONE cell — `stack_condense.rs` asserts exactly
+/// that case — so a set collapses them and a cell count is not a settlement
+/// count in general. It happens to be 1:1 at BASELINE (26,146 attractor cells
+/// against Task 1's 26,146 settlements), but that is a measured coincidence
+/// of the baseline, not a property, and it was never established for an
+/// arm's own output. Any claim about settlements being CREATED or DESTROYED
+/// has to count this `Vec`; only claims about which cells are OCCUPIED may
+/// use the set.
+///
+/// Takes an ALREADY-BUILT world/terrain/climate: the four arms differ only
 /// in the mask, and the world they are read against is the same one — genesis
 /// is by far the expensive half, so building it once per seed and taking
-/// three reports off it costs a third of what three independent 30-seed
+/// four reports off it costs a quarter of what four independent 30-seed
 /// sweeps would, for byte-identical results (the report is pure over the
 /// committed world; see [`demography_report_from`]'s doc).
 fn attractor_cells_of(
@@ -1155,7 +1256,7 @@ fn attractor_cells_of(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
     mask: ChannelMask,
-) -> BTreeSet<CellId> {
+) -> Vec<CellId> {
     demography_report_from_masked(world, wc, terrain, climate, mask)
         .expect("demography report reconstructs")
         .stack_settlements
@@ -1172,13 +1273,15 @@ fn attractor_cells_of(
 /// is exactly the evidence shape that has misled this project before.
 ///
 /// **On the arm-C `include_str!` grep:** it is a coarse instrument. It sees
-/// four whole demography files and nine named worldgen functions, matches
-/// four spellings, and would miss a soil term reaching siting through a
+/// the WHOLE `domains/demography/src` directory (11 files today, enumerated
+/// by reading the directory at test time rather than by a fixed list of
+/// `include_str!` paths) and ten named worldgen functions, matches four
+/// spellings, and would miss a soil term reaching siting through a
 /// helper in a file it does not include, through a re-exported alias, or
 /// through a value passed in from a caller that read the soil itself. It is
 /// NOT a proof of absence. It is a tripwire on the specific wiring this
-/// arm's null depends on, and the `assert!(moved_a > 0)` /
-/// `assert!(moved_b > 0)` positive controls are what carry the real
+/// arm's null depends on, and the `assert!(move_a.vacated > 0)` /
+/// `assert!(move_b.vacated > 0)` positive controls are what carry the real
 /// evidential weight.
 ///
 /// **Arm C runs FIRST in the body even though it is the last arm
@@ -1189,9 +1292,10 @@ fn attractor_cells_of(
 ///
 /// # Dated measurement (2026-08-12, Task 2)
 ///
-/// See the module doc's Task-2 section for the measured `moved_a` /
-/// `moved_b` counts — the calibration of this instrument's sensitivity, which
-/// a later reader needs before judging any future null it reports.
+/// See the module doc's Task-2 section for the measured per-arm [`Movement`]
+/// figures — `vacated` / `newly_occupied` / net, the calibration of this
+/// instrument's sensitivity, which a later reader needs before judging any
+/// future null it reports.
 ///
 /// claim: readout(seed: 1..=30, off-gate heavy:) — reports how many
 /// settlements each ablation moves over one fixed sweep, and asserts only
@@ -1226,8 +1330,10 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     assert!(
         sources.len() >= 11,
         "expected the demography domain to have at least the 11 sources it \
-         had when this clause was written, found {} — if the domain shrank \
-         that is fine, but check this scan is still pointed at it",
+         had when this clause was written, found {} — this fires when the \
+         scan finds FEWER sources than the domain is known to have, which \
+         almost always means it is pointed at the wrong directory rather \
+         than that the domain shrank. Verify the path before raising this.",
         sources.len()
     );
     for (path, src) in &sources {
@@ -1294,6 +1400,11 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     let mut move_a = Movement::default();
     let mut move_b = Movement::default();
     let mut move_ab = Movement::default();
+    // PER-SEED, because a pooled net of zero can hide +3 and -3 in different
+    // worlds (fix round 3). Both are needed: cells answer "which ground is
+    // occupied", settlements answer "were any created or destroyed".
+    let mut per_seed_net_a: Vec<i64> = Vec::new();
+    let mut per_seed_settlement_delta_a: Vec<i64> = Vec::new();
     for seed in 1..=30u64 {
         let world = world_of(seed, &wc);
         let terrain = terrain_of(&world).expect("terrain reconstructs");
@@ -1314,13 +1425,26 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
         );
         let is_settleable = |cell: &CellId| !terrain.is_ocean(*cell) && capacity.at(*cell) > 0.0;
 
-        let base = attractor_cells_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
-        let a = attractor_cells_of(&world, &wc, &terrain, &climate, arm_a_mask);
-        let b = attractor_cells_of(&world, &wc, &terrain, &climate, arm_b_mask);
-        let ab = attractor_cells_of(&world, &wc, &terrain, &climate, combined_mask);
+        // One entry per settlement; `cells_of` derives the occupied-cell set.
+        let base_v = attractor_cells_of(&world, &wc, &terrain, &climate, ChannelMask::NONE);
+        let a_v = attractor_cells_of(&world, &wc, &terrain, &climate, arm_a_mask);
+        let b_v = attractor_cells_of(&world, &wc, &terrain, &climate, arm_b_mask);
+        let ab_v = attractor_cells_of(&world, &wc, &terrain, &climate, combined_mask);
+
+        // SETTLEMENT counts (not cell counts) on the settleable-land
+        // population — the only quantity that can support a "created or
+        // destroyed" claim. See [`attractor_cells_of`].
+        let settlements_in = |v: &[CellId]| v.iter().filter(|c| is_settleable(c)).count() as i64;
+        per_seed_settlement_delta_a.push(settlements_in(&a_v) - settlements_in(&base_v));
+
+        let base: BTreeSet<CellId> = base_v.iter().copied().collect();
+        let a: BTreeSet<CellId> = a_v.iter().copied().collect();
+        let b: BTreeSet<CellId> = b_v.iter().copied().collect();
+        let ab: BTreeSet<CellId> = ab_v.iter().copied().collect();
 
         base_all += base.len();
         base_settleable += base.iter().filter(|c| is_settleable(c)).count();
+        per_seed_net_a.push(movement_of(&base, &a, &is_settleable).net());
         // SAME predicate on BOTH sides of every difference — the fix-round-2
         // lesson from this file's module doc, applied to a set difference
         // rather than a ratio: filtering one side only would count every
@@ -1346,6 +1470,44 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
             m.changed_cells()
         );
     }
+
+    // ARM A IS **NOT** PURE RELOCATION — a claim this file made and this
+    // block RETRACTED by measuring it (fix round 3, 2026-08-12).
+    //
+    // The module doc read arm A's POOLED `net == 0` as "moves settlements
+    // without creating or destroying a single one". A pooled net cannot
+    // support that: +3 in one world and -3 in another sums to zero and looks
+    // identical to no change anywhere. Nor could a CELL net, since two
+    // settlements can share a cell (see `attractor_cells_of`). So both were
+    // checked PER SEED, as assertions, and both went RED. The numbers are
+    // printed below and recorded in the module doc; the claim is withdrawn.
+    //
+    // NOTHING IS ASSERTED HERE NOW, deliberately. The honest guard would be a
+    // threshold on how relocation-dominated the movement is, and no such
+    // threshold was preregistered; inventing one after seeing the numbers is
+    // the rescue this campaign forbids. The positive controls below are the
+    // assertions, and they are unaffected — they only ever claimed that
+    // movement exists.
+    let pooled_net: i64 = per_seed_net_a.iter().sum();
+    let nonzero = per_seed_net_a.iter().filter(|n| **n != 0).count();
+    let span = |v: &[i64]| {
+        (
+            v.iter().copied().min().unwrap_or(0),
+            v.iter().copied().max().unwrap_or(0),
+        )
+    };
+    let (net_lo, net_hi) = span(&per_seed_net_a);
+    let (d_lo, d_hi) = span(&per_seed_settlement_delta_a);
+    println!(
+        "REPOSE ARMS: arm A per-seed occupied-cell net: pooled {pooled_net:+}, but \
+         {nonzero} of {} seeds NONZERO, range {net_lo:+}..{net_hi:+} - NOT pure relocation",
+        per_seed_net_a.len()
+    );
+    println!("REPOSE ARMS: arm A per-seed occupied-cell nets: {per_seed_net_a:?}");
+    println!(
+        "REPOSE ARMS: arm A per-seed settleable SETTLEMENT-count delta: range \
+         {d_lo:+}..{d_hi:+}: {per_seed_settlement_delta_a:?}"
+    );
 
     // POSITIVE CONTROLS, asserted on the SETTLEABLE-LAND population — the one
     // the exposure readout above measures, and therefore the one arm C's null
@@ -1381,13 +1543,18 @@ fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
 /// moved", against a denominator of baseline SETTLEMENTS. Those are different
 /// units. A settlement that RELOCATES contributes TWO cells to a symmetric
 /// difference — the one it left and the one it took — so the figure is
-/// inflated by up to 2× against that denominator, and the module doc's
-/// original "3,036 of 26,146 = 11.6%" was a count of changed CELLS over a
-/// count of SETTLEMENTS.
+/// inflated against that denominator, and the module doc's original
+/// "3,036 of 26,146 = 11.6%" was a count of changed CELLS over a count of
+/// SETTLEMENTS. **2× is the PURE-RELOCATION case, not an upper bound:** an
+/// arm that also creates settlements inflates further, and arm B measures
+/// 399/193 = 2.07×.
 ///
 /// **Which figure to quote: `vacated`, as a share of the baseline.** It is
-/// 1:1 with baseline settlements (baseline attractor cells are 1:1 with
-/// settlements — 26,146 matches Task 1's total exactly), and it answers the
+/// 1:1 with baseline settlements — 26,146 attractor cells against Task 1's
+/// 26,146 settlements — which is a MEASURED property of the baseline, not a
+/// general one: [`hornvale_demography::stack_condense`] can place two
+/// settlements on one cell, so an ARM's own cell count needs its own check
+/// (fix round 3 made it, per seed; see the module doc). It answers the
 /// question the arms are asked: how much of the settlement pattern this
 /// readout measures does the channel account for. `newly_occupied` and `net`
 /// are reported because a channel can also create or destroy settlements
@@ -1410,7 +1577,9 @@ impl Movement {
         self.vacated + self.newly_occupied
     }
 
-    /// Signed change in occupied cells. Zero means pure relocation.
+    /// Signed change in occupied cells. Zero POOLED does NOT mean pure
+    /// relocation — arm A pools to zero while 29 of its 30 seeds are
+    /// individually nonzero (module doc, fix round 3). Read it per seed.
     fn net(self) -> i64 {
         self.newly_occupied as i64 - self.vacated as i64
     }
@@ -1653,7 +1822,7 @@ fn which_channel_carries_the_exposure_gradient() {
         assert_ne!(
             arm_settlements, base_settlements,
             "arm {label} left the pooled settlement distribution untouched — \
-             the attribution table is measuring one reading three times"
+             the attribution table is measuring one reading four times"
         );
     }
 }
