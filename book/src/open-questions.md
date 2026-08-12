@@ -772,6 +772,50 @@ decides placement wherever it reasons about placement at all. It constrains
 placement; it does not determine it, and that is now measured with the field held
 constant to the bit.
 
+*Re-scored again by [The Muster](./chronicle/the-muster.md) (2026-08-12), which
+found that the one consumer still believed exempt is not exempt either.*
+
+**The exemption above does not survive, and the correction sharpens the general
+form rather than weakening it.** The paragraph two above concedes that the level
+is gauge for *one* consumer — a kind's own ranking of cells — and load-bearing
+downstream. The concession was too generous. A change to the level is not a
+uniform factor at all: the constructor holds a stronghold at exactly `1.00`
+while pulling every lower rung down, so it changes the ladder's **contrast**
+rather than its scale, and the factor then reweights biome against every other
+condition inside the per-cell limiting product. Measured on seed 42 with every
+authored shape held fixed, **all seven kinds carrying a shaped row have their
+own cell ranking changed**, and one kind's argmax — the cell the placement
+routine would choose as a stronghold — moves outright, with 5 of its top 50
+cells surviving. **All eleven row-less kinds are bit-identical**, which is the
+control: with no row the factor is `1.0` at every level, and there the level
+genuinely is gauge.
+
+So two claims had been wearing one sentence. *A uniform rescale of a whole row
+cannot reorder that kind's own ranking* is true and is what this chapter says.
+*Changing the level preserves ranking* is false, because the constructor is not
+a uniform rescale. For a kind with a shaped row the level is load-bearing in all
+four of its consumers and gauge in none. The general form above — a claim true
+and incomplete is more durable than one that is false — now has a checkable
+successor, ratified as a decision: **when a quantity is described as gauge, name
+the transformation it is gauge under, and name the consumers checked.** The
+short form named neither, which is exactly how it stayed unfalsified across two
+campaigns while being wrong about four consumers out of four.
+
+**And the split this bet's successor asked for is refuted, by its own
+instrument.** The open question left standing was whether the level should
+become two numbers, one per consumer. A preregistered sweep, its rule frozen
+before any measurement, says no — with the caution that the *first* arm said
+yes. Varying the level globally collapses the shipped per-kind spread to one
+scalar and manufactures the opposition it then reports, because at a scale
+factor of one a uniform level simply **is** the no-affinity world. Scaling each
+kind's shipped level instead — ordering preserved, and the shipped
+configuration reproducing byte-identically at a scale factor of one — satisfies
+every band simultaneously with the shipped values interior to the satisfied set.
+One quantity, correctly valued. The transferable half is a control, not a
+result: **for any one-scalar sweep over a per-kind quantity, ask whether the
+shipped configuration reproduces byte-identically somewhere on the grid; if it
+cannot, the sweep is not interpolating the shipped world.**
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -2275,3 +2319,41 @@ undifferentiated sharing where the original band permitted 75%, so the world is
 if anything more differentiated than the bound was written to allow. Both halves
 of that sentence are only sayable because the bound was re-derived rather than
 re-fitted.
+
+*Extended by [The Muster](./chronicle/the-muster.md) (2026-08-12), which found
+that the re-derived ceiling cannot be reached at all, and that the instrument
+enforcing this bound had been reading an empty store.*
+
+**A derived bound can rot in the opposite direction, and this one has.** The
+repair above replaced a literal `3.0` with three quarters of the peopled count,
+which was correct and which the roster's growth has since carried to **13.5**.
+The reading it bounds cannot exceed the number of kinds actually *present* in a
+cell, and the mean claimed cell holds **6.4351** of the eighteen — pooled over
+177 336 claimed cells across five seeds. **The ceiling now asks for more
+coexistence than the world puts in a cell at all**, so the band is one-sided by
+construction: it can only ever be failed from below, and no perturbation of the
+quantity it was written to watch can reach its upper edge. A literal rots by
+falling behind its dependency; a derived bound rots by outrunning what the
+world can produce, and neither failure announces itself.
+
+**And the guard enforcing it was reading nothing.** The test that asserts this
+band built its own component set with two stores left empty — the biome
+affinities and the habitat realms — both of which are sparse and read through a
+default on absence, so an empty store did not raise; it silently supplied the
+null hypothesis. Every authored affinity row in the registry scored identically
+inside the one test whose purpose was to notice when they changed. With both
+stores live the same five worlds read **2.1128** against **2.3734** blind, and
+the decomposition matters more than the total: a third of that movement is
+interaction between a *single* realm row and the affinity rows, so the affinity
+contribution alone is 7.2% rather than the 11% a naive attribution would claim.
+
+**What that costs this chapter's confidence is narrower than it looks, and
+sharper.** A repaired guard that stays green proves nothing, so it was
+mutation-proven — and the proof is an existence proof rather than a
+demonstration that the band tracks the quantity. At today's roster the level
+alone cannot cross either edge at **any** value; widening the rows to reach
+every kind is necessary and nowhere near sufficient; and of three assignments
+differing only in which kind holds which ground, all three move the reading by a
+similar amount and only one crosses the floor — the *most* differentiated of the
+three does not. The bound is a real instrument again. It is not yet a sensitive
+one, and the difference is now written down where it will be read.

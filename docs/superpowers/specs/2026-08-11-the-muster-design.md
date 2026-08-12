@@ -173,6 +173,42 @@ about the sweep, not about the guard.
 
 ## §4 Part B — the founder-handle epoch (`/v2`)
 
+> **ERRATUM, 2026-08-12 — this section was not built by this campaign.
+> `campaign/the-ell` shipped it.** Part B was held here on the reasoning that
+> The Ell retypes `Fact.day` (decision 0126, superseding 0014) and moves the
+> history bake from years to days — the units of the very fields
+> `founder_handle` keys on — so landing an identity epoch first would have
+> renamed every founder in every world and let The Ell rename them all again.
+> The Ell then did the widening itself rather than handing the tree back,
+> riding an epoch it was already paying for.
+>
+> **What it shipped, against what this section specifies.** The constraint §4.3
+> made non-negotiable is honoured: **the drop backstop stays.** The Ell's own
+> plan called for restoring the fatal assert, and building the residual seeds
+> showed what that would cost, so the drop is retained as the honest handling of
+> a residual. §4.4's prediction B1 is confirmed over the census range — **0
+> colliding worlds and 0 dropped founders over seeds 0–999**, against 2 and 2
+> before — and the residual over 0–2999 is exactly {2634, 2898}, the twin-parent
+> case §4.1's own table predicted no one-hop widening would remove.
+>
+> **What it corrected in this section.** §4.1's scoring is the diagnosis this
+> spec inherited, and The Ell measured the narrower founding-side-only key it
+> implies: that key collides in **732 of 1000** worlds and costs **1582**
+> dropped founders. Decision 0127 records the resolution — an *identity* key and
+> a *discrimination* key are different kinds of object, and `founder_handle` is
+> the second wearing the first's name. §4.5's rename-only property (B2) and the
+> `/v2` naming discipline of §4.6 are subsumed by that decision's own
+> byte-neutrality evidence.
+>
+> **Consequently §7's "one census refresh at the close" does not apply to what
+> this campaign shipped.** The census was owed by the epoch, and the epoch
+> landed elsewhere with its own regeneration. Part A's only production-crate
+> change is doc-only; no world moved. See the chronicle's closing section for
+> the evidence.
+>
+> Left in place rather than rewritten, for the same reason §1.3's erratum is: a
+> spec that quietly corrects itself teaches the next reader nothing.
+
 ### §4.1 What changes
 
 `founder_handle` widens to fold its referents by their **material** keys. The

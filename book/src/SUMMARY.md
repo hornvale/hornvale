@@ -352,6 +352,7 @@
 - [The Ell](./chronicle/the-ell.md)
 - [The Ford](./chronicle/the-ford.md)
 - [The Ford, stage 2](./chronicle/the-ford-stage-2.md)
+- [The Muster](./chronicle/the-muster.md)
 
 # Appendix: The Frontier
 

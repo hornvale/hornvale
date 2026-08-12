@@ -241,7 +241,7 @@ rows read.
 | `book/src/chronicle/the-muster.md` | **create** — the campaign's chronicle, carrying the promoted sweep (spec §6) | 6 |
 | `docs/retrospectives/the-muster.md` | **create** — process lessons (decision 0020) | 6 |
 | `book/src/frontier/idea-registry.md` | **modify** — `MEM-founder-handle-epoch` → `shipped`; `BIO-40` repointed | 6 |
-| `docs/decisions/0125-*.md` | **create** — the founder-handle epoch, ratified | 6 |
+| `docs/decisions/0128-*.md` | **create** — the gauge rule, ratified (the founder-handle epoch was ratified as `0127` by The Ell) | 6 |
 
 ---
 
@@ -754,17 +754,56 @@ touched none of the four. That sentence is now in the guard's module doc.
   does not exist yet. It is plain backticked text, not an intra-doc or mdbook
   link, and `docs_consistency` never resolves source-cited paths — so **no check
   will fail if the chronicle is never written under that name.**
+  **DISCHARGED 2026-08-12** — written at exactly that path and wired into
+  `book/src/SUMMARY.md`.
 - Four deferred Minor findings from Part A, for the final whole-branch review to
   triage: `beta_calibration_freeze.rs:253` says the clamp first binds at
   `d = 1.60` while `:270` of the same file says `d ≈ 1.45` (measured: kobold
   ≈ 1.445, goblin ≈ 1.503, so a re-runner places the onset 0.16 too deep); the
   doc's "span ≥ 0.365" is really 0.3645; "distinct" survives at `:143-144`
   describing a different, undocumented arm; and the fn doc at `:296-299`
-  overstates what the guard is shown to detect.
+  overstates what the guard is shown to detect. **Still deferred at the close;
+  triaged and left unfixed deliberately.**
+
+### Campaign status, 2026-08-12 — **the plan and the spec are COMPLETE**
+
+Task 6 is discharged and nothing in this plan remains to execute.
+
+| task | status |
+|---|---|
+| 1, 2 | complete here (`9831539c..92e6b53a`), reviewed, re-verified after The Ell |
+| 3, 4, 5 | **superseded** by `campaign/the-ell` — marked in place below, not deleted |
+| 6 | complete — chronicle, retrospective, decision `0128`, registry, book sweep |
+
+The close's own deliverables, for the record:
+`book/src/chronicle/the-muster.md` (wired into `book/src/SUMMARY.md`, and the
+path `domains/species/src/lib.rs` cites),
+`docs/retrospectives/the-muster.md`,
+`docs/decisions/0128-name-the-transformation-a-quantity-is-gauge-under.md`,
+the spec's §4 erratum, the registry repoint of the diversity row, and the
+Confidence Gradient re-score. **No census refresh is owed** — Part A's only
+production-crate change carries zero non-comment changed lines and the
+seven-path drift check is clean; the epoch that would have owed one landed on
+another branch with its own regeneration.
+
+The preregistration, its Amendment 1 and both result sets are **promoted into
+the chronicle**; they lived in a temporary directory outside the repository and
+no longer exist there.
 
 ---
 
-## Task 3: The widened key, as a `/v2` epoch
+## Task 3: The widened key, as a `/v2` epoch — **SUPERSEDED**
+
+> **SUPERSEDED, 2026-08-12, by `campaign/the-ell`.** Not abandoned: the work
+> shipped, from another campaign's branch, under decision
+> [0127](../../decisions/0127-identity-keys-and-discrimination-keys-are-different-kinds.md).
+> The Ell retypes `Fact.day` and moves the history bake from years to days —
+> the units this task's key reads — so it rode an epoch it was already paying
+> for rather than forcing a second one. The drop backstop this task was
+> forbidden to remove is retained. This task is left standing rather than
+> deleted because the sequencing reasoning is the record; see the spec's §4
+> erratum and `PART A OUTCOME` above. **Do not execute it.**
+
 
 **Files:**
 - Modify: `domains/history/src/flesh.rs:69` (`FOUNDER_ROLE`), `:79-137` (the
@@ -1069,7 +1108,13 @@ git commit -F /tmp/hv-msg-t3.txt -- domains/history/src/flesh.rs domains/history
 
 ---
 
-## Task 4: Prediction B2 — the epoch is a rename, and nothing else
+## Task 4: Prediction B2 — the epoch is a rename, and nothing else — **SUPERSEDED**
+
+> **SUPERSEDED, 2026-08-12, by `campaign/the-ell`.** B2's rename-only property
+> is subsumed by decision 0127's own byte-neutrality evidence — a zero-diff
+> rebaseline, the world golden passing without one, and a re-run of the
+> thousand-seed sweep rather than a carried-over result. **Do not execute it.**
+
 
 **Files:**
 - Create: `windows/worldgen/tests/founder_epoch.rs`
@@ -1250,7 +1295,14 @@ git commit -F /tmp/hv-msg-t4.txt -- windows/worldgen/tests/founder_epoch.rs
 
 ---
 
-## Task 5: Prediction B1 — the residual over the census range
+## Task 5: Prediction B1 — the residual over the census range — **SUPERSEDED**
+
+> **SUPERSEDED, 2026-08-12, by `campaign/the-ell`.** B1 is confirmed on its
+> named subject and measured over the census range: **0 colliding worlds and 0
+> dropped founders over seeds 0–999**, against 2 and 2 before, with the residual
+> over 0–2999 exactly {2634, 2898} — the twin-parent case this campaign's own
+> diagnosis predicted no one-hop widening would remove. **Do not execute it.**
+
 
 **Files:**
 - Modify: `windows/worldgen/tests/founder_collision.rs` (module doc only, to
@@ -1410,11 +1462,16 @@ the same family as The Radiation's twenty-four.
 
 - [ ] **Step 3: The decision record**
 
-`docs/decisions/0125-<slug>.md`, following the format of `0120`. The subject is
-the founder-handle epoch: what changed, that v1 stays declared, that the drop
-backstop stays because no key is total, and that `descent::founder_of` is a
-separate handle this epoch does not move. Append-only; do not edit 0051, 0006
-or 0120 — cite them.
+`docs/decisions/0128-<slug>.md`, following the format of `0120`. Append-only;
+do not edit 0051, 0006 or 0120 — cite them.
+
+> **RESOLVED, 2026-08-12.** The founder-handle epoch was ratified as **0127** by
+> `campaign/the-ell`, which shipped it. This campaign's own record is **0128**:
+> *name the transformation a quantity is gauge under* — grounded in Part A's
+> measurement that "the level is gauge" was true under a uniform rescale, false
+> under a level change, and survived two campaigns, a spec, a plan and a
+> chronicle unfalsified because it named no transformation to disagree with.
+> Highest existing record verified as `0127` before writing.
 
 **The number is not a free choice, and it moved once already.** This plan was
 written claiming `0121`; The Grain landed four records (0121–0124) while the plan
