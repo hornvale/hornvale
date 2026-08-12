@@ -9,7 +9,7 @@ use crate::circulation::{
     RotationRegime, band_count_for, band_index, is_rising_band, prevailing_wind,
 };
 use crate::currents::ocean_current_field;
-use crate::facets::BiomeExpr;
+use crate::facets::{BiomeExpr, Formation, Stratum};
 use crate::habitability;
 use crate::moisture::{moisture_field, upwind_neighbor};
 use crate::precipitation::{
@@ -481,6 +481,54 @@ impl GeneratedClimate {
     pub fn biome_expr_at(&self, cell: CellId) -> BiomeExpr {
         *self.biome_expr.get(cell)
     }
+    /// Every stratum present at a cell, shallowest first — the cell's
+    /// **column**.
+    ///
+    /// Derived from the cell's stored [`BiomeExpr`] alone: its `realm` names
+    /// the ladder and its `stratum` names how far down this cell's floor
+    /// reaches, so the column is that ladder's prefix. Pure; no new inputs.
+    ///
+    /// **Direction:** this answers *which strata exist here*, never *which are
+    /// reachable*. A sealed void exists and is unreachable; reachability is
+    /// [`crate::facets::Access`]'s question, not this one.
+    pub fn strata_at(&self, cell: CellId) -> Vec<Stratum> {
+        let e = self.biome_expr_at(cell);
+        let ladder = e.realm.strata();
+        let floor = ladder
+            .iter()
+            .position(|s| *s == e.stratum)
+            .expect("a cell's stratum is always on its own realm's ladder");
+        ladder[..=floor].to_vec()
+    }
+
+    /// The community at a cell and a stratum, or `None` when that stratum is
+    /// not present there — below this cell's floor, or on another realm's
+    /// ladder entirely.
+    ///
+    /// At the cell's own stratum this returns the stored expression
+    /// unchanged, which is what keeps it and [`Self::biome_expr_at`] from
+    /// drifting apart. Above it, the water is open water at its own depth —
+    /// the reading [`crate::biome::classify_marine_expr`] already argues for,
+    /// where a vent is a community *at* a depth rather than one that displaced
+    /// a depth.
+    pub fn biome_expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> Option<BiomeExpr> {
+        let e = self.biome_expr_at(cell);
+        let ladder = e.realm.strata();
+        let floor = ladder
+            .iter()
+            .position(|s| *s == e.stratum)
+            .expect("a cell's stratum is always on its own realm's ladder");
+        let here = ladder.iter().position(|s| *s == stratum)?;
+        match here.cmp(&floor) {
+            std::cmp::Ordering::Greater => None,
+            std::cmp::Ordering::Equal => Some(e),
+            std::cmp::Ordering::Less => Some(BiomeExpr {
+                realm: e.realm,
+                formation: Formation::OpenWater,
+                stratum,
+            }),
+        }
+    }
     /// The per-cell habitability mask.
     /// type-audit: bare-ok(flag)
     pub fn habitability(&self) -> &CellMap<bool> {
@@ -752,8 +800,21 @@ pub mod test_support {
     }
 
     /// A small mixed land/ocean, spinning world — the shape every other
-    /// provider test builds by hand.
+    /// provider test builds by hand. Land is `+300.0` m, ocean a uniform
+    /// `-1000.0` m (so every ocean cell has the same depth, floor stratum,
+    /// and column height — there is exactly one column shape in this
+    /// fixture), with [`SeafloorFeature::None`] everywhere.
     pub fn sample_climate() -> GeneratedClimate {
+        sample_world().1
+    }
+
+    /// [`sample_climate`]'s [`Geosphere`] and [`GeneratedClimate`], from one
+    /// construction — so a caller that needs to iterate cells (`strata_at`'s
+    /// and `biome_expr_at_stratum`'s tests, in particular) cannot silently
+    /// drift onto a different mesh than the climate was built over. Rebuilding
+    /// `Geosphere::new(4)` separately would compile and pass today, but
+    /// couples silently to that literal; this makes the coupling explicit.
+    pub fn sample_world() -> (Geosphere, GeneratedClimate) {
         let geo = Geosphere::new(4);
         let elev = CellMap::from_fn(&geo, |c| {
             let m = if geo.position(c)[2] > 0.0 {
@@ -765,7 +826,8 @@ pub mod test_support {
         });
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime))
+        let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
+        (geo, climate)
     }
 }
 
