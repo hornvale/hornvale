@@ -9,17 +9,32 @@ use hornvale_language::anthroponym::{
 fn person_is_a_distinct_name_kind_with_its_own_seed_label() {
     // The label is a save-format contract: it is folded into the derive
     // path, so it must be "person" and must differ from every existing kind.
-    let labels = [
-        NameKind::Settlement.label_for_test(),
-        NameKind::Deity.label_for_test(),
-        NameKind::Epithet.label_for_test(),
-        NameKind::Person.label_for_test(),
-    ];
-    assert_eq!(labels[3], "person");
-    let mut sorted = labels.to_vec();
+    //
+    // This test used to hand-list four labels inline, which is exactly what
+    // let `Landform`'s addition slip through unnoticed at first: a
+    // hand-listed array only ever inspects what someone remembered to name
+    // in it, so a fifth variant would leave this test green while covering
+    // one fewer kind than the enum actually has. Iterating `NameKind::ALL`
+    // instead ties the label count to the enum's own variant count (kept
+    // honest by the compile-time sentinel next to `ALL`'s definition in
+    // `naming.rs`), so a sixth variant widens this test's coverage for free
+    // instead of silently narrowing it.
+    let labels: Vec<&str> = NameKind::ALL.iter().map(|k| k.label_for_test()).collect();
+    assert_eq!(
+        labels.len(),
+        5,
+        "NameKind::ALL grew or shrank without this test's expectation moving with it"
+    );
+    assert!(labels.contains(&"person"));
+    assert!(labels.contains(&"landform"));
+    let mut sorted = labels.clone();
     sorted.sort_unstable();
     sorted.dedup();
-    assert_eq!(sorted.len(), 4, "NameKind labels must be distinct");
+    assert_eq!(
+        sorted.len(),
+        labels.len(),
+        "NameKind labels must be distinct"
+    );
 }
 
 #[test]

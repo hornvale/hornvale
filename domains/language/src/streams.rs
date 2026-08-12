@@ -37,7 +37,8 @@ pub const ARTICLES: StreamLabel<'static> = StreamLabel::from_static("articles");
 /// The numeracy-rung draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numeracy-rung");
-/// The name sub-tree (settlement/deity/epithet/person name generation).
+/// The name sub-tree (settlement/deity/epithet/person/landform name
+/// generation).
 /// type-audit: bare-ok(identifier-text: return)
 pub const NAME: StreamLabel<'static> = StreamLabel::from_static("name");
 /// The generic epoch-2 suffix leg, appended one level deeper than a v1
