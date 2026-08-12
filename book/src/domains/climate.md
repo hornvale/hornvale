@@ -247,6 +247,30 @@ ordering beneath it. The Mire's most surprising finding is a property of
 these worlds, not of the way it was first measured. See [The
 Fare](../chronicle/the-fare.md).
 
+**The biome field has a depth coordinate now ([The Fathom](../chronicle/the-fathom.md)).**
+`BiomeExpr { realm, formation, stratum }` — the type the biome and marine
+classifications above already build — always carried a vertical rung; the
+one accessor every consumer called discarded it before returning. Two
+additive reads expose the column it was always deriving: every stratum
+present at a cell, and the community at any one of them. For the sea this
+falls out of what `classify_marine_expr` already computes independently (a
+floor depth and a seafloor community): a reef sits in a one-rung column, an
+abyssal trench in a four-rung one, with open water filling every rung above
+the floor. Measured on seed 42's 29,896 ocean cells, the column is
+non-degenerate — three distinct heights, a three-rung median, no height
+holding more than 72% of cells — with one preregistered clause narrowly
+falsified (5.85% of cells are single-rung against a <5% ceiling, diagnosed
+as an unmeasured guess rather than a wrong world: Earth's own continental
+shelf runs 7–8% of ocean area). The same column also made a standing
+mismatch visible for the first time: `Formation::SeaIce` is selected on
+surface temperature alone, independent of the depth `stratum` records, so
+92% of seed 42's sea-ice cells carry a stratum below the epipelagic — ice
+the model files four kilometres down. Reported, not repaired; the column
+adds no world content and changes no world bytes, land or sea. The
+underworld's own rock strata stay uninhabited (`BiomeExpr::biome()` still
+declares a cave formation `unreachable!()`) — this campaign only gives every
+realm the coordinate a future one needs to fill it.
+
 **The tier ladder ahead:** *stochastic* weather — day-to-day variation the
 world's pure `world(place, time)` cannot yet express (standing felt weather has
 shipped; the *changing* kind waits on an event model) — ocean currents and cloud

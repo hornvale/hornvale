@@ -353,6 +353,7 @@
 - [The Ford](./chronicle/the-ford.md)
 - [The Ford, stage 2](./chronicle/the-ford-stage-2.md)
 - [The Muster](./chronicle/the-muster.md)
+- [The Fathom](./chronicle/the-fathom.md)
 
 # Appendix: The Frontier
 

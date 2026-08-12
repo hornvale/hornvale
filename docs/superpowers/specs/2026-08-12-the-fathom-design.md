@@ -305,3 +305,68 @@ destroys it.
 The standard project definition, plus: the metaplan's §7 reconstruction test is
 written into campaign 1's spec before campaign 1 opens, so the axis list cannot
 reach implementation unvalidated.
+
+## 10. Decisions promoted from the ledger
+
+Auto-resolved under `campaign-autopilot` during the brainstorm and plan
+stages; promoted here in full, since `.superpowers/sdd/decision-ledger.md`
+is git-ignored scratch that does not survive the worktree.
+
+- **The legacy `Biome` enum gains no rock variants.** The underworld exists
+  only as a `BiomeExpr`; widening `Biome` would drag glyph, colour,
+  `biome_class`, the map, the census, and the append-only cross-repo
+  `biome_legend` behind it for no reachable benefit yet. 1 ideonomy pass, 0
+  overturns.
+- **A chamber's community is not `f(CaveKind, stratum)`.** Overturned
+  mid-brainstorm (2 passes, 1 overturn): cave kind is an *input* to a future
+  classification, not its output — `Formation` already means community, and
+  `KarstCave`/`LavaTube`/`FractureCave` are the process that made the void,
+  misfiled into the community slot before the underworld had life to name.
+  The discarded alternative, `f(CaveKind, deepest_band)`, would have capped
+  the underworld at three communities forever. Belongs to campaign 2.
+- **The sea and the underworld are not separate planes with their own
+  index.** Column realms (this campaign's subject) co-register on one
+  `CellId` space and differ only by stratum; only *transit* realms
+  (campaign 3) get their own index. The coupling is physical —
+  `is_ocean = elevation < sea_level` makes bathymetry and topography the
+  same field, and a water cycle cannot close across independently-indexed
+  spaces. 2 passes, 0 overturns.
+- **Mangroves, cypress domes, and gallery forests are not taxonomy.** They
+  are room-grain content (~1 km) inside a ~110 km cell and belong to the
+  fine layer (The Grain's territory), not `Formation` — the same category
+  error as `Formation::KarstCave` would have been. 2 passes, 0 overturns.
+- **Campaign 0's scope is a pure refactor gated on byte-identical worlds,
+  plus the sea's column as its first consumer.** The expand-contract recipe
+  (captured before-arm, draw-for-draw assertion) was already executed once
+  in this tree (`windows/locale/src/grammar.rs`'s `Biome`-to-`Formation`
+  re-key); a byte-identity proof is what makes a cross-cutting re-key safe
+  to review at all. Discarded: including the sky's upper strata (new
+  content, breaks the proof) and repairing the sea-ice-at-depth artifact
+  (same reason — it ships as H-2, a reported finding, instead).
+- **`dominant-land-biome` is not renamed.** It is correctly named — a land
+  question — and wants a per-realm companion column, not a repair; renaming
+  a committed census column for no behavioural change is pure artifact
+  drift, and drift checks freeze what they pin. Companion columns belong to
+  campaign 2.
+- **Campaign naming: The Chorography (program), The Fathom (campaign 0).**
+  Grepped before adopting — "The Column" hits 61 files as a common noun and
+  would be unsearchable, "The Reaches" collides with The Rill's own reach
+  vocabulary, "The Gazetteer" hits 8 files. Both chosen names hit 0.
+- **The axis list for campaign 1 is validated by reconstruction against the
+  existing corpus, not by argument.** The proposed six axes are this
+  author's synthesis, never measured, and two are suspected collinear with
+  inputs `classify_land` already reads — which would make the decomposition
+  a factoring rather than a fidelity gain. Campaign 1 must say which,
+  measured, before building on the list. Captured as a gate on campaign 1's
+  Definition of Done (§9 above), not left as a hope.
+- **G4 plan self-review: proceed to execution.** Two spec defects were found
+  and corrected while *writing the plan* (the accessor name collision with
+  the existing `biome_expr_at(cell)`, and three of four "binary-world
+  assumption" sites turning out latent rather than live), and two plan
+  defects were found by checking rather than assuming (no `GeneratedClimate`
+  constructor reachable from `domains/climate/tests/`, and
+  `hornvale-game-core` excluded from the cargo workspace). All four are the
+  same failure — a document asserting something about code it had not
+  read — caught by running a command in every case, never by re-reading the
+  prose. See the retrospective for the full accounting, which grew to seven
+  instances by the campaign's close.
