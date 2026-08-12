@@ -766,3 +766,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-12T16:15:28Z | gate | 764.565 | 3196.520 | 237.086 | 4.49 | 0 | 217b4579 | campaign/the-beacon | ambrose | 12 |
 | 2026-08-12T16:37:02Z | rebaseline | 251.291 | 242.063 | 15.189 | 1.02 | 0 | d6521c71 | campaign/the-beacon | ambrose | 12 |
 | 2026-08-12T18:41:05Z | gate | 804.506 | 3167.345 | 232.787 | 4.23 | 0 | be113f1b | campaign/the-beacon | ambrose | 12 |
+| 2026-08-12T21:04:17Z | census | 1718.995 | 55074.823 | 330.455 | 32.23 | 0 | 7304eb09 |  | lefford | 40 |

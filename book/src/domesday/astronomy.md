@@ -129,6 +129,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 | `0` | 953 | 95.3% |
 | `1` | 47 | 4.7% |
 
+### `insolation-rel`
+
+Top-of-atmosphere stellar flux at the anchor, relative to Earth — the driver of the temperature baseline
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.53285834 | 0.62136199 | 0.74190708 | 0.89415079 | 1.1056801 | 0.7680428 |
+
 ### `largest-figure-members`
 
 Member count of the largest star figure (0 if none)
@@ -288,6 +298,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
 | 128.30347 | 273.84871 | 446.66343 | 677.99089 | 1185.6202 | 487.39332 |
+
+### `zone-position`
+
+Where in the habitable zone the anchor sits, normalized: (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 the cold outer edge. This is the DRAWN variable — the orbit is placed uniform in radius across the zone — and it is what temperature actually tracks; the ledger's `anchor-orbit-au` fact predicate (not a lab metric — there is no metric of that name) is 95% collinear with luminosity and so reads as uninformative on its own
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.0024055989 | 0.25568419 | 0.50233683 | 0.75788582 | 0.99980135 | 0.5003273 |
 
 ## Weaknesses found here
 

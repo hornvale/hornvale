@@ -315,6 +315,39 @@
       "rung": "astronomy"
     },
     {
+      "buckets": [
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1
+      ],
+      "doc": "Top-of-atmosphere stellar flux at the anchor, relative to Earth (L/a², Earth = 1, the shared SKY-15 definition, not a re-derivation) — the driver of the temperature baseline",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "insolation-rel",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Where in the habitable zone the anchor sits, normalized: (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 the cold outer edge. This is the DRAWN variable — the orbit is placed uniform in radius across the zone — and it is what temperature actually tracks; the ledger's `anchor-orbit-au` fact predicate (not a lab metric — there is no metric of that name) is 95% collinear with luminosity and so reads as uninformative on its own",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "zone-position",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
       "doc": "Number of tectonic plates the globe drew or was pinned to",
       "domain": "terrain",
       "kind": "categorical",
@@ -352,6 +385,22 @@
       "domain": "terrain",
       "kind": "numeric",
       "name": "mountain-coverage",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        500.0,
+        1000.0,
+        1500.0,
+        2000.0,
+        3000.0
+      ],
+      "doc": "Mean elevation above sea level over land cells, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mean-land-elevation-m",
       "role": "descriptor",
       "rung": "terrain"
     },
@@ -2780,7 +2829,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x33f7b80250f5d1e3"
+    "fnv1a64": "0x655557d03b6f568a"
   },
   "schema_version": 1,
   "study": {
