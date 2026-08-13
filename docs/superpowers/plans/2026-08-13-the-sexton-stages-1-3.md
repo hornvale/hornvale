@@ -419,6 +419,32 @@ captured immediately rather than discarded; and a red run never becomes a
 baseline.
 
 ```make
+# THREE CORRECTIONS TO AN EARLIER DRAFT OF THIS RECIPE, all found by the
+# one-task-ahead brief check and all load-bearing:
+#
+# (a) `nextest-check` STAYS a prerequisite. The earlier draft dropped the
+#     `test` target as a prereq and called nextest directly, which silently
+#     discarded `test`'s own `nextest-check` prereq — the target whose entire
+#     job is to fail with an install hint when cargo-nextest is missing. A
+#     machine without it would have got `command not found` instead.
+#
+# (b) THE DEFAULT PROFILE, NOT `ci`. `.config/nextest.toml` states that
+#     `[profile.default]` is "deliberately left at nextest's own defaults:
+#     `make gate` must behave exactly as it did before this campaign", and the
+#     `ci` profile sets `fail-fast = false`. Running the gate under `ci` would
+#     silently turn every red gate into a full-suite run — 368 times a month,
+#     on the axis this campaign exists to protect. The durations the alarm
+#     needs are complete on a GREEN run regardless of profile, and a green run
+#     is the only run whose durations are ever recorded, so the `ci` profile
+#     buys nothing here and costs fast red feedback.
+#
+# (c) THE ALARM RUNS ONLY ON GREEN. Consequence of (b), and correct
+#     independently: under fail-fast a red run's `run.json` is TRUNCATED, so
+#     alarming against it compares a partial suite to a whole-suite baseline
+#     and can report a regression that does not exist. The spec already states
+#     this principle for S7 — "a duration measured under a partial run is not
+#     comparable to a baseline" — and it binds here first.
+#
 # THE GATE IS NOW ALSO THE MEASUREMENT (The Sexton, Task 3). `make ci` ran 9
 # times against this target's 368: an instrument watching a gate that crept
 # 234 s -> 934 s, running at 2.4% of that gate's frequency, while every gate
@@ -433,16 +459,21 @@ baseline.
 # unguarded version was a one-way ratchet: the alarm fired at 2x and ci-record
 # immediately wrote the inflated durations back as the new reference, erasing
 # its own evidence.
-gate-run: fmt-check clippy type-audit type-audit-report
+gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	@mkdir -p target/nextest/ci docs/timings
 	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
-	    --profile ci --message-format libtest-json-plus \
+	    --message-format libtest-json-plus \
 	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
 	nextest_status=$$?; \
 	cargo test -q --workspace --doc; \
 	doctest_status=$$?; \
-	cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
-	alarm_status=$$?; \
+	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then \
+	    cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	    alarm_status=$$?; \
+	else \
+	    alarm_status=0; \
+	    echo "make gate: skipping the duration alarm — the run was red, so its durations are truncated and not comparable to a baseline" >&2; \
+	fi; \
 	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
 	    cargo run --quiet -p hornvale -- ci-record; \
 	else \
