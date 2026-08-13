@@ -426,11 +426,32 @@ The natural tail is already identified — 703 tests carry 96% of the suite's
 4,628 CPU-s, and the heavy tier plus the census sentinel are both
 throughput-shaped.
 
-**Preregistered success criterion**, so this cannot be declared a win by
-narration: the split gate's **wall time on the Mac, measured on a quiet box
-against a same-host before-arm**, is at least 25% below the same box's current
-median. If it is not, the split is reverted and the finding recorded — a null
-here is a result, not a failure.
+**The objective function is not wall time. It is local occupancy.** Owner
+correction, 2026-08-13: a 400 s gate that leaves the laptop idle beats a 322 s
+one that pins twelve cores and makes everything else on the machine sluggish.
+Efficiency is the wrong axis; *interruption* is the right one. So the criterion
+is two-part and the occupancy half is primary.
+
+**Preregistered success criteria**, so this cannot be declared a win by
+narration, both measured on a quiet box against a same-host before-arm:
+
+1. **Primary — local occupancy.** The share of total gate CPU landing on the
+   box the human is typing on falls by at least 60%.
+2. **Secondary — wall time.** The split gate's wall time on the Mac is at least
+   25% below that box's current median.
+
+If (1) holds and (2) does not, **that is still a pass** and the spec says so in
+advance, because (1) is what the owner actually asked for. If neither holds, the
+split reverts and the null is recorded.
+
+**A caveat against overclaiming, since the owner's suspicion is partly about
+contention.** Several rows on both sides are contended: `ambrose` gates at
+`cpu_ratio` 4.23-4.49 on twelve cores are ~35% utilised, and lefford's range is
+18.6-30.0 on forty. The honest comparison is best-against-best — lefford 243.3 s
+at ratio 28.99 versus the Macs' 321.7 s at ratio 8.03 — and that still gives
+~25%, not more. **Less contention narrows the gap on the annoyance axis, not on
+the efficiency axis.** Both halves of the criterion above exist so the campaign
+cannot confuse the two.
 
 **Sequencing.** After S16, because the dispatch mechanism is the scheduler's,
 and after S14, because the before-arm must come from a recorded row.
@@ -564,3 +585,39 @@ Numbers chosen **after** the final absorption and checked against `origin/main`
    evaporates.* (§3.12, S18.)
 5. *CPU-seconds are not portable across hosts.* (§1.5 — candidate; may be better
    as a CLAUDE.md line than a record, to be decided at close.)
+
+---
+
+## §8 What this campaign sets up but does not do: a second host
+
+Recorded here because the owner named it as the destination (2026-08-13, "if we
+bring back using AWS servers, we might see comparable efficiency and much less
+annoyance… once we have the overall workflow ironed out"), and because the
+argument for it is stronger than opinion: **decision 0063 abandoned AWS on two
+stated premises, and both have since expired.**
+
+| 0063's premise | Its status now |
+|---|---|
+| *Load* — "~7 minutes on a 40-core box … no longer monopolizes the machine", which is what dissolved 0046's remote round-trip | The Rill's census ran **19,207 s**. That is **46x** the figure 0063 relied on. Run 0063's own argument on today's number and it points back at remote. |
+| *Bytes* — "this machine is NOT byte-identical to AWS": seed 681 `divergence-hobgoblin` reads 5 here and 6 in the AWS golden, a discrete count decided upstream of quantize-at-emit | **Decision 0090 diagnosed exactly that class of flip** — `f64::floor()` dispatching to per-host glibc on the default `x86-64` codegen baseline — and it was **fixed by the baseline pin at `3a7092c3`**, with a 40-world all-metric probe byte-identical across x86_64/Linux and aarch64/Darwin afterwards. |
+
+**This is new information, not a fresh opinion**, which is the standard the
+registry's anti-relitigation rule sets. It is still not this campaign's work:
+0063 is a ratified decision and superseding it needs its own record, its own
+measurement, and an owner decision.
+
+**What this campaign contributes to it, and it is the whole difficulty.**
+Qualifying a host has never been a runnable operation — 0063's finding came from
+noticing a golden disagreed, after the fact. **S1 is that operation.** The census
+sentinel is a continuous cross-host reproducibility check, and adding a host
+becomes: run the sentinel there, read the verdict. Its declared-waiver escape
+hatch (§3.9) is what keeps a genuine divergence visible instead of ignored.
+
+So the sequence, for a later campaign: land Stages 1-3 → run the sentinel on the
+candidate host → if clean, re-run 0063's own seed-681 counterexample as a
+falsifier → then, and only then, a decision record superseding 0063.
+
+**One thing that must not be assumed on the way.** §1.5's lesson applies with
+full force to a machine nobody has measured: an AWS instance's CPU-seconds are
+not comparable to lefford's or to a Mac's, and **no host may be adopted on
+projected arithmetic.** Qualify it with the sentinel; time it with recorded rows.
