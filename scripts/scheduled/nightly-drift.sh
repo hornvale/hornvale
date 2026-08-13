@@ -41,12 +41,23 @@ drift="$(git diff --stat -- $paths)"
 # . --quiet` treats `--quiet` as a pathspec, fails, and (because the failure
 # is swallowed) silently leaves the working tree dirty — caught by the dry
 # run in Step 4, not by reading.
-stray="$(git status --porcelain 2>/dev/null || true)"
+# ONLY untracked entries. An earlier version captured the whole
+# `git status --porcelain`, which on any night with real drift is dominated by
+# modified TRACKED files — the very drift this script exists to report — so the
+# cruft notice fired redundantly and described reverted files as "removed".
+stray="$(git status --porcelain 2>/dev/null | grep '^??' || true)"
 git checkout --quiet -- . 2>/dev/null || true
 if [ -n "$stray" ]; then
+    n="$(printf '%s\n' "$stray" | wc -l | tr -d ' ')"
+    # The paths go to stderr (journalctl), NOT into the note: `git status
+    # --porcelain` escapes unusual names, and a quote or space in a path splits
+    # `make board-post`'s NOTE into extra shell words, which tools/board rejects
+    # with exit 2 — swallowed by the `|| true` below. A count cannot break it.
+    echo "nightly-drift: removing $n untracked path(s):" >&2
+    printf '%s\n' "$stray" >&2
     git clean -fdq 2>/dev/null || true
     make board-post KIND=technique BY=scheduler PATHS='scripts/' \
-      NOTE="nightly-drift: the checkout was not clean before cleanup and has been reset. Removed: $(printf '%s' "$stray" | tr '\n' ' ')" || true
+      NOTE="nightly-drift: the checkout carried $n untracked path(s) and has been cleaned. See journalctl -u hornvale-nightly.service for the list." || true
 fi
 
 if [ "$rc" -ne 0 ]; then
