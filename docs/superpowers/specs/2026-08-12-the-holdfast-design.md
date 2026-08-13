@@ -247,10 +247,24 @@ In absolute time (share × own-run wall): `exp` 8.92 s → 4.06 s
 - **H3 (worldgen −15%): NOT MEASURED at crate scale.** The one test
   measured moved −19.8%, which is *not* the crate-level claim H3 made.
   Recorded as unmeasured rather than inferred from one test.
-- **H4 (identity, binding): PASSED.** seed-42 sha unchanged
-  (`ab2fec35…`, 13533 facts, village Googo); 40/40-seed sweep
-  byte-identical; `make rebaseline` drift-clean across every generated
-  directory; 856/856 scoped worldgen+kernel tests.
+- **H4 (identity, binding): PASSED, and re-proven after absorbing main.**
+  Against the pre-merge base `ab26668f`: seed-42 sha unchanged
+  (`ab2fec35…`, 13533 facts, village Googo), 40/40-seed sweep
+  byte-identical, `make rebaseline` drift-clean, 856/856 scoped
+  worldgen+kernel tests.
+
+  That evidence then **expired**. Absorbing 78 commits of main (The Rill,
+  The Millrace) moved world generation underneath the branch — The Rill
+  took the river network from ~200 polylines to 3,606 — so a sweep taken
+  against `ab26668f` certifies a tree that no longer exists. Re-run
+  against the new main `26b7c48c`: seed 42 byte-identical (13533 facts,
+  village Googo) and the 40-seed sweep byte-identical on the merged tree,
+  with `make rebaseline` drift-clean again.
+
+  **A byte-identity claim is scoped to the base it was taken against.**
+  The merge was conflict-free, which is not evidence of anything; the
+  semantic check (neither campaign touches `EraAdjust`, `sea_level`, the
+  condition niche or the sovereignty floor) and the re-run sweep are.
 
 ### The falsification arrived, in a shape §4 did not predict
 

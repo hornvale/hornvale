@@ -110,3 +110,34 @@ test that was measured.
 Resisting the inference is the point. One test moving −19.8% is not the
 crate moving −19.8%, and a readout that quietly promotes the former into
 the latter is how a preregistration stops meaning anything.
+
+## 9. The absorption: a clean merge proved nothing, twice over
+
+78 commits of main arrived at close (The Rill and The Millrace), and git
+merged them with **zero conflicts**. Two things had to be checked anyway,
+and neither was mechanical.
+
+**The identity evidence had expired.** The seed-42 hash and the 40-seed
+sweep were taken against the pre-merge base. The Rill took the river
+network from ~200 polylines to 3,606 — world generation moved underneath
+the branch — so the old sweep certified a tree that no longer existed. It
+was re-run against the new main (`26b7c48c`) and is byte-identical there
+too, but that is a *second* measurement, not the first one still being
+valid. **A byte-identity claim is scoped to the base it was taken
+against, and absorbing main invalidates it.**
+
+**Two campaigns found the same defect shape independently.** Main's
+`8904464f perf(worldgen)` hoists a recomputed climate out of a per-species
+loop — structurally the same finding as this campaign's, in the same
+crate, arrived at from a different direction. It also fixed two of the
+four worldgen regressions this campaign had identified and listed
+(`seed_6_…figures_summary` 9.816 s → 3.559 s, `seed_9_…pole_star_line`
+8.591 s → 3.394 s).
+
+That is mostly good news, but it carries a warning for the campaign that
+takes followup F5: **a measured regression list goes stale while you hold
+it.** Two of the four items on this one were fixed by someone else within
+a day, and nothing announced it — the list was only known to be stale
+because the merge forced a re-read of main's chronicles. Re-measure before
+acting on an inherited finding, rather than trusting the number that
+justified queueing it.
