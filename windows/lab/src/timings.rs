@@ -177,8 +177,10 @@ pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
          # One row per test: <test-id>\\t<seconds, millisecond precision>.\n\
          # The reserved id {BELOW_FLOOR_ID} carries a THIRD field instead:\n\
          # {BELOW_FLOOR_ID}\\t<summed seconds>\\t<count of tests folded in>.\n\
-         # Rewritten by `make ci`; history lives in git, so `git log -p` on\n\
-         # this file is the record."
+         # Rewritten by every GREEN `make gate` (The Sexton folded ci-record\n\
+         # into gate-run; `make ci` is now an alias). A red run leaves it\n\
+         # untouched. History lives in git, so `git log -p` on this file is\n\
+         # the record."
     );
     for r in &sorted {
         match r.folded_count {
