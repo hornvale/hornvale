@@ -264,7 +264,10 @@ automatically correct the moment a census lands and adds nothing to
 exists to "canonicalize a row for comparison with fixture-loaded rows".
 
 **Cost.** Measured: 31.34 CPU-s/world all-metric on ambrose, so three seeds
-≈ 94 CPU-s ≈ 8 s wall on twelve cores — about 2% of a gate.
+≈ 94 CPU-s ≈ 8 s wall on twelve cores. The reference band it must be judged
+against, same host, from the ledger: **`make gate` on `ambrose` runs
+489–805 s** (the spread is contention, not work — see §2.1's S6 row). Eight
+seconds is ~1.6% of the fastest of those.
 
 **Feasibility, and why it is not blocked by 0079.** Decision 0079 enforces that
 census goldens are *authored* on one host because the machines disagreed on
@@ -351,8 +354,10 @@ are opinions. With a few months of it, they are actuarial.
 
 ## §4 Success criteria
 
-1. `make gate` includes the sentinel and stays under its current wall-clock
-   band on ambrose (a `≤ 2%` addition against the §1.2 measurement).
+1. `make gate` includes the sentinel and its wall-clock addition on `ambrose`
+   is `≤ 2%` of the 489 s floor recorded in §3.5 — i.e. `≤ ~10 s`, measured on
+   a quiet box against a same-host before-arm, never against another host's
+   baseline.
 2. `make rebaseline` is byte-identical to today's output, at a measured
    `cpu_ratio > 4` on a twelve-core box.
 3. A red gate leaves a row in `docs/timings/defects-<host>.tsv`; a green gate
