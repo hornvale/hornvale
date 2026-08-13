@@ -80,6 +80,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Betweenness — one surface, many readouts](#betweenness--one-surface-many-readouts)
   - [Chokepoints — the bridge is the degenerate case](#chokepoints--the-bridge-is-the-degenerate-case)
   - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
+  - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -5183,6 +5184,161 @@ inheritance — and categorical aggregation is not associative, so "tundra" and
 Decision 0038's one-way rule is forced by the algebra of what is being
 aggregated, which is a justification for it that the decision record does not
 currently give.
+
+## The instrument turned inward — the project as its own subject
+
+Hornvale has an unusually complete apparatus for asking *what is true of the
+world we generated*: the Laboratory, the census, the Domesday survey,
+seam-guard, the type audit, the timings baseline, drift checks over every
+committed artifact. It has almost nothing for asking *what is true of the
+project generating it*. The digest is the single instrument pointed inward,
+and its own design places it at the halfway rung of a five-rung ladder whose
+top is [[UNI-29]].
+
+The asymmetry is measurable rather than rhetorical. Every instrument in the
+list reads **evidence** — measurements over worlds. Almost none reads
+**structure**. Three consequences of that gap were measured on 2026-08-13,
+and they turned out to be one consequence wearing three costumes.
+
+The idea registry had grown past the point where it can be read at all: 1,111
+rows, 983 KB, adding roughly 23 KB a day. Extracting its `[[…]]` graph — 599
+links across 345 distinct targets, an afternoon's work against a parser that
+already existed for the drift check — showed it to be sharply bimodal. One
+connected body of 392 rows carries the project's actual argument; 584 rows,
+better than half the file, touch nothing whatsoever. The distribution of
+degrees is a clean power law: 584 at zero, 231 at one, ten above nine. Two
+readings that the raw file cannot give up: isolation is not an artifact of
+the linking convention being recent (pre-slug rows are 58 % isolated against
+50 % for later ones, so age explains eight points of a fifty-three point
+effect); and connected rows are *longer* than isolated ones, median 553
+characters against 475. Length tracks integration. A ratchet on row length —
+the obvious remedy, and the one the waiver list encourages — would therefore
+cut the load-bearing rows and leave every orphan in place.
+
+The same shape appears in the code. A clone detector that normalises
+identifiers and literals away and hashes what remains found 224 redundant
+copies among 4,146 functions. The purest case is a three-vector `dot`,
+`cross` and `normalize` repeated byte-identically, doc comments included,
+across six crates — including three times *inside the kernel*, which the
+layering rule cannot explain and which turns out to be a visibility problem
+rather than an architectural one. The largest duplication is not in the code
+at all: the type audit, seam-guard, the trope ratchet, the timings baseline
+and the registry waiver list are five implementations of one pattern —
+scan a source of truth, compare against a committed artifact, fail on
+**novelty** rather than existence, carry an append-only escape list. The
+governing documents already identify them as the same ratchet, in prose, and
+the fifth was written anyway.
+
+And the same shape appears in world-search. Finding a world in which some
+emergent conjunction holds — a species, a condition, a place, all at once —
+looks like an intractable search, and is one only because the ledger is never
+indexed. Recording, per seed, the earliest day on which each predicate was
+first committed turns the conjunction into a set intersection and a maximum
+over three numbers, and hands back the world-time from which a replay should
+begin.
+
+The move is the same in all three: **the corpus is too large to hold, the
+structure is small enough to hold, and nobody has extracted the structure.**
+
+### Why observability here is not application performance monitoring
+
+The reflex, when a system grows complex enough to fail mysteriously, is to
+reach for the tools that industry built for the same feeling: distributed
+tracing, span trees, flame graphs, sampled retention. Almost none of it
+transfers, and the reason is a single premise. Those tools exist because
+production is *unreproducible*. Last Tuesday's request cannot be re-run, so
+it must be captured as it happens, at a cost proportional to traffic, and
+sampled because keeping everything is unaffordable. Sampling, retention
+stores, trace-identifier propagation and always-on collection are all
+consequences of that one fact.
+
+A deterministic world inverts it. Any run can be reproduced exactly, so the
+correct default is to capture *nothing* and re-derive on demand; the entire
+trace store is the triple of seed, pins, and what to watch. The axis those
+tools are built around — wall-clock duration — is the one this project has
+constitutionally banned, and for which it already has better instruments.
+
+What does transfer is the span tree, keyed on **cause** rather than time.
+Application tracing reconstructs causality from a temporal proxy because it
+has no access to the real edges; a fact ledger has them, or nearly. A fact
+records what became true. It does not record what made it true. That single
+missing parent edge is the whole distance between the ledger and a trace —
+and it belongs in the tap rather than the ledger, because it is re-derivable
+and the ledger's format is a permanent contract.
+
+The primitive that follows is closer to a reversing debugger than to a
+monitoring product: name a predicate, and have the system return the earliest
+world-time at which it was already false, with the causal chain that reached
+it. Determinism supplies three search axes no monitoring tool can offer —
+bisection on world-time, on revision history, and on seed space, the last of
+which distinguishes a defect from a defect *in one regime*.
+
+There is a boundary worth stating before any of it is built. Such a tap reads
+the live system as it runs, which is precisely what the explain window
+refuses to do; that refusal is how the window proves the committed ledger
+sufficient. The tap is therefore a debugger and not a window, and must not
+inherit the salience ranking that phenomena carry, since that filter is tuned
+for what an inhabitant would notice rather than for what an investigator
+needs.
+
+### Exogenous input, and the experimental arm
+
+A world is a seed and a ledger, everything else re-derived. An imperative
+intervention — erupt this volcano, give this actor that improbable desire —
+is not derivable from the seed, and so appears to break the guarantee. It
+does not, provided the intervention becomes part of the world's identity
+alongside the seed. Once stated that way, three mechanisms the codebase
+treats as unrelated collapse into one category: a pin is an exogenous
+constraint at genesis, a player action is exogenous input during play, and an
+intervention is an exogenous edit mid-run. All three are the same object at
+different times.
+
+That reframing promotes the idea out of convenience tooling. An intervention
+is the `do` operator of causal inference. The Laboratory today is purely
+**observational**: it measures correlations across seeds it did not choose.
+An intervention tape gives it an **experimental** arm — the same seed, run
+with and without, the effect read off directly — and its most valuable form
+is not an in-world event at all but the suspension of a *model*, which
+measures what that model contributes to everything downstream. That question
+is asked constantly here and answered by argument.
+
+One hazard decides the design. An intervention does not merely add an event;
+it displaces every subsequent draw, so an intervened world diverges
+everywhere rather than downstream of the intervention, and the matched pair
+that motivated the whole exercise measures noise. Interventions must
+therefore draw from a stream of their own, or be applied as state edits that
+draw nothing at all.
+
+### The project's epistemology is poorer than the world's
+
+In the world, a belief is a first-class object. Knowledge is partial,
+provenance-tagged, and permitted to be false; doctrine can be contested and
+can schism; a prediction can be wrong twice running and precipitate a crisis
+that the Book prints in its margin. Out of the world, every record the
+project keeps about itself is assumed true, complete, and settled. A
+committed baseline can be a thousand commits stale and drift-check green
+forever. A registry row captured a year ago is indistinguishable from one
+written this morning. That five tools instantiate one pattern is a sentence
+in a Markdown file that no test can consult and no code can query.
+
+This is the same gap as the unmix doctrine [[PROC-11]] and the same rung
+problem as [[UNI-29]], but it names the direction of travel more usefully
+than either: **the things the project knows about itself should be
+represented the way the things the world knows about itself are
+represented** — as typed, queryable, contradiction-checked assertions rather
+than as prose. The ratchet is the concrete test. Had "these five are one
+pattern" been a fact in a ledger rather than a sentence in a file, the sixth
+would have been a configuration entry.
+
+The near-term rungs are modest and mostly consist of pointing existing
+instruments ninety degrees inward: a registry status for a *refuted*
+prediction, which the vocabulary presently lacks in a project whose method is
+preregistered falsification; a first-occurrence index over the ledger; an
+anomaly report that uses census percentiles as its prior, so that a world
+volunteers its own outliers rather than waiting to be asked; and a shape
+index over the code, declared and default-deny, which fails when a file
+instantiates a named pattern without saying so. That last one is itself a
+ratchet, which is either the joke or the point.
 
 ## Intellectual lineage
 
