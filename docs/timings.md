@@ -807,3 +807,24 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-13T18:34:30Z | world-check | 46.945 | 61.741 | 6.717 | 1.46 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-13T19:13:14Z | rebaseline | 36.728 | 218.968 | 9.481 | 6.22 | 0 | d8435f61 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-13T19:13:51Z | rebaseline | 37.018 | 219.513 | 9.188 | 6.18 | 0 | d8435f61 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T13:40:29Z | gate | 475.516 | 3635.033 | 163.694 | 7.99 | 0 | 8e007e2a | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T13:42:59Z | rebaseline | 143.694 | 230.531 | 11.703 | 1.69 | 0 | 8e007e2a | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T14:18:40Z | gate | 410.831 | 3452.995 | 120.050 | 8.70 | 0 | 8e22fc23 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T14:46:11Z | gate | 401.733 | 3459.289 | 120.083 | 8.91 | 0 | 56cca795 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T15:21:03Z | gate | 465.518 | 3557.896 | 168.378 | 8.00 | 0 | a5eefec5 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T16:07:39Z | gate | 455.370 | 3325.260 | 156.346 | 7.65 | 0 | 097108f7 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T16:09:58Z | rebaseline | 131.191 | 227.271 | 12.458 | 1.83 | 0 | 097108f7 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T16:40:19Z | gate | 428.645 | 2876.961 | 162.115 | 7.09 | 0 | 7a18edee | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T17:19:14Z | gate | 397.700 | 2985.809 | 151.760 | 7.89 | 0 | 4bb7b4a9 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T17:21:36Z | rebaseline | 133.377 | 228.738 | 14.277 | 1.82 | 0 | 4bb7b4a9 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T17:48:54Z | gate | 412.071 | 3043.338 | 178.460 | 7.82 | 0 | d6f8fb52 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T17:51:22Z | rebaseline | 137.554 | 228.837 | 13.568 | 1.76 | 0 | d6f8fb52 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T18:31:01Z | gate | 353.081 | 2933.928 | 126.989 | 8.67 | 0 | 53a73c7d | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T18:33:19Z | rebaseline | 130.899 | 227.586 | 13.529 | 1.84 | 0 | 53a73c7d | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:01:49Z | census | 949.579 | 26793.028 | 330.171 | 28.56 | 0 | 476f578d |  | lefford | 40 |
+| 2026-08-13T19:25:00Z | gate | 345.675 | 2899.941 | 125.765 | 8.75 | 0 | f9766097 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:27:16Z | rebaseline | 129.575 | 226.835 | 13.231 | 1.85 | 0 | f9766097 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:35:12Z | gate | 356.958 | 2949.735 | 126.718 | 8.62 | 0 | 11efd527 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:37:26Z | rebaseline | 127.760 | 226.699 | 12.894 | 1.88 | 0 | 11efd527 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:44:42Z | gate | 356.234 | 2966.450 | 126.160 | 8.68 | 0 | 9db4f8df | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T19:47:02Z | rebaseline | 133.561 | 227.300 | 13.538 | 1.80 | 0 | 9db4f8df | campaign/the-millrace | MacBookPro | 10 |

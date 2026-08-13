@@ -489,3 +489,482 @@ fn the_bank_sign_is_identical_across_two_builds() {
          channel, so agreeing on the sign proves nothing"
     );
 }
+
+// ---------------------------------------------------------------------------
+// The index equality battery (The Millrace, Task 4).
+//
+// `ChannelNetwork::nearest_line` is indexed: it narrows a candidate LINE SET
+// with a spherical bucket grid over the network's vertices, then runs the
+// unchanged scan over that set. The correctness argument is one inequality —
+// every segment within `D` of the query has an endpoint inside the cap of
+// radius `D + L_max/2` — and it is an argument about COVERAGE, so the way it
+// fails is a true winner that never enters the set. That is silent: the answer
+// is still *a* nearby line with a well-formed distance, and it reaches the
+// SERIALIZED SIGN of `bank_signed_distance`. A wrong index does not go red; it
+// commits a different world and then drift-checks green forever.
+//
+// So the linear scan survives as `nearest_line_reference` and these tests hold
+// the two against each other on real worlds. The sample is not uniform, and
+// every category below is present for a reason the correctness argument names.
+// ---------------------------------------------------------------------------
+
+/// The subdivision levels the equality battery sweeps: the whole legal range
+/// (`TerrainPins` admits 4-7). Level matters because it moves both quantities
+/// the index is built from at once — `L_max` halves with cell spacing while
+/// the vertex count quadruples — so a grid sized correctly at one level is not
+/// thereby sized correctly at another.
+///
+/// **All four are in the commit gate, and level 7 was measured before it was
+/// kept there.** The battery's cost is almost entirely the REFERENCE arm, which
+/// is `O(lines x segments)` per probe — level 7 carries 10,949 lines and 54,838
+/// vertices against level 6's 3,606 and 14,606 — and the whole four-level sweep
+/// runs in ~4.5 s. A `heavy:` ignore would have been the cheaper reflex and the
+/// wrong call: the heavy tier is invisible to `make gate`, and this is the one
+/// test standing between a coverage bug in the index and a silently different
+/// committed world.
+const EQUALITY_LEVELS: [u32; 4] = [4, 5, 6, 7];
+
+/// Positions per category per level, past which the sampler stops. The battery
+/// is O(positions x lines x segments) in the REFERENCE arm — that is the whole
+/// point of it — so the budget is what keeps a level-6 sweep in the commit
+/// gate at all.
+const CATEGORY_BUDGET: usize = 240;
+
+/// One sampled position and the reason it is in the sample. The label is
+/// carried so a failure says which part of the correctness argument broke,
+/// rather than printing three unit-vector components and leaving the reader to
+/// work out what was special about them.
+struct Probe {
+    /// The unit position to query.
+    at: [f64; 3],
+    /// Why this position is in the sample.
+    why: &'static str,
+}
+
+/// The comparable form of a `nearest_line` answer: the line index and the
+/// **bits** of the signed distance.
+///
+/// Bits rather than the `f64` itself for two reasons, both of which would
+/// otherwise weaken the assertion silently: `NaN != NaN` would make a pair of
+/// NaN answers compare unequal and a pair of differing NaNs compare... also
+/// unequal, but `-0.0 == 0.0` would make a SIGN FLIP at a channel centre
+/// compare EQUAL, and the sign is exactly what this battery is protecting.
+fn answer_bits(answer: Option<(usize, f64)>) -> Option<(usize, u64)> {
+    answer.map(|(i, d)| (i, d.to_bits()))
+}
+
+/// Extend the direction `from -> to` past `to` by `t` times its length, back
+/// on the sphere. `None` if the two points coincide, which meander
+/// displacement can produce.
+fn extend_beyond(from: [f64; 3], to: [f64; 3], t: f64) -> Option<[f64; 3]> {
+    let step = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+    if norm(step) == 0.0 {
+        return None;
+    }
+    let p = [
+        to[0] + step[0] * t,
+        to[1] + step[1] * t,
+        to[2] + step[2] * t,
+    ];
+    if norm(p) == 0.0 {
+        return None;
+    }
+    Some(normalize(p))
+}
+
+/// Positions strung out past the two ENDPOINTS of every line, in the
+/// line's own direction.
+///
+/// Present because beyond a segment's endpoints `signed_distance` measures to
+/// the nearer *vertex* rather than to the arc, and the sign is a fact about
+/// the polyline soup rather than about a river (see
+/// `bank_signed_distance`'s own doc). The index must still answer identically
+/// out there, and this is the region where the winning line is NOT the line
+/// whose bucket the query falls in.
+fn beyond_endpoint_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
+    let mut out = Vec::new();
+    for line in &net.polylines {
+        let n = line.points.len();
+        if n < 2 {
+            continue;
+        }
+        for t in [0.25_f64, 1.0, 4.0] {
+            for (from, to) in [
+                (line.points[n - 2], line.points[n - 1]),
+                (line.points[1], line.points[0]),
+            ] {
+                if out.len() == budget {
+                    return out;
+                }
+                if let Some(at) = extend_beyond(from, to, t) {
+                    out.push(Probe {
+                        at,
+                        why: "beyond a line's endpoint",
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The two poles, and rings of longitudes at four latitudes closing on the
+/// north and south poles.
+///
+/// Present because The Bearing's index shipped with a near-pole coverage hole
+/// and its all-levels equality test is what caught it. A lat/lon bucket grid
+/// needs a longitude window that widens as `cos(lat)` shrinks, and the failure
+/// mode is a window computed once from a fixed constant instead of per query
+/// from the search radius. 89.99 degrees is inside the innermost band of any
+/// plausible grid; the poles themselves are the degenerate case where longitude
+/// stops being defined at all.
+fn polar_probes() -> Vec<Probe> {
+    let mut out = vec![
+        Probe {
+            at: [0.0, 0.0, 1.0],
+            why: "the north pole exactly",
+        },
+        Probe {
+            at: [0.0, 0.0, -1.0],
+            why: "the south pole exactly",
+        },
+    ];
+    for lat in [89.99_f64, 89.0, 85.0, 75.0] {
+        for hemisphere in [1.0_f64, -1.0] {
+            for step in 0..12 {
+                let lon = -180.0 + f64::from(step) * 30.0;
+                out.push(Probe {
+                    at: math::unit_sphere_from_lat_lon(hemisphere * lat, lon),
+                    why: "a high-latitude ring",
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Positions offset perpendicularly from every vertex across a spread of
+/// **ranges**, from a thousandth of a radian out to a tenth.
+///
+/// This category exists because measurement showed the battery had almost no
+/// power without it, and the reason is worth stating precisely. The index
+/// decides membership by BUCKET, and the grid's bucket edge is a few
+/// hundredths of a radian; `sample_positions_near_channels` offsets by at most
+/// 2.5e-3 rad, so every one of its probes sits in the same bucket as the very
+/// vertex it was generated from. Such a probe finds its winner however badly
+/// the search radius is computed — it is a test of the scan, not of the
+/// coverage argument.
+///
+/// The offsets here deliberately straddle and exceed the bucket edge, so the
+/// nearest vertex of the winning line is often one or several buckets away and
+/// the query reaches it only if the radius and the window are right.
+///
+/// **It did not, in the event, catch anything either** — with the `L_max / 2`
+/// term deleted from the pruning bound it reports zero disagreements, for the
+/// reason `segment_midpoint_probes` records: the bucket neighbourhood a query
+/// visits is more generous than the cap it asks for, so shrinking the cap does
+/// not shrink what is searched. The category is kept for the region it covers,
+/// not for a detection claim it has not earned.
+fn ranged_offset_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
+    let mut out = Vec::new();
+    for line in &net.polylines {
+        for j in 0..line.points.len() {
+            let base = line.points[j];
+            let ahead = if j + 1 < line.points.len() {
+                line.points[j + 1]
+            } else {
+                line.points[j - 1]
+            };
+            let travel = [ahead[0] - base[0], ahead[1] - base[1], ahead[2] - base[2]];
+            let side = cross(base, travel);
+            if norm(side) == 0.0 {
+                continue;
+            }
+            let side = normalize(side);
+            for off in [1.0e-3_f64, 5.0e-3, 1.0e-2, 2.0e-2, 5.0e-2, 1.0e-1] {
+                for sign in [1.0_f64, -1.0] {
+                    if out.len() == budget {
+                        return out;
+                    }
+                    let step = sign * off;
+                    out.push(Probe {
+                        at: normalize([
+                            base[0] + side[0] * step,
+                            base[1] + side[1] * step,
+                            base[2] + side[2] * step,
+                        ]),
+                        why: "offset from a vertex by up to a tenth of a radian",
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Positions on the perpendicular of the **midpoint** of the network's longest
+/// segments, both sides, at a spread of offsets.
+///
+/// This is the **equality case of the coverage inequality**, and it is the one
+/// place in the sample where the pruning bound is the binding constraint rather
+/// than a formality. The index gathers lines by the cap `D + L_max / 2`, and
+/// the `L / 2` term exists for exactly this configuration: a probe beside the
+/// middle of a long arc is at distance `D` from the arc but `~ D + L / 2` from
+/// its nearest VERTEX, which is what the grid actually holds. Everywhere else
+/// the two are close together and the term is slack.
+///
+/// The longest segments are chosen because `L_max` is a single network-wide
+/// number: a bound error is only visible where `L` is near it. Ordering is by
+/// `total_cmp` on the length with the segment's own `(line, vertex)` as the
+/// tie-break, so the choice is deterministic rather than dependent on sort
+/// stability.
+///
+/// **Its worth was measured, and the measurement REFUTED the reason it was
+/// added.** It was written to sharpen the battery against a shrunken pruning
+/// bound, and it did not: with the `L_max / 2` term deleted outright, this
+/// category reports zero disagreements at every level, exactly as before. The
+/// mechanism is that the grid's bucket edge exceeds `L_max` at every level, so
+/// the cap the bound asks for is always smaller than the bucket neighbourhood
+/// actually visited — the analytic bound is not the binding constraint for any
+/// query near water, and no placement of a near-water probe can make it one.
+/// That is why the coverage argument is pinned DIRECTLY, in
+/// `channel.rs::the_gather_covers_every_line_with_a_vertex_in_the_cap`, rather
+/// than through answers that happen to move.
+///
+/// It is kept because the region is right even though the current grid makes it
+/// slack: this is the one place in the sample where `min(angle(p,a),
+/// angle(p,b)) = d + L / 2` is actually attained, so a future grid sized nearer
+/// the cap would make it the first category to fire. Do not read its silence as
+/// evidence the bound is unimportant — read it as the measured size of the
+/// margin the grid gives it.
+fn segment_midpoint_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
+    let mut segments: Vec<(f64, usize, usize)> = Vec::new();
+    for (i, line) in net.polylines.iter().enumerate() {
+        for j in 0..line.points.len().saturating_sub(1) {
+            let (a, b) = (line.points[j], line.points[j + 1]);
+            let dot = dot(a, b).clamp(-1.0, 1.0);
+            segments.push((math::acos(dot), i, j));
+        }
+    }
+    segments.sort_by(|x, y| {
+        y.0.total_cmp(&x.0)
+            .then_with(|| x.1.cmp(&y.1))
+            .then_with(|| x.2.cmp(&y.2))
+    });
+    let mut out = Vec::new();
+    for &(_, i, j) in &segments {
+        let (a, b) = (net.polylines[i].points[j], net.polylines[i].points[j + 1]);
+        for off in [1.0e-5_f64, 1.0e-3, 1.0e-2] {
+            let Some((left, right)) = mirrored_pair_across(a, b, off) else {
+                continue;
+            };
+            for at in [left, right] {
+                if out.len() == budget {
+                    return out;
+                }
+                out.push(Probe {
+                    at,
+                    why: "beside the midpoint of one of the longest segments",
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Positions at and immediately around every confluence — the points where the
+/// build's repair pass has placed a tributary's mouth vertex EXACTLY on its
+/// trunk's vertex for the shared cell.
+///
+/// Present because a coincident vertex is the one place two different lines are
+/// guaranteed to be exactly equidistant from a probe placed on it, so it is
+/// where the `(|d|, index)` tie-break is most likely to be exercised on a real
+/// world — and the tie-break is what the index must not move. The offsets
+/// straddle it so the neighbourhood is covered as well as the point.
+fn confluence_probes(net: &ChannelNetwork, budget: usize) -> Vec<Probe> {
+    let mut out = Vec::new();
+    for (i, cells) in net.run_cells.iter().enumerate() {
+        let Some(&mouth) = cells.last() else {
+            continue;
+        };
+        let Some((trunk, _)) = net.trunk_vertex(mouth) else {
+            continue;
+        };
+        if trunk == i {
+            continue;
+        }
+        let Some(&at) = net.polylines[i].points.last() else {
+            continue;
+        };
+        for off in [0.0_f64, 1.0e-6, 1.0e-4, 1.0e-2] {
+            for axis in 0..3 {
+                if out.len() == budget {
+                    return out;
+                }
+                let mut p = at;
+                p[axis] += off;
+                if norm(p) == 0.0 {
+                    continue;
+                }
+                out.push(Probe {
+                    at: normalize(p),
+                    why: "at or beside a confluence",
+                });
+            }
+        }
+    }
+    out
+}
+
+/// The whole position sample for one world, category by category.
+fn equality_probes(terrain: &GeneratedTerrain) -> Vec<Probe> {
+    let net = terrain.channels();
+    let geo = terrain.geosphere();
+    let mut out = Vec::new();
+    // Near the water: the ordinary case, and the one the index is optimised
+    // for — a small search radius and a handful of candidates.
+    for at in sample_positions_near_channels(net, CATEGORY_BUDGET) {
+        out.push(Probe {
+            at,
+            why: "beside a channel",
+        });
+    }
+    // Cell centres, strided across the whole globe. This is where the sample
+    // gets its FAR-FROM-NETWORK positions — mid-ocean, deep desert — which the
+    // near-channel sampler cannot produce and which are the only positions
+    // that exercise the search radius growing past its first guess.
+    let stride = (geo.cell_count() / CATEGORY_BUDGET).max(1);
+    for c in geo.cells().step_by(stride) {
+        out.push(Probe {
+            at: geo.position(c),
+            why: "a cell centre",
+        });
+    }
+    out.extend(beyond_endpoint_probes(net, CATEGORY_BUDGET));
+    out.extend(ranged_offset_probes(net, CATEGORY_BUDGET));
+    out.extend(segment_midpoint_probes(net, CATEGORY_BUDGET));
+    out.extend(polar_probes());
+    out.extend(confluence_probes(net, CATEGORY_BUDGET));
+    out
+}
+
+/// Assert the indexed `nearest_line` and the unindexed `nearest_line_reference`
+/// return the identical `Option<(usize, f64)>` — same line index, bit-equal
+/// distance — at every probe, and return how many probes there were.
+///
+/// Also asserts the **non-empty guarantee** at every probe: a non-empty network
+/// always answers `Some`. It is stated separately from the equality above
+/// because equality alone cannot carry it — two implementations that both
+/// wrongly returned `None` at some position would agree perfectly. The
+/// unindexed scan returns `Some` whenever `polylines` is non-empty, by
+/// construction, and the index is only allowed to be faster, never more
+/// evasive.
+fn assert_index_equals_reference(terrain: &GeneratedTerrain, level: u32) -> usize {
+    let net = terrain.channels();
+    assert!(
+        !net.polylines.is_empty(),
+        "level {level} produced no channels at all, so the comparison below is vacuous"
+    );
+    let probes = equality_probes(terrain);
+    for probe in &probes {
+        let indexed = net.nearest_line(probe.at);
+        let reference = net.nearest_line_reference_for_test(probe.at);
+        assert_eq!(
+            answer_bits(indexed),
+            answer_bits(reference),
+            "level {level}: the index and the reference scan disagree at {:?} ({}) — \
+             indexed {indexed:?}, reference {reference:?}",
+            probe.at,
+            probe.why
+        );
+        assert!(
+            indexed.is_some(),
+            "level {level}: a non-empty network answered None at {:?} ({}) — the index may \
+             narrow the candidate set but never past empty; every query on a network with \
+             channels has a nearest channel",
+            probe.at,
+            probe.why
+        );
+    }
+    probes.len()
+}
+
+/// THE KEYSTONE'S GUARD. The indexed `nearest_line` answers exactly what the
+/// linear scan answers, on real worlds, at every level the pins admit.
+///
+/// The full return value is compared, not the index alone and not an
+/// approximate distance: the `f64` is bit-equal because the index changes only
+/// WHICH lines are evaluated, never HOW — `signed_distance` is called
+/// unchanged, on the same inputs, so a different number would mean the winner
+/// itself had changed.
+///
+/// # WHAT THIS TEST OWNS, AND WHAT IT CANNOT SEE
+///
+/// It is the CONTRACT — the indexed answer equals the unindexed one — and that
+/// is the assertion that matters, because it is the answer, not the mechanism,
+/// that reaches a serialized sign.
+///
+/// The index has **two** terms, guarded by two tests that do not overlap:
+///
+/// - **This test owns the RADIUS POLICY**: the `L_max / 2` pruning term, the
+///   opening radius, the re-gather condition, `MIN_SEARCH_RADIUS`. It is the
+///   only thing in the tree that enters `nearest_line`'s loop at all.
+/// - **`channel.rs::the_gather_covers_every_line_with_a_vertex_in_the_cap` owns
+///   the GATHER**: the bucket window, the band range, the pole test, the
+///   ordering. It calls `VertexGrid::gather` with literal radii and **never
+///   enters that loop**, so no mutation of the radius policy can redden it.
+///
+/// Measured both ways: deleting the `L_max / 2` term reddens this test and
+/// leaves the coverage test green; a 1% window shrink, a collapsed band range,
+/// or a dropped pole test reddens the coverage test and leaves this one green.
+/// Read the two as one guard, and do not weaken either on the strength of the
+/// other being green — **neither covers the other's term at all.**
+///
+/// # THE GAP, WHICH IS STILL OPEN
+///
+/// This test is a **1-in-6,175 instrument** for its own term: with the
+/// `L_max / 2` term deleted outright, exactly one probe of 6,175 across levels
+/// 4-7 disagreed. That is not a wrong answer being tolerated but the grid being
+/// more generous than the cap it is asked for — the bucket edge exceeds `L_max`
+/// at every level, so quantization supplies more margin than the term covers
+/// for. Two probe categories below were added specifically to sharpen this and
+/// measurably did not; their doc comments record the refutation.
+///
+/// So the radius policy — a determinism-contract term, since it decides which
+/// line's sign gets serialized — **remains thinly guarded**, and the coverage
+/// test does not close that gap because it cannot see the term at all. The
+/// remedy is to size the grid's `lat_bands` from `L_max` rather than from the
+/// vertex count, making the analytic bound binding and this test sharp; it
+/// trades a performance characteristic for testability and is deferred to its
+/// own decision. A future reader finding two green tests must not conclude the
+/// policy is covered.
+///
+/// The sample deliberately spans the regions the coverage argument has to
+/// survive: beside a channel (the common case), at a cell centre far from any
+/// (the search radius grows past its first guess), beyond a line's endpoints
+/// (the winner is not the line whose bucket the query is in), at the poles
+/// (where a longitude window must widen without bound), and at a confluence
+/// (where two lines are exactly equidistant and the tie-break decides a
+/// serialized sign). Each carries its label into the failure message.
+#[test]
+fn the_indexed_nearest_line_equals_the_linear_scan() {
+    let mut total = 0usize;
+    for level in EQUALITY_LEVELS {
+        let geo = Geosphere::new(level);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo, outcome);
+        let net = terrain.channels();
+        let probed = assert_index_equals_reference(&terrain, level);
+        println!(
+            "level {level}: {probed} probes agreed, on {} lines / {} vertices",
+            net.polylines.len(),
+            net.polylines.iter().map(|l| l.points.len()).sum::<usize>(),
+        );
+        total += probed;
+    }
+    assert!(
+        total >= 1_500,
+        "only {total} probes across levels {EQUALITY_LEVELS:?} — the sampler collapsed and \
+         the equality above ran on almost nothing"
+    );
+}

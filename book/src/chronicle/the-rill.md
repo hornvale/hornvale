@@ -426,6 +426,14 @@ memory *falling* 2.2%, so there was no trade to make. That still leaves a
 future census at about 1.8 hours — **~3.7× what this campaign found it** — and
 the remaining cost is structural rather than incidental.
 
+*That projection was superseded within a day, and by a wider margin than it
+predicted.* [The Millrace](./the-millrace.md) indexed the nearest-line query
+this campaign identified as the blocked lever, and the next refresh cost
+**949.579 seconds** — not 1.8 hours, and **1.81× faster than the 1,718.995 s
+this campaign inherited**. The structural half of the diagnosis was right; the
+extrapolation from it was pessimistic by roughly seven-fold, because it assumed
+the remaining terms would scale rather than be removed.
+
 ## A field whose meaning moved without its schema
 
 One consequence deserves to be stated rather than discovered.
