@@ -518,7 +518,6 @@ impl BankReading {
     /// to re-run [`ChannelNetwork::nearest_line`] to classify it. That
     /// duplication was real: the lab's transect sweep ran the all-lines scan
     /// twice per probe, once for the owning line and once for the band.
-    /// type-audit: bare-ok(enum: return)
     pub fn transverse(&self) -> Transverse {
         Transverse::from_band(band(self.signed_distance, &self.band_edges))
     }
