@@ -124,8 +124,13 @@ Task 7's implementer reported a cost that contradicted its brief.
 ```
 
 `docs/timings.md` records gate, rebaseline, census, ci and heavy — and nothing
-else. Every cold worktree build is invisible to it. CLAUDE.md's own measured
-figure for a full workspace test build is 771 s; at 73 branches in a month,
+else. Every cold worktree build is invisible to it. The measured figure for a
+full workspace test build is **771 s** — decision 0113 and the Whetstone
+retrospective, timing `cargo nextest run --workspace --no-run` at 771 s
+optimized against ~780 s unoptimized. (An earlier draft attributed it to
+"CLAUDE.md's own measured figure"; CLAUDE.md carries the number only because
+*this* campaign put it there, so that citation was circular. The number is
+unaffected.) At 73 branches in a month,
 even assuming only half got a fresh worktree, that is **roughly eight hours of
 entirely unrecorded waiting** — comparable to the census line, and absent from
 every decision ever made about cost.
@@ -318,6 +323,24 @@ stages with explicit dependencies, running each stage's members concurrently.
 **Determinism.** Outputs are distinct files, so ordering cannot affect bytes.
 The success criterion is `make rebaseline` leaving every generated artifact
 byte-unchanged — the same falsifier The Whetstone used for its profile change.
+
+**Measured outcome (added post-implementation).** Quote this as **~2.2x
+steady-state**, with both figures, and never the best pair alone:
+
+| | wall | cpu_ratio |
+|---|---|---|
+| before (pre-Task-5 rows) | 111.4–125.2 s | 1.65–1.81 |
+| best same-day pair       | 36.7 s        | 6.22      |
+| last measured, final tree | **56.5 s**   | **3.75**  |
+
+`125.2 → 36.7 s` is a 3.4x, and it is the honest *best* number rather than the
+honest *representative* one: it is the fastest after-run paired with the
+slowest before-run, both on `ambrose` on 2026-08-13. The last run on the
+campaign's final tree — the same box, hours later, against a tree that had
+since absorbed The Fathom — took 56.474 s at cpu_ratio 3.75 (row stamped
+2026-08-13T22:50:52Z). Against the 125.2 s before-arm that is 2.2x; against the
+111.4 s one, 2.0x. The steady-state figure is the one a later campaign will
+reproduce, so it is the one this spec claims.
 
 #### §3.6 S15 — recycle worktrees instead of destroying them
 
