@@ -1,0 +1,5 @@
+# Defect ledger for ambrose — which test caught what, and on what change.
+# Written by scripts/defect-ledger.sh on every RED gate. Committed:
+# git log -p on this file is the archaeology of what the suite defends.
+when_utc	commit	branch	changed_crates	failed_test
+2026-08-13T17:48:46Z	d426f96f	campaign/the-sexton	(none)	hornvale-kernel::hv_probe_red$hv_probe_deliberate_red

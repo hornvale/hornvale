@@ -93,6 +93,7 @@ gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	nextest_status=$$?; \
 	cargo test -q --workspace --doc; \
 	doctest_status=$$?; \
+	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
 	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then \
 	    cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
 	    alarm_status=$$?; \
