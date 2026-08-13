@@ -1583,7 +1583,14 @@ paths="$(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | tr '\n' ' ')"
 drift="$(git diff --stat -- $paths)"
 
 # Leave the checkout clean regardless — this job owns no changes.
-git checkout -- . --quiet 2>/dev/null || true
+# `--quiet` MUST precede the `--` pathspec separator. After it, git reads it as
+# a PATHSPEC: `git checkout -- . --quiet` exits 1 with "pathspec '--quiet' did
+# not match any file(s)", and the `2>/dev/null || true` swallows that — leaving
+# the tree DIRTY, which is the exact opposite of this line's job. Proven in an
+# isolated repo: `-- . --quiet` -> exit 1, file still ` M`; `--quiet -- .` ->
+# exit 0, clean. Found by Task 8's dry run, which checked `git status` rather
+# than trusting `exit=0`.
+git checkout --quiet -- . 2>/dev/null || true
 
 if [ "$rc" -ne 0 ]; then
     make board-post KIND=technique BY=scheduler PATHS='scripts/' \
@@ -1839,7 +1846,14 @@ if [ -n "$diff_out" ]; then
 fi
 
 # Own no changes: the goldens this run wrote are a report, not a commit.
-git checkout -- . --quiet 2>/dev/null || true
+# `--quiet` MUST precede the `--` pathspec separator. After it, git reads it as
+# a PATHSPEC: `git checkout -- . --quiet` exits 1 with "pathspec '--quiet' did
+# not match any file(s)", and the `2>/dev/null || true` swallows that — leaving
+# the tree DIRTY, which is the exact opposite of this line's job. Proven in an
+# isolated repo: `-- . --quiet` -> exit 1, file still ` M`; `--quiet -- .` ->
+# exit 0, clean. Found by Task 8's dry run, which checked `git status` rather
+# than trusting `exit=0`.
+git checkout --quiet -- . 2>/dev/null || true
 make board-sync >/dev/null 2>&1 || true
 exit 0
 ```
