@@ -23,6 +23,16 @@ use hornvale_terrain::branch::RillReading;
 /// to score the same population the grounding writes to; a second copy of this
 /// test is exactly how an emitted arm and a grounded arm quietly stop
 /// describing the same rooms.
+///
+/// **There is, in fact, a second expression of this partition, and it is the
+/// failure mode above.** `grammar::micro_habitat`
+/// (`grammar.rs:95-104`) matches independently on `Medium::AirOverRock` and
+/// `Formation::Ice` to choose between the land, ice, water and rock clause
+/// sets, rather than calling this. The two agree **exactly today** — that was
+/// verified, so this is drift risk and not a live divergence — and collapsing
+/// them was deliberately not done at The Rill's close, because it is a
+/// behaviour change and the close is not where an unverified one ships. If you
+/// change either arm, change both, and prefer making the renderer call this.
 /// type-audit: bare-ok(flag: return)
 pub fn wetness_is_grounded(expr: BiomeExpr) -> bool {
     expr.realm.medium == Medium::AirOverRock && expr.formation != Formation::Ice
@@ -56,7 +66,18 @@ const LOCAL_VARIATION: f64 = 0.1;
 /// `describe_with_weights` — that precedent rests on a consumer re-deriving the
 /// value from the emitted document, and no consumer can re-derive this one:
 /// [`RillReading`]'s `distance` and `band_edges` are never serialized, so the
-/// allocation half is invisible outside the process. The reason here is that
+/// allocation's **inputs** are unavailable outside the process.
+///
+/// Read that as the narrow claim it is. The inputs are unserialized; the
+/// **result is not**. This function's return reaches `micro.wetness`, which is
+/// emitted — The Rill moved that leaf in the gallery, in three vessel
+/// snapshots and in two game-core fixtures. So nothing upstream of here is
+/// free to change: a reordering inside
+/// `hornvale_terrain::branch::rill_reading`, or an index over its
+/// nearest-branch search, silently rewrites committed worlds even though no
+/// field it touches is ever written down. Its tie-break is documented as a
+/// contract at its own definition for exactly this reason. The reason here is
+/// that
 /// the choice is **determinism-neutral and precision-immaterial**: the blend is
 /// quantized at emit either way, so taking it is one fewer recomputation of the
 /// same three-corner mean rather than a second, differently-rounded copy of it,

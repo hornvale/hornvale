@@ -10,7 +10,7 @@ times finer below it, and a census that grew elevenfold.
 This campaign's scratch died with its checkout. Everything below was promoted
 out of it before teardown.
 
-## The count: six controller-authored defects, four correct refusals
+## The count: six controller-authored defects, seven correct refusals
 
 Six tasks, ten review passes, eight fix rounds, one absorption, one canonical
 census. **Every defect this campaign found in its own plan text originated in
@@ -64,13 +64,39 @@ became R-7 and pushed R-8 along), and Task 5's brief named a consumed
 interface, `subdivide::flow_at`, that **had been deleted in Task 4** — a stale
 interface riding through a spec rewrite untouched.
 
+### Three more refusals, none of which was a defect in the plan
+
+The four above are the refusals that *found a defect*. Three others cost
+nothing and are the more ordinary case — an agent declining to assert what it
+had not established. They are worth counting because the healthy rate is the
+whole point.
+
+5. **Task 2 refused to write an unmeasured number.** `metrics.rs:6917`'s
+   "disabling the repair drops seed 42 to 0.92361" is likely stale, but
+   re-measuring it means disabling the confluence repair. It declined rather
+   than write a number it had not measured, and said which number and why.
+6. **Task 4 refused a review finding it could not reproduce.** Finding 4(c)
+   claimed `worst_reach`'s message could name the wrong cell; it is a monotone
+   maximum asserted inside the loop, so it cannot. The implementer made the
+   value per-cell anyway — so the message no longer *depends* on that
+   argument — and declined to claim a defect it had not found. Making the
+   change and refusing the diagnosis are separable, and it did both.
+7. **The final-review fixer escalated rather than extending silently.** It
+   found a fourth site for Important 2 — the *published* `doc:` literal at
+   `metrics.rs:3473`, the one flowing into both `schema.json` files and the
+   Domesday page, still asserting that `lab_channel_connectivity` "measures the
+   joins" — and refused to edit it unasked, because doing so moves three
+   committed artifacts before the final gate. It was right that it needed
+   fixing (a published description is worse than a private comment, not out of
+   scope) and right to ask rather than widen its own brief.
+
 The distribution is the project's documented pattern and the diagnosis has not
 changed: a controller writes prose that asserts things and dispatches it to
 agents who execute against it, so a controller's mistake meets nothing until
 somebody checks the premise. What is worth adding is the **rate of correct
-refusal**. Four briefs were refused on measured evidence and every refusal was
-right. A campaign whose implementers cannot refuse is a campaign that ships its
-controller's arithmetic.
+refusal**. Seven briefs, corrections or findings were refused on measured
+evidence and every refusal was right. A campaign whose implementers cannot
+refuse is a campaign that ships its controller's arithmetic.
 
 ### The transferable form of defect 4
 
@@ -214,6 +240,26 @@ with was itself the product of an earlier renumber** — the board decision was
 0128 until The Muster took 0128. The project already knows that registry IDs
 collide by arithmetic; the decision log has the same property and no check.
 The fix is a check that compares *numbers*, not filenames.
+
+**Nothing enforces the decision *index*, and it had already lost a row.**
+`docs/decisions/README.md`'s table ran 0127 → 0129 → 0130 with **0128 missing**
+— found by Task 3 and left, restored at this close.
+
+The precise shape is worth stating, because a gap check does exist and stayed
+green throughout. `docs_consistency`'s `no_gaps_in_the_decision_log` reads the
+**record filenames** in `docs/decisions/` and asserts `0001..=last` is
+unbroken; `0128-name-the-transformation-a-quantity-is-gauge-under.md` was
+present the whole time, so the check was correct and silent. Its neighbour
+`docs/digest/decisions-in-force.md` is generated and listed 0128 all along.
+The only surface that lost the row is the one that is **hand-maintained and
+unchecked** — the README table — and the reason the guard cannot see it is
+that the two read different things: files versus a table *about* files.
+
+That is the same gap as §3's, one level down. A renumber edits the table by
+hand, and a hand-edited index sitting beside a generated twin is exactly where
+a row goes missing unnoticed. A check comparing the table's numbers against
+`docs/decisions/*.md` closes it, and probably wants to be the same test as the
+number-collision check.
 
 ## 4. A plan commit swept a file deletion into the index
 
@@ -401,6 +447,48 @@ campaign's chronicle and verifying the module list and re-export block were
   reference page. Left alone deliberately: it wants a ruling, not a unilateral
   edit.
 
+## Deferred minors, promoted from the campaign ledger
+
+These were reviewed, judged not worth a fix round, and would otherwise have
+died with the worktree. Roughly 32 Minors were raised across the five
+implementation tasks; most were repaired in-branch, and what follows is what
+was still live at the close.
+
+- **Task 2.** `domains/terrain/src/channel.rs:561-562` computes `cell_spacing`
+  and `local_slope` for the terminal non-river cell and discards both.
+- **Task 2.** The report's "every line gains a terminal row" is untrue of
+  fixture line 17, which ends at a confluence.
+- **Task 2.** `windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json`
+  moved the **other** way — `−1.7488e-4 → +3.0625e-4`, sign flipped and
+  magnitude nearly doubled. Benign (both outside `band_edges[0]`, and
+  `channel_bands` unmoved), but the report presented only the seed-42
+  improvement, which is a one-sided reading of a two-sided move.
+- **Task 3.** The outlet-kind **6090 / 1086 / 0** breakdown is documented at
+  `rill_properties.rs:261` and unasserted — a number in a doc comment with no
+  test behind it, which is this campaign's own named law.
+- **Task 3.** `transects_with_strongest` re-derives `walk_depth` rather than
+  taking it, and `channel_properties.rs:443`'s cap-bounded floor lacks the note
+  the other two cap-bounded floors were given.
+- **Task 3.** "91 loud vertices of 14,606 (0.62%)" is hand-arithmetic over two
+  printed numbers — correct, and over the right population, but computed by a
+  human rather than by the test that owns it. Relatedly, "the one loud vertex
+  reads `NotACrossing`" is asserted twice and is **not independently verifiable
+  from the aggregate output** the test prints.
+- **Task 5.** `windows/locale/src/grammar.rs:95-104` expresses the same
+  ground/ice/other partition as a three-way match on the **renderer** side,
+  without calling `micro::wetness_is_grounded` — the remaining place the render
+  half and the grounding half could diverge. A reviewer verified the two agree
+  exactly *today*, so this is drift risk rather than divergence. Both sites now
+  carry a comment naming the other and the hazard; the code was deliberately
+  left alone, because collapsing them is a behaviour change and the close is
+  not where an unverified one ships.
+
+**Task 4's Minors 7–12 were deferred by number only.** The ledger records the
+deferral and not the findings, so they are **unrecoverable**. This list is
+therefore known-incomplete and must not be read as the full set. The one
+exception is `rill_probe.rs:98`'s hand-typed "89%", which was pulled back in as
+a member of finding 5's class and fixed in-branch.
+
 ## Follow-ups
 
 No `followups.md` exists; these are promoted from the ledger with their
@@ -413,6 +501,17 @@ measured numbers so nobody re-derives them.
    `bank_signed_distance`, so any change to the search order is a
    determinism-contract change and needs byte-identity evidence and its own
    scoped work.
+
+   **`rill_reading` is in this scope too** (`domains/terrain/src/branch.rs:790-800`).
+   Its nearest-branch search over `here` then `geo.neighbors(here)` uses the
+   same strict-`<` first-wins rule, so the neighbour enumeration order and the
+   cell's own priority are equally a contract. The reason is one step longer
+   than `nearest_line`'s and was initially got wrong in a doc: `RillReading`'s
+   `distance` and `band_edges` are indeed never serialized, but
+   `rill_reading → grounded_wetness → micro.wetness` **is**, and this
+   campaign's own blast radius moved `micro/wetness` in the gallery, three
+   vessel snapshots and two game-core fixtures. Both tie-breaks are now
+   documented as contracts at their definitions.
 2. **`channel-connectivity` is superlinear and will overtake everything.** It
    walks one path per polyline and does 7 `transverse_at` calls per hop, each an
    O(V) scan, so `walks × V` grew 19.7 × 16.5 = **up to 326×** (measured ≥180×,
@@ -441,6 +540,17 @@ measured numbers so nobody re-derives them.
    whoever picks it up — the comparison to the pre-repair 17/64 is a count at
    one threshold and not a distribution comparison, and the current values are
    all high (min 0.9724).
+
+   **Two baseline facts the re-measurement established and could not fix.**
+   The Ford's other H2-2 figure — "19 insertions, 0 deletions, 0 replacements
+   over 7 artifacts" — was a one-off manual diff taken at its stage-2 close: it
+   is **not re-runnable, and no instrument in the repo reproduces it**. And
+   `channel-transect-dry-reach`, one of the three census columns this campaign
+   moved, **has no recoverable baseline at all** (its post-value is mean
+   0.7577, min 0.6890, max 0.8281). So "exactly three columns moved of 203" is
+   true and stands as the blast radius, but one of the three moved *from an
+   unknown value* — a fact worth carrying, because a future reader comparing
+   against it will otherwise assume a before-arm exists.
 7. **The level-6 width-law fixture is declared permanently un-repinnable with
    no sunset.** That is right inside this campaign; after it, a legitimate
    recalibration must hand-edit hex or delete the test. Its authority ends
@@ -468,9 +578,23 @@ measured numbers so nobody re-derives them.
    the metric's own doc still measures "20 joins across 183 walks" as of
    Task 2, against a shipped network of 3,606 polylines.
 10. **~32 Minor review findings were deferred across the five implementation
-   tasks** to the whole-branch review, and are listed individually in the
-   campaign ledger. The ones with a chance of biting: a now-dead
-   dropped-singleton arm in the lab metrics; `assert!(allocation_active > 0)`
-   being a floor of one, the identical shape a Minor two files away condemned;
-   and a mutation panic paste whose line number does not match the shipped
-   file.
+   tasks** to the whole-branch review. The still-live ones are written out
+   above, under *Deferred minors, promoted from the campaign ledger* — the
+   campaign ledger they used to live in is gone, so that section is now the
+   record. Read its closing paragraph too: **Task 4's Minors 7–12 were deferred
+   by number only and are unrecoverable**, so the list is known-incomplete by
+   six.
+11. **A `make ci` on this branch will alarm, and the alarm is predicted.** The
+   campaign moved `hornvale-locale::water_reading` **1.53 s → 12.27 s** (8.0×,
+   part of it a deliberate 400 → 1600 sample increase), added the 1,492-line
+   `rill_properties.rs`, and the memoisation guard adds **~30–39 s** to the lab
+   lib binary. None of that is the whole story, because the committed baseline
+   was already stale before this campaign touched it: Task 3 measured
+   `docs/timings/test-baseline-MacBookPro.tsv` directly and found **only 177 of
+   its 534 rows still exist, with the shared subset totalling 0.47×** — it
+   predates The Whetstone's optimized dev profile. The file contains **no
+   `water_reading`, `wetness_reading` or `rill_properties` row at all**, so the
+   moved tests cannot even be compared. The resolution is a post-merge
+   `make ci` on a quiet `ambrose` with the baseline re-recorded in that same
+   commit, not an edit here; this entry exists so that whoever sees the red
+   does not spend a session attributing it to one task.

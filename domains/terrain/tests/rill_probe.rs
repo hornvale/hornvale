@@ -482,6 +482,21 @@ fn strahler(outlet: &[Option<u32>], length: &[f64]) -> BTreeMap<u32, (usize, f64
 /// arithmetic mean was the sole cause of the previous Tier 2's only reported
 /// miss: one 13-to-1 ratio at the top of a tree dragged the mean of eight
 /// terms from 4.0 to 5.05.
+///
+/// **Read that recommendation narrowly: it is true of Horton's laws and false
+/// of this estimator.** Over *consecutive* order ratios the geometric mean
+/// **telescopes** — the product of `S_w / S_{w+1}` collapses to
+/// `S_1 / S_max`, so this returns
+/// `(leaves / top-order segments)^(1/(k−1))` and **sees nothing but the two
+/// endpoints**. Every interior order cancels, so a tree can be badly
+/// non-Hortonian in the middle and score the same. The classical estimator is
+/// a log-regression over *all* orders, which is not this.
+///
+/// Nothing here is wrong to run — the probe is hand-run and its numbers are
+/// real — but do not quote the ratio as a Horton bifurcation ratio without
+/// reading The Rill's follow-up 8 in `docs/retrospectives/the-rill.md`, which
+/// records why the pass/fail is *likely* robust and why that has **not** been
+/// measured.
 fn geometric_mean(ratios: &[f64]) -> f64 {
     if ratios.is_empty() {
         return f64::NAN;

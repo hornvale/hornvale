@@ -778,6 +778,24 @@ fn nearest_rill(
 /// [`ChannelNetwork::bank_reading`] is. It is deliberately *not* a per-room
 /// flow direction: nothing downstream consumes a direction, and inventing one
 /// is what the design this replaces was falsified for.
+///
+/// **The search order is a determinism contract, for the same reason
+/// [`ChannelNetwork::nearest_line`]'s is.** Candidates are considered as
+/// `here` first, then `geo.neighbors(here)` in the order the geosphere yields
+/// them, and `best.is_none_or(|(d, _, _)| distance < d)` is a **strict** `<`,
+/// so an exact tie keeps whichever cell was offered first. Changing the
+/// enumeration order, or giving `here` a different priority, or relaxing the
+/// comparison, silently re-decides every tied position.
+///
+/// That this reaches a *serialized* value is one step longer than it looks,
+/// and getting it wrong is easy: [`RillReading`]'s `distance` and
+/// `band_edges` are indeed never serialized, but they are not the end of the
+/// path. `rill_reading` feeds `grounded_wetness`, which feeds `micro.wetness`,
+/// which **is** emitted — The Rill's own blast radius moved `micro/wetness` in
+/// the gallery, in three vessel snapshots and in two game-core fixtures. So a
+/// future spatial index over this search is a determinism-contract change
+/// needing byte-identity evidence, not a refactor. See follow-up 1 in
+/// `docs/retrospectives/the-rill.md`.
 /// type-audit: pending(wave-1: position)
 pub fn rill_reading(
     position: [f64; 3],
