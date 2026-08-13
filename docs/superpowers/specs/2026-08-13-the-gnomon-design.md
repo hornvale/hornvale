@@ -400,15 +400,25 @@ reports rather than expanding scope.
 
 ### 4.3 Consumers that move together
 
-Grepped; this list is complete:
-
 - `cli/tests/docs_consistency.rs:361` — the `REGISTRY_STATUSES` const
   (currently `[&str; 6]`), plus a new test for the required parenthetical.
 - `book/src/frontier/idea-registry.md:25-37` — "How to read a row"; the
   seventh bullet and the amended "do not invent an eighth" sentence.
 - `book/src/frontier/CLAUDE.md:65` — the authoring rule.
+- `docs/CLAUDE.md:58` — *"Status is one of the six documented values"*, inside
+  the enumerated list of what the drift check asserts.
 - `docs/README.md:49` names a pipeline without enumerating statuses, so it
   does **not** change. Verified by reading it.
+
+**This list said three and "grepped; this list is complete." It was wrong, and
+how it was wrong is the part worth keeping.** The grep behind it searched a
+hand-picked set of paths — `cli/tests/`, `tools/`, `scripts/`,
+`book/src/frontier/CLAUDE.md`, `docs/README.md` — and `docs/CLAUDE.md` was not
+among them. It surfaced only because that file later loaded into context on its
+own. Re-grepping the *claim* (the token "six" near "status", repo-wide) found it
+in seconds. An enumeration asserts completeness, and completeness is exactly
+what enumerating-from-remembered-paths gets wrong. Grep the claim, not the files
+you thought of.
 
 ### 4.4 A latent defect found and deliberately not fixed here
 

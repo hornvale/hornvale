@@ -96,15 +96,21 @@ one-off `cargo run`) that builds seed 42 and prints, for `is-settlement`, the
 count of facts and the count of distinct non-genesis `day` values at
 `BuildDepth::Settlements` and at `BuildDepth::Full`.
 
-**Decision rule, not a prediction:**
-- Non-genesis days appear only at `Full` → every metric in Task 2 uses
-  `Extractor::Full(|v: &FullView| …)`.
-- Non-genesis days appear at `Settlements` too → use
-  `Extractor::Settlement`, which is cheaper for studies that select only these
-  metrics, and record the finding in the task report.
-- No non-genesis days at either → **STOP**. The spec's §2.2 measurement was
-  taken on a `hornvale new` build; a divergence here means the lab's view chain
-  differs from the CLI's and that is a finding worth more than this task.
+**All nineteen metrics use `Extractor::Full` regardless of what the probe
+finds** — ruled at preflight, see the ledger. The census selects `"metrics":
+"all"` and therefore already builds to Full, so a shallower rung saves nothing
+there; and the in-module test helper `extract(&FullView, name)`
+(`windows/lab/src/metrics.rs:12066`) panics on a non-Full metric, so a mixed
+roster would need two different test helpers for one roster. Uniformity wins.
+
+The probe is therefore for the **record**, not for rung selection:
+
+- Non-genesis days appear at `Full` → note at which depth they first appear and
+  proceed.
+- No non-genesis days at `Full` → **STOP and report.** The spec's §2.2
+  measurement was taken on a `hornvale new` build; a divergence here means the
+  lab's view chain differs from the CLI's, and that is a finding worth more
+  than this task.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -113,7 +119,7 @@ Add to the `#[cfg(test)]` module in `windows/lab/src/metrics.rs`:
 ```rust
 #[test]
 fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
-    let v = FullView::build(Seed::new(42), &SkyPins::default()).expect("seed 42 builds");
+    let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
     match extract(&v, "first-day-is-settlement") {
         MetricValue::Number(d) => assert!(d.is_finite(), "a first day must be finite, got {d}"),
         other => panic!("expected a Number, got {other:?}"),
@@ -122,7 +128,7 @@ fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
 
 #[test]
 fn first_day_of_an_unmatched_object_is_absent() {
-    let v = FullView::build(Seed::new(42), &SkyPins::default()).expect("seed 42 builds");
+    let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
     assert!(
         matches!(
             first_day(v.world(), "occ-people", Some("no-such-species")),
@@ -293,7 +299,7 @@ const FIRST_DAY_METRICS: [&str; 19] = [
 fn every_first_day_metric_is_registered() {
     for name in FIRST_DAY_METRICS {
         assert!(
-            metrics().iter().any(|m| m.name == name),
+            registry().iter().any(|m| m.name == name),
             "the frozen first-occurrence roster names {name}, which is not registered"
         );
     }
@@ -301,7 +307,7 @@ fn every_first_day_metric_is_registered() {
 
 #[test]
 fn every_registered_first_day_metric_is_in_the_frozen_roster() {
-    for m in metrics().iter().filter(|m| m.name.starts_with("first-day-")) {
+    for m in registry().iter().filter(|m| m.name.starts_with("first-day-")) {
         assert!(
             FIRST_DAY_METRICS.contains(&m.name),
             "{} is registered but absent from the frozen roster — widening the \
@@ -316,8 +322,8 @@ Both directions are required and the doc comment must say which each enforces.
 A one-directional check (`declared ⊆ registered`) is structurally blind to
 over-admission and still reads as total to the next person.
 
-Use the roster accessor the file actually exposes (`metrics()` above is the
-shape; read the file for the spelling).
+The roster accessor is `registry()` (re-exported at `windows/lab/src/lib.rs:27`);
+verified at preflight, so use it as written.
 
 - [ ] **Step 3: Run and confirm it fails**
 
@@ -771,6 +777,21 @@ form of a recent record (read `0130` first). It must carry:
   eighth. The sentence must remain an anti-drift guard, not become an
   invitation.
 - `book/src/frontier/CLAUDE.md:65` — add `refuted` to the listed vocabulary.
+- `docs/CLAUDE.md:58` — reads *"Status is one of the six documented values"*
+  inside the enumerated list of drift-check assertions. Change six to seven.
+  **This consumer was missing from the spec's original "complete" list**; it
+  was found at preflight by grepping the claim instead of a remembered set of
+  paths (ledger R5). Before editing, re-run that grep — the vocabulary may have
+  a fifth reader nobody has named either:
+
+  ```bash
+  grep -rn --include=*.md --include=*.rs -iE \
+    'six (are the whole|documented values)|one of the six|these six|\[&str; 6\]' . \
+    --exclude-dir=target --exclude-dir=.git --exclude-dir=book/book
+  ```
+
+  Ignore hits in `docs/superpowers/plans/` and `docs/retrospectives/` — those
+  are historical records of what was true when written, and are not edited.
 - `docs/README.md:49` names a pipeline without enumerating statuses and does
   **not** change. Read it and confirm before leaving it alone.
 
