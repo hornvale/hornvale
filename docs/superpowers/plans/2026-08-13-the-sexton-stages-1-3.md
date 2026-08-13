@@ -704,7 +704,18 @@ Expected: clean.
 - [ ] **Step 2: Wire it into `gate-run`**
 
 In the `Makefile`'s `gate-run` recipe from Task 3, add one line immediately
-after `alarm_status=$$?;`:
+after **`doctest_status=$$?;`** — that is, BEFORE the alarm's `if` block, not
+inside it:
+
+**Do not use `alarm_status=$$?;` as the anchor.** An earlier draft said to, and
+Task 3's Ruling 6 has since moved that line *inside* the green-only branch
+(`if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then`). Anchoring
+there would run the defect ledger **only on green gates** — exactly inverted,
+since its entire job is to record failures. Placed before the alarm block it
+runs unconditionally, and the script self-guards: no failed events in
+`run.json` means it exits 0 without writing.
+
+The line to add:
 
 ```make
 	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
