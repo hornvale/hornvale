@@ -7109,6 +7109,37 @@ fn lab_run_owner(
 /// disabling the repair does drop seed 42 to 0.92361 — and it must not be
 /// read as evidence about a world. The walk is kept rather than deleted
 /// because it is the thing that fails if the repair is ever undone.
+///
+/// **AND SINCE TASK 3 THE TRIPWIRE IS ITSELF LARGELY VACUOUS. Read this
+/// before quoting the column, and read the two figures above as stale.**
+/// The walk's continuation test asks whether the next cell is
+/// `WaterKind::River`; `ChannelNetwork::build`'s reach predicate is
+/// `!Ocean && downhill.is_some()`, which is a strictly wider set. Task 3
+/// made the network render the whole land flow tree, so a tributary can now
+/// end on a cell whose downhill target is `DryLand` — a **sub-threshold**
+/// trunk, rendered as a narrow channel but not classified as a river. On such
+/// a walk `continues` is false, the loop breaks BEFORE `owner[last_cell]` is
+/// consulted, and the walk is counted `intact` **without ever crossing its
+/// join** — which is the only thing this measurement was ever about ("the
+/// entire content of this measurement is at the joins", above).
+///
+/// **The mechanism is certain; the magnitude is UNMEASURED and no number is
+/// stated here on purpose.** It is readable from the code that the case
+/// exists and that such walks score untested; what fraction of walks take it
+/// is not, and this campaign does not publish figures it has not measured.
+/// Two things bound the concern qualitatively. The "20 joins across 183
+/// walks" measured above is **as of Task 2**, on a 183-polyline network; the
+/// shipped network has 3,606 polylines, and `lab_channel_transect_width`'s
+/// own doc puts ~6400 confluences in a world that had ~90. So the join
+/// population those figures sampled and the real one are two different orders
+/// of magnitude apart.
+///
+/// **Consequence for anyone reading this column's stillness as evidence.** A
+/// column that did not move because it became vacuous is not the same
+/// reassurance as a column that did not move because nothing broke. The
+/// repair is a one-word change — test `owner[last_cell].is_some()` rather
+/// than the water class — but it WILL move a census column, so it needs its
+/// own scoped work and its own refresh, and is deliberately not made here.
 fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
     let net = terrain.channels();
     if net.polylines.is_empty() {

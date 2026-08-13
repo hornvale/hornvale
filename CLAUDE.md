@@ -198,9 +198,11 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # you are holding: 0063 measured "~7 minutes"; this block then said
 # 776/887/921 s (2026-08-09) and told you to budget 15; by 2026-08-11 main
 # itself was at 1710-1789 s (~29 min) with nothing here updated; and The
-# Rill's refresh took **19,207.751 s — 5 h 20 m** (2026-08-13, cpu_ratio
-# 36.50 on 40 cores), 11.2x wall and 12.7x CPU against the pre-Rill run seven
-# hours earlier. A memoisation landed inside that campaign recovers 3.01x,
+# Rill's refresh took **19,207.751 s — 5 h 20 m** (row stamped
+# 2026-08-13T06:08:39Z, cpu_ratio 36.50 on 40 cores), 11.2x wall and 12.7x CPU
+# against the pre-Rill run whose row is stamped 2026-08-12T21:04:17Z — the run
+# immediately before it, hours earlier, not a stale figure from a week back.
+# A memoisation landed inside that campaign recovers 3.01x,
 # which projects the next refresh at ~6,400 s (~1.8 h) — still ~3.7x what The
 # Rill found. THE FAILURE THIS PARAGRAPH REPLACES: two independent readers (a
 # campaign controller and its own cost attribution) both anchored on the

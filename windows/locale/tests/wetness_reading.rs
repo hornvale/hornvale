@@ -528,6 +528,17 @@ fn a_walk_gets_damper_as_it_descends() {
         (214, 345),
         "the in-scope grounded R-7 fraction moved from the value The Rill measured"
     );
+    // Pinned because the CHRONICLE quotes it. The four fractions above are
+    // aggregates, and equal aggregates are consistent both with no change and
+    // with equal-and-opposite change — which is exactly the inference that had
+    // to be corrected here once already. This is the per-step reversal counter
+    // itself, so it is the only assertion in the file that can distinguish
+    // those two worlds.
+    assert_eq!(
+        allocation_flips, 34,
+        "the allocation's step-verdict reversal count moved from the 34 The Rill \
+         measured and published; the aggregates above can stay put while this moves"
+    );
     // The claim the data supports: the supply term is damper downhill more
     // often than a coin would be, and more often than the emitted axis manages.
     // Stated on the SUPPLY arm rather than the grounded one, because the

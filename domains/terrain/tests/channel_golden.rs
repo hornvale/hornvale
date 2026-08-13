@@ -89,8 +89,12 @@ use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 
 /// Level 5, not the canonical 6: the point of this fixture is the derivation,
 /// which is grid-independent, and level 5 keeps the commit gate cheap (a
-/// sub-second world; 3887 channel vertices since The Rill's Task 3, 46 before
-/// it). Level 6 is the readout's grid.
+/// sub-second world; 3887 channel vertices since The Rill's Task 3, **76
+/// immediately before Task 3, and 46 before the campaign began**). Both
+/// baselines are given because the ~51x below is 3887/76 — Task 2 had already
+/// taken the fixture 46 -> 76 by making every run reach the cell it drains
+/// into, so dividing by the pre-campaign 46 gives 84.5 and contradicts it.
+/// Level 6 is the readout's grid.
 ///
 /// **The fixture is ~3900 rows and ~290 KB, and that is the price of the only
 /// topology witness in the repo.** Task 3 made the network render the whole

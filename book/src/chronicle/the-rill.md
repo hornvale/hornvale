@@ -194,12 +194,15 @@ feature inside it.
 > floodplain.
 
 Two independent instruments, in two different windows, say this. The
-containment figure says it from the other side: 89.6% of rooms contain a
-watercourse while the total channel area is **0.67% of land**. Those reconcile
-exactly — 3.67 × 10⁻⁴ radians of line per contained room is about 1.25 room
-edges, at a mean channel occupancy of 0.70% of a room, and 0.896 × 0.0070 =
-0.0063. Nearly every room has a stream somewhere in it, and nearly none of any
-room is water.
+containment figure says it from the other side: over the sampled coarse cells,
+89.6% of rooms contain a watercourse while the channel area across those same
+cells is **0.63% of land**. Those two reconcile exactly, and it is worth
+watching them do it — 3.67 × 10⁻⁴ radians of line per contained room is about
+1.25 room edges, at a mean channel occupancy of 0.70% of a room, so
+0.896 × 0.0070 = 0.0063. **Both figures are the sampled population**, which is
+what makes the identity meaningful; extrapolated to the whole world the channel
+area is 0.67%, agreeing with the sampled figure to about 6%. Nearly every room
+has a stream somewhere in it, and nearly none of any room is water.
 
 ## The prediction that failed first: Horton's ratios
 
@@ -369,9 +372,23 @@ canonical host, and the result is a blast radius stated as evidence rather than
 as a claim: **exactly three columns of 203 moved, across all 1,000 worlds** —
 the channel land fraction, the transect dry reach, and the un-truncated band
 monotonicity. Nothing else moved at all. The shipped band-monotonicity axis did
-not move, nor did channel connectivity.
+not move.
 
-Two things a reader needs in order to read that correctly.
+**Channel connectivity did not move either, and that one is not reassurance.**
+The column walks each watercourse downstream and asks whether it stays in
+water across every junction — but its continuation test asks whether the next
+cell is classified a *river*, while the network now renders every reach,
+which is a strictly wider set. A tributary ending on a sub-threshold trunk
+therefore stops the walk *before* the junction is ever examined, and the walk
+is scored intact without having been tested. The mechanism is certain; the
+proportion of walks it affects has not been measured and no figure for it
+appears here or in the metric's own description. **A column that did not move
+because it became vacuous is not the same reassurance as a column that did not
+move because nothing broke**, and the repair — asking whether the next cell is
+carried by any run, rather than what class it is — moves a census column, so
+it is left to work that can pay for a refresh.
+
+Three things a reader needs in order to read the rest correctly.
 
 **The census was authored at the revision that absorbed the trunk branch
 (`d8ed9bd6`), while the branch itself advanced two commits further to

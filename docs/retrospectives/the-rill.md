@@ -222,8 +222,9 @@ The controller told Nathan the running census would take 1.3–2.4 h. It took
 anchored on `CLAUDE.md`'s *"776 s / 887 s / 921 s … Budget 15"*.
 
 `docs/timings.md` — the ledger `CLAUDE.md`'s own prose points at — showed the
-pre-Rill run **seven hours earlier at 1,718.995 s**, with rows at 1,709.9 /
-1,789.1 / 1,719.0 going back two days. **Main's own census cost had already
+**immediately preceding census at 1,718.995 s**, its row stamped
+2026-08-12T21:04:17Z against The Rill's own 2026-08-13T06:08:39Z, with rows at
+1,709.9 / 1,789.1 / 1,719.0 going back two days. **Main's own census cost had already
 doubled and `CLAUDE.md` was never updated.** Against the true before-arm the
 growth is 11.2× wall and 12.7× CPU, which makes the attribution's independently
 measured **9.1–9.4× per world** approximately right. *The attribution was
@@ -435,12 +436,24 @@ measured numbers so nobody re-derives them.
    interior per-order ratios sit at ~2.68, below the 3.0 floor, so a regression
    estimator would also miss — but that has **not** been measured and must not
    be asserted.
-9. **~32 Minor review findings were deferred across the five implementation
+9. **`channel-connectivity` is largely vacuous and the column's stillness was
+   cited as evidence.** Its walk continues only while the next cell is
+   classified `WaterKind::River`, but `ChannelNetwork::build`'s reach predicate
+   is `!Ocean && downhill.is_some()` — strictly wider since Task 3. A tributary
+   ending on a sub-threshold trunk breaks the walk *before* `owner[last_cell]`
+   and scores `intact` without crossing its join, which is the only thing the
+   measurement is about. **The mechanism is certain; the magnitude is not
+   measured and no figure for it is recorded anywhere** — the review estimated
+   one and correctly refused to assert it. Two pieces of work, and they are
+   separable: (a) quantify the affected fraction; (b) the repair, which is
+   testing `owner[last_cell].is_some()` rather than the water class. (b)
+   **moves a census column**, so it needs its own scoped work and its own
+   refresh and must not be slipped into a documentation pass. Note also that
+   the metric's own doc still measures "20 joins across 183 walks" as of
+   Task 2, against a shipped network of 3,606 polylines.
+10. **~32 Minor review findings were deferred across the five implementation
    tasks** to the whole-branch review, and are listed individually in the
-   campaign ledger. The ones with a chance of biting: the module doc saying
-   "Both tests" in a three-test file; "15,864 comparisons" overstating
-   independence by 4× (the four band edges are linear multiples of one
-   half-width at fixed slope, so the substantive count is 3,966); a now-dead
+   campaign ledger. The ones with a chance of biting: a now-dead
    dropped-singleton arm in the lab metrics; `assert!(allocation_active > 0)`
    being a floor of one, the identical shape a Minor two files away condemned;
    and a mutation panic paste whose line number does not match the shipped

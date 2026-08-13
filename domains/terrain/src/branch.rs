@@ -1085,14 +1085,16 @@ mod tests {
                             (j as f64 / 4.0 - 1.0) * 1.5 * half,
                         ];
                         let start = root(stretch, unit);
-                        let inside = usize::from(!start.patch.contains(target));
+                        // 1 when the target is OUTSIDE the patch, which is index 1 of the
+                        // `["inside ", "outside"]` labels below.
+                        let outside = usize::from(!start.patch.contains(target));
                         let descent = descend_to_nearest(cell, start, unit, &cut, target)
                             .expect("the partition has parts");
                         let exhaustive = exhaustive_nearest(cell, start, unit, &cut, target)
                             .expect("the exhaustive walk stayed inside its node cap");
-                        arm[inside].0 += 1;
+                        arm[outside].0 += 1;
                         if descent.0 != exhaustive.0 {
-                            arm[inside].1 += 1;
+                            arm[outside].1 += 1;
                             // Measured against the ROOM the network resolves
                             // to, not against the exhaustive distance: a query
                             // sitting almost on a branch has a near-zero
@@ -1100,7 +1102,7 @@ mod tests {
                             // enormous relative error for an absolute
                             // difference no observer could be positioned to
                             // notice.
-                            arm[inside].2 = arm[inside].2.max((descent.0 - exhaustive.0) / room);
+                            arm[outside].2 = arm[outside].2.max((descent.0 - exhaustive.0) / room);
                         }
                     }
                 }
