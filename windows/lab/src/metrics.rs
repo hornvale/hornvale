@@ -201,9 +201,42 @@ pub struct TerrainView {
     pub globe: GlobeSummary,
     /// The full tectonic globe (for coverage metrics over cells).
     pub terrain: hornvale_terrain::GeneratedTerrain,
+    /// This view's one channel-transect sweep, computed on first demand by
+    /// [`TerrainView::band_transects`] and then reused (The Rill: three
+    /// metrics each read a different count off the same sweep, and the
+    /// registry was paying for it three times — measured at exactly 2.99×).
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here.** The
+    /// cell is a private field of the view, so its lifetime is exactly one
+    /// world's evaluation: `build_row` constructs a `BuiltView` per (seed,
+    /// pin set), applies every metric to it, and drops it. There is no key
+    /// to collide, no `static` to outlive a world, and no way to hand this
+    /// cell a network other than the `terrain` beside it — the initializer
+    /// below reads `self.terrain.channels()` and nothing else. `OnceCell`
+    /// (not `OnceLock`) is deliberate: it is `!Sync`, so a view carrying a
+    /// filled cell cannot be shared across the runner's worker threads even
+    /// by accident.
+    ///
+    /// The stored value is an `Option`, so "swept, and this world has no
+    /// channels" (`Some(None)` once filled) stays distinct from "not yet
+    /// swept" (the cell itself unset). A world with no channels is
+    /// therefore swept once and answered `Absent` three times, never
+    /// re-swept.
+    band_transects: std::cell::OnceCell<Option<LabBandTransects>>,
 }
 
 impl TerrainView {
+    /// This world's channel-transect sweep — [`lab_band_transects`] over
+    /// `self.terrain.channels()` — computed at most once per view and
+    /// shared by the three metrics that read it. `None` when the world has
+    /// no channel network (or no transectable vertex), exactly as calling
+    /// the function directly would answer.
+    fn band_transects(&self) -> Option<&LabBandTransects> {
+        self.band_transects
+            .get_or_init(|| lab_band_transects(self.terrain.channels()))
+            .as_ref()
+    }
+
     /// Build a terrain-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<TerrainView, BuildError> {
         Self::build_with_components(seed, pins, WorldComponents::assemble()?)
@@ -256,6 +289,7 @@ impl TerrainView {
                 astronomy,
                 globe,
                 terrain,
+                band_transects: std::cell::OnceCell::new(),
             },
             hoisted_climate,
         ))
@@ -3486,11 +3520,9 @@ pub fn registry() -> Vec<Metric> {
             },
             domain: Domain::Hydrology,
             role: Role::Descriptor,
-            extract: Extractor::Terrain(|v: &TerrainView| {
-                match lab_band_transects(v.terrain.channels()) {
-                    Some(t) => MetricValue::Number(t.monotone as f64 / t.transects as f64),
-                    None => MetricValue::Absent,
-                }
+            extract: Extractor::Terrain(|v: &TerrainView| match v.band_transects() {
+                Some(t) => MetricValue::Number(t.monotone as f64 / t.transects as f64),
+                None => MetricValue::Absent,
             }),
         },
         Metric {
@@ -3502,29 +3534,39 @@ pub fn registry() -> Vec<Metric> {
                   `channel`. Published because a rule that changes a verdict \
                   must have the reading it changes on the record beside it \
                   rather than in a campaign report — and the record now runs \
-                  both ways. Before the confluence repair the truncation was \
-                  load-bearing (47 of 64 probe worlds read below H4's 0.99 \
-                  floor un-truncated, and none reached 1.0); with tributary \
-                  mouths placed on their trunks all 64 read 1.0 on BOTH \
-                  columns. That is the measured evidence that the gap was the \
-                  confluence separation and never band-edge speckle: two \
-                  lines meeting at a point share their distance minimum AT \
-                  that point, so a transect leaving a join recedes from both \
-                  at once and cannot descend into the partner, while two \
-                  lines held 4.5 half-widths apart have no shared minimum and \
-                  did. Absent on a world with no channels",
+                  both ways. **Both of the readings below are ON THE FORD'S \
+                  NETWORK** (183 polylines, 883 vertices at seed 42), and the \
+                  second is that network's reading rather than a standing \
+                  property of the rule: before the confluence repair the \
+                  truncation was load-bearing (47 of 64 probe worlds read \
+                  below H4's 0.99 floor un-truncated, and none reached 1.0); \
+                  with tributary mouths placed on their trunks all 64 read \
+                  1.0 on BOTH columns. That PAIR is the measured evidence \
+                  that the gap was the confluence separation and never \
+                  band-edge speckle: two lines meeting at a point share their \
+                  distance minimum AT that point, so a transect leaving a \
+                  join recedes from both at once and cannot descend into the \
+                  partner, while two lines held 4.5 half-widths apart have no \
+                  shared minimum and did. **On The Rill's network the same 64 \
+                  worlds read 12 of 64 above the floor and NONE at 1.0** \
+                  (mean 0.9843, min 0.9724, max 0.9941). The repair is \
+                  untouched and `channel-band-monotonicity` is still 1.0 on \
+                  all 64 — what changed is density: with 3,606 polylines \
+                  where there were 183, a transect walking outward meets an \
+                  UNRELATED line far sooner, ending its own-channel prefix \
+                  where this column scores the interruption as a failure. \
+                  Read it beside `channel-transect-dry-reach` (mean 0.7577): \
+                  about a quarter of transects are now truncated before \
+                  reaching `dry`, against a Ford network on which truncation \
+                  was doing nothing. Absent on a world with no channels",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.9, 0.99, 0.999, 1.0],
             },
             domain: Domain::Hydrology,
             role: Role::Descriptor,
-            extract: Extractor::Terrain(|v: &TerrainView| {
-                match lab_band_transects(v.terrain.channels()) {
-                    Some(t) => {
-                        MetricValue::Number(t.monotone_untruncated as f64 / t.transects as f64)
-                    }
-                    None => MetricValue::Absent,
-                }
+            extract: Extractor::Terrain(|v: &TerrainView| match v.band_transects() {
+                Some(t) => MetricValue::Number(t.monotone_untruncated as f64 / t.transects as f64),
+                None => MetricValue::Absent,
             }),
         },
         Metric {
@@ -3545,11 +3587,9 @@ pub fn registry() -> Vec<Metric> {
             },
             domain: Domain::Hydrology,
             role: Role::Descriptor,
-            extract: Extractor::Terrain(|v: &TerrainView| {
-                match lab_band_transects(v.terrain.channels()) {
-                    Some(t) => MetricValue::Number(t.reached_dry as f64 / t.transects as f64),
-                    None => MetricValue::Absent,
-                }
+            extract: Extractor::Terrain(|v: &TerrainView| match v.band_transects() {
+                Some(t) => MetricValue::Number(t.reached_dry as f64 / t.transects as f64),
+                None => MetricValue::Absent,
             }),
         },
         // --- The Branches (Task 10): the family battery, seed-swept —
@@ -7172,12 +7212,18 @@ struct LabBandTransects {
 /// occurred after a different river became the nearest — none can have
 /// happened while the originating line still was. That is the "no speckle"
 /// claim H4 actually asks about, derived rather than measured by hand, and it
-/// is what the readout observed on all 64 probe worlds.
+/// is what the readout observed on all 64 probe worlds — on The Ford's
+/// network then, and still on The Rill's denser one now (`monotone` is 1.0 on
+/// all 64 while `monotone_untruncated` is not).
 ///
 /// The truncation was load-bearing, not cosmetic, which is why the reading it
 /// changes ships as its own column instead of living in a campaign report —
 /// and that column is now the evidence for what the gap between the two
-/// actually was. Before the confluence repair, no probe world at all was
+/// actually was. **Both readings in this paragraph are on The Ford's network
+/// (183 polylines, 883 vertices), and the second is that network's reading,
+/// not a standing property** — see the metric's own doc for The Rill's
+/// re-measurement (12 of 64, none at 1.0, on 3,606 polylines). Before the
+/// confluence repair, no probe world at all was
 /// clean un-truncated (min 0.9636, 47 of 64 below H4's floor); after it, all
 /// 64 read 1.0 on both columns. The geometry: two polylines that meet at a
 /// common point both attain their minimum distance to that point AT it, so a
@@ -9210,6 +9256,54 @@ mod tests {
             t.monotone
         );
         assert!(t.monotone <= t.transects && t.reached_dry <= t.transects);
+    }
+
+    /// The memo is the SAME sweep, and it is a memo (The Rill).
+    ///
+    /// Three metrics — `channel-band-monotonicity`, its un-truncated
+    /// companion, and `channel-transect-dry-reach` — each read a different
+    /// count off one [`lab_band_transects`] call. They used to call it
+    /// independently, which the census paid for at a measured 2.99×. Two
+    /// things have to hold for the memo that removed that to be safe, and
+    /// neither is visible from a metric's own value:
+    ///
+    /// 1. **It answers what the direct call answers.** All four counts, on a
+    ///    real world's network, against a fresh un-memoized sweep of the same
+    ///    network — so a memo that ever served a *different* world's sweep
+    ///    (the failure mode that would corrupt three census columns and then
+    ///    drift-check green) reddens here.
+    /// 2. **It is actually a memo.** The second call returns the very same
+    ///    `LabBandTransects`, by pointer — not an equal one recomputed. That
+    ///    is the positive control for the speedup: an equality-only assertion
+    ///    would stay green against a memo that silently re-swept every time.
+    #[test]
+    fn the_band_transect_memo_is_one_sweep_of_this_world() {
+        let view = TerrainView::build(Seed(42), &SkyPins::default())
+            .expect("seed 42 builds to the terrain rung");
+        let direct = lab_band_transects(view.terrain.channels()).expect("this world has channels");
+        let memo = view
+            .band_transects()
+            .expect("the memo agrees it has channels");
+        assert_eq!(
+            (
+                memo.transects,
+                memo.monotone,
+                memo.monotone_untruncated,
+                memo.reached_dry
+            ),
+            (
+                direct.transects,
+                direct.monotone,
+                direct.monotone_untruncated,
+                direct.reached_dry
+            ),
+            "the memoized sweep disagrees with a fresh sweep of the same network"
+        );
+        let again = view.band_transects().expect("the memo is still filled");
+        assert!(
+            std::ptr::eq(memo, again),
+            "the second read re-swept instead of reusing the first — the memo is not memoizing"
+        );
     }
 
     /// The connectivity walk must be able to FAIL, and must be reading the
