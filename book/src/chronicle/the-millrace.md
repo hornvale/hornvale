@@ -288,6 +288,20 @@ measurement rather than disproved by it*. The property test supplies
 far-from-network and polar positions itself, precisely because the census
 population would not.
 
+How near-channel it is shows up in the shape of the result: across 41,027
+queries only **four distinct candidate-set sizes occur** — 1, 2, 3 and 6 —
+because the search radius is effectively constant at 0.575 mean cell spacings
+and the query's own offset contributes under 3% of it. The probe is therefore
+not measuring a per-query quantity at all; it is measuring local channel
+density at a fixed radius. Two consequences follow. The re-gather step — widen
+and look again when the answer lies outside the cap — is a **correctness
+requirement that this population essentially never exercises**, so the property
+test is its only coverage. And none of this transfers to the world-walking
+path: in `windows/locale` the distance to the nearest river is many cells, the
+radius grows with it, and the sub-cell argument that makes the census result so
+lopsided simply does not hold. **The claim is scoped to the lab's read path**,
+which is what the campaign was for.
+
 And the radius policy — the `L_max/2` term, the opening radius, the re-gather
 condition — is guarded more thinly than it looks. Deleting the pruning bound
 outright makes **exactly one probe in 6,175** disagree with the reference,

@@ -243,7 +243,56 @@ file both can read is cheap to settle and expensive to leave.* The fix belongs
 to the gate wrapper, not to a campaign about river geometry, and is a
 follow-up below.
 
-## 5. Small notes
+## 5. Measurement technique worth reusing
+
+- **A preregistered percentile must name which tail is bad.** P2 asked for a
+  "95th-percentile-**worst** `k ≥ 2`", and small `k` is the bad direction — so
+  the clause is a floor on the **5th percentile of `k`**. Scoring it against the
+  literal 95th percentile would have been vacuous, because that quantity cannot
+  fall below the median, which already had to clear a higher floor. The probe
+  recorded that reading in its own output rather than leaving it to the reader.
+- **Isolate matched arms by pathspec, never by a bare stash.** Every before/after
+  pair used `git stash push -m <tag> -- <pathspec>` / `apply` / `drop` — the
+  repo's hook refuses a bare pop, and a bare stash would have swept unrelated
+  files across the arm boundary. The one arm that needed a temporary edit (a
+  counterfactual "repair without the memo") was restored from a scratch copy and
+  verified by `shasum` equality *plus* `grep -c "NOT FOR COMMIT" == 0`, with a
+  `touch` to defeat the stale-mtime trap.
+- **Report `uptime` on both sides of every arm.** Two arms in this campaign ran
+  at visibly different load (6.09–6.48 versus 7.56–9.46), which is exactly the
+  confound that makes a clean-looking ratio meaningless. The control that
+  rescued it was that Task 4's *before*-arm reproduced Task 1's *after*-arm to
+  within 0.96% — a harness-drift bound measured rather than assumed.
+- **Run a mutation against the whole crate, not the new test.** Each of Task 3's
+  three mutations reported `198 passed; 1 failed`, so "this contract is held by
+  nothing today" was *measured* (the new test is the only objector among 199)
+  rather than repeated from the brief.
+- **A revert is not verified until the binary recompiles.** Every post-mutation
+  green in this campaign was confirmed by a `Compiling` line in the output;
+  a `Finished`-only green is a stale binary agreeing with itself.
+- **An argument that does not generalise correctly is worth replacing even when
+  its conclusion is right.** Task 2 first justified the small candidate sets
+  from 14,606 vertices spread *uniformly* over the sphere. Channel vertices are
+  on land and dendritic, so that was an order-of-magnitude gesture that happened
+  to land. The replacement — the search radius is sub-cell, measured — reaches
+  the same conclusion *and* correctly predicts where the result stops holding
+  (`windows/locale`, where the radius grows with the distance to the river).
+- **`std::time::Instant` is banned in test code**, so no timing lives inside a
+  test; every arm was timed with `/usr/bin/time -l` around the whole process.
+
+- **Anti-vacuity inside a tie test.** Task 3's rill tie assertion alone would
+  have been satisfied by a constant preference for the query's own cell, so the
+  test additionally asserts that a strictly nearer *later* candidate still wins
+  and that a candidate answering `None` steps aside rather than winning with an
+  absent distance — over both a pentagon (5 neighbours) and a hexagon (6), with
+  the degrees confirmed by measurement rather than assumed.
+- **A forwarded figure is a hypothesis.** The controller computed the tie
+  query's search radius as ~0.96 from the spec's formula and handed it to Task 4
+  as a condition to verify. Measured, it is **1.096** — the same conclusion
+  (comfortably under the whole-sphere fallback) from a different number, and the
+  measured value is what got pinned in the test.
+
+## 6. Small notes
 
 - **A generated artifact merges without conflicting.** The absorption of
   `main` was conflict-free, which means no git hook ran and no drift check
