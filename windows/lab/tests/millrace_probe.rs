@@ -13,7 +13,7 @@
 //! cargo test --release -p hornvale-lab --test millrace_probe -- --ignored --nocapture
 //! ```
 //!
-//! # Two things this file is careful about
+//! # Four things this file is careful about
 //!
 //! **The query population is replayed, not invented.** `k` is a property of
 //! the queries actually made, so both query generators here are transcriptions
@@ -23,10 +23,21 @@
 //! decides how many queries a walk issues at all. The lab's own helpers
 //! (`lab_left_normal`, `lab_offset`, `lab_normalize`, `lab_run_owner`) and its
 //! two sweep constants are private to `windows/lab/src/metrics.rs`, so they
-//! are reproduced here verbatim rather than reached for. That duplication is
-//! the cost of measuring from outside the crate, and it is the one thing in
-//! this file that can silently rot: if either metric's sampling design moves,
-//! this probe is measuring a population that no longer exists.
+//! are reproduced here verbatim rather than reached for.
+//!
+//! **That duplication is guarded, on the transect half only.**
+//! [`assert_sweep_matches_published`] recomputes
+//! `channel-band-monotonicity-untruncated` and `channel-transect-dry-reach`
+//! from the transcribed sweep and asserts bit-equality with the shipped
+//! registry's own extractors, so a drift in stride, window, step count or
+//! ordering turns this file red. **The join half has no such guard and cannot
+//! get one from published output**: `channel-connectivity` is the only metric
+//! reading that population and `metrics.rs:7111` records it as constant since
+//! the confluence repair, so it reads 1.0000 for any transcription including a
+//! badly wrong one. Two corroborations an earlier draft of this file offered —
+//! that connectivity reproduces at 1.0000, and that the network measures
+//! 3,606 / 14,606 — are worth nothing for exactly that reason: the first is a
+//! documented constant and the second corroborates the world build.
 //!
 //! **The instrument carries its own positive control.** A cap that is too
 //! small produces a flatteringly tiny candidate set that simply does not
@@ -41,9 +52,25 @@
 //! headwater excludes almost everything and a probe far from any river
 //! degrades toward the full scan. Everything below is a distribution.
 //!
-//! # `k`, and which tail the prediction is about
+//! # `k` here is an UPPER BOUND on the `k` an index delivers
 //!
 //! `k = L / |candidates|`, `L` the polyline count, so **larger is better**.
+//! What this file computes is the *cap's* candidate set, using the true answer
+//! distance `D` from a **completed** full scan. A real index is worse than
+//! that in two one-directional ways, and neither is a defect in the design:
+//!
+//! 1. It cannot know `D` before it has candidates, so spec §3.2's loop always
+//!    gathers at a radius **≥** the one used here.
+//! 2. It gathers by **bucket**, not by cap. `L_max/2` is about 0.58 mean
+//!    level-6 cell spacings, so `rho` is sub-cell for every near-channel
+//!    query, and any bucket grid hands back a 2x2-to-3x3 neighbourhood —
+//!    4-9x the cap's area.
+//!
+//! So a delivered median candidate set of ~4-9 lines is the realistic reading
+//! of a measured 1-2. Nothing in the verdict moves (that is still 50-110x
+//! P2's floor of 8), but no delivered factor should be quoted from this
+//! file's raw numbers.
+//!
 //! Spec §2.1's P2 asks for `median k >= 8` and `95th-percentile-worst k >= 2`.
 //! The worst queries are the ones with the *smallest* `k`, so the second
 //! clause is a floor on the **5th percentile of `k`** (equivalently: on 95% of
@@ -51,9 +78,9 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Geosphere, Seed, SphericalPolyline, math};
-use hornvale_lab::TerrainView;
+use hornvale_lab::{Extractor, MetricValue, TerrainView, registry};
 use hornvale_terrain::{
-    GeneratedTerrain, WaterKind,
+    WaterKind,
     channel::{ChannelNetwork, Transverse},
 };
 
@@ -80,12 +107,14 @@ const SEGMENT_CEILING_RATIO: f64 = 1.5;
 // The world under measurement
 // ---------------------------------------------------------------------------
 
-/// Build the seed-42 world to `BuildDepth::Terrain` and hand back its terrain.
+/// Build the seed-42 world to `BuildDepth::Terrain`.
 ///
 /// `BuildDepth::Terrain` is what the lab's channel metrics themselves run at
 /// (every channel metric is an `Extractor::Terrain`), so this is the same
-/// world the read path being instrumented sees.
-fn probe_world() -> GeneratedTerrain {
+/// world the read path being instrumented sees. The whole `TerrainView` is
+/// returned rather than just its terrain, because the drift guard needs to
+/// hand it to the registry's own extractors.
+fn probe_world() -> TerrainView {
     let view = TerrainView::build(Seed(SEED), &SkyPins::default())
         .expect("seed 42 builds to the terrain rung");
     assert_eq!(
@@ -93,7 +122,7 @@ fn probe_world() -> GeneratedTerrain {
         LEVEL,
         "this probe is only meaningful on the canonical grid"
     );
-    view.terrain
+    view
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +193,29 @@ fn max_segment_arc(net: &ChannelNetwork) -> f64 {
         }
     }
     worst
+}
+
+/// The mean cell-to-neighbour edge on the mesh — the length scale that decides
+/// whether a cap of radius `rho` is sub-cell.
+///
+/// This is the load-bearing number for how far the measured `k` can be
+/// trusted: `rho = D + L_max/2`, and if `L_max/2` is well under one cell
+/// spacing then for any near-channel query the cap cannot reach past the
+/// query's own cell and its immediate surroundings. It is measured here rather
+/// than quoted, because everything the report says about the bound between the
+/// measured `k` and a delivered one rests on it.
+fn mean_cell_edge(geo: &Geosphere) -> f64 {
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for id in 0..geo.cell_count() {
+        let c = CellId(id as u32);
+        let p = geo.position(c);
+        for &n in geo.neighbors(c) {
+            total += angle(p, geo.position(n));
+            count += 1;
+        }
+    }
+    total / count as f64
 }
 
 /// `E_max` — the longest cell-to-neighbour edge on the mesh.
@@ -258,21 +310,51 @@ fn shrink_factor(net: &ChannelNetwork, q: [f64; 3], half_max_segment: f64) -> Op
 // Query population 1: `lab_band_transects`' strided transect sweep
 // ---------------------------------------------------------------------------
 
-/// Every position `lab_band_transects` issues a `bank_reading` for, in issue
-/// order — a transcription of that function's sampling design with the
-/// band-counting removed.
+/// The transcribed sweep: every position `lab_band_transects` issues a
+/// `bank_reading` for, in issue order, **plus the two counts that make the
+/// transcription checkable against published output**.
+struct TranscribedSweep {
+    /// Positions queried, in issue order.
+    queries: Vec<[f64; 3]>,
+    /// Transects swept — the denominator of both published ratios.
+    transects: usize,
+    /// Transects monotone over the whole sweep, truncating nothing.
+    monotone_untruncated: usize,
+    /// Own-channel prefixes that reached `Dry` before truncation.
+    reached_dry: usize,
+}
+
+/// Transcribe `lab_band_transects` — its sampling design *and* enough of its
+/// band-counting to reproduce two published metric values.
 ///
 /// The stride, the `outer <= 0.0` skip, both sides and the inclusive
 /// `0..=TRANSECT_STEPS` sweep are reproduced exactly; `s = 0` lands on the
 /// vertex itself for both sides, and that duplicate is a real duplicate query
 /// in the shipped sweep, so it is kept.
-fn band_transect_queries(net: &ChannelNetwork) -> Vec<[f64; 3]> {
+///
+/// **Why the counting is here at all, when only the positions are measured.**
+/// A transcription that drifts from the function it copies is the one failure
+/// a probe like this cannot afford, and the first version of this file offered
+/// two corroborations that are both vacuous: `channel-connectivity` reads
+/// 1.0000 for *any* walk transcription (`metrics.rs:7111` records that the
+/// metric is constant since the confluence repair and both of its failure
+/// branches are unreachable), and the network's 3,606 / 14,606 dimensions
+/// corroborate the world build rather than the sweep. Carrying the counts lets
+/// [`assert_sweep_matches_published`] compare against real published output
+/// instead, which moves if the stride, the window, the step count or the
+/// iteration order moves.
+fn transcribed_band_sweep(net: &ChannelNetwork) -> TranscribedSweep {
+    let mut out = TranscribedSweep {
+        queries: Vec::new(),
+        transects: 0,
+        monotone_untruncated: 0,
+        reached_dry: 0,
+    };
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     if vertices == 0 {
-        return Vec::new();
+        return out;
     }
     let stride = vertices.div_ceil(MAX_TRANSECTS).max(1);
-    let mut out = Vec::new();
     let mut index = 0usize;
     for (i, line) in net.polylines.iter().enumerate() {
         for j in 0..line.points.len() {
@@ -287,14 +369,107 @@ fn band_transect_queries(net: &ChannelNetwork) -> Vec<[f64; 3]> {
             }
             let left = left_normal(line, j);
             for side in [1.0_f64, -1.0] {
+                out.transects += 1;
+                let mut previous = 0u8;
+                let mut still_own = true;
+                let mut good_untruncated = true;
+                let mut reached_dry = false;
                 for s in 0..=TRANSECT_STEPS {
                     let offset = side * outer * s as f64 / TRANSECT_STEPS as f64;
-                    out.push(offset_from(line, j, left, offset));
+                    let q = offset_from(line, j, left, offset);
+                    out.queries.push(q);
+                    let (owns, band) = match net.bank_reading(q) {
+                        Some(reading) => (reading.line == i, reading.transverse().index()),
+                        None => (false, Transverse::Dry.index()),
+                    };
+                    if !owns {
+                        still_own = false;
+                    }
+                    if band < previous {
+                        good_untruncated = false;
+                    }
+                    previous = band;
+                    // The shipped loop also tracks `own_previous` here to
+                    // score `channel-band-monotonicity`. That column is not
+                    // reproduced: `metrics.rs:7273` records it reading 1.0 on
+                    // all 64 probe worlds, so asserting on it would corroborate
+                    // nothing. `reached_dry` is the half of this branch that
+                    // still discriminates.
+                    if still_own && band == Transverse::Dry.index() {
+                        reached_dry = true;
+                    }
+                }
+                if good_untruncated {
+                    out.monotone_untruncated += 1;
+                }
+                if reached_dry {
+                    out.reached_dry += 1;
                 }
             }
         }
     }
     out
+}
+
+/// The published value of one registry metric, read through the public
+/// `registry()` / `Metric.extract` surface.
+fn published_number(view: &TerrainView, name: &str) -> f64 {
+    let metric = registry()
+        .into_iter()
+        .find(|m| m.name == name)
+        .unwrap_or_else(|| panic!("no metric named {name} in the registry"));
+    let Extractor::Terrain(extract) = metric.extract else {
+        panic!("{name} is not a Terrain-rung metric");
+    };
+    match extract(view) {
+        MetricValue::Number(x) => x,
+        other => panic!("{name} did not read as a number: {other:?}"),
+    }
+}
+
+/// **The drift guard on the transcription.** Recompute two published metrics
+/// from the transcribed sweep and assert bit-equality with the shipped
+/// registry's own extractors.
+///
+/// The two chosen are `channel-band-monotonicity-untruncated` and
+/// `channel-transect-dry-reach`, both `monotone_untruncated / transects` and
+/// `reached_dry / transects` over exactly the population this probe replays.
+/// `channel-band-monotonicity` is deliberately **not** used: `metrics.rs:7273`
+/// records it reading 1.0 on all 64 probe worlds, which makes it exactly as
+/// vacuous a corroboration as `channel-connectivity`.
+///
+/// **What this does and does not cover.** It covers the transect half — a
+/// drift in the stride, the outward window, the step count, the side loop or
+/// the iteration order moves at least one of these two ratios. It covers the
+/// join half **not at all**, and no available published observable would:
+/// `channel-connectivity` is the only metric reading that population and it is
+/// a documented constant. That gap is stated rather than papered over; the
+/// durable fix is moving this probe in-crate beside `lab_channel_transect_width`
+/// so the shipped functions can be called directly, which is a larger change
+/// than this task should make.
+fn assert_sweep_matches_published(view: &TerrainView, sweep: &TranscribedSweep) {
+    let cases = [
+        (
+            "channel-band-monotonicity-untruncated",
+            sweep.monotone_untruncated as f64 / sweep.transects as f64,
+        ),
+        (
+            "channel-transect-dry-reach",
+            sweep.reached_dry as f64 / sweep.transects as f64,
+        ),
+    ];
+    for (name, mine) in cases {
+        let theirs = published_number(view, name);
+        assert_eq!(
+            mine.to_bits(),
+            theirs.to_bits(),
+            "the transcribed transect sweep no longer reproduces {name} ({mine} vs the \
+             published {theirs}). `lab_band_transects`' sampling design has moved, so the \
+             query population this probe replays is not the one the census issues, and \
+             every k it reports is about a population that no longer exists"
+        );
+        println!("  drift guard: {name} = {theirs} reproduced from the transcribed sweep");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -501,13 +676,22 @@ fn score_p2(label: &str, k: &mut [f64]) {
 #[test]
 #[ignore = "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand"]
 fn the_longest_channel_segment_stays_inside_the_mesh_edge_ceiling() {
-    let terrain = probe_world();
-    let net = terrain.channels();
+    let view = probe_world();
+    let net = view.terrain.channels();
     let l_max = max_segment_arc(net);
-    let e_max = max_cell_edge(terrain.geosphere());
+    let e_max = max_cell_edge(view.terrain.geosphere());
+    let e_mean = mean_cell_edge(view.terrain.geosphere());
     println!(
         "L_max = {l_max:.9} rad, E_max = {e_max:.9} rad, ratio = {:.6}",
         l_max / e_max
+    );
+    // The bound between a measured k and a delivered one (see the module doc's
+    // UPPER BOUND section) is exactly this ratio: a cap half-width well under
+    // one cell spacing cannot reach past the query's own neighbourhood.
+    println!(
+        "E_mean = {e_mean:.9} rad; L_max/2 = {:.9} rad = {:.4} mean cell spacings",
+        l_max / 2.0,
+        l_max / 2.0 / e_mean
     );
     assert!(
         l_max <= SEGMENT_CEILING_RATIO * e_max,
@@ -516,12 +700,24 @@ fn the_longest_channel_segment_stays_inside_the_mesh_edge_ceiling() {
     );
 }
 
+/// The drift guard, standing on its own so it has a findable name and a
+/// distinct failure. The measurement test below runs the same assertion on its
+/// own sweep, so running that test alone is still guarded.
 #[test]
-#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network (17 s measured); run by hand"]
+#[ignore = "probe: sweeps every transect twice — once transcribed, once through the shipped metric (16 s measured); run by hand"]
+fn the_transcribed_transect_sweep_reproduces_the_published_metrics() {
+    let view = probe_world();
+    let sweep = transcribed_band_sweep(view.terrain.channels());
+    println!("transcribed sweep: {} transects", sweep.transects);
+    assert_sweep_matches_published(&view, &sweep);
+}
+
+#[test]
+#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network (41 s measured); run by hand"]
 fn the_candidate_set_a_capped_query_would_gather() {
-    let terrain = probe_world();
-    let net = terrain.channels();
-    let globe = terrain.globe();
+    let view = probe_world();
+    let net = view.terrain.channels();
+    let globe = view.terrain.globe();
     let lines = net.polylines.len();
     let vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
     let l_max = max_segment_arc(net);
@@ -529,15 +725,20 @@ fn the_candidate_set_a_capped_query_would_gather() {
     println!("network: {lines} polylines, {vertices} vertices; L_max = {l_max:.9} rad");
 
     // --- population 1: the transect sweep (predicate-independent) ----------
-    let transects = band_transect_queries(net);
-    let mut transect_k: Vec<f64> = transects
+    // The drift guard runs FIRST, before any k is reported: a transcription
+    // that no longer reproduces the shipped sweep is measuring a population
+    // the census does not issue.
+    let sweep = transcribed_band_sweep(net);
+    assert_sweep_matches_published(&view, &sweep);
+    let mut transect_k: Vec<f64> = sweep
+        .queries
         .iter()
         .map(|&q| shrink_factor(net, q, half).expect("the network is not empty"))
         .collect();
     print_distribution("band transects", &mut transect_k, lines);
 
     // --- population 2: the join probes, under both predicates --------------
-    let owner = run_owner(net, terrain.geosphere().cell_count());
+    let owner = run_owner(net, view.terrain.geosphere().cell_count());
     let probes = join_probes(net, &owner, half);
 
     let shipped = |last_cell: CellId| match *globe.downhill.get(last_cell) {
