@@ -1148,11 +1148,59 @@ pub fn axis_supply_with(weights: &[f64], per_axis: &[(hornvale_kernel::ResourceA
 /// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
 /// cannot drift apart on the one rule they must agree about.
 fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+    // Elevation first, because it is the only axis that can undercut the
+    // others, and when it does it is already the answer.
+    //
+    // `eval` returns `clamp(floor + (1 - floor) * devotion * bump, 0, 1)` with
+    // `bump = exp(-z²/2) ∈ (0, 1]`. For `floor ∈ [0, 1]` and `devotion ≥ 0`
+    // every term added to `floor` is non-negative, and the clamp cannot push
+    // the result below `floor` because `floor` is itself inside `[0, 1]`. So
+    // the three floored axes each return **at least `floor_buf`**, while
+    // elevation is passed `0.0` and may return less. If it does, no later
+    // evaluation can lower the minimum, and the remaining three `exp` calls
+    // cannot change the answer.
+    //
+    // Both preconditions are real rather than assumed. `floor_buf` comes from
+    // `sovereignty_floor`, which is `SOVEREIGNTY_FLOOR_MAX * (1 - exp(-e))`
+    // with `e ≥ 0` and `SOVEREIGNTY_FLOOR_MAX = 0.95`, hence `[0, 0.95]`.
+    // `devotion` is a `pub` field and therefore NOT enforced by the type, so
+    // it is asserted below rather than trusted.
+    //
+    // NaN needs no guard, in one direction by proof and in the other by type.
+    // `f64::min` returns the non-NaN operand, so a NaN on any of the three
+    // skipped axes is discarded by the eager form too — the fast path and the
+    // full path agree on it. And the axis actually branched on cannot be NaN
+    // at all: `SeaLevelHeight::from_metres` refuses a non-finite metre value,
+    // so `height_asl_m` is finite by construction.
+    //
+    // Worth knowing why this pays: the module doc above records that with
+    // elevation unfloored, a wide low-`devotion` elevation curve sits below
+    // every other axis's floor, so **elevation binds on 100% of land for
+    // goblin, gnoll and human**. On those species the fast path is not an
+    // optimisation for the rare case — it is the common case, and the other
+    // three curves were determining nothing anyway. That is the measured
+    // pathology The Tense means to fix, not a property to depend on: this
+    // shortcut is a pure identity and stays correct however the floors move.
+    debug_assert!(
+        (0.0..=1.0).contains(&floor_buf),
+        "floor_buf must be in [0, 1] for the elevation shortcut to be sound: {floor_buf}"
+    );
+    debug_assert!(
+        cn.temperature.devotion >= 0.0
+            && cn.moisture.devotion >= 0.0
+            && cn.insolation.devotion >= 0.0,
+        "a negative devotion lets a floored axis fall below floor_buf, which \
+         would invalidate the elevation shortcut"
+    );
+    let elevation = cn.elevation.eval(s.height_asl_m.get(), 0.0);
+    if elevation <= floor_buf {
+        return elevation;
+    }
     cn.temperature
         .eval(s.temperature_c, floor_buf)
         .min(cn.moisture.eval(s.moisture, floor_buf))
         .min(cn.insolation.eval(s.insolation, floor_buf))
-        .min(cn.elevation.eval(s.height_asl_m.get(), 0.0))
+        .min(elevation)
 }
 
 /// **The Tense §3.3's two-tier tolerance — SHADOW MODE, not yet binding.**
@@ -8674,6 +8722,116 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 mod tests {
     use super::*;
     use hornvale_kernel::test_lineage;
+
+    /// claim: invariant — the short-circuited Liebig minimum equals the eager one.
+    ///
+    /// [`tolerance_liebig`] returns elevation's response without evaluating the
+    /// other three when that response cannot be beaten. This pins the shortcut
+    /// against the eager four-evaluation form it replaced, asserting BIT
+    /// equality — not approximate agreement — because the whole point is that
+    /// no world's bytes move.
+    ///
+    /// The sweep is built to exercise both branches and the places the proof
+    /// could fail rather than only the happy path: `floor_buf` at both extremes
+    /// (`0.0`, where the shortcut almost never fires, and `0.95`, where it
+    /// almost always does), elevation responses that land above and below every
+    /// floor, and NaN on each axis in turn — `f64::min` ignores a NaN operand,
+    /// so a NaN on a skipped axis is exactly where a wrong shortcut would
+    /// diverge silently.
+    ///
+    /// Elevation carries no NaN case because it *cannot*:
+    /// [`hornvale_kernel::SeaLevelHeight::from_metres`] is a validating
+    /// constructor that rejects a non-finite metre value, so the one axis the
+    /// shortcut reads is the one axis that can never be NaN. That is a
+    /// stronger guarantee than this test could assert, and it is why the
+    /// shortcut may branch on `height_asl_m` without a finiteness guard of its
+    /// own.
+    #[test]
+    fn the_liebig_shortcut_equals_the_eager_minimum() {
+        use hornvale_kernel::ecology::ConditionResponse;
+
+        /// The pre-shortcut form, verbatim. Kept here rather than in the
+        /// module so a future edit to `tolerance_liebig` cannot silently
+        /// redefine what this test compares against.
+        fn eager(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+            cn.temperature
+                .eval(s.temperature_c, floor_buf)
+                .min(cn.moisture.eval(s.moisture, floor_buf))
+                .min(cn.insolation.eval(s.insolation, floor_buf))
+                .min(cn.elevation.eval(s.height_asl_m.get(), 0.0))
+        }
+
+        let r = |optimum: f64, width: f64, devotion: f64| ConditionResponse {
+            optimum,
+            width,
+            devotion,
+        };
+        // Two niches: a broad generalist, and a narrow specialist whose
+        // elevation curve is the wide low-devotion shape the module doc
+        // records as binding on 100% of land for three peoples.
+        let niches = [
+            hornvale_species::ConditionNiche {
+                temperature: r(18.0, 12.0, 0.80),
+                moisture: r(0.55, 0.25, 0.70),
+                insolation: r(1.0, 0.40, 0.60),
+                elevation: r(400.0, 900.0, 0.45),
+            },
+            hornvale_species::ConditionNiche {
+                temperature: r(4.0, 5.0, 0.90),
+                moisture: r(0.30, 0.10, 0.25),
+                insolation: r(0.6, 0.15, 0.10),
+                elevation: r(2600.0, 4000.0, 0.20),
+            },
+        ];
+        let temps = [-50.0, 0.0, 20.0, 45.0, f64::NAN];
+        let moists = [0.0, 0.30, 0.82, 1.0, f64::NAN];
+        let insols = [0.0, 0.50, 1.0, 2.0, f64::NAN];
+        let heights = [-4000.0, 0.0, 500.0, 3000.0, 8000.0];
+        let floors = [0.0, 0.25, 0.70, 0.95];
+
+        let mut checked = 0u32;
+        let mut shortcut_fired = 0u32;
+        for cn in &niches {
+            for &t in &temps {
+                for &m in &moists {
+                    for &i in &insols {
+                        for &h in &heights {
+                            for &floor_buf in &floors {
+                                let s = Substrate {
+                                    temperature_c: t,
+                                    moisture: m,
+                                    insolation: i,
+                                    height_asl_m: hornvale_kernel::SeaLevelHeight::from_metres(h),
+                                };
+                                let want = eager(cn, &s, floor_buf);
+                                let got = tolerance_liebig(cn, &s, floor_buf);
+                                assert_eq!(
+                                    want.to_bits(),
+                                    got.to_bits(),
+                                    "shortcut diverged at t={t} m={m} i={i} h={h} \
+                                     floor={floor_buf}: eager {want} vs shortcut {got}"
+                                );
+                                if cn.elevation.eval(h, 0.0) <= floor_buf {
+                                    shortcut_fired += 1;
+                                }
+                                checked += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // A sweep that never takes the fast branch would pass vacuously and
+        // prove nothing about the shortcut, so assert both branches ran.
+        assert!(
+            checked > 2000,
+            "sweep too small to be meaningful: {checked}"
+        );
+        assert!(
+            shortcut_fired > 0 && shortcut_fired < checked,
+            "sweep must exercise BOTH branches: {shortcut_fired} of {checked} took the shortcut"
+        );
+    }
 
     /// claim: invariant — the hoisted dot product equals the looked-up one.
     ///
