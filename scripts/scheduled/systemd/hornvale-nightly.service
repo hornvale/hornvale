@@ -1,0 +1,16 @@
+[Unit]
+Description=Hornvale nightly unattended checks (The Sexton)
+Documentation=file:///home/%i/Projects/hornvale/scripts/scheduled/README.md
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/hornvale-scheduled
+Environment=HV_SCHED_REPO=%h/Projects/hornvale-scheduled
+ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-drift.sh
+# The census ExecStart is added by Task 9, which creates the script it names.
+# Shipping both here would make this oneshot unit fail wholesale for anyone
+# who installs it between Task 8 and Task 9 (pre-flight Ruling 3).
+# A failed run must be READABLE, which is why this is a timer and not cron:
+#   journalctl --user -u hornvale-nightly.service -n 200
+StandardOutput=journal
+StandardError=journal
