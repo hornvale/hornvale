@@ -507,8 +507,15 @@ is reachable only by a human typing `make test`, which is still worth keeping.
 
 ```make
 ci: gate ## Alias for `make gate`, which now carries the timing alarm (The Sexton)
-	@echo "make ci: `make gate` now records the baseline and runs the alarm; this is an alias." >&2
+	@echo "make ci: \`make gate\` now records the baseline and runs the alarm; this is an alias." >&2
 ```
+
+**The backticks MUST stay escaped.** Unescaped, they are shell command
+substitution inside a double-quoted string, so every `make ci` would run the
+entire gate a second time — silently, since the printed text looks identical.
+Caught by Task 3's implementer. The repo has recorded this exact hazard before:
+`PROC-commit-message-via-file` describes backticked prose expanding and running
+a real gate.
 
 Delete the `ci-run` target. Remove `ci-run` from `.PHONY`.
 
@@ -533,7 +540,11 @@ cp docs/timings/test-baseline-$(hostname -s).tsv /tmp/hv-b4red.tsv
 cat >> kernel/tests/hv_probe_red.rs <<'RS'
 #[test]
 fn hv_probe_deliberate_red() {
-    assert!(false, "deliberate red — The Sexton Task 3 guard proof");
+    // NOT `assert!(false, ...)`: clippy::assertions_on_constants denies it under
+    // `-D warnings`, so the probe would fail at CLIPPY rather than inside
+    // nextest — proving nothing about the alarm and recorder guards it exists
+    // to exercise. Found by Task 3's implementer.
+    assert_eq!(1, 2, "deliberate red — The Sexton Task 3 guard proof");
 }
 RS
 make gate; echo "gate exit=$?"
@@ -712,7 +723,10 @@ rm -f docs/timings/defects-$HOST.tsv
 cat >> kernel/tests/hv_probe_red.rs <<'RS'
 #[test]
 fn hv_probe_deliberate_red() {
-    assert!(false, "deliberate red — The Sexton Task 4 ledger proof");
+    // NOT `assert!(false, ...)` — clippy::assertions_on_constants denies it under
+    // `-D warnings`, so the probe would redden clippy instead of nextest and
+    // never reach the defect ledger this step is testing.
+    assert_eq!(1, 2, "deliberate red — The Sexton Task 4 ledger proof");
 }
 RS
 make gate; echo "gate exit=$?"
