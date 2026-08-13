@@ -172,21 +172,39 @@ document that varies room to room across a narrow view: measured on seed 42's
 flagship neighbourhood, `openness` spans 1.977 of its available 2.0 within
 thirty-one adjacent rooms.
 
-**`wetness` is address noise, and it is not hydrology.** This is the one
-reading of `micro` the schema explicitly rules out. The axis does not know
-where the water is, it is not derived from drainage or elevation, and a
-consumer must not band a water kind from it: a room whose `wetness` reads
-`+0.9` is not a room with a stream in it. `water` is the field that answers
-that question, at the resolution `resolution` declares. The same holds one
-step weaker for the other three — they are a *texture*, coupled to nothing in
-the terrain model, and the honest way to consume them is as local variation
-within whatever the coarser fields already established.
+**`wetness` was address noise until [The Rill](../chronicle/the-rill.md); it
+is now hydrology, under an unchanged schema tag.** This paragraph previously
+said the opposite, and the reversal is the reason it is written out rather
+than replaced: the field's *shape* never moved — same key, same type, same
+range, same position, no added or removed leaves anywhere in the document —
+so nothing a parser can check will tell a consumer that its meaning changed.
 
-Nothing downstream of the document may recover its own detail from `micro`
-either. A consumer that computed, say, drinkable water from `wetness` would
-be inventing sub-cell hydrology the simulation does not have — and the
-producer tried the analogous refinement internally and reverted it (see
-"Resolution" below).
+What it means now: the room's climate moisture, allocated by the room's
+position relative to the nearest watercourse in a space-filling drainage
+network, wherever the room is bare ground under open air. At sea, on ice and
+in the rock column it is still the address draw, because there the axis reads
+as current, snow cover or seep, none of which a river's proximity governs.
+A consumer may therefore treat `wetness` as a real, if coarse, statement about
+water — with two cautions the producer measured rather than assumes:
+
+- **It is not a water class and must still not be banded into one.** `water`
+  answers that question, at the resolution `resolution` declares. A room whose
+  `wetness` reads `+0.9` stands near water; it is not standing in it. In these
+  worlds a sub-cell valley's outer edge is about **a hundred times narrower
+  than a walk-depth room**, so essentially no room is inside a channel.
+- **A local draw is still spent on it,** as variation within the headroom the
+  grounded value leaves, and at walking depth that draw is the larger term by
+  three orders of magnitude. The axis is hydrology *plus noise*, not hydrology
+  alone.
+
+**`relief`, `aspect` and `openness` remain address noise** — a *texture*,
+coupled to nothing in the terrain model, and the honest way to consume them is
+as local variation within whatever the coarser fields already established.
+Nothing downstream of the document may recover its own detail from those
+three: a consumer that computed, say, canopy cover from `openness` would be
+inventing sub-cell structure the simulation does not have — and the producer
+tried the analogous refinement of a *categorical* field internally and
+reverted it (see "Resolution" below).
 
 ## Marks and the legend
 
@@ -369,8 +387,12 @@ move together and never contradict each other. **`relief` is deliberately
 absent from the list**: it is banded from `height_asl_m`, a three-corner
 *blend*, so it genuinely varies below grid resolution — that is real signal,
 not noise to be disclosed away. **`micro` is absent for a different reason**:
-it is per-room address noise, the finest-grained field the document carries,
-never grid-resolution in the first place.
+it is the finest-grained field the document carries and was never
+grid-resolution in the first place. That remains true of all four axes since
+[The Rill](../chronicle/the-rill.md), but for two different reasons now —
+`relief`, `aspect` and `openness` are per-room address noise, while `wetness`
+is decided by a sub-cell drainage network finer than the grid rather than
+coarser, so neither belongs on a list of fields a wide view will render flat.
 
 A consumer reading a flat `biome`/`water`/`color` across a wide view should
 caption the resolution (*"grid resolution — every room here reads one
@@ -381,6 +403,9 @@ blend of a categorical field's underlay — and reverted it: the change split
 calibrated coarse statistic (fresh water at walking depth) by 29%, halving
 thirst-driven fauna movement in the process. Sub-cell water belongs to a
 hydrology model with an actual flow graph, not to a resolution disclosure.
+That model now exists — [The Rill](../chronicle/the-rill.md) — and it is what
+`micro.wetness` reads, which is exactly why it appears on neither list: it is
+sub-cell *information*, not a coarse field rendered flat and not a texture.
 
 ## The document
 
@@ -445,7 +470,7 @@ each in `[-1, 1]` and quantized at the emit boundary:
 |---|---|---|
 | `relief` | a hollow | a rise |
 | `aspect` | shaded | sunlit |
-| `wetness` | dry | wet — **address noise, never hydrology**; do not band a water kind from it |
+| `wetness` | dry | wet — climate moisture allocated by distance to the nearest watercourse on bare ground, plus a local draw; still **not a water class**, so do not band one from it |
 | `openness` | closed canopy | open ground |
 
 Each element of a cell's `marks` (`Mark`) is an object, in this field order:

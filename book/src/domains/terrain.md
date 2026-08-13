@@ -285,13 +285,28 @@ sampled from a position-continuous spherical noise field —
 `terrain/channel-meander`, hash-noise only, no new draws — since
 address-hashed noise cannot form a connected watercourse. The primitive
 itself lives in the kernel and knows nothing about water: a coastline, a
-scarp and a treeline band the same scalar. **This is the producer only.** No
-consumer has moved yet: `WaterKind` keeps its cell semantics for every class
-including `River`, `river_proximity` keeps its meaning and its habitability
-consumers, and the map, the locale and the walk still answer the cell-scale
-question. Lakes stay faces deliberately — through-flow lakes still classify
-as `River`, and converting the class wholesale would have turned every lake
-into a line.
+scarp and a treeline band the same scalar. Lakes stay faces deliberately —
+through-flow lakes still classify as `River`, and converting the class
+wholesale would have turned every lake into a line.
+
+**The network is now space-filling, and the first consumer has moved.**
+[The Rill](../chronicle/the-rill.md) removed the discharge threshold that
+drew only the top 6.7% of the flow tree, so every land cell with a downhill
+target carries a line (183 → 3,606 polylines on seed 42) and a sub-threshold
+trickle is a *narrow* channel rather than an absent one. Every run now
+includes the cell it drains into, which retires the thirty-nine seed-42 river
+cells that carried no polyline at all. Below cell scale the network continues
+by **partitioning a scalar, never lifting a direction**: a sub-cell
+watercourse is a branch *attached* to a rendered polyline, inheriting its
+direction from the attachment and taking a conserving integer share of the
+coarse cell's catchment, so basins refine and cannot be rerouted. The
+attempt to lift the coarse flow field onto rooms instead was built and
+falsified — cells are the icosphere's vertices and rooms its faces, so a flow
+edge runs *along* a room's boundary and never through it. `WaterKind` keeps
+its cell semantics for every class including `River`, and `river_proximity`
+keeps its meaning and its habitability consumers; what moved is the locale's
+`wetness`, which is now climate moisture allocated by distance to the nearest
+watercourse rather than address noise.
 
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a

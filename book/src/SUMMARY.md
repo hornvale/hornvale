@@ -354,6 +354,7 @@
 - [The Ford, stage 2](./chronicle/the-ford-stage-2.md)
 - [The Muster](./chronicle/the-muster.md)
 - [The Beacon](./chronicle/the-beacon.md)
+- [The Rill](./chronicle/the-rill.md)
 
 # Appendix: The Frontier
 
