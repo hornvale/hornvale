@@ -456,6 +456,259 @@ pub struct ChannelNetwork {
     /// because the alternative is an `O(network)` scan per query, and Tier 2
     /// asks this question once per cell per reading.
     trunk_vertex: Vec<Option<(u32, u32)>>,
+    /// The spherical bucket grid over this network's vertices that
+    /// [`ChannelNetwork::nearest_line`] narrows its candidate line set with,
+    /// and the measured `L_max` its coverage argument rests on.
+    ///
+    /// Private, and deliberately not part of the struct's documented public
+    /// surface: it is a pure accelerator over `polylines`, carries no
+    /// information that is not already in them, and every answer it takes part
+    /// in is asserted equal to the unindexed scan's
+    /// (`tests/channel_properties.rs`). Built by
+    /// [`ChannelNetwork::assemble`], which is the only way any network in this
+    /// crate is constructed, so no site can be assembled without it.
+    grid: VertexGrid,
+}
+
+/// The pad added to a search radius before the bucket window is computed,
+/// radians.
+///
+/// The window formulae below are exact in real arithmetic and are evaluated in
+/// floating point, so a vertex sitting exactly on the cap boundary could in
+/// principle be excluded by a last-ULP rounding of `asin`/`sin`. The failure
+/// that would produce is the silent one — a true winner missing from the
+/// candidate set — so the boundary is pushed outward by an amount that is
+/// enormous against a double's rounding error at these magnitudes (~1e-16 rad)
+/// and negligible against the grid's own bucket size (~2e-2 rad): it cannot
+/// change which buckets are visited except within a nanoradian of an edge, and
+/// there it errs toward visiting more.
+const CAP_PAD: f64 = 1.0e-9;
+
+/// The smallest radius a candidate search starts from, radians.
+///
+/// The search opens at `L_max / 2`, the minimum radius the coverage inequality
+/// can be satisfied at. A network whose segments are all degenerate measures
+/// `L_max == 0`, and a search that opened at zero and grew by multiplication
+/// would never grow at all — so the opening radius has a floor. It is far below
+/// any real network's cell spacing, so it never widens an ordinary first
+/// gather.
+const MIN_SEARCH_RADIUS: f64 = 1.0e-6;
+
+/// A spherical bucket grid over one network's **vertices**, plus the longest
+/// segment in that network — the two things
+/// [`ChannelNetwork::nearest_line`]'s candidate gather is built from.
+///
+/// # Why vertices, and why `L_max`
+///
+/// The index narrows the candidate *line set* and nothing else; the winner is
+/// then chosen by the unchanged scan over that set, so the whole of
+/// correctness is: **is the true winner in the set?**
+///
+/// For a segment `[a, b]` of arc length `L` whose closest point to `p` lies at
+/// distance `d`, the two sub-arcs from that closest point sum to `L`, so the
+/// nearer of them is at most `L / 2`, and by the spherical triangle inequality
+///
+/// > `min( angle(p, a), angle(p, b) ) <= d + L / 2 <= d + L_max / 2`
+///
+/// So every segment within `D` of `p` has an **endpoint** — a vertex — inside
+/// the cap of radius `D + L_max / 2`. Bucketing vertices and gathering that cap
+/// therefore contains the winner. `L_max` is the only quantity that has to be
+/// bounded, and it is **measured exactly**, in the same pass that buckets the
+/// vertices, rather than assumed: spec §3.2 argues independently that
+/// `L_max <= 1.5 * E_max`, and that argument is a tripwire on this measurement
+/// (Task 2 scored it at 1.051), never a substitute for it.
+///
+/// # The grid
+///
+/// A plain latitude/longitude grid: `lat_bands` equal bands in latitude,
+/// `lon_buckets = 2 * lat_bands` equal steps in longitude within every band,
+/// stored as CSR (`starts` indexes `lines`). Buckets near the poles are
+/// therefore narrow in true distance, which costs a query near a pole a wider
+/// longitude window — computed **per query** from the search radius and the
+/// query's own latitude, never from a fixed constant, which is precisely the
+/// near-pole coverage hole The Bearing shipped and its equality test caught.
+///
+/// Entries are `(bucket, polyline)` pairs deduplicated at build time, so a long
+/// line that crosses a bucket several times appears in it once.
+#[derive(Clone, Debug)]
+struct VertexGrid {
+    /// Latitude bands, spanning `[-pi/2, pi/2]` in equal steps.
+    lat_bands: usize,
+    /// Longitude buckets within each band, spanning `[-pi, pi)` in equal steps.
+    lon_buckets: usize,
+    /// CSR offsets into `lines`, length `lat_bands * lon_buckets + 1`.
+    starts: Vec<u32>,
+    /// Polyline indices, grouped by bucket, ascending and deduplicated within
+    /// each bucket.
+    lines: Vec<u32>,
+    /// The longest segment anywhere in the network, radians — the measured
+    /// `L_max` the coverage inequality above is stated in. `0.0` for a network
+    /// with no segments at all.
+    max_segment: f64,
+}
+
+/// Latitude and longitude of a unit vector, radians: latitude in
+/// `[-pi/2, pi/2]`, longitude in `(-pi, pi]`.
+fn lat_lon(p: [f64; 3]) -> (f64, f64) {
+    (math::asin(p[2].clamp(-1.0, 1.0)), math::atan2(p[1], p[0]))
+}
+
+/// The latitude band `lat` falls in, clamped into range. A NaN latitude lands
+/// in band 0 rather than panicking — the query path's fallback is what makes a
+/// NaN position answer correctly, and it is reached by the scan finding no
+/// comparable distance, not by this function guessing.
+fn band_of(lat: f64, lat_bands: usize) -> usize {
+    let t = (lat + std::f64::consts::FRAC_PI_2) / std::f64::consts::PI * lat_bands as f64;
+    // The NaN case is spelled out rather than left to a negated comparison:
+    // every one of these three branches is a deliberate choice about an
+    // incomparable input, and hiding one inside `!(t > 0.0)` makes it look
+    // like an accident of operator precedence.
+    if t.is_nan() || t <= 0.0 {
+        0
+    } else if t >= lat_bands as f64 {
+        lat_bands - 1
+    } else {
+        t as usize
+    }
+}
+
+/// The longitude step `lon` falls in, **unwrapped**: the caller may pass a
+/// longitude outside `[-pi, pi)` (the two ends of a window straddling the
+/// antimeridian do), so the result may be negative or `>= lon_buckets` and is
+/// wrapped by the caller with `rem_euclid`.
+fn lon_step(lon: f64, lon_buckets: usize) -> i64 {
+    let t = (lon + std::f64::consts::PI) / (2.0 * std::f64::consts::PI) * lon_buckets as f64;
+    if t.is_nan() { 0 } else { t.floor() as i64 }
+}
+
+impl VertexGrid {
+    /// Bucket every vertex of `polylines` and measure the longest segment, in
+    /// one pass over the network.
+    ///
+    /// The grid is sized to the network: `lat_bands = sqrt(V / 2)` puts roughly
+    /// one vertex in each of the `2 * lat_bands^2 ~ V` buckets, so the bucket
+    /// edge tracks the mesh's own cell spacing as the level changes rather than
+    /// being tuned to one of them. The ceiling exists because the memory is
+    /// `O(buckets)` and a pathological network should not be able to ask for an
+    /// unbounded allocation; the floor keeps a one-vertex network legal.
+    fn build(polylines: &[SphericalPolyline]) -> VertexGrid {
+        let mut vertex_count = 0usize;
+        let mut max_segment = 0.0_f64;
+        for line in polylines {
+            vertex_count += line.points.len();
+            for w in line.points.windows(2) {
+                let length = angle(w[0], w[1]);
+                if length > max_segment {
+                    max_segment = length;
+                }
+            }
+        }
+        let lat_bands = ((vertex_count as f64 / 2.0).sqrt().round() as usize).clamp(1, 1024);
+        let lon_buckets = lat_bands * 2;
+        let bucket_count = lat_bands * lon_buckets;
+
+        // `(bucket, line)` pairs, sorted and deduplicated: a line crossing a
+        // bucket with several vertices is one entry there. Sorting also puts
+        // each bucket's own entries in ascending line order, which is the order
+        // the query needs and is why the merged candidate list needs only one
+        // sort of its own.
+        let mut pairs: Vec<(u32, u32)> = Vec::with_capacity(vertex_count);
+        for (i, line) in polylines.iter().enumerate() {
+            for &p in &line.points {
+                let (lat, lon) = lat_lon(p);
+                let bucket = band_of(lat, lat_bands) * lon_buckets
+                    + lon_step(lon, lon_buckets).rem_euclid(lon_buckets as i64) as usize;
+                pairs.push((bucket as u32, i as u32));
+            }
+        }
+        pairs.sort_unstable();
+        pairs.dedup();
+
+        let mut starts = vec![0u32; bucket_count + 1];
+        for &(bucket, _) in &pairs {
+            starts[bucket as usize + 1] += 1;
+        }
+        for b in 0..bucket_count {
+            starts[b + 1] += starts[b];
+        }
+        let lines = pairs.iter().map(|&(_, line)| line).collect();
+
+        VertexGrid {
+            lat_bands,
+            lon_buckets,
+            starts,
+            lines,
+            max_segment,
+        }
+    }
+
+    /// Append every polyline with a vertex in the cap of radius `rho` about
+    /// `position` to `out`, then sort and deduplicate it — so `out` comes back
+    /// in **ascending polyline index**, which is the order the candidate scan
+    /// must evaluate in for the lowest-index tie-break to be the one the
+    /// unindexed scan makes.
+    ///
+    /// The set is a superset of the cap: membership is decided by bucket, not
+    /// by re-measuring each vertex. Over-inclusion costs a `signed_distance`
+    /// call and cannot change the answer; under-inclusion changes a world.
+    ///
+    /// # The longitude window
+    ///
+    /// A cap of angular radius `r` about latitude `phi` spans longitudes within
+    /// `asin(sin r / cos phi)` of the query's — **when the cap excludes both
+    /// poles**, which is exactly the condition `|phi| + r < pi/2`, and which
+    /// also guarantees `r < pi/2` so the formula's own branch is the principal
+    /// one. When the cap reaches a pole, longitude stops bounding anything and
+    /// the whole band is taken. Both the window and the test are recomputed
+    /// **per query** from `r` and this query's latitude.
+    ///
+    /// Deduplication is by sorting a small candidate list rather than by
+    /// stamping an epoch into a `Vec<u32>` over every polyline, and the reason
+    /// is `&self`: an epoch array is mutable state, which this method cannot
+    /// hold without interior mutability — and `ChannelNetwork` is shared across
+    /// scoped threads by the lab's runner, so a `RefCell` here would cost the
+    /// type its `Sync`. The alternative that keeps `&self` is a fresh
+    /// `vec![0; polylines.len()]` per query, which at level 6 is a 14 KB zeroing
+    /// per call against a candidate list of four to nine entries. Sorting the
+    /// short list is cheaper on both counts, and it is what produces the
+    /// ascending order the tie-break needs.
+    fn gather(&self, position: [f64; 3], rho: f64, out: &mut Vec<u32>) {
+        let r = rho + CAP_PAD;
+        let (lat, lon) = lat_lon(position);
+        let band_lo = band_of(lat - r, self.lat_bands);
+        let band_hi = band_of(lat + r, self.lat_bands);
+        let steps = self.lon_buckets as i64;
+
+        let reaches_a_pole =
+            lat + r >= std::f64::consts::FRAC_PI_2 || lat - r <= -std::f64::consts::FRAC_PI_2;
+        let ratio = math::sin(r) / math::cos(lat);
+        // `ratio.is_nan()` takes the whole band, which is the conservative
+        // answer: over-inclusion costs a `signed_distance` call and cannot
+        // change the result, while under-inclusion changes a world.
+        let (first, count) = if reaches_a_pole || ratio.is_nan() || ratio >= 1.0 {
+            (0, steps)
+        } else {
+            let half = math::asin(ratio);
+            let lo = lon_step(lon - half, self.lon_buckets);
+            let hi = lon_step(lon + half, self.lon_buckets);
+            (lo, (hi - lo + 1).clamp(1, steps))
+        };
+
+        for band in band_lo..=band_hi {
+            let row = band * self.lon_buckets;
+            for k in 0..count {
+                let column = (first + k).rem_euclid(steps) as usize;
+                let bucket = row + column;
+                let (from, to) = (
+                    self.starts[bucket] as usize,
+                    self.starts[bucket + 1] as usize,
+                );
+                out.extend_from_slice(&self.lines[from..to]);
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+    }
 }
 
 /// One channel reading at one position: what
@@ -775,12 +1028,38 @@ impl ChannelNetwork {
             }
         }
 
+        // ASSEMBLED, not struct-literalled, and assembled HERE — after the
+        // confluence repair above, which relocates every tributary mouth.
+        // `VertexGrid::build` measures `L_max` and buckets the vertices in the
+        // same pass, so both would be taken from pre-repair geometry if this
+        // ran any earlier.
+        ChannelNetwork::assemble(polylines, all_edges, runs, meander, trunk_vertex)
+    }
+
+    /// Assemble a network from its parts, building the vertex index over the
+    /// polylines as given.
+    ///
+    /// **The only constructor in the crate**, hand-built test networks
+    /// included, and that is the point: `grid` is a derived field, and a struct
+    /// literal that forgot it — or supplied one built from *different*
+    /// polylines — would produce a network whose `nearest_line` silently
+    /// answers about geometry it does not have. A private constructor makes
+    /// that unrepresentable; a private field alone does not.
+    fn assemble(
+        polylines: Vec<SphericalPolyline>,
+        band_edges: Vec<Vec<[f64; 4]>>,
+        run_cells: Vec<Vec<CellId>>,
+        meander: SphereFbm,
+        trunk_vertex: Vec<Option<(u32, u32)>>,
+    ) -> ChannelNetwork {
+        let grid = VertexGrid::build(&polylines);
         ChannelNetwork {
             polylines,
-            band_edges: all_edges,
-            run_cells: runs,
+            band_edges,
+            run_cells,
             meander,
             trunk_vertex,
+            grid,
         }
     }
 
@@ -897,8 +1176,95 @@ impl ChannelNetwork {
     /// correct as it stands — but the campaign's rule is that the line index
     /// is never serialized while the sign it selects will be, so it is worth
     /// knowing the two are not entirely independent.
+    /// # Implementation: the index narrows the candidate set and nothing else
+    ///
+    /// The scan below is the scan
+    /// [`ChannelNetwork::nearest_line_reference`] runs — the same
+    /// `line.signed_distance(position)`, the same `d.abs() < best.abs()`, in
+    /// ascending polyline index — restricted to the lines
+    /// [`VertexGrid::gather`] returns. The returned `f64` is bit-identical
+    /// because it is produced by the same function on the same inputs, and the
+    /// sign is **never re-derived from a segment here**: doing that would
+    /// duplicate the degenerate-segment side-borrowing and the intra-segment
+    /// tie-break that live in the kernel, which is the second chance to
+    /// disagree that this method's own doc argues against.
+    ///
+    /// So correctness reduces to whether the winner is in the set, which
+    /// [`VertexGrid`] states and argues. The loop iterates because the cap's
+    /// radius depends on the answer: it opens at `L_max / 2` (the smallest
+    /// radius the inequality can hold at, since `D >= 0`), and if the best
+    /// distance found needs a wider cap than was gathered, it re-gathers at
+    /// `D + L_max / 2`. `D` cannot increase when the set grows, so each pass
+    /// strictly widens the cap and the next pass's requirement is no larger —
+    /// it terminates, and in practice on the first or second pass.
+    ///
+    /// **Two exits go to the reference scan, and both are mandatory rather than
+    /// defensive.** A cap of radius `pi` is the whole sphere, so there is
+    /// nothing left to narrow and the index would only be paying for its own
+    /// bookkeeping. And a candidate set in which nothing compares — every
+    /// distance NaN, which a NaN position produces — must still answer exactly
+    /// what the unindexed scan answers, which is what running it does.
     /// type-audit: pending(wave-1: position), pending(wave-1: return)
     pub fn nearest_line(&self, position: [f64; 3]) -> Option<(usize, f64)> {
+        if self.polylines.is_empty() {
+            return None;
+        }
+        let half_max_segment = self.grid.max_segment / 2.0;
+        let mut rho = half_max_segment.max(MIN_SEARCH_RADIUS);
+        let mut candidates: Vec<u32> = Vec::new();
+        loop {
+            if rho.is_nan() || rho >= std::f64::consts::PI {
+                return self.nearest_line_reference(position);
+            }
+            candidates.clear();
+            self.grid.gather(position, rho, &mut candidates);
+            if candidates.is_empty() {
+                // Nothing in the cap at all: widen and look again. Growth is
+                // multiplicative so this reaches the whole-sphere fallback in a
+                // bounded number of passes however empty the neighbourhood is.
+                rho *= 4.0;
+                continue;
+            }
+            let mut best = f64::INFINITY;
+            let mut best_line: Option<usize> = None;
+            for &i in &candidates {
+                let d = self.polylines[i as usize].signed_distance(position);
+                if d.abs() < best.abs() {
+                    best = d;
+                    best_line = Some(i as usize);
+                }
+            }
+            let Some(line) = best_line else {
+                return self.nearest_line_reference(position);
+            };
+            if best.abs() + half_max_segment <= rho {
+                return Some((line, best));
+            }
+            rho = best.abs() + half_max_segment;
+        }
+    }
+
+    /// The **unindexed** linear scan over every polyline — the definition of
+    /// [`ChannelNetwork::nearest_line`], kept as an executable oracle.
+    ///
+    /// It is byte-for-byte the loop `nearest_line` was before The Millrace
+    /// indexed it, and it is never deleted. An index whose reference
+    /// implementation is gone is an index nobody can ever re-verify, and this
+    /// one narrows a candidate set that decides a **serialized sign** (see
+    /// [`ChannelNetwork::bank_signed_distance`]) — a wrong answer here does not
+    /// fail, it commits a different world and then drift-checks green forever.
+    ///
+    /// `domains/terrain/tests/channel_properties.rs` asserts
+    /// `nearest_line == nearest_line_reference` — the full `Option<(usize,
+    /// f64)>`, with the `f64` bit-equal — across levels 4 through 7 and a
+    /// position sample that includes the places the index is most likely to be
+    /// wrong. It is reached from there through
+    /// [`ChannelNetwork::nearest_line_reference_for_test`].
+    ///
+    /// It is also the query path's own mandatory fallback: when the search
+    /// radius reaches `pi` the cap is the whole sphere and the index has
+    /// nothing left to narrow, so the scan runs.
+    fn nearest_line_reference(&self, position: [f64; 3]) -> Option<(usize, f64)> {
         let mut best = f64::INFINITY;
         let mut best_line: Option<usize> = None;
         for (i, line) in self.polylines.iter().enumerate() {
@@ -909,6 +1275,23 @@ impl ChannelNetwork {
             }
         }
         best_line.map(|i| (i, best))
+    }
+
+    /// Test-only door onto [`ChannelNetwork::nearest_line_reference`], so the
+    /// equality property battery in `tests/channel_properties.rs` can compare
+    /// the index against the scan it replaced without the scan becoming part of
+    /// this crate's real public surface.
+    ///
+    /// `#[doc(hidden)]` for the reason
+    /// `hornvale_worldgen::defensibility_for_test` is: the reference stays
+    /// private, with `nearest_line` as its only production entry point, and
+    /// publishing a second "which line is nearest" method would invite exactly
+    /// the duplicate selection [`ChannelNetwork::bank_reading`] exists to
+    /// prevent.
+    /// type-audit: pending(wave-1: position), pending(wave-1: return)
+    #[doc(hidden)]
+    pub fn nearest_line_reference_for_test(&self, position: [f64; 3]) -> Option<(usize, f64)> {
+        self.nearest_line_reference(position)
     }
 
     /// Angular distance from `position` to the nearest channel in radians,
@@ -1098,19 +1481,21 @@ mod tests {
             unit(0.5, 1.0, 0.0),
         ];
         let edges = band_edges(36.0, 0.0, 1.0);
-        ChannelNetwork {
-            band_edges: vec![vec![edges; points.len()]],
-            run_cells: vec![(0..points.len() as u32).map(CellId).collect()],
-            polylines: vec![SphericalPolyline { points }],
-            meander: SphereFbm::new(
+        ChannelNetwork::assemble(
+            vec![SphericalPolyline {
+                points: points.clone(),
+            }],
+            vec![vec![edges; points.len()]],
+            vec![(0..points.len() as u32).map(CellId).collect()],
+            SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
             // These hand-built networks have no `CellId` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
-            trunk_vertex: Vec::new(),
-        }
+            Vec::new(),
+        )
     }
 
     /// A network of exactly two hand-built polylines, in the order given, with
@@ -1119,25 +1504,26 @@ mod tests {
     /// network can be assembled from outside the crate at all.
     fn two_line_network(first: Vec<[f64; 3]>, second: Vec<[f64; 3]>) -> ChannelNetwork {
         let edges = band_edges(36.0, 0.0, 1.0);
-        ChannelNetwork {
-            band_edges: vec![vec![edges; first.len()], vec![edges; second.len()]],
-            run_cells: vec![
-                (0..first.len() as u32).map(CellId).collect(),
-                (0..second.len() as u32).map(CellId).collect(),
-            ],
-            polylines: vec![
+        let (first_len, second_len) = (first.len(), second.len());
+        ChannelNetwork::assemble(
+            vec![
                 SphericalPolyline { points: first },
                 SphericalPolyline { points: second },
             ],
-            meander: SphereFbm::new(
+            vec![vec![edges; first_len], vec![edges; second_len]],
+            vec![
+                (0..first_len as u32).map(CellId).collect(),
+                (0..second_len as u32).map(CellId).collect(),
+            ],
+            SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
             // These hand-built networks have no `CellId` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
-            trunk_vertex: Vec::new(),
-        }
+            Vec::new(),
+        )
     }
 
     /// Offset `start` by `off` radians perpendicular to the polyline's first
@@ -1304,19 +1690,19 @@ mod tests {
     /// outside the crate at all.
     #[test]
     fn an_empty_network_has_no_bank() {
-        let empty = ChannelNetwork {
-            polylines: Vec::new(),
-            band_edges: Vec::new(),
-            run_cells: Vec::new(),
-            meander: SphereFbm::new(
+        let empty = ChannelNetwork::assemble(
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
             // These hand-built networks have no `CellId` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
-            trunk_vertex: Vec::new(),
-        };
+            Vec::new(),
+        );
         assert_eq!(empty.bank_signed_distance(unit(1.0, 0.0, 0.0)), None);
     }
 
@@ -1406,6 +1792,204 @@ mod tests {
             north_first.bank_signed_distance(query).unwrap(),
             -south_first.bank_signed_distance(query).unwrap(),
             "build order stopped deciding the sign of a tied position"
+        );
+    }
+
+    /// THE COVERAGE PROPERTY ITSELF, asserted directly rather than inferred
+    /// from an answer coming out right.
+    ///
+    /// `tests/channel_properties.rs` holds the contract — the indexed
+    /// `nearest_line` equals the unindexed scan — and that is the assertion
+    /// that matters. But it can only see a gather bug that actually *changes an
+    /// answer*, and measurement showed how thin that is: with the `L_max / 2`
+    /// term deleted from the pruning bound outright, **one probe in 6,175**
+    /// across four levels disagreed, and deleting the pole test from the
+    /// longitude window changed nothing at all. Neither is a wrong answer being
+    /// tolerated; both are the grid being far more generous than the cap it is
+    /// asked for — the bucket edge at every level exceeds `L_max`, so bucket
+    /// quantization supplies more margin than the term it would be covering
+    /// for, and a query never gets far enough from every line to need a radius
+    /// where the pole test binds. An equality test is a poor instrument for a
+    /// property whose violations are that rare.
+    ///
+    /// So the mechanism is pinned where it is stated: **`gather` returns a
+    /// superset of the lines with a vertex inside the cap.** That is the whole
+    /// of [`VertexGrid`]'s argument, it holds for every radius rather than for
+    /// the radii one world's queries happen to produce, and it is what the
+    /// near-pole coverage hole The Bearing shipped would violate.
+    ///
+    /// The radii sweep from far below the bucket edge to most of a hemisphere,
+    /// because the window formula changes branch across that range: below
+    /// `pi/2 - |lat|` the longitude window is `asin(sin r / cos lat)`, and above
+    /// it the cap swallows a pole and longitude bounds nothing.
+    #[test]
+    fn the_gather_covers_every_line_with_a_vertex_in_the_cap() {
+        let geo = Geosphere::new(5);
+        let outcome =
+            crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).expect("seed 42");
+        let terrain = crate::GeneratedTerrain::new(geo, outcome);
+        let net = terrain.channels();
+        let geo = terrain.geosphere();
+
+        // Positions: cell centres across the whole globe, plus the poles and a
+        // ladder of latitudes closing on them — the region the window formula
+        // is most sensitive in.
+        let mut positions: Vec<[f64; 3]> =
+            geo.cells().step_by(97).map(|c| geo.position(c)).collect();
+        positions.push([0.0, 0.0, 1.0]);
+        positions.push([0.0, 0.0, -1.0]);
+        for lat in [89.99_f64, 89.0, 80.0, 45.0] {
+            for hemisphere in [1.0_f64, -1.0] {
+                for step in 0..8 {
+                    positions.push(math::unit_sphere_from_lat_lon(
+                        hemisphere * lat,
+                        -180.0 + f64::from(step) * 45.0,
+                    ));
+                }
+            }
+        }
+
+        let mut checked = 0usize;
+        let mut nonempty = 0usize;
+        let mut candidates = Vec::new();
+        for &p in &positions {
+            for rho in [1.0e-4_f64, 1.0e-2, 5.0e-2, 0.25, 0.75, 1.5, 2.0, 3.0] {
+                candidates.clear();
+                net.grid.gather(p, rho, &mut candidates);
+                // Every line with a vertex inside the cap must be offered.
+                for (i, line) in net.polylines.iter().enumerate() {
+                    if line.points.iter().any(|&v| angle(p, v) <= rho) {
+                        assert!(
+                            candidates.binary_search(&(i as u32)).is_ok(),
+                            "line {i} has a vertex inside the cap of radius {rho} about {p:?} \
+                             but the gather did not offer it — the coverage argument the index \
+                             rests on does not hold, and nearest_line can silently answer with \
+                             the wrong river"
+                        );
+                    }
+                }
+                // Ascending and deduplicated, which is what makes the candidate
+                // scan's strict `<` reproduce the reference's lowest-index
+                // tie-break.
+                assert!(
+                    candidates.windows(2).all(|w| w[0] < w[1]),
+                    "the gather is not strictly ascending: {candidates:?}"
+                );
+                if !candidates.is_empty() {
+                    nonempty += 1;
+                }
+                checked += 1;
+            }
+        }
+        println!(
+            "gather coverage: {checked} (position, radius) pairs, {nonempty} with candidates, \
+             over {} lines",
+            net.polylines.len()
+        );
+        // Anti-vacuity in both directions: the sweep ran, and it ran on gathers
+        // that actually returned something to be right about.
+        assert!(checked >= 1_000, "only {checked} pairs swept");
+        assert!(
+            nonempty * 2 >= checked,
+            "only {nonempty} of {checked} gathers returned any candidate at all — the \
+             assertion above is mostly ranging over empty sets"
+        );
+    }
+
+    /// `L_max` is **measured**, not assumed: the stored `max_segment` is the
+    /// longest segment the network actually has.
+    ///
+    /// Spec §3.2 argues independently that `L_max <= 1.5 * E_max`, and Task 2
+    /// scored that at 1.051. That argument is a tripwire on this measurement,
+    /// never a substitute for it — a hard-coded ceiling would be a bound
+    /// nobody checked against the geometry it is meant to bound.
+    #[test]
+    fn the_stored_max_segment_is_the_longest_segment_there_is() {
+        let geo = Geosphere::new(5);
+        let outcome =
+            crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).expect("seed 42");
+        let terrain = crate::GeneratedTerrain::new(geo, outcome);
+        let net = terrain.channels();
+        let mut longest = 0.0_f64;
+        let mut segments = 0usize;
+        for line in &net.polylines {
+            for w in line.points.windows(2) {
+                longest = longest.max(angle(w[0], w[1]));
+                segments += 1;
+            }
+        }
+        assert!(segments > 1_000, "only {segments} segments to measure over");
+        assert_eq!(
+            net.grid.max_segment.to_bits(),
+            longest.to_bits(),
+            "the stored L_max ({}) is not the network's longest segment ({longest})",
+            net.grid.max_segment
+        );
+        assert!(
+            longest > 0.0,
+            "a zero L_max would make the cap argument vacuous"
+        );
+        println!("L_max {longest} rad over {segments} segments");
+    }
+
+    /// ANTI-VACUITY FOR THE TEST ABOVE. The tie query reaches the tie-break
+    /// through the **indexed gather**, not through the whole-sphere fallback.
+    ///
+    /// This matters because `nearest_line` answers from
+    /// [`ChannelNetwork::nearest_line_reference`] whenever the search radius
+    /// reaches `pi`, and the reference is the very implementation whose
+    /// tie-break the test above is checking. If this network's query took that
+    /// exit, the test would go green no matter what order the index gathered
+    /// candidates in — it would be pinning the oracle against itself and
+    /// asserting nothing about the index at all.
+    ///
+    /// The two arcs are each ~86.6 degrees, so `L_max` is ~1.51 rad and the
+    /// half-segment term alone is ~0.76 — a large fraction of `pi`, which is
+    /// exactly why the question is worth asking here and would not be worth
+    /// asking on a real network (where `L_max` is a cell spacing, ~2e-2 rad).
+    ///
+    /// `D + L_max / 2` is the **widest** radius `nearest_line`'s loop can ever
+    /// reach for a query whose answer is at distance `D`: the loop opens at
+    /// `L_max / 2` and only ever re-gathers at `D + L_max / 2`. So showing that
+    /// radius is below `pi`, and that the gather there already holds both
+    /// lines, shows the fallback cannot fire and the tie is decided among
+    /// candidates.
+    #[test]
+    fn the_exact_tie_is_decided_by_the_indexed_gather_not_the_fallback() {
+        let north = vec![unit(1.0, 0.0, 0.25), unit(0.0, 1.0, 0.25)];
+        let south = vec![unit(1.0, 0.0, -0.25), unit(0.0, 1.0, -0.25)];
+        let query = unit(1.0, 1.0, 0.0);
+        let net = two_line_network(north, south);
+
+        let half = net.grid.max_segment / 2.0;
+        let (_, signed) = net.nearest_line(query).expect("the network is non-empty");
+        let widest = signed.abs() + half;
+        println!(
+            "tie query: L_max {} rad, D {} rad, widest search radius {widest} rad",
+            net.grid.max_segment,
+            signed.abs()
+        );
+        assert!(
+            widest < std::f64::consts::PI,
+            "the tie query's widest search radius is {widest} rad, so nearest_line can reach \
+             the whole-sphere fallback and the tie-break test above says nothing about the index"
+        );
+
+        let mut candidates = Vec::new();
+        net.grid.gather(query, widest, &mut candidates);
+        assert_eq!(
+            candidates,
+            vec![0, 1],
+            "the gather at the widest radius does not offer both tied lines in ascending order"
+        );
+        // And at the radius the loop actually OPENS at, so the assertion above
+        // is not resting on a pass the query never makes.
+        let mut opening = Vec::new();
+        net.grid
+            .gather(query, half.max(MIN_SEARCH_RADIUS), &mut opening);
+        assert_eq!(
+            opening, candidates,
+            "the opening gather and the widest gather disagree about the candidate set"
         );
     }
 
@@ -1541,23 +2125,24 @@ mod tests {
             unit(1.0, 0.5, 0.0),
             unit(0.5, 1.0, 0.0),
         ];
-        let net = ChannelNetwork {
-            band_edges: vec![vec![
+        let run_cells = vec![(0..points.len() as u32).map(CellId).collect()];
+        let net = ChannelNetwork::assemble(
+            vec![SphericalPolyline { points }],
+            vec![vec![
                 band_edges(16.0, 0.0, 1.0),
                 band_edges(200.0, 0.0, 1.0),
                 band_edges(4_000.0, 0.0, 1.0),
             ]],
-            run_cells: vec![(0..points.len() as u32).map(CellId).collect()],
-            polylines: vec![SphericalPolyline { points }],
-            meander: SphereFbm::new(
+            run_cells,
+            SphereFbm::new(
                 Seed(42).derive(streams::CHANNEL_MEANDER),
                 MEANDER_FREQUENCY,
                 MEANDER_OCTAVES,
             ),
             // These hand-built networks have no `CellId` domain to index, and
             // nothing in this module's own tests asks about a trunk vertex.
-            trunk_vertex: Vec::new(),
-        };
+            Vec::new(),
+        );
         let head_half = net.band_edges[0][0][0];
         let mouth_half = net.band_edges[0][2][0];
         assert!(
