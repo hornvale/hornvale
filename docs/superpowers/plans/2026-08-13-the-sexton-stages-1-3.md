@@ -1048,15 +1048,44 @@ if [ -d "$DEST" ]; then
 fi
 
 # Prefer an existing pool member whose branch is already merged into BASE.
+#
+# CANDIDATES COME FROM `git worktree list`, NEVER FROM `find`. This is the
+# whole safety property of this loop, and getting it wrong is destructive.
+#
+# `.claude/worktrees/` accumulates ORPHAN DIRECTORIES — a worktree removed from
+# git's registry whose directory survives. `git -C <plain-dir-inside-the-repo>`
+# does not fail: it walks UP and operates on the ENCLOSING repository. So a
+# `find`-based scan asks an orphan for its branch and gets **the main
+# checkout's** branch back, judges it merged (main is always an ancestor of
+# origin/main), and then runs `git switch -c` against the main checkout —
+# yanking `main` onto a campaign branch underneath every other session.
+# Measured on a real orphan (`the-illumination`, 2026-08-13):
+#   $ git -C .claude/worktrees/the-illumination branch --show-current
+#   main            # <- the MAIN CHECKOUT's branch, not the orphan's
+#
+# Same family as PROC-git-dir-leak: a directory is not isolated from the
+# repository it sits inside.
 recycled=""
 while IFS= read -r wt; do
-    [ -d "$wt" ] || continue
+    # Never the main checkout, whatever the registry says.
+    [ "$wt" != "$ROOT" ] || continue
+    case "$wt" in "$POOL"/*) ;; *) continue ;; esac
+
     br="$(git -C "$wt" branch --show-current 2>/dev/null || echo '')"
     [ -n "$br" ] || continue
+
+    # Never recycle a tree someone is working in. A merged branch is not the
+    # same as an idle worktree: a session mid-cleanup after its own merge has
+    # a merged branch and live uncommitted work.
+    if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]; then
+        echo "worktree-take: skipping $wt — working tree is dirty" >&2
+        continue
+    fi
+
     if git -C "$ROOT" merge-base --is-ancestor "$br" "origin/$BASE" 2>/dev/null; then
         recycled="$wt"; break
     fi
-done < <(find "$POOL" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+done < <(git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{print $2}')
 
 if [ -n "$recycled" ]; then
     echo "worktree-take: recycling $recycled (its branch is merged into $BASE)" >&2
@@ -1096,7 +1125,39 @@ worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main
 
 Add `worktree-take` to `.PHONY`.
 
-- [ ] **Step 3: Verify recycling and the scratch sweep**
+- [ ] **Step 3: Prove the orphan-directory hazard is closed FIRST**
+
+Before testing the happy path, prove the dangerous one cannot happen. There is
+a real orphan in the pool right now — `.claude/worktrees/the-illumination`,
+which is a directory but is **not** in `git worktree list`.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git worktree list | cat
+ls -d .claude/worktrees/*/
+# The hazard, demonstrated:
+git -C .claude/worktrees/the-illumination branch --show-current
+```
+
+That last command prints `main` — the **main checkout's** branch, because `git
+-C` on a plain directory walks up to the enclosing repo. A `find`-based scan
+would treat that as a recyclable worktree and `git switch` the main checkout.
+
+Now confirm your implementation never sees it:
+
+```bash
+git -C "$(git rev-parse --show-toplevel)" worktree list --porcelain \
+  | awk '/^worktree /{print $2}'
+```
+
+Expected: four paths, none of them `the-illumination`. **If `the-illumination`
+appears in that list, STOP and report** — the safety property does not hold and
+the task cannot proceed as designed.
+
+Do NOT delete the orphan directory. It is not this task's to remove and may
+hold another session's work; report it instead.
+
+- [ ] **Step 4: Verify recycling and the scratch sweep**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -1127,7 +1188,7 @@ git worktree prune
 git branch -D campaign/hv-probe-sexton campaign/hv-probe-sexton2 hv-probe-merged 2>/dev/null || true
 ```
 
-- [ ] **Step 4: Update CLAUDE.md**
+- [ ] **Step 5: Update CLAUDE.md**
 
 Replace the sentence "Campaigns run in git worktrees under
 `.claude/worktrees/<campaign>/` (untracked); `make prewarm` warms a fresh one's
@@ -1147,7 +1208,7 @@ worktree would otherwise hand the next campaign the previous one's decision
 ledger, silently, and it would read as its own.
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
