@@ -530,9 +530,20 @@ see the same physics — finish the readout first), and never while main's
 checkout shows another session mid-landing (the preflight peeks and warns).
 Parallel sessions are the norm; small absorptions keep semantic drift next
 to its cause instead of surfacing it at a 105-commit merge. Campaigns run in
-git worktrees under `.claude/worktrees/<campaign>/` (untracked); `make
-prewarm` warms a fresh one's `target/` — start it in the background right
-after `git worktree add`, before the first gate.
+git worktrees under `.claude/worktrees/<campaign>/`
+(untracked), and since The Sexton those worktrees are a **recycled pool**, not
+one-per-campaign: `make worktree-take NAME=<campaign>` reuses a member whose
+branch is already merged, keeping its warm `target/` and sweeping its
+`.superpowers/sdd/` scratch. 73 branches went through this repo in one month
+against 3 live worktrees, each new one paying a full cold build (a measured
+771 s) that nothing recorded. `make prewarm` still warms a genuinely cold one —
+start it in the background right after taking it. **The scratch sweep is not
+optional**: `.superpowers/sdd/` is git-ignored and per-worktree, so a recycled
+worktree would otherwise hand the next campaign the previous one's decision
+ledger, silently, and it would read as its own. `make worktree-take` resolves
+the pool from the **main checkout** regardless of which worktree you run it
+from — running it from inside the campaign you are about to retire is normal,
+and the pool it finds is always the same one.
 
 `make preflight` mechanizes only the **checkable** half. It compares ancestry
 and peeks at main's checkout; it has no opinion about whether two campaigns

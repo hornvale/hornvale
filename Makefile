@@ -9,6 +9,7 @@
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
+#   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
@@ -23,7 +24,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -275,6 +276,9 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
 	@bash scripts/timed.sh prewarm -- make --no-print-directory prewarm-run
+
+worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main])
+	@NAME="$(NAME)" BASE="$(BASE)" bash scripts/worktree-take.sh
 
 # THE COLD-BUILD COST WAS INVISIBLE UNTIL THIS LANDED (The Sexton, Task 2).
 # docs/timings.md carried five labels and 73 branches went through this target
