@@ -1799,8 +1799,26 @@ sha="$(git rev-parse HEAD)"
 
 # census-run.sh enforces the canonical host (0079) and serialises on the box's
 # claim (0081). If another heavy job holds it, that is not a failure — skip.
-if ! bash scripts/census-run.sh status | grep -qi 'no .*run'; then
-    echo "nightly-census: the box is held by another heavy run; skipping tonight" >&2
+#
+# FAIL CLOSED, AND MATCH EXACTLY. Three verified facts force this shape:
+#  1. `hornvale lab claim-status` (which both status wrappers call) ALWAYS
+#     exits 0 — it only prints. So the exit code is not a predicate and the
+#     prose is the sole shell-visible signal.
+#  2. `census_claim.rs` itself warns against this: "Callers that must *decide*
+#     something need the fields, not the sentence: parsing prose back into data
+#     is how a measurement acquires a second, disagreeing model of its own
+#     format." We have no typed shell path, so we take the narrowest possible
+#     prose dependency and make every deviation safe.
+#  3. Therefore: proceed ONLY on an exact match of the known free-state string.
+#     Held, empty, error, or REWORDED output all fall through to skip. A loose
+#     pattern (`grep -qi 'no .*run'`) is wrong in the permissive direction —
+#     it can match a held line, and a five-hour census started on a contended
+#     box is the expensive failure here.
+free="no heavy run in progress"
+status="$(bash scripts/census-run.sh status 2>/dev/null || true)"
+if [ "$status" != "$free" ]; then
+    echo "nightly-census: not starting — status was: ${status:-<empty>}" >&2
+    echo "  (expected exactly: $free)" >&2
     exit 0
 fi
 
@@ -1841,10 +1859,13 @@ bash scripts/census-run.sh status
 grep -n "census-run.sh status" scripts/scheduled/nightly-census.sh
 ```
 
-Confirm the exact wording `census-run.sh status` prints when the box is
-**free**, and adjust the `grep -qi` pattern to match it. **Do not assume the
-string** — read the script's own output. If the pattern is wrong in the
-permissive direction the job will start a five-hour census on a contended box.
+The controller has already read it: `census-run.sh status` prints exactly
+`no heavy run in progress` (exit 0) when the box is free. Confirm that yourself
+before trusting it, and confirm the comparison is **exact and fail-closed** —
+anything other than that exact string must skip. If the string has changed
+since, STOP and report rather than loosening the match: a permissive predicate
+starts a five-hour census on a contended box, which is the expensive failure
+mode here.
 
 - [ ] **Step 3: Add the census ExecStart to the systemd unit**
 
