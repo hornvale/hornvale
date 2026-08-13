@@ -116,6 +116,15 @@ Predicted landing, by lever, each falsifiable on its own:
 | L1 connectivity suffix-memo (§6) | connectivity hops `walks x depth` -> `L` | shared trunk suffixes |
 | L2 the index (§3) | remaining `nearest_line` cost **/k** | `k` = the measured candidate-set factor, **unknown** |
 
+**Attribution is reported in absolute CPU-s/world deltas, never in ratios.**
+The three levers are multiplicative on overlapping subsets, so the *ratio* each
+appears to buy depends on which landed first — land L2 before L0 and L0 then
+appears to save half of a smaller number, while the final total is identical.
+Absolute deltas are order-independent and add; ratios are neither. This is the
+same failure as §1.3 seen from the other side: there a live absolute was
+divided by a retired denominator, here a live denominator would move under a
+sequence of arms.
+
 `k` is the campaign's one genuinely unknown quantity, and the honest statement
 is that the brief's ~1.1-1.3x target brackets two different worlds:
 
@@ -451,14 +460,27 @@ literal (`metrics.rs:3473-3520`) flows into
 
 Sequenced so that each task's measurement is honest about what precedes it.
 
-| # | task | gate |
-|---|---|---|
-| 1 | L0: collapse the duplicate scan (§4) | byte-identical artifacts; before/after arms |
-| 2 | Measure P2's candidate-set distribution on the un-indexed tree (§3.3) | **falsification hinge for task 4** |
-| 3 | Contract assertions for both tie-breaks (§5) | mutation-proven red |
-| 4 | The index + the permanent oracle (§3) | acceptance 2; byte-identical artifacts |
-| 5 | Connectivity: quantify P3, memoise, repair (§6) | the §6.3 branch table decides the column |
-| 6 | Close: census refresh, chronicle, retrospective, `TOOL-24` levers | acceptance 4, 5, 6 |
+| # | task | gate | ordering |
+|---|---|---|---|
+| 1 | L0: collapse the duplicate scan (§4) | byte-identical artifacts; before/after arms | **chosen** — attribution hygiene |
+| 2 | Measure P2's candidate-set distribution on the un-indexed tree (§3.3) | **falsification hinge for task 4** | **forced** — gates task 4 |
+| 3 | Contract assertions for both tie-breaks (§5) | mutation-proven red | **forced** — the oracle must exist before the index |
+| 4 | The index + the permanent oracle (§3) | acceptance 2; byte-identical artifacts | |
+| 5 | Connectivity: quantify P3, memoise, repair (§6) | the §6.3 branch table decides the column | |
+| 6 | Close: census refresh, chronicle, retrospective, `TOOL-24` levers | acceptance 4, 5, 6 | |
 
-Task 2 gates task 4. Task 5's memo and repair are one commit. Task 1 precedes
-everything so the index is measured against a deduplicated tree.
+The **forced/chosen** column exists because a chosen ordering may be revisited
+under pressure and a forced one may not; leaving them indistinguishable is how a
+dependency gets dropped. Task 5's memo and repair are one commit (§6.2).
+
+**One coupling that the task numbering hides.** Task 5's repair **changes the
+query distribution task 2 measured** — after it, walks chain to the sea instead
+of stopping at the first sub-threshold trunk, so more joins are probed and in
+different places. `k` is a property of the query population, so **P2's
+pre-repair measurement does not automatically transfer.** Task 2 therefore
+measures the distribution under *both* predicates (the shipped one and the
+repaired one), which is cheap because it is the same instrumented sweep run
+twice, and task 5 re-checks `k` against its own arm. Discovered by asking which
+task orderings were forced rather than assumed — the levers are otherwise
+measurement-independent, since L0 removes duplicate calls at the *same*
+positions and so leaves the distribution untouched.
