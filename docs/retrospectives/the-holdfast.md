@@ -134,6 +134,36 @@ four worldgen regressions this campaign had identified and listed
 (`seed_6_…figures_summary` 9.816 s → 3.559 s, `seed_9_…pole_star_line`
 8.591 s → 3.394 s).
 
+Main moved twice more during the close (The Fathom, 24 commits touching
+climate), so the absorb-verify-gate cycle ran three times in total. Each
+round re-took the sweep. That is the cost of closing a campaign while four
+worktrees are active, and it is the correct cost — the alternative is
+certifying a tree nobody will ever run.
+
+**In a many-worktree repo, address git by path, not by working
+directory.** A `cd` into the main checkout persisted across tool calls, and
+the next `git merge origin/main` therefore fast-forwarded *main* instead of
+absorbing into the branch. The symptom was alarming and completely
+misleading: `tolerance_liebig` read as the original eager form, the test had
+vanished, and the obvious conclusion — "the merge silently reverted the
+change" — was wrong. `git merge-base --is-ancestor <commit> HEAD` returning
+NO, plus `git rev-parse --abbrev-ref HEAD` printing `main`, located it in
+one step. Nothing was lost, because the branch ref still held everything.
+
+Two things follow. Use `git -C <path>` for every git command once more than
+one worktree exists; the cost is a variable and it removes the whole class.
+And when a change appears to have vanished, **ask which ref you are standing
+on before concluding anything about what git did to your work** — the
+vanishing was real, the explanation was not, and the wrong explanation would
+have led to re-applying a commit that was never lost.
+
+The near-miss inside the near-miss: had the shortcut actually been reverted,
+**the equivalence test would have passed vacuously**, exactly as it did the
+first time it was written, because it compares `tolerance_liebig` against a
+copy of the eager form. A test that pins an optimisation to its reference
+cannot detect the optimisation's removal. Only the profile or an explicit
+grep can.
+
 That is mostly good news, but it carries a warning for the campaign that
 takes followup F5: **a measured regression list goes stale while you hold
 it.** Two of the four items on this one were fixed by someone else within
