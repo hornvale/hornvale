@@ -1849,6 +1849,23 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(if count == 0 { 0.0 } else { sum / count as f64 })
             }),
         },
+        // --- The Gnomon (Task 1): the first-occurrence index. Each column
+        // reads the earliest `Fact.day` for a predicate (optionally narrowed
+        // to a specific text object) via the shared `first_day` helper below
+        // the registry — Absent when the key never occurs, never collapsed
+        // into 0.0 (a world with none and a world settled at genesis are
+        // different facts). ---
+        Metric {
+            name: "first-day-is-settlement",
+            doc: "Earliest world-day on which any settlement existed; \
+                  Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "is-settlement", None)),
+        },
         Metric {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
@@ -4747,6 +4764,35 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
     ]
+}
+
+/// The earliest `Fact.day` among facts matching `predicate` — and, when
+/// `object` is `Some`, whose object is that exact text. `Absent` when nothing
+/// matches, or when no matching fact is time-bound.
+///
+/// Absent is deliberately distinct from `Number(0.0)`: a key that never occurs
+/// in a world and a key that occurs at genesis are different facts about that
+/// world, and collapsing them would make the census unable to express the
+/// difference.
+fn first_day(world: &World, predicate: &str, object: Option<&str>) -> MetricValue {
+    let mut best: Option<f64> = None;
+    for f in world.ledger.find(predicate) {
+        if let Some(want) = object {
+            match &f.object {
+                Value::Text(t) if t == want => {}
+                _ => continue,
+            }
+        }
+        let Some(d) = f.day else { continue };
+        best = Some(match best {
+            Some(b) if b <= d.day() => b,
+            _ => d.day(),
+        });
+    }
+    match best {
+        Some(d) => MetricValue::Number(d),
+        None => MetricValue::Absent,
+    }
 }
 
 /// One world's raid bookkeeping, read off its reconstructed occupation
@@ -9299,7 +9345,16 @@ mod tests {
         // committed metric read the thing itself. Land is `e >= sea`,
         // matching mountain-coverage so the hypsometry target compares the
         // two directly.
-        assert_eq!(registry().len(), 203);
+        //
+        // +1 for THE GNOMON (Task 1: first-day-is-settlement) — the first
+        // column of a first-occurrence index over the fact ledger, reading
+        // the earliest `Fact.day` for a predicate via the shared `first_day`
+        // helper. Eighteen more of the same shape land in a later task of
+        // this campaign; each will move this pin by one and redden the
+        // census-fixture-header tests below until the campaign's pre-merge
+        // census refresh (root CLAUDE.md's census block) catches them all
+        // up at once.
+        assert_eq!(registry().len(), 204);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -12073,6 +12128,27 @@ mod tests {
             Extractor::Full(f) => f(view),
             other => panic!("metric {name} is {:?}-rung, not Full", other.rung()),
         }
+    }
+
+    #[test]
+    fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        match extract(&v, "first-day-is-settlement") {
+            MetricValue::Number(d) => assert!(d.is_finite(), "a first day must be finite, got {d}"),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn first_day_of_an_unmatched_object_is_absent() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        assert!(
+            matches!(
+                first_day(v.world(), "occ-people", Some("no-such-species")),
+                MetricValue::Absent
+            ),
+            "an object that never occurs must be Absent, never 0.0"
+        );
     }
 
     #[test]
