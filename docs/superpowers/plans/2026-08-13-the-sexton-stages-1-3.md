@@ -643,10 +643,27 @@ changed_crates="$(
     | sort -u | paste -sd, - )"
 [ -n "$changed_crates" ] || changed_crates='(none)'
 
-failed="$(grep -o '"name":"[^"]*"[^}]*"event":"failed"' "$RUN_JSON" 2>/dev/null \
-          | sed 's/.*"name":"\([^"]*\)".*/\1/' | sort -u)"
+# ORDER-INDEPENDENT, AND THAT IS NOT A STYLE CHOICE. nextest's
+# libtest-json-plus emits `event` BEFORE `name`:
+#   {"type":"test","event":"ok","name":"crate::bin$test","exec_time":0.021}
+# An earlier draft of this script grepped a name-then-event pattern. Measured
+# against a real 3,449-test run.json: that pattern matched 0 lines and this one
+# matched all 3,449. The failure mode was silent — the script would exit 0,
+# print nothing, and leave an empty ledger, which is indistinguishable from
+# "no tests failed".
+failed_lines="$(grep '"event":"failed"' "$RUN_JSON" 2>/dev/null)"
+[ -n "$failed_lines" ] || exit 0
 
-[ -n "$failed" ] || exit 0
+failed="$(printf '%s\n' "$failed_lines" \
+          | grep -o '"name":"[^"]*"' | sed 's/^"name":"//; s/"$//' | sort -u)"
+
+# A parse failure must be LOUD. If there are failed events but no name parses
+# out of them, the extractor is broken — not the suite — and a silent empty
+# ledger would hide exactly the data this script exists to collect.
+if [ -z "$failed" ]; then
+    echo "defect-ledger: $RUN_JSON has failed events but no parseable test names — the EXTRACTOR is broken, not the suite" >&2
+    exit 1
+fi
 
 if [ ! -f "$LEDGER" ]; then
     printf '# Defect ledger for %s — which test caught what, and on what change.\n' "$HOST" > "$LEDGER"
@@ -704,6 +721,17 @@ rm kernel/tests/hv_probe_red.rs
 ```
 Expected: a row naming `hv_probe_deliberate_red`, with `changed_crates`
 containing `kernel`.
+
+**If that file is empty or missing, STOP and report it** — do not "fix" it by
+loosening the grep until something appears. An empty ledger after a known red
+run means the extractor did not match, which is the precise silent failure this
+script was rewritten to avoid. Confirm the raw material is actually there
+before touching the script:
+
+```bash
+grep -c '"event":"failed"' target/nextest/ci/run.json
+grep '"event":"failed"' target/nextest/ci/run.json | head -1 | cut -c1-200
+```
 
 Then the green case:
 ```bash
