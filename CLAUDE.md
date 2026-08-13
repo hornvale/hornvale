@@ -174,9 +174,12 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
 # reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them. Refreshed once per campaign at the pre-merge close, keeping
-# book/src/laboratory/generated/*/rows.csv current with main rather than
-# lagging it.
+# for them. Refreshed NIGHTLY on lefford since The Sexton (scripts/scheduled/), which
+# posts the diff to the board and commits nothing. A campaign close now READS
+# last night's result instead of waiting for a run: if the diff is empty you
+# are done. Committing a moved column is still a deliberate human act on the
+# canonical box. The Rill's refresh took 19,207 s to move three of 205 columns
+# with a human waiting on it; nothing about that needed to be synchronous.
 #
 # THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
 # whatever box you are sitting at". That ambiguity is the whole trap, and it
