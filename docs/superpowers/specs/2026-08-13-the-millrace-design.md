@@ -451,8 +451,21 @@ literal (`metrics.rs:3473-3520`) flows into
   **regeneration is an explicit-authorization carve-out — ask Nathan.** Budget
   from `docs/timings.md` (`grep '| census |' docs/timings.md | tail`), never
   from a doc comment.
-- `make gate` is ~8 min and three other campaigns are live on this box
-  (`the-docket`, `the-fathom`, `the-repose`) — stagger gates.
+- **This is the only campaign running until the performance issue is solved**
+  (Nathan, at G3). Three other worktrees exist on the box — `the-docket`,
+  `the-fathom`, `the-repose` — but no session is active in them, so gates need
+  no staggering. A worktree's existence is not a running session, and this
+  campaign inferred the wrong thing from `git worktree list` at G3.
+
+  The benefit is a measurement one, and it is larger than the scheduling one.
+  Every arm this campaign takes lands on a **quiet box**, so `uptime` either
+  side is a confirmation rather than a filter, and no number has to be
+  discarded for contention. The Rill discarded a 5-run pair taken at load
+  average 50 that was 3.3x wrong, and `make ci`'s alarm is known to be blind to
+  ordinary load (it asks only whether a *census claim* is held, so parallel
+  sessions are invisible to it). Neither hazard is live here. If that changes —
+  another campaign starts — every arm taken after it is contended and must say
+  so.
 
 ---
 
