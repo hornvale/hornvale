@@ -180,6 +180,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/slice-2` | third of three orthogonal crust noise slices (hash-noise only; no stream draws) |
 | `terrain/crenulation` | rift crenulation-noise sub-leg (hash-noise only; no stream draws) |
 | `terrain/channel-meander` | channel meander displacement field (hash-noise only; no stream draws) |
+| `terrain/rill-partition` | where a sub-cell catchment divides between its two branches (hash-noise only; no stream draws) |
 
 ### hornvale-vessel
 

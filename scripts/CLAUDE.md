@@ -147,3 +147,38 @@ confirmation-gated in the Makefile.
   fixture, and the duplication went stale twice (2026-07-13, 2026-07-20)
   because nothing forced it back into sync — this closes the gap by
   construction rather than by memory.
+- **The board lane rule** (B13, decision 0129): `tools/board/` is a `.rs`
+  tree but not a workspace member (`members = ["kernel", "domains/*",
+  "windows/*", "cli"]`), so the Rust-relevant filter above would otherwise
+  run a full `make quick` that cannot see it, while skipping the 24.4s
+  `cargo test --manifest-path tools/board/Cargo.toml` suite that can. When
+  the **entire** staged set is under `tools/board/`, the hook runs that
+  suite instead of `make quick`; any other staged path — including a
+  **mixed** commit that touches `tools/board/` alongside workspace code —
+  falls through to the ordinary filter unchanged, so this only ever adds
+  coverage and never drops the workspace gate on a change that needs it.
+  This rule covers board-only *commits*; it is not a substitute for a gate
+  that runs the board's 194 tests on every push — nothing does that (see
+  root `CLAUDE.md`'s board paragraph), so a mixed commit still needs `make
+  quick` to catch a workspace regression, and neither arm catches a board
+  regression introduced by a change that never gets committed at all.
+- **`git -C <dir>` DOES NOT SCOPE WHICH REPOSITORY GIT ACTS ON**, and wiring
+  the board suite into the lane above is how the project learned it. Git runs
+  a hook with `GIT_DIR` and `GIT_INDEX_FILE` **exported**, and from a linked
+  worktree — where all campaign work happens — they are absolute paths into
+  the real repository (`GIT_DIR=/…/.git/worktrees/<campaign>`). `GIT_DIR`
+  outranks `-C`, which only sets the working directory. So every
+  `git -C <tempdir>` in the board's hermetic-looking tests operated on the
+  developer's own checkout: `git init` re-initialised it and guessed **bare**
+  (a worktree gitdir does not end in `/.git`, so `core.bare = true` and the
+  primary checkout stopped being a working tree at all), `git config`
+  overwrote `user.name` with `board test`, the merge helper landed
+  `root`/`work`/`merge` commits on `main` plus `campaign/*` branches, and a
+  loose-ref write left `refs/hornvale/peers/dangling -> deadbeef…`, which
+  broke `git fetch` repository-wide. The fix is
+  `tools/board/src/git.rs`'s `Repo::command`, which scrubs
+  `GIT_LOCATION_VARS`/`GIT_IDENTITY_VARS` from every invocation; the guard is
+  `tools/board/tests/hermeticity{,_env}.rs`; and the belt is the `env -u`
+  prefix on the `cargo test` line here. **Any hook that runs a test suite
+  touching git needs that `env -u`** — a temp directory is not isolation when
+  the environment names the repository.

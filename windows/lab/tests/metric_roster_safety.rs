@@ -26,7 +26,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
-use hornvale_lab::{BuiltView, MetricValue, registry};
+use hornvale_lab::{BuiltView, MetricValue, ViewRung, registry};
 use hornvale_worldgen::WorldComponents;
 
 /// The rosters the two shipped studies build with, in
@@ -83,13 +83,8 @@ fn every_metric_survives_every_study_roster() {
     let mut report: Vec<String> = Vec::new();
     let mut family: Vec<String> = Vec::new();
     for (label, wc) in study_rosters() {
-        let view = BuiltView::build_to(
-            Seed(42),
-            &SkyPins::default(),
-            wc,
-            hornvale_worldgen::BuildDepth::Full,
-        )
-        .expect("a full-depth build at seed 42");
+        let view = BuiltView::build_to(Seed(42), &SkyPins::default(), wc, ViewRung::Full)
+            .expect("a full-depth build at seed 42");
         for name in panicking_metrics(&view) {
             report.push(format!("roster {label}: {name}"));
         }

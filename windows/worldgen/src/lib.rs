@@ -8513,10 +8513,19 @@ type RenderedPantheon = (
 /// beliefs. The single site both [`almanac_context`] and
 /// [`rendered_beliefs`] build a species' voiced pantheon (the
 /// content→render seam, spec §6) through.
+///
+/// Takes the world's ALREADY-BUILT `climate` (The Single Sculpt) rather than
+/// re-deriving one per species: both callers loop this over every biosphere
+/// kind, and the plain `observed_phenomena_as` this used to call re-runs the
+/// full terrain sculpt plus climate derivation on every trip. Byte-identical
+/// whenever `climate` equals `climate_of(world)` — the observation reads only
+/// the climate's fields, via the documented `observed_phenomena_as_in_from`
+/// seam the census path already relies on.
 fn rendered_pantheon_of(
     world: &World,
     wc: &WorldComponents,
     species: &str,
+    climate: &GeneratedClimate,
 ) -> Result<Option<RenderedPantheon>, BuildError> {
     let Some(v) = flagship_of(world, species) else {
         return Ok(None);
@@ -8525,7 +8534,7 @@ fn rendered_pantheon_of(
     if beliefs.is_empty() {
         return Ok(None);
     }
-    let phenomena = observed_phenomena_as(world, species)?;
+    let phenomena = observed_phenomena_as_in_from(world, wc, species, climate)?;
     // Reached only once `flagship_of` above returned `Some`: only peopled
     // species place settlements/flagships, so `species` is guaranteed peopled
     // here. Psychology sourced from the ALREADY-built component set (ECS c3),
@@ -8586,8 +8595,13 @@ pub fn rendered_beliefs(
     // (ECS c3): every species here is a canonical registry kind, so `assemble`
     // gives the byte-identical psyche rows a per-def rebuild would.
     let wc = WorldComponents::assemble()?;
+    // One climate for the whole loop (The Single Sculpt), not one per species:
+    // `rendered_pantheon_of` observes phenomena, and observation needs the
+    // world's climate. Byte-identical — this is the same `climate_of(world)`
+    // each per-species call used to derive for itself.
+    let climate = climate_of(world)?;
     for name in wc.biosphere.ids() {
-        if let Some((_, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, &wc, name.0, &climate)? {
             out.extend(rendered);
         }
     }
@@ -8769,7 +8783,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             // predicate, the People section uses (`settlement_lines`).
             let named = placed_peoples(world).len() > 1;
             for name in wc.biosphere.ids() {
-                if let Some((v, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
+                if let Some((v, rendered)) = rendered_pantheon_of(world, &wc, name.0, &climate)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         attribution: named.then(|| hornvale_almanac::PantheonAttribution {
                             species: name.0.to_string(),

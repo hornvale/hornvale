@@ -90,6 +90,16 @@ fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
 }
 
 /// The micro-habitat clause reads the MicroField deterministically (no draw).
+///
+/// **This match is a second expression of the grounding partition**, and
+/// `micro::wetness_is_grounded` — which is `pub` precisely so there
+/// would be only one — names that as its failure mode: "a second copy of this
+/// test is exactly how an emitted arm and a grounded arm quietly stop
+/// describing the same rooms". The bare-ground/ice split below is decided
+/// here independently rather than by calling it. The two agree **exactly
+/// today** (verified at The Rill's close, so this is drift risk and not a live
+/// divergence) and were deliberately left uncollapsed, because merging them is
+/// a behaviour change. Change either arm and you must change both.
 fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
     match expr.realm.medium {
         // Permanent ice is land, and its clauses were the ordinary land ones —
@@ -404,7 +414,7 @@ mod tests {
                 face: 3,
                 path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, last],
             };
-            let micro = crate::micro::micro_field(addr.seed(Seed(42)));
+            let micro = crate::micro::micro_field(addr.seed(Seed(42)), None);
             let r = derived_regime(
                 Seed(42),
                 &addr,

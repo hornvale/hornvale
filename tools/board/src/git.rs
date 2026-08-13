@@ -1,10 +1,107 @@
 //! The only place this crate invokes `git`. Every operation takes an explicit
-//! repo root; nothing depends on the process working directory, which is what
-//! makes the tests hermetic.
+//! repo root, and every invocation is built by [`Repo::command`], which is
+//! what makes the tests hermetic.
+//!
+//! **`-C <root>` is not enough, and believing it was cost this project a
+//! corrupted checkout.** `-C` sets git's working directory; it does *not*
+//! scope which repository git acts on. `GIT_DIR` in the environment
+//! outranks it entirely, and git *exports an absolute `GIT_DIR`* to every
+//! hook it runs from a linked worktree:
+//!
+//! ```text
+//! GIT_DIR=/…/hornvale/.git/worktrees/the-beacon
+//! GIT_INDEX_FILE=/…/hornvale/.git/worktrees/the-beacon/index
+//! ```
+//!
+//! `scripts/hooks/pre-commit` runs this crate's suite on a board-only commit
+//! (B13, decision 0129), so every `git -C <tempdir>` in every test inherited
+//! that and operated on the developer's real repository instead: `git init`
+//! re-initialised it (and, because a worktree gitdir does not end in
+//! `/.git`, guessed *bare* and set `core.bare = true`), `git config` rewrote
+//! its identity to the test's, `git commit`/`merge` landed `board test`
+//! commits on `main`, and `update-ref` left dangling refs that broke
+//! `git fetch` repository-wide.
+//!
+//! Hence [`GIT_LOCATION_VARS`]: every invocation starts from a scrubbed
+//! environment, so the repository is decided by `-C <root>` and nothing else.
+//! `tools/board/tests/hermeticity.rs` is the guard.
 
 use crate::BoardError;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/// Every environment variable that can redirect `git` at a repository, index,
+/// or object store other than the one `-C <root>` names.
+///
+/// Scrubbed from every invocation this crate makes ([`Repo::command`]).
+/// `GIT_DIR` is the one that did the damage, but each of these can move the
+/// target: `GIT_WORK_TREE`/`GIT_COMMON_DIR` relocate the tree and the shared
+/// dir, `GIT_INDEX_FILE` the staging area, `GIT_OBJECT_DIRECTORY` and
+/// `GIT_ALTERNATE_OBJECT_DIRECTORIES` where objects are written and read,
+/// `GIT_NAMESPACE` which refs are visible, and the two discovery knobs how
+/// far git walks up looking for a repository.
+pub const GIT_LOCATION_VARS: &[&str] = &[
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    "GIT_PREFIX",
+];
+
+/// Every environment variable that can decide *who authored* a commit this
+/// crate writes.
+///
+/// Also scrubbed, for a smaller reason than [`GIT_LOCATION_VARS`]: these
+/// cannot corrupt another repository, but git exports `GIT_AUTHOR_NAME`,
+/// `GIT_AUTHOR_EMAIL`, and `GIT_AUTHOR_DATE` to a hook, so a `board post`
+/// made from inside one would silently be stamped with the *outer* commit's
+/// author and timestamp rather than the identity `git config` names. Scrubbing
+/// them makes a board commit read the same whether or not a hook is in the
+/// call stack.
+pub const GIT_IDENTITY_VARS: &[&str] = &[
+    "GIT_AUTHOR_NAME",
+    "GIT_AUTHOR_EMAIL",
+    "GIT_AUTHOR_DATE",
+    "GIT_COMMITTER_NAME",
+    "GIT_COMMITTER_EMAIL",
+    "GIT_COMMITTER_DATE",
+];
+
+/// Every environment variable that can inject *config* into a git invocation.
+///
+/// **Severity: mislabeling, not corruption.** These cannot redirect the
+/// repository, and that was verified rather than assumed — injecting
+/// `core.worktree` through both `GIT_CONFIG_PARAMETERS` and the
+/// `GIT_CONFIG_COUNT`/`_KEY_0`/`_VALUE_0` trio still left
+/// `rev-parse --show-toplevel` and `--absolute-git-dir` answering the `-C`
+/// repository, because git ignores `core.worktree` once `GIT_DIR` is scrubbed
+/// (and it is, above). Nothing here opens a path to another repository's
+/// objects or refs.
+///
+/// `GIT_CONFIG_PARAMETERS` is the one that is actually **hook-exported**, and
+/// only when the outer command used `-c`: `git -c user.name=Injected commit`
+/// hands the hook `GIT_CONFIG_PARAMETERS='user.name'='Injected'`. It outranks
+/// repo-local config, so before this list existed a board commit in a repo
+/// configured `board test` came out stamped `Injected Identity` — which
+/// falsified [`GIT_IDENTITY_VARS`]' promise that a board commit reads the same
+/// whether or not a hook is in the call stack. It holds now.
+///
+/// The rest are **not** hook-exported and are inert here; they are listed for
+/// uniformity, so that "config cannot come from the environment" is the whole
+/// rule rather than a rule with one member. Scrubbing `GIT_CONFIG_COUNT` alone
+/// disarms any `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_VALUE_<n>` pairs, since git
+/// reads the count to know how many to apply — so those need no enumeration.
+pub const GIT_CONFIG_VARS: &[&str] = &[
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_SYSTEM",
+];
 
 /// A handle to a git repository, identified by its root directory.
 #[derive(Debug, Clone)]
@@ -42,6 +139,11 @@ impl Repo {
     /// resolves a relative `GIT_INDEX_FILE` against its own `-C` root, but
     /// any Rust-side cleanup of the same path resolves against the
     /// *process* cwd, so a relative path here is a latent leak.
+    ///
+    /// The `.env` here lands *after* [`command`](Self::command)'s scrub, which
+    /// removes `GIT_INDEX_FILE` along with the rest of
+    /// [`GIT_LOCATION_VARS`] — so this sets the throwaway index deliberately
+    /// on top of a clean environment rather than inheriting a hook's.
     pub fn git_with_index(&self, index: &Path, args: &[&str]) -> Result<String, BoardError> {
         let out = self
             .command()
@@ -52,11 +154,39 @@ impl Repo {
         Self::finish(args, out)
     }
 
-    /// The `git -C <root>` invocation common to every command this crate runs.
+    /// The `git -C <root>` invocation common to every command this crate runs,
+    /// built from an environment scrubbed of everything that could point git
+    /// somewhere else.
+    ///
+    /// This is the **only** `Command::new("git")` in the crate, and
+    /// `tools/board/tests/hermeticity.rs` asserts that it stays the only one —
+    /// a second spawn site would be a second chance to inherit a hook's
+    /// `GIT_DIR`. See the module docs for what that cost once.
     fn command(&self) -> Command {
         let mut cmd = Command::new("git");
+        for var in GIT_LOCATION_VARS
+            .iter()
+            .chain(GIT_IDENTITY_VARS)
+            .chain(GIT_CONFIG_VARS)
+        {
+            cmd.env_remove(var);
+        }
         cmd.arg("-C").arg(&self.root);
         cmd
+    }
+
+    /// Run git and hand back the raw [`Output`](std::process::Output),
+    /// **without** treating a non-zero exit as an error.
+    ///
+    /// [`git`](Self::git) discards stdout on failure, which is exactly where
+    /// git puts diagnostics like `CONFLICT (content)`. A caller that needs to
+    /// assert *why* a command failed needs those bytes. Only a failure to
+    /// spawn is an error here.
+    pub fn git_output(&self, args: &[&str]) -> Result<std::process::Output, BoardError> {
+        self.command()
+            .args(args)
+            .output()
+            .map_err(|e| BoardError::Io(format!("spawning git: {e}")))
     }
 
     /// Shared success/failure handling for a finished `git` invocation.
@@ -73,11 +203,24 @@ impl Repo {
 
     /// Run git with bytes on stdin, returning trimmed stdout.
     pub fn git_stdin(&self, args: &[&str], input: &[u8]) -> Result<String, BoardError> {
+        let out = self.git_stdin_bytes(args, input)?;
+        Ok(String::from_utf8_lossy(&out).trim_end().to_string())
+    }
+
+    /// Run `git` with `input` on stdin, returning stdout as **bytes**.
+    ///
+    /// [`git_stdin`](Self::git_stdin) decodes lossily and trims trailing
+    /// whitespace, both of which corrupt a size-framed stream: lossy decoding
+    /// changes byte lengths (U+FFFD is three bytes) and trimming eats the last
+    /// record's terminator. `cat-file --batch` is size-framed, so it needs
+    /// this.
+    pub fn git_stdin_bytes(&self, args: &[&str], input: &[u8]) -> Result<Vec<u8>, BoardError> {
         use std::io::Write;
         use std::process::Stdio;
-        let mut child = Command::new("git")
-            .arg("-C")
-            .arg(&self.root)
+        // Through `command()`, not a second `Command::new("git")`: this path
+        // must inherit the same environment scrub as every other.
+        let mut child = self
+            .command()
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -100,7 +243,7 @@ impl Repo {
                 stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
             });
         }
-        Ok(String::from_utf8_lossy(&out.stdout).trim_end().to_string())
+        Ok(out.stdout)
     }
 
     /// Resolve a ref, reporting absence as `None` rather than an error.
@@ -134,6 +277,30 @@ impl Repo {
             "--git-path",
             name,
         ])?))
+    }
+
+    /// Resolve a path under the repository's **common** dir — shared by
+    /// every worktree, unlike [`git_path`](Self::git_path)'s per-worktree
+    /// answer. A `git fetch` serves every worktree at once (there is one
+    /// remote-tracking state, not one per worktree), so anything that
+    /// records "when did we last sync" belongs here: verified empirically
+    /// that from inside a linked worktree, `--git-path` returns
+    /// `/…/.git/worktrees/<name>` while `--git-common-dir` returns the
+    /// shared `/…/.git` — recording sync times under the former would report
+    /// nine different ages for one fetch, one per worktree.
+    ///
+    /// Always absolute, for the same reason `git_path` is: a relative path
+    /// resolves against the *process* cwd on the `std::fs` calls a caller
+    /// makes with it, not the repo root.
+    pub fn git_common_path(&self, name: &str) -> Result<PathBuf, BoardError> {
+        Ok(
+            PathBuf::from(self.git(&[
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-common-dir",
+            ])?)
+            .join(name),
+        )
     }
 }
 

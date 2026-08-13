@@ -1445,6 +1445,26 @@ that could not, by construction, reflect the layer being changed, and four
 stages of evidence were vacuous before anyone noticed. The check that a
 measurement can move at all belongs beside the measurement, not after it.
 
+[The Millrace](./chronicle/the-millrace.md) supplies the sharpest measurement
+of that cost this chapter has, and it is a count rather than an argument. One
+of the census columns this chapter counts among the world's self-checks —
+`channel-connectivity`, which asks whether a tributary's junction with its
+trunk stays inside the channel band — was asking its continuation question
+with a stricter test than the network's own, so **82.83% of its walks ended
+before reaching the join they existed to test** and scored intact without ever
+testing one. The column read 1.0000. Repaired, on sixty-four worlds, it still
+reads 1.0000 — the value was right and the claim behind it was empty, which is
+the exact failure a drift check cannot see. The campaign then went looking for
+the same shape in its own work and found it **five more times**, twice inside
+the repair for the first instance and once in the file whose own documentation
+is a warning about it. Two consequences for this chapter's confidence
+accounting. A column's *value* being stable across campaigns is evidence about
+the world only if something independent establishes the column can move at all;
+and the discipline that catches these is not review but **mutation** — every
+one of the six was settled by neutralising the code under test and watching
+whether anything went red. Nothing in the standing gate does that for a
+Laboratory metric.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single
@@ -1701,6 +1721,40 @@ whose land itself never varies because it is permanently frozen.
   What moved is the menu: crossing the floor by *addition and disclosure* costs
   no conservation proof, and is available to any quantity willing to travel
   beside the coarse field rather than replacing it.
+  **Re-scored by [The Rill](./chronicle/the-rill.md) (2026-08-13): the
+  principle was *measured failing*, at a magnitude no previous campaign had
+  produced, and the repair converts it from a rule a design must respect into
+  a property of what kind of quantity is being refined.** Every re-score above
+  argues about what a fine layer may add, subtract or disclose. The Rill asked
+  the mechanical question underneath all of them — *which quantity is being
+  refined* — and got a dichotomy with a measurement on each side. A **scalar**
+  refines by area partition: the parts sum to the whole, so the fine answer
+  cannot disagree with the coarse one, by construction rather than by test. A
+  **direction** refines by a transfer operator between a mesh and its dual, and
+  **there is no canonical one**. The campaign built the direction lift first,
+  in good faith, and it delivered 26–31% of land to the sea where the coarse
+  graph delivers 74–82%, doubled the basin count, and sent 6.0–7.5% of interior
+  faces to a terminus outside their own coarse basin. Rebuilt as a partition of
+  the scalar with directions *inherited from attachment* rather than computed,
+  basin agreement is 41,415 of 41,415. Three consequences for this row. First,
+  the row's own long-standing framing was subtly wrong about the mesh: it has
+  read "a level-7 room literally *is* a level-7 triangle" as licence to lower
+  coarse structure onto rooms, and cells are the icosphere's **vertices** while
+  rooms are its **faces**, so a coarse flow edge runs *along* a room's boundary
+  and never through it — the primal/dual distinction is load-bearing and the
+  active-region swap this row still awaits inherits it. Second, **every local
+  invariant held while the composed one failed**, which is the sharpest
+  statement yet of what a refinement owes: agreement checked one step at a time
+  is not agreement, and the reference must be the coarse graph's *composed*
+  answer. Third, the harm has a visible signature — routing a direction out of
+  every element gives every element a channel, and the campaign's world came
+  out with 5–6% of its land underwater against a 0.5% ceiling. **Saturation is
+  the signature of having refined the wrong quantity**, and it is cheap to look
+  for. The bet's confidence rises: it now has a mechanical test (is this
+  quantity a scalar or a direction?) that predicts violations before they are
+  built, alongside The Grain's test (is this field ordinal or nominal?) that
+  predicts them for values. What is unchanged is that both tests were bought by
+  building the violation first.
 
 
 ## Genuinely open — split by whether the world can grade itself
