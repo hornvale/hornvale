@@ -12,7 +12,14 @@ use crate::diurnal::{diurnal_amplitude, diurnal_anomaly};
 use hornvale_kernel::math;
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomaly, Temperature};
 
-/// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
+/// Standard (ICAO) environmental lapse rate: °C lost per meter of elevation
+/// above sea level. **Not** the dry adiabatic rate (9.8 K/km) — 6.5 K/km is
+/// the observed/standard-atmosphere rate, and the two are not
+/// interchangeable; see `docs/audits/land-elevation-attribution.md` §3.5,
+/// which uses this same rate and explicitly disclaims 9.8 K/km.
+///
+/// kind: **physics** (decision 0106). Cited: ICAO/US Standard Atmosphere
+/// 1976, troposphere lapse rate.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains

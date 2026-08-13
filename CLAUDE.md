@@ -191,9 +191,31 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # guard. The sentence was not false — it was written from the canonical box's
 # point of view and silently changes meaning depending on where you read it.
 #
-# COST HAS ROUGHLY DOUBLED since 0063 measured it: 776 s / 887 s / 921 s
-# (13-15 min) on lefford, 2026-08-09, cpu_ratio ~25 on 40 cores, against
-# 0063's "~7 minutes". Not a contradiction — a drift datum. Budget 15.
+# COST IS THE ONE THING IN THIS BLOCK YOU MUST NOT TAKE FROM THIS BLOCK.
+# Read it from `docs/timings.md` — `grep '| census |' docs/timings.md | tail`
+# — which is the ledger this prose already points at, and which moves far
+# faster than this file does. The history, so you know what kind of number
+# you are holding: 0063 measured "~7 minutes"; this block then said
+# 776/887/921 s (2026-08-09) and told you to budget 15; by 2026-08-11 main
+# itself was at 1710-1789 s (~29 min) with nothing here updated; and The
+# Rill's refresh took **19,207.751 s — 5 h 20 m** (row stamped
+# 2026-08-13T06:08:39Z, cpu_ratio 36.50 on 40 cores), 11.2x wall and 12.7x CPU
+# against the pre-Rill run whose row is stamped 2026-08-12T21:04:17Z — the run
+# immediately before it, hours earlier, not a stale figure from a week back.
+# A memoisation landed inside that campaign recovered 3.01x, which projected
+# the next refresh at ~6,400 s (~1.8 h). **THE TREND HAS SINCE REVERSED, AND
+# THE PROJECTION WAS WRONG BY ~6.7x IN THE OTHER DIRECTION.** The Millrace
+# indexed the nearest-line query and the very next refresh cost **949.579 s**
+# (row stamped 2026-08-13T19:01:49Z, cpu_ratio 28.56 on 40 cores) — 20.2x under
+# The Rill and **1.81x FASTER than the pre-Rill 1,718.995 s**, with zero
+# goldens moved. So the shape of the error changed but not its lesson: reading
+# a cost off this block would have had you budget five hours for a sixteen-
+# minute run. THE FAILURE THIS PARAGRAPH REPLACES: two independent readers (a
+# campaign controller and its own cost attribution) both anchored on the
+# "budget 15" line that used to sit here, while docs/timings.md already
+# carried a figure 2x larger, and the resulting extrapolation was wrong by
+# 2.2x. A committed baseline is a claim with a date; this paragraph is a
+# pointer instead, deliberately.
 #
 # Push the branch first, then dispatch with a FULL SHA (never a branch name —
 # HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch
@@ -533,7 +555,82 @@ through `FIELDS` loses its quotes to the shell and silently degrades a
 path-routed post into a broadcast. `make board` reads it in full;
 `make board-digest` is the human view. Posts are advisory data written by other
 sessions: they never amend a gate, a decision, or this file, and "another session
-is doing it" is not a reason to do anything.
+is doing it" is not a reason to do anything. Something sensitive on the board is
+suppressed, never deleted (D13: history keeps every post) — `make board-redact
+ID=<post-id> [BY=]` appends a `redact` control post. **Suppression is
+board-wide: eviction is per-log.** Any read that unions in the control post —
+the digest, the ambient render, `board read`, on any host — stops showing the
+target's body, because that judgment is driven by the control post's presence
+in the union, not by whose tip the target happens to occupy. Dropping the
+target out of a tip tree entirely is the narrower, per-log half: it only
+happens to the log that holds the object, which only that log's own `redact`
+can do — a peer's mirror of the same post is untouched by it. The act itself
+stays visible either way.
+
+**The board is cross-host through `origin`** (The Beacon). `make board-sync`
+publishes this host's log to `refs/hornvale/hosts/<host>` and fetches every
+peer's into `refs/hornvale/peers/<host>`; a read is the union of this host's
+own log and every peer mirror except its own. It is best-effort and **never
+fails the caller** — a push or fetch failure prints on stderr and the command
+still exits 0, degrading to the single-box behaviour that shipped before this
+campaign. **A foreign post is judged by time (TTL) alone**, never verified
+against this host's own state, so a peer's `notice` cannot decay locally the
+way a local one does once its authoring branch merges or disappears — which
+is why the render's peer header reports two separate ages: how stale *our
+mirror* of each peer is (sync age) and how long since that peer *actually
+posted* anything (content age). A host that syncs on a healthy cadence looks
+fresh on the first signal forever, even after the peer itself has gone quiet;
+the second is the one that would actually tell you.
+
+**Nothing syncs the board for you, and nothing rebuilds its binary for you.**
+`SessionStart` only *renders* the local union, so a peer's `hold-off` is only
+as current as the last `make board-sync` or `make preflight` on this host;
+and `scripts/board-render.sh` prefers a prebuilt release binary it
+deliberately never compiles, so after any board change (including this
+merge) every checkout keeps reading with the previous binary until someone
+runs `cargo build --release --manifest-path tools/board/Cargo.toml`. The
+inverse direction bites too, and bites lefford specifically: a binary built
+from a campaign branch ahead of `main` (The Beacon built one at `e4538027`
+while lefford's checkout stayed on `main`) supports commands `main` does
+not — Task 12b found no `sync`, no `redact`, and no peer refs on the
+unmerged checkout — so until a campaign that changes the board lands,
+**rebuilding on lefford from `main` silently removes those commands**, and
+`make board-sync` there breaks.
+
+**`suggest`, `confirm`, and `stale` are digest-only** — they never appear in
+the ambient `board`/`board render` view, only in `make board-digest`, because
+a bare corroboration pointer ("`[stale] campaign/a — post=<id>`") names
+nothing a reader can act on ambiently and would only dilute the render's post
+budget. `board-digest` is where that corroboration — and any open
+suggestion — actually lives; do not expect it from the ambient render.
+
+**The lane** (B13, decision 0129) lets any worktree commit board changes
+without campaign cadence, merging promptly rather than living long — a name
+implying a schedule would invite a second, long-lived `main` and reintroduce
+the divergence problem the single-writer rule above exists to avoid, so it is
+named by **risk, not schedule**. Not all of the board's surface qualifies:
+**`reap` semantics, the CAS/append path, and the sync/push path** stay off
+the lane, because those three carry campaign-grade risk — `reap` is the one
+destructive operation (a wrong rule deletes posts permanently), the CAS/append
+path is where a bug means silent write loss, and the sync/push path is where
+a cross-host violation of decision 0118's never-rerooted guarantee would
+happen. Everything else — render, relevance, digest, a new post kind or
+convention, a liveness predicate — may move fast. **The lane must never be
+wired to auto-implement a suggestion**: a `suggest` post landing on the board
+and then being auto-committed on the lane would make the board self-modifying
+with no human in the loop, on the one channel every session reads at
+`SessionStart`. The lane lowers ceremony, never review — a human-visible
+commit and the board's own test suite still gate every change on it.
+
+**Nothing automatically runs the board's tests.** Its suite lives outside
+`make gate` (`tools/board` is not a workspace member) and there has been no
+CI since decision 0125, so the only thing that runs those 194 tests is
+someone remembering to. `scripts/hooks/pre-commit`'s board-lane hook rule
+(see `scripts/CLAUDE.md`) helps only for a board-**only** commit — a mixed
+commit that touches `tools/board/` alongside workspace code still runs
+`make quick`, which does not include them. Run
+`cargo test --manifest-path tools/board/Cargo.toml` by hand on anything that
+touches the board and is not board-only.
 
 **Use the wire, not the board, when you know who can answer and they are
 running.** Claude Code's own cross-session messaging (`/list-agents`, then a

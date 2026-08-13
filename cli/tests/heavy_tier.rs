@@ -163,7 +163,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 23] = [
+const EXPECTED_UNTOKENISED: [&str; 29] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
@@ -178,7 +178,13 @@ const EXPECTED_UNTOKENISED: [&str; 23] = [
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
+    "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand",
+    "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
+    "probe: enumerates every branch of a whole coarse basin, twice (1.4 s measured); run by hand",
     "probe: measurement only, run explicitly",
+    "probe: replays ~50k real nearest-line queries against the full 3,606-line network, each answered by the UNINDEXED reference scan (23.1 s measured, --release; 1.1 s when the oracle was the Task-4 index, which is why the module doc explains the trade); run by hand",
+    "probe: sweeps every transect twice — once transcribed, once through the shipped metric (0.3 s measured, --release, post-Task-4 index); run by hand",
+    "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (21.8 s measured); run by hand",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "runs the full gathering census; the fixture is drift-checked in CI",

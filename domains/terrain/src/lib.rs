@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod branch;
 pub mod carve;
 pub mod channel;
 pub mod crust;
@@ -12,6 +13,12 @@ pub mod elevation;
 pub mod facts;
 pub mod features;
 pub mod globe;
+/// The land-elevation attribution probe (The Glasshouse, Stage A Task 4).
+/// Test-only: it reads crate-internal per-term helpers, which is exactly why
+/// it lives in the crate instead of in an integration test that would have to
+/// reimplement them.
+#[cfg(test)]
+mod land_elevation_attribution;
 pub mod lithology;
 pub mod pins;
 pub mod plates;
@@ -26,13 +33,18 @@ pub mod water;
 pub use streams::stream_labels;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
+pub use branch::{
+    CatchmentCut, RILL_MIN_CATCHMENT, RILL_WHOLE, RILLS_PER_CELL_MAX, Rill, RillReading,
+    cell_catchment, rill_reading, rills_of, room_spacing,
+};
 pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
 pub use channel::{
     BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
-    FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, Transverse, band_edges, channel_half_width, confinement,
+    FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
+    channel_half_width, confinement,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
@@ -317,7 +329,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 24);
+        assert_eq!(labels.len(), 25);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");

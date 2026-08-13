@@ -9,6 +9,7 @@ pub mod post;
 pub mod relevance;
 pub mod render;
 pub mod store;
+pub mod sync;
 
 /// Everything that can go wrong, always carrying the physical reason.
 #[derive(Debug)]

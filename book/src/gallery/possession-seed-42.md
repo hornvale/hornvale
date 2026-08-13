@@ -5,11 +5,11 @@ the same world in your browser — same crates, same bytes.)*
 
 ```text
 [room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > look
 [room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > map
 [lens: colour · depth 12 · radius 4 · lattice-aligned, not north-up]
@@ -21,7 +21,7 @@ Ways on: NE, NW, S.
  +++++++
   + + +
   ways on: NE, NW, S
-  legend: Googo, bugbear of Googo, buttressed canopy, shaded, in a hollow, tropical rainforest
+  legend: Googo, bugbear of Googo, buttressed canopy, shaded, damp, in a hollow, tropical rainforest
 
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
@@ -89,7 +89,7 @@ A recess cut back from the main space, deep enough to sit in.
 Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > go n
 No way n from here.
@@ -115,15 +115,15 @@ A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > out
 [room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > go ne
 [room 750518380, day 0]
-Tropical rainforest — a stream gully, sun-warmed, on a rise — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — a stream gully, sun-warmed, damp, on a rise — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: N, SW, SE.
 > back
 [room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
 Time passes. You sense movement nearby (766 stirred).
