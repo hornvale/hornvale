@@ -86,12 +86,31 @@ gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy 
 # unguarded version was a one-way ratchet: the alarm fired at 2x and ci-record
 # immediately wrote the inflated durations back as the new reference, erasing
 # its own evidence.
+#
+# THE HUMAN OUTPUT IS TEE'D, NOT REDIRECTED. `--message-format libtest-json-plus`
+# puts the JSON on STDOUT and the ordinary progress stream (Compiling…, PASS/FAIL
+# lines, the Summary) on STDERR. Sending stderr straight to run.log left the
+# most-run command in the repo printing NOTHING for ~7 minutes and pointing at a
+# file on failure. That was tolerable at `make ci`'s 9 runs a month; at `make
+# gate`'s 368 it is a daily regression, and staring at a silent terminal is how
+# a gate starts looking hung. So stderr goes through `tee`: the file the alarm
+# and the archaeology need still receives the complete stream, and the terminal
+# gets it live.
+#
+# WHY THE `.rc` FILE AND NOT `PIPESTATUS`/`pipefail`. This Makefile sets no
+# SHELL, so recipes run under `/bin/sh` — `dash` on lefford. `${PIPESTATUS[0]}`,
+# `set -o pipefail` and `2> >(tee …)` are all bashisms that would work on this
+# Mac and fail there, silently reporting `tee`'s exit status (always 0) as the
+# gate's verdict — a gate that can never go red. Writing the status inside the
+# brace group is POSIX and reads the same everywhere.
 gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	@mkdir -p target/nextest/ci docs/timings
-	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
 	    --message-format libtest-json-plus \
-	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
-	nextest_status=$$?; \
+	    2>&1 1>target/nextest/ci/run.json; \
+	   echo $$? > target/nextest/ci/nextest.rc; \
+	 } | tee target/nextest/ci/run.log >&2; \
+	nextest_status=$$(cat target/nextest/ci/nextest.rc); \
 	cargo test -q --workspace --doc; \
 	doctest_status=$$?; \
 	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
