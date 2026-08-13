@@ -258,6 +258,29 @@ inline; recorded here so neither is a minor nobody wrote down.
 
 ## Follow-ups
 
+**F-12 — the closing walk has no step for the ci baseline, and it needed one.**
+The walk's step 6 is "full gate + artifact drift," and neither `make gate` nor
+`make rebaseline` touches `docs/timings/test-baseline-<host>.tsv`. That file had
+been re-recorded on main's tip one commit before this campaign merged, so it
+predated every test the campaign added. Caught only by asking, after the close
+was otherwise finished, what this campaign *changed* versus what the timing
+watchdog *knows about* — a question no step prompts.
+
+`make ci` on the merged tree passed (706.7 s, cpu_ratio 4.66 on a quiet box) and
+re-recorded: the `<below-floor>` aggregate went `2792 → 2801`, exactly the nine
+sub-second tests this campaign added. Worth noting the prediction that motivated
+the run was **wrong in its detail** — the named new tests were expected to appear
+as individual baseline rows and do not, because the format folds everything under
+a one-second floor into that single counted aggregate. The action was right and
+the reasoning was not, which is instance nine of this retrospective's opening
+theme: a claim about a file's contents, asserted without reading its own stated
+format, in the sentence directly above the header that states it.
+
+The general form worth carrying: **a campaign that adds or removes tests owes the
+timing baseline a re-record, and nothing in the gate or the close will say so.**
+CLAUDE.md already states the discipline — re-record in the commit that caused the
+shift — but no step routes you to it.
+
 **F-11 — pre-existing census-artifact drift on `main`, found here and not caused
 here.** `make gate-full`'s heavy tier writes
 `book/src/laboratory/generated/the-history/` and `the-sounding/` as a side
