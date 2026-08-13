@@ -1509,6 +1509,40 @@ deliberately left ungated this campaign, so "the poles do not vary" may be
 true for land and false for the sea ice that borders it, on coastlines
 whose land itself never varies because it is permanently frozen.
 
+*Re-scored sideways by [The Fathom](./chronicle/the-fathom.md) (2026-08-13),
+which did not settle the underworld question above but corrected the premise
+the sentence rests on.*
+
+**"The way the sea's depth layers already are" was more generous to the sea
+than the sea deserved.** That clause reads as though the marine model were a
+finished thing to copy. It was not. The sea had the *vocabulary* — five pelagic
+strata, each pairing a community with a depth — and it did not have the
+*enumeration*: the accessor returned exactly one stratum per cell, the one its
+floor lies in, so the water standing above that floor was unaskable. A cell over
+a vent reported the vent and nothing about the kilometre of open water above it.
+Declaring the underworld as places was therefore never going to be a matter of
+copying a working pattern sideways; the pattern had to be built first, and this
+campaign built it.
+
+Two things fell out of asking the question for the first time, and both lower
+confidence in the sea as an exemplar. **Seed 42 has no cell whose floor reaches
+`Abyssal` or `Hadal`** — column heights come back `{1: 1749, 2: 6669,
+3: 21478}` over 29,896 ocean cells, so two of the five pelagic strata never
+occur as a floor in the flagship world at all, and the deepest arm of the marine
+classifier is unreachable there. And **8,916 of 9,695 sea-ice cells (92%) carry
+a stratum below the epipelagic** — ice filed four kilometres down, because the
+classifier picks sea ice on surface temperature with no depth condition while
+taking its stratum from the floor. Neither is a defect this campaign introduced;
+both are things that could not be seen while one value came back per cell, and
+both were left standing deliberately rather than repaired, because the campaign's
+acceptance criterion was that no world byte move.
+
+So the underworld question is **still open**, exactly as stated above, and the
+route to it is one step longer than the chapter thought: the column had to
+become askable before anything could be declared in it. What is now settled is
+only that asking is possible. Whether a realm's hard gate generalises past caves
+remains the thing a campaign placing a people underground will find out.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,
