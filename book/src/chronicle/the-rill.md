@@ -388,7 +388,7 @@ move because nothing broke**, and the repair — asking whether the next cell is
 carried by any run, rather than what class it is — moves a census column, so
 it is left to work that can pay for a refresh.
 
-Three things a reader needs in order to read the rest correctly.
+Two things a reader needs in order to read the rest correctly.
 
 **The census was authored at the revision that absorbed the trunk branch
 (`d8ed9bd6`), while the branch itself advanced two commits further to
