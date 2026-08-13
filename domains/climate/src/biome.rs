@@ -111,7 +111,11 @@ pub fn tree_line_m(latitude_deg: f64) -> f64 {
 const ICE_C: f64 = -20.0;
 
 impl Biome {
-    /// True for the marine variants.
+    /// True for the marine variants — asks whether a cell's SURFACE medium is
+    /// water, never a claim about the column beneath it: a cell with an
+    /// underworld under it is not marine and never will be, because the
+    /// underworld is a stratum beneath the cell rather than the cell's own
+    /// biome.
     /// type-audit: bare-ok(flag)
     pub fn is_marine(self) -> bool {
         matches!(

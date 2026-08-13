@@ -123,6 +123,8 @@ pub fn connection_graph(
     let cost = traversal_cost(geo, elevation, biome);
     let mut graph = ConnectionGraph::new(geo.cell_count());
 
+    // Separates SURFACE traversal only. Underworld edges beneath a marine or
+    // land cell are a later campaign's addition, not a defect in this line.
     let marine = CellMap::from_fn(geo, |c| biome.get(c).is_marine());
     add_adjacency_edges(geo, &cost, &mut graph);
     add_water_routes(geo, &marine, current, cfg, &mut graph);

@@ -353,6 +353,7 @@
 - [The Ford](./chronicle/the-ford.md)
 - [The Ford, stage 2](./chronicle/the-ford-stage-2.md)
 - [The Muster](./chronicle/the-muster.md)
+- [The Fathom](./chronicle/the-fathom.md)
 - [The Beacon](./chronicle/the-beacon.md)
 - [The Holdfast](./chronicle/the-holdfast.md)
 - [The Rill](./chronicle/the-rill.md)

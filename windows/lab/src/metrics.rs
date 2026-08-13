@@ -1861,6 +1861,8 @@ pub fn registry() -> Vec<Metric> {
                 let mut counts: std::collections::BTreeMap<&'static str, usize> =
                     std::collections::BTreeMap::new();
                 for (_, b) in biomes.iter() {
+                    // Buckets cells by SURFACE medium (`is_marine()`); not a
+                    // question about the column beneath a cell.
                     if !b.is_marine() {
                         *counts.entry(b.name()).or_insert(0) += 1;
                     }

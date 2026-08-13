@@ -163,10 +163,11 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 27] = [
+const EXPECTED_UNTOKENISED: [&str; 29] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
+    "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
     "compiles the workspace in release; CI runs it with -- --ignored",
@@ -175,6 +176,7 @@ const EXPECTED_UNTOKENISED: [&str; 27] = [
     "measurement: builds eight full worlds; run explicitly with --ignored",
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
+    "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand",
     "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
@@ -220,18 +222,25 @@ const EXPECTED_UNTOKENISED: [&str; 27] = [
 /// what the module doc above describes. A future pass that adopts them should
 /// give them a token class and delete them from this roster.
 ///
-/// **A fourth kind is now here twice, and is neither of those things.** The two
-/// `"PREREGISTERED, not met: awaits <registry-slug> (<reason>)"` entries carry
-/// a preregistered prediction that was MEASURED and NOT MET — the test's
-/// failure is the record, and the slug names the registry row a successor must
-/// discharge it against. They are findable (the prefix greps cleanly) and they
-/// name an owner (the row), so they lack nothing a token class would give them
-/// except membership in the filter above; they sit in this roster rather than
-/// in a token class because that filter governs which tier RUNS a test, and a
-/// preregistered-not-met pin must be run by neither tier. Adding one is a
-/// review decision like any other entry here: The Radiation's is
-/// `BIO-rung-weighted-concentration`, reviewed 2026-08-10, and its evidence is
+/// **A fourth kind is now here three times, and is neither of those things.**
+/// The `"PREREGISTERED, not met: awaits <registry-slug> (<reason>)"` entries
+/// carry a preregistered prediction that was MEASURED and NOT MET — the
+/// test's failure is the record, and the slug names the registry row a
+/// successor must discharge it against. They are findable (the prefix greps
+/// cleanly) and they name an owner (the row), so they lack nothing a token
+/// class would give them except membership in the filter above; they sit in
+/// this roster rather than in a token class because that filter governs
+/// which tier RUNS a test, and a preregistered-not-met pin must be run by
+/// neither tier. Adding one is a review decision like any other entry here:
+/// The Radiation's is `BIO-rung-weighted-concentration`, reviewed
+/// 2026-08-10, evidence at
 /// `windows/worldgen/tests/radiation_readout.rs::desert_elf_concentrates_in_its_authored_stronghold_biomes`.
+/// The Fathom's is `CLIM-shelf-single-rung-threshold`, reviewed 2026-08-12 —
+/// not a falsified mechanism but an unmeasured threshold (5.85% measured
+/// against a 5% ceiling authored before anyone measured a real world's
+/// shelf fraction), which the ruling deliberately left unmoved rather than
+/// widened to fit the measurement; evidence at
+/// `windows/worldgen/tests/fathom_column_probe.rs::h1_clause_3_single_rung_share_preregistered_not_met`.
 #[test]
 fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
     let reasons = ignore_reasons();
