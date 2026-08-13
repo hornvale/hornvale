@@ -1445,6 +1445,26 @@ that could not, by construction, reflect the layer being changed, and four
 stages of evidence were vacuous before anyone noticed. The check that a
 measurement can move at all belongs beside the measurement, not after it.
 
+[The Millrace](./chronicle/the-millrace.md) supplies the sharpest measurement
+of that cost this chapter has, and it is a count rather than an argument. One
+of the census columns this chapter counts among the world's self-checks —
+`channel-connectivity`, which asks whether a tributary's junction with its
+trunk stays inside the channel band — was asking its continuation question
+with a stricter test than the network's own, so **82.83% of its walks ended
+before reaching the join they existed to test** and scored intact without ever
+testing one. The column read 1.0000. Repaired, on sixty-four worlds, it still
+reads 1.0000 — the value was right and the claim behind it was empty, which is
+the exact failure a drift check cannot see. The campaign then went looking for
+the same shape in its own work and found it **five more times**, twice inside
+the repair for the first instance and once in the file whose own documentation
+is a warning about it. Two consequences for this chapter's confidence
+accounting. A column's *value* being stable across campaigns is evidence about
+the world only if something independent establishes the column can move at all;
+and the discipline that catches these is not review but **mutation** — every
+one of the six was settled by neutralising the code under test and watching
+whether anything went red. Nothing in the standing gate does that for a
+Laboratory metric.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single

@@ -202,9 +202,15 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # 2026-08-13T06:08:39Z, cpu_ratio 36.50 on 40 cores), 11.2x wall and 12.7x CPU
 # against the pre-Rill run whose row is stamped 2026-08-12T21:04:17Z — the run
 # immediately before it, hours earlier, not a stale figure from a week back.
-# A memoisation landed inside that campaign recovers 3.01x,
-# which projects the next refresh at ~6,400 s (~1.8 h) — still ~3.7x what The
-# Rill found. THE FAILURE THIS PARAGRAPH REPLACES: two independent readers (a
+# A memoisation landed inside that campaign recovered 3.01x, which projected
+# the next refresh at ~6,400 s (~1.8 h). **THE TREND HAS SINCE REVERSED, AND
+# THE PROJECTION WAS WRONG BY ~6.7x IN THE OTHER DIRECTION.** The Millrace
+# indexed the nearest-line query and the very next refresh cost **949.579 s**
+# (row stamped 2026-08-13T19:01:49Z, cpu_ratio 28.56 on 40 cores) — 20.2x under
+# The Rill and **1.81x FASTER than the pre-Rill 1,718.995 s**, with zero
+# goldens moved. So the shape of the error changed but not its lesson: reading
+# a cost off this block would have had you budget five hours for a sixteen-
+# minute run. THE FAILURE THIS PARAGRAPH REPLACES: two independent readers (a
 # campaign controller and its own cost attribution) both anchored on the
 # "budget 15" line that used to sit here, while docs/timings.md already
 # carried a figure 2x larger, and the resulting extrapolation was wrong by
