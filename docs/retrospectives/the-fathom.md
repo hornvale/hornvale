@@ -82,6 +82,34 @@ not architectural claims at all, they are claims about which directory a
 file lives in or which tool builds it — the cheapest possible thing to
 verify and the easiest to skip because it feels beneath verifying.
 
+## 0b. A correction has a blast radius, and nobody computed it
+
+Instance #8 above is that a correction never left the scratch. Closing the
+campaign found the sharper version: **the correction did leave the scratch, was
+written into three documents, and still missed a fourth.**
+
+The fix wave that repaired the LIVE-to-latent verdict updated the spec, the
+chronicle and this retrospective. It did not update
+`docs/superpowers/specs/2026-08-12-the-chorography-metaplan.md`, whose §3.2 went
+on asserting the disproved version — *"a karst cavern would be counted as land
+... a chamber at `Stratum::Basement` would tell the game client the player is
+underwater"* — until the closing walk read it. The same thing happened
+independently to a second, unrelated correction: the final review caught a
+misleading `abyssal trench` illustration in the chronicle, the fix wave repaired
+it *there*, and the identical sentence survived in `book/src/domains/climate.md`
+and again in the spec's own design section.
+
+Two corrections, two propagation misses each, and in both cases the fix was
+applied to the document the reviewer happened to be reading rather than to
+every document carrying the claim.
+
+**The rule: when a finding is corrected, grep for the claim, not for the file.**
+A reviewer reports a location because that is where they were looking. The
+claim's blast radius is a different question and has to be asked separately —
+the same way this project already knows to audit a defect's *shape* rather than
+its instance. Both misses here were found by grepping the assertion across the
+campaign's whole prose surface, which took one command each.
+
 ## 1. A duplicate one crate over, invisible to the review that should have caught it
 
 This is the finding worth the most, because it is not a mistake anyone made
@@ -164,7 +192,31 @@ lesson, and is recorded here because it is the instance where the fix and
 its verification both happened inside the campaign that shipped the bug,
 not in a later one that discovered it.
 
-## 4. What held up well
+## 4. Delegation is not automatically behaviour-preserving
+
+This one is recorded because the *practice* survived into the tree and the
+*principle* nearly did not. Collapsing two derivations into one looks like a
+refactor with nothing to decide, and the campaign's own plan text called it
+that. It was not. The two implementations differed on exactly the inputs
+neither had been asked about: a non-water cell (empty vector on one side,
+`[Surface]` on the other) and a stratum below the floor (`Some(OpenWater)` on
+one, `None` on the other). Delegating without noticing would have moved
+behaviour in a campaign whose entire claim was that no behaviour moved.
+
+**A merge of two implementations must be proven equivalent on the inputs
+nobody thought to ask about, not on the inputs the callers happen to pass.**
+What made it safe here was a before-arm captured from the *pre-delegation*
+source in its own commit, and a reviewer who restored that source and re-ran
+the after-arm against it rather than trusting the fixture's provenance. The
+mutation that proved the fixture non-vacuous came from the reviewer too.
+
+The corollary the campaign learned the expensive way: two of the three tests
+written for that task are **tautological** post-refactor — once the call is a
+literal pass-through, no input distinguishes real delegation from a correct
+duplicate. That was disclosed rather than dressed up as coverage, and the
+disclosure is what made the one genuinely load-bearing test findable.
+
+## 5. What held up well
 
 Two things worked and are worth stating so they are not lost among the
 findings above.
@@ -205,6 +257,25 @@ inline; recorded here so neither is a minor nobody wrote down.
   touch of that file rather than as a standalone change.
 
 ## Follow-ups
+
+**F-11 — pre-existing census-artifact drift on `main`, found here and not caused
+here.** `make gate-full`'s heavy tier writes
+`book/src/laboratory/generated/the-history/` and `the-sounding/` as a side
+effect, and on this campaign's merged tree both came back numerically drifted
+against what is committed. The cause is not this campaign: both files' last
+commits (`e9cb4a09`, `979508f8`) are **ancestors of The Fathom's own base**,
+verified with `git merge-base --is-ancestor`. So `main` has been carrying stale
+generated survey artifacts for some time, and nothing surfaces it — the heavy
+tier is the only writer, `make rebaseline` does not regenerate these two, and
+the everyday drift check therefore cannot see the gap.
+
+This is a fresh recurrence of `PROC-red-gate-freezes-artifact`, which already
+names the general shape (an artifact whose only writer is a path the ordinary
+gate does not run). Whoever next touches settlement or migration physics should
+regenerate both and check whether the committed values were ever right, rather
+than assuming a diff there is their own doing. Posted to the board so it reaches
+sessions that will never read this file.
+
 
 Ten items were found by reading during the brainstorm that opened this
 program and were deliberately not acted on — each is separable from The

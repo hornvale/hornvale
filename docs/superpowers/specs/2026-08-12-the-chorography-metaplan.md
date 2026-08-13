@@ -1,6 +1,8 @@
 # The Chorography — the program for saying what a place is
 
-*Metaplan. Five campaigns. Status: G3 review.*
+*Metaplan. Five campaigns. Status: **campaign 0 (The Fathom) complete**; the
+remaining four are unstarted. Campaign 1 may not open until its spec carries
+§ 7's reconstruction test.*
 
 Ptolemy separated **geography**, which maps the whole, from **chorography**,
 which describes the particular place. Hornvale has excellent geography and a
@@ -66,10 +68,25 @@ consequences, each verified:
 | 4 | `vantage.rs:64` | `submerged := stratum != Surface` |
 | 5 | census column | `dominant-land-biome` |
 
-An underworld biome is not `WATERWORLD`, so `is_marine()` is false, so a karst
-cavern would be counted as **land** — in the census and in the connection
-graph. A chamber at `Stratum::Basement` would tell the game client the player
-is underwater.
+**Corrected by campaign 0, and the correction is worth more than the original
+claim.** This section first read: an underworld biome is not `WATERWORLD`, so
+`is_marine()` is false, so a karst cavern is counted as land in the census and
+the connection graph, and a chamber at `Stratum::Basement` tells the game
+client the player is underwater. **Four of those five sites are latent, not
+live**, for a structural reason the draft had not read: sites 1–3 and 5 all
+read a cell's *surface projection*, and the underworld is never a cell's own
+biome — it is a stratum *beneath* the cell — so a cell's expression stays
+`OVERWORLD` or `WATERWORLD` however full the rock column beneath it gets.
+Site 4 is latent too: `Session` threads the water column and the cave lattice
+through two separate fields, so no rock rung reaches the client's vantage
+today.
+
+What survives is the diagnosis, not the alarm. The single index really is the
+root of all five, and `Stratum` really is one enum spanning both ladders with
+nothing in the type stopping a later reuse from making site 4 live — which is
+why campaign 0 fixed that one pre-emptively and left the other four documented
+rather than re-keyed. See [The Fathom §3](2026-08-12-the-fathom-design.md) for
+the measured table.
 
 ### 3.3 The sea separated community from depth already; it still returns a point
 
@@ -125,10 +142,13 @@ that keeps a generated space from becoming a naming free-for-all.
 
 ## 4. The campaigns
 
-    0. THE FATHOM      the column: give every realm its depth coordinate, and
-                       kill the five two-realm assumptions. Pure refactor plus
-                       the sea's column as its first consumer. Byte-identical
-                       worlds. Unblocks everything below.
+    0. THE FATHOM      COMPLETE. The column: every realm gets its depth
+                       coordinate. One two-realm assumption fixed
+                       pre-emptively, four documented rather than re-keyed
+                       (they were latent, not live -- see 3.2). Pure refactor
+                       plus the sea's column as its first consumer.
+                       Byte-identical worlds, proven. Unblocks everything
+                       below.
 
     1. THE AXES        decompose community into independently-valued axes,
                        shared across grain and realm; unify ConditionNiche with

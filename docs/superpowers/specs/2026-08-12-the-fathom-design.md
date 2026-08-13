@@ -1,7 +1,10 @@
 # The Fathom — every realm gets its depth coordinate
 
 *Campaign spec. Campaign 0 of [The
-Chorography](2026-08-12-the-chorography-metaplan.md). Status: G3 review.
+Chorography](2026-08-12-the-chorography-metaplan.md). Status: **COMPLETE** —
+all five tasks shipped, reviewed and merged; see
+[the chronicle](../../../book/src/chronicle/the-fathom.md) and
+[the retrospective](../retrospectives/the-fathom.md).
 Branch: `the-fathom`.*
 
 ## 1. What this campaign produces
@@ -125,7 +128,10 @@ without a single new input:
 This is the physically correct reading and the one `classify_marine_expr`'s own
 doc already argues for: a vent is *a community at a depth*, so the water above
 it is open water at its own depth. A reef cell (floor above 200 m) has a
-one-stratum column; an abyssal cell has four.
+one-stratum column; a bathypelagic-floored cell has three. (A four- or
+five-rung column needs an `Abyssal` or `Hadal` floor, which § 6's measurement
+found seed 42 does not contain anywhere — so the rule below has arms the
+flagship world never exercises.)
 
 For land, `strata_at` returns `[Surface]` and `biome_expr_at_stratum(cell, Surface)`
 returns the land expression. Unchanged in every respect.
