@@ -764,6 +764,44 @@ fn nearest_rill(
     )
 }
 
+/// The cells [`rill_reading`] measures, **in the order it offers them**:
+/// `here` first, then `geo.neighbors(here)` in the order the geosphere yields
+/// them.
+///
+/// Split out from [`rill_reading`] with [`nearest_offered`] so that the search
+/// order half of that function's determinism contract is a thing a test can
+/// hold rather than only a sentence in a doc comment; see
+/// `tests::an_exact_tie_between_candidate_cells_is_kept_by_the_first_offered`.
+/// Allocation-free on purpose — the shipped call is one `once` and one slice
+/// iterator, exactly the two loops this replaces.
+fn rill_candidates(here: CellId, geo: &Geosphere) -> impl Iterator<Item = CellId> + '_ {
+    core::iter::once(here).chain(geo.neighbors(here).iter().copied())
+}
+
+/// The first candidate whose measured distance is **strictly** less than every
+/// earlier one's, as `(distance, catchment, cell)` — `None` when `measure`
+/// answers `None` for all of them.
+///
+/// The strictness is the contract: on an exact tie the candidate offered
+/// *first* is kept, so [`rill_candidates`]'s order decides the answer.
+/// Relaxing this one `<` to `<=` hands every tied position to the last
+/// equidistant candidate instead, and the reading that results feeds
+/// `grounded_wetness` and so `micro.wetness`, which is emitted.
+fn nearest_offered(
+    candidates: impl Iterator<Item = CellId>,
+    mut measure: impl FnMut(CellId) -> Option<(f64, f64)>,
+) -> Option<(f64, f64, CellId)> {
+    let mut best: Option<(f64, f64, CellId)> = None;
+    for candidate in candidates {
+        if let Some((distance, catchment)) = measure(candidate)
+            && best.is_none_or(|(d, _, _)| distance < d)
+        {
+            best = Some((distance, catchment, candidate));
+        }
+    }
+    best
+}
+
 /// The sub-cell network at a position: the nearest branch, and the transverse
 /// geometry it implies.
 ///
@@ -780,12 +818,17 @@ fn nearest_rill(
 /// is what the design this replaces was falsified for.
 ///
 /// **The search order is a determinism contract, for the same reason
-/// [`ChannelNetwork::nearest_line`]'s is.** Candidates are considered as
-/// `here` first, then `geo.neighbors(here)` in the order the geosphere yields
-/// them, and `best.is_none_or(|(d, _, _)| distance < d)` is a **strict** `<`,
-/// so an exact tie keeps whichever cell was offered first. Changing the
-/// enumeration order, or giving `here` a different priority, or relaxing the
-/// comparison, silently re-decides every tied position.
+/// [`ChannelNetwork::nearest_line`]'s is.** Candidates are [`rill_candidates`]
+/// — `here` first, then `geo.neighbors(here)` in the order the geosphere
+/// yields them — and [`nearest_offered`] compares with a **strict** `<`, so an
+/// exact tie keeps whichever cell was offered first. Changing the enumeration
+/// order, or giving `here` a different priority, or relaxing the comparison,
+/// silently re-decides every tied position. Both halves are now held by
+/// `tests::an_exact_tie_between_candidate_cells_is_kept_by_the_first_offered`,
+/// which is why they are two named functions rather than two loops inline: a
+/// tie is unreachable on a real world (0 of 3,352 multi-candidate positions on
+/// seed 42 at level 5, closest non-zero gap 1.5e-8), so the assertion has to
+/// be able to supply the distances itself.
 ///
 /// That this reaches a *serialized* value is one step longer than it looks,
 /// and getting it wrong is easy: [`RillReading`]'s `distance` and
@@ -807,19 +850,9 @@ pub fn rill_reading(
 ) -> Option<RillReading> {
     let here = index.nearest_to_position(geo, position);
     let unit = cell_catchment(geo);
-    let mut best: Option<(f64, f64, CellId)> = None;
-    let mut consider = |c: CellId| {
-        if let Some((distance, catchment)) = nearest_rill(c, position, net, geo, cut)
-            && best.is_none_or(|(d, _, _)| distance < d)
-        {
-            best = Some((distance, catchment, c));
-        }
-    };
-    consider(here);
-    for &neighbor in geo.neighbors(here) {
-        consider(neighbor);
-    }
-    let (distance, catchment, cell) = best?;
+    let (distance, catchment, cell) = nearest_offered(rill_candidates(here, geo), |c| {
+        nearest_rill(c, position, net, geo, cut)
+    })?;
     Some(RillReading {
         distance,
         band_edges: band_edges(
@@ -835,6 +868,75 @@ pub fn rill_reading(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [`rill_reading`] offers `here` before any neighbour, offers neighbours
+    /// in the geosphere's own yield order, and takes a candidate only on a
+    /// **strictly** smaller distance — so two candidates that measure exactly
+    /// equal are decided by that order alone.
+    ///
+    /// This reaches a serialized value: the reading feeds `grounded_wetness`
+    /// and so `micro.wetness`, which is emitted into the gallery, the vessel
+    /// snapshots and the game-core fixtures. A spatial index over this search
+    /// that gathered its candidates in a different order, or relaxed the `<`
+    /// to `<=`, would move every tied position and leave every drift check
+    /// green afterwards.
+    ///
+    /// **The tie is supplied, not found, and it has to be.** A throwaway probe
+    /// over seed 42 at level 5 measured the real distribution: of 10,242 query
+    /// positions, 3,352 had two or more candidate cells answering, and
+    /// **exactly none** of them tied — the closest two distances anywhere in
+    /// that sweep differed by 1.5e-8. Cell centres are the most symmetric
+    /// positions the grid has, so a tie is not merely rare there but absent,
+    /// and a version of this test that hunted for one on a real world would
+    /// have asserted over an empty population and passed forever. That is why
+    /// [`nearest_offered`] takes its measurements as a closure: the only way
+    /// to hold this contract is to hand it the tie.
+    #[test]
+    fn an_exact_tie_between_candidate_cells_is_kept_by_the_first_offered() {
+        let geo = Geosphere::new(1);
+        // A pentagon (5 neighbours) and a hexagon (6), because the candidate
+        // count is not fixed and neither should the assertion be.
+        for here in [CellId(0), CellId(20)] {
+            let offered: Vec<CellId> = rill_candidates(here, &geo).collect();
+            assert_eq!(offered[0], here, "`here` is no longer offered first");
+            assert_eq!(
+                &offered[1..],
+                geo.neighbors(here),
+                "the neighbours are no longer offered in the geosphere's yield order"
+            );
+
+            // Every candidate exactly equidistant: the order decides.
+            let tied = nearest_offered(rill_candidates(here, &geo), |_| Some((0.25, 1.0)));
+            assert_eq!(
+                tied.map(|(_, _, c)| c),
+                Some(here),
+                "an exact tie was not kept by the first candidate offered"
+            );
+
+            // And the tie-break must not be a constant preference for `here`:
+            // a strictly nearer candidate later in the order still wins.
+            let last = *offered.last().expect("a cell has neighbours");
+            let strict = nearest_offered(rill_candidates(here, &geo), |c| {
+                Some((if c == last { 0.1 } else { 0.25 }, 1.0))
+            });
+            assert_eq!(
+                strict.map(|(_, _, c)| c),
+                Some(last),
+                "a strictly nearer later candidate did not win"
+            );
+
+            // A candidate that answers `None` is skipped rather than winning
+            // with an absent distance — the `here`-has-no-trunk case.
+            let skipped = nearest_offered(rill_candidates(here, &geo), |c| {
+                (c != here).then_some((0.25, 1.0))
+            });
+            assert_eq!(
+                skipped.map(|(_, _, c)| c),
+                Some(offered[1]),
+                "a candidate with no rills did not step aside"
+            );
+        }
+    }
 
     /// The canonical grid the bound is stated for, matching
     /// `tests/rill_properties.rs`.

@@ -1113,6 +1113,33 @@ mod tests {
         }
     }
 
+    /// A network of exactly two hand-built polylines, in the order given, with
+    /// the same synthetic band edges [`test_network`] uses on both. Built here
+    /// for the same reason [`test_network`] is: `meander` is private, so no
+    /// network can be assembled from outside the crate at all.
+    fn two_line_network(first: Vec<[f64; 3]>, second: Vec<[f64; 3]>) -> ChannelNetwork {
+        let edges = band_edges(36.0, 0.0, 1.0);
+        ChannelNetwork {
+            band_edges: vec![vec![edges; first.len()], vec![edges; second.len()]],
+            run_cells: vec![
+                (0..first.len() as u32).map(CellId).collect(),
+                (0..second.len() as u32).map(CellId).collect(),
+            ],
+            polylines: vec![
+                SphericalPolyline { points: first },
+                SphericalPolyline { points: second },
+            ],
+            meander: SphereFbm::new(
+                Seed(42).derive(streams::CHANNEL_MEANDER),
+                MEANDER_FREQUENCY,
+                MEANDER_OCTAVES,
+            ),
+            // These hand-built networks have no `CellId` domain to index, and
+            // nothing in this module's own tests asks about a trunk vertex.
+            trunk_vertex: Vec::new(),
+        }
+    }
+
     /// Offset `start` by `off` radians perpendicular to the polyline's first
     /// segment, left-positive — the same side convention `signed_distance`
     /// reads.
@@ -1305,6 +1332,81 @@ mod tests {
         }
         assert!(net.bank_signed_distance(sample_left(&net)).unwrap() > 0.0);
         assert!(net.bank_signed_distance(sample_right(&net)).unwrap() < 0.0);
+    }
+
+    /// On an **exact** `|d|` tie between two channels the lower polyline index
+    /// wins, and the sign the world stores is that winner's — so build order
+    /// decides a serialized value at every tied position.
+    ///
+    /// [`ChannelNetwork::nearest_line`] is the lexicographic argmin over
+    /// `(|d|, index)`: minimise `|d|`, and the strict `<` keeps the lowest
+    /// index when two are equal. Relax that one character to `<=` and the
+    /// *last* equidistant line wins instead, which flips the sign
+    /// [`ChannelNetwork::bank_signed_distance`] reports there. Nothing else in
+    /// the suite objects to that flip; this test is what holds it.
+    ///
+    /// **The tie is constructed, not hunted.** The set of positions exactly
+    /// equidistant from two lines has measure zero, so a tie found on a real
+    /// world is a tie that moves the next time the network does. Two arcs
+    /// mirrored in `z`, queried from a point on the equator, tie *bitwise*:
+    /// under `z -> -z` every product inside `SphericalPolyline::signed_distance`
+    /// is either unchanged or an exact IEEE negation, and negation commutes
+    /// with round-to-nearest — while the two sides come out exactly opposite,
+    /// the query point being left of the southern arc and right of the
+    /// northern one. The equality is asserted rather than assumed: a tie that
+    /// has quietly stopped being exact would make everything below vacuous.
+    #[test]
+    fn an_exact_tie_between_two_lines_is_won_by_the_lower_index() {
+        let north = vec![unit(1.0, 0.0, 0.25), unit(0.0, 1.0, 0.25)];
+        let south = vec![unit(1.0, 0.0, -0.25), unit(0.0, 1.0, -0.25)];
+        let query = unit(1.0, 1.0, 0.0);
+
+        let d_north = SphericalPolyline {
+            points: north.clone(),
+        }
+        .signed_distance(query);
+        let d_south = SphericalPolyline {
+            points: south.clone(),
+        }
+        .signed_distance(query);
+        assert_eq!(
+            d_north.abs().to_bits(),
+            d_south.abs().to_bits(),
+            "the tie is not exact: |{d_north}| vs |{d_south}|"
+        );
+        assert!(d_north != 0.0, "the query point is ON both lines");
+        assert_eq!(
+            d_north, -d_south,
+            "the two lines do not report opposite sides: {d_north} and {d_south}"
+        );
+
+        // North built first: index 0 wins the tie, and its sign is what the
+        // network reports.
+        let north_first = two_line_network(north.clone(), south.clone());
+        assert_eq!(
+            north_first.nearest_line(query).map(|(i, _)| i),
+            Some(0),
+            "an exact tie did not go to the lower index"
+        );
+        assert_eq!(north_first.bank_signed_distance(query), Some(d_north));
+        assert_eq!(north_first.bank_reading(query).map(|r| r.line), Some(0));
+
+        // The same two arcs, built in the other order: index 0 still wins, so
+        // the reported sign is now the other one. Same geometry, same query,
+        // opposite serialized sign — which is the whole reason this tie-break
+        // is a determinism contract and not an implementation detail.
+        let south_first = two_line_network(south, north);
+        assert_eq!(
+            south_first.nearest_line(query).map(|(i, _)| i),
+            Some(0),
+            "an exact tie did not go to the lower index"
+        );
+        assert_eq!(south_first.bank_signed_distance(query), Some(d_south));
+        assert_eq!(
+            north_first.bank_signed_distance(query).unwrap(),
+            -south_first.bank_signed_distance(query).unwrap(),
+            "build order stopped deciding the sign of a tied position"
+        );
     }
 
     /// `Transverse`'s index/name/legend triple is a committed contract (a
