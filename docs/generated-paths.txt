@@ -1,0 +1,15 @@
+# The drift-check path list — the single source of truth.
+#
+# `make rebaseline` diffs these; cli/tests/generated_paths.rs asserts each is
+# TRACKED, because `git diff --exit-code <path>` is silently vacuous against a
+# path with no index entry (CLAUDE.md, "Generated-artifact freshness").
+#
+# Adding a generated directory means adding it HERE and `git add`-ing its
+# contents in the same commit.
+book/src/gallery/
+book/src/reference/
+book/src/laboratory/
+docs/audits/
+docs/digest/
+book/src/domesday/
+clients/game/core/tests/fixtures/
