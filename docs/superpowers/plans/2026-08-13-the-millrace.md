@@ -99,11 +99,20 @@ In `impl BankReading` (add the block if none exists, next to the struct at
     /// to re-run [`ChannelNetwork::nearest_line`] to classify it. That
     /// duplication was real: the lab's transect sweep ran the all-lines scan
     /// twice per probe, once for the owning line and once for the band.
-    /// type-audit: bare-ok(enum: return)
     pub fn transverse(&self) -> Transverse {
         Transverse::from_band(band(self.signed_distance, &self.band_edges))
     }
 ```
+
+**Amended after Task 1's review (`8e22fc23`).** This block originally carried a
+`type-audit: bare-ok(enum: return)` line above `pub fn transverse`, and the
+implementation copied it faithfully. There is no `enum` class: `BARE_OK_CLASSES`
+(`tools/type-audit/src/tag.rs`) does not list one, so `parse_tag` would reject
+the tag with "unknown bare-ok class" the moment `Transverse` acquired a tracked
+primitive and the item became an `AuditItem`. It was inert by luck rather than
+valid, and `type-audit check` cannot catch a tag on an item it never audits. The
+line is deleted here so the plan no longer prescribes it; the prose doc comment
+is what `#![warn(missing_docs)]` actually requires.
 
 `band` is already imported in this file from `hornvale_kernel`
 (`channel.rs:22`). Then rewrite `transverse_at`'s body:

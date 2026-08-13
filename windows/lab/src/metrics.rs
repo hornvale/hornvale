@@ -3507,8 +3507,9 @@ pub fn registry() -> Vec<Metric> {
                   worlds; The Rill's review had guessed ~3,500 and rightly \
                   declined to assert it. The walk now asks `build`'s own \
                   reach predicate, so it stops only where the flow stops: \
-                  joins actually crossed go 853 -> 2,333 on seed 42, and \
-                  2.43x in total over the 64 worlds. **The value did not \
+                  on seed 42 alone the joins actually crossed go 853 -> 2,333 \
+                  (2.74x), and summed over all 64 probe worlds they go \
+                  90,537 -> 219,763 (2.43x). **The value did not \
                   move.** The two rules are bit-identical on all 64 probe \
                   worlds, both 1.0, so this is a vacuous 1.0 converted into a \
                   tested 1.0 — which is why the repair landed in this column \
@@ -7341,7 +7342,7 @@ fn lab_fold_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
 ///
 /// **What the repair changed.** The walk now asks [`lab_flow_continues`] —
 /// `build`'s own reach predicate — so it stops only where the flow stops. On
-/// seed 42 the joins actually crossed go **853 -> 2,333** (2.73x); across the
+/// seed 42 the joins actually crossed go **853 -> 2,333** (2.74x); across the
 /// 64 probe worlds the rise is 2.06-2.75x per world and 2.43x in total
 /// (90,537 -> 219,763 crossings). What it did NOT
 /// change is the value: over those same 64 worlds the two rules are

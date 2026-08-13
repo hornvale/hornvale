@@ -180,7 +180,7 @@ const EXPECTED_UNTOKENISED: [&str; 27] = [
     "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
     "probe: enumerates every branch of a whole coarse basin, twice (1.4 s measured); run by hand",
     "probe: measurement only, run explicitly",
-    "probe: replays ~50k real nearest-line queries against the full 3,606-line network (1.1 s measured, --release, post-Task-4 index); run by hand",
+    "probe: replays ~50k real nearest-line queries against the full 3,606-line network, each answered by the UNINDEXED reference scan (23.1 s measured, --release; 1.1 s when the oracle was the Task-4 index, which is why the module doc explains the trade); run by hand",
     "probe: sweeps every transect twice — once transcribed, once through the shipped metric (0.3 s measured, --release, post-Task-4 index); run by hand",
     "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (21.8 s measured); run by hand",
     "readout: chronicle evidence, run manually with --nocapture",

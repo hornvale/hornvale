@@ -1,17 +1,39 @@
 //! The Millrace, Task 2: what a capped nearest-line query would actually
-//! gather, measured **before** any index exists.
+//! gather, measured against the **unindexed** linear scan.
 //!
 //! Spec §3.2 reduces the correctness of a bucketed `nearest_line` to one
 //! inequality — every segment within `D` of `p` has an endpoint inside the cap
 //! of radius `rho = D + L_max/2` — and spec §3.3 requires the *benefit* of
-//! that cap measured first, on the shipped tree, with no index built. This
-//! file is that measurement. It builds no index and changes no metric; it
-//! replays the real query population and reports, per query, how many distinct
-//! polylines the cap would have handed the scan.
+//! that cap measured first, on the shipped tree, before the index is built.
+//! This file is that measurement. It builds no index of its own and changes no
+//! metric; it replays the real query population and reports, per query, how
+//! many distinct polylines the cap would have handed the scan.
 //!
 //! ```text
 //! cargo test --release -p hornvale-lab --test millrace_probe -- --ignored --nocapture
 //! ```
+//!
+//! # The oracle is the reference scan, deliberately
+//!
+//! Task 2 wrote this file when `ChannelNetwork::nearest_line` **was** the
+//! linear scan, so taking `D` and the winner from it made the control below
+//! independent by construction. Task 4 then made `nearest_line` the bucket
+//! index, and that independence silently lapsed: the probe's cap and the
+//! index's gather would have rested on the *same* coverage inequality with the
+//! *same* `L_max`, so a wrong inequality would be **agreed on rather than
+//! caught**. Every `D`, winner and signed distance here therefore comes from
+//! `ChannelNetwork::nearest_line_reference_for_test` — the unindexed scan the
+//! index replaced, which `domains/terrain/tests/channel_properties.rs`
+//! separately pins the index equal to.
+//!
+//! **What restoring it costs, measured rather than guessed.** Every figure
+//! this file prints is bit-identical either way (as the equality property
+//! battery says it must be), but the measurement test went **1.1 s -> 23.1 s**
+//! (`--release`, seed 42, ~41k queries): the reference scan's per-polyline
+//! segment projection is far heavier than the cap sweep's early-exiting dot
+//! products, so the independent oracle is roughly 20x the indexed one. This is
+//! an `#[ignore]`d hand-run probe, so that buys a control that can actually
+//! disagree with the index for a cost nothing in the gate pays.
 //!
 //! # Four things this file is careful about
 //!
@@ -50,11 +72,11 @@
 //!
 //! **The instrument carries its own positive control.** A cap that is too
 //! small produces a flatteringly tiny candidate set that simply does not
-//! contain the answer, so every single query re-runs `nearest_line`'s exact
-//! argmin over the candidate set alone and asserts it reproduces the full
-//! scan's winner and its bit-identical signed distance
-//! ([`shrink_factor`]). Spec §3.2's inequality is therefore checked, not
-//! assumed, on every query this probe reports a `k` for.
+//! contain the answer, so every single query re-runs the exact argmin over the
+//! candidate set alone and asserts it reproduces the **reference scan's**
+//! winner and its bit-identical signed distance ([`shrink_factor`]). Spec
+//! §3.2's inequality is therefore checked, not assumed, on every query this
+//! probe reports a `k` for.
 //!
 //! **A mean is not reported alone.** The win is structurally heterogeneous —
 //! the cap's radius scales with the answer distance, so a probe beside a
@@ -250,17 +272,19 @@ fn max_cell_edge(geo: &Geosphere) -> f64 {
 
 /// The candidate set a capped query at `q` would gather: the **distinct
 /// polylines with a vertex inside the cap** of radius `D + L_max/2`, where `D`
-/// is the true answer distance the shipped linear scan returns.
+/// is the true answer distance the **unindexed** linear scan
+/// (`ChannelNetwork::nearest_line_reference_for_test`) returns — never the
+/// index's, for the reason the module doc gives.
 ///
 /// The cap is applied as `dot >= cos(rho)` rather than `angle <= rho` — the
 /// same test, one `acos` per query instead of one per vertex. `rho >= pi`
 /// degenerates to `cos_rho = -1`, which every unit vector satisfies, so the
 /// full-scan fallback needs no special case here.
 ///
-/// `None` only when the network is empty, which `nearest_line` also answers
-/// `None` for.
+/// `None` only when the network is empty, which the reference scan also
+/// answers `None` for.
 fn candidates(net: &ChannelNetwork, q: [f64; 3], half_max_segment: f64) -> Option<Vec<usize>> {
-    let (_, signed) = net.nearest_line(q)?;
+    let (_, signed) = net.nearest_line_reference_for_test(q)?;
     let rho = signed.abs() + half_max_segment;
     let cos_rho = if rho >= std::f64::consts::PI {
         -1.0
@@ -283,13 +307,18 @@ fn candidates(net: &ChannelNetwork, q: [f64; 3], half_max_segment: f64) -> Optio
 /// A units error, a stale `L_max`, or a sign slip in the cap would all show up
 /// as an impressively small candidate set that simply does not contain the
 /// answer, and the resulting `k` would be a large, meaningless number. So
-/// every query re-runs `nearest_line`'s exact argmin — `d.abs() <
-/// best.abs()`, ascending polyline index — over the candidate set alone and
-/// asserts it reproduces the full scan's winner *and* its bit-identical signed
+/// every query re-runs the exact argmin — `d.abs() < best.abs()`, ascending
+/// polyline index — over the candidate set alone and asserts it reproduces the
+/// **unindexed reference scan's** winner *and* its bit-identical signed
 /// distance. That is spec §3.2's inequality checked empirically, per query,
 /// rather than trusted; a red here says the measurement below is worthless.
+///
+/// The comparison is against the reference scan and not against
+/// `ChannelNetwork::nearest_line`, because since Task 4 the latter gathers by
+/// bucket under the *same* coverage inequality with the *same* `L_max`: a
+/// wrong inequality would be agreed on by both sides rather than caught.
 fn shrink_factor(net: &ChannelNetwork, q: [f64; 3], half_max_segment: f64) -> Option<f64> {
-    let (winner, signed) = net.nearest_line(q)?;
+    let (winner, signed) = net.nearest_line_reference_for_test(q)?;
     let gathered = candidates(net, q, half_max_segment)?;
     let mut best = f64::INFINITY;
     let mut best_line: Option<usize> = None;
@@ -345,9 +374,10 @@ struct TranscribedSweep {
 /// A transcription that drifts from the function it copies is the one failure
 /// a probe like this cannot afford, and the first version of this file offered
 /// two corroborations that are both vacuous: `channel-connectivity` reads
-/// 1.0000 for *any* walk transcription (`metrics.rs:7111` records that the
-/// metric is constant since the confluence repair and both of its failure
-/// branches are unreachable), and the network's 3,606 / 14,606 dimensions
+/// 1.0000 for *any* walk transcription (`lab_channel_connectivity`'s own doc
+/// in `windows/lab/src/metrics.rs` records that the metric is constant since
+/// the confluence repair and that both of its failure branches are
+/// unreachable), and the network's 3,606 / 14,606 dimensions
 /// corroborate the world build rather than the sweep. Carrying the counts lets
 /// [`assert_sweep_matches_published`] compare against real published output
 /// instead, which moves if the stride, the window, the step count or the
@@ -400,10 +430,10 @@ fn transcribed_band_sweep(net: &ChannelNetwork) -> TranscribedSweep {
                     previous = band;
                     // The shipped loop also tracks `own_previous` here to
                     // score `channel-band-monotonicity`. That column is not
-                    // reproduced: `metrics.rs:7273` records it reading 1.0 on
-                    // all 64 probe worlds, so asserting on it would corroborate
-                    // nothing. `reached_dry` is the half of this branch that
-                    // still discriminates.
+                    // reproduced: `lab_band_transects`' own doc records it
+                    // reading 1.0 on all 64 probe worlds, so asserting on it
+                    // would corroborate nothing. `reached_dry` is the half of
+                    // this branch that still discriminates.
                     if still_own && band == Transverse::Dry.index() {
                         reached_dry = true;
                     }
@@ -443,9 +473,10 @@ fn published_number(view: &TerrainView, name: &str) -> f64 {
 /// The two chosen are `channel-band-monotonicity-untruncated` and
 /// `channel-transect-dry-reach`, both `monotone_untruncated / transects` and
 /// `reached_dry / transects` over exactly the population this probe replays.
-/// `channel-band-monotonicity` is deliberately **not** used: `metrics.rs:7273`
-/// records it reading 1.0 on all 64 probe worlds, which makes it exactly as
-/// vacuous a corroboration as `channel-connectivity`.
+/// `channel-band-monotonicity` is deliberately **not** used:
+/// `lab_band_transects`' own doc in `windows/lab/src/metrics.rs` records it
+/// reading 1.0 on all 64 probe worlds, which makes it exactly as vacuous a
+/// corroboration as `channel-connectivity`.
 ///
 /// **What this does and does not cover.** It covers the transect half — a
 /// drift in the stride, the outward window, the step count, the side loop or
@@ -723,7 +754,7 @@ fn the_transcribed_transect_sweep_reproduces_the_published_metrics() {
 }
 
 #[test]
-#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network (1.1 s measured, --release, post-Task-4 index); run by hand"]
+#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network, each answered by the UNINDEXED reference scan (23.1 s measured, --release; 1.1 s when the oracle was the Task-4 index, which is why the module doc explains the trade); run by hand"]
 fn the_candidate_set_a_capped_query_would_gather() {
     let view = probe_world();
     let net = view.terrain.channels();
