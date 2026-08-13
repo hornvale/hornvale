@@ -292,7 +292,54 @@ follow-up below.
   (comfortably under the whole-sphere fallback) from a different number, and the
   measured value is what got pinned in the test.
 
-## 6. Small notes
+## 6. Findings from the planning pass, promoted because nothing else holds them
+
+These were settled in the campaign's decision ledger before any code was
+written, and the ledger is scratch.
+
+- **The campaign brief conflated two functions.** It said the network is
+  "already cell-bucketed" and that the nearest-cell index "is already threaded
+  into the query path". Both are true of `rill_reading`, which takes an index as
+  a parameter and considers exactly a cell plus its neighbours; both are false
+  of `nearest_line`, whose signature carries no index at all. Reading the two
+  signatures split one scope into a cost deliverable and a contract-only one,
+  and it is the reason the index had to be **owned by `ChannelNetwork` and built
+  in `build`** rather than passed in. The Rill's own measured null — the
+  per-room path went 0.42 → 0.45 CPU-s/world across a 16× densification —
+  agreed.
+- **A share computed over a retired denominator understated a term by 3×.**
+  The brief put `channel-connectivity` at "~7.5% of cost, a slope problem, not a
+  size problem". That 7.5% is 5.50 against a *pre*-memoisation total of 72.03,
+  and The Rill's own memo had already taken the total to 23.93 without touching
+  connectivity — making it **23% of total and 34% of lab reads**, the largest
+  identified read term. Same failure family as a stale absolute, one layer in:
+  a **live** absolute divided by a **retired** denominator. It would have ranked
+  the campaign's tasks wrongly.
+- **A census column redefined in place makes its own history a lie.**
+  `make census-history` loads a study's git history into a queryable series; a
+  column that means two things across that series is indistinguishable from one
+  that moved. This is the save-format rule — *deliberate regeneration uses an
+  epoch suffix, never a rename* — one layer out, and the metric family already
+  carries the precedent (`channel-band-monotonicity` and its `-untruncated`
+  companion coexist for exactly this reason). It is why the repair was gated on
+  a measured decision rule rather than committed to in advance, and it is the
+  argument to reach for the next time a column's meaning is wrong.
+- **Two inverse indexes over the same relation, differing in which claim
+  wins.** `ChannelNetwork::trunk_vertex` keeps the **first** run to claim a
+  cell; the metric's local `lab_run_owner` kept the **last**. Substituting the
+  published accessor for the per-world rebuild is right — one implementation
+  rather than two — but it is safe **only on the strength of the R-4 invariant**
+  that makes the relation functional, and the commit says so. A deduplication
+  that silently depends on an invariant is a deduplication that breaks when the
+  invariant is relaxed.
+- **Mark which task orderings are forced and which are chosen.** Measuring the
+  candidate distribution before building the index was *forced* — it was the
+  falsification hinge. Landing the duplicate-scan removal before the index was
+  *chosen*, for attribution hygiene, so the index would be credited only with
+  what it bought. Leaving the two indistinguishable in a plan is how a real
+  dependency gets dropped under schedule pressure.
+
+## 7. Small notes
 
 - **A generated artifact merges without conflicting.** The absorption of
   `main` was conflict-free, which means no git hook ran and no drift check

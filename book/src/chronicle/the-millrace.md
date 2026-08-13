@@ -82,8 +82,10 @@ min( angle(p,a), angle(p,b) )  ≤  d + L/2  ≤  d + L_max/2
 ```
 
 Every segment within `d` of `p` therefore has an **endpoint** inside the cap of
-radius `d + L_max/2`. Bucket the vertices, gather that cap, and the winner
-cannot be absent. The distance function itself is called unchanged, so the
+radius `d + L_max/2`. Bucket the **vertices**, gather that cap, and the winner
+cannot be absent. Bucketing whole polylines instead would have been useless at
+this density — a level-6 run spans many cells, so its bounding cap covers most
+of a continent and excludes nothing. The distance function itself is called unchanged, so the
 returned `f64` is bit-identical by construction rather than by tolerance — the
 index narrows *which* lines are compared and never *how*.
 
