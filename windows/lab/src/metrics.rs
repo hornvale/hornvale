@@ -7219,26 +7219,43 @@ fn lab_connectivity_verdicts(
 /// every walk that reaches a run continues exactly as that run's own walk
 /// does — and the hop test depends only on the run. Intactness is therefore a
 /// pure suffix property, and this collapses `walks x depth` to `L` hops
-/// evaluated once. **The memo is exact by construction, not by tolerance**;
-/// `the_memoised_fold_reproduces_the_unmemoised_walk` asserts it against a
-/// transcription of the unmemoised loop, per run, on real worlds.
+/// evaluated once. **The memo is exact by construction, not by tolerance**,
+/// and it is pinned by
+/// `the_fold_reproduces_the_unmemoised_walk_on_hand_built_chains` — over
+/// hand-written verdict vectors, because no real world can witness it: every
+/// world reads 1.0 under either continuation rule, so an unmemoised reference
+/// taken on one is `[true; n]` and agrees with a fold that always returns
+/// `true`. The world-level assertion is a shape check; the hand-built one is
+/// the proof.
 ///
 /// **The campaign expected this to be load-bearing and measurement says it is
 /// not, which is recorded here rather than quietly enjoyed.** The spec's worst
 /// case for the repaired walk was `walks x chain depth` with depth bounded only
 /// by the run count (3,606 at seed 42), on the argument that a repaired walk
 /// chains to the sea instead of stopping at the first sub-threshold trunk. The
-/// chains are in fact **shallow**: over `the-ford-probe`'s 64 worlds the
-/// deepest walk crosses **10** joins and the mean walk crosses **0.70**, because
-/// `build` claims trunks in ascending cell order, so a tributary typically joins
-/// a trunk that is already running to the sea. Measured on that harness, the
+/// chains are in fact **shallow**. Seed 42 under the repaired rule, walks by
+/// depth:
+///
+/// ```text
+/// joins crossed  0     1     2    3   4  5
+/// walks       2028  1035   378  125  33  7      (sum k*n_k = 2,333)
+/// ```
+///
+/// 1,035 of the 1,578 walks that cross anything (65.6%) join a trunk that then
+/// ends. Over all 64 `the-ford-probe` worlds the deepest walk crosses **10**
+/// joins and the mean walk crosses **0.70**. Measured on that harness, the
 /// unmemoised repaired walk costs 21.02 user-s against the memoised 20.26 —
 /// +0.012 CPU-s/world, inside the spread of repeated runs of either arm.
 ///
-/// So the memo is kept for what it does guarantee, not for a win it was not
-/// measured to deliver: it is exact, it costs one pass, and it removes the
-/// quadratic term as a *possibility* — depth is a property of the world, and
-/// nothing in the code bounds it.
+/// **Why shallow is an observation and not a guarantee.** It is tempting to
+/// derive it: `build` claims along `Geosphere::cells()` in ascending order, so
+/// a run's trunk always has a lower run index. That is a real argument, and it
+/// yields acyclicity and a bound of the **run count** — it does **not** bound
+/// the depth, which is what a quadratic term would be quadratic in. Nothing
+/// forbids a world whose trunk chains are long. So the shallowness above is
+/// **measured on 64 worlds**, not structural, and the memo is kept for what it
+/// does guarantee: it is exact, it costs one pass, and it removes the
+/// quadratic term as a *possibility*.
 ///
 /// The chain is walked iteratively with an explicit `pending` list rather than
 /// by recursion: nothing bounds the depth but the run count, and a 3,606-deep
@@ -7355,19 +7372,39 @@ fn lab_fold_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
 /// **Cost, and a falsified expectation.** The walk is memoised over its shared
 /// suffixes ([`lab_fold_intact`]) because the spec expected the repair to make
 /// walks chain to the sea and the term expensive. Measured, it does not: the
-/// deepest walk in 64 worlds crosses 10 joins, and repair-plus-memo costs
-/// +0.002 CPU-s/world against the pre-repair column on `the-ford-probe` —
-/// null at this harness's resolution. See [`lab_fold_intact`] for the arms.
+/// deepest walk in 64 worlds crosses 10 joins (seed 42's depth histogram is in
+/// [`lab_fold_intact`]), and repair-plus-memo costs +0.002 CPU-s/world against
+/// the pre-repair column on `the-ford-probe` — null at this harness's
+/// resolution. The shallowness is measured, not guaranteed by the build order;
+/// see [`lab_fold_intact`] for why that distinction is kept.
 fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
+    let verdicts = lab_connectivity_hops(terrain)?;
+    let intact = lab_fold_intact(&verdicts);
+    let good = intact.iter().filter(|&&v| v).count();
+    Some(good as f64 / intact.len() as f64)
+}
+
+/// The shipped walk's per-run hop verdicts for one world — the metric's own
+/// intermediate, factored out so a test can assert on it.
+///
+/// **It exists because the metric's VALUE cannot police the metric's RULE.**
+/// The column is a constant 1.0, so an assertion comparing
+/// `lab_channel_connectivity` against a recomputation under any continuation
+/// rule passes under every rule; the verdict vector is the shallowest thing
+/// here that actually varies with the rule (2,987 `Ends` under the superseded
+/// rule against 2,028 under the shipped one, seed 42). A test asserting the
+/// shipped closure is the repaired one has to assert on this.
+fn lab_connectivity_hops(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+) -> Option<Vec<LabHopVerdict>> {
     let net = terrain.channels();
     if net.polylines.is_empty() {
         return None;
     }
     let globe = terrain.globe();
-    let verdicts = lab_connectivity_verdicts(net, |cell| lab_flow_continues(globe, cell));
-    let intact = lab_fold_intact(&verdicts);
-    let good = intact.iter().filter(|&&v| v).count();
-    Some(good as f64 / intact.len() as f64)
+    Some(lab_connectivity_verdicts(net, |cell| {
+        lab_flow_continues(globe, cell)
+    }))
 }
 
 /// One sweep of the channel network's transects, counted four ways.
@@ -9697,10 +9734,35 @@ mod tests {
             );
         }
 
-        // (3) The memo is exact — under the shipped rule AND under the
-        // superseded one, so the proof does not depend on the repair.
+        // (3) The shipped metric reads the REPAIRED rule. Asserted on the
+        // verdict vector, not on the value: the value is 1.0 under either
+        // rule, so an assertion over values passes under both and guards
+        // nothing (the review mutation-proved exactly that). The vectors
+        // differ — 2,987 `Ends` against 2,028 on seed 42 — so this one can
+        // fail.
         let repaired = lab_connectivity_verdicts(net, |c| lab_flow_continues(globe, c));
         let superseded = lab_connectivity_verdicts(net, |c| lab_river_continues(globe, c));
+        assert_eq!(
+            lab_connectivity_hops(terrain).as_ref(),
+            Some(&repaired),
+            "the shipped metric's continuation rule is not the repaired one"
+        );
+        assert_ne!(
+            superseded, repaired,
+            "the two rules produced identical verdict vectors on this world, so the assertion \
+             above cannot distinguish them and is not a guard here"
+        );
+
+        // (4) The memo agrees with an unmemoised walk of the same verdicts.
+        //
+        // **THIS IS A SHAPE CHECK, NOT THE MEMO'S PROOF, AND THE DIFFERENCE
+        // IS THE REVIEW'S FINDING.** Every real world reads 1.0 under both
+        // rules, so no verdict is `LeftChannel` or `FellOut`, so both sides
+        // here are `[true; n]` and the assertion survives replacing
+        // `lab_fold_intact`'s whole body with `vec![true; len]` — which is
+        // precisely the mis-sharing mode it looks like it covers. The proof
+        // is `the_fold_reproduces_the_unmemoised_walk_on_hand_built_chains`,
+        // over verdict vectors written by hand, where `false` exists.
         for (label, verdicts) in [("repaired", &repaired), ("superseded", &superseded)] {
             assert_eq!(
                 lab_fold_intact(verdicts),
@@ -9712,6 +9774,85 @@ mod tests {
         (superseded, repaired)
     }
 
+    /// **The memo's actual proof.** `lab_fold_intact` takes a
+    /// `&[LabHopVerdict]` and nothing else, so its behaviour can be pinned on
+    /// vectors written by hand — with the expected answers stated by hand, not
+    /// derived from the thing under test — in microseconds and without a world.
+    ///
+    /// It exists because the world-level assertion **cannot fail**. A real
+    /// world reads 1.0 under either continuation rule, so every verdict is
+    /// `Ends` or `Continues`, so both sides of that comparison are `[true; n]`:
+    /// replacing this function's entire body with `vec![true; verdicts.len()]`
+    /// leaves every world-level test in this file green, including the 64-world
+    /// probe, byte for byte. The mode the memo could plausibly get wrong — a
+    /// `false` deep in a shared suffix failing to reach the tributaries that
+    /// share it — is exactly the mode a `[true; n]` reference is blind to.
+    ///
+    /// Each case therefore contains a `false`, and the cases are chosen for
+    /// sharing structure rather than for coverage of the enum: several
+    /// tributaries on one broken suffix, a break deep in a chain, a `FellOut`
+    /// mid-chain, and a diamond (two runs whose walks rejoin). The cycle pair
+    /// pins the `0..=len` bound's documented resolution, which no network can
+    /// produce and no other test reaches.
+    #[test]
+    fn the_fold_reproduces_the_unmemoised_walk_on_hand_built_chains() {
+        use LabHopVerdict::{Continues, Ends, FellOut, LeftChannel};
+        let cases: [(&str, Vec<LabHopVerdict>, Vec<bool>); 8] = [
+            (
+                "three tributaries share one broken trunk suffix",
+                vec![Continues(3), Continues(3), Continues(3), LeftChannel],
+                vec![false, false, false, false],
+            ),
+            (
+                "the break is three hops down a shared chain",
+                vec![Continues(1), Continues(2), Continues(3), LeftChannel],
+                vec![false, false, false, false],
+            ),
+            (
+                "a FellOut mid-chain breaks only what feeds it",
+                vec![Continues(1), FellOut, Ends],
+                vec![false, false, true],
+            ),
+            (
+                "a diamond: two runs rejoin on an intact suffix",
+                vec![Continues(2), Continues(2), Continues(3), Ends],
+                vec![true, true, true, true],
+            ),
+            (
+                "a diamond on a broken suffix breaks both arms",
+                vec![Continues(2), Continues(2), Continues(3), LeftChannel],
+                vec![false, false, false, false],
+            ),
+            (
+                "intact and broken walks in one network",
+                vec![Continues(2), Continues(3), Ends, LeftChannel],
+                vec![true, false, true, false],
+            ),
+            (
+                "a two-cycle exhausts the bound and resolves intact",
+                vec![Continues(1), Continues(0)],
+                vec![true, true],
+            ),
+            (
+                "a three-cycle with a tributary hanging off it",
+                vec![Continues(1), Continues(2), Continues(0), Continues(0)],
+                vec![true, true, true, true],
+            ),
+        ];
+        for (name, verdicts, want) in cases {
+            assert_eq!(
+                lab_fold_intact(&verdicts),
+                want,
+                "the memoised fold is wrong on: {name}"
+            );
+            assert_eq!(
+                lab_fold_intact(&verdicts),
+                unmemoised_intact(&verdicts),
+                "the memoised fold and an unmemoised walk disagree on: {name}"
+            );
+        }
+    }
+
     /// The invariants on a real world, in the commit gate.
     ///
     /// Level 5 rather than the canonical grid because this is the *always*
@@ -9719,20 +9860,28 @@ mod tests {
     /// `the-ford-probe`'s seeds at the canonical level, and this one exists so
     /// that a change breaking them cannot wait for someone to remember a
     /// by-hand run.
+    ///
+    /// **What a real world can and cannot witness.** It witnesses the two
+    /// agreements — `lab_run_owner` against `trunk_vertex`, and the reach
+    /// predicate against the trunk index — because those compare two
+    /// independently computed answers that a defect separates. It does **not**
+    /// witness the memo, because on any world every walk is intact; that proof
+    /// is `the_fold_reproduces_the_unmemoised_walk_on_hand_built_chains`.
     #[test]
     fn the_memoised_fold_reproduces_the_unmemoised_walk() {
         let terrain = ford_test_terrain();
         let (superseded, repaired) = assert_connectivity_invariants(&terrain);
-        // Both arms are computed; assert the shipped column is the repaired
-        // one, so a future edit cannot quietly re-point it at the old rule.
+        assert!(
+            !superseded.is_empty() && !repaired.is_empty(),
+            "this world has no runs, so nothing above was tested"
+        );
+        // The value is a constant, so it is asserted only for its range —
+        // never as evidence about the rule, which (3) above holds on the
+        // verdict vector instead.
         assert_eq!(
             lab_channel_connectivity(&terrain),
             Some(connectivity_of(&repaired)),
-            "the shipped column is not reading the repaired continuation rule"
-        );
-        assert!(
-            !superseded.is_empty(),
-            "this world has no runs, so nothing above was tested"
+            "the shipped column is not the fold of the shipped verdicts"
         );
     }
 
@@ -9814,6 +9963,23 @@ mod tests {
                      their join never crossed",
                     superseded.len(),
                     ends as f64 / superseded.len() as f64,
+                );
+                // The depth distribution is the datum behind the null: the
+                // memo's value depends on how deep walks actually go, and
+                // "shallow" is a measurement, not something the build order
+                // guarantees.
+                let mut histogram: Vec<usize> = vec![0; max_depth + 1];
+                for &d in &depths {
+                    histogram[d] += 1;
+                }
+                println!("depth histogram [seed 42, repaired rule]: {histogram:?}");
+                let joining = depths.iter().filter(|&&d| d > 0).count();
+                let one_hop = depths.iter().filter(|&&d| d == 1).count();
+                println!(
+                    "  {one_hop} of {joining} joining walks ({:.3}) join a trunk that itself \
+                     ends; sum k*n_k = {} matches the crossings column",
+                    one_hop as f64 / joining as f64,
+                    depths.iter().sum::<usize>(),
                 );
             }
         }

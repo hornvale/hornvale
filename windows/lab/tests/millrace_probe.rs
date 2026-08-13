@@ -714,7 +714,7 @@ fn the_longest_channel_segment_stays_inside_the_mesh_edge_ceiling() {
 /// distinct failure. The measurement test below runs the same assertion on its
 /// own sweep, so running that test alone is still guarded.
 #[test]
-#[ignore = "probe: sweeps every transect twice — once transcribed, once through the shipped metric (16 s measured); run by hand"]
+#[ignore = "probe: sweeps every transect twice — once transcribed, once through the shipped metric (0.3 s measured, --release, post-Task-4 index); run by hand"]
 fn the_transcribed_transect_sweep_reproduces_the_published_metrics() {
     let view = probe_world();
     let sweep = transcribed_band_sweep(view.terrain.channels());
@@ -723,7 +723,7 @@ fn the_transcribed_transect_sweep_reproduces_the_published_metrics() {
 }
 
 #[test]
-#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network (41 s measured); run by hand"]
+#[ignore = "probe: replays ~50k real nearest-line queries against the full 3,606-line network (1.1 s measured, --release, post-Task-4 index); run by hand"]
 fn the_candidate_set_a_capped_query_would_gather() {
     let view = probe_world();
     let net = view.terrain.channels();
