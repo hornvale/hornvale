@@ -85,7 +85,16 @@ while IFS= read -r wt; do
     # Never recycle a tree someone is working in. A merged branch is not the
     # same as an idle worktree: a session mid-cleanup after its own merge has
     # a merged branch and live uncommitted work.
-    if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]; then
+    #
+    # ONE EXCLUSION, and without it this whole script is dead code.
+    # `docs/timings/test-baseline-<host>.tsv` is rewritten by every green gate
+    # (The Sexton folded ci-record into gate-run), so "has run a gate" — the
+    # normal end state of a finished campaign — would otherwise make every pool
+    # member permanently unrecyclable and silently degrade the pool to cold
+    # creation, defeating the point. It is machine-written and regenerable;
+    # genuine work is never only in this file.
+    dirty="$(git -C "$wt" status --porcelain 2>/dev/null | grep -v 'docs/timings/test-baseline-' || true)"
+    if [ -n "$dirty" ]; then
         echo "worktree-take: skipping $wt — working tree is dirty" >&2
         continue
     fi
@@ -103,6 +112,21 @@ done < <(git -C "$ROOT" worktree list --porcelain | awk '
 if [ -n "$recycled" ]; then
     echo "worktree-take: recycling $recycled (its branch is merged into $BASE)" >&2
     git -C "$recycled" fetch origin
+    # DISCARD THE BASELINE BEFORE SWITCHING, or the exclusion above is worse
+    # than the bug it fixes. `git switch -c` refuses to overwrite a locally
+    # modified file whose content differs at the target commit — and main's
+    # baseline moves constantly, because every green gate rewrites it. So the
+    # normal case is exactly the conflicting one. Measured in a throwaway pool:
+    #   error: Your local changes to the following files would be overwritten
+    #          by checkout: docs/timings/test-baseline-ambrose.tsv
+    #   Aborting                                                    (rc=1)
+    # Under `set -e` that aborts the script after it has already printed
+    # "recycling", turning a silent degradation into a hard stop. The file is
+    # machine-written and regenerable — the next green gate rewrites it — which
+    # is the same premise that let us ignore it above, so restoring it here is
+    # the other half of one decision, not a separate judgement about someone's
+    # work.
+    git -C "$recycled" checkout --quiet -- 'docs/timings/test-baseline-*.tsv' 2>/dev/null || true
     git -C "$recycled" switch -c "campaign/$NAME" "origin/$BASE"
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
