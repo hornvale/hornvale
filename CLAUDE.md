@@ -174,12 +174,28 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
 # reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them. Refreshed NIGHTLY on lefford since The Sexton (scripts/scheduled/), which
-# posts the diff to the board and commits nothing. A campaign close now READS
-# last night's result instead of waiting for a run: if the diff is empty you
-# are done. Committing a moved column is still a deliberate human act on the
-# canonical box. The Rill's refresh took 19,207 s to move three of 205 columns
-# with a human waiting on it; nothing about that needed to be synchronous.
+# for them.
+#
+# THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
+# the pre-merge close, by a human on lefford — see the dispatch line below.
+#
+# A NIGHTLY ALTERNATIVE EXISTS BUT IS NOT INSTALLED. The Sexton wrote
+# `scripts/scheduled/` (a systemd user timer that runs the census on lefford
+# overnight, posts the diff to the board, and commits nothing), because The
+# Rill's refresh took 19,207 s to move three of the census's 206 columns (203
+# metrics) with a human waiting on it, and nothing about that needed to be
+# synchronous. But INSTALLING IT IS A MANUAL STEP ON LEFFORD THAT NOBODY HAS
+# RUN — `~/Projects/hornvale-scheduled` does not exist there — so as of this
+# writing no nightly result is being produced at all. The install procedure,
+# and the two rules a scheduled job obeys, are in
+# `scripts/scheduled/README.md`.
+#
+# SO: DO NOT CLOSE A CAMPAIGN ON "the nightly diff was empty". Until the timer
+# is installed AND has been observed producing correct diffs over several
+# nights, an absent notice means the job is not running, not that the census
+# agrees with main — and an earlier draft of this block told you the opposite.
+# Committing a moved column is a deliberate human act on the canonical box
+# either way; that part never changes.
 #
 # THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
 # whatever box you are sitting at". That ambiguity is the whole trap, and it
@@ -324,15 +340,28 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # make do
 cargo run --manifest-path tools/digest/Cargo.toml -- render decisions  # docs/digest/decisions-in-force.md
 cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/digest/intent-vs-reality.md
 
-# Generated-artifact freshness. The single source of truth is
-# scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
-# registry/manifest dumps, lab studies, the type-audit report, the digest's
-# decision index and delta report, the Domesday survey, the committed
-# vessel/session/v2 client fixtures); `make rebaseline` and CI both call it,
-# so they cannot silently diverge:
+# Generated-artifact freshness. Two sources of truth, each authoritative for a
+# different half. WHAT IS GENERATED: scripts/regenerate-artifacts.sh (three
+# seed-42 almanacs, the elevation map, registry/manifest dumps, lab studies,
+# the type-audit report, the digest's decision index and delta report, the
+# Domesday survey, the committed vessel/session/v2 client fixtures) — `make
+# rebaseline` calls it, so there is exactly one regeneration path. WHICH PATHS
+# ARE DRIFT-CHECKED: `docs/generated-paths.txt`, and NOT the prose below.
+#
+# THAT FILE IS THE LIST. This block used to restate all seven paths inline,
+# which is the exact drift shape the file was created to prevent: a campaign
+# that reads CLAUDE.md, adds a directory to the prose, and never touches the
+# file gets no tracked-ness check on it — and `git diff --exit-code` against an
+# untracked path is silently vacuous, so the check would pass forever. Add a
+# generated directory HERE, in docs/generated-paths.txt, and `git add` its
+# contents in the same commit. `cli/tests/generated_paths.rs` enforces both
+# that every declared path is tracked and that this block still names the file.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
+# The drift check, reading its path list from the one file that declares it:
+git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+# The notes below explain WHY particular entries are in that file; they are
+# commentary on it, never a second copy of it.
 # docs/audits/ is in that list — the type-audit report drifts on any
 # pub-boundary change, and omitting it is a common miss. So is docs/digest/
 # (The Digest): the in-force decision index drifts whenever a decision record

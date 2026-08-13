@@ -73,7 +73,9 @@ tweak — drifts those. After any output change:
 
 ```bash
 make rebaseline
-git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
+# The path list is `docs/generated-paths.txt` — the single source of truth, so
+# no guide restates it (`cli/tests/generated_paths.rs` enforces that).
+git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 ```
 
 `clients/game/core/tests/fixtures/` belongs on that list even though it lives

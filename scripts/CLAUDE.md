@@ -47,9 +47,13 @@ Key knobs:
   and the `docs/digest/` drift check goes red for the wrong reason. This used
   to be handled by a `fetch-depth: 0` on the runner's checkout; with 0125 the
   burden is on whoever clones — never regenerate from a shallow clone.
-- After regen, the drift check is `git diff` over
-  `book/src/gallery book/src/reference book/src/laboratory docs/audits
-  docs/digest book/src/domesday clients/game/core/tests/fixtures` — note
+- After regen, the drift check is `git diff` over the paths declared in
+  **`docs/generated-paths.txt`** — the single source of truth, which no guide
+  restates (`cli/tests/generated_paths.rs` fails on a second copy, because an
+  inline list drifts the moment a generated directory is added). Read it:
+  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`.
+  The notes that follow explain WHY particular entries are in that file; they
+  are commentary on it, not a duplicate of it — note
   **`docs/audits/`** is in the list, and it now holds TWO drift-checked
   reports: the type-audit report (drifts on any pub-boundary change — a common
   miss) and **`seam-guard-roster.md`** (drifts whenever a `seam-guard:` tag is
