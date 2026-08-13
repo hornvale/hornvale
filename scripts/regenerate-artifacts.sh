@@ -24,6 +24,100 @@
 # rebaseline produces the full set.
 set -euo pipefail
 
+# THE SCRIPT WAS A LIST AND IS NOW A DAG (The Sexton, Task 5).
+#
+# 62 sequential `cargo run` invocations measured cpu_ratio 0.72-2.11 on 10-12
+# core boxes — effectively serial, on 15.9% of all measured human waiting.
+# Nobody decided that; it fell out of the file being a shell list.
+#
+# Outputs are DISTINCT FILES, so ordering cannot affect bytes. The success
+# criterion is `make rebaseline` leaving every generated artifact
+# byte-unchanged — the same falsifier The Whetstone used for its profile
+# change. Group D (studies) stays serial: `lab run` already saturates every
+# core internally, so co-scheduling it would oversubscribe, exactly as
+# .config/nextest.toml documents for the scattered batteries.
+#
+# THE CLASSIFICATION (traced by reading what each invocation actually reads,
+# not guessed from its name — a wrong assignment here is a write race that
+# surfaces as intermittent byte drift and gets blamed on determinism):
+#
+#   GROUP A — world builders. The three `hornvale new` calls writing the
+#   throwaway temp files $w42/$wsky/$wlocked. Mutually independent; every
+#   other world-touching invocation below depends on one of these three.
+#
+#   GROUP B — readers of $w42/$wsky/$wlocked (traced: each takes `--world` or
+#   `--seed`, and reads it before writing exactly one output). Almanacs,
+#   `explain`, `dictionary`, `locale`, `possess`, `history`, `connections`,
+#   the gallery maps, the scene exports, the surrounds ascii charts. Each
+#   writes to its own file, so independent of every other Group B member.
+#   Two `possess --seed 42 --snapshot …` calls (the committed game-core
+#   fixtures) do NOT read $w42/$wsky/$wlocked at all — traced their args:
+#   `--seed` builds a fresh internal genesis, not the temp files — so they
+#   have no dependency on Group A's reap either, but scheduling them with the
+#   rest of B is harmless (no shared write target) and keeps this script
+#   simple.
+#
+#   GROUP C — world-free dumps, traced to have NO `--world`/`--seed` build
+#   dependency on Group A's temp files: `concepts`, `concepts --manifest`,
+#   `streams`, `phonology`, `proto goblinoid|dwarf|elf`, the type-audit
+#   report, and the digest renders, as the plan names. Tracing turned up four
+#   more of the same shape, not named in the plan: the `first_light` example
+#   (hardcodes `Seed(42)` and builds its own mini-genesis internally — never
+#   touches $w42/$wsky/$wlocked), `book` (loops over `Seed(1..=3)`, its own
+#   internal builds), `tropes report`/`report --corpus …`/`matrix` (each
+#   builds its own `Seed(0)` world via `world_builder::build_world`,
+#   independent of Group A), and the seam-guard roster (a source-tree scan,
+#   no world at all). All of these are safe to co-schedule with B: distinct
+#   write targets, and no read dependency on B's or A's outputs.
+#
+#   GROUP D — the lab studies (`lab run`, traced: internally parallel across
+#   seeds via `std::thread::available_parallelism`, per
+#   `windows/lab/src/runner.rs`). Runs serially with respect to each other and
+#   is never co-scheduled with anything else, so it does not oversubscribe a
+#   box A/B/C are already using every core of. This is the-chorus (always)
+#   plus the-census/census-of-the-meeting (only under HV_CENSUS=1) — moved
+#   next to each other below; their relative order is unchanged from before
+#   this DAG (chorus, then the census pair), only their position in the
+#   overall script moved.
+#
+#   NOT IN A/B/C/D — the census-schema backfill loop and the domesday survey.
+#   Traced: `backfill-schema` reads the CSVs Group D's census studies write
+#   (when HV_CENSUS=1) and `domesday` reads what `backfill-schema` just wrote,
+#   so both stay serial, right after Group D reaps — exactly where they sat
+#   in the original list, since Group D itself did not move relative to them.
+#
+# Schedule: A, reap; B+C together, reap; D serially; then the two dependent
+# trailers (schema backfill, domesday) serially.
+#
+# FAN-OUT IS BOUNDED BY HV_JOBS, not by wishful thinking. Group B+C alone has
+# over 50 `spawn` call sites; left uncapped on a quiet box that is a >50-way
+# `cargo run` fan-out, and one world build peaks around 300 MB, so that is
+# north of the ~16 GB `.config/nextest.toml` already measured as the failure
+# shape for uncapped concurrency on the test runner (it projected ~82 GB
+# co-resident there). This repo's normal state is two to three parallel
+# campaign sessions on one Mac (root CLAUDE.md's working-ceiling note), so
+# "quiet box" is the exception, not the default to design for.
+HV_JOBS="${HV_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
+_pids=()
+spawn() {
+    # Bound the fan-out. `wait -n` would be the clean way to block until any
+    # one background job frees a slot, but `/bin/bash` on the box this runs
+    # on is 3.2.57 (macOS ships it; `#!/usr/bin/env bash` resolves there) and
+    # 3.2 has no `wait -n` — so poll instead. 0.2s granularity is noise next
+    # to invocations costing seconds, and confirmed (by hand, off-script)
+    # that `jobs -rp` reports backgrounded PIDs correctly in this script's
+    # non-interactive context (job control being off affects terminal
+    # signalling, not bash's own jobs table).
+    while [ "$(jobs -rp | wc -l | tr -d ' ')" -ge "$HV_JOBS" ]; do sleep 0.2; done
+    "$@" & _pids+=("$!")
+}
+reap() {
+    local rc=0 p
+    for p in ${_pids+"${_pids[@]}"}; do wait "$p" || rc=1; done
+    _pids=()
+    [ "$rc" -eq 0 ] || { echo "regenerate-artifacts: a parallel job failed" >&2; exit 1; }
+}
+
 # CENSUS HOST GUARD, hoisted to the top: with HV_CENSUS=1 this script writes
 # the committed census goldens, which only the canonical box may author
 # (decision 0063). Checked BEFORE the ~4 minutes of other regeneration, so a
@@ -71,81 +165,32 @@ wlocked="$work/hv-locked.json" # seed 42, tidally locked
 run() { cargo run -q "$@"; }
 run_release() { cargo run -q --release "$@"; }
 
-echo "regenerate-artifacts: first light + seed-42 worlds" >&2
-run -p hornvale-kernel --example first_light
-run -p hornvale -- new --seed 42 --sky constant --out "$w42"
-run -p hornvale -- new --seed 42 --out "$wsky"
-run -p hornvale -- new --seed 42 --rotation locked --out "$wlocked"
+echo "regenerate-artifacts: GROUP A — world builders (parallel)" >&2
+spawn run -p hornvale -- new --seed 42 --sky constant --out "$w42"
+spawn run -p hornvale -- new --seed 42 --out "$wsky"
+spawn run -p hornvale -- new --seed 42 --rotation locked --out "$wlocked"
+reap
 
-echo "regenerate-artifacts: almanacs" >&2
-run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
-run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
-run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
+# ---- Group B/C job bodies that are more than one `run` call ----------------
+# (compound blocks: a hand-authored header/frame around one or more `run`
+# invocations, all destined for one committed file). Wrapped in functions so
+# `spawn` can background the whole block and the caller's `> file` redirect
+# captures every printf and `run` inside it, exactly as the original `{ …; }
+# > file` groups did.
 
-echo "regenerate-artifacts: the book" >&2
-run -p hornvale -- book > book/src/gallery/the-book.md
-
-echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
-run_release -p hornvale -- lab run studies/the-chorus.study.json
-
-echo "regenerate-artifacts: explain" >&2
-run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
-
-echo "regenerate-artifacts: reference dumps" >&2
-run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
-run -p hornvale -- concepts --manifest > book/src/reference/concept-manifest-generated.md
-run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
-run -p hornvale -- phonology > book/src/reference/phonology.md
-run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
-run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-generated.md
-run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
-run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
-run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
 # The live-pane preamble is hand-authored framing (The Casement, decision
 # 0052): the possess dump replaces the whole file, so re-emit the preamble
 # here rather than losing it on every regen — it was clobbered twice by
 # earlier regen runs before this step carried it.
-possess_tmp="$(mktemp)"
-run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
-{
+gen_possession_day0() {
+    local possess_tmp
+    possess_tmp="$(mktemp)"
+    run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
     head -n 1 "$possess_tmp"
     printf '\n*(This transcript is frozen. [The live pane](./possession-live.md) derives\nthe same world in your browser — same crates, same bytes.)*\n'
     tail -n +2 "$possess_tmp"
-} > book/src/gallery/possession-seed-42.md
-rm -f "$possess_tmp"
-
-# The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
-# render tests read this instead of paying for genesis (measured 1.43 s).
-# Regenerated here, beside the transcripts above, so it cannot silently lag
-# `vessel/session/v2`'s schema.
-#
-# `--script` is REQUIRED here, even though the script is empty (the fixture
-# is turn 0, the opening — no verb should run before the snapshot). Every
-# OTHER `possess` call in this file passes `--script`, which routes input
-# through a `Cursor`; without one, `possess` falls into its interactive arm
-# and blocks reading `stdin.lock()`. That hangs a human running `make
-# rebaseline` from an ordinary terminal even though it is invisible to a
-# non-interactive agent or CI, whose stdin is already at EOF — an empty
-# `--script` cannot block either way. `--lens`/`--echo` differ between the
-# two arms, but neither reaches the snapshot (only the terminal draw does;
-# see `PossessOpts::lens`'s doc), so this is byte-identical to the possess
-# call this replaced.
-mkdir -p clients/game/core/tests/fixtures
-run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
-    --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
-
-# The committed CHAMBER-band fixture (The Quire, Task 4 fix round): the
-# turn-0 fixture above always lands on `spatial.band == "walk"`, so
-# `hornvale-game-core`'s `Spatial::Chamber` mirror (`Plan`, `PlanExtent`,
-# `PaletteEntry`, `PlanPoint`, `PlanMark`) had no committed coverage —
-# nothing would catch a regression before Tasks 6/7 lean on those types.
-# `scripts/possession-chamber.txt` is a single `enter`, verified to land
-# seed 42's flagship possession inside a structure (`spatial.band ==
-# "chamber"`) from its opening room — the same first move
-# `possession-walk.txt` makes. `--script` is required for the same reason
-# as the turn-0 call above: without it `possess` blocks on `stdin.lock()`.
-run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
-    --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
+    rm -f "$possess_tmp"
+}
 
 # The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
 # separate recording — the day-0 transcript above never advances time, so it
@@ -162,9 +207,10 @@ run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
 # lands most, not all, towns on the river network — a real, measured
 # fraction, not every seed/settlement), but this world's own flagship
 # settlement's real, measured outcome.
-possess_ot_tmp="$(mktemp)"
-run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
-{
+gen_possession_overtime() {
+    local possess_ot_tmp
+    possess_ot_tmp="$(mktemp)"
+    run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
     # Both transcripts start at day 0, so `possess`'s own H1 is identical for
     # the two pages (The Running Head). Override it here rather than teaching
     # `possess` about the book's page layout: the day-0 page above keeps the
@@ -174,8 +220,8 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and\nsatisfy it — narrated by `wait`, felt directly through `needs`, and\nrecounted with its own reason by `why`. This settlement condenses\ndirectly onto fresh water (settlements-near-rivers): the NPC drinks in\nplace rather than walking to it, so `why` recounts a drink, not a\njourney — not every settlement'"'"'s fate (condensation lands most, not\nall, towns on the river network), but this world'"'"'s own flagship\nsettlement'"'"'s real, measured outcome. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
-} > book/src/gallery/possession-over-time-seed-42.md
-rm -f "$possess_ot_tmp"
+    rm -f "$possess_ot_tmp"
+}
 
 # The legibility surface (living-community, T7): a real seed-42 site read back
 # off the ledger as prose — its stratigraphy of occupation layers plus the
@@ -275,8 +321,7 @@ rm -f "$possess_ot_tmp"
 # changes; that is a reported number and this script asserts NO mechanism for
 # it, because a roster change moves several things at once.
 history_site=4604
-echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
-{
+gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
@@ -305,7 +350,7 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
-} > book/src/gallery/history-seed-42.md
+}
 
 # The transport topology's legibility surface (The Connection Graph, T6): two
 # real seed-42 sites read off the derived ConnectionGraph as prose, plus the
@@ -317,8 +362,7 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 # lines are hand-authored (the render replaces the file body, so re-emit
 # them here); the fenced blocks are the `connections` verb's exact,
 # drift-checked output.
-echo "regenerate-artifacts: the legibility surface (the transport topology)" >&2
-{
+gen_connections() {
     printf '# The Transport Topology of Seed 42\n\n'
     printf 'The connection graph'\''s legibility surface: a site'\''s natural sea-lanes and\n'
     printf 'overland routes, and which of the world'\''s naturally-connected regions it\n'
@@ -349,41 +393,37 @@ echo "regenerate-artifacts: the legibility surface (the transport topology)" >&2
     printf '```text\n'
     run -p hornvale -- connections --world "$wsky" --overview
     printf '```\n'
-} > book/src/gallery/connections-seed-42.md
+}
 
-echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
-run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
-    > book/src/gallery/elevation-seed-42.md
-run -p hornvale -- biome-map --world "$wsky" --out book/src/gallery/biome-seed-42.png \
-    > book/src/gallery/biome-seed-42.md
-run -p hornvale -- biome-map --world "$wlocked" --out book/src/gallery/biome-seed-42-locked.png \
-    > book/src/gallery/biome-seed-42-locked.md
-run -p hornvale -- settlement-map --world "$wsky" --out book/src/gallery/settlement-seed-42.png \
-    > book/src/gallery/settlement-seed-42.md
-run -p hornvale -- settlement-map --world "$wlocked" --out book/src/gallery/settlement-seed-42-locked.png \
-    > book/src/gallery/settlement-seed-42-locked.md
-run -p hornvale -- paleo-map --world "$wsky" --out book/src/gallery/paleo-seed-42.png \
-    > book/src/gallery/paleo-seed-42.md
-# The sediment/carve-delta lens (Sculpting): PNG only — no committed .md
-# sibling yet, so the markdown goes to /dev/null.
-run -p hornvale -- map --world "$wsky" --out book/src/gallery/sediment-seed-42.png \
-    --field sediment > /dev/null
-run -p hornvale -- map --world "$wsky" --out book/src/gallery/column-seed-42.png \
-    --field column > book/src/gallery/column-seed-42.md
-run -p hornvale -- map --world "$wsky" --out book/src/gallery/features-seed-42.png \
-    --field features > book/src/gallery/features-seed-42.md
-run -p hornvale -- vestige-map --world "$wsky" --out book/src/gallery/vestige-seed-42.png \
-    > book/src/gallery/vestige-seed-42.md
-run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-seed-42.png \
-    > book/src/gallery/star-chart-seed-42.md
+# The variety surface (the-shoal, T4): a global sample of rooms, so the book
+# shows what the world's places actually read like. Roughly two thirds of any
+# sample is sea — which is exactly why this page exists. Before The Shoal every
+# one of those rows said "broken terrain", and no committed artifact sampled a
+# marine room, so the gap was invisible in the book for as long as it existed.
+gen_room_sample() {
+    printf '# The Look of the World — Seed 42\n\n'
+    printf 'A Fibonacci-lattice sample of rooms spread evenly over the globe, each\n'
+    printf 'rendered by the locale window: its biome, its strangeness, and the\n'
+    printf 'descriptor drawn for it. Most of any honest sample of a world is ocean,\n'
+    printf 'so most of this page is ocean — the sea read at its own depths, with the\n'
+    printf 'sunlit water described by its light and the lightless water not.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'Generated by `hornvale locale --world world.json --sample 48`.\n\n'
+    printf '```text\n'
+    run -p hornvale -- locale --world "$wsky" --sample 48
+    printf '```\n'
+}
 
-echo "regenerate-artifacts: scene exports" >&2
-run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
-run -p hornvale -- scene tiles-region --world "$wsky" --face 0 --level 3 --ix 4 --iy 4 --samples 16 > book/src/gallery/scene-tiles-region-seed-42.json
-run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-seed-42.json
-run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
-run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
-run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
+# The findability surface (the-occlusion, T7): the placed exotic sites. The
+# strangeness budget keeps them a rare minority of land by design, so a random
+# `locale --sample` essentially never lands on one — the tier was generated but
+# unreachable. This listing is where it becomes visible.
+gen_strange_sites() {
+    printf '# The Strange Sites of Seed 42\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'The world'"'"'s placed exotic regimes: where each is, and what makes it\nstrange. Generated by `hornvale locale --world world.json --strange`.\n\n'
+    run -p hornvale -- locale --world "$wsky" --strange
+}
 
 # The Purview's legibility surface (The Margin): the same scene/surrounds/v1
 # chart the JSON export above carries, rendered through --render ascii at
@@ -406,52 +446,149 @@ run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surr
 # scene-surrounds-seed-42.json, since they render the identical
 # `biome`/`water`/`relief` classifications; the hand-authored .md that
 # includes them carries no such exposure and is checked normally.
-# The variety surface (the-shoal, T4): a global sample of rooms, so the book
-# shows what the world's places actually read like. Roughly two thirds of any
-# sample is sea — which is exactly why this page exists. Before The Shoal every
-# one of those rows said "broken terrain", and no committed artifact sampled a
-# marine room, so the gap was invisible in the book for as long as it existed.
-echo "regenerate-artifacts: the variety surface (a global room sample)" >&2
-{
-    printf '# The Look of the World — Seed 42\n\n'
-    printf 'A Fibonacci-lattice sample of rooms spread evenly over the globe, each\n'
-    printf 'rendered by the locale window: its biome, its strangeness, and the\n'
-    printf 'descriptor drawn for it. Most of any honest sample of a world is ocean,\n'
-    printf 'so most of this page is ocean — the sea read at its own depths, with the\n'
-    printf 'sunlit water described by its light and the lightless water not.\n\n'
-    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'Generated by `hornvale locale --world world.json --sample 48`.\n\n'
-    printf '```text\n'
-    run -p hornvale -- locale --world "$wsky" --sample 48
-    printf '```\n'
-} > book/src/gallery/room-sample-seed-42.md
-
-# The findability surface (the-occlusion, T7): the placed exotic sites. The
-# strangeness budget keeps them a rare minority of land by design, so a random
-# `locale --sample` essentially never lands on one — the tier was generated but
-# unreachable. This listing is where it becomes visible.
-echo "regenerate-artifacts: the findability surface (placed exotic sites)" >&2
-{
-    printf '# The Strange Sites of Seed 42\n\n'
-    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
-    printf 'The world'"'"'s placed exotic regimes: where each is, and what makes it\nstrange. Generated by `hornvale locale --world world.json --strange`.\n\n'
-    run -p hornvale -- locale --world "$wsky" --strange
-} > book/src/gallery/strange-sites-seed-42.md
-
-echo "regenerate-artifacts: the legibility surface (the purview, off a possession)" >&2
-mkdir -p book/src/gallery/generated/surrounds-seed-42
-{
+gen_surrounds_flagship() {
     printf '$ hornvale scene surrounds --world world.json --render ascii\n'
     run -p hornvale -- scene surrounds --world "$wsky" --render ascii
-} > book/src/gallery/generated/surrounds-seed-42/flagship.txt
-{
+}
+gen_surrounds_coastline() {
     printf '$ hornvale scene surrounds --world world.json --room 897392747 --render ascii\n'
     run -p hornvale -- scene surrounds --world "$wsky" --room 897392747 --render ascii
-} > book/src/gallery/generated/surrounds-seed-42/coastline.txt
-{
+}
+gen_surrounds_seam() {
     printf '$ hornvale scene surrounds --world world.json --room 724698318 --render ascii\n'
     run -p hornvale -- scene surrounds --world "$wsky" --room 724698318 --render ascii
-} > book/src/gallery/generated/surrounds-seed-42/seam.txt
+}
+
+echo "regenerate-artifacts: GROUP B+C — world readers and world-free dumps (parallel)" >&2
+
+# Group C: world-free dumps (see classification comment above).
+spawn run -p hornvale-kernel --example first_light
+spawn run -p hornvale -- book > book/src/gallery/the-book.md
+spawn run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
+spawn run -p hornvale -- concepts --manifest > book/src/reference/concept-manifest-generated.md
+spawn run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
+spawn run -p hornvale -- phonology > book/src/reference/phonology.md
+spawn run -p hornvale -- proto goblinoid > book/src/reference/proto-goblinoid-generated.md
+spawn run -p hornvale -- proto dwarf > book/src/reference/proto-dwarf-generated.md
+spawn run -p hornvale -- proto elf > book/src/reference/proto-elf-generated.md
+spawn run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+# The seam-guard roster. STATIC by design — registrations, declarations and
+# call sites, never verdicts (those cost a scoped test run per site, so an
+# artifact carrying them could not be regenerated cheaply). Its job is to put
+# every `expect(survives: …)` declaration under review pressure: a diff is
+# harder to leave lying around than a doc comment.
+spawn run --manifest-path tools/seam-guard/Cargo.toml -- report > docs/audits/seam-guard-roster.md
+spawn run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
+spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
+  > docs/audits/trope-coverage-tvtropes-2012.md
+spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
+spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
+  > docs/digest/decisions-in-force.md
+spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
+  > docs/digest/intent-vs-reality.md
+
+# Group B: readers of $w42/$wsky/$wlocked.
+spawn run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
+spawn run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
+spawn run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
+spawn run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
+spawn run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
+spawn run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
+spawn gen_possession_day0 > book/src/gallery/possession-seed-42.md
+
+# The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
+# render tests read this instead of paying for genesis (measured 1.43 s).
+# Regenerated here, beside the transcripts above, so it cannot silently lag
+# `vessel/session/v2`'s schema.
+#
+# `--script` is REQUIRED here, even though the script is empty (the fixture
+# is turn 0, the opening — no verb should run before the snapshot). Every
+# OTHER `possess` call in this file passes `--script`, which routes input
+# through a `Cursor`; without one, `possess` falls into its interactive arm
+# and blocks reading `stdin.lock()`. That hangs a human running `make
+# rebaseline` from an ordinary terminal even though it is invisible to a
+# non-interactive agent or CI, whose stdin is already at EOF — an empty
+# `--script` cannot block either way. `--lens`/`--echo` differ between the
+# two arms, but neither reaches the snapshot (only the terminal draw does;
+# see `PossessOpts::lens`'s doc), so this is byte-identical to the possess
+# call this replaced.
+#
+# NOTE (traced, not guessed): `--seed 42` here builds its own internal
+# genesis and never reads $w42/$wsky/$wlocked, so this has no real
+# dependency on Group A's reap — it is scheduled here anyway because it
+# shares no write target with anything else in this block.
+mkdir -p clients/game/core/tests/fixtures
+spawn run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
+    --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
+
+# The committed CHAMBER-band fixture (The Quire, Task 4 fix round): the
+# turn-0 fixture above always lands on `spatial.band == "walk"`, so
+# `hornvale-game-core`'s `Spatial::Chamber` mirror (`Plan`, `PlanExtent`,
+# `PaletteEntry`, `PlanPoint`, `PlanMark`) had no committed coverage —
+# nothing would catch a regression before Tasks 6/7 lean on those types.
+# `scripts/possession-chamber.txt` is a single `enter`, verified to land
+# seed 42's flagship possession inside a structure (`spatial.band ==
+# "chamber"`) from its opening room — the same first move
+# `possession-walk.txt` makes. `--script` is required for the same reason
+# as the turn-0 call above: without it `possess` blocks on `stdin.lock()`.
+# (Same note as above: `--seed 42` is self-contained, no Group A dependency.)
+spawn run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
+    --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
+
+spawn gen_possession_overtime > book/src/gallery/possession-over-time-seed-42.md
+spawn gen_history > book/src/gallery/history-seed-42.md
+spawn gen_connections > book/src/gallery/connections-seed-42.md
+
+spawn run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
+    > book/src/gallery/elevation-seed-42.md
+spawn run -p hornvale -- biome-map --world "$wsky" --out book/src/gallery/biome-seed-42.png \
+    > book/src/gallery/biome-seed-42.md
+spawn run -p hornvale -- biome-map --world "$wlocked" --out book/src/gallery/biome-seed-42-locked.png \
+    > book/src/gallery/biome-seed-42-locked.md
+spawn run -p hornvale -- settlement-map --world "$wsky" --out book/src/gallery/settlement-seed-42.png \
+    > book/src/gallery/settlement-seed-42.md
+spawn run -p hornvale -- settlement-map --world "$wlocked" --out book/src/gallery/settlement-seed-42-locked.png \
+    > book/src/gallery/settlement-seed-42-locked.md
+spawn run -p hornvale -- paleo-map --world "$wsky" --out book/src/gallery/paleo-seed-42.png \
+    > book/src/gallery/paleo-seed-42.md
+# The sediment/carve-delta lens (Sculpting): PNG only — no committed .md
+# sibling yet, so the markdown goes to /dev/null.
+spawn run -p hornvale -- map --world "$wsky" --out book/src/gallery/sediment-seed-42.png \
+    --field sediment > /dev/null
+spawn run -p hornvale -- map --world "$wsky" --out book/src/gallery/column-seed-42.png \
+    --field column > book/src/gallery/column-seed-42.md
+spawn run -p hornvale -- map --world "$wsky" --out book/src/gallery/features-seed-42.png \
+    --field features > book/src/gallery/features-seed-42.md
+spawn run -p hornvale -- vestige-map --world "$wsky" --out book/src/gallery/vestige-seed-42.png \
+    > book/src/gallery/vestige-seed-42.md
+spawn run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-seed-42.png \
+    > book/src/gallery/star-chart-seed-42.md
+
+spawn run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
+spawn run -p hornvale -- scene tiles-region --world "$wsky" --face 0 --level 3 --ix 4 --iy 4 --samples 16 > book/src/gallery/scene-tiles-region-seed-42.json
+spawn run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-seed-42.json
+spawn run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
+spawn run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
+spawn run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
+
+spawn gen_room_sample > book/src/gallery/room-sample-seed-42.md
+spawn gen_strange_sites > book/src/gallery/strange-sites-seed-42.md
+
+mkdir -p book/src/gallery/generated/surrounds-seed-42
+spawn gen_surrounds_flagship > book/src/gallery/generated/surrounds-seed-42/flagship.txt
+spawn gen_surrounds_coastline > book/src/gallery/generated/surrounds-seed-42/coastline.txt
+spawn gen_surrounds_seam > book/src/gallery/generated/surrounds-seed-42/seam.txt
+
+reap
+
+# GROUP D — the lab studies. Serial with respect to each other, and never
+# co-scheduled with A/B/C: `lab run` already saturates every core internally
+# (windows/lab/src/runner.rs reads std::thread::available_parallelism()), so
+# running it alongside anything else would oversubscribe rather than help.
+echo "regenerate-artifacts: GROUP D — lab studies (serial)" >&2
+
+echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
+run_release -p hornvale -- lab run studies/the-chorus.study.json
 
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
@@ -487,6 +624,8 @@ fi
 # the live registry. It builds NO world, so this is safe to run unconditionally
 # and costs nothing. It must run AFTER the census block above (so a fresh run's
 # rows are re-schema'd) and BEFORE the domesday survey below (which reads it).
+# NOT parallelised with Group D above (or anything else): it reads whatever
+# Group D's census pair just wrote, so it stays a serial trailer.
 #
 # The `"backfilled": true` marker the re-render adds is accurate: a committed
 # schema IS derived after the fact relative to the census run that wrote its
@@ -507,33 +646,9 @@ done
 # refresh left there, not a fresh run) and renders book/src/domesday/ — the
 # index plus one page per domain. It never triggers a census itself (spec
 # §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
-# above.
+# above. Serial (not parallelised): it reads the schema the backfill loop
+# just wrote.
 echo "regenerate-artifacts: the domesday survey" >&2
 run -p hornvale -- lab domesday
-
-echo "regenerate-artifacts: type-audit report" >&2
-run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
-
-# The seam-guard roster. STATIC by design — registrations, declarations and
-# call sites, never verdicts (those cost a scoped test run per site, so an
-# artifact carrying them could not be regenerated cheaply). Its job is to put
-# every `expect(survives: …)` declaration under review pressure: a diff is
-# harder to leave lying around than a doc comment.
-echo "regenerate-artifacts: seam-guard roster" >&2
-run --manifest-path tools/seam-guard/Cargo.toml -- report > docs/audits/seam-guard-roster.md
-
-echo "regenerate-artifacts: trope coverage report" >&2
-run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
-run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
-  > docs/audits/trope-coverage-tvtropes-2012.md
-run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
-
-echo "regenerate-artifacts: the digest's in-force decision index" >&2
-run --manifest-path tools/digest/Cargo.toml -- render decisions \
-  > docs/digest/decisions-in-force.md
-
-echo "regenerate-artifacts: the digest's intent-vs-reality delta report" >&2
-run --manifest-path tools/digest/Cargo.toml -- render delta \
-  > docs/digest/intent-vs-reality.md
 
 echo "regenerate-artifacts: done." >&2
