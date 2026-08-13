@@ -1378,8 +1378,29 @@ fn the_first_three_census_worlds_match_the_committed_rows() {
     let waived: Vec<String> = waivers().into_iter().map(|(n, _)| n).collect();
     let mut moved: Vec<String> = Vec::new();
 
+    // `load_rows` does NOT validate row count against the study — it parses
+    // every record, so `committed` holds all 1000 census rows while `live`
+    // holds 3. `zip` therefore compares the first three, which is what we
+    // want. But it would just as happily compare MISALIGNED pairs if the
+    // census CSV's leading rows were ever not seeds 0..2, and pass or fail
+    // meaninglessly. Assert the alignment rather than relying on it.
+    assert!(
+        committed.rows.len() >= live.rows.len(),
+        "the committed census has fewer rows ({}) than the sentinel ran ({})",
+        committed.rows.len(),
+        live.rows.len()
+    );
+
     for (live_row, want_row) in live.rows.iter().zip(committed.rows.iter()) {
         let got = hornvale_lab::canonical_row(live_row);
+        assert_eq!(
+            got.seed, want_row.seed,
+            "sentinel/committed row misalignment: the sentinel measured seed {} \
+             where the committed census row is seed {}. The comparison below \
+             would be meaningless — check that the census still starts at \
+             seed 0 and that the sentinel's `seeds.from` matches it.",
+            got.seed, want_row.seed
+        );
         for ((name, g), w) in live
             .metric_names
             .iter()
