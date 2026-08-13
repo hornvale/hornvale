@@ -212,3 +212,59 @@ two axes claimed here were checked individually rather than assumed.
 - Fixturing the suite's genesis-paying tests (followup F1) — attacks
   suite cost, not simulation cost.
 - Census regeneration.
+
+## 8. Readout — supersedes §3's plan half
+
+**Shipped: B only.** A and D are folded into one future campaign
+(followup F5). §3 stands as written; this section records what happened
+against it.
+
+### Measured (lefford, interleaved A/B/A/B/A/B, both arms same contention)
+
+| measure | `ab26668f` | `46b18c8e` | delta |
+|---|---|---|---|
+| `migration_fires_at_volume` wall | 39.36 s | 31.58 s | **−19.8%** |
+| `math::exp` inclusive | 22.66% | 12.86% | — |
+| `ConditionResponse::eval` inclusive | 30.54% | 15.11% | — |
+| `tolerance_liebig` inclusive | 31.20% | 18.34% | — |
+| `per_species_capacity_at` inclusive | 50.52% | 41.38% | — |
+
+In absolute time (share × own-run wall): `exp` 8.92 s → 4.06 s
+(**−54.5%**), `eval` 12.02 s → 4.77 s (−60.3%).
+
+### Hypotheses
+
+- **H1 (≥40% of path `exp`): PASSED**, at ~54.5%. Two caveats stated
+  rather than buried: H1 was preregistered in *calls* and was measured in
+  *time* — a fair proxy for a fixed-cost function, not the same quantity;
+  and the two perf profiles were recorded under different load (6817 vs
+  9665 stacks), so each percentage is internally valid but comparing them
+  assumes non-`exp` work scaled evenly. The interleaved wall-clock figure
+  is the independent measurement and agrees.
+- **H2 (whole-suite `exp` ≤ 10.0%): NOT MEASURED.** Requires a
+  whole-suite profile; lefford was carrying another session's job at
+  3925% CPU and it was not worth displacing for this.
+- **H3 (worldgen −15%): NOT MEASURED at crate scale.** The one test
+  measured moved −19.8%, which is *not* the crate-level claim H3 made.
+  Recorded as unmeasured rather than inferred from one test.
+- **H4 (identity, binding): PASSED.** seed-42 sha unchanged
+  (`ab2fec35…`, 13533 facts, village Googo); 40/40-seed sweep
+  byte-identical; `make rebaseline` drift-clean across every generated
+  directory; 856/856 scoped worldgen+kernel tests.
+
+### The falsification arrived, in a shape §4 did not predict
+
+§4 preregistered that a low A saving would mean the era loop was not the
+multiplier assumed. A's saving *is* low — ~3% against the ~48% forecast —
+but the stated cause is wrong. The multiplier was right; **B removed most
+of the multiplicand before A could claim it.** B's shortcut fires ~73% of
+invocations, solved from the measured `exp` shift via
+`(4 − 3p)/4 = 0.455`, and on those it already skips the two axes A would
+hoist. A reaches only the remaining 27%.
+
+Recorded, not retuned. The lesson worth carrying: **two optimisations on
+the same path do not compose additively, and A's value had to be
+recomputed as a marginal figure after B rather than reused as the
+standalone estimate.** The ordering decision in ledger #3 — B first
+because it was premise-independent — turned out to also be the ordering
+that revealed this, which was luck rather than foresight.
