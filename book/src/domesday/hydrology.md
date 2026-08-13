@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 1 | 1 | 1 | 1 | 1 |
+| 0.96078431 | 0.98039216 | 0.98431373 | 0.98823529 | 1 | 0.9842818 |
 
 ### `channel-connectivity`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.00018457039 | 0.00027829849 | 0.00030547165 | 0.00033567362 | 0.00042678537 | 0.00030680178 |
+| 0.0020035514 | 0.0021542401 | 0.0021988309 | 0.0022381275 | 0.0023822752 | 0.0021968022 |
 
 ### `channel-transect-dry-reach`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.89834025 | 0.93640351 | 0.9465812 | 0.95673077 | 0.98557692 | 0.94623807 |
+| 0.6640625 | 0.74015748 | 0.76078431 | 0.77929688 | 0.8503937 | 0.76006684 |
 
 ### `coast-roughness-slope`
 
@@ -179,11 +179,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 ## Weaknesses found here
 
 ### `channel-band-monotonicity`
-
-- **D2**: min == median == max == 1 across 1000 worlds
-- **D4**: median 1 equals the min (1 .. 1)
-
-### `channel-band-monotonicity-untruncated`
 
 - **D2**: min == median == max == 1 across 1000 worlds
 - **D4**: median 1 equals the min (1 .. 1)
