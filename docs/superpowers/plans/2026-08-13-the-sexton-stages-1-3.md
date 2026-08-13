@@ -497,7 +497,11 @@ gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 ```
 
 Note `test` is no longer a prerequisite of `gate-run` — the nextest invocation
-above replaces it. Leave the `test` target itself in place; other targets use it.
+above replaces it, and `nextest-check` takes its place on the prerequisite line
+so the install hint survives (Ruling 4). Leave the `test` target itself in
+place, but not for the reason an earlier draft gave: **nothing else depends on
+it.** Verified — `gate-run` was its only consumer, so after this change `test`
+is reachable only by a human typing `make test`, which is still worth keeping.
 
 - [ ] **Step 3: Make `ci` an alias**
 
