@@ -851,6 +851,14 @@ fn equality_probes(terrain: &GeneratedTerrain) -> Vec<Probe> {
 /// Assert the indexed `nearest_line` and the unindexed `nearest_line_reference`
 /// return the identical `Option<(usize, f64)>` — same line index, bit-equal
 /// distance — at every probe, and return how many probes there were.
+///
+/// Also asserts the **non-empty guarantee** at every probe: a non-empty network
+/// always answers `Some`. It is stated separately from the equality above
+/// because equality alone cannot carry it — two implementations that both
+/// wrongly returned `None` at some position would agree perfectly. The
+/// unindexed scan returns `Some` whenever `polylines` is non-empty, by
+/// construction, and the index is only allowed to be faster, never more
+/// evasive.
 fn assert_index_equals_reference(terrain: &GeneratedTerrain, level: u32) -> usize {
     let net = terrain.channels();
     assert!(
@@ -869,6 +877,14 @@ fn assert_index_equals_reference(terrain: &GeneratedTerrain, level: u32) -> usiz
             probe.at,
             probe.why
         );
+        assert!(
+            indexed.is_some(),
+            "level {level}: a non-empty network answered None at {:?} ({}) — the index may \
+             narrow the candidate set but never past empty; every query on a network with \
+             channels has a nearest channel",
+            probe.at,
+            probe.why
+        );
     }
     probes.len()
 }
@@ -882,17 +898,46 @@ fn assert_index_equals_reference(terrain: &GeneratedTerrain, level: u32) -> usiz
 /// unchanged, on the same inputs, so a different number would mean the winner
 /// itself had changed.
 ///
-/// **What this test can and cannot see.** It is the CONTRACT — the indexed
-/// answer equals the unindexed one — and that is the assertion that matters,
-/// because it is the answer, not the mechanism, that reaches a serialized sign.
-/// But it can only notice a coverage bug that actually changes an answer, and
-/// that is measured to be a thin margin: with the `L_max / 2` term deleted from
-/// the pruning bound outright, exactly **one probe in 6,175** disagreed. The
-/// mechanism is therefore pinned directly and separately, in
-/// `channel.rs::the_gather_covers_every_line_with_a_vertex_in_the_cap`, which
-/// asserts the coverage property at radii no world's queries reach and reddens
-/// on window and band mutations this test sleeps through. Read the two as one
-/// guard, and do not weaken either on the strength of the other being green.
+/// # WHAT THIS TEST OWNS, AND WHAT IT CANNOT SEE
+///
+/// It is the CONTRACT — the indexed answer equals the unindexed one — and that
+/// is the assertion that matters, because it is the answer, not the mechanism,
+/// that reaches a serialized sign.
+///
+/// The index has **two** terms, guarded by two tests that do not overlap:
+///
+/// - **This test owns the RADIUS POLICY**: the `L_max / 2` pruning term, the
+///   opening radius, the re-gather condition, `MIN_SEARCH_RADIUS`. It is the
+///   only thing in the tree that enters `nearest_line`'s loop at all.
+/// - **`channel.rs::the_gather_covers_every_line_with_a_vertex_in_the_cap` owns
+///   the GATHER**: the bucket window, the band range, the pole test, the
+///   ordering. It calls `VertexGrid::gather` with literal radii and **never
+///   enters that loop**, so no mutation of the radius policy can redden it.
+///
+/// Measured both ways: deleting the `L_max / 2` term reddens this test and
+/// leaves the coverage test green; a 1% window shrink, a collapsed band range,
+/// or a dropped pole test reddens the coverage test and leaves this one green.
+/// Read the two as one guard, and do not weaken either on the strength of the
+/// other being green — **neither covers the other's term at all.**
+///
+/// # THE GAP, WHICH IS STILL OPEN
+///
+/// This test is a **1-in-6,175 instrument** for its own term: with the
+/// `L_max / 2` term deleted outright, exactly one probe of 6,175 across levels
+/// 4-7 disagreed. That is not a wrong answer being tolerated but the grid being
+/// more generous than the cap it is asked for — the bucket edge exceeds `L_max`
+/// at every level, so quantization supplies more margin than the term covers
+/// for. Two probe categories below were added specifically to sharpen this and
+/// measurably did not; their doc comments record the refutation.
+///
+/// So the radius policy — a determinism-contract term, since it decides which
+/// line's sign gets serialized — **remains thinly guarded**, and the coverage
+/// test does not close that gap because it cannot see the term at all. The
+/// remedy is to size the grid's `lat_bands` from `L_max` rather than from the
+/// vertex count, making the analytic bound binding and this test sharp; it
+/// trades a performance characteristic for testability and is deferred to its
+/// own decision. A future reader finding two green tests must not conclude the
+/// policy is covered.
 ///
 /// The sample deliberately spans the regions the coverage argument has to
 /// survive: beside a channel (the common case), at a cell centre far from any

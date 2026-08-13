@@ -788,3 +788,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-13T15:59:51Z | gate | 17.386 | 24.399 | 16.728 | 2.37 | 0 | 097108f7 | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T16:07:39Z | gate | 455.370 | 3325.260 | 156.346 | 7.65 | 0 | 097108f7 | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T16:09:58Z | rebaseline | 131.191 | 227.271 | 12.458 | 1.83 | 0 | 097108f7 | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T16:40:19Z | gate | 428.645 | 2876.961 | 162.115 | 7.09 | 0 | 7a18edee | campaign/the-millrace | MacBookPro | 10 |

@@ -1465,6 +1465,13 @@ mod tests {
     /// 0.63 s for both worlds, in line with the rest of this suite.
     const CONFLUENCES_AT_LEVEL_6: usize = 67;
 
+    /// Roughly how many cell centres
+    /// [`the_gather_covers_every_line_with_a_vertex_in_the_cap`] probes per
+    /// level. A budget rather than a stride, because the assertion is
+    /// `O(positions x radii x lines x vertices)` and both `lines` and
+    /// `vertices` already quadruple with each level.
+    const CAP_COVERAGE_POSITIONS: usize = 40;
+
     /// A hand-built two-segment polyline on the equator, with band edges from
     /// the REAL laws at a deliberately coarse synthetic cell (spacing 1.0
     /// rad). The coarseness is the point: it puts every band wide enough for
@@ -1796,104 +1803,279 @@ mod tests {
     }
 
     /// THE COVERAGE PROPERTY ITSELF, asserted directly rather than inferred
-    /// from an answer coming out right.
-    ///
-    /// `tests/channel_properties.rs` holds the contract — the indexed
-    /// `nearest_line` equals the unindexed scan — and that is the assertion
-    /// that matters. But it can only see a gather bug that actually *changes an
-    /// answer*, and measurement showed how thin that is: with the `L_max / 2`
-    /// term deleted from the pruning bound outright, **one probe in 6,175**
-    /// across four levels disagreed, and deleting the pole test from the
-    /// longitude window changed nothing at all. Neither is a wrong answer being
-    /// tolerated; both are the grid being far more generous than the cap it is
-    /// asked for — the bucket edge at every level exceeds `L_max`, so bucket
-    /// quantization supplies more margin than the term it would be covering
-    /// for, and a query never gets far enough from every line to need a radius
-    /// where the pole test binds. An equality test is a poor instrument for a
-    /// property whose violations are that rare.
-    ///
-    /// So the mechanism is pinned where it is stated: **`gather` returns a
-    /// superset of the lines with a vertex inside the cap.** That is the whole
-    /// of [`VertexGrid`]'s argument, it holds for every radius rather than for
-    /// the radii one world's queries happen to produce, and it is what the
+    /// from an answer coming out right: **`gather` returns a superset of the
+    /// lines with a vertex inside the cap.** That is the whole of
+    /// [`VertexGrid`]'s argument, it holds at every radius rather than at the
+    /// radii one world's queries happen to produce, and it is what the
     /// near-pole coverage hole The Bearing shipped would violate.
     ///
-    /// The radii sweep from far below the bucket edge to most of a hemisphere,
+    /// # WHAT THIS TEST OWNS, AND WHAT IT CANNOT SEE
+    ///
+    /// The index has **two** terms, and they are guarded by two different
+    /// tests that do not overlap. Read this before concluding that two green
+    /// tests mean the index is covered.
+    ///
+    /// - **This test owns the GATHER**: the bucket window, the latitude band
+    ///   range, the pole test, the ascending/deduplicated ordering. It calls
+    ///   [`VertexGrid::gather`] with **literal radii** and never enters
+    ///   [`ChannelNetwork::nearest_line`]'s loop at all.
+    /// - **`tests/channel_properties.rs::the_indexed_nearest_line_equals_the_linear_scan`
+    ///   owns the RADIUS POLICY**: the `L_max / 2` pruning term, the opening
+    ///   radius, the re-gather condition, `MIN_SEARCH_RADIUS`. None of those
+    ///   appear anywhere below, so **no mutation of any of them can ever redden
+    ///   this test.**
+    ///
+    /// The disjointness is measured, not assumed. Deleting the `L_max / 2` term
+    /// (`max_segment * 0.0`) reddens the equality test and leaves this one
+    /// green; shrinking the longitude window 1%, collapsing the band range, or
+    /// dropping the pole test reddens this one and leaves the equality test
+    /// green.
+    ///
+    /// # THE GAP THIS DOES NOT CLOSE
+    ///
+    /// The radius policy is a determinism-contract term — it decides which
+    /// lines are offered, and therefore which line's **sign**
+    /// [`ChannelNetwork::bank_signed_distance`] serializes — and it is guarded
+    /// only by the equality test, which is a **1-in-6,175 instrument**: with the
+    /// `L_max / 2` term deleted outright, exactly one probe of 6,175 across
+    /// levels 4-7 disagreed. That is not a wrong answer being tolerated; it is
+    /// the grid being far more generous than the cap it is asked for, because
+    /// the bucket edge at every level exceeds `L_max`, so bucket quantization
+    /// supplies more margin than the term it would be covering for.
+    ///
+    /// **The remedy is to size `lat_bands` from `L_max` rather than from the
+    /// vertex count**, which would make the analytic bound binding and the
+    /// equality test sharp — and which tightens the gather at the same time.
+    /// That trades a performance characteristic for testability and is left as
+    /// its own decision. Until it is taken, **the radius policy remains thinly
+    /// guarded**, and this test is not the thing guarding it.
+    ///
+    /// # The sweep
+    ///
+    /// Across every level the pins admit, because `lat_bands = sqrt(V / 2)`
+    /// moves with level — which is the very quantity the deferred decision
+    /// above is about, so pinning coverage at one level would pin it at one
+    /// grid sizing.
+    ///
+    /// The radii span from far below the bucket edge to most of a hemisphere,
     /// because the window formula changes branch across that range: below
     /// `pi/2 - |lat|` the longitude window is `asin(sin r / cos lat)`, and above
-    /// it the cap swallows a pole and longitude bounds nothing.
+    /// it the cap swallows a pole and longitude bounds nothing. The two radii
+    /// past `pi/2` are the only ones at which the pole test is load-bearing
+    /// rather than redundant — below `pi/2` a cap that reaches a pole always
+    /// has `sin(r) / cos(lat) >= 1` anyway — so a sweep that stopped at 1.5 rad
+    /// would let a dropped pole test through.
     #[test]
     fn the_gather_covers_every_line_with_a_vertex_in_the_cap() {
-        let geo = Geosphere::new(5);
-        let outcome =
-            crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).expect("seed 42");
-        let terrain = crate::GeneratedTerrain::new(geo, outcome);
-        let net = terrain.channels();
-        let geo = terrain.geosphere();
+        let mut total = 0usize;
+        for level in [4_u32, 5, 6, 7] {
+            let geo = Geosphere::new(level);
+            let outcome =
+                crate::generate(Seed(42), &geo, &crate::TerrainPins::default()).expect("seed 42");
+            let terrain = crate::GeneratedTerrain::new(geo, outcome);
+            let net = terrain.channels();
+            let geo = terrain.geosphere();
 
-        // Positions: cell centres across the whole globe, plus the poles and a
-        // ladder of latitudes closing on them — the region the window formula
-        // is most sensitive in.
-        let mut positions: Vec<[f64; 3]> =
-            geo.cells().step_by(97).map(|c| geo.position(c)).collect();
-        positions.push([0.0, 0.0, 1.0]);
-        positions.push([0.0, 0.0, -1.0]);
-        for lat in [89.99_f64, 89.0, 80.0, 45.0] {
-            for hemisphere in [1.0_f64, -1.0] {
-                for step in 0..8 {
-                    positions.push(math::unit_sphere_from_lat_lon(
-                        hemisphere * lat,
-                        -180.0 + f64::from(step) * 45.0,
-                    ));
-                }
-            }
-        }
-
-        let mut checked = 0usize;
-        let mut nonempty = 0usize;
-        let mut candidates = Vec::new();
-        for &p in &positions {
-            for rho in [1.0e-4_f64, 1.0e-2, 5.0e-2, 0.25, 0.75, 1.5, 2.0, 3.0] {
-                candidates.clear();
-                net.grid.gather(p, rho, &mut candidates);
-                // Every line with a vertex inside the cap must be offered.
-                for (i, line) in net.polylines.iter().enumerate() {
-                    if line.points.iter().any(|&v| angle(p, v) <= rho) {
-                        assert!(
-                            candidates.binary_search(&(i as u32)).is_ok(),
-                            "line {i} has a vertex inside the cap of radius {rho} about {p:?} \
-                             but the gather did not offer it — the coverage argument the index \
-                             rests on does not hold, and nearest_line can silently answer with \
-                             the wrong river"
-                        );
+            // Positions: cell centres across the whole globe, plus the poles and
+            // a ladder of latitudes closing on them — the region the window
+            // formula is most sensitive in. The cell stride is chosen from the
+            // cell COUNT rather than being a fixed constant, so the position
+            // budget stays flat as the level rises: the inner assertion is
+            // `O(positions x radii x lines x vertices)`, and a fixed stride
+            // would make level 7 sixteen times level 5's cost for no extra
+            // coverage of the window formula.
+            let stride = (geo.cell_count() / CAP_COVERAGE_POSITIONS).max(1);
+            let mut positions: Vec<[f64; 3]> = geo
+                .cells()
+                .step_by(stride)
+                .map(|c| geo.position(c))
+                .collect();
+            positions.push([0.0, 0.0, 1.0]);
+            positions.push([0.0, 0.0, -1.0]);
+            for lat in [89.99_f64, 89.0, 80.0, 45.0] {
+                for hemisphere in [1.0_f64, -1.0] {
+                    for step in 0..8 {
+                        positions.push(math::unit_sphere_from_lat_lon(
+                            hemisphere * lat,
+                            -180.0 + f64::from(step) * 45.0,
+                        ));
                     }
                 }
-                // Ascending and deduplicated, which is what makes the candidate
-                // scan's strict `<` reproduce the reference's lowest-index
-                // tie-break.
-                assert!(
-                    candidates.windows(2).all(|w| w[0] < w[1]),
-                    "the gather is not strictly ascending: {candidates:?}"
-                );
-                if !candidates.is_empty() {
-                    nonempty += 1;
+            }
+
+            let mut checked = 0usize;
+            let mut nonempty = 0usize;
+            let mut candidates = Vec::new();
+            for &p in &positions {
+                for rho in [1.0e-4_f64, 1.0e-2, 5.0e-2, 0.25, 0.75, 1.5, 2.0, 3.0] {
+                    candidates.clear();
+                    net.grid.gather(p, rho, &mut candidates);
+                    // Every line with a vertex inside the cap must be offered.
+                    for (i, line) in net.polylines.iter().enumerate() {
+                        if line.points.iter().any(|&v| angle(p, v) <= rho) {
+                            assert!(
+                                candidates.binary_search(&(i as u32)).is_ok(),
+                                "level {level}: line {i} has a vertex inside the cap of radius \
+                                 {rho} about {p:?} but the gather did not offer it — the \
+                                 coverage argument the index rests on does not hold, and \
+                                 nearest_line can silently answer with the wrong river"
+                            );
+                        }
+                    }
+                    // Ascending and deduplicated, which is what makes the
+                    // candidate scan's strict `<` reproduce the reference's
+                    // lowest-index tie-break.
+                    assert!(
+                        candidates.windows(2).all(|w| w[0] < w[1]),
+                        "level {level}: the gather is not strictly ascending: {candidates:?}"
+                    );
+                    if !candidates.is_empty() {
+                        nonempty += 1;
+                    }
+                    checked += 1;
                 }
-                checked += 1;
+            }
+            println!(
+                "gather coverage level {level}: {checked} (position, radius) pairs, {nonempty} \
+                 with candidates, over {} lines / {} vertices, {} lat bands",
+                net.polylines.len(),
+                net.polylines.iter().map(|l| l.points.len()).sum::<usize>(),
+                net.grid.lat_bands,
+            );
+            // Anti-vacuity in both directions, per level: the sweep ran, and it
+            // ran on gathers that actually returned something to be right about.
+            assert!(checked >= 500, "level {level}: only {checked} pairs swept");
+            assert!(
+                nonempty * 2 >= checked,
+                "level {level}: only {nonempty} of {checked} gathers returned any candidate at \
+                 all — the assertion above is mostly ranging over empty sets"
+            );
+            total += checked;
+        }
+        assert!(total >= 2_000, "only {total} pairs across the four levels");
+    }
+
+    /// THE NON-EMPTY GUARANTEE: a network with any channel in it answers
+    /// `Some` at **every** position, however far from water.
+    ///
+    /// The brief called the non-empty fallback mandatory, and the property is
+    /// not entailed by the equality battery: two implementations that both
+    /// wrongly answered `None` somewhere would agree with each other perfectly.
+    /// The unindexed scan has it by construction — `best_line` is `Some` after
+    /// the first comparable distance — and the index is only allowed to be
+    /// faster, never more evasive.
+    ///
+    /// **Both of `nearest_line`'s exits to the reference scan are unreachable
+    /// on any network `build` can produce, and this test does not pretend
+    /// otherwise.** Replacing either with `panic!` leaves the whole terrain
+    /// suite green. That is a fact about the geometry, not a gap:
+    ///
+    /// - The `rho >= pi` exit cannot fire because `pi` is the **supremum** of
+    ///   `D + L_max / 2`, not a value it attains. A segment of arc length `L`
+    ///   puts every point of the sphere within `pi - L / 2` of one of its
+    ///   endpoints, so `D <= pi - L_max / 2` and the sum is at most `pi`
+    ///   exactly, approached only as the query tends to the antipode of a
+    ///   segment's midpoint. It is a safety net over an inequality that is
+    ///   tight, kept because "at most `pi`" and "less than `pi`" differ by
+    ///   exactly the case that would loop forever.
+    ///
+    ///   **How tight, measured:** the first case below drives the search
+    ///   radius to `3.1415926535897927` rad against `PI` =
+    ///   `3.141592653589793` — short by a single ULP. The exit is not
+    ///   comfortably unreachable, it is unreachable by one bit, which is the
+    ///   argument for keeping it rather than the argument for deleting it.
+    /// - The no-comparable-distance exit needs every candidate to return NaN,
+    ///   which needs a NaN position.
+    ///
+    /// So the guarantee is asserted where it can be, over the geometry that
+    /// comes closest to breaking it: the antipode of a segment's midpoint (the
+    /// maximal-radius case above), a one-vertex line (`L_max == 0`, which is
+    /// also the only thing that exercises the empty-gather widening), coincident
+    /// vertices, and a query sitting exactly on a vertex.
+    #[test]
+    fn a_non_empty_network_always_has_a_nearest_line() {
+        // A network of arbitrary polylines, with band edges and run cells kept
+        // parallel so nothing that reads them can trip.
+        let network = |lines: Vec<Vec<[f64; 3]>>| {
+            let edges = band_edges(36.0, 0.0, 1.0);
+            let band = lines.iter().map(|l| vec![edges; l.len()]).collect();
+            let cells = lines
+                .iter()
+                .map(|l| (0..l.len() as u32).map(CellId).collect())
+                .collect();
+            ChannelNetwork::assemble(
+                lines
+                    .into_iter()
+                    .map(|points| SphericalPolyline { points })
+                    .collect(),
+                band,
+                cells,
+                SphereFbm::new(
+                    Seed(42).derive(streams::CHANNEL_MEANDER),
+                    MEANDER_FREQUENCY,
+                    MEANDER_OCTAVES,
+                ),
+                Vec::new(),
+            )
+        };
+
+        // A short arc, so `pi - L/2` is nearly `pi`: the antipode of its
+        // midpoint is the farthest any query can be from this network, and the
+        // search radius there is the largest the loop ever computes.
+        let short = vec![unit(1.0, 0.0, 0.0), unit(1.0, 0.1, 0.0)];
+        let midpoint = normalize([short[0][0] + short[1][0], short[0][1] + short[1][1], 0.0]);
+        let antipode = [-midpoint[0], -midpoint[1], -midpoint[2]];
+
+        let cases: Vec<(&str, ChannelNetwork, Vec<[f64; 3]>)> = vec![
+            (
+                "a short arc, queried from the antipode of its midpoint",
+                network(vec![short.clone()]),
+                vec![antipode, unit(0.0, 0.0, 1.0), short[0]],
+            ),
+            (
+                "a one-vertex line (L_max == 0, the empty-gather widening)",
+                network(vec![vec![unit(1.0, 0.0, 0.0)]]),
+                vec![antipode, unit(0.0, 0.0, -1.0), unit(1.0, 0.0, 0.0)],
+            ),
+            (
+                "a line whose two vertices coincide",
+                network(vec![vec![unit(1.0, 0.0, 0.0), unit(1.0, 0.0, 0.0)]]),
+                vec![antipode, unit(0.0, 1.0, 0.0)],
+            ),
+            (
+                "a near-half-circle, the largest L_max a segment can have",
+                network(vec![vec![unit(1.0, 0.0, 0.0), unit(-1.0, 0.0, 0.002)]]),
+                vec![unit(0.0, 1.0, 0.0), unit(0.0, -1.0, 0.0), antipode],
+            ),
+        ];
+
+        for (what, net, positions) in cases {
+            let half = net.grid.max_segment / 2.0;
+            for p in positions {
+                let indexed = net.nearest_line(p);
+                assert!(
+                    indexed.is_some(),
+                    "{what}: a non-empty network answered None at {p:?}"
+                );
+                // And it is still the scan's answer, since the fallback exits
+                // are the one place the two implementations could diverge
+                // without the equality battery's real worlds noticing.
+                let reference = net.nearest_line_reference_for_test(p);
+                assert_eq!(
+                    indexed.map(|(i, d)| (i, d.to_bits())),
+                    reference.map(|(i, d)| (i, d.to_bits())),
+                    "{what}: the index and the scan disagree at {p:?}"
+                );
+                let widest = indexed.expect("asserted Some above").1.abs() + half;
+                println!("{what}: at {p:?} widest search radius {widest} rad");
             }
         }
-        println!(
-            "gather coverage: {checked} (position, radius) pairs, {nonempty} with candidates, \
-             over {} lines",
-            net.polylines.len()
-        );
-        // Anti-vacuity in both directions: the sweep ran, and it ran on gathers
-        // that actually returned something to be right about.
-        assert!(checked >= 1_000, "only {checked} pairs swept");
-        assert!(
-            nonempty * 2 >= checked,
-            "only {nonempty} of {checked} gathers returned any candidate at all — the \
-             assertion above is mostly ranging over empty sets"
-        );
+
+        // The other half of the contract, stated here beside it: an EMPTY
+        // network answers None. `nearest_line` returns before it ever consults
+        // the grid, which is what makes "non-empty" the whole precondition.
+        let empty = network(Vec::new());
+        assert_eq!(empty.nearest_line(unit(1.0, 0.0, 0.0)), None);
     }
 
     /// `L_max` is **measured**, not assumed: the stored `max_segment` is the
