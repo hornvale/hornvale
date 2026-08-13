@@ -23,14 +23,17 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full seam-guard seam-guard-list ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-quick: fmt-check clippy type-audit type-audit-report ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
+quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
+	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
+
+quick-run: fmt-check clippy type-audit type-audit-report
 
 gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
@@ -46,6 +49,9 @@ gate-run: fmt-check clippy type-audit type-audit-report test
 	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
+	@bash scripts/timed.sh gate-fast -- make --no-print-directory gate-fast-run
+
+gate-fast-run:
 	@bash scripts/gate-fast.sh
 
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
@@ -257,6 +263,13 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		exit 1; }
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
+	@bash scripts/timed.sh prewarm -- make --no-print-directory prewarm-run
+
+# THE COLD-BUILD COST WAS INVISIBLE UNTIL THIS LANDED (The Sexton, Task 2).
+# docs/timings.md carried five labels and 73 branches went through this target
+# in one month with zero rows — roughly eight unrecorded hours, comparable to
+# the census line. The wrapper above is the whole fix.
+prewarm-run:
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
@@ -319,6 +332,9 @@ regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via s
 	@scripts/aws-gate/regen-git.sh .
 
 preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
+	@bash scripts/timed.sh preflight -- make --no-print-directory preflight-run
+
+preflight-run:
 	@bash scripts/preflight-merge.sh
 
 doctor: ## Print the repo self-map (orientation for a fresh session)
@@ -353,7 +369,10 @@ wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this 
 	cargo build --manifest-path clients/vessel/wasm/Cargo.toml --release --target wasm32-unknown-unknown
 	cp clients/vessel/wasm/target/wasm32-unknown-unknown/release/hornvale_vessel_wasm.wasm book/src/gallery/vessel.wasm
 
-vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+vessel-check: ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+	@bash scripts/timed.sh vessel-check -- make --no-print-directory vessel-check-run
+
+vessel-check-run: wasm-vessel
 	cd clients/vessel && deno fmt --check && deno lint && deno task check && deno task test
 	cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
 	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
@@ -393,7 +412,10 @@ wasm-world: ## Build the world catalog wasm (external clients consume this; neve
 	  echo "WARNING: wasm-opt not found (brew install binaryen) — shipping unoptimized; CI will optimize"; \
 	fi
 
-world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity smoke + size gate
+world-check: ## The catalog's local gate: lint + golden byte-identity smoke + size gate
+	@bash scripts/timed.sh world-check -- make --no-print-directory world-check-run
+
+world-check-run: wasm-world
 	cargo fmt --check --manifest-path clients/world-wasm/Cargo.toml
 	cargo clippy --manifest-path clients/world-wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	cargo run -p hornvale -- new --seed 42 --out /tmp/hv-wc.json
@@ -426,6 +448,9 @@ world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity
 	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }
 
 game-check: ## The game client's local gate: fmt/clippy/test on both crates
+	@bash scripts/timed.sh game-check -- make --no-print-directory game-check-run
+
+game-check-run:
 	cargo fmt --check --manifest-path clients/game/core/Cargo.toml
 	cargo fmt --check --manifest-path clients/game/bin/Cargo.toml
 	cargo clippy --manifest-path clients/game/core/Cargo.toml --all-targets -- -D warnings

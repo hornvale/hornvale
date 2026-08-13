@@ -13,6 +13,13 @@ separates a *queued* run from a *slow* one. Rows predating the column simply
 lack it; this file is not drift-checked, so history is left as it was. This file is
 NOT drift-checked and never gates the build; it is a record you read.
 
+Since The Sexton the ledger covers **every command that makes a human wait**,
+not only the expensive milestone runs it was built for: `prewarm`, `preflight`,
+`gate-fast`, `quick` and the three client checks record rows alongside `gate`,
+`ci`, `rebaseline`, `census` and `heavy`. The reason is decision 0086's
+amendment generalised — a cost with no label is invisible to every decision
+about cost, and `prewarm` had zero rows against 73 branches in a month.
+
 **The build-failing half now exists, and it is a different file.** The
 Timekeeper (decision
 [0088](decisions/0088-the-suite-watches-its-own-clock.md)) gave the suite a
@@ -780,3 +787,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-13T11:20:38Z | rebaseline | 112.526 | 227.012 | 10.664 | 2.11 | 0 | cc576f08 | the-rill | MacBookPro | 10 |
 | 2026-08-13T11:51:02Z | rebaseline | 130.291 | 228.438 | 10.932 | 1.84 | 0 | 734d0a1b | the-rill | MacBookPro | 10 |
 | 2026-08-13T12:08:20Z | gate | 489.124 | 3536.576 | 177.917 | 7.59 | 0 | 856d1523 | the-rill | MacBookPro | 10 |
+| 2026-08-13T16:33:11Z | quick | 10.416 | 8.060 | 0.637 | 0.83 | 0 | 760b0121 | campaign/the-sexton | ambrose | 12 |
