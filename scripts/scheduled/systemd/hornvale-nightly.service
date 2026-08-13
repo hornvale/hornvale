@@ -9,7 +9,11 @@ Documentation=file://%h/Projects/hornvale/scripts/scheduled/README.md
 Type=oneshot
 WorkingDirectory=%h/Projects/hornvale-scheduled
 Environment=HV_SCHED_REPO=%h/Projects/hornvale-scheduled
-ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-drift.sh
+# `-` prefix: a oneshot unit aborts its remaining ExecStart= commands when one
+# fails, so an unprefixed drift failure (fetch error, empty paths guard) would
+# silently cancel the census too. Each job reports its own failure to the board
+# and to journalctl; neither should be able to suppress the other.
+ExecStart=-%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-drift.sh
 ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-census.sh
 # A failed run must be READABLE, which is why this is a timer and not cron:
 #   journalctl --user -u hornvale-nightly.service -n 200

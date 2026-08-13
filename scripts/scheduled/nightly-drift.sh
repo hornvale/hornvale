@@ -12,6 +12,21 @@
 # scheduling is outside that boundary, exactly as clients/ is.
 set -uo pipefail
 
+# Sanitise anything interpolated into `make board-post NOTE=`.
+#
+# TWO SEPARATE HAZARDS, and the second is the one that bites hardest:
+#  - Shell: a double quote splits NOTE into extra words, tools/board rejects
+#    the malformed argv with exit 2, and the call site's `|| true` swallows it.
+#  - MAKE: NOTE is a make command-line variable, and GNU Make recursively
+#    expands `$(...)` in variable values BEFORE the shell is involved. A
+#    `$(shell ...)` in the text EXECUTES. Verified against this repo's own
+#    Makefile with `make -n` — the dry run still ran the command.
+# So `$` and backticks must go, not just quotes. These are diagnostic strings;
+# losing a literal `$` costs nothing. Every value interpolated into a NOTE=
+# below is captured into a variable and piped through this FIRST — never a
+# raw `$(...)` substitution inline inside the NOTE="..." string.
+board_safe() { tr -d '\\`$"' | tr '\n' ' '; }
+
 REPO="${HV_SCHED_REPO:?HV_SCHED_REPO must name a checkout this job owns}"
 cd "$REPO" || exit 1
 
@@ -56,16 +71,19 @@ if [ -n "$stray" ]; then
     echo "nightly-drift: removing $n untracked path(s):" >&2
     printf '%s\n' "$stray" >&2
     git clean -fdq 2>/dev/null || true
+    n_safe="$(printf '%s' "$n" | board_safe)"
     make board-post KIND=technique BY=scheduler PATHS='scripts/' \
-      NOTE="nightly-drift: the checkout carried $n untracked path(s) and has been cleaned. See journalctl -u hornvale-nightly.service for the list." || true
+      NOTE="nightly-drift: the checkout carried ${n_safe} untracked path(s) and has been cleaned. See journalctl -u hornvale-nightly.service for the list." || true
 fi
 
 if [ "$rc" -ne 0 ]; then
+    tail_safe="$(tail -5 /tmp/hv-nightly-drift.log | board_safe)"
     make board-post KIND=technique BY=scheduler PATHS='scripts/' \
-      NOTE="nightly-drift: make rebaseline FAILED on main (rc=$rc). Tail: $(tail -5 /tmp/hv-nightly-drift.log | tr '\n' ' ' | tr -d '"')" || true
+      NOTE="nightly-drift: make rebaseline FAILED on main (rc=$rc). Tail: ${tail_safe}" || true
 elif [ -n "$drift" ]; then
+    drift_safe="$(printf '%s' "$drift" | board_safe)"
     make board-post KIND=notice BY=scheduler FIELDS='polarity=fyi' PATHS='book/ docs/audits/ docs/digest/' \
-      NOTE="nightly-drift: main has UNCOMMITTED generated-artifact drift. Someone merged without running make rebaseline. $(echo "$drift" | tr '\n' ' ')" || true
+      NOTE="nightly-drift: main has UNCOMMITTED generated-artifact drift. Someone merged without running make rebaseline. ${drift_safe}" || true
 fi
 
 make board-sync >/dev/null 2>&1 || true

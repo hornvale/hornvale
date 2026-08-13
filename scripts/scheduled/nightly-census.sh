@@ -8,6 +8,21 @@
 # README, rule 1).
 set -uo pipefail
 
+# Sanitise anything interpolated into `make board-post NOTE=`.
+#
+# TWO SEPARATE HAZARDS, and the second is the one that bites hardest:
+#  - Shell: a double quote splits NOTE into extra words, tools/board rejects
+#    the malformed argv with exit 2, and the call site's `|| true` swallows it.
+#  - MAKE: NOTE is a make command-line variable, and GNU Make recursively
+#    expands `$(...)` in variable values BEFORE the shell is involved. A
+#    `$(shell ...)` in the text EXECUTES. Verified against this repo's own
+#    Makefile with `make -n` — the dry run still ran the command.
+# So `$` and backticks must go, not just quotes. These are diagnostic strings;
+# losing a literal `$` costs nothing. Every value interpolated into a NOTE=
+# below is captured into a variable and piped through this FIRST — never a
+# raw `$(...)` substitution inline inside the NOTE="..." string.
+board_safe() { tr -d '\\`$"' | tr '\n' ' '; }
+
 REPO="${HV_SCHED_REPO:?HV_SCHED_REPO must name a checkout this job owns}"
 cd "$REPO" || exit 1
 
@@ -44,16 +59,20 @@ HV_CENSUS_WORKTREE=canonical HV_CENSUS_REF="$sha" bash scripts/census-run.sh \
     >/tmp/hv-nightly-census.log 2>&1
 rc=$?
 
+sha_safe="$(printf '%s' "${sha:0:8}" | board_safe)"
+
 if [ "$rc" -ne 0 ]; then
+    tail_safe="$(tail -5 /tmp/hv-nightly-census.log | board_safe)"
     make board-post KIND=technique BY=scheduler PATHS='windows/lab/' \
-      NOTE="nightly-census: census-run.sh FAILED on main at ${sha:0:8} (rc=$rc). Tail: $(tail -5 /tmp/hv-nightly-census.log | tr '\n' ' ' | tr -d '"')" || true
+      NOTE="nightly-census: census-run.sh FAILED on main at ${sha_safe} (rc=$rc). Tail: ${tail_safe}" || true
     exit 0
 fi
 
 diff_out="$(make lab-diff STUDY=the-census 2>/dev/null | head -40)"
 if [ -n "$diff_out" ]; then
+    diff_safe="$(printf '%s' "$diff_out" | board_safe)"
     make board-post KIND=notice BY=scheduler FIELDS='polarity=fyi' PATHS='book/src/laboratory/' \
-      NOTE="nightly-census on main at ${sha:0:8}: COLUMNS MOVED. Refresh and commit on lefford before your close. $(echo "$diff_out" | tr '\n' ' ' | tr -d '"')" || true
+      NOTE="nightly-census on main at ${sha_safe}: COLUMNS MOVED. Refresh and commit on lefford before your close. ${diff_safe}" || true
 fi
 
 # Own no changes: the goldens this run wrote are a report, not a commit.
