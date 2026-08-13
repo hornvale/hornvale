@@ -186,15 +186,24 @@ ever seen to pass is not known to be a check.
 Run:
 ```bash
 cd "$(git rev-parse --show-toplevel)"
+cp docs/generated-paths.txt /tmp/hv-gp-backup.txt
 printf '\nbook/src/no-such-generated-dir/\n' >> docs/generated-paths.txt
 cargo test -p hornvale --test generated_paths
 ```
 Expected: **FAIL**, naming `book/src/no-such-generated-dir/`.
 
-Then restore:
+Then restore, and prove the restore:
 ```bash
-git checkout -- docs/generated-paths.txt
+cp /tmp/hv-gp-backup.txt docs/generated-paths.txt
+diff -q /tmp/hv-gp-backup.txt docs/generated-paths.txt && echo "RESTORED"
 ```
+
+**Not `git checkout --`.** The file is still untracked at this point — it
+is not `git add`-ed until Step 5 — so `git checkout -- docs/generated-paths.txt`
+errors with "did not match any file(s) known to git" and restores nothing.
+Found by Task 1's implementer. The imperative "then restore: `git checkout
+--`" was asserting the file was tracked, which is exactly the
+hidden-assertion shape `campaign-autopilot` names.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
