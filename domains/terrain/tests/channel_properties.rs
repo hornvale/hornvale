@@ -303,6 +303,13 @@ fn the_polyline_vertex_order_is_downstream_order() {
         let terrain = GeneratedTerrain::new(geo, outcome);
         total += downstream_segments_of(&terrain, seed);
     }
+    // Printed, not only asserted: the doc block above quotes a per-seed
+    // breakdown, and the total is the one figure a reader would otherwise
+    // have to take on trust.
+    println!(
+        "downstream segments across {} seeds: {total}",
+        SWEEP_SEEDS.len()
+    );
     assert!(
         total >= 9_000,
         "only {total} channel segments across {} seeds (measured 19,186) — the assertion ran on \
@@ -469,6 +476,13 @@ fn the_bank_sign_is_identical_across_two_builds() {
     // 200 of 400 — a floor of "both signs occur" is what this can honestly
     // claim, since the balance is a property of the sampler and not of the
     // world.
+    //
+    // PRINTED as well as written down, and The Rill re-measured it: still
+    // exactly 200 of 400 on a network eight times denser, which is what the
+    // sentence above predicts — the cap binds long before the world does, so
+    // this figure is a property of `sample_positions_near_channels` and is the
+    // one number in this file that a denser network CANNOT move.
+    println!("H2-1: {checked} positions sampled across two builds, {signed} right-bank");
     assert!(
         signed > 0 && signed < checked,
         "{signed} of {checked} readings are right-bank — the sweep does not straddle the \

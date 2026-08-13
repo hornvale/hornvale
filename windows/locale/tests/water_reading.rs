@@ -182,7 +182,7 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
-    let mut seen: Vec<Transverse> = Vec::new();
+    let mut seen: Vec<(Transverse, usize)> = Vec::new();
     for line in FIXTURE.lines() {
         let room = room_of(line);
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
@@ -204,8 +204,9 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
             "room {room:?}: the document's own numbers (d={d:?}, edges={edges:?}) band to \
              {recomputed:?} but the network says {expected:?}"
         );
-        if !seen.contains(&expected) {
-            seen.push(expected);
+        match seen.iter_mut().find(|(t, _)| *t == expected) {
+            Some((_, n)) => *n += 1,
+            None => seen.push((expected, 1)),
         }
         checked += 1;
     }
@@ -214,9 +215,32 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
         "only {checked} rooms carried a reading; sweep too thin"
     );
     // Anti-vacuity: a sweep that lands in one band everywhere would agree with
-    // any classifier at all. The committed fixture spans all five (25 channel,
-    // 30 bank, 32 floodplain, 4 terrace, 109 dry at capture); three is the
-    // floor below which this stops being a test of the banding.
+    // any classifier at all; three is the floor below which this stops being a
+    // test of the banding.
+    //
+    // THE SPREAD IS PRINTED, NOT WRITTEN DOWN, because The Rill moved it. It
+    // used to read "(25 channel, 30 bank, 32 floodplain, 4 terrace, 109 dry at
+    // capture)"; re-measured after Task 3 rendered the whole land flow tree it
+    // is 41 channel, 22 bank, 26 floodplain, 2 terrace, 109 dry.
+    //
+    // **The dry count did not move, and that is the informative half.** The
+    // fixture's 200 rooms are fixed, and the wet/dry partition came out
+    // identical: the 91 wet rooms re-banded INWARD (channel +16, exactly
+    // balancing bank -8, floodplain -6, terrace -2) while the 109 dry ones
+    // stayed dry. An 8x denser network made the wet rooms wetter and recruited
+    // no new ones.
+    //
+    // **What that is NOT caused by.** The width law was not retuned — Task 1
+    // measured `channel_half_width` and shipped no recalibration
+    // (`CHANNEL_WIDTH_COEFF` is still 8.5e-4), and every one of the four edges
+    // is a fixed multiple of `channel_half_width(drainage, cell_edge)`, so the
+    // bands moved only through `drainage`. The cause is therefore the network
+    // itself: Task 3 renders every downhill step rather than the top 6.7%, and
+    // Task 4 repartitions discharge at branches. Which of those two dominates,
+    // and whether a room re-banded because it got nearer a centreline or
+    // because the drainage under its nearest vertex changed, is NOT measured
+    // here — do not read a decomposition into the counts above.
+    println!("H2-3: {checked} of 200 fixture rooms carried a reading; band spread {seen:?}");
     assert!(
         seen.len() >= 3,
         "the sweep reached only {seen:?}; it no longer exercises the banding"
