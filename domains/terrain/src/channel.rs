@@ -509,6 +509,21 @@ pub struct BankReading {
     pub line: usize,
 }
 
+impl BankReading {
+    /// The band this reading falls in — the classification
+    /// [`ChannelNetwork::transverse_at`] reports, computed from the reading
+    /// rather than from a second query.
+    ///
+    /// This exists so a caller that already holds a [`BankReading`] never has
+    /// to re-run [`ChannelNetwork::nearest_line`] to classify it. That
+    /// duplication was real: the lab's transect sweep ran the all-lines scan
+    /// twice per probe, once for the owning line and once for the band.
+    /// type-audit: bare-ok(enum: return)
+    pub fn transverse(&self) -> Transverse {
+        Transverse::from_band(band(self.signed_distance, &self.band_edges))
+    }
+}
+
 impl ChannelNetwork {
     /// Build the network from a generated globe.
     ///
@@ -805,10 +820,7 @@ impl ChannelNetwork {
         let Some(reading) = self.bank_reading(position) else {
             return (Transverse::Dry, f64::INFINITY);
         };
-        (
-            Transverse::from_band(band(reading.signed_distance, &reading.band_edges)),
-            reading.signed_distance,
-        )
+        (reading.transverse(), reading.signed_distance)
     }
 
     /// The whole reading at `position`: the **signed** distance

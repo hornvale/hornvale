@@ -7332,10 +7332,17 @@ fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option
                 for s in 0..=LAB_FORD_TRANSECT_STEPS {
                     let offset = side * outer * s as f64 / LAB_FORD_TRANSECT_STEPS as f64;
                     let q = lab_offset(line, j, left, offset);
-                    if net.nearest_line(q).map(|(k, _)| k) != Some(i) {
+                    // ONE scan, not two. `bank_reading` already resolves the
+                    // winning line and the geometry the band is read from, so
+                    // asking `nearest_line` separately re-ran the whole
+                    // all-lines scan to recover a field this reading carries.
+                    let (owns, band) = match net.bank_reading(q) {
+                        Some(reading) => (reading.line == i, reading.transverse().index()),
+                        None => (false, hornvale_terrain::channel::Transverse::Dry.index()),
+                    };
+                    if !owns {
                         still_own = false;
                     }
-                    let band = net.transverse_at(q).0.index();
                     if band < previous {
                         good_untruncated = false;
                     }
