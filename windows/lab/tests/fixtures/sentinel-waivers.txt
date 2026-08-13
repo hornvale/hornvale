@@ -1,0 +1,9 @@
+# Metrics allowed to disagree between this host and the committed,
+# lefford-authored census. Format: `metric-name: reason`. A line without a
+# ':' is a parse error, deliberately — see the module doc of
+# ../census_sentinel.rs.
+#
+# EMPTY IS THE EXPECTED STATE. Decision 0090's audit found cross-host
+# reproducibility clean after the codegen baseline pin at 3a7092c3. An entry
+# here is evidence that finding has decayed for some metric, and wants a
+# follow-up, not a shrug.
