@@ -99,6 +99,14 @@ set -euo pipefail
 # "quiet box" is the exception, not the default to design for.
 HV_JOBS="${HV_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
 _pids=()
+# Parallel to `_pids`, index for index: the command line each PID was given.
+# A bare "a parallel job failed" names nothing — with 53 spawn sites and up to
+# HV_JOBS running at once, it says only that one of them died, and the output
+# of the survivors is interleaved on top of it. That already cost this campaign
+# a diagnosis: a `make rebaseline` rc=1 that could not be reproduced because
+# nothing recorded which job it was. `make rebaseline` is on every close path,
+# so this is the message a stuck session reads first.
+_labels=()
 spawn() {
     # Bound the fan-out. `wait -n` would be the clean way to block until any
     # one background job frees a slot, but `/bin/bash` on the box this runs
@@ -110,12 +118,24 @@ spawn() {
     # signalling, not bash's own jobs table).
     while [ "$(jobs -rp | wc -l | tr -d ' ')" -ge "$HV_JOBS" ]; do sleep 0.2; done
     "$@" & _pids+=("$!")
+    _labels+=("$*")
 }
 reap() {
-    local rc=0 p
-    for p in ${_pids+"${_pids[@]}"}; do wait "$p" || rc=1; done
+    # `${_pids+"${_pids[@]}"}` rather than `"${!_pids[@]}"`: same reason the
+    # original loop used it — bash 3.2 (what `#!/usr/bin/env bash` resolves to
+    # on macOS) errors on an empty array under `set -u`. So walk the values and
+    # carry the index by hand.
+    local rc=0 p i=0
+    for p in ${_pids+"${_pids[@]}"}; do
+        if ! wait "$p"; then
+            rc=1
+            echo "regenerate-artifacts: JOB FAILED (pid $p): ${_labels[$i]}" >&2
+        fi
+        i=$((i + 1))
+    done
     _pids=()
-    [ "$rc" -eq 0 ] || { echo "regenerate-artifacts: a parallel job failed" >&2; exit 1; }
+    _labels=()
+    [ "$rc" -eq 0 ] || { echo "regenerate-artifacts: a parallel job failed (named above)" >&2; exit 1; }
 }
 
 # CENSUS HOST GUARD, hoisted to the top: with HV_CENSUS=1 this script writes
