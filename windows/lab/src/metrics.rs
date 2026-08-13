@@ -3487,37 +3487,40 @@ pub fn registry() -> Vec<Metric> {
                   zero-length crossing, and the walk can no longer leave the \
                   network because `build` pushes a cell onto its claiming run \
                   BEFORE testing whether it was already claimed, so any cell \
-                  with a river downhill is necessarily a non-final vertex of \
+                  the flow continues past is necessarily a non-final vertex of \
                   a kept run and always has an owner. Read a 1.0 here as a \
                   tripwire that the repair is still in place, never as a \
-                  measurement of the world. **EVERYTHING ABOVE WAS MEASURED \
-                  AND REASONED ON THE FORD'S NETWORK — 183 polylines at seed \
-                  42 — AND THE RILL'S TASK 3 CHANGED WHAT THIS WALK CAN \
-                  SEE.** The walk continues only while the next cell \
-                  classifies as `River`, but `ChannelNetwork::build`'s reach \
-                  predicate is `!Ocean && downhill.is_some()`, which became \
-                  strictly wider when Task 3 rendered the whole land flow \
-                  tree (3,606 polylines at seed 42). A run ending on a \
-                  SUB-THRESHOLD trunk — rendered as a narrow channel, but not \
-                  classified a river — therefore stops the walk BEFORE its \
-                  join is examined, and that walk is counted intact without \
-                  the crossing ever being tested. The mechanism is certain \
-                  from the code; **the proportion of walks it affects is \
-                  UNMEASURED, and no figure for it is stated here.** So 1.0 \
-                  is still a true reading and the tripwire is still a \
-                  tripwire, but *this measures the JOINS* describes The \
-                  Ford's network and no longer describes this one. The 0.95 \
-                  floor is The Ford's preregistration, scored against The \
-                  Ford's network; it is neither restated nor retuned here, \
-                  and it is not re-scored against this one. Above all, do not \
-                  read this column's stillness across a change as evidence \
-                  that joins are sound: a column that did not move because it \
+                  measurement of the world. **THE RILL'S TASK 3 THEN LEFT \
+                  THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED \
+                  AND REPAIRED IT.** The walk used to continue only while the \
+                  next cell classified as `River`, while \
+                  `ChannelNetwork::build`'s reach predicate is `!Ocean && \
+                  downhill.is_some()` — strictly wider once Task 3 rendered \
+                  the whole land flow tree (3,606 runs at seed 42, from 183). \
+                  A run ending on a SUB-THRESHOLD trunk — rendered as a \
+                  narrow channel, but not classified a river — stopped the \
+                  walk BEFORE its join was examined, and that walk scored \
+                  intact with nothing tested. **Measured at last (The \
+                  Millrace, prediction P3, seed 42 at the canonical grid): \
+                  2,987 of 3,606 walks — 82.83% — had a false FIRST \
+                  continuation test**, 0.749-0.850 across the 64 probe \
+                  worlds; The Rill's review had guessed ~3,500 and rightly \
+                  declined to assert it. The walk now asks `build`'s own \
+                  reach predicate, so it stops only where the flow stops: \
+                  joins actually crossed go 853 -> 2,333 on seed 42, and \
+                  2.43x in total over the 64 worlds. **The value did not \
+                  move.** The two rules are bit-identical on all 64 probe \
+                  worlds, both 1.0, so this is a vacuous 1.0 converted into a \
+                  tested 1.0 — which is why the repair landed in this column \
+                  rather than beside it in a second one, and why no census \
+                  value changed. The 0.95 floor is The Ford's \
+                  preregistration, scored against The Ford's network; it is \
+                  neither restated, retuned, nor re-scored here. Above all, \
+                  do not read this column's stillness across a change as \
+                  evidence that joins are sound: it is a constant by \
+                  construction, and a column that did not move because it \
                   became vacuous is not the same reassurance as one that did \
-                  not move because nothing broke. Quantifying the affected \
-                  fraction, and repairing the walk to ask whether the next \
-                  cell is carried by any run rather than what class it is, \
-                  are separate work — the repair moves this column's value \
-                  and so owes its own census refresh",
+                  not move because nothing broke",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
             },
@@ -7079,6 +7082,17 @@ fn lab_channel_transect_width(
 /// it is an interior or head vertex of, never the run it merely terminates.
 /// That distinction is the whole of confluence topology: a tributary's last
 /// cell is also the trunk's, and only the trunk continues downstream from it.
+///
+/// **This is a per-world rebuild of a relation the network already publishes**
+/// ([`hornvale_terrain::channel::ChannelNetwork::trunk_vertex`]), and since
+/// The Millrace the metric reads the published accessor instead — one
+/// implementation of "who carries this cell", not two. It is kept, under
+/// `#[cfg(test)]`, as the *other* implementation the agreement assertion needs:
+/// the two are not identical by construction (this keeps the **last** claiming
+/// run, `trunk_vertex` keeps the **first**), and they agree only because the
+/// claim relation is functional — which `domains/terrain`'s R-4 asserts and
+/// this file may not assume silently.
+#[cfg(test)]
 fn lab_run_owner(
     net: &hornvale_terrain::channel::ChannelNetwork,
     cell_count: usize,
@@ -7092,6 +7106,190 @@ fn lab_run_owner(
         }
     }
     owner
+}
+
+/// Does the flow continue past `cell` — is there a downstream reach for a run
+/// to carry it into?
+///
+/// **This is `ChannelNetwork::build`'s own reach predicate** (`channel.rs`:
+/// `!Ocean && downhill.is_some()`), spelled here rather than approximated,
+/// because "does a run continue past this cell" is exactly what a downstream
+/// walk needs to know and exactly what `build` decides with. A run stops on
+/// the first cell that fails it — the sea, or a terminal sink with nowhere to
+/// send what it receives — and continues past every cell that passes.
+///
+/// It replaces a `WaterKind::River` test (The Rill's Task 3 made that strictly
+/// narrower than the reach predicate: `River` additionally requires
+/// `drainage >= RIVER_MIN_DRAINAGE`, so a tributary ending on a *sub-threshold*
+/// trunk stopped the walk before its join was ever examined). See
+/// [`lab_channel_connectivity`] for what that cost the measurement.
+fn lab_flow_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
+    !matches!(
+        *globe.water_kind.get(cell),
+        hornvale_terrain::WaterKind::Ocean
+    ) && globe.downhill.get(cell).is_some()
+}
+
+/// What one run's own hop contributes to its walk, **before** the walk's
+/// remaining suffix is folded in.
+///
+/// Splitting the walk into per-run hops is what makes the memo in
+/// [`lab_fold_intact`] possible: the hop test depends only on the run, never
+/// on how a walk arrived at it, so intactness is a pure suffix property.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LabHopVerdict {
+    /// The flow does not continue past this run's last cell: it reached the
+    /// sea or a terminal sink. The walk is over, and it is intact.
+    Ends,
+    /// The flow continues past the last cell, but no run carries it onward —
+    /// the walk falls out of the network.
+    ///
+    /// **This is the arm that used to be reached through a second, differently
+    /// worded question**, and it is kept as its own verdict rather than folded
+    /// into [`Self::Ends`] for that reason. Since the predicate repair the two
+    /// questions — "does the flow continue past this cell" (the terrain's
+    /// reach predicate) and "does a run carry it onward" (the network's
+    /// `trunk_vertex` index) — are logically the same question, so this arm is
+    /// unreachable while the network renders everything the flow tree carries.
+    /// They are nevertheless still *asked separately*, because this arm is the
+    /// only signal that they have come apart, and a walk silently scoring
+    /// intact because it fell out of the network is the failure this whole
+    /// column exists to catch.
+    FellOut,
+    /// The join crossing left the `Channel` band: the walk is broken here.
+    LeftChannel,
+    /// The crossing held. This walk's verdict is its trunk's verdict.
+    Continues(usize),
+}
+
+/// Evaluate every run's hop exactly once, under a continuation rule.
+///
+/// `flow_continues` is a parameter for one reason, stated so it is not mistaken
+/// for generality nobody uses: the shipped path always passes
+/// [`lab_flow_continues`], and the test module replays the **superseded**
+/// `WaterKind::River` rule through this same function so that both arms are
+/// measured on the shipped geometry instead of on a transcription of it. A
+/// transcribed walk is precisely what cannot be trusted here — this column
+/// reads a constant, so a badly wrong transcription reproduces it exactly.
+fn lab_connectivity_verdicts(
+    net: &hornvale_terrain::channel::ChannelNetwork,
+    flow_continues: impl Fn(CellId) -> bool,
+) -> Vec<LabHopVerdict> {
+    (0..net.polylines.len())
+        .map(|line| {
+            let last_cell = *net.run_cells[line].last().expect("a run has cells");
+            if !flow_continues(last_cell) {
+                return LabHopVerdict::Ends;
+            }
+            // The published inverse index, NOT a per-world rebuild of it. The
+            // two are not identical — `lab_run_owner` keeps the LAST claiming
+            // run and this keeps the FIRST — and they agree only because the
+            // claim relation is functional, which `domains/terrain`'s R-4
+            // asserts and `run_owner_agrees_with_the_published_trunk_vertex`
+            // re-checks here on real worlds.
+            let Some((trunk, vertex)) = net.trunk_vertex(last_cell) else {
+                return LabHopVerdict::FellOut;
+            };
+            let from = *net.polylines[line].points.last().expect("a run has points");
+            let to = net.polylines[trunk].points[vertex];
+            for s in 1..8 {
+                let t = f64::from(s) / 8.0;
+                let q = lab_normalize([
+                    from[0] + (to[0] - from[0]) * t,
+                    from[1] + (to[1] - from[1]) * t,
+                    from[2] + (to[2] - from[2]) * t,
+                ]);
+                if net.transverse_at(q).0 != hornvale_terrain::channel::Transverse::Channel {
+                    return LabHopVerdict::LeftChannel;
+                }
+            }
+            LabHopVerdict::Continues(trunk)
+        })
+        .collect()
+}
+
+/// Fold per-run hop verdicts into per-run walk verdicts, **evaluating each run
+/// at most once**.
+///
+/// ```text
+/// intact_from[line] = hop_ok(line) && intact_from[trunk_of(line)]
+/// ```
+///
+/// Walks share suffixes — a walk ends each step by moving onto its trunk, so
+/// every walk that reaches a run continues exactly as that run's own walk
+/// does — and the hop test depends only on the run. Intactness is therefore a
+/// pure suffix property, and this collapses `walks x depth` to `L` hops
+/// evaluated once. **The memo is exact by construction, not by tolerance**;
+/// `the_memoised_fold_reproduces_the_unmemoised_walk` asserts it against a
+/// transcription of the unmemoised loop, per run, on real worlds.
+///
+/// **The campaign expected this to be load-bearing and measurement says it is
+/// not, which is recorded here rather than quietly enjoyed.** The spec's worst
+/// case for the repaired walk was `walks x chain depth` with depth bounded only
+/// by the run count (3,606 at seed 42), on the argument that a repaired walk
+/// chains to the sea instead of stopping at the first sub-threshold trunk. The
+/// chains are in fact **shallow**: over `the-ford-probe`'s 64 worlds the
+/// deepest walk crosses **10** joins and the mean walk crosses **0.70**, because
+/// `build` claims trunks in ascending cell order, so a tributary typically joins
+/// a trunk that is already running to the sea. Measured on that harness, the
+/// unmemoised repaired walk costs 21.02 user-s against the memoised 20.26 —
+/// +0.012 CPU-s/world, inside the spread of repeated runs of either arm.
+///
+/// So the memo is kept for what it does guarantee, not for a win it was not
+/// measured to deliver: it is exact, it costs one pass, and it removes the
+/// quadratic term as a *possibility* — depth is a property of the world, and
+/// nothing in the code bounds it.
+///
+/// The chain is walked iteratively with an explicit `pending` list rather than
+/// by recursion: nothing bounds the depth but the run count, and a 3,606-deep
+/// recursion to save a `Vec` would be a poor trade. The `0..=len` bound is the
+/// unmemoised loop's own belt-and-braces stop, kept with the same resolution it
+/// had there (an exhausted bound leaves the walk intact) so that a cyclic
+/// network — which the strictly-descending downhill graph cannot produce —
+/// fails the same way it used to instead of hanging the lab.
+fn lab_fold_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
+    let mut intact: Vec<Option<bool>> = vec![None; verdicts.len()];
+    let mut pending: Vec<usize> = Vec::new();
+    for start in 0..verdicts.len() {
+        if intact[start].is_some() {
+            continue;
+        }
+        pending.clear();
+        let mut line = start;
+        let mut verdict = true;
+        for _ in 0..=verdicts.len() {
+            match verdicts[line] {
+                LabHopVerdict::Ends => {
+                    verdict = true;
+                    break;
+                }
+                LabHopVerdict::FellOut | LabHopVerdict::LeftChannel => {
+                    verdict = false;
+                    break;
+                }
+                LabHopVerdict::Continues(trunk) => match intact[trunk] {
+                    Some(known) => {
+                        verdict = known;
+                        break;
+                    }
+                    None => {
+                        pending.push(line);
+                        line = trunk;
+                    }
+                },
+            }
+        }
+        // Every run on the chain shares the verdict its suffix resolved to —
+        // that is the suffix property, applied.
+        intact[line] = Some(verdict);
+        for &earlier in &pending {
+            intact[earlier] = Some(verdict);
+        }
+    }
+    intact
+        .into_iter()
+        .map(|v| v.expect("every run's walk resolved"))
+        .collect()
 }
 
 /// H2's axis: the fraction of downstream walks that reach the sea or a sink
@@ -7108,122 +7306,68 @@ fn lab_run_owner(
 /// drainage graph were separated in space. The walk crosses that separation
 /// the only way a walker could, and reads the band along the way.
 ///
-/// **SINCE THE CONFLUENCE REPAIR THIS FUNCTION IS CONSTANT.** It returns
-/// `Some(1.0)` for every world with a non-empty network and `None` for every
-/// world without one — a function of "has channels", nothing more. Both ways
-/// it could return less than 1.0 are unreachable:
+/// **THE MILLRACE REPAIRED THE CONTINUATION TEST, AND QUANTIFIED WHAT IT WAS
+/// COSTING.** The walk used to continue only while the next cell classified
+/// `WaterKind::River`, while `ChannelNetwork::build`'s reach predicate is
+/// `!Ocean && downhill.is_some()` — strictly wider since The Rill's Task 3
+/// rendered the whole land flow tree. A run ending on a *sub-threshold* trunk
+/// therefore stopped the walk BEFORE its join was examined, and that walk
+/// scored intact with nothing tested.
 ///
-/// - *The join crossing.* The repair (`ChannelNetwork::build`) places a
-///   tributary's mouth ON the trunk vertex it joins, so `from == to` exactly
-///   and all seven interpolated samples land on a point at distance zero from
-///   a polyline. Measured at level 6, **as of The Rill's Task 2**: seed 42 has
-///   20 joins across 183 walks, seed 7 has 70 across 359, every one at exactly
-///   zero separation. (At The Ford, which is where these numbers were first
-///   taken, it was 15 across 144 and 52 across 295. Task 2 made every run
-///   reach the cell it drains into, which both adds runs — the one-cell runs
-///   the old length filter dropped — and makes a trunk's last river cell a
-///   non-final vertex, so joins that landed exactly there are now recognised
-///   as confluences instead of being invisible to the owner map.)
-/// - *Falling out of the network.* This was never reachable, before the
-///   repair either. In `build` the claiming run does `run.push(target)`
-///   **before** testing `claimed.insert(target)`, so a cell with a river
-///   downhill is necessarily a non-final vertex of the run that first claimed
-///   it, that run necessarily has `len() >= 2` and is kept, and `owner[c]` is
-///   therefore always `Some`. Measured `continues_but_unowned == 0` on seed
-///   42 level 6, seed 7 level 6 and seed 42 level 5, in **both** arms.
+/// **The magnitude, measured** (The Millrace, prediction P3, seed 42 at the
+/// canonical grid): **2,987 of 3,606 walks — 82.83% — had a FALSE first
+/// continuation test**, so more than four walks in five were scored without
+/// crossing a single join. The Rill's review guessed ~3,500 of 3,606 and
+/// declined to assert it; the guess was 17% high, which is why it is recorded
+/// here as a measurement and not as a corroborated estimate. The same ratio
+/// holds across all 64 of `the-ford-probe`'s worlds (0.749-0.850).
 ///
-/// So the column is a regression tripwire on the repair and nothing else —
-/// disabling the repair does drop seed 42 to 0.92361 — and it must not be
-/// read as evidence about a world. The walk is kept rather than deleted
-/// because it is the thing that fails if the repair is ever undone.
+/// **What the repair changed.** The walk now asks [`lab_flow_continues`] —
+/// `build`'s own reach predicate — so it stops only where the flow stops. On
+/// seed 42 the joins actually crossed go **853 -> 2,333** (2.73x); across the
+/// 64 probe worlds the rise is 2.06-2.75x per world and 2.43x in total
+/// (90,537 -> 219,763 crossings). What it did NOT
+/// change is the value: over those same 64 worlds the two rules are
+/// **bit-identical on every seed**, both reading 1.0, so the repair converts a
+/// vacuous 1.0 into a tested 1.0 and moves no census value. That measurement
+/// is what decided this landed in place rather than beside the old column as a
+/// second one — see `the_connectivity_arms_over_the_ford_probe_seeds`.
 ///
-/// **AND SINCE TASK 3 THE TRIPWIRE IS ITSELF LARGELY VACUOUS. Read this
-/// before quoting the column, and read the two figures above as stale.**
-/// The walk's continuation test asks whether the next cell is
-/// `WaterKind::River`; `ChannelNetwork::build`'s reach predicate is
-/// `!Ocean && downhill.is_some()`, which is a strictly wider set. Task 3
-/// made the network render the whole land flow tree, so a tributary can now
-/// end on a cell whose downhill target is `DryLand` — a **sub-threshold**
-/// trunk, rendered as a narrow channel but not classified as a river. On such
-/// a walk `continues` is false, the loop breaks BEFORE `owner[last_cell]` is
-/// consulted, and the walk is counted `intact` **without ever crossing its
-/// join** — which is the only thing this measurement was ever about ("the
-/// entire content of this measurement is at the joins", above).
+/// **The value is still a constant, and must still not be read as a fact about
+/// a world.** Both ways this can report less than 1.0 remain unreachable:
 ///
-/// **The mechanism is certain; the magnitude is UNMEASURED and no number is
-/// stated here on purpose.** It is readable from the code that the case
-/// exists and that such walks score untested; what fraction of walks take it
-/// is not, and this campaign does not publish figures it has not measured.
-/// Two things bound the concern qualitatively. The "20 joins across 183
-/// walks" measured above is **as of Task 2**, on a 183-polyline network; the
-/// shipped network has 3,606 polylines, and `lab_channel_transect_width`'s
-/// own doc puts ~6400 confluences in a world that had ~90. So the join
-/// population those figures sampled and the real one are two different orders
-/// of magnitude apart.
+/// - *The join crossing.* The confluence repair (`ChannelNetwork::build`)
+///   places a tributary's mouth ON the trunk vertex it joins, so `from == to`
+///   exactly, all seven interpolated samples land on one point at distance
+///   zero from a polyline, and `band(0.0, edges) == Channel`.
+/// - *Falling out of the network.* `build` does `run.push(target)` **before**
+///   testing `claimed.insert(target)`, so a cell the flow continues past is
+///   necessarily a non-final vertex of the run that first claimed it, and
+///   `trunk_vertex` is therefore always `Some` there. That is now the same
+///   question the continuation test asks, which is exactly why
+///   [`LabHopVerdict::FellOut`] is still asked separately rather than deleted.
 ///
-/// **Consequence for anyone reading this column's stillness as evidence.** A
-/// column that did not move because it became vacuous is not the same
-/// reassurance as a column that did not move because nothing broke. The
-/// repair is a one-word change — test `owner[last_cell].is_some()` rather
-/// than the water class — but it WILL move a census column, so it needs its
-/// own scoped work and its own refresh, and is deliberately not made here.
+/// So the column remains a **regression tripwire on the confluence repair** —
+/// disabling that repair does drop seed 42 below 1.0 — but it is a tripwire
+/// that is now genuinely armed at every join a walk passes, instead of one
+/// whose walks mostly stopped before reaching a join at all.
+///
+/// **Cost, and a falsified expectation.** The walk is memoised over its shared
+/// suffixes ([`lab_fold_intact`]) because the spec expected the repair to make
+/// walks chain to the sea and the term expensive. Measured, it does not: the
+/// deepest walk in 64 worlds crosses 10 joins, and repair-plus-memo costs
+/// +0.002 CPU-s/world against the pre-repair column on `the-ford-probe` —
+/// null at this harness's resolution. See [`lab_fold_intact`] for the arms.
 fn lab_channel_connectivity(terrain: &hornvale_terrain::GeneratedTerrain) -> Option<f64> {
     let net = terrain.channels();
     if net.polylines.is_empty() {
         return None;
     }
     let globe = terrain.globe();
-    let owner = lab_run_owner(net, terrain.geosphere().cell_count());
-    let mut walks = 0usize;
-    let mut intact = 0usize;
-    for start in 0..net.polylines.len() {
-        walks += 1;
-        let mut line = start;
-        let mut good = true;
-        // The downhill graph is acyclic, so a walk visits each run at most
-        // once; the bound is a belt-and-braces stop, not a real limit.
-        for _ in 0..=net.polylines.len() {
-            let last_cell = *net.run_cells[line].last().expect("a run has cells");
-            let continues = match *globe.downhill.get(last_cell) {
-                Some(next) => matches!(
-                    *globe.water_kind.get(next),
-                    hornvale_terrain::WaterKind::River
-                ),
-                None => false,
-            };
-            if !continues {
-                break; // reached the sea or a terminal sink: the walk is done
-            }
-            let Some((trunk, vertex)) = owner[last_cell.0 as usize] else {
-                // The run stopped on a river cell no run owns (a dropped
-                // singleton). The walk falls out of the network.
-                good = false;
-                break;
-            };
-            let from = *net.polylines[line].points.last().expect("a run has points");
-            let to = net.polylines[trunk].points[vertex];
-            for s in 1..8 {
-                let t = f64::from(s) / 8.0;
-                let q = lab_normalize([
-                    from[0] + (to[0] - from[0]) * t,
-                    from[1] + (to[1] - from[1]) * t,
-                    from[2] + (to[2] - from[2]) * t,
-                ]);
-                if net.transverse_at(q).0 != hornvale_terrain::channel::Transverse::Channel {
-                    good = false;
-                    break;
-                }
-            }
-            if !good {
-                break;
-            }
-            line = trunk;
-        }
-        if good {
-            intact += 1;
-        }
-    }
-    Some(intact as f64 / walks as f64)
+    let verdicts = lab_connectivity_verdicts(net, |cell| lab_flow_continues(globe, cell));
+    let intact = lab_fold_intact(&verdicts);
+    let good = intact.iter().filter(|&&v| v).count();
+    Some(good as f64 / intact.len() as f64)
 }
 
 /// One sweep of the channel network's transects, counted four ways.
@@ -9398,6 +9542,290 @@ mod tests {
         }
         let value = lab_channel_connectivity(&terrain).expect("this world has channels");
         assert!((0.0..=1.0).contains(&value));
+    }
+
+    // --- The Millrace (Task 5): the connectivity walk's memo and its
+    // continuation rule. ---
+
+    /// The **superseded** continuation rule: continue while the cell
+    /// downstream of this one classifies `WaterKind::River`.
+    ///
+    /// Kept, and run through the shipped [`lab_connectivity_verdicts`] rather
+    /// than through a transcribed walk, so the two arms of the repair are
+    /// comparable on the shipped geometry. Nothing in the shipped path calls
+    /// it.
+    fn lab_river_continues(globe: &hornvale_terrain::TectonicGlobe, cell: CellId) -> bool {
+        match *globe.downhill.get(cell) {
+            Some(next) => matches!(
+                *globe.water_kind.get(next),
+                hornvale_terrain::WaterKind::River
+            ),
+            None => false,
+        }
+    }
+
+    /// The walk exactly as it ran before the memo: one independent traversal
+    /// per run, sharing nothing.
+    ///
+    /// The hop evaluation is hoisted out (it consumes the same `verdicts`
+    /// slice the memo does), which is exact because a hop is a pure function
+    /// of its run. What is NOT hoisted is the part that could be wrong — the
+    /// per-walk chaining — so a memo that mis-shared a suffix or resolved a
+    /// chain to the wrong verdict separates the two.
+    fn unmemoised_intact(verdicts: &[LabHopVerdict]) -> Vec<bool> {
+        (0..verdicts.len())
+            .map(|start| {
+                let mut line = start;
+                let mut good = true;
+                for _ in 0..=verdicts.len() {
+                    match verdicts[line] {
+                        LabHopVerdict::Ends => break,
+                        LabHopVerdict::FellOut | LabHopVerdict::LeftChannel => {
+                            good = false;
+                            break;
+                        }
+                        LabHopVerdict::Continues(trunk) => line = trunk,
+                    }
+                }
+                good
+            })
+            .collect()
+    }
+
+    /// The column's value from a verdict vector — `intact / walks`.
+    fn connectivity_of(verdicts: &[LabHopVerdict]) -> f64 {
+        let intact = lab_fold_intact(verdicts);
+        intact.iter().filter(|&&v| v).count() as f64 / intact.len() as f64
+    }
+
+    /// Joins **attempted**, summed over walks — the work the unmemoised walk
+    /// did, and the quantity Task 2's two-arm probe reported as "joins
+    /// crossed" (853 -> 2,333 on seed 42). Counted the way that probe counted
+    /// it: a hop whose seven probes then failed is still an attempted
+    /// crossing, and a walk that fell out of the network attempted none.
+    ///
+    /// Computed with the same suffix fold the memo uses, so it reports what
+    /// the walks would have paid for, not what the memo actually evaluated
+    /// (which is one hop per run, by construction). Returned per run, because
+    /// the **maximum** is the interesting one: it is the walk depth the
+    /// unmemoised cost is quadratic in, and measuring it is how the campaign
+    /// found that the depth the spec's worst case assumed does not occur.
+    fn walk_crossing_depths(verdicts: &[LabHopVerdict]) -> Vec<usize> {
+        let mut per_run: Vec<Option<usize>> = vec![None; verdicts.len()];
+        let mut pending: Vec<usize> = Vec::new();
+        for start in 0..verdicts.len() {
+            if per_run[start].is_some() {
+                continue;
+            }
+            pending.clear();
+            let mut line = start;
+            let mut tail = 0usize;
+            for _ in 0..=verdicts.len() {
+                match verdicts[line] {
+                    LabHopVerdict::Ends | LabHopVerdict::FellOut => {
+                        tail = 0;
+                        break;
+                    }
+                    LabHopVerdict::LeftChannel => {
+                        tail = 1;
+                        break;
+                    }
+                    LabHopVerdict::Continues(trunk) => match per_run[trunk] {
+                        Some(known) => {
+                            tail = known + 1;
+                            break;
+                        }
+                        None => {
+                            pending.push(line);
+                            line = trunk;
+                        }
+                    },
+                }
+            }
+            per_run[line] = Some(tail);
+            while let Some(earlier) = pending.pop() {
+                tail += 1;
+                per_run[earlier] = Some(tail);
+            }
+        }
+        per_run
+            .into_iter()
+            .map(|v| v.expect("every run's depth resolved"))
+            .collect()
+    }
+
+    /// Every assertion this task's repair rests on, over one world: the memo
+    /// is exact under BOTH continuation rules, the published `trunk_vertex`
+    /// agrees with the per-world `lab_run_owner` rebuild, and the terrain's
+    /// reach predicate agrees with the network's index on every run's last
+    /// cell.
+    ///
+    /// Returned counts let the ignored 64-seed probe report what it asserted.
+    fn assert_connectivity_invariants(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+    ) -> (Vec<LabHopVerdict>, Vec<LabHopVerdict>) {
+        let net = terrain.channels();
+        let globe = terrain.globe();
+
+        // (1) One implementation of "who carries this cell", checked against
+        // the other. `lab_run_owner` keeps the LAST claiming run and
+        // `trunk_vertex` the FIRST, so this is an assertion that the claim
+        // relation is functional — `domains/terrain`'s R-4 — re-checked at the
+        // point where this file starts depending on it.
+        let owner = lab_run_owner(net, terrain.geosphere().cell_count());
+        for (index, entry) in owner.iter().enumerate() {
+            assert_eq!(
+                *entry,
+                net.trunk_vertex(CellId(index as u32)),
+                "the per-world owner rebuild and the published trunk_vertex disagree at cell \
+                 {index}: the claim relation is not functional, and R-4 — which the metric's \
+                 substitution of the published accessor rests on — does not hold here"
+            );
+        }
+
+        // (2) The repaired predicate and the network's index ask the same
+        // question, which is what makes `FellOut` unreachable rather than
+        // deleted. Asserted on the population the walk actually consults.
+        for line in 0..net.polylines.len() {
+            let last_cell = *net.run_cells[line].last().expect("a run has cells");
+            assert_eq!(
+                lab_flow_continues(globe, last_cell),
+                net.trunk_vertex(last_cell).is_some(),
+                "the terrain's reach predicate and the network's trunk index disagree at the \
+                 last cell of run {line}: a walk can now fall out of the network, and \
+                 LabHopVerdict::FellOut is reachable"
+            );
+        }
+
+        // (3) The memo is exact — under the shipped rule AND under the
+        // superseded one, so the proof does not depend on the repair.
+        let repaired = lab_connectivity_verdicts(net, |c| lab_flow_continues(globe, c));
+        let superseded = lab_connectivity_verdicts(net, |c| lab_river_continues(globe, c));
+        for (label, verdicts) in [("repaired", &repaired), ("superseded", &superseded)] {
+            assert_eq!(
+                lab_fold_intact(verdicts),
+                unmemoised_intact(verdicts),
+                "the memoised fold disagrees with an unmemoised walk of the same {label} \
+                 verdicts, per run"
+            );
+        }
+        (superseded, repaired)
+    }
+
+    /// The invariants on a real world, in the commit gate.
+    ///
+    /// Level 5 rather than the canonical grid because this is the *always*
+    /// arm: the ignored probe below runs the same assertions over all 64 of
+    /// `the-ford-probe`'s seeds at the canonical level, and this one exists so
+    /// that a change breaking them cannot wait for someone to remember a
+    /// by-hand run.
+    #[test]
+    fn the_memoised_fold_reproduces_the_unmemoised_walk() {
+        let terrain = ford_test_terrain();
+        let (superseded, repaired) = assert_connectivity_invariants(&terrain);
+        // Both arms are computed; assert the shipped column is the repaired
+        // one, so a future edit cannot quietly re-point it at the old rule.
+        assert_eq!(
+            lab_channel_connectivity(&terrain),
+            Some(connectivity_of(&repaired)),
+            "the shipped column is not reading the repaired continuation rule"
+        );
+        assert!(
+            !superseded.is_empty(),
+            "this world has no runs, so nothing above was tested"
+        );
+    }
+
+    /// claim: invariant(forall-seed) — over `the-ford-probe`'s 64 seeds, the
+    /// memo reproduces the unmemoised walk per run and the two "who carries
+    /// this cell" answers agree. The P3 fraction and the branch table beside
+    /// them are a readout: printed, never asserted, because the decision they
+    /// feed (spec §6.3) is a human one.
+    ///
+    /// **Prediction P3, and the branch table that decides whether this repair
+    /// adds a column.** Both arms over all 64 of `the-ford-probe`'s seeds, one
+    /// world build each, at the canonical grid.
+    ///
+    /// Prints, and asserts nothing about, the two arms' values: the decision
+    /// rule (spec §6.3) is that identical values on all 64 seeds means the
+    /// repair lands in place, and any difference means an additively-named
+    /// second column. What it DOES assert is every invariant the repair rests
+    /// on, per world — see [`assert_connectivity_invariants`].
+    #[test]
+    #[ignore = "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand"]
+    fn the_connectivity_arms_over_the_ford_probe_seeds() {
+        let pins = SkyPins::default();
+        let mut differing = 0usize;
+        let mut worlds = 0usize;
+        let mut deepest = 0usize;
+        println!(
+            "{:>4}  {:>12}  {:>12}  {:>6}  {:>6}  {:>8}  {:>8}  {:>7}",
+            "seed", "superseded", "repaired", "runs", "ends", "cross-sup", "cross-rep", "max-dep"
+        );
+        for seed in 0..64u64 {
+            let view = TerrainView::build(Seed(seed), &pins)
+                .unwrap_or_else(|e| panic!("seed {seed} builds to the terrain rung: {e:?}"));
+            assert_eq!(
+                view.terrain.geosphere().level(),
+                hornvale_terrain::GLOBE_LEVEL,
+                "this probe is only meaningful on the canonical grid"
+            );
+            let net = view.terrain.channels();
+            if net.polylines.is_empty() {
+                println!("{seed:>4}  {:>12}  {:>12}", "absent", "absent");
+                continue;
+            }
+            worlds += 1;
+            let (superseded, repaired) = assert_connectivity_invariants(&view.terrain);
+            let (a, b) = (connectivity_of(&superseded), connectivity_of(&repaired));
+            if a.to_bits() != b.to_bits() {
+                differing += 1;
+            }
+            // P3: walks whose FIRST continuation test is already false. A
+            // walk's first hop is its own run's hop, so this is exactly the
+            // count of runs whose verdict is `Ends` under the superseded rule.
+            let ends = superseded
+                .iter()
+                .filter(|v| **v == LabHopVerdict::Ends)
+                .count();
+            let fell_out = superseded
+                .iter()
+                .chain(repaired.iter())
+                .filter(|v| **v == LabHopVerdict::FellOut)
+                .count();
+            assert_eq!(
+                fell_out, 0,
+                "seed {seed}: a walk fell out of the network — LabHopVerdict::FellOut is \
+                 reachable after all"
+            );
+            let depths = walk_crossing_depths(&repaired);
+            let max_depth = depths.iter().copied().max().unwrap_or(0);
+            deepest = deepest.max(max_depth);
+            println!(
+                "{seed:>4}  {a:>12.6}  {b:>12.6}  {:>6}  {ends:>6}  {:>8}  {:>8}  {max_depth:>7}",
+                superseded.len(),
+                walk_crossing_depths(&superseded).iter().sum::<usize>(),
+                depths.iter().sum::<usize>(),
+            );
+            if seed == 42 {
+                println!(
+                    "P3 [seed 42]: {ends} of {} walks ({:.4}) have a FALSE first continuation \
+                     test under the superseded WaterKind::River rule — counted intact with \
+                     their join never crossed",
+                    superseded.len(),
+                    ends as f64 / superseded.len() as f64,
+                );
+            }
+        }
+        println!("deepest walk under the repaired rule, over all {worlds} worlds: {deepest} joins");
+        println!(
+            "branch table: {differing} of {worlds} worlds differ between the arms -> {}",
+            if differing == 0 {
+                "REPAIR IN PLACE (no column added)"
+            } else {
+                "NEW ADDITIVELY-NAMED COLUMN"
+            }
+        );
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---

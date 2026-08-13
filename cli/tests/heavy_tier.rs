@@ -163,7 +163,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 26] = [
+const EXPECTED_UNTOKENISED: [&str; 27] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
@@ -177,6 +177,7 @@ const EXPECTED_UNTOKENISED: [&str; 26] = [
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand",
+    "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
     "probe: enumerates every branch of a whole coarse basin, twice (1.4 s measured); run by hand",
     "probe: measurement only, run explicitly",
     "probe: replays ~50k real nearest-line queries against the full 3,606-line network (41 s measured); run by hand",

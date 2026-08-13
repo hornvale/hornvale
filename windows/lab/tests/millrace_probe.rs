@@ -32,12 +32,21 @@
 //! registry's own extractors, so a drift in stride, window, step count or
 //! ordering turns this file red. **The join half has no such guard and cannot
 //! get one from published output**: `channel-connectivity` is the only metric
-//! reading that population and `metrics.rs:7111` records it as constant since
-//! the confluence repair, so it reads 1.0000 for any transcription including a
-//! badly wrong one. Two corroborations an earlier draft of this file offered —
-//! that connectivity reproduces at 1.0000, and that the network measures
-//! 3,606 / 14,606 — are worth nothing for exactly that reason: the first is a
-//! documented constant and the second corroborates the world build.
+//! reading that population and `lab_channel_connectivity`'s own doc records it
+//! as constant since the confluence repair, so it reads 1.0000 for any
+//! transcription including a badly wrong one. Two corroborations an earlier
+//! draft of this file offered — that connectivity reproduces at 1.0000, and
+//! that the network measures 3,606 / 14,606 — are worth nothing for exactly
+//! that reason: the first is a documented constant and the second corroborates
+//! the world build.
+//!
+//! **Since Task 5 the join half's *findings* are no longer taken here.** The
+//! vacuity measurement (P3) and the two-arm comparison that decided whether the
+//! repair moved a census value live in-crate, in `metrics.rs`'s own test module
+//! (`the_connectivity_arms_over_the_ford_probe_seeds`), where the shipped walk
+//! can be called directly under either continuation rule instead of
+//! transcribed. What survives here is the `k` measurement, which needs the
+//! query *positions* and not the verdicts.
 //!
 //! **The instrument carries its own positive control.** A cap that is too
 //! small produces a flatteringly tiny candidate set that simply does not
@@ -443,10 +452,12 @@ fn published_number(view: &TerrainView, name: &str) -> f64 {
 /// the iteration order moves at least one of these two ratios. It covers the
 /// join half **not at all**, and no available published observable would:
 /// `channel-connectivity` is the only metric reading that population and it is
-/// a documented constant. That gap is stated rather than papered over; the
-/// durable fix is moving this probe in-crate beside `lab_channel_transect_width`
-/// so the shipped functions can be called directly, which is a larger change
-/// than this task should make.
+/// a documented constant. That gap is stated rather than papered over. Task 5
+/// took the durable fix for everything that *depends* on the join half — the
+/// vacuity measurement and the two-arm comparison moved in-crate, where the
+/// shipped walk is called rather than transcribed — but this file's own join
+/// transcription, which exists only to source query positions, still has no
+/// guard.
 fn assert_sweep_matches_published(view: &TerrainView, sweep: &TranscribedSweep) {
     let cases = [
         (
@@ -480,18 +491,17 @@ fn assert_sweep_matches_published(view: &TerrainView, sweep: &TranscribedSweep) 
 /// `for s in 1..8` in the shipped metric.
 const JOIN_PROBES: usize = 7;
 
-/// For each cell, the `(line, vertex)` of the run that CLAIMED it — a
-/// transcription of `lab_run_owner`.
+/// For each cell, the `(line, vertex)` of the run that carries it onward.
+///
+/// **Read from the network's published `trunk_vertex` index, not rebuilt.**
+/// This was a transcription of the lab's private `lab_run_owner` until Task 5
+/// made the metric itself read the published accessor; the two rebuilds are
+/// not identical (one keeps the first claiming run, the other the last), so
+/// with the metric no longer rebuilding, neither does this.
 fn run_owner(net: &ChannelNetwork, cell_count: usize) -> Vec<Option<(usize, usize)>> {
-    let mut owner = vec![None; cell_count];
-    for (i, run) in net.run_cells.iter().enumerate() {
-        for (j, &c) in run.iter().enumerate() {
-            if j + 1 < run.len() {
-                owner[c.0 as usize] = Some((i, j));
-            }
-        }
-    }
-    owner
+    (0..cell_count)
+        .map(|i| net.trunk_vertex(CellId(i as u32)))
+        .collect()
 }
 
 /// One join probe, evaluated once and reused by every walk that crosses it.
@@ -741,24 +751,30 @@ fn the_candidate_set_a_capped_query_would_gather() {
     let owner = run_owner(net, view.terrain.geosphere().cell_count());
     let probes = join_probes(net, &owner, half);
 
-    let shipped = |last_cell: CellId| match *globe.downhill.get(last_cell) {
+    // The rule this metric shipped until Task 5: continue while the cell
+    // downstream classifies `River`. Kept as an arm because it is the
+    // population every `k` figure before Task 5 was measured over.
+    let superseded = |last_cell: CellId| match *globe.downhill.get(last_cell) {
         Some(next) => matches!(*globe.water_kind.get(next), WaterKind::River),
         None => false,
     };
-    // The repair `lab_channel_connectivity`'s own doc names: test whether a run
-    // claims this cell, rather than the water class of the cell downstream of
-    // it. A run claims a cell only where it continues past it, so this is the
-    // direct question the water-class test was standing in for.
-    let repaired = |last_cell: CellId| owner[last_cell.0 as usize].is_some();
+    // The rule the metric ships now: `ChannelNetwork::build`'s own reach
+    // predicate, which is what decides whether a run continues past a cell.
+    // Task 5 asserts in-crate that this agrees with "a run carries this cell"
+    // on every run's last cell, on all 64 of these worlds.
+    let shipped = |last_cell: CellId| {
+        !matches!(*globe.water_kind.get(last_cell), WaterKind::Ocean)
+            && globe.downhill.get(last_cell).is_some()
+    };
 
     for (label, predicate) in [
         (
-            "shipped WaterKind::River",
-            &shipped as &dyn Fn(CellId) -> bool,
+            "superseded WaterKind::River",
+            &superseded as &dyn Fn(CellId) -> bool,
         ),
         (
-            "repaired owner.is_some()",
-            &repaired as &dyn Fn(CellId) -> bool,
+            "shipped reach predicate",
+            &shipped as &dyn Fn(CellId) -> bool,
         ),
     ] {
         let mut arm = walk_arm(net, &owner, &probes, predicate);
