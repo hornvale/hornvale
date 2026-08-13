@@ -3490,7 +3490,34 @@ pub fn registry() -> Vec<Metric> {
                   with a river downhill is necessarily a non-final vertex of \
                   a kept run and always has an owner. Read a 1.0 here as a \
                   tripwire that the repair is still in place, never as a \
-                  measurement of the world",
+                  measurement of the world. **EVERYTHING ABOVE WAS MEASURED \
+                  AND REASONED ON THE FORD'S NETWORK — 183 polylines at seed \
+                  42 — AND THE RILL'S TASK 3 CHANGED WHAT THIS WALK CAN \
+                  SEE.** The walk continues only while the next cell \
+                  classifies as `River`, but `ChannelNetwork::build`'s reach \
+                  predicate is `!Ocean && downhill.is_some()`, which became \
+                  strictly wider when Task 3 rendered the whole land flow \
+                  tree (3,606 polylines at seed 42). A run ending on a \
+                  SUB-THRESHOLD trunk — rendered as a narrow channel, but not \
+                  classified a river — therefore stops the walk BEFORE its \
+                  join is examined, and that walk is counted intact without \
+                  the crossing ever being tested. The mechanism is certain \
+                  from the code; **the proportion of walks it affects is \
+                  UNMEASURED, and no figure for it is stated here.** So 1.0 \
+                  is still a true reading and the tripwire is still a \
+                  tripwire, but *this measures the JOINS* describes The \
+                  Ford's network and no longer describes this one. The 0.95 \
+                  floor is The Ford's preregistration, scored against The \
+                  Ford's network; it is neither restated nor retuned here, \
+                  and it is not re-scored against this one. Above all, do not \
+                  read this column's stillness across a change as evidence \
+                  that joins are sound: a column that did not move because it \
+                  became vacuous is not the same reassurance as one that did \
+                  not move because nothing broke. Quantifying the affected \
+                  fraction, and repairing the walk to ask whether the next \
+                  cell is carried by any run rather than what class it is, \
+                  are separate work — the repair moves this column's value \
+                  and so owes its own census refresh",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.5, 0.8, 0.9, 0.95, 0.99],
             },

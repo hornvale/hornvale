@@ -142,6 +142,22 @@ constrain, so it could not have failed.
   invariance test stayed **green, deliberately**, because a different
   coefficient is still scale-free. That is what proves two tests independent
   rather than one duplicated change-detector.
+- **Verify a revert by re-running after `touch`, never by grepping the
+  source — because the source is not what ran.** Hit live at the close, while
+  mutation-proving the flip-count pin. The mutation was applied with
+  `sed -i.bak`, and the revert was `mv file.bak file` — which restored an
+  mtime *older* than the compiled test binary, so cargo skipped the rebuild
+  and re-ran the **mutated** binary against reverted source. `grep` showed the
+  correct value while the run reported the mutated one. Here it produced a
+  false **red**, which is loud and self-correcting. **Apply the mutation in
+  the other order and the identical mechanism produces a false green** — the
+  direction that silently invalidates a mutation proof, by reporting that a
+  mutated assertion passed when what ran was the unmutated build. This
+  campaign leaned on mutation proofs repeatedly and rested several
+  independence claims on them, so the hazard is load-bearing for how much all
+  of that evidence is worth. It is a documented repo trap; what is new is that
+  the false-green direction is the dangerous one and the check is one word
+  (`touch`).
 - **A reference from outside the repository.** Task 1's review parsed the
   690-line fixture in Python and recomputed every row *outside* the tree —
   661/661 bit-exact. Task 5's draw-order witness verified against a **different
