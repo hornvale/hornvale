@@ -191,9 +191,23 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # guard. The sentence was not false — it was written from the canonical box's
 # point of view and silently changes meaning depending on where you read it.
 #
-# COST HAS ROUGHLY DOUBLED since 0063 measured it: 776 s / 887 s / 921 s
-# (13-15 min) on lefford, 2026-08-09, cpu_ratio ~25 on 40 cores, against
-# 0063's "~7 minutes". Not a contradiction — a drift datum. Budget 15.
+# COST IS THE ONE THING IN THIS BLOCK YOU MUST NOT TAKE FROM THIS BLOCK.
+# Read it from `docs/timings.md` — `grep '| census |' docs/timings.md | tail`
+# — which is the ledger this prose already points at, and which moves far
+# faster than this file does. The history, so you know what kind of number
+# you are holding: 0063 measured "~7 minutes"; this block then said
+# 776/887/921 s (2026-08-09) and told you to budget 15; by 2026-08-11 main
+# itself was at 1710-1789 s (~29 min) with nothing here updated; and The
+# Rill's refresh took **19,207.751 s — 5 h 20 m** (2026-08-13, cpu_ratio
+# 36.50 on 40 cores), 11.2x wall and 12.7x CPU against the pre-Rill run seven
+# hours earlier. A memoisation landed inside that campaign recovers 3.01x,
+# which projects the next refresh at ~6,400 s (~1.8 h) — still ~3.7x what The
+# Rill found. THE FAILURE THIS PARAGRAPH REPLACES: two independent readers (a
+# campaign controller and its own cost attribution) both anchored on the
+# "budget 15" line that used to sit here, while docs/timings.md already
+# carried a figure 2x larger, and the resulting extrapolation was wrong by
+# 2.2x. A committed baseline is a claim with a date; this paragraph is a
+# pointer instead, deliberately.
 #
 # Push the branch first, then dispatch with a FULL SHA (never a branch name —
 # HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch

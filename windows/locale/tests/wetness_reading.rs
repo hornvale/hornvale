@@ -531,8 +531,13 @@ fn a_walk_gets_damper_as_it_descends() {
     // The claim the data supports: the supply term is damper downhill more
     // often than a coin would be, and more often than the emitted axis manages.
     // Stated on the SUPPLY arm rather than the grounded one, because the
-    // allocation flips no step verdicts and claiming it for the full model
-    // would credit this campaign with a term that predates it.
+    // allocation buys nothing and claiming it for the full model would credit
+    // this campaign with a term that predates it. It is NOT inert — the
+    // `flips` line printed above counts 34 of 420 step verdicts reversed — but
+    // the reversals CANCEL: over all steps grounded and supply-only both score
+    // 276/420, and in scope grounded is 214/345 = 0.6203 against supply-only
+    // 216/345 = 0.6261, very slightly worse. Equal totals are consistent with
+    // no change and with equal-and-opposite change; this one is the latter.
     assert!(
         f(scoped[2]) > 0.5 && f(scoped[2]) > f(scoped[0]),
         "the climate supply does not beat chance in scope: supply {:.4}, emitted {:.4}",

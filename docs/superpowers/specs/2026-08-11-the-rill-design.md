@@ -178,27 +178,21 @@ child((k+2)%3)` is a rotation); that `RIVER_MIN_DRAINAGE` has exactly one
 executable use workspace-wide, so no count threshold is inherited; and the
 finding that no walk-depth room anywhere in these worlds is fully inside water.
 
-`RoomAddr::corners()` is a deterministic 4-way descent whose doc states it is
-**byte-identical to the same face in `Geosphere::new(self.path.len())`**. The
-room mesh and the geosphere are one lattice, so a room at depth *d* **is** a
-level-*d* cell. Drainage can therefore subdivide exactly as rooms do, and the
-topology forces most of the answer:
-
-- a parent flows out through **one** edge;
-- the **central** child (`digit 3`, `[ab, bc, ca]`) touches no parent edge, so
-  it can never be the outlet and must drain into a corner child;
-- the corner child on the parent's outflow edge **is** the outlet, forced;
-- the remaining children form a tree draining into it.
-
-The only freedom is which spanning tree the remaining children form. That is a
-seeded draw from a small, enumerable set of valid configurations — bounded,
-deterministic, and resolvable from a room's address in `O(depth)` with nothing
-stored: descend the path, resolving flow at each level. The same rule at every
-level is what makes the result self-similar rather than merely fractal-looking.
-
-Inflow boundary conditions come from the coarse graph the same way: a parent
-edge across which a neighbour flows *in* is an inlet, and the child owning
-that edge receives it.
+**The paragraphs that stood here were the falsified design's mechanics, and
+the rewrite above left them behind.** They said that because `RoomAddr::
+corners()` is byte-identical to the same *face* in `Geosphere::new(depth)`,
+"a room at depth *d* **is** a level-*d* cell", and derived the routing from
+it: a parent flows out through one edge, the central child can never be the
+outlet, the corner child on the outflow edge is the outlet *forced*, the rest
+form a spanning tree draining into it. Every clause of that is the primal/dual
+conflation this same section refutes fifty lines above — a room is a face and
+a cell is a vertex — and the `corners()` fact it rests on is the one true
+statement in it, already carried above where it belongs. They are removed
+rather than retained because the falsification, its measured cost and its
+cause are all recorded above; what is gone is the *present-tense* restatement
+of a construction the campaign threw away, which is the same class of defect
+(prose outliving the code it described) this campaign spent five tasks
+sweeping.
 
 ### 4.3 The width law is already scale-free — asserted, not assumed
 
