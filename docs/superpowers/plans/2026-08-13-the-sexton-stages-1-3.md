@@ -648,8 +648,16 @@ RUN_JSON="${1:?usage: defect-ledger.sh <run.json>}"
 
 # The crates a human touched, by the same directory->crate mapping gate-fast
 # uses. Overapproximation is fine here; this is a correlate, not a gate.
+# BOTH commands are needed and neither is redundant. `git diff --name-only
+# HEAD` lists tracked modifications only and never untracked files — and a
+# NEWLY ADDED file (a new test, module or fixture) is one of the commonest
+# causes of a red gate, so on its own this field would degrade to `(none)`
+# exactly where it is most informative, and `(none)` is indistinguishable
+# from "nothing changed". `--exclude-standard` keeps .gitignore'd paths
+# (target/) out. Do not simplify this back to one command.
 changed_crates="$(
-    git -C "$ROOT" diff --name-only HEAD 2>/dev/null \
+    { git -C "$ROOT" diff --name-only HEAD 2>/dev/null; \
+      git -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null; } \
     | awk -F/ '{ if ($1=="kernel") print "kernel"; else if (NF>1) print $1"/"$2 }' \
     | sort -u | paste -sd, - )"
 [ -n "$changed_crates" ] || changed_crates='(none)'
@@ -798,6 +806,12 @@ check. It is committed and per-host so `git log -p` is the archaeology.
   censuses are invisible to it.
 ```
 
+**The `git add` list includes the ledgers the proof runs touched.** An earlier
+draft listed only the three new/edited source files, which is the same defect
+The Quire recorded — a file list that reads as complete and is not. The proof
+runs in Step 3 legitimately write `docs/timings.md`, the host duration baseline,
+and the new defects TSV; all three belong in the commit.
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -823,7 +837,9 @@ Wired with `|| true` — bookkeeping must never change a gate's verdict.
 The README states the limits plainly: changed_crates is a correlate not a
 cause, absence is weak evidence, and the heavy tier is invisible to it.
 EOF
-git add scripts/defect-ledger.sh docs/timings/defects-README.md Makefile
+git add scripts/defect-ledger.sh docs/timings/defects-README.md Makefile \
+        docs/timings/defects-$(hostname -s).tsv docs/timings.md \
+        docs/timings/test-baseline-$(hostname -s).tsv
 git commit -F /tmp/hv-t4.txt
 ```
 
