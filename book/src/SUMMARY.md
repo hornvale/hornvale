@@ -355,6 +355,8 @@
 - [The Muster](./chronicle/the-muster.md)
 - [The Beacon](./chronicle/the-beacon.md)
 - [The Holdfast](./chronicle/the-holdfast.md)
+- [The Rill](./chronicle/the-rill.md)
+- [The Millrace](./chronicle/the-millrace.md)
 
 # Appendix: The Frontier
 

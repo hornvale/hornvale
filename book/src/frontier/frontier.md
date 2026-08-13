@@ -66,6 +66,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
   - [Narrative delivery — which piece next, when content is derived](#narrative-delivery--which-piece-next-when-content-is-derived)
   - [Knowability — whether a derived world can be known from inside it](#knowability--whether-a-derived-world-can-be-known-from-inside-it)
+  - [Possession as progression — how a soul earns the right to be somewhere](#possession-as-progression--how-a-soul-earns-the-right-to-be-somewhere)
   - [The self-reflective ledger — the capability schema as a derived view](#the-self-reflective-ledger--the-capability-schema-as-a-derived-view)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
@@ -79,6 +80,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Betweenness — one surface, many readouts](#betweenness--one-surface-many-readouts)
   - [Chokepoints — the bridge is the degenerate case](#chokepoints--the-bridge-is-the-degenerate-case)
   - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
+  - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -3935,6 +3937,250 @@ Measure first; design second.
 
 ---
 
+## Possession as progression — how a soul earns the right to be somewhere
+
+*(Provoked by Breath of the Wild's landmark theory — Fujibayashi's triangles and
+the attention they pull — arriving at a project with no vertical camera to put
+them in. Nine ideonomic passes; high confidence in the reformulation and in the
+inventory of what is already built, medium in the mechanisms it implies. Two
+framings were overturned mid-survey and one factual claim of this section's own
+first draft was wrong; both are recorded below rather than quietly fixed.
+Nothing is built. The prerequisites are named at the end, because three of them
+are single lines of shipped code.)*
+
+**The rule does not transfer, and the reason is the finding.** A triangle in
+Breath of the Wild is usually explained as a choice — go around it or climb over
+it. Structurally it is an *occlusion schedule*: a shape that guarantees the
+summits of distant things clear the ridge in front of you while the ground
+beneath them does not, so the player is continuously handed enough to form a
+conjecture and never enough to confirm one. Confirmation costs a walk. A
+top-down roguelike has no vertical axis with which to hide a base, so the
+mechanism as stated is simply unavailable. What survives the projection is the
+quantity the mechanism was manipulating: **the expected-information-gain field
+over space**, whose gradient is the reason to walk anywhere at all. Exploration
+is ascent on that field. Wandering is what a flat field feels like from inside —
+and it goes flat in two directions, which is the half rarely said. Flat at zero
+is omniscience: one look exhausts the region and movement becomes bookkeeping.
+Flat and positive is uniform cover: something is always out there and nothing
+says where, which is the failure the tabletop record already blames hexcrawling
+for. Triangles hold the field in the partially observable middle, where it has
+maxima, slopes that lead to them, and the property that arriving at one
+generates the next.
+
+**The walk-band chart is presently the second kind of flat.** Its neighbourhood
+is a ball of breadth-first rings around the observer, and the radius is a
+constant. Relief is banded per cell from abyss to alpine; canopy openness is
+emitted for every cell, unlike the fields gated to the observer's own square. So
+the chart already knows there is an alpine cell three rings out, and nothing
+about that makes it visible from four. **Elevation and cover are both present as
+labels and absent as causes.** The roguelike reading of a triangle is therefore
+not occlusion but *reach*: a rise is a cell you can see further from, a closed
+canopy is a cell you cannot see through, and the flat constant wants to become a
+function of two fields already in the document.
+
+**Top-down surrenders the occlusion axis and is handed an identification axis in
+exchange.** Breath of the Wild cannot show you a mountain and withhold that it
+is a mountain; its mesh is what it is. A glyph can. A mark on the chart already
+separates the noun that makes it examinable from the kind that says what sort of
+thing it is, so a mark at range can deliver its kind and withhold its noun —
+*something stands there* — which carries the same information structure as
+seeing a summit over a ridge, by degrading identity with distance instead of
+occluding geometry. This is not a bolt-on. Phenomena in this world are
+source-blind by constitutional design, so an observer receives appearances and
+never objects; recognising that the peak seen from the south and the peak seen
+from the north are one peak is exactly the achievement the sky's morning and
+evening star already wait on. Wayfinding is that achievement at terrestrial
+scale, and **failing it is what being lost is** — a derived epistemic state, not
+a fog effect.
+
+**Lifted free of souls and bodies, the whole design is one conserved quantity.**
+Abstract it and what remains is *a bounded quantity of presence, allocated
+across a population, where the depth of an allocation decides both control and
+inheritance*. Breadth and depth trade against each other: ride one person wholly
+or a thousand thinly. Two consequences fall out immediately, and the first
+overturned this survey's own framing. The opening view of the whole world is not
+a separate mode with a transition into play — it is **possession at maximal
+breadth and zero depth**, so the drill-down from world to region to settlement to
+person is one continuous quantity rather than a mode switch. And the ambition of
+possessing a settlement, a culture, a civilisation reduces to *cardinality of
+simultaneous vessels* rather than a new and coarser mechanism. The middle
+allocations are entirely unbuilt, and they are where the readings get strange:
+perceive is available at every allocation and thins with breadth, while
+identifying-with exists only at the narrow end, and control over a whole people
+is not a command but a *drift in custom*.
+
+**There are three gates, and only the first is epistemic.** Knowledge lights a
+place: hearsay puts a distant city on the map so that it can pull at you. Contact
+opens it: you may take a body there only if you have physically been there, or at
+least at its outskirts. Resistance limits the step: how far a single jump may
+climb, so that a goblin cannot walk up a peak, be eaten by a dragon, and become
+the dragon. Collapsing any pair loses something specific. Knowledge alone is
+short-circuited by finding a well-travelled gossip in a tavern. Contact alone
+gives a dark map with nothing to pull toward. No resistance at all turns death
+into a teleport to anywhere lethal enough to kill you. Resistance also wants a
+substance rather than a stipulated power scalar, and the motivation engine
+supplies one: a creature whose setpoints are coherent and well defended is hard
+to ride, while a confused, exhausted, grieving, dying or dreaming one is easy —
+which makes the approach to a difficult vessel a plan rather than a vigil, since
+susceptibility can be *induced*. Transplant medicine's answer to rejection is
+not patience but immunosuppression.
+
+**Death is the transport.** Killed by a guard on a threshold, you may possess the
+guard — the nearest live body, and the one that has just proved it was there. So
+failure is a *transfer* rather than a reset, and difficulty and progress ride a
+single axis: get killed deeper in, arrive deeper in. It is also declinable. You
+may refuse the guard, widen out, and fall back to somewhere safe, which makes the
+moment of eviction the design's first genuine risk against reward — take the
+ground and be present but shallow and hunted, or retreat and let the foothold you
+paid to reach decay. The exploit this obviously opens closes itself against the
+conserved quantity rather than against a new rule: **a voluntary step spends
+depth and an eviction loses it**, so dying carries you inward and leaves you
+barely present, which is precisely the story worth playing rather than a
+punishment bolted onto it.
+
+**The route decides the station.** Come through the sewers and the body available
+is an outcast; kill a guard and you are a guard; arrive in a coffle and you are a
+slave; arrive with goods and you are a merchant. **How you enter a society
+decides your standing in it**, which is a derived class system falling out of the
+contact rule with nothing authored anywhere. Scheming for a drow queen's favour
+therefore stops being an unlock handed over and becomes an achievement climbed to
+from the bottom — a better game than being issued a noble. It also settles a
+complaint the design earns honestly: among the ways one agent takes control of
+another — command, persuasion, deception, coercion, hire, inheritance,
+institution — possession is the only one that requires no consent and leaves no
+relationship behind, so a soul that only possesses accumulates knowledge and
+never allies. What it inherits instead is a *station*, and stations carry
+obligations and access.
+
+**The chain of bodies is a lattice, not a ladder.** A power route to a dragon
+runs through chieftain, ogre and giant; a knowledge route to the same vessel runs
+through hermit, scholar and cultist. The lineages are genuinely incomparable —
+neither is above the other — and their *join* is the first vessel that requires
+both, which is exactly what stops the structure collapsing into a level. This is
+where the question that provoked the survey lands: **the medium-height triangles
+are the intermediate bodies** between what you are and what you want to be. They
+are derived, they admit multiple routes with different characters, and no tech
+tree is authored anywhere.
+
+**The economy wants one quantity and no clock.** Depth is per-body. It accrues
+while held, it is spent on a voluntary step, it is lost on an eviction, and it
+does not travel — only knowledge and disposition cross a transfer. So there is no
+level and no score: a formidable soul is one that has *been many things*, holding
+wide reach and rich disposition, never one carrying a large number. The elegance
+is real and so is its risk, recorded here rather than admired: one quantity now
+carries four semantics, and a curve that is wrong is wrong in four places at
+once, with nothing retunable in isolation.
+
+**Depth accrues on valued novelty, which is why the design needs no timer.** The
+gain from a stretch of life is roughly *novelty times preciousness to this
+vessel*, and both halves are already modelled — novelty as a set difference
+against what is known, preciousness as the vessel's own setpoints. The same fact
+is therefore worth different depth in different bodies, so choosing a vessel
+becomes a question of what this body can learn that matters to it, and an elder
+elf watching a toddler circle a yard for three years values none of it. Research,
+craft, and the learning of people and places all pay. So does deduction, which is
+a gain event with no new facts in it — connecting two things already held — which
+means confinement, illness and long winters are playable rather than dead.
+
+**A stretch without novelty is net negative, not merely neutral, and this is the
+sharpest mechanic in the design.** Knowledge here is monotone: absorption only
+ever extends, so the knower never forgets while the world moves on. Held
+knowledge therefore does not fade — it silently becomes *false*, decaying into
+accurate descriptions of a place that has changed. The divergence is computable
+today, since a knower's entries are already checked against ground truth, and the
+drama is entirely in the detection: **you learn that your map is wrong only by
+going back.** Diaspora literature has been writing that beat for three thousand
+years. The remembered homeland is not the actual place, memory practice preserves
+a version reality has left behind, and return is the mechanism that breaks it.
+
+**The host is co-present, and that turns out to be a delivery channel rather
+than a new system.** The person whose body you hold stays aware and tells you
+things: how they feel about the people you meet, where they fish, that they fear
+what is coming out of the dark. All three of those are already computed and have
+no honest route to the player today — affect through the motivational
+arbitration, local belief through the creature's own store, dread through a
+hazard memory that is documented as a pure fold over committed history. The
+channel is already cut at both ends, too: a creature's belief is a derived fold,
+ledger-consistent by construction, while the player's knowledge is an
+accumulating store whose *heard* entries sit deliberately outside the
+ground-truth check so that a told falsehood can land. Co-presence merely connects
+them. Two things follow that the design had been treating as open problems. The
+share of a vessel that survives into the soul stops being a width to calibrate
+and becomes a consequence — **what the host said and the soul kept** — with no
+merge semantics and no question of whose belief wins. And narration acquires the
+speaker this project's rendering discipline has always required: phenomena carry
+no text and words are realised only where the speaker is known, so a co-present
+host is a known speaker *inside the player's own body*, with a tongue, a concept
+coverage, and its own reasoned gaps where no word exists for what is being seen.
+Narration stops being omniscient third person and becomes this person's voice.
+
+**Affect stops being an oracle for exactly one creature.** The felt state of a
+co-located creature is currently reported through the same arbitration that
+drives it, so the player reads truth instead of inferring it. A host who
+describes their own feelings converts that oracle into *testimony*, while every
+other creature remains inference from display — which is the split the problem
+wanted. And a host may be wrong about themselves, so the gap between what the
+arbitration computes and what the host says is derivable, and that gap is what
+self-deception is. Cooperation is a variable in the same move: a host who hates
+you says nothing, or lies, or tells the truth in a way calculated to cost you, so
+a soul must earn the assistance of the body it has taken. That is an antagonist
+who cannot be escaped by leaving the room.
+
+**The moral structure sharpens rather than softens, and the design should be
+awake to it.** If the host is aware while the soul holds control, ordinary
+possession is imprisonment in one's own body — so the vessel that *wants* a rider
+stops being an exotic variant and becomes the only clean case, which argues for
+making invited possession common rather than rare and letting the discomfort of
+every other path be felt rather than abstracted. Structurally the design is
+entry at the margin, extraction of value, departure; that reading will be made
+whether or not it is intended, and the honest move available is to let the world
+make it, since a culture with a doctrine about riders can accuse the player in
+its own vocabulary. What a host believes you *are* is culturally determined and
+therefore free: a people with the doctrine names you correctly and knows what to
+do about it, and a people without one explains you with the words it has —
+intrusive thoughts, a haunting, a fever, a god, a wandering ancestor. A vacated
+host, finally, is not a trace but a **witness**: it remembers being ridden and
+can say so, so a pursuer does not track a soul, it interviews the soul's former
+bodies in order, and whether that chain is reliable is the independence problem
+exactly.
+
+**There is no victory condition, and that is the thesis rather than an
+omission.** Lives do not usually end in a feeling of triumph, and this design is
+not trying to manufacture one; the stated aim is expanded consciousness and
+empathy. That is not decoration, because it reassigns machinery. Identifying-with
+is promoted from a late-game luxury to the thing actually being scored. The drift
+of a soul's motives as it carries dispositions out of the bodies it has held
+stops being a complication and becomes the product — you become someone by whom
+you have been. And the requirement that every rung be interesting *as a life* is
+promoted from a design risk to the thesis itself: the dragon is a pretext, which
+is precisely the achievement the original game is admired for, its castle visible
+from the first minute and unvisited for a hundred hours. Read that way the survey
+was quietly contradicting this project's own arc, which already holds that **the
+wake is the content, not a reward for play** — the artifact a playthrough
+produces is the record of lives passed through, and the organ that traces it is
+already shipped.
+
+**What is missing, in order of how cheaply it is known.** Every possession
+currently begins amnesiac: the session constructs one with an empty knowledge
+store, so there is nothing to inherit and nothing to converse with, because a
+vessel is not modelled as knowing anything. The starting settlement exists in
+code and means nothing — it is the first settlement fact in the ledger, neither
+the capital nor the largest, and the published reference page for the scene
+schema contradicts the code by calling it the world's highest-population
+settlement. There are no cities: the design wants a cosmopolitan hub and the
+largest settlement of the reference world holds eighty-two people, which is a
+settlement-scale prerequisite rather than a possession detail. And host speech
+must be selected by the same novelty and preciousness that score depth, which
+puts the narrative delivery layer on the critical path — a layer carrying a
+standing note that it has never been measured, so what co-presence needs first is
+a study rather than machinery. Beneath all four sits the bet: most of a
+playthrough happens in unglamorous bodies, so the design works only if each rung
+is interesting as a life. That is a wager on the simulation being good rather
+than on the progression being good. It is the right wager for this project to
+make, and it is also the one that would sink it.
+
+---
+
 ## The self-reflective ledger — the capability schema as a derived view
 
 *(High confidence in the shape; it is the derived-view architecture (UNI-20) pointed
@@ -4938,6 +5184,161 @@ inheritance — and categorical aggregation is not associative, so "tundra" and
 Decision 0038's one-way rule is forced by the algebra of what is being
 aggregated, which is a justification for it that the decision record does not
 currently give.
+
+## The instrument turned inward — the project as its own subject
+
+Hornvale has an unusually complete apparatus for asking *what is true of the
+world we generated*: the Laboratory, the census, the Domesday survey,
+seam-guard, the type audit, the timings baseline, drift checks over every
+committed artifact. It has almost nothing for asking *what is true of the
+project generating it*. The digest is the single instrument pointed inward,
+and its own design places it at the halfway rung of a five-rung ladder whose
+top is [[UNI-29]].
+
+The asymmetry is measurable rather than rhetorical. Every instrument in the
+list reads **evidence** — measurements over worlds. Almost none reads
+**structure**. Three consequences of that gap were measured on 2026-08-13,
+and they turned out to be one consequence wearing three costumes.
+
+The idea registry had grown past the point where it can be read at all: 1,111
+rows, 983 KB, adding roughly 23 KB a day. Extracting its `[[…]]` graph — 599
+links across 345 distinct targets, an afternoon's work against a parser that
+already existed for the drift check — showed it to be sharply bimodal. One
+connected body of 392 rows carries the project's actual argument; 584 rows,
+better than half the file, touch nothing whatsoever. The distribution of
+degrees is a clean power law: 584 at zero, 231 at one, ten above nine. Two
+readings that the raw file cannot give up: isolation is not an artifact of
+the linking convention being recent (pre-slug rows are 58 % isolated against
+50 % for later ones, so age explains eight points of a fifty-three point
+effect); and connected rows are *longer* than isolated ones, median 553
+characters against 475. Length tracks integration. A ratchet on row length —
+the obvious remedy, and the one the waiver list encourages — would therefore
+cut the load-bearing rows and leave every orphan in place.
+
+The same shape appears in the code. A clone detector that normalises
+identifiers and literals away and hashes what remains found 224 redundant
+copies among 4,146 functions. The purest case is a three-vector `dot`,
+`cross` and `normalize` repeated byte-identically, doc comments included,
+across six crates — including three times *inside the kernel*, which the
+layering rule cannot explain and which turns out to be a visibility problem
+rather than an architectural one. The largest duplication is not in the code
+at all: the type audit, seam-guard, the trope ratchet, the timings baseline
+and the registry waiver list are five implementations of one pattern —
+scan a source of truth, compare against a committed artifact, fail on
+**novelty** rather than existence, carry an append-only escape list. The
+governing documents already identify them as the same ratchet, in prose, and
+the fifth was written anyway.
+
+And the same shape appears in world-search. Finding a world in which some
+emergent conjunction holds — a species, a condition, a place, all at once —
+looks like an intractable search, and is one only because the ledger is never
+indexed. Recording, per seed, the earliest day on which each predicate was
+first committed turns the conjunction into a set intersection and a maximum
+over three numbers, and hands back the world-time from which a replay should
+begin.
+
+The move is the same in all three: **the corpus is too large to hold, the
+structure is small enough to hold, and nobody has extracted the structure.**
+
+### Why observability here is not application performance monitoring
+
+The reflex, when a system grows complex enough to fail mysteriously, is to
+reach for the tools that industry built for the same feeling: distributed
+tracing, span trees, flame graphs, sampled retention. Almost none of it
+transfers, and the reason is a single premise. Those tools exist because
+production is *unreproducible*. Last Tuesday's request cannot be re-run, so
+it must be captured as it happens, at a cost proportional to traffic, and
+sampled because keeping everything is unaffordable. Sampling, retention
+stores, trace-identifier propagation and always-on collection are all
+consequences of that one fact.
+
+A deterministic world inverts it. Any run can be reproduced exactly, so the
+correct default is to capture *nothing* and re-derive on demand; the entire
+trace store is the triple of seed, pins, and what to watch. The axis those
+tools are built around — wall-clock duration — is the one this project has
+constitutionally banned, and for which it already has better instruments.
+
+What does transfer is the span tree, keyed on **cause** rather than time.
+Application tracing reconstructs causality from a temporal proxy because it
+has no access to the real edges; a fact ledger has them, or nearly. A fact
+records what became true. It does not record what made it true. That single
+missing parent edge is the whole distance between the ledger and a trace —
+and it belongs in the tap rather than the ledger, because it is re-derivable
+and the ledger's format is a permanent contract.
+
+The primitive that follows is closer to a reversing debugger than to a
+monitoring product: name a predicate, and have the system return the earliest
+world-time at which it was already false, with the causal chain that reached
+it. Determinism supplies three search axes no monitoring tool can offer —
+bisection on world-time, on revision history, and on seed space, the last of
+which distinguishes a defect from a defect *in one regime*.
+
+There is a boundary worth stating before any of it is built. Such a tap reads
+the live system as it runs, which is precisely what the explain window
+refuses to do; that refusal is how the window proves the committed ledger
+sufficient. The tap is therefore a debugger and not a window, and must not
+inherit the salience ranking that phenomena carry, since that filter is tuned
+for what an inhabitant would notice rather than for what an investigator
+needs.
+
+### Exogenous input, and the experimental arm
+
+A world is a seed and a ledger, everything else re-derived. An imperative
+intervention — erupt this volcano, give this actor that improbable desire —
+is not derivable from the seed, and so appears to break the guarantee. It
+does not, provided the intervention becomes part of the world's identity
+alongside the seed. Once stated that way, three mechanisms the codebase
+treats as unrelated collapse into one category: a pin is an exogenous
+constraint at genesis, a player action is exogenous input during play, and an
+intervention is an exogenous edit mid-run. All three are the same object at
+different times.
+
+That reframing promotes the idea out of convenience tooling. An intervention
+is the `do` operator of causal inference. The Laboratory today is purely
+**observational**: it measures correlations across seeds it did not choose.
+An intervention tape gives it an **experimental** arm — the same seed, run
+with and without, the effect read off directly — and its most valuable form
+is not an in-world event at all but the suspension of a *model*, which
+measures what that model contributes to everything downstream. That question
+is asked constantly here and answered by argument.
+
+One hazard decides the design. An intervention does not merely add an event;
+it displaces every subsequent draw, so an intervened world diverges
+everywhere rather than downstream of the intervention, and the matched pair
+that motivated the whole exercise measures noise. Interventions must
+therefore draw from a stream of their own, or be applied as state edits that
+draw nothing at all.
+
+### The project's epistemology is poorer than the world's
+
+In the world, a belief is a first-class object. Knowledge is partial,
+provenance-tagged, and permitted to be false; doctrine can be contested and
+can schism; a prediction can be wrong twice running and precipitate a crisis
+that the Book prints in its margin. Out of the world, every record the
+project keeps about itself is assumed true, complete, and settled. A
+committed baseline can be a thousand commits stale and drift-check green
+forever. A registry row captured a year ago is indistinguishable from one
+written this morning. That five tools instantiate one pattern is a sentence
+in a Markdown file that no test can consult and no code can query.
+
+This is the same gap as the unmix doctrine [[PROC-11]] and the same rung
+problem as [[UNI-29]], but it names the direction of travel more usefully
+than either: **the things the project knows about itself should be
+represented the way the things the world knows about itself are
+represented** — as typed, queryable, contradiction-checked assertions rather
+than as prose. The ratchet is the concrete test. Had "these five are one
+pattern" been a fact in a ledger rather than a sentence in a file, the sixth
+would have been a configuration entry.
+
+The near-term rungs are modest and mostly consist of pointing existing
+instruments ninety degrees inward: a registry status for a *refuted*
+prediction, which the vocabulary presently lacks in a project whose method is
+preregistered falsification; a first-occurrence index over the ledger; an
+anomaly report that uses census percentiles as its prior, so that a world
+volunteers its own outliers rather than waiting to be asked; and a shape
+index over the code, declared and default-deny, which fails when a file
+instantiates a named pattern without saying so. That last one is itself a
+ratchet, which is either the joke or the point.
 
 ## Intellectual lineage
 

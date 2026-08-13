@@ -51,7 +51,7 @@
     "micro": {
       "relief": 0.19504828,
       "aspect": 0.029023334,
-      "wetness": 0.038805085,
+      "wetness": 0.085382904,
       "openness": 0.66924456
     },
     "descriptor": "a peat hollow",
@@ -115,12 +115,12 @@
     }
   ],
   "cave": null,
-  "channel_distance": 0.04164611,
+  "channel_distance": 0.0050572254,
   "channel_bands": [
-    0.000033755706,
-    0.000067511411,
-    0.0013073977,
-    0.0019610966
+    0.000017199781,
+    0.000034399562,
+    0.00066288677,
+    0.00099433015
   ],
   "resolution": {
     "grid_level": 6,

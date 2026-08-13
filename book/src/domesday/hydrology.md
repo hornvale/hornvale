@@ -28,17 +28,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `channel-band-monotonicity-untruncated`
 
-`channel-band-monotonicity` over the SAME transects with the nearest-line truncation switched off — the whole sweep scored, including the stretch where a different river has become the nearest and its band legitimately falls back to `channel`. Published because a rule that changes a verdict must have the reading it changes on the record beside it rather than in a campaign report — and the record now runs both ways. Before the confluence repair the truncation was load-bearing (47 of 64 probe worlds read below H4's 0.99 floor un-truncated, and none reached 1.0); with tributary mouths placed on their trunks all 64 read 1.0 on BOTH columns. That is the measured evidence that the gap was the confluence separation and never band-edge speckle: two lines meeting at a point share their distance minimum AT that point, so a transect leaving a join recedes from both at once and cannot descend into the partner, while two lines held 4.5 half-widths apart have no shared minimum and did. Absent on a world with no channels
+`channel-band-monotonicity` over the SAME transects with the nearest-line truncation switched off — the whole sweep scored, including the stretch where a different river has become the nearest and its band legitimately falls back to `channel`. Published because a rule that changes a verdict must have the reading it changes on the record beside it rather than in a campaign report — and the record now runs both ways. **Both of the readings below are ON THE FORD'S NETWORK** (183 polylines, 883 vertices at seed 42), and the second is that network's reading rather than a standing property of the rule: before the confluence repair the truncation was load-bearing (47 of 64 probe worlds read below H4's 0.99 floor un-truncated, and none reached 1.0); with tributary mouths placed on their trunks all 64 read 1.0 on BOTH columns. That PAIR is the measured evidence that the gap was the confluence separation and never band-edge speckle: two lines meeting at a point share their distance minimum AT that point, so a transect leaving a join recedes from both at once and cannot descend into the partner, while two lines held 4.5 half-widths apart have no shared minimum and did. **On The Rill's network the same 64 worlds read 12 of 64 above the floor and NONE at 1.0** (mean 0.9843, min 0.9724, max 0.9941). The repair is untouched and `channel-band-monotonicity` is still 1.0 on all 64 — what changed is density: with 3,606 polylines where there were 183, a transect walking outward meets an UNRELATED line far sooner, ending its own-channel prefix where this column scores the interruption as a failure. Read it beside `channel-transect-dry-reach` (mean 0.7577): about a quarter of transects are now truncated before reaching `dry`, against a Ford network on which truncation was doing nothing. Absent on a world with no channels
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 1 | 1 | 1 | 1 | 1 |
+| 0.96078431 | 0.98039216 | 0.98431373 | 0.98823529 | 1 | 0.9842818 |
 
 ### `channel-connectivity`
 
-H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell with a river downhill is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world
+H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next cell classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.00018457039 | 0.00027829849 | 0.00030547165 | 0.00033567362 | 0.00042678537 | 0.00030680178 |
+| 0.0020035514 | 0.0021542401 | 0.0021988309 | 0.0022381275 | 0.0023822752 | 0.0021968022 |
 
 ### `channel-transect-dry-reach`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.89834025 | 0.93640351 | 0.9465812 | 0.95673077 | 0.98557692 | 0.94623807 |
+| 0.6640625 | 0.74015748 | 0.76078431 | 0.77929688 | 0.8503937 | 0.76006684 |
 
 ### `coast-roughness-slope`
 
@@ -179,11 +179,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 ## Weaknesses found here
 
 ### `channel-band-monotonicity`
-
-- **D2**: min == median == max == 1 across 1000 worlds
-- **D4**: median 1 equals the min (1 .. 1)
-
-### `channel-band-monotonicity-untruncated`
 
 - **D2**: min == median == max == 1 across 1000 worlds
 - **D4**: median 1 equals the min (1 .. 1)

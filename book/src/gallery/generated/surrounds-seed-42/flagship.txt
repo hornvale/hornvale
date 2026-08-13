@@ -6,4 +6,4 @@ $ hornvale scene surrounds --world world.json --render ascii
  +++++++
   + + +
   ways on: NE, NW, S
-  legend: Googo, buttressed canopy, shaded, in a hollow, tropical rainforest
+  legend: Googo, buttressed canopy, shaded, damp, in a hollow, tropical rainforest
