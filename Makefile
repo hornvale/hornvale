@@ -23,7 +23,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -38,15 +38,88 @@ quick-run: fmt-check clippy type-audit type-audit-report
 gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
 
-# The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
-# and `ci-run` use. Until this split, docs/timings.md carried ZERO rows
-# labelled `gate` (0086's amendment): the ledger built to catch a suite
-# creeping "65s -> 43.5 min" was never wired to the most-run expensive command
-# in the repo, so a 4-minute budget drifting to 15+ was never observable.
-# Read them filtered — `scripts/timed.sh report gate` — because gates are
-# frequent and will dominate the ledger by row count.
-gate-run: fmt-check clippy type-audit type-audit-report test
-	@bash scripts/census-advisory.sh || true
+# The gate's body, split out so `timed.sh` can wrap it. Until this split,
+# docs/timings.md carried ZERO rows labelled `gate` (0086's amendment): the
+# ledger built to catch a suite creeping "65s -> 43.5 min" was never wired to
+# the most-run expensive command in the repo, so a 4-minute budget drifting to
+# 15+ was never observable. Read them filtered — `scripts/timed.sh report
+# gate` — because gates are frequent and will dominate the ledger by row count.
+#
+# THREE CORRECTIONS TO AN EARLIER DRAFT OF THIS RECIPE, all found by the
+# one-task-ahead brief check and all load-bearing:
+#
+# (a) `nextest-check` STAYS a prerequisite. The earlier draft dropped the
+#     `test` target as a prereq and called nextest directly, which silently
+#     discarded `test`'s own `nextest-check` prereq — the target whose entire
+#     job is to fail with an install hint when cargo-nextest is missing. A
+#     machine without it would have got `command not found` instead.
+#
+# (b) THE DEFAULT PROFILE, NOT `ci`. `.config/nextest.toml` states that
+#     `[profile.default]` is "deliberately left at nextest's own defaults:
+#     `make gate` must behave exactly as it did before this campaign", and the
+#     `ci` profile sets `fail-fast = false`. Running the gate under `ci` would
+#     silently turn every red gate into a full-suite run — 368 times a month,
+#     on the axis this campaign exists to protect. The durations the alarm
+#     needs are complete on a GREEN run regardless of profile, and a green run
+#     is the only run whose durations are ever recorded, so the `ci` profile
+#     buys nothing here and costs fast red feedback.
+#
+# (c) THE ALARM RUNS ONLY ON GREEN. Consequence of (b), and correct
+#     independently: under fail-fast a red run's `run.json` is TRUNCATED, so
+#     alarming against it compares a partial suite to a whole-suite baseline
+#     and can report a regression that does not exist. The spec already states
+#     this principle for S7 — "a duration measured under a partial run is not
+#     comparable to a baseline" — and it binds here first.
+#
+# THE GATE IS NOW ALSO THE MEASUREMENT (The Sexton, Task 3). `make ci` ran 9
+# times against this target's 368: an instrument watching a gate that crept
+# 234 s -> 934 s, running at 2.4% of that gate's frequency, while every gate
+# already computed the durations it needed and threw them away.
+#
+# ORDER IS LOAD-BEARING, unchanged from ci-run: the alarm must compare this run
+# against the baseline still on disk from the LAST recorded run, so it runs
+# BEFORE ci-record overwrites that file. Recording first would make every run
+# compare against itself and the alarm could never fire.
+#
+# A RED RUN NEVER BECOMES THE BASELINE — guarded on BOTH statuses, because the
+# unguarded version was a one-way ratchet: the alarm fired at 2x and ci-record
+# immediately wrote the inflated durations back as the new reference, erasing
+# its own evidence.
+gate-run: fmt-check clippy type-audit type-audit-report nextest-check
+	@mkdir -p target/nextest/ci docs/timings
+	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --message-format libtest-json-plus \
+	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
+	nextest_status=$$?; \
+	cargo test -q --workspace --doc; \
+	doctest_status=$$?; \
+	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then \
+	    cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	    alarm_status=$$?; \
+	else \
+	    alarm_status=0; \
+	    echo "make gate: skipping the duration alarm — the run was red, so its durations are truncated and not comparable to a baseline" >&2; \
+	fi; \
+	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
+	    cargo run --quiet -p hornvale -- ci-record; \
+	else \
+	    echo "make gate: NOT recording a baseline — the run was red, so these durations are not a reference" >&2; \
+	fi; \
+	echo ""; \
+	echo "== detail written to =="; \
+	echo "  target/nextest/ci/run.json   structured per-test durations"; \
+	echo "  target/nextest/ci/run.log    human output, including failures"; \
+	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
+	if [ $$nextest_status -ne 0 ]; then \
+	    echo "make gate: FAILED — nextest was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
+	    exit $$nextest_status; \
+	fi; \
+	if [ $$doctest_status -ne 0 ]; then \
+	    echo "make gate: FAILED — doctests were red (exit $$doctest_status)" >&2; \
+	    exit $$doctest_status; \
+	fi; \
+	bash scripts/census-advisory.sh || true; \
+	exit $$alarm_status
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/timed.sh gate-fast -- make --no-print-directory gate-fast-run
@@ -69,75 +142,12 @@ seam-guard: ## Neutralise each registered seam and report the ones no test notic
 seam-guard-list: ## Print the registered seams and their call sites (cheap, no build)
 	@cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- list
 
-# The CI entry point. A WRAPPER: every decision it makes lives in Rust
-# (windows/lab/src/timings.rs, cli/tests/timings_alarm.rs). Raw output is
-# persisted before anything summarises it, so a surprise never costs a re-run.
-# ORDER IS LOAD-BEARING: the alarm must compare this run against the baseline
-# still sitting on disk from the LAST recorded run, so it runs BEFORE
-# ci-record overwrites that file — recording first would make every run
-# compare against itself and the alarm could never fire.
-#
-# The libtest-json-plus stream must survive a failing nextest run — the
-# alarm and ci-record still need to read it, and a red run's durations
-# belong on disk for archaeology — so this recipe cannot simply abort the
-# moment nextest exits nonzero. The whole recipe is one shell script (note
-# the backslash continuations) with no `set -e`, so a mid-script nonzero
-# exit does not by itself stop anything; the FIX is that nextest's status is
-# now CAPTURED immediately (`nextest_status=$$?`) instead of being discarded
-# by an `|| true` on that line — discarding it entirely was the original
-# bug: `make ci` reported success on a fully failing suite because nothing
-# downstream ever re-checked pass/fail. The alarm and ci-record still run in
-# the same order as before, and the captured status is re-raised at the very
-# end, after the summary prints, so a red suite now fails `make ci` while
-# still leaving every artifact on disk for inspection.
-#
-# A RED RUN NEVER BECOMES THE BASELINE. `ci-record` is guarded on both
-# statuses, because the un-guarded version was a one-way ratchet: the alarm
-# fired on two tests at 2x, and `ci-record` — running unconditionally on the
-# next line — immediately wrote those inflated durations back as the new
-# reference. The alarm erased its own evidence, and the following run would
-# have compared against the regression and seen nothing. Caught by running
-# `make ci` for real (2026-07-30) and noticing the alarmed values sitting in
-# the baseline afterwards. This is the same ratchet the final review found in
-# the CONTENTION path; the fix there guarded `cmd_ci_record` against a live
-# claim and did not guard this path. Re-recording a regression stays a
-# deliberate act: fix it, or re-record in the commit that caused it.
-#
-# `ci` is a thin timing wrapper around `ci-run`; the body lives there so
-# scripts/timed.sh can measure the WALL TIME a human actually waits through —
-# suite, alarm and record together — and append it to docs/timings.md beside
-# the `rebaseline` and `census` rows. This campaign exists because that ledger
-# carried ZERO rows for `make gate`, so the gate's creep from 234s to 934s was
-# unobservable; shipping a per-test recorder that did not record its own wall
-# time would have repeated the same omission one level up. `make timings
-# LABEL=ci` reads it back. timed.sh passes the wrapped command's exit status
-# through, so a red suite still fails `make ci`.
-ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
-	@bash scripts/timed.sh ci -- make --no-print-directory ci-run
-
-ci-run:
-	@mkdir -p target/nextest/ci docs/timings
-	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
-	    --profile ci --message-format libtest-json-plus \
-	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
-	nextest_status=$$?; \
-	cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
-	alarm_status=$$?; \
-	if [ $$nextest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
-	    cargo run --quiet -p hornvale -- ci-record; \
-	else \
-	    echo "make ci: NOT recording a baseline — the run was red, so these durations are not a reference" >&2; \
-	fi; \
-	echo ""; \
-	echo "== make ci: detail written to =="; \
-	echo "  target/nextest/ci/run.json   structured per-test durations"; \
-	echo "  target/nextest/ci/run.log    human output, including failures"; \
-	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
-	if [ $$nextest_status -ne 0 ]; then \
-	    echo "make ci: FAILED — the nextest run itself was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
-	    exit $$nextest_status; \
-	fi; \
-	exit $$alarm_status
+# `ci` is now an alias for `gate` (The Sexton, Task 3): the libtest-json
+# stream, the duration alarm and `ci-record` moved into `gate-run` itself, so
+# there is no separate suite left to run here. Retained so existing muscle
+# memory and documentation keep working.
+ci: gate ## Alias for `make gate`, which now carries the timing alarm (The Sexton)
+	@echo "make ci: \`make gate\` now records the baseline and runs the alarm; this is an alias." >&2
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is

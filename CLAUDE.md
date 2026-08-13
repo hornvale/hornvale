@@ -99,9 +99,13 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~8 min since 0113; 0040 budgeted 4)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
-#   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
-#                     # profile (~7 min since 0113), writes target/nextest/ci/run.json +
-#                     # run.log, alarms on a per-test or whole-suite duration
+#   make ci          # ALIAS for `make gate` since The Sexton. The Timekeeper's
+#                     # duration alarm and baseline recorder now run inside the
+#                     # gate itself, because `make ci` had run 9 times against
+#                     # `make gate`'s 368 while every gate already computed the
+#                     # durations it needed and discarded them.
+#                     # It writes target/nextest/ci/run.json + run.log, alarms
+#                     # on a per-test or whole-suite duration
 #                     # shift against docs/timings/test-baseline-<host>.tsv,
 #                     # THEN (only if the alarm passed) rewrites that baseline
 #                     # from this run. The baseline is per HOST and committed,
