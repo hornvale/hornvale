@@ -1278,7 +1278,7 @@ Expected: green, empty drift, and `rebaseline` rows showing `cpu_ratio > 4`.
 
 ## Task 7: The census sentinel
 
-**Why:** the last two census refreshes moved 3 of 205 columns each, and the
+**Why:** the last two census refreshes moved 3 of 203 columns each, and the
 second cost 5 h 20 m — discovered at campaign close, five hours after the
 commit that caused it. Measured all-metric cost is 31.34 CPU-s/world, so three
 worlds is ~94 CPU-s ≈ 8 s wall on twelve cores: ~1.6% of the 489 s gate floor
@@ -1507,7 +1507,7 @@ cargo fmt
 cat > /tmp/hv-t7.txt <<'EOF'
 feat(lab): a three-world census sentinel inside the commit gate
 
-The last two census refreshes moved 3 of 205 columns each and the second cost
+The last two census refreshes moved 3 of 203 columns each and the second cost
 5 h 20 m — a drift discovered at campaign close, hours after the commit that
 caused it. Measured all-metric cost is 31.34 CPU-s/world, so three worlds is
 ~94 CPU-s, about 1.6% of ambrose's 489 s gate floor.

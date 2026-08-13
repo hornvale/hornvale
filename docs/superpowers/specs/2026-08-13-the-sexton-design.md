@@ -51,12 +51,12 @@ answer reshapes S11 from "move the gate" into "split it" (§3.11).
 The two most recent census refreshes:
 
 ```
-  61442eda  "the authorized refresh"   3 columns ADDED    / 205   (1719 s wall)
-  cc576f08  "the Rill's refresh"       3 columns MODIFIED / 205  (19208 s wall)
+  61442eda  "the authorized refresh"   3 columns ADDED    / 203   (1719 s wall)
+  cc576f08  "the Rill's refresh"       3 columns MODIFIED / 203  (19208 s wall)
 ```
 
 The Rill spent **five hours and twenty minutes to move three columns.** The
-other 202 were recomputed to confirm they had not moved — which is the
+other 200 were recomputed to confirm they had not moved — which is the
 determinism guard doing its job, at the dataset's price, on the critical path,
 at campaign close, when a human is most eager to finish. It is the one job in
 the repo with no reason to block anybody.
@@ -67,8 +67,18 @@ And the cost split inside it is not where anyone assumed. Measured on `ambrose`,
 ```
   cargo run -p hornvale -- new --seed 42                    1.60 CPU-s
   lab run, 4 worlds x 1 Full-rung metric        6.55 CPU-s -> 1.64 CPU-s/world
-  lab run, 4 worlds x all 205 metrics         125.37 CPU-s -> 31.34 CPU-s/world
+  lab run, 4 worlds x all 203 metrics         125.37 CPU-s -> 31.34 CPU-s/world
 ```
+
+**A correction to this document's own arithmetic.** An earlier draft said
+**205** metrics throughout. The census carries **203**: its header is
+`seed, pin_set, <metrics…>, refusal` — 206 columns, so 206 − 3 = 203, and
+`lab list-metrics | grep -c '^| [a-z]'` agrees. The 205 came from reading a
+`wc -l` that counted the markdown table's header and separator rows, and was
+corroborated by a coincidence: `lab run` reports "summary + 205 charts
+published", because charts and metrics are not one-to-one. **The measured
+costs above are unaffected** — they came from running the study, not from
+multiplying a per-metric figure by a count.
 
 **World generation is 5% of census cost; metric extraction is 95%.** Every
 worldgen optimisation campaign is aiming at the wrong 5% where the census is
