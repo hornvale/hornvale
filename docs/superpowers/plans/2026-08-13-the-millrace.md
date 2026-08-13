@@ -227,7 +227,11 @@ index is falsified and the campaign says so.
 
 **Interfaces:**
 - Consumes: nothing from Task 1.
-- Produces: a printed distribution. No code later tasks depend on.
+- Produces: **the probe harness itself**, `windows/lab/tests/millrace_probe.rs`,
+  which Task 4 Step 7 re-runs as its measurement and Task 5 Step 1 extends with
+  the vacuity count. Build it to be extended — a world-building helper and a
+  percentile-printing helper that a second probe can call, not one monolithic
+  `#[test]` body. Also produces the `k` distribution that gates Task 4.
 
 - [ ] **Step 1: Write the probe as an `#[ignore]`d test**
 
