@@ -77,7 +77,8 @@ the one way it can be silently absent.
 **Files:**
 - Create: `docs/generated-paths.txt` (the single source of truth for the list)
 - Create: `cli/tests/generated_paths.rs`
-- Modify: `Makefile` (the `rebaseline` help text references the list)
+- (No Makefile edit. An earlier draft listed one; no step performs it, and
+  Task 2 rewrites that region of the Makefile anyway — pre-flight Ruling 1.)
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
@@ -950,6 +951,16 @@ if [ -n "$recycled" ]; then
     git -C "$recycled" switch -c "campaign/$NAME" "origin/$BASE"
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
+    # `mv` leaves the MAIN REPO's back-pointer stale. Verified, and the naive
+    # assumption is wrong in an important way: the moved worktree's own
+    # commands keep working (its `.git` file is an absolute path to an
+    # unchanged admin dir), so nothing looks broken. What breaks is
+    # `.git/worktrees/<name>/gitdir`, which still names the OLD path — so
+    # `git worktree list` reports a path that no longer exists and
+    # `git worktree prune` may reap a live worktree. Probe output:
+    #   $ git worktree repair /tmp/hv-mv-probe-moved
+    #   repair: gitdir incorrect: .../.git/worktrees/hv-mv-probe/gitdir
+    git -C "$ROOT" worktree repair "$DEST"
     echo "worktree-take: $DEST is warm — no prewarm needed" >&2
 else
     echo "worktree-take: no recyclable member; creating a cold worktree" >&2
@@ -1389,7 +1400,9 @@ Type=oneshot
 WorkingDirectory=%h/Projects/hornvale-scheduled
 Environment=HV_SCHED_REPO=%h/Projects/hornvale-scheduled
 ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-drift.sh
-ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-census.sh
+# The census ExecStart is added by Task 9, which creates the script it names.
+# Shipping both here would make this oneshot unit fail wholesale for anyone
+# who installs it between Task 8 and Task 9 (pre-flight Ruling 3).
 # A failed run must be READABLE, which is why this is a timer and not cron:
 #   journalctl --user -u hornvale-nightly.service -n 200
 StandardOutput=journal
@@ -1597,7 +1610,26 @@ Confirm the exact wording `census-run.sh status` prints when the box is
 string** — read the script's own output. If the pattern is wrong in the
 permissive direction the job will start a five-hour census on a contended box.
 
-- [ ] **Step 3: Update CLAUDE.md's census block**
+- [ ] **Step 3: Add the census ExecStart to the systemd unit**
+
+Task 8 shipped `scripts/scheduled/systemd/hornvale-nightly.service` with the
+drift `ExecStart` only, and a comment naming this step. Replace that comment
+with the second line:
+
+```ini
+ExecStart=%h/Projects/hornvale-scheduled/scripts/scheduled/nightly-census.sh
+```
+
+Verify the unit parses before committing:
+
+```bash
+systemd-analyze verify scripts/scheduled/systemd/hornvale-nightly.service 2>&1 | head
+```
+On macOS `systemd-analyze` does not exist; that is expected — the check runs on
+lefford at install time. Confirm by eye that both `ExecStart` lines name files
+that exist in `scripts/scheduled/`.
+
+- [ ] **Step 4: Update CLAUDE.md's census block**
 
 Replace "Refreshed once per campaign at the pre-merge close" with:
 
@@ -1610,7 +1642,7 @@ Replace "Refreshed once per campaign at the pre-merge close" with:
 # with a human waiting on it; nothing about that needed to be synchronous.
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
