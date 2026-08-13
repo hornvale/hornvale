@@ -22,15 +22,32 @@ make rebaseline >/tmp/hv-nightly-drift.log 2>&1
 rc=$?
 
 paths="$(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | tr '\n' ' ')"
+if [ -z "$paths" ]; then
+    echo "nightly-drift: docs/generated-paths.txt yielded no paths; not diffing" >&2
+    exit 1
+fi
 # shellcheck disable=SC2086
 drift="$(git diff --stat -- $paths)"
 
-# Leave the checkout clean regardless — this job owns no changes. `--quiet`
-# must come BEFORE the `--` pathspec separator: `git checkout -- . --quiet`
-# treats `--quiet` as a pathspec, fails, and (because the failure is
-# swallowed below) silently leaves the working tree dirty — caught by the
-# dry run in Step 4, not by reading.
+# `git checkout -- .` restores tracked files only; untracked files survive it
+# and survive the next run's `reset --hard` too. This job runs unattended in a
+# worktree a human also uses, so it must neither accumulate cruft nor delete
+# anything silently: report first, then clean.
+#
+# `-fd` and deliberately NOT `-x`: ignored paths (target/, the warm build this
+# whole scheduler depends on) must survive.
+#
+# `--quiet` must come BEFORE the `--` pathspec separator: `git checkout --
+# . --quiet` treats `--quiet` as a pathspec, fails, and (because the failure
+# is swallowed) silently leaves the working tree dirty — caught by the dry
+# run in Step 4, not by reading.
+stray="$(git status --porcelain 2>/dev/null || true)"
 git checkout --quiet -- . 2>/dev/null || true
+if [ -n "$stray" ]; then
+    git clean -fdq 2>/dev/null || true
+    make board-post KIND=technique BY=scheduler PATHS='scripts/' \
+      NOTE="nightly-drift: the checkout was not clean before cleanup and has been reset. Removed: $(printf '%s' "$stray" | tr '\n' ' ')" || true
+fi
 
 if [ "$rc" -ne 0 ]; then
     make board-post KIND=technique BY=scheduler PATHS='scripts/' \

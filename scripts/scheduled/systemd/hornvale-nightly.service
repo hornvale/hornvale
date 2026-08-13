@@ -1,6 +1,9 @@
 [Unit]
 Description=Hornvale nightly unattended checks (The Sexton)
-Documentation=file:///home/%i/Projects/hornvale/scripts/scheduled/README.md
+# %h already expands to a full home-directory path (e.g. /home/alice), same
+# as every other specifier below — no literal /home/ prefix, and %i (the
+# template-instance specifier) does not apply to this non-templated unit.
+Documentation=file://%h/Projects/hornvale/scripts/scheduled/README.md
 
 [Service]
 Type=oneshot

@@ -377,7 +377,7 @@ gate-remote-teardown: ## Remove all remote-gate infra
 	@scripts/aws-gate/teardown.sh
 
 shellcheck: ## Lint all shell scripts
-	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* tools/census/*.sh
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* scripts/scheduled/*.sh tools/census/*.sh
 
 wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true
