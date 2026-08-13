@@ -254,11 +254,14 @@ one accessor every consumer called discarded it before returning. Two
 additive reads expose the column it was always deriving: every stratum
 present at a cell, and the community at any one of them. For the sea this
 falls out of what `classify_marine_expr` already computes independently (a
-floor depth and a seafloor community): a reef sits in a one-rung column, an
-abyssal trench in a four-rung one, with open water filling every rung above
-the floor. Measured on seed 42's 29,896 ocean cells, the column is
+floor depth and a seafloor community): a reef sits in a one-rung column, a
+bathypelagic floor in a three-rung one, with open water filling every rung
+above the floor. Measured on seed 42's 29,896 ocean cells, the column is
 non-degenerate — three distinct heights, a three-rung median, no height
-holding more than 72% of cells — with one preregistered clause narrowly
+holding more than 72% of cells — though **no cell in that world has an
+`Abyssal` or `Hadal` floor at all**, so two of the five pelagic rungs never
+occur as a floor there and the classifier's deepest arm is unreachable on the
+flagship seed. One preregistered clause came back narrowly
 falsified (5.85% of cells are single-rung against a <5% ceiling, diagnosed
 as an unmeasured guess rather than a wrong world: Earth's own continental
 shelf runs 7–8% of ocean area). The same column also made a standing
