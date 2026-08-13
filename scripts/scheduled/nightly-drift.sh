@@ -31,6 +31,46 @@ REPO="${HV_SCHED_REPO:?HV_SCHED_REPO must name a checkout this job owns}"
 cd "$REPO" || exit 1
 
 git fetch origin --quiet || { echo "nightly-drift: fetch failed" >&2; exit 1; }
+
+# NEVER RESET OVER SOMEONE'S UNCOMMITTED WORK. `git reset --hard` discards
+# tracked modifications permanently, and the comments below already concede
+# that "this job runs unattended in a worktree a human also uses". At 03:30
+# nobody is watching, and a `reset --hard` there is indistinguishable from the
+# work never having existed. `scripts/worktree-take.sh` — from this same
+# campaign — refuses to touch a dirty worktree for exactly this reason; this
+# job was the one place the rule was not applied.
+#
+# So: report and skip, never stash and never clean. A skipped night costs one
+# drift report; a destroyed afternoon costs an afternoon.
+#
+# `-uno`: UNTRACKED files are not work at risk here — `reset --hard` leaves
+# them alone, and the block further down reports and cleans them deliberately.
+# Only tracked modifications are unrecoverable.
+#
+# The baseline exclusion is the same one `worktree-take.sh` carries: since The
+# Sexton folded `ci-record` into `gate-run`, `docs/timings/test-baseline-<host>.tsv`
+# is rewritten by EVERY green gate, so "a human ran a gate here" is the normal
+# state of this checkout and would otherwise disable the job permanently. It is
+# machine-written and regenerable; genuine work is never only in this file.
+dirty="$(git status --porcelain -uno 2>/dev/null | grep -v 'docs/timings/test-baseline-' || true)"
+if [ -n "$dirty" ]; then
+    echo "nightly-drift: SKIPPING — $REPO carries uncommitted tracked changes:" >&2
+    printf '%s\n' "$dirty" >&2
+    # A count, never the paths: `git status --porcelain` escapes unusual names,
+    # and a quote or space in one splits `make board-post`'s NOTE into extra
+    # shell words, which tools/board rejects with exit 2 — swallowed by the
+    # `|| true`. Same reasoning as the untracked-cruft note below.
+    # Two steps, matching the untracked-cruft note below: the inner command
+    # substitution strips `wc -l`'s trailing newline, which `board_safe` would
+    # otherwise turn into a stray space inside the sentence.
+    n_dirty="$(printf '%s\n' "$dirty" | wc -l | tr -d ' ')"
+    n_dirty="$(printf '%s' "$n_dirty" | board_safe)"
+    make board-post KIND=notice BY=scheduler FIELDS='polarity=fyi' PATHS='scripts/' \
+      NOTE="nightly-drift: SKIPPED — the scheduled checkout carries ${n_dirty} uncommitted tracked change(s), which this job will not reset over. No drift report tonight. See journalctl -u hornvale-nightly.service for the list; commit or discard them by hand." || true
+    make board-sync >/dev/null 2>&1 || true
+    exit 0
+fi
+
 git reset --hard origin/main --quiet || exit 1
 
 make rebaseline >/tmp/hv-nightly-drift.log 2>&1
