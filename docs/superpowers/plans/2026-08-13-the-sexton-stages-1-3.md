@@ -1660,16 +1660,36 @@ asking humans to remember instead.
    It reports to the board. Precedent: decision 0129's lane rule. The hazard is
    a nightly job committing while a session is mid-landing, which
    `make preflight` warns about and cannot prevent.
-2. **Jobs run in a checkout they own** — `~/Projects/hornvale-scheduled`, not
-   the shared `~/Projects/hornvale`. A `git reset --hard` in a checkout someone
-   else is using destroys their work. This is not hypothetical: CLAUDE.md
-   already warns that lefford's regeneration worktree is shared and must have
-   its HEAD verified before reuse.
+2. **Jobs run in a LINKED WORKTREE of lefford's main checkout, never a separate
+   clone.** `git reset --hard` in a worktree touches only that worktree's own
+   branch, so the "owns its checkout" property holds — while a *clone* would
+   break the board.
+
+   **Why a clone breaks it, verified rather than assumed.** The board is an
+   orphan ref (`refs/hornvale/board`) and `git clone` does not fetch
+   `refs/hornvale/*`, so a fresh clone starts with an EMPTY board. Its
+   `board-sync` would then push a divergent log to
+   `refs/hornvale/hosts/lefford`, which already exists. Two consequences, and
+   the second is the bad one:
+   - It cannot clobber: `tools/board/src/sync.rs` asserts a no-force invariant
+     on the push argv directly (B3), precisely because "the consequence of a
+     force-push here is there is nothing left to compare against". The push is
+     **rejected**.
+   - `board-sync` is best-effort and **never fails its caller**, so the
+     rejection is silent and every nightly post would be published nowhere.
+     And the rejection text names a *hostname collision between two machines*
+     — a correct message for its designed case and a misleading one here,
+     where it is two checkouts on one box.
+
+   A linked worktree shares the object store and the ref namespace, so there is
+   exactly one board log per host and posts publish normally.
 
 ## Install (on lefford, once)
 
 ```bash
-git clone <origin> ~/Projects/hornvale-scheduled
+# A WORKTREE, not a clone — see rule 2 above; a clone silently breaks the board.
+cd ~/Projects/hornvale
+git worktree add ~/Projects/hornvale-scheduled -b scheduled origin/main
 mkdir -p ~/.config/systemd/user
 cp ~/Projects/hornvale-scheduled/scripts/scheduled/systemd/* ~/.config/systemd/user/
 systemctl --user daemon-reload
