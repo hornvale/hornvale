@@ -42,8 +42,9 @@ each one contradicts something the project currently believes.
 **Fifty hours of waiting happened on 10–12 core laptops while a 40-core machine
 sat idle 97% of the time.** Decision 0086 put gates on the Mac and heavy work on
 lefford because lefford's other jobs are long; the ledger says lefford's other
-jobs occupy it for under an hour a day. This campaign does not move the gate —
-that is S11, deferred — but it removes the reason the premise held.
+jobs occupy it for under an hour a day, so that premise is gone. **Idle is not
+the same as fast, though** — §1.5 measures what this box actually is, and the
+answer reshapes S11 from "move the gate" into "split it" (§3.11).
 
 ### §1.2 The census is scheduled at the worst possible moment
 
@@ -124,44 +125,75 @@ zero marginal cost.
 
 ---
 
+## §1.5 A correction this spec is built on
+
+An earlier draft of this campaign argued that moving the gate to lefford would
+floor it near 116 s, reasoning `4628 CPU-s / 40 cores`. **That is wrong, and
+the ledger says so.** Every `gate` and `ci` row ever recorded on each host:
+
+```
+  make gate ON lefford (40 cores)   wall 243-594 s    cpu  6,945-12,090 CPU-s
+  make gate ON the Macs (10-12)     wall 322-805 s    cpu  2,485- 3,873 CPU-s
+```
+
+**lefford burns 2-3x the CPU-seconds for the same suite** — its cores are much
+slower individually, so core count buys throughput, never latency. Best-case
+lefford is 243 s against the Macs' 322 s: a ~25-35% win, not 3x.
+
+The error was dividing *one host's* CPU-seconds by *another host's* core count.
+The repo already carries the rule that would have caught it — "a duration is
+meaningless without its host", which is why `docs/timings/` keys baselines on
+`hostname -s` — but it is stated about **wall time** and was applied only
+there. **CPU-seconds are not portable across hosts either**, and this spec
+states that as the generalisation.
+
+Consequences, both load-bearing below: S11 shrinks from "move the gate" to
+"split it" (§3.11), and no cross-host projection in this document rests on
+arithmetic rather than on a recorded row.
+
+---
+
 ## §2 Scope
 
-Nine moves. All are small, mutually independent, and touch no ratified
-doctrine. Five are **enabling**: they create datasets that later, larger
-decisions need in order to be evidence-based rather than guesses.
+Thirteen moves in four stages. The staging is not administrative — it is the
+argument. **Stages 1-3 are cheap, doctrine-free instrumentation and scheduling;
+Stage 4 is where the four hard decisions get made, and it is deliberately last
+because three of the four rest on premises the earlier stages either supply
+evidence for or destroy.**
 
-| # | Move | Limb |
+| Stage | Name | Moves |
 |---|---|---|
-| S13 | A test that every generated directory has an index entry | sweep |
-| S14 | Ledger every command that makes a human wait | sweep |
-| S15 | Recycle worktrees instead of destroying them | sweep |
-| S16 | A systemd-timer scheduler on lefford | bells |
-| S1 | A three-world census sentinel in the commit gate | bells |
-| S2 | The census runs nightly, not at campaign close | bells |
-| S3 | `regenerate-artifacts.sh` runs as a DAG, not a list | sweep |
-| S4 | Fold `make ci`'s instrumentation into `make gate` | bells |
-| S5 | A committed defect ledger | burial (groundwork) |
+| 1 | **See** | S14 ledger every waiting command · S5 defect ledger · S13 index-entry test · S4 fold `ci` into `gate` |
+| 2 | **Sweep** | S3 parallel `regenerate-artifacts.sh` · S15 recycle worktrees |
+| 3 | **Bells** | S16 scheduler on lefford · S2 nightly census · S1 census sentinel |
+| 4 | **Decide** | S7 gate purpose split · S18 suite life cycle · S11 split gate across hosts · S12 census sampling |
 
-### §2.1 Explicitly out of scope, and why
+### §2.1 The honest limit of Stage 1
+
+S5 and S14 are instruments, and an instrument installed today has no readings
+today. **This campaign cannot close the loop on them.** It lands them, states
+what each is for, and hands the readings to a later campaign. Saying so here
+prevents the failure this project has already recorded twice — a bound cited
+from a measurement nobody re-took (`PROC-floors-erode-unseen`), and an
+instrument shipped and then never watched (`make ci`, 9 runs against 368).
+
+### §2.2 Still out of scope
 
 | Deferred | Reason |
 |---|---|
-| S6 serialize Mac gates | Reverses decision 0081. Wants its own record and fresh `cpu_ratio` rows, which S14 supplies. |
-| S7 gate / gate-fast purpose split | Reverses standing doctrine ("`make gate` gates commits"; "gate-fast is ITERATION ONLY"). Nathan's call, not a work item. |
-| S8 content-addressed verdict cache | Its value rests on an unmeasured hit rate. S5 supplies the data; build it after. |
-| S9 inverted seam-guard ("which tests guard nothing") | Depends on S5's catch-rate data to be defensible rather than a guess. |
-| S10 census guard / dataset split | The larger census restructuring. S2 captures most of its human-wait value first, at a fraction of the effort. |
-| S11 gate execution on lefford | Its blocker is 0086's premise, which S2 expires. Sequence after, with S14's data. |
-| S12 seed count 1000 → 300 | **Fidelity carve-out.** Flagged in §6, decided by Nathan only. |
-| S17 preregistered census-column diff | Wants S10's column store. The highest-value coverage idea; next campaign. |
-| S18 name the suite's life cycle as policy | A decision record, not work. |
-| sccache | Admissible under 0040's dev-tool precedent, but see §3.3 — the low-risk move dominates it. |
+| S6 serialize Mac gates | Reverses decision 0081, whose reopening criterion is fresh `cpu_ratio` rows. S14 supplies them; the decision belongs to the campaign that reads them. |
+| S8 verdict cache | Value is entirely a hit rate, obtainable by replaying the ledger's 368 gate SHAs. Measure in Stage 1, build later. |
+| S9 inverted seam-guard | The death organ of S18. Needs S5's catch-rate data to be defensible; S18 ratifies the *policy* here, S9 builds the tool after. |
+| S10 census column store | The larger census restructuring. S2 captures its human-wait value first at a fraction of the effort; S17 and S12's better form both want it. |
+| S17 preregistered column diff | Wants S10's column store. Highest-value coverage idea in the backlog. |
 
 ---
 
 ## §3 The moves
 
-### §3.1 S13 — a test that every generated directory is indexed
+### Stage 1 — See
+
+#### §3.1 S13 — a test that every generated directory is indexed
 
 **Goal.** Close a known vacuity permanently.
 
@@ -173,16 +205,15 @@ that." Add a workspace test that reads the drift-check path list and asserts
 each has at least one tracked file.
 
 **Why it leads.** The artifact drift check is the load-bearing verification in
-this repo — simplest system that would still work: one command produces
-artifacts, `git diff --exit-code` compares them. It is also the one with no CI,
-no schedule, and a documented history of being forgotten. This is the cheapest
-item in the campaign and it protects the most.
+this repo — the simplest system that would still work is *one command produces
+artifacts, `git diff --exit-code` compares them*. It is also the one with no CI,
+no schedule, and a documented history of being forgotten.
 
-**Direction the check enforces**, stated in its own doc comment per the
+**Direction the check enforces**, in its own doc comment per the
 campaign-autopilot rule: it asserts *every declared path is tracked*. It is
 structurally blind to a generated directory nobody declared.
 
-### §3.2 S14 — ledger every command that makes a human wait
+#### §3.2 S14 — ledger every command that makes a human wait
 
 **Goal.** Make §1.3's eight invisible hours visible.
 
@@ -191,132 +222,27 @@ structurally blind to a generated directory nobody declared.
 client checks (`vessel-check`, `world-check`, `game-check`). Same row format,
 same ledger.
 
-**Risk.** Row-count growth. `docs/timings.md` is already at 782 lines and
-CLAUDE.md warns gates "will dominate the ledger by row count." Mitigation: this
-campaign adds no new reader requirement — `scripts/timed.sh report <label>`
-already filters — but the follow-up register should carry the eventual need to
-compact or shard the ledger.
+**Risk.** Row-count growth; `docs/timings.md` is already 782 lines. No new
+reader requirement is added (`scripts/timed.sh report <label>` filters), but
+eventual compaction goes to the follow-up register.
 
-### §3.3 S15 — recycle worktrees instead of destroying them
+#### §3.3 S5 — a committed defect ledger
 
-**Goal.** Remove most of the cold-build cost with zero new tooling.
+**Goal.** Start the only dataset that can make S7, S9 and S12 evidence-based.
 
-**Mechanism.** A small pool of long-lived worktrees under
-`.claude/worktrees/`, reassigned with `git switch` rather than created and
-destroyed per campaign. Documented in CLAUDE.md's process section; a
-`make worktree-take NAME=<campaign>` convenience target.
+**Mechanism.** On a red gate, append the failing test ids and the changed-crate
+set to `docs/timings/defects-<host>.tsv`. Committed and per-host, matching
+`test-baseline-<host>.tsv`, for the reason CLAUDE.md gives for that file:
+"`git log -p` on it is the archaeology of how the suite's cost moved over time."
 
-**Why this and not a compiler cache.** This was an ideonomy overturn and it is
-worth recording. A shared `RUSTC_WRAPPER` is *admissible* — decision 0004 binds
-"the **workspace** depends on serde/serde_json only", and a dev tool is exactly
-the category decision 0040 used to admit nextest. But the cost is caused by
-**destroying worktrees**, not by lacking a cache: 73 branches against 3 live
-worktrees. Recycling captures most of the saving with no new determinism
-surface, and **a compiler cache that ever returns a wrong object file is a
-silent determinism violation** — the worst bug class in this repo, and a poor
-first instrument for a saving a scheduling change already gets. sccache goes to
-the registry with that risk stated, not into this campaign.
+**Why it matters more than it looks.** Every scheduling or retirement idea in
+this document needs one number nobody records: **has this test ever caught
+anything?** `docs/timings.md` has six RED rows and each records only *that* it
+was red. Without this, "retire that test" is an opinion; with a few months of
+it, it is actuarial. Cross-domain original: claim history in insurance,
+time-since-last-finding in aviation, sentinel surveillance in epidemiology.
 
-**Interaction to respect.** `.superpowers/sdd/` is per-worktree and git-ignored;
-recycling a worktree must sweep it, or a campaign inherits the previous
-campaign's ledger. CLAUDE.md already warns that a shared regeneration worktree
-on lefford needs its HEAD verified before reuse — same discipline, now local.
-
-### §3.4 S16 — a scheduler on lefford
-
-**Goal.** Restore what 0125 deleted, on hardware the project owns.
-
-**Mechanism.** systemd timers. Verified present on the box:
-`systemd 252 (252.39-1~deb12u2)`, with cron also available. Timers are chosen
-for `journalctl` (a failed run leaves a durable, queryable record) and
-`Persistent=true` (survives a reboot). A nightly job whose failure is invisible
-would reproduce the exact pathology this campaign exists to fix.
-
-**The constraint that makes this safe.** **A scheduled job never commits, and
-never touches `main`.** It produces artifacts, writes its result, and posts to
-the board; a human commits. Direct precedent: decision 0129's lane rule — "the
-lane must never be wired to auto-implement a suggestion… that would make the
-board self-modifying with no human in the loop, on the one channel every session
-reads at `SessionStart`." Same argument, same channel. The concrete hazard this
-forecloses is a nightly job committing while a session is mid-landing, which
-`make preflight` warns about and cannot prevent.
-
-**Constitutional note.** The wall-clock ban governs the *sim*, not the
-infrastructure. Scheduling sits outside the determinism boundary, exactly as
-`clients/` does.
-
-**Initial timer set.** Nightly census on `main` (§3.6); nightly uncached full
-gate on `main`; nightly drift sweep (`make rebaseline` + the `git diff
---exit-code` list, reporting only); `make board-sync`; orphan-worktree report.
-
-### §3.5 S1 — a three-world census sentinel in the commit gate
-
-**Goal.** Catch census drift at the commit that caused it, not five hours into
-a campaign close.
-
-**Mechanism.** A gate test runs the full metric roster over three seeds and
-compares against **the first three rows of the committed
-`book/src/laboratory/generated/the-census/rows.csv`.** No new artifact: the
-sentinel's expectation is derived from the census's own committed rows, so it is
-automatically correct the moment a census lands and adds nothing to
-`regenerate-artifacts.sh`. Comparison goes through the existing
-`canonicalize_row` in `windows/lab/src/runner.rs`, whose doc comment states it
-exists to "canonicalize a row for comparison with fixture-loaded rows".
-
-**Cost.** Measured: 31.34 CPU-s/world all-metric on ambrose, so three seeds
-≈ 94 CPU-s ≈ 8 s wall on twelve cores. The reference band it must be judged
-against, same host, from the ledger: **`make gate` on `ambrose` runs
-489–805 s** (the spread is contention, not work — see §2.1's S6 row). Eight
-seconds is ~1.6% of the fastest of those.
-
-**Feasibility, and why it is not blocked by 0079.** Decision 0079 enforces that
-census goldens are *authored* on one host because the machines disagreed on
-~0.1% of discrete-count metrics. **Decision 0090 refines that and the audit came
-back clean:** the divergence was traced to `f64::floor()` dispatching to
-per-host glibc on the default `x86-64` codegen baseline, fixed by the baseline
-pin at `3a7092c3`, and a 40-world all-metric probe is byte-identical between
-x86_64/Linux and aarch64/Darwin. The sentinel only *reads*; 0079's write-path
-enforcement is untouched.
-
-**The bonus, and the risk, are the same thing.** The sentinel turns 0090's
-one-time audit into a continuous one, over metrics that did not exist when that
-audit ran. If a newly-added metric is host-divergent, the sentinel reddens on
-the Mac — which is precisely the failure 0079 feared and could not detect. That
-needs a **declared-waiver escape hatch on the `tropes check` / seam-guard
-ratchet pattern** (a waiver must carry a reason; a reasonless one is a parse
-error), never a disabled test.
-
-### §3.6 S2 — the census runs nightly
-
-**Goal.** Take the census off the campaign-close critical path.
-
-**Mechanism.** A systemd timer on lefford runs the census against `main` nightly,
-writes `rows.csv` and the summary into a scratch location, runs `make lab-diff`
-against the committed copy, and **posts the diff to the board**. It does not
-commit. A campaign close then reads the morning's result instead of waiting five
-hours for one.
-
-**Consequence for CLAUDE.md.** The "census re-pin at close" ritual becomes "read
-last night's diff; if it is empty, you are done." The commit of a moved column
-remains a deliberate human act on the canonical box, unchanged by this campaign.
-
-### §3.7 S3 — `regenerate-artifacts.sh` as a DAG
-
-**Goal.** Recover most of the 12.2-hour rebaseline line.
-
-**Mechanism.** The script is 62 sequential `cargo run` invocations. Measured
-`cpu_ratio` across recent rebaseline rows is **0.72–2.11 on 10–12 core boxes** —
-it is effectively serial, and nobody decided that; it is an artifact of the
-script being a shell list. Most invocations are independent; several share the
-same seed-42 world and re-derive it in separate processes. Restructure into
-declared stages with explicit dependencies and run each stage's members
-concurrently.
-
-**Determinism.** Outputs are distinct files, so ordering does not affect bytes.
-The success criterion is `make rebaseline` leaving every generated artifact
-byte-unchanged — the same falsifier The Whetstone used for its profile change.
-
-### §3.8 S4 — fold `make ci` into `make gate`
+#### §3.4 S4 — fold `make ci` into `make gate`
 
 **Goal.** Stop discarding 368 measurements a month.
 
@@ -326,49 +252,263 @@ already documents at length is preserved: the alarm compares against the
 baseline still on disk, *then* the recorder overwrites it, and a red run never
 becomes a baseline.
 
-**Why.** `make ci` has run **9 times against `make gate`'s 368.** The Timekeeper
-built a per-test duration alarm to watch a gate that crept from 234 s to 934 s,
-and the instrument runs at 2.4% of the frequency of the thing it watches — while
-every gate already computes the durations it needs and throws them away.
+**Why.** `make ci` has run **9 times against `make gate`'s 368** — an
+instrument built to watch a gate that crept 234 s → 934 s, running at 2.4% of
+the frequency of the thing it watches, while every gate already computes the
+durations it needs and throws them away.
 
 **Blind spot this also improves.** The Timekeeper's open follow-up #1 is that
 the contention guard "cannot see ordinary load." With 368 samples a month
 instead of 9, the load-aware suppression it wants becomes calibratable.
 
-### §3.9 S5 — a committed defect ledger
+### Stage 2 — Sweep
 
-**Goal.** Start the only dataset that can make S7, S9 and S12 evidence-based.
+#### §3.5 S3 — `regenerate-artifacts.sh` as a DAG
 
-**Mechanism.** On a red gate, append the failing test ids and the changed-crate
-set to `docs/timings/defects-<host>.tsv`. Committed and per-host, matching
-`test-baseline-<host>.tsv`, for the reason CLAUDE.md gives for that file: "`git
-log -p` on it is the archaeology of how the suite's cost moved over time."
+**Goal.** Recover most of the 12.2-hour rebaseline line.
 
-**Why it matters more than it looks.** Every scheduling or retirement idea in
-the deferred list needs one number nobody records: **has this test ever caught
-anything?** `docs/timings.md` has six RED rows and each records only *that* it
-was red. Without this, "retire that test" and "run this one every tenth gate"
-are opinions. With a few months of it, they are actuarial.
+**Mechanism.** The script is 62 sequential `cargo run` invocations. Measured
+`cpu_ratio` across recent rebaseline rows is **0.72-2.11 on 10-12 core boxes** —
+effectively serial, and nobody decided that; it is an artifact of the script
+being a shell list. Most invocations are independent; several share the same
+seed-42 world and re-derive it in separate processes. Restructure into declared
+stages with explicit dependencies, running each stage's members concurrently.
+
+**Determinism.** Outputs are distinct files, so ordering cannot affect bytes.
+The success criterion is `make rebaseline` leaving every generated artifact
+byte-unchanged — the same falsifier The Whetstone used for its profile change.
+
+#### §3.6 S15 — recycle worktrees instead of destroying them
+
+**Goal.** Remove most of the cold-build cost with zero new tooling.
+
+**Mechanism.** A small pool of long-lived worktrees under `.claude/worktrees/`,
+reassigned with `git switch` rather than created and destroyed per campaign,
+plus a `make worktree-take NAME=<campaign>` convenience target.
+
+**Why this and not a compiler cache.** A shared `RUSTC_WRAPPER` is *admissible*
+— decision 0004 binds "the **workspace** depends on serde/serde_json only", and
+a dev tool is exactly the category decision 0040 used to admit nextest. But the
+cost is caused by **destroying worktrees**, not by lacking a cache: 73 branches
+against 3 live worktrees, 43 GB of `target/`. Recycling captures most of the
+saving with no new determinism surface, and **a compiler cache that ever
+returns a wrong object file is a silent determinism violation** — the worst bug
+class in this repo, and a poor first instrument for a saving a scheduling change
+already gets. `TOOL-sccache` carries the option with that risk stated.
+
+**Interaction to respect.** `.superpowers/sdd/` is per-worktree and git-ignored;
+recycling must sweep it, or a campaign inherits the previous campaign's ledger.
+CLAUDE.md already requires verifying HEAD before reusing lefford's shared
+regeneration worktree — the same discipline, now local.
+
+### Stage 3 — Bells
+
+#### §3.7 S16 — a scheduler on lefford
+
+**Goal.** Restore what 0125 deleted, on hardware the project owns.
+
+**Mechanism.** systemd timers. Verified present: `systemd 252 (252.39-1~deb12u2)`,
+with cron also available. Timers chosen for `journalctl` (a failed run leaves a
+durable, queryable record) and `Persistent=true` (survives a reboot). A nightly
+job whose failure is invisible would reproduce the exact pathology this campaign
+exists to fix.
+
+**The constraint that makes this safe.** **A scheduled job never commits, and
+never touches `main`.** It produces artifacts, writes its result, and posts to
+the board; a human commits. Direct precedent: decision 0129's lane rule — "the
+lane must never be wired to auto-implement a suggestion… that would make the
+board self-modifying with no human in the loop, on the one channel every session
+reads at `SessionStart`." Same argument, same channel. The concrete hazard
+foreclosed is a nightly job committing while a session is mid-landing, which
+`make preflight` warns about and cannot prevent.
+
+**Constitutional note.** The wall-clock ban governs the *sim*, not the
+infrastructure. Scheduling sits outside the determinism boundary, exactly as
+`clients/` does.
+
+**Initial timer set.** Nightly census on `main` (§3.8); nightly uncached full
+gate on `main`; nightly drift sweep (`make rebaseline` plus the `git diff
+--exit-code` list, reporting only); `make board-sync`; orphan-worktree report.
+
+#### §3.8 S2 — the census runs nightly
+
+**Goal.** Take the census off the campaign-close critical path.
+
+**Mechanism.** A timer runs the census against `main` nightly, writes `rows.csv`
+and the summary to a scratch location, runs `make lab-diff` against the
+committed copy, and **posts the diff to the board**. It does not commit. A
+campaign close then reads the morning's result instead of waiting five hours.
+
+**Consequence for CLAUDE.md.** The "census re-pin at close" ritual becomes "read
+last night's diff; if it is empty, you are done." Committing a moved column
+remains a deliberate human act on the canonical box.
+
+#### §3.9 S1 — a three-world census sentinel in the commit gate
+
+**Goal.** Catch census drift at the commit that caused it, not five hours into a
+campaign close.
+
+**Mechanism.** A gate test runs the full metric roster over three seeds and
+compares against **the first three rows of the committed
+`book/src/laboratory/generated/the-census/rows.csv`.** No new artifact: the
+expectation is derived from the census's own committed rows, so it is
+automatically correct the moment a census lands and adds nothing to
+`regenerate-artifacts.sh`. Comparison goes through the existing
+`canonicalize_row` in `windows/lab/src/runner.rs`, whose doc comment states it
+exists to "canonicalize a row for comparison with fixture-loaded rows".
+
+**Cost.** Measured: 31.34 CPU-s/world all-metric on ambrose, so three seeds
+≈ 94 CPU-s ≈ 8 s wall on twelve cores. The reference band, same host, from the
+ledger: **`make gate` on `ambrose` runs 489-805 s** (the spread is contention,
+not work — §2.2's S6 row). Eight seconds is ~1.6% of the fastest of those.
+
+**Feasibility, and why 0079 does not block it.** Decision 0079 enforces that
+census goldens are *authored* on one host because the machines disagreed on
+~0.1% of discrete-count metrics. **Decision 0090 refines that and the audit came
+back clean:** the divergence was traced to `f64::floor()` dispatching to
+per-host glibc on the default `x86-64` codegen baseline, fixed by the baseline
+pin at `3a7092c3`, and a 40-world all-metric probe is byte-identical between
+x86_64/Linux and aarch64/Darwin. The sentinel only *reads*; 0079's write-path
+enforcement is untouched.
+
+**The bonus and the risk are the same thing.** The sentinel turns 0090's
+one-time audit into a continuous one, over metrics that did not exist when that
+audit ran. If a newly-added metric is host-divergent the sentinel reddens on the
+Mac — precisely the failure 0079 feared and could not detect. That needs a
+**declared-waiver escape hatch on the `tropes check` / seam-guard ratchet
+pattern** (a waiver carries a reason; a reasonless one is a parse error), never
+a disabled test.
+
+### Stage 4 — Decide
+
+Every move in this stage reverses or reopens something settled. They are last
+because Stages 1-3 change what is true about their premises.
+
+#### §3.10 S7 — the gate serves two ends; give it two instruments
+
+**The claim.** `make gate` serves (i) *protect main from a broken commit* and
+(ii) *give the author confidence to keep going*. (i) wants complete-and-once at
+the merge boundary; (ii) wants fast-and-partial and continuous. One instrument
+priced at (i) is being run at (ii)'s frequency — **368 times a month**.
+
+**What changes.** `gate-fast` becomes the per-commit instrument and `make gate`
+moves to the merge boundary, where `make preflight` already lives. Both already
+exist; only doctrine forbids using them this way ("`make gate` still gates
+commits"; "ITERATION ONLY").
+
+**Why it survived the pass that killed S11's premise.** The obvious dissolution
+— *make the gate cheap enough that nobody needs a split* — is exactly what
+§1.5 refutes. The gate is ~4-8 minutes wherever it runs, on either host, at
+either core count. **No infrastructure move in this campaign makes S7
+unnecessary**, which is why it is a decision rather than a deferral.
+
+**The pass did reshape it.** Negating "the gate is one instrument" yields
+*three*, not two: protection, confidence, and **measurement** — and S4 makes the
+gate a measurement instrument in Stage 1. So the split must assign the timing
+alarm deliberately to one of the three, not leave it riding on whichever
+happens to run. Recommendation: measurement rides with *protection*, because a
+duration measured under a partial run is not comparable to a baseline.
+
+**Ratification.** A decision record. Number chosen **after** the final
+absorption, checked against `origin/main` per `PROC-decision-number-collision`.
+
+#### §3.11 S11 — split the gate across hosts; do not move it
+
+**Corrected by §1.5.** "Move the gate to lefford" is not worth its machinery:
+243 s best-case there against 322 s best-case on a Mac, for push + ssh + a
+remote worktree.
+
+**What the negation gives instead.** lefford's shape is *many slow cores* — it
+is good at embarrassingly parallel long tails and bad at latency. The Macs are
+the reverse. So assign by shape rather than by box: **the latency-critical body
+of the gate stays local; the long parallel tail goes to lefford, concurrently.**
+The natural tail is already identified — 703 tests carry 96% of the suite's
+4,628 CPU-s, and the heavy tier plus the census sentinel are both
+throughput-shaped.
+
+**Preregistered success criterion**, so this cannot be declared a win by
+narration: the split gate's **wall time on the Mac, measured on a quiet box
+against a same-host before-arm**, is at least 25% below the same box's current
+median. If it is not, the split is reverted and the finding recorded — a null
+here is a result, not a failure.
+
+**Sequencing.** After S16, because the dispatch mechanism is the scheduler's,
+and after S14, because the before-arm must come from a recorded row.
+
+#### §3.12 S18 — name the suite's life cycle, and ratify it
+
+**The claim.** A living suite has three organs and Hornvale has one.
+*Reproduction* — a finding becomes a test, a panel test becomes a census metric
+— exists as practice. *Aging* (time-since-last-catch) and *death* (retire a
+test that guards nothing) do not. That is why cost ratchets: The Whetstone's
+934 s → 460 s recovery came from compiler flags, a one-time win that cannot
+repeat.
+
+**What this campaign does.** Ratifies the policy and lands *aging*'s instrument
+(S5). *Death*'s instrument is S9, deferred, because retiring a test on anything
+less than evidence is exactly the irreversible move this campaign should not
+make in a hurry — nobody re-adds a deleted test.
+
+**The guardrail, from the reversibility pass.** A retired assertion must
+**migrate, not evaporate**: it becomes a census column or a golden artifact.
+Which is precisely why S18 and S10 are the same mechanism seen from two ends —
+migration is only affordable if the census is incremental.
+
+#### §3.13 S12 — the census sampling question
+
+**A fidelity trade, and therefore treated as one.** This campaign does **not**
+cut the seed count. It does the work that would make such a cut a decision
+rather than a guess, and stops.
+
+**What Stage 4 delivers:** a stated precision requirement **per metric class**
+(the `SummaryKind` axis already exists), and a measurement of what actually
+degrades at n=300 against the committed n=1000 rows — which is a pure read over
+data already on disk, costing no census run at all.
+
+**The arithmetic on the table.** A proportion carries a ±3.1% confidence
+half-width at n=1000 and ±5.7% at n=300, for a 3.3x cut.
+
+**What the pass added, and it is better than the original.** Negating "fewer
+seeds" gives **fewer seeds *per column*, not per census**: measure each metric
+on a seeded 300-world subset, a *different* subset per metric. The dataset keeps
+1,000 rows, every world stays represented, and each column costs 30%. Costs:
+the CSV becomes sparse, chart `n` varies by column, and the determinism guard
+goes blind on unsampled cells — so it is an option to evaluate, not a
+recommendation, and it wants S10's column store to be implementable at all.
+
+**The premise most likely to dissolve.** After S2, the census costs a machine's
+night, not a human's close. The human-wait justification for cutting it
+**dies in Stage 3**; only "lefford's nights are finite" survives, which is a far
+weaker case. Stage 4 should re-ask whether S12 still has a live premise before
+spending on it.
 
 ---
 
 ## §4 Success criteria
 
-1. `make gate` includes the sentinel and its wall-clock addition on `ambrose`
-   is `≤ 2%` of the 489 s floor recorded in §3.5 — i.e. `≤ ~10 s`, measured on
-   a quiet box against a same-host before-arm, never against another host's
-   baseline.
-2. `make rebaseline` is byte-identical to today's output, at a measured
-   `cpu_ratio > 4` on a twelve-core box.
-3. A red gate leaves a row in `docs/timings/defects-<host>.tsv`; a green gate
-   leaves none.
-4. Every command in §3.2's list leaves a `docs/timings.md` row.
-5. A new generated directory with no index entry reddens the gate.
-6. The lefford timers run for seven consecutive nights, and a deliberately
-   introduced census drift is reported on the board without any human
-   invocation and without any commit.
-7. `make ci` and `make gate` produce the same baseline effects; running both
-   is no longer necessary.
+**Stage 1.** (1) Every command in §3.2's list leaves a `docs/timings.md` row.
+(2) A red gate leaves a row in `docs/timings/defects-<host>.tsv`; a green gate
+leaves none. (3) A new generated directory with no index entry reddens the gate.
+(4) `make ci` and `make gate` produce the same baseline effects; running both is
+no longer necessary.
+
+**Stage 2.** (5) `make rebaseline` is byte-identical to today's output at a
+measured `cpu_ratio > 4` on a twelve-core box.
+
+**Stage 3.** (6) `make gate` includes the sentinel and its wall-clock addition
+on `ambrose` is `≤ 2%` of the 489 s floor in §3.9 — `≤ ~10 s`, measured on a
+quiet box against a same-host before-arm. (7) The timers run seven consecutive
+nights, and a deliberately introduced census drift is reported on the board with
+no human invocation and no commit.
+
+**Stage 4.** (8) S7 and S18 are ratified decision records, numbered after the
+final absorption. (9) S11 either meets §3.11's preregistered 25% criterion or is
+reverted with the null recorded. (10) S12 produces a per-metric-class precision
+statement and a degradation table read from the committed n=1000 rows — and
+**no seed-count change ships in this campaign**.
+
+**Every stage.** `make preflight` from the branch at each stage boundary, per
+CLAUDE.md; absorb main; never mid-measurement.
 
 ---
 
@@ -378,44 +518,49 @@ are opinions. With a few months of it, they are actuarial.
 `domains/climate/`, `domains/terrain/` and intends an epoch that will move
 census values. The Sexton touches none of those paths. The sentinel's golden is
 census-*derived* rather than pinned, so a Glasshouse census refresh updates the
-sentinel's expectation for free — the coupling is by construction, not by hand.
+sentinel's expectation for free — the coupling is by construction.
 
-**The Holdfast** is optimising worldgen byte-identically by declaration, so it
-cannot interact with any assertion here.
+**The Holdfast** is byte-identical by declaration and cannot interact with any
+assertion here.
 
 A board `notice` is posted for `scripts/`, `Makefile`, `docs/timings.md`,
-`docs/timings/`, `windows/lab/` and `cli/tests/`.
+`docs/timings/`, `windows/lab/` and `cli/tests/`; it will be re-posted when
+Stage 4 begins, because Stage 4 changes shared doctrine.
 
 ---
 
 ## §6 Flagged for review
 
-- **§3.5's escape hatch is determinism-contract-adjacent.** A waiver mechanism
-  on a cross-host reproducibility check is the kind of thing that, mis-specified,
-  lets exactly decision 0079's silent failure back in. It should be reviewed as
-  a contract, not as a convenience.
-- **S12 (1000 seeds → 300) is a fidelity carve-out and is NOT in this
-  campaign.** Recording the arithmetic so the option stays visible: a proportion
-  carries a ±3.1% confidence half-width at n=1000 and ±5.7% at n=300, for a 3.3×
-  cut. It should not be touched until the precision requirement is stated per
-  metric class, and it is Nathan's call alone.
-- **S15's worktree recycling changes a documented process rule** (CLAUDE.md's
-  "Campaigns run in git worktrees under `.claude/worktrees/<campaign>/`"). Low
-  stakes, but it is a process change rather than a tooling one.
-- **Low-confidence assumption:** the ~8 hours of unrecorded prewarm in §1.3 is
-  an *estimate* (73 branches × CLAUDE.md's measured 771 s, halved for reuse),
-  not a measurement. S14 exists precisely to replace it with one, and no
-  decision in this campaign depends on its magnitude.
+- **§3.9's escape hatch is determinism-contract-adjacent.** A waiver on a
+  cross-host reproducibility check is the one thing here that, mis-specified,
+  lets decision 0079's silent failure back in. Review it as a contract.
+- **S12 remains a fidelity carve-out.** It is in scope for *analysis* only;
+  §4's criterion 10 states explicitly that no seed-count change ships. The cut
+  itself stays Nathan's, in a later campaign, with the precision statement in
+  hand.
+- **S7 and S18 reverse or codify standing doctrine** and produce decision
+  records. They are in Stage 4 so they are decided with Stages 1-3's evidence.
+- **§1.5 is a correction to this document's own earlier draft.** It is stated
+  in the spec rather than quietly fixed, because the generalisation — CPU-seconds
+  are not portable across hosts — is the reusable part.
+- **Low-confidence assumption:** the ~8 unrecorded prewarm hours in §1.3 is an
+  estimate (73 branches × a measured 771 s, halved for reuse), not a
+  measurement. S14 replaces it with one; nothing here depends on its magnitude.
 
 ---
 
 ## §7 Decisions this campaign will propose
 
-None are minted here. Candidates for ratification at close, subject to the
-number-collision hazard registry row `PROC-decision-number-collision` (check
-`origin/main` before minting):
+Numbers chosen **after** the final absorption and checked against `origin/main`
+(`PROC-decision-number-collision` has fired three times).
 
-- *A scheduled job never commits.* (§3.4's constraint — the durable form of the
-  0129 lane argument, generalised from the board to all automation.)
-- *Every command that makes a human wait leaves a ledger row.* (The
-  generalisation of 0086's amendment that was never made.)
+1. *A scheduled job never commits.* (§3.7 — the 0129 lane argument generalised
+   from the board to all automation.)
+2. *Every command that makes a human wait leaves a ledger row.* (The
+   generalisation of 0086's amendment that was never made.)
+3. *The gate is two instruments, and measurement rides with protection.* (§3.10,
+   S7 — supersedes the "`make gate` gates commits" doctrine.)
+4. *The test suite has a life cycle; a retired assertion migrates, never
+   evaporates.* (§3.12, S18.)
+5. *CPU-seconds are not portable across hosts.* (§1.5 — candidate; may be better
+   as a CLAUDE.md line than a record, to be decided at close.)
