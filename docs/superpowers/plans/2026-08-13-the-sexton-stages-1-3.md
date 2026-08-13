@@ -1169,6 +1169,27 @@ mkdir -p .claude/worktrees/hv-probe-sexton/.superpowers/sdd
 echo "previous campaign's ledger" > .claude/worktrees/hv-probe-sexton/.superpowers/sdd/decision-ledger.md
 ```
 
+**The test must prove WHICH PATH it took.** An earlier draft of this step did a
+manual, unrepaired `mv` before re-taking — which broke the registry lookup, so
+`worktree-take` silently fell back to the COLD path and the `SCRATCH SWEPT`
+assertion passed while testing nothing. A green result from a test that never
+entered the code under test is worse than no test, because it produces
+evidence. Found by Task 6's implementer.
+
+So: let the script itself perform the switch/`mv`/`repair`, and **assert on the
+observable that discriminates the two paths** — the script prints
+`worktree-take: recycling <path>` on the recycle path and
+`worktree-take: no recyclable member; creating a cold worktree` on the cold
+path. Capture its output and grep for the recycling line before trusting any
+downstream assertion:
+
+```bash
+make worktree-take NAME=hv-probe-recycle 2>&1 | tee /tmp/hv-take.log
+grep -q "recycling" /tmp/hv-take.log \
+  && echo "RECYCLE PATH TAKEN (the assertions below mean something)" \
+  || { echo "COLD PATH TAKEN — the sweep assertion would be vacuous; fix the setup"; exit 1; }
+```
+
 Now prove the sweep, by making that branch an ancestor of main and re-taking:
 ```bash
 git -C .claude/worktrees/hv-probe-sexton switch -c hv-probe-merged origin/main
