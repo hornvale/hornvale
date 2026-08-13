@@ -65,9 +65,16 @@ And the cost split inside it is not where anyone assumed. Measured on `ambrose`,
 `main`, 2026-08-13:
 
 ```
-  cargo run -p hornvale -- new --seed 42                    1.60 CPU-s
-  lab run, 4 worlds x 1 Full-rung metric        6.55 CPU-s -> 1.64 CPU-s/world
-  lab run, 4 worlds x all 203 metrics         125.37 CPU-s -> 31.34 CPU-s/world
+  DEV profile, ambrose, PRE-Millrace (2026-08-13 morning)
+    cargo run -p hornvale -- new --seed 42                  1.60 CPU-s
+    lab run, 4 worlds x 1 Full-rung metric      6.55 CPU-s -> 1.64 CPU-s/world
+    lab run, 4 worlds x all 203 metrics       125.37 CPU-s -> 31.34 CPU-s/world
+    => world build 5.2% · metric extraction 94.8%
+
+  DEV profile, ambrose, POST-Millrace (2026-08-13 evening, same day)
+    lab run, 4 worlds x 1 Full-rung metric      6.63 CPU-s -> 1.66 CPU-s/world
+    lab run, 4 worlds x all 203 metrics        21.03 CPU-s ->  5.26 CPU-s/world
+    => world build 31.6% · metric extraction 68.4%
 ```
 
 **A correction to this document's own arithmetic.** An earlier draft said
@@ -80,9 +87,33 @@ published", because charts and metrics are not one-to-one. **The measured
 costs above are unaffected** — they came from running the study, not from
 multiplying a per-metric figure by a count.
 
-**World generation is 5% of census cost; metric extraction is 95%.** Every
-worldgen optimisation campaign is aiming at the wrong 5% where the census is
-concerned.
+**This number moved by 6x inside a single day, and that is itself the finding.**
+
+Pre-Millrace the split was world build 5% / metric extraction 95%, and an
+earlier draft of this spec drew the obvious conclusion — that worldgen
+optimisation aims at the wrong 5% of census cost. **That conclusion is no longer
+true.** The Millrace's lab and terrain work (absorbed at this campaign's Stage 2
+boundary) cut metric extraction **8.25x** — 29.70 to 3.60 CPU-s/world — while
+leaving the world build untouched at ~1.65. The split is now **32% / 68%**:
+extraction is still the majority, but nothing like the near-totality the
+original measurement showed, and "worldgen is the wrong 5%" is simply wrong on
+this tree.
+
+Both arms were re-measured in the **dev** profile, matching the original, after
+a first attempt in `--release` produced a 6x figure that would have been
+uninterpretable — the two effects were separable only by holding the profile
+fixed (CLAUDE.md's Whetstone rule: check which profile a path uses before
+comparing anything).
+
+**What this campaign should take from it.** The deferred `TOOL-census-column-store`
+(S10) rests on extraction dominating cost; at 68% the case survives but is
+weaker than the row asserts, and it should be re-measured before that campaign
+is specced rather than inheriting a figure from here. More generally: a
+measurement in this repo decayed 6x between a spec written in the morning and
+its Stage 3 the same evening. That is `PROC-floors-erode-unseen` — "a floor
+whose cited measurement is never re-taken decays into a catastrophe alarm" —
+firing inside one working day, on this spec, and it was caught only because
+Task 7's implementer reported a cost that contradicted its brief.
 
 ### §1.3 The ledger cannot see its own largest blind spot
 
