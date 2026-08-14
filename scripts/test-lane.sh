@@ -205,6 +205,48 @@ else
     bad "nested acquisition under a held ancestor did not proceed cleanly (rc=$rc, marker=[$(cat "$marker_guarded")]): $out"
 fi
 
+# --- the claim EXCLUDES ------------------------------------------------------
+# Direction enforced: `while one holder has the claim, a second acquirer waits`.
+# It does NOT prove the first holder ever releases; the ordering case below
+# covers that. Skipped where there is no flock (macOS ships none).
+echo "== the claim excludes =="
+if ! command -v flock >/dev/null 2>&1; then
+    note "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
+else
+    lock="$tmp/staff.lock"
+    ( exec 9>"$lock"; flock 9; sleep 3 ) &
+    holder=$!
+    sleep 0.5
+    if flock -w 1 -E 99 "$lock" -c true; then
+        bad "a second acquirer took a HELD claim — the lane does not serialize"
+    else
+        ok "a second acquirer is refused while the claim is held"
+    fi
+    wait $holder
+fi
+
+# --- ordering is FIFO --------------------------------------------------------
+# Direction enforced: `waiters are granted in arrival order`. This pins a
+# MEASURED property of this kernel's flock, which is why lane-run.sh keeps no
+# ticket sequence of its own. If this ever goes red, the lane needs a ticket
+# spool and the spec's section 6 has to be revisited.
+echo "== ordering is FIFO =="
+if command -v flock >/dev/null 2>&1; then
+    lock="$tmp/order.lock"; out="$tmp/order.log"; : > "$out"
+    ( exec 9>"$lock"; flock 9; sleep 2 ) &
+    holder=$!
+    sleep 0.3
+    for i in 1 2 3 4 5 6 7 8; do
+        ( flock "$lock" -c "echo w$i >> '$out'" ) &
+    done
+    wait $holder; wait
+    if [ "$(tr '\n' ' ' < "$out")" = "w1 w2 w3 w4 w5 w6 w7 w8 " ]; then
+        ok "eight simultaneous waiters were granted in arrival order"
+    else
+        bad "grant order was not FIFO: $(tr '\n' ' ' < "$out")"
+    fi
+fi
+
 if [ "$fails" -ne 0 ]; then
     echo "test-lane: $fails failure(s)" >&2
     exit 1
