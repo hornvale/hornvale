@@ -130,12 +130,17 @@ successor.
 stays low and unimodal — 56% of worlds keep it under 5% of their surface,
 essentially all the rest under 10%. This census was the field's first
 measurement, taken while it was still banked and unconsumed by any domain
-(spec §15). It is no longer banked: unrest is read twice today — settlement
-capacity is scaled down by hostility, the worse of unrest and aridity, and
-[The Repose](../chronicle/the-repose.md) derives a per-cell hazard recurrence
-from it at the composition root. The distribution above is what those reads
-are reading, which makes it a prior on how much of any world those reads can
-reach at all.
+(spec §15). It is no longer banked. Unrest is read in several places today:
+it is the *whole* of the `hostility` term that scales settlement capacity
+(aridity stopped folding into that term at The Tilth, so hostility now carries
+nothing but tectonic unrest); it enters the mineral-prospectivity field at
+weight 0.3; it sets the per-cell recurrence
+[The Repose](../chronicle/the-repose.md) derives at the composition root; and
+it is the `threat` term in the environment summaries culture reads. The two
+that reach settlement siting are the first two, and they pull opposite ways —
+a penalty and a reward on the same field. The distribution above is what all
+of them are reading, which makes it a prior on how much of any world those
+reads can reach at all.
 
 {{#include generated/the-census/the-census-default-unrest-coverage.svg}}
 

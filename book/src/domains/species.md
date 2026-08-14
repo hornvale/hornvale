@@ -509,18 +509,20 @@ now carry the land limit that three of them always carried implicitly. A
 species' habitat then follows from what it eats. No kind is forbidden the sea;
 the roster **of that day** simply had nothing that could feed there — checked
 kind by kind it was entirely terrestrial, and even the two wettest niches, the
-otyugh's and the black dragon's, were swamps, which is wet *land*. That
-sentence is now history rather than description: The Vacancy authored the
-marine axis it anticipated, and the sea is inhabited. The Repose measured the
-consequence at scale — over thirty seeds, 33,544 of 59,690 stack settlements
-stand on cells that are not settleable land, and the giant squid alone holds
-30,971 of them, 51.9% of the unfiltered total. A reader taking "the roster is
-entirely terrestrial" as a live fact would mis-scope any land-only statistic by
-more than half. All three submerged shares
-return to 0 %, with every kind's land carrying capacity byte-unchanged. An
-aquatic kind arrives by weighting a marine supply axis with a field defined on
-water — an addition to the supply vocabulary rather than an exemption from a
-rule.
+otyugh's and the black dragon's, were swamps, which is wet *land*. All three
+submerged shares return to 0 %, with every kind's land carrying capacity
+byte-unchanged. An aquatic kind arrives by weighting a marine supply axis with
+a field defined on water — an addition to the supply vocabulary rather than an
+exemption from a rule.
+
+**That last sentence is now history rather than description**, and the roster
+sentence above it with it. The Vacancy authored the marine axis this paragraph
+anticipated, exactly in the shape it predicted, and the sea is inhabited. The
+Repose then measured the consequence at scale: over thirty seeds, 33,544 of
+59,690 stack settlements stand on cells that are not settleable land, and the
+giant squid alone holds 30,971 of them, 51.9% of the unfiltered total. A
+reader taking "the roster is entirely terrestrial" as a live fact would
+mis-scope any land-only statistic by more than half.
 
 *The Vacancy* took both of those unfinished halves. The marine axis is real,
 its supply derived from what climate already computes (the marine biome class,

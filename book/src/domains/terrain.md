@@ -50,9 +50,12 @@ drowns a drawn target ocean fraction, and an *unrest* field — high near
 young convergent boundaries, near zero in old interiors — is derived
 alongside it.
 
-That field is no longer banked. It is read twice: settlement capacity is
-scaled down by hostility, the worse of unrest and aridity, toward exactly
-zero; and the composition root derives a per-cell hazard recurrence from it.
+That field is no longer banked. Settlement capacity is scaled down by
+`hostility`, which since The Tilth carries unrest and nothing else — aridity
+used to fold in and no longer does, because moisture was being counted twice.
+Unrest is also weighted at 0.3 in the mineral-prospectivity field, so the one
+quantity both repels settlement and attracts it. The composition root derives
+a per-cell hazard recurrence from it, and culture reads it as a `threat` term.
 Terrain also publishes whether a cell carries a volcanic **edifice** — the
 discrete cone an island arc's along-strike gate builds, as opposed to the
 continuous skirt around it — which is what lets a mountain be one object with

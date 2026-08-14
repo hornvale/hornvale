@@ -5,8 +5,8 @@ Process lessons, not product. The product is in
 named mountain, a magnitude law recovered from its own authored input, a
 motivating premise wrong in both halves, and an exposure gradient that neither
 modelled channel carries **on the shipped roster** — the scope clause is part
-of the finding, because one of the two channels is read by 0.4% of the settled
-population and this instrument cannot acquit it.
+of the finding, because one of the two channels is read by 0.4% of the
+settlements measured and this instrument cannot acquit it.
 
 This campaign's process story has one spine: **eight assertions that could not
 fail.** Five originated in text the controller wrote. What makes it worth a

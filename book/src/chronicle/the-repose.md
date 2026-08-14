@@ -12,7 +12,7 @@ The answer is a null, and it is the interesting kind. Settlements **do**
 over-occupy violent ground, and on the shipped roster neither of the two
 mechanisms the design named is what puts them there. That scope clause is
 load-bearing and is carried everywhere below: one of the two channels is read
-by 0.4% of the settled population, so this instrument cannot acquit it — only
+by 0.4% of the settlements measured, so this instrument cannot acquit it — only
 report that it explains nothing here.
 
 ## What the world gained, and what it did not
@@ -44,20 +44,21 @@ Four derived objects, all at the composition root, none of them stored:
 Nothing was committed to any ledger. No stream that already existed gained a
 draw. The seed-42 almanac, the seed-42 scene export and the seed-42 world are
 byte-identical to what they were before the campaign began, and everything
-`make rebaseline` actually rebuilds — the gallery, the registry and manifest
-dumps, the type-audit report, the digest, the client fixtures — came back
-unchanged. The **gallery** is the decisive tree there, because it is the one
-regenerated from live worlds.
+`make rebaseline` rebuilds came back unchanged. Two parts of that carry real
+weight, because they are regenerated from **live worlds** rather than copied:
+the gallery, rebuilt from three seed-42 worlds, and the chorus study, rebuilt
+from fifty (seeds 0–49, six metrics, rows and charts). Fifty-three worlds
+generated afresh, not one byte moved.
 
-The stronger claim, that the census tables and the survey are unmoved, is
-*not* evidenced by that run and is not made here. `regenerate-artifacts.sh`
-gates the census studies behind `HV_CENSUS=1`, so `make rebaseline` never
-rewrites `book/src/laboratory/generated/`; and `book/src/domesday/` is a pure
-read over that same committed census, so its stillness is derivative of a file
-nothing re-derived. Supporting the stronger claim would take a census refresh
-on the canonical box and a diff of its rows — the standard pre-merge
-regeneration, which is a separate act from this one. A mountain now has a
-name, and no world knows it yet.
+What that run does **not** evidence is the census. `regenerate-artifacts.sh`
+runs the chorus study unconditionally but keeps the two censuses' `rows.csv`
+behind an opt-in flag, so those rows were never re-derived; and
+`book/src/domesday/` is a pure read over them, so its stillness is derivative
+of a file nothing recomputed. (Their `schema.json` *is* re-derived every run,
+from the live metric registry — but that builds no world and says nothing
+about the numbers.) Supporting the stronger claim would take a census refresh
+on the canonical box and a diff of its rows, which is a separate act from this
+one. A mountain now has a name, and no world knows it yet.
 
 ## The magnitude law was authored, and recovering it proved nothing about the world
 
@@ -137,6 +138,14 @@ The 0–250 m band holds **65.5% of all settlements**. So the anti-correlation
 is a pooled and upper-band effect, not a law of the world, and the sentence
 "within any elevation band the high-unrest ground runs colder" is more than
 this table supports.
+
+Two honest qualifications on that reversal. The lower bands' shares are an
+order of magnitude smaller than the upper bands' throughout — the whole rise
+is from 0.000000 to about 0.0006, against upper-band values near 0.009 and
+0.014 — so the *sign* disagrees while the *magnitude* stays near the floor.
+And both lower bands still reach exactly zero at decile 9, as every band does.
+The claim is that the direction is not universal, not that the lowlands hold
+much andosol; they do not.
 
 The premise still did not merely fail to connect: where the land is, the
 fertility runs against the violence. It just does not do so everywhere, and
