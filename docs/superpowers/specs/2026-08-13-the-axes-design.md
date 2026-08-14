@@ -42,7 +42,7 @@ stated a criterion that cannot fail.
 - **Naming axis values.** Axis values do not become registered concepts. See
   §5.2.
 - **Any world-side measurement before The Glasshouse lands or is declined.** See
-  §5.4.
+  §5.5.
 - **Building The Tense's §3.3 two-tier successor.** `tolerance_tiered` stays in
   shadow. Reshaping the evaluation is that campaign's stage, not this one's.
 
@@ -233,28 +233,55 @@ read off a cell the way temperature can. The matrix records them with their
 valence declared, and the campaign does not pretend they are the same kind of
 thing as substrate.
 
-### 4.2 Where the shared vocabulary lives — **flagged for G3**
+### 4.2 The vocabulary lives in the kernel — **ruled at G3**
 
 `BiomeAffinity` is keyed by biome **name string**, and its doc states why: *"a
 domain crate may not depend on a sibling domain … resolution against the live
 `Biome` value happens at the composition root."* A vector shared between
 `domains/climate` (producer) and `domains/species` (consumer) has exactly that
-problem, and the metaplan never says where it lives.
+problem, and the metaplan never says where it lives. The layering rule admitted
+two answers — `hornvale-kernel`, or hand-mirrored per 0094 with resolution at
+`worldgen`. **Nathan ruled: the kernel.**
 
-Two solutions exist and the layering rule admits no third:
+The ruling is stronger than it looked when it was asked, because the pattern is
+not merely *permitted* there — it is **already implemented there, twice, with
+its hazards worked out.** `kernel/src/ecology.rs` carries:
 
-- **(a) `hornvale-kernel`.** `kernel/src/ecology.rs` already holds
-  `ConditionResponse` and `sovereignty_floor` — the exact machinery
-  `ConditionNiche` is built from, already depended on by `domains/species`.
-  Decision 0094 says to share the *roster* and never the derivation; an axis
-  vocabulary is a roster, so this is consistent with 0094 rather than in tension
-  with it.
-- **(b) Hand-mirrored per 0094**, as `Formation`/`CaveKind` already are across
-  the terrain/climate border, with resolution at `worldgen`.
+```rust
+pub struct ResourceAxis { .. }                      // a named axis
+pub const PHOTOSYNTHATE: ResourceAxis = ..;         // six axis constants
+pub fn v1_basis() -> &'static [ResourceAxis];       // a VERSIONED basis
+pub struct ResourceVector(BTreeMap<u16, f64>);      // sparse, validating ctor
+```
 
-**Recommendation: (a).** The precedent is exact and already load-bearing for the
-same struct. Presented as a flagged item regardless, because it is architectural
-and adjacent to the layering constitution.
+So the axis table is not a new kind of object in this codebase. It is a second
+basis alongside `v1_basis()` — different semantics (that one is trophic supply,
+this one is environmental state) and the same form. Three things transfer, and
+this campaign adopts all three rather than re-deriving them:
+
+1. **The basis is a versioned `&'static [Axis]`**, named with its version, so a
+   later refinement is a `v2` epoch rather than an edit in place.
+2. **The response vector is sparse with a validating constructor**, rejecting
+   non-finite weights, with the zero vector legal and meaningful.
+3. **Order is append-only, pinned by a guard test.** `v1_basis`'s own doc states
+   the hazard exactly: *"Insert an axis at or before an existing one and you
+   change which axis wins those ties … prepending `MARINE_FORAGE` would make a
+   zero-weight niche resolve marine-dominant instead of photosynthate-dominant."*
+   It is pinned by `the_basis_ids_are_append_only`, "which is what makes this a
+   rule rather than a hope."
+
+**The tie-break hazard transfers and must be designed against, not inherited.**
+Any argmax or dominant-axis read over the environmental basis resolves total
+ties to index 0. This campaign's basis will be read that way (a "which axis
+binds here" query is the natural consumer, and §3.6 shows the codebase already
+does exactly this for `ConditionNiche`). §5.5 makes the ordering contract
+explicit rather than leaving it to be discovered.
+
+This is the **third** time this program has found the thing it was about to
+build already sitting one crate over — after The Fathom's `water_column_at` and
+`variant_pool`'s three-axis signature (§3.3). The Fathom retrospective §1's rule
+(*grep the consumers of the raw material, not just its producer*) is now
+this program's most reliably load-bearing lesson.
 
 ### 4.3 Additive unification — the flooring structure does not move
 
@@ -328,7 +355,29 @@ Any change to the response vector's shape must be applied to, or proven
 irrelevant to, all three sites in §3.6. The campaign's own design (§4.3) is that
 none of them changes; the acceptance criteria assert that rather than assume it.
 
-### 5.4 The Glasshouse sequencing
+### 5.4 The basis order is a save-format contract from the first commit
+
+Following §4.2's ruling, the environmental basis lands in `hornvale-kernel` —
+the crate whose own `CLAUDE.md` opens with *"the three save-format contracts in
+this crate … change any of these and the same seed produces a different world."*
+The basis is not one of those three, but it acquires the same character the
+moment anything reads it by index, exactly as `v1_basis()` did.
+
+Therefore, in the **same commit** that introduces the basis:
+
+- the ordering is declared append-only in the basis function's own doc comment,
+  stating the tie-break consequence in the concrete terms `v1_basis` uses;
+- an append-only guard test exists, in the idiom of
+  `the_basis_ids_are_append_only`, and is **proven to fire** by mutation —
+  reorder two axes, watch the specific assertion go red, revert;
+- a refinement is a `v2` basis, never an edit in place, per the kernel's epoch
+  rule.
+
+Writing the guard later is not equivalent: between introduction and guard, a
+reordering is invisible, and this campaign's whole currency is that no world
+byte moves.
+
+### 5.5 The Glasshouse sequencing
 
 `campaign/the-glasshouse` has posted a `hold-off` naming `biome.rs
 classify_land` and intends an **epoch**: a new astronomy seed label plus
@@ -404,7 +453,7 @@ Stated at the strength the measurement supports:
   confirm an identity. The spec states this as derived and does not claim the
   stronger result.
 - **Marine and cave: measured**, as the count of contrastive features surviving
-  redundancy rules. World-side, so gated on §5.4.
+  redundancy rules. World-side, so gated on §5.5.
 
 ### 6.4 P-4 — axis-space distance reproduces the affinity ladder
 
@@ -441,16 +490,22 @@ four axes as ungrounded noise draws.
    merely observed to pass.
 3. **All three copies** of the Liebig minimum (§3.6) are shown unaffected.
 4. The preregistration of §6 exists as tests, and each is proven to fire.
-5. `make gate` green; `make rebaseline` produces an empty diff across every
-   committed artifact path, `docs/audits/` included — the type-audit report
-   drifts on any pub-boundary change and is regenerated in the same commit.
+5. `make gate` green; `make rebaseline` produces an empty diff across the paths
+   declared in **`docs/generated-paths.txt`** (the single source of truth since
+   The Sexton — never a restated list). `docs/audits/` is among them and is the
+   common miss: the type-audit report drifts on any pub-boundary change, and
+   this campaign adds `pub` items to the kernel, so it is regenerated in the
+   same commit that introduces them.
 6. No new registered concept (§5.2), verified by an unchanged concept roster.
+7. **The basis's append-only guard exists in the same commit as the basis**
+   (§5.4), in `the_basis_ids_are_append_only`'s idiom, and is proven to fire by
+   reordering two axes and watching the specific assertion go red.
 
 ## 8. Risks
 
 - **The fit deadlocks against P-1.** Mitigated by §6.1's stop rule making that
   a publishable finding rather than a blocked campaign.
-- **The Glasshouse lands mid-campaign.** Mitigated by §5.4 — world-side arms are
+- **The Glasshouse lands mid-campaign.** Mitigated by §5.5 — world-side arms are
   not run until it settles, so nothing has to be re-derived.
 - **Scope creep into The Tense.** `tolerance_tiered` is in shadow and its §3.3
   successor is specified-and-unbuilt; §4.3's additive design is what keeps this
@@ -464,9 +519,17 @@ four axes as ungrounded noise draws.
 
 Implementation, plus this project's standing close: a chronicle entry
 (`book/src/chronicle/the-axes.md`), a freshness sweep of stale chapters,
-re-scoring any Confidence Gradient bet this campaign moves (decision 0030), a
-one-page retrospective (decision 0020), and a `make ci` re-record if the test
-count moves (The Fathom's F-12).
+re-scoring any Confidence Gradient bet this campaign moves (decision 0030), and
+a one-page retrospective (decision 0020).
+
+**The Fathom's F-12 is discharged by The Sexton and needs no step here.** F-12
+asked for a `make ci` re-record whenever a campaign adds or removes tests,
+noting that nothing in the gate or the close routes you to it. `make ci` is now
+an **alias for `make gate`** (`Makefile:195`), and the timing alarm and baseline
+recorder run inside the gate itself — so the re-record happens on every gate
+run rather than needing its own step. Recorded here rather than silently
+dropped, because this spec's first draft carried F-12's step and it would have
+read as a missing action to whoever ran the close.
 
 Corrections this campaign owes to documents it does not otherwise touch, per
 The Fathom retrospective §0b — *grep for the claim, not for the file*:
@@ -479,6 +542,6 @@ The Fathom retrospective §0b — *grep for the claim, not for the file*:
 Seventeen entries in `.superpowers/sdd/decision-ledger.md`, five ideonomy
 passes, two overturns (pass 1 reframed the gate question; pass 2 reversed the
 `tolerance_liebig` decision from re-key to freeze). The load-bearing ones are
-promoted above: §4.4 (#1, #7), §6.1 (#2), §3.2 (#3), §5.4 (#4), §4.3 (#6),
+promoted above: §4.4 (#1, #7), §6.1 (#2), §3.2 (#3), §5.5 (#4), §4.3 (#6),
 §6.5 (#8), §4.1 (#9), §4.1.1 (#10), §6.2 (#11), §7.1 (#12), §6.4 (#13),
 §4.2 (#14), §3.7 (#15), §5.2 (#16), §6.1 stop rule (#17).
