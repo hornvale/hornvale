@@ -8847,6 +8847,81 @@ mod tests {
         );
     }
 
+    /// claim: invariant — **exactly one axis is unfloored, and it is the one
+    /// that may undercut the others.**
+    ///
+    /// This is the precondition The Holdfast's fast path is sound *because of*,
+    /// and which neither of its two `debug_assert!`s checks: they verify that
+    /// `floor_buf` is in `[0, 1]` and that three devotions are non-negative,
+    /// never that the flooring structure is what it is assumed to be.
+    ///
+    /// `the_liebig_shortcut_equals_the_eager_minimum` above does not close this
+    /// gap either, and the reason is worth stating: it compares the shortcut
+    /// against a local `eager` that **hardcodes the same structure**
+    /// (`.min(cn.elevation.eval(.., 0.0))`). Floor elevation in both and the two
+    /// still agree — verified by mutation, not asserted — so that test stays
+    /// green while the semantics move underneath it.
+    ///
+    /// The Axes needs this pinned because campaign 1 adds axes to the response
+    /// vector and campaign 2 stops leaning on elevation. Both are changes an
+    /// agreement-only test cannot see.
+    ///
+    /// Two probes, because the invariant has two halves that fail differently:
+    /// one catches elevation *gaining* a floor, the other catches any of the
+    /// other three *losing* theirs.
+    #[test]
+    fn exactly_one_axis_is_unfloored_and_it_is_the_undercutter() {
+        use hornvale_kernel::ecology::ConditionResponse;
+
+        let r = |optimum: f64, width: f64, devotion: f64| ConditionResponse {
+            optimum,
+            width,
+            devotion,
+        };
+        let floor_buf = 0.60;
+        let at = |t: f64, m: f64, i: f64, h: f64| Substrate {
+            temperature_c: t,
+            moisture: m,
+            insolation: i,
+            height_asl_m: hornvale_kernel::SeaLevelHeight::from_metres(h),
+        };
+
+        // Every axis identical and every input far from its optimum. The three
+        // floored axes can each return no less than `floor_buf`; elevation is
+        // passed `0.0` and collapses. So the minimum must sit BELOW the floor —
+        // which is only possible if elevation is genuinely unfloored.
+        let uniform = hornvale_species::ConditionNiche {
+            temperature: r(0.0, 1.0, 1.0),
+            moisture: r(0.0, 1.0, 1.0),
+            insolation: r(0.0, 1.0, 1.0),
+            elevation: r(0.0, 1.0, 1.0),
+        };
+        let far = tolerance_liebig(&uniform, &at(50.0, 50.0, 50.0, 50.0), floor_buf);
+        assert!(
+            far < floor_buf,
+            "elevation has acquired a floor: with every axis far from optimum \
+             the minimum should collapse below floor_buf={floor_buf}, got {far}"
+        );
+
+        // Now hold elevation AT its optimum, so it cannot be the binding axis,
+        // and drive each other axis far away in turn. Each is floored, so the
+        // minimum can never fall below `floor_buf`. If any of the three lost its
+        // floor, the minimum would collapse the way `far` above does.
+        for (label, s) in [
+            ("temperature", at(50.0, 0.0, 0.0, 0.0)),
+            ("moisture", at(0.0, 50.0, 0.0, 0.0)),
+            ("insolation", at(0.0, 0.0, 50.0, 0.0)),
+        ] {
+            let got = tolerance_liebig(&uniform, &s, floor_buf);
+            assert!(
+                got >= floor_buf,
+                "the {label} axis has lost its floor: with elevation at its \
+                 optimum the minimum must stay at or above floor_buf={floor_buf}, \
+                 got {got}"
+            );
+        }
+    }
+
     /// claim: invariant — the hoisted dot product equals the looked-up one.
     ///
     /// [`axis_supply_with`] is only sound because `weights[i]` is the weight of
