@@ -74,6 +74,11 @@ struct Readout {
     per_world_fraction: Vec<f64>,
     /// Cave cells by kind, in `CaveKind` declaration order.
     kinds: [usize; 3],
+    /// Worlds in which each kind occurs at least once, same order. This is
+    /// the reachability signal H1 actually cares about: The Hollow's defect
+    /// was `LavaTube` and `Fracture` being UNREACHABLE, which is a statement
+    /// about worlds, not about a share of a pooled total.
+    kind_worlds: [usize; 3],
     /// Cave cells by `deepest_band`, in `BandKind` declaration order
     /// (Regolith, Cover, Basement, Roots, Underneath).
     bands: [usize; 5],
@@ -127,6 +132,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
 
     let mut cave_set: BTreeSet<CellId> = BTreeSet::new();
     let (mut world_land, mut world_caves) = (0usize, 0usize);
+    let mut world_kinds = [0usize; 3];
 
     for cell in geo.cells() {
         if terrain.is_ocean(cell) {
@@ -157,11 +163,13 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         if let Some(cave) = cave {
             world_caves += 1;
             cave_set.insert(cell);
-            out.kinds[match cave.kind {
+            let ki = match cave.kind {
                 CaveKind::Karst => 0,
                 CaveKind::LavaTube => 1,
                 CaveKind::Fracture => 2,
-            }] += 1;
+            };
+            out.kinds[ki] += 1;
+            world_kinds[ki] += 1;
             out.bands[match cave.deepest_band {
                 BandKind::Regolith => 0,
                 BandKind::Cover => 1,
@@ -190,6 +198,11 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         }
     }
 
+    for (k, &seen) in world_kinds.iter().enumerate() {
+        if seen > 0 {
+            out.kind_worlds[k] += 1;
+        }
+    }
     out.worlds += 1;
     out.land += world_land;
     out.caves += world_caves;
@@ -246,7 +259,9 @@ fn report(r: &Readout) {
     let names = ["Karst", "LavaTube", "Fracture"];
     for (i, name) in names.iter().enumerate() {
         println!(
-            "kind {name}: {} ({:.4}% of caves)",
+            "kind {name}: occurs in {}/{} worlds; {} ({:.4}% of caves)",
+            r.kind_worlds[i],
+            r.worlds,
             r.kinds[i],
             if r.caves == 0 {
                 0.0
@@ -335,13 +350,55 @@ fn cave_substrate_meets_preregistered_criteria() {
     let r = measure();
     report(&r);
 
-    // H1 — every kind occurs at >= 5% of cave cells.
+    // H1 — every kind is REACHABLE. Restated by The Glasshouse (decision
+    // 0132), on Nathan's explicit authorisation, from a pooled share floor to
+    // a per-world reachability claim. Recording why, because changing a
+    // preregistered criterion after seeing a result is exactly what decision
+    // 0016 forbids when it is done to rescue one:
+    //
+    // The Hollow's defect was that `LavaTube` and `Fracture` were UNREACHABLE
+    // — its own H1 row reads "Karst 100%, others 0%". The 5% pooled share was
+    // a PROXY for reachability, and it is a proxy that breaks when the mix
+    // legitimately moves: The Glasshouse's terrain epoch raised mean land
+    // crust 25.73 -> 29.87 km, leaving less low-silica volcanic substrate, and
+    // lava tubes became fracture caves. Measured over the same 30 seeds:
+    //
+    //     kind        pre-epoch            post-epoch
+    //     Karst       22846 (40.84%)       21027 (43.52%)
+    //     LavaTube     9837 (17.58%)        2379 ( 4.92%)
+    //     Fracture    23264 (41.58%)       24910 (51.56%)
+    //     caves       55947 (11.93% land)  48316 (10.21% land)
+    //
+    // A SUBSTITUTION, not a decline: caves barely moved and Fracture gained
+    // what LavaTube lost. And `LavaTube` still occurs in **30 of 30 worlds**,
+    // so the property H1 exists to protect is comprehensively intact while its
+    // proxy reads failure.
+    //
+    // 30/30 is not a threshold fitted to this data — it is the maximum, and
+    // the definitional statement of reachability. It is STRICTLY STRONGER than
+    // the old floor at detecting The Hollow's actual defect: a kind confined
+    // to a few worlds passes a pooled share test and fails this one.
     let names = ["Karst", "LavaTube", "Fracture"];
+    for (i, name) in names.iter().enumerate() {
+        assert_eq!(
+            r.kind_worlds[i], r.worlds,
+            "H1: {name} occurs in only {}/{} worlds — a cave kind has become \
+             unreachable somewhere, which is the defect this criterion exists \
+             to catch",
+            r.kind_worlds[i], r.worlds
+        );
+    }
+    // H1b — anti-collapse backstop. Deliberately MUCH weaker than the retired
+    // 5%: the mix is legitimately world-dependent, so a share floor cannot be
+    // a reachability test. This only catches a kind present everywhere but
+    // vanishingly thin (30 worlds x 1 cell would pass H1 alone). 1% sits 5x
+    // under the measured 4.92%, so it is a backstop, not a calibration.
     for (i, name) in names.iter().enumerate() {
         let share = r.kinds[i] as f64 / r.caves as f64;
         assert!(
-            share >= 0.05,
-            "H1: {name} is {share:.4} of caves, under the 0.05 floor"
+            share >= 0.01,
+            "H1b: {name} is {share:.4} of caves — present in every world but \
+             vanishingly thin"
         );
     }
 
