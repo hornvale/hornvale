@@ -9,8 +9,11 @@ whether the worlds it already generates place their settlements as though the
 gap were there.
 
 The answer is a null, and it is the interesting kind. Settlements **do**
-over-occupy violent ground. Neither of the two mechanisms the design named is
-what puts them there.
+over-occupy violent ground, and on the shipped roster neither of the two
+mechanisms the design named is what puts them there. That scope clause is
+load-bearing and is carried everywhere below: one of the two channels is read
+by 0.4% of the settled population, so this instrument cannot acquit it — only
+report that it explains nothing here.
 
 ## What the world gained, and what it did not
 
@@ -20,21 +23,41 @@ Four derived objects, all at the composition root, none of them stored:
   nearest boundary kind, and the presence of a volcanic edifice, returning a
   recurrence interval;
 - a **volcano identity** keyed on the edifice's source contact rather than on
-  the cell you happen to ask about, so one cone is one mountain — on seed 42 at
-  the canonical mesh, 187 cones spread over 360 edifice cells, which without an
-  identity rule would have minted up to 360 names for 187 objects;
+  the cell you happen to ask about, so every cell of one edifice answers with
+  the same mountain — on seed 42 at the canonical mesh, 360 edifice cells
+  resolve to **187 objects**, where without an identity rule the same ground
+  would have minted up to 360 names. Read that as 187 *identities*, not 187
+  free-standing peaks: the key is a contact cell, and 173 of the 187 contacts
+  abut another contact on the same plate, so one continuous stretch of arc —
+  physically a ridge of coalesced cones — resolves to a chain of separately
+  named volcanoes rather than to one. A settlement's horizon along such an arc
+  can hold on the order of ten of them. It is a deliberate scale match (an L6
+  cell is roughly 120 km against real arc spacing of 50–100 km), and a
+  successor modelling a settlement's relationship to "its mountain" must not
+  assume that relationship is 1:1;
 - an **event stream**, drawn for a `(seed, cell, window)` query, with Poisson
   inter-event times and magnitudes from an authored law;
 - **knownness**, a people's awareness of its own ground: set to one by an
-  eruption, halved every generation or two, and discarded entirely past ten
+  eruption, halved every two generations, and discarded entirely past ten
   half-lives.
 
 Nothing was committed to any ledger. No stream that already existed gained a
 draw. The seed-42 almanac, the seed-42 scene export and the seed-42 world are
-byte-identical to what they were before the campaign began, and the whole
-generated-artifact corpus — the gallery, the laboratory tables, the survey —
-regenerated without moving a byte. A mountain now has a name, and no world
-knows it yet.
+byte-identical to what they were before the campaign began, and everything
+`make rebaseline` actually rebuilds — the gallery, the registry and manifest
+dumps, the type-audit report, the digest, the client fixtures — came back
+unchanged. The **gallery** is the decisive tree there, because it is the one
+regenerated from live worlds.
+
+The stronger claim, that the census tables and the survey are unmoved, is
+*not* evidenced by that run and is not made here. `regenerate-artifacts.sh`
+gates the census studies behind `HV_CENSUS=1`, so `make rebaseline` never
+rewrites `book/src/laboratory/generated/`; and `book/src/domesday/` is a pure
+read over that same committed census, so its stillness is derivative of a file
+nothing re-derived. Supporting the stronger claim would take a census refresh
+on the canonical box and a diff of its rows — the standard pre-merge
+regeneration, which is a separate act from this one. A mountain now has a
+name, and no world knows it yet.
 
 ## The magnitude law was authored, and recovering it proved nothing about the world
 
@@ -89,19 +112,35 @@ five call sites in the workspace and not one of them lies on the path that
 places a settlement. The reward the design assumed was being paid is not wired
 to a payee.
 
-**And the fertility is not even where the violence is.** Measured across thirty
-seeds, the land-area-weighted andosol share falls monotonically as unrest
-rises:
+**And the fertility is mostly not where the violence is.** Measured across
+thirty seeds, the land-area-weighted andosol share falls by an order of
+magnitude as unrest rises — though not step by step:
 
 | unrest decile | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | andosol share | 0.009151 | 0.006607 | 0.006012 | 0.007355 | 0.006397 | 0.003927 | 0.002973 | 0.001793 | 0.000386 | **0.000000** |
 
-Exactly zero in the most violent decile. The mechanism is legible in the
-classifier: andosol requires volcanic parent rock **and** a mean temperature
-above 5 °C, and within any elevation band the high-unrest ground runs colder.
-Volcanic soil and volcanic violence are anti-correlated in Hornvale. The
-premise did not merely fail to connect; it pointed the wrong way.
+Exactly zero in the most violent decile, and 0.009151 in the calmest — but the
+series rises at decile 2 → 3, so it is not monotone, and the first draft of
+this paragraph said it was. The mechanism is legible in the classifier:
+andosol requires volcanic parent rock **and** a mean temperature above 5 °C,
+and on high ground the high-unrest cells run colder.
+
+**The direction is not universal, and the exception is where almost everyone
+lives.** Stratified by elevation band, the two upper bands carry the fall —
+0.009338 → 0.000000 in 1000–2500 m and 0.013843 → 0.000000 in 2500 m+, and
+between them they hold 75.8% of the land, which is why they set the pooled
+shape. The two lower bands run the other way: each reads exactly zero at
+decile 0 and *rises* into an interior peak — 0.000587 at decile 5 in 0–250 m,
+0.000527 at decile 6 in 250–1000 m — before collapsing to zero at decile 9.
+The 0–250 m band holds **65.5% of all settlements**. So the anti-correlation
+is a pooled and upper-band effect, not a law of the world, and the sentence
+"within any elevation band the high-unrest ground runs colder" is more than
+this table supports.
+
+The premise still did not merely fail to connect: where the land is, the
+fertility runs against the violence. It just does not do so everywhere, and
+least of all on the ground people actually settle.
 
 **And unrest is already charged for.** A hostility term multiplies carrying
 capacity by `(1 − unrest)` on every cell. The model the campaign was written to
@@ -135,7 +174,29 @@ support. The bands now carry their metre ranges and nothing else.
 The statistic is a settlement's share of a stratum divided by that stratum's
 share of the land: an exposure ratio, one per unrest decile per elevation band,
 pooled over thirty seeds — 26,146 settlements on 440,715 cells of settleable
-land. Taking the rise from the calmest decile to the most violent:
+land.
+
+The spec asked one sentence — *do settlements over-occupy high-unrest ground
+relative to the land base rate?* — so here is the unstratified answer to it,
+which is the cleanest result the campaign has:
+
+| unrest decile | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| exposure ratio | 0.868 | 0.911 | 0.931 | 0.932 | 0.953 | 0.981 | 0.997 | 1.009 | 1.091 | **1.328** |
+
+**Strictly monotone across all ten deciles**, crossing unity between decile 6
+and decile 7, and rising ×1.53 end to end. The land base is almost perfectly
+even across the deciles by construction (44,044 to 44,149 cells each), so this
+is a settlement-side signal, not a denominator artifact. Yes: settlements
+over-occupy high-unrest ground.
+
+That single number is a mixture over elevation, and stratifying it is what the
+spec's confound control asks for — but note before reading the strata that the
+unstratified series is the *stronger* statement of the headline, not a weaker
+one. It is monotone where no stratum is, and it is unambiguous about
+direction, while in both upper bands the absolute occupancy stays below unity
+even at decile 9. Taking the rise from the calmest decile to the most violent,
+band by band:
 
 | band | decile 0 | decile 9 | rise |
 |---|---|---|---|
@@ -159,7 +220,7 @@ signature was visible in the published fixture without re-running anything —
 three peoples reading *exactly* 100.0% of one band with exact zeros in the
 other three, beside one people distributing normally.
 
-## Neither modelled channel carries it
+## Neither modelled channel carries it, on the shipped roster
 
 Unrest reaches settlement siting through exactly two live paths: the hostility
 penalty, which suppresses capacity as unrest rises, and a mineral-prospectivity
@@ -274,10 +335,18 @@ comparison has no sample on one of its sides.
 
 A hazard field that nothing yet fears, a mountain with a name nobody says, and
 a measured gradient with no identified cause. The campaign that was supposed to
-find out whether Hornvale rewards violent ground found that it does, that both
-of the mechanisms anyone had thought of are innocent, and that the soil the
-whole premise rested on is not merely disconnected from siting but is in the
-wrong places entirely.
+find out whether Hornvale rewards violent ground found that it does, that on
+the shipped roster neither of the mechanisms anyone had thought of accounts
+for it, and that the soil the whole premise rested on is not merely
+disconnected from siting but — across most of the land — sits in the wrong
+places entirely.
+
+*Accounts for* rather than *is innocent of*: an acquittal is a claim this
+measurement is not powered to make. Hostility was tested and opposes the
+effect, which is a real result. The mineral channel was only shown to be
+unread by 99.6% of the settled population, which is a fact about the roster.
+The gradient is unattributed by this instrument on this roster; naming its
+cause is open.
 
 The design listed three possible readings of its central statistic and called
 all three informative. It got a fourth: the effect is real, and the model does

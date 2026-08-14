@@ -542,8 +542,11 @@ fn process_events(
 /// **The block loop is therefore unbounded, and a caller must not hand it an
 /// unclamped span.** A window of ~1e12 days — the kind an
 /// "everything since genesis" default or a user-supplied number produces —
-/// iterates ~1e9 blocks and looks hung rather than failing. Clamp the span at
-/// the call site to what the question actually needs.
+/// iterates `1e12 / BLOCK_DAYS` ≈ **2.7e6** blocks (`BLOCK_DAYS` is 365,250,
+/// not 1,000: the block is a thousand *years*), and each of those blocks pays
+/// a count draw plus two draws per event it yields. That is slow enough to
+/// look hung rather than to fail. Clamp the span at the call site to what the
+/// question actually needs.
 pub fn events_in(
     seed: Seed,
     terrain: &GeneratedTerrain,

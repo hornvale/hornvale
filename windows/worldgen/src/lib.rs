@@ -888,14 +888,26 @@ pub fn species_carrying_input(
 /// a land mask would state "nothing lives in water" as a law of the model —
 /// a law that would have to be *unstated* the day an aquatic kind is
 /// authored. Masking the supply says the narrower, truer thing: *these*
-/// resources are land resources. The roster today is entirely terrestrial
-/// (checked kind by kind at The Tumult: swamp, cave, forest, plains, tundra,
-/// alpine and volcanic kinds; no aquatic or amphibious kind, and the two
-/// wettest — otyugh and black dragon — are swamp-dwellers, i.e. wet *land*),
-/// so masking every axis is correct today. An aquatic kind arrives by
-/// authoring a marine supply axis and a supply field defined on water, not by
-/// an exemption from a global rule; its uptake vector would simply weight an
-/// axis these fields do not touch.
+/// resources are land resources. When this was written the roster WAS entirely
+/// terrestrial (checked kind by kind at The Tumult: swamp, cave, forest,
+/// plains, tundra, alpine and volcanic kinds; no aquatic or amphibious kind,
+/// and the two wettest — otyugh and black dragon — are swamp-dwellers, i.e.
+/// wet *land*), and that sentence used to read "today".
+///
+/// **IT NO LONGER DOES, AND THE DESIGN IS WHY IT DID NOT HAVE TO CHANGE.** The
+/// Vacancy authored the marine supply axis this paragraph anticipated, plus
+/// marine kinds to weight it (`sea-elf`, `reef-shark`, `giant-squid`), and it
+/// arrived exactly as predicted: a new axis with a supply field defined on
+/// water, no exemption from any global rule, and every mask below untouched.
+/// The five v1 axes are still correctly land-masked; they are simply no longer
+/// the whole vocabulary.
+///
+/// The consequence for anyone counting settlements: **a settlement is no
+/// longer necessarily on land.** The Repose measured 33,544 of 59,690 stack
+/// settlements over thirty seeds sitting on cells that are not settleable land
+/// (`giant-squid` alone 30,971 of them), after a readout that assumed
+/// otherwise silently banded every marine settlement into its lowest elevation
+/// band. Filter both sides of any land-relative statistic.
 ///
 /// Ambient detritus supply (BIO-35 Stage 1: The Demesne). Dead-matter
 /// resource is treated as broadly available this stage — a small constant

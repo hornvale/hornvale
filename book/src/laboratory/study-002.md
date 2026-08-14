@@ -128,10 +128,14 @@ successor.
 
 **Unrest coverage** (the fraction of cells with tectonic unrest above 0.3)
 stays low and unimodal — 56% of worlds keep it under 5% of their surface,
-essentially all the rest under 10%. Unrest is banked, unconsumed by any
-domain in C3 (spec §15); the census is simply the first measurement of a
-field waiting for a future architecture, theology, or legend campaign to
-read it.
+essentially all the rest under 10%. This census was the field's first
+measurement, taken while it was still banked and unconsumed by any domain
+(spec §15). It is no longer banked: unrest is read twice today — settlement
+capacity is scaled down by hostility, the worse of unrest and aridity, and
+[The Repose](../chronicle/the-repose.md) derives a per-cell hazard recurrence
+from it at the composition root. The distribution above is what those reads
+are reading, which makes it a prior on how much of any world those reads can
+reach at all.
 
 {{#include generated/the-census/the-census-default-unrest-coverage.svg}}
 

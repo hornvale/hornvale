@@ -492,10 +492,11 @@ defined on the seafloor exactly as on a hillside. With the elevation axis
 re-datumed and no longer excluding submerged cells by accident, the three kinds
 that eat detritus or rock scored right across the ocean floor: at seed 42 the
 otyugh's total suitability went from 0 % to 85 % submerged, the rust monster's
-from 22 % to 86 %, the xorn's from 58 % to 74 %. No settlement ever landed
-there — every one of seed 42's 216 stack settlements is on land, because the
-peoples' own supply is land-limited — but a swamp detritivore whose habitat is
-mostly seabed is not a claim this model should be making.
+from 22 % to 86 %, the xorn's from 58 % to 74 %. No settlement landed there *at
+the time* — every one of seed 42's 216 stack settlements then stood on land,
+because every people's supply was land-limited — but a swamp detritivore whose
+habitat is mostly seabed is not a claim this model should be making. That
+"then" is load-bearing now, and the paragraph after next says why.
 
 The repair is a **supply-term** one, not an elevation one, and where it was put
 matters more than what it does. The blunt option was to multiply assembled
@@ -506,9 +507,16 @@ declared *terrestrial*: detritus becomes a field rather than a constant, zero
 below sea level, and mineral supply is masked the same way, so all five axes
 now carry the land limit that three of them always carried implicitly. A
 species' habitat then follows from what it eats. No kind is forbidden the sea;
-the roster simply has nothing that can feed there — checked kind by kind, it is
-entirely terrestrial, and even the two wettest niches, the otyugh's and the
-black dragon's, are swamps, which is wet *land*. All three submerged shares
+the roster **of that day** simply had nothing that could feed there — checked
+kind by kind it was entirely terrestrial, and even the two wettest niches, the
+otyugh's and the black dragon's, were swamps, which is wet *land*. That
+sentence is now history rather than description: The Vacancy authored the
+marine axis it anticipated, and the sea is inhabited. The Repose measured the
+consequence at scale — over thirty seeds, 33,544 of 59,690 stack settlements
+stand on cells that are not settleable land, and the giant squid alone holds
+30,971 of them, 51.9% of the unfiltered total. A reader taking "the roster is
+entirely terrestrial" as a live fact would mis-scope any land-only statistic by
+more than half. All three submerged shares
 return to 0 %, with every kind's land carrying capacity byte-unchanged. An
 aquatic kind arrives by weighting a marine supply axis with a field defined on
 water — an addition to the supply vocabulary rather than an exemption from a

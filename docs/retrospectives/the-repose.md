@@ -4,7 +4,9 @@ Process lessons, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-repose.md): a hazard field and a
 named mountain, a magnitude law recovered from its own authored input, a
 motivating premise wrong in both halves, and an exposure gradient that neither
-modelled channel carries.
+modelled channel carries **on the shipped roster** — the scope clause is part
+of the finding, because one of the two channels is read by 0.4% of the settled
+population and this instrument cannot acquit it.
 
 This campaign's process story has one spine: **eight assertions that could not
 fail.** Five originated in text the controller wrote. What makes it worth a
@@ -169,7 +171,7 @@ back to the spec's own words** rather than widened to a new ocean band.
 Inventing a stratum after seeing the data is changing a preregistered population
 post hoc, however reasonable the new stratum sounds.
 
-## 4. Prose outrunning its own table — three rounds running
+## 4. Prose outrunning its own table — four rounds running
 
 Every defect in three consecutive review rounds was a *sentence* that claimed
 more than the table directly above it, and the code was right every time. The
@@ -186,6 +188,36 @@ leaves the original standing is not a correction.** A report led with a
 retracted claim and carried its retraction 367 lines later. The fix was to
 rewrite the claim in place *and* post the correction to the board, because a
 stale claim in a durable ledger keeps misleading after the report is closed.
+
+**And a fourth round, which is the part worth carrying.** The whole-branch
+review found the same shape again in the *published* prose — the chronicle,
+this file's own opening sentence, and the test file's fix-round-1 record.
+Three findings, all of the same family:
+
+- The chronicle called the andosol series "monotonic" directly above a table
+  containing `d2 = 0.006012 → d3 = 0.007355`. The identical error had been
+  found and corrected 56 lines further down, about the *exposure* table, in the
+  same document. **A correction applied to one table does not propagate to its
+  neighbour**, and nothing mechanical connects them.
+- The source claim under it was worse: the test file asserted the share fell
+  "monotonically decreasing within EVERY band checked separately". Falsified in
+  all four bands, and the band that falsifies it hardest — `0-250m`, where the
+  share *rises* with unrest — holds 65.5% of all settlements. So the campaign's
+  stated mechanism had the wrong sign on the ground most people live on, and
+  the pooled table could not show it because the two upper bands hold 75.8% of
+  the land.
+- The scope clause "on the shipped roster" was written down as load-bearing,
+  in the test file, in a paragraph explicitly warning against dropping it — and
+  then dropped from **four of the five places it was restated**, including this
+  file's opening sentence and the chronicle's conclusion, which used the word
+  *innocent*. An acquittal is exactly what arm B has no power to issue.
+
+The generalisation the third bullet forces: **the summary sentences are where a
+qualifier dies.** A caveat survives in the paragraph that argues for it and
+evaporates in the abstract, the heading, and the conclusion — the three places
+a reader in a hurry actually reads. Writing "this clause is load-bearing" next
+to the clause did not protect it. Re-reading every restatement against the
+clause did.
 
 ## 5. Two amendments that measurement forced, and one that expired
 
@@ -288,6 +320,21 @@ is the cheap always-running half of the same claim.
   the unguarded one.
 - **An unmoved laboratory directory is not evidence about the census**, because
   the regeneration script skips censuses. The gallery is the decisive tree.
+  This rule was written here and then violated by the chronicle, which claimed
+  the laboratory tables and the survey "regenerated without moving a byte" — a
+  conclusion that is very likely true and whose evidence was never taken. A
+  rule stated in the retrospective does not audit the chronicle.
+- **A tripwire behind a `heavy:` tag is not a tripwire.** Spec §6.6 declared the
+  exposure probe a regression tripwire — re-run it after any campaign touching
+  siting or soil — and its mechanism was two *source greps costing
+  milliseconds*, parked inside a 322-second heavy-tier test because that is
+  where the arm they belonged to lived. Since decision 0125 there is no CI, so
+  they ran only when a human dispatched `make heavy-remote`: the campaign that
+  would trip the wire is exactly the one that would not run it. The fix was to
+  extract the free half into its own untagged test and call it from both.
+  Generalisation: **tag a test by the cost of its most expensive clause only
+  after checking whether the cheap clauses can be split out** — a `heavy:` tag
+  is applied to a whole test but earned by one part of it.
 - **The host name is not stable.** This Mac reported two different names across
   a reboot, and the timings baseline is keyed on it. Read `hostname -s` before
   reading a baseline.

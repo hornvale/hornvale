@@ -146,15 +146,56 @@
 //!
 //! - `unrest_deciles_differ_in_andosol_share`: andosol_share ran the
 //!   OPPOSITE direction from the guard's original directional assumption —
-//!   0.92% at decile 0 falling monotonically to 0.00% at decile 9, and
-//!   monotonically decreasing within EVERY band checked separately (not
-//!   merely in the pooled mix). `SoilOrder::Andosol` requires volcanic
-//!   parent rock AND `mean_temp_c > 5.0`; high-unrest ground in this terrain
-//!   model runs colder within a band than low-unrest ground does, which is
-//!   enough to gate Andosol out even where the parent rock qualifies. A
-//!   genuine finding, not degeneracy or a probe defect (the deciles are
-//!   demonstrably NOT uniform; they just disagreed with the original
-//!   encoding's assumed sign).
+//!   0.92% at decile 0 against 0.00% at decile 9. `SoilOrder::Andosol`
+//!   requires volcanic parent rock AND `mean_temp_c > 5.0`, and in the two
+//!   bands that hold most of the land the high-unrest ground runs colder,
+//!   which is enough to gate Andosol out even where the parent rock
+//!   qualifies. A genuine finding, not degeneracy or a probe defect (the
+//!   deciles are demonstrably NOT uniform; they just disagreed with the
+//!   original encoding's assumed sign).
+//!
+//!   **CORRECTED IN THE FIX WAVE (2026-08-14). The sentence this bullet
+//!   originally carried — "falling monotonically … and monotonically
+//!   decreasing within EVERY band checked separately (not merely in the
+//!   pooled mix)" — was false on both counts, and is re-derived here from
+//!   the committed fixture rather than restated.** The land-cell-weighted
+//!   pooled series is not monotone: it rises at d2→d3 (0.006012 → 0.007355)
+//!   before resuming its fall. Per band it is worse — the "within EVERY
+//!   band" clause is falsified in all four:
+//!
+//!   | decile | `0-250m` | `250-1000m` | `1000-2500m` | `2500m+` |
+//!   |---|---|---|---|---|
+//!   | 0 | 0.000000 | 0.000000 | 0.009338 | 0.013843 |
+//!   | 1 | 0.000206 | 0.000000 | 0.004466 | 0.011763 |
+//!   | 2 | 0.000200 | 0.000174 | 0.003849 | 0.010921 |
+//!   | 3 | 0.000417 | 0.000000 | 0.005660 | 0.012691 |
+//!   | 4 | 0.000000 | 0.000000 | 0.005052 | 0.011051 |
+//!   | 5 | **0.000587** | 0.000176 | 0.003225 | 0.006532 |
+//!   | 6 | 0.000194 | **0.000527** | 0.002344 | 0.004972 |
+//!   | 7 | 0.000199 | 0.000521 | 0.001050 | 0.003159 |
+//!   | 8 | 0.000000 | 0.000000 | 0.000436 | 0.000557 |
+//!   | 9 | 0.000000 | 0.000000 | 0.000000 | 0.000000 |
+//!
+//!   The two upper bands do fall overall (0.009338 → 0.000000 and
+//!   0.013843 → 0.000000) but both rise at d2→d3. The two LOWER bands do
+//!   the opposite: each starts at exactly zero at d0 and *rises* into an
+//!   interior peak (`0-250m` at d5, `250-1000m` at d6) before collapsing to
+//!   zero at d9.
+//!
+//!   **This is the substantive part, and it is why the sentence mattered.**
+//!   `0-250m` holds 65.5% of all settlements in this readout (17,138 of
+//!   26,146), and in that band the andosol share moves the SAME direction as
+//!   unrest over d0→d5, not the opposite one. So "volcanic soil and volcanic
+//!   violence are anti-correlated" is a **pooled and upper-band** statement,
+//!   carried by the two bands that hold 75.8% of the land, and it is NOT a
+//!   universal one — the mechanism sentence ("within any elevation band the
+//!   high-unrest ground runs colder") overstates its own data. The pooled
+//!   series is dominated by the upper bands because they hold most of the
+//!   land, not because every band agrees.
+//!
+//!   None of this touches the guard, which is direction-free by design
+//!   (`(hi - lo).abs() > 0.002` on the pooled series) and stays green either
+//!   way. It was published PROSE that claimed more than the table.
 //! - `exposure_ratios_are_within_absurdity_bounds`: `sea-elf` (4 total
 //!   settlements across the whole 30-seed sweep, ALL of them marine — see
 //!   fix round 2) read exposure ratios up to 22.95, over the 20.0 ceiling,
@@ -1552,6 +1593,13 @@ fn attractor_cells_of(
 /// being read against a claim that no longer holds, so there is nothing to
 /// measure. Failing before the expensive half is the honest order.
 ///
+/// **Arm C also runs on the commit gate, which this test does not.** Its two
+/// clauses live in [`assert_no_soil_reaches_siting`] and have their own
+/// untagged test, [`the_siting_path_does_not_read_soil`] — spec §6.6 declares
+/// this probe a regression tripwire, and a tripwire reachable only through
+/// `make heavy-remote` cannot fire on the campaign that would trip it. This
+/// test keeps calling them so its own ordering above still holds.
+///
 /// # Dated measurement (2026-08-12, Task 2)
 ///
 /// See the module doc's Task-2 section for the measured per-arm [`Movement`]
@@ -1568,68 +1616,12 @@ fn attractor_cells_of(
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     // ARM C, FIRST because it is free and because a stale null makes the
-    // expensive half unreadable. Soil fertility has no application point in
-    // the siting path, so the arm is a CONNECTIVITY assertion: no siting-path
-    // code reads a soil order or a soil fertility. If this ever fails,
-    // someone wired The Ground into siting and this probe's null is stale —
-    // which is precisely the shelf life spec §6.6 declares.
-    //
-    // Clause 1: the demography domain, where the whole siting ARITHMETIC
-    // lives (carrying capacity, the coexistence pack, both condensations).
-    // The claim being made is "this domain does not know soil exists at
-    // all", so the scan must cover the WHOLE domain.
-    //
-    // ENUMERATED AT RUNTIME, not by a list of `include_str!` paths (fix
-    // round 2, 2026-08-12). The first encoding named four files —
-    // carrying_capacity, coexist, condense, stack_condense — while claiming
-    // the domain, leaving niche.rs (home of `ConditionNiche`, the natural
-    // place a soil axis would be added), founder.rs, flow.rs, footprint.rs,
-    // render.rs, byproducts.rs and lib.rs unscanned. A hand-written path
-    // list cannot make a whole-domain claim, because a file added tomorrow
-    // is not in it; reading the directory can.
-    let demography_src = concat!(env!("CARGO_MANIFEST_DIR"), "/../../domains/demography/src");
-    let sources = rust_sources_under(std::path::Path::new(demography_src));
-    assert!(
-        sources.len() >= 11,
-        "expected the demography domain to have at least the 11 sources it \
-         had when this clause was written, found {} — this fires when the \
-         scan finds FEWER sources than the domain is known to have, which \
-         almost always means it is pointed at the wrong directory rather \
-         than that the domain shrank. Verify the path before raising this.",
-        sources.len()
-    );
-    for (path, src) in &sources {
-        for spelling in SOIL_SPELLINGS {
-            assert!(
-                !src.contains(spelling),
-                "the demography source {path} now mentions `{spelling}` — The \
-                 Ground has been wired into the siting arithmetic, and this \
-                 probe's arm-C null is STALE. Re-take the reading and rewrite \
-                 this assertion."
-            );
-        }
-    }
-
-    // Clause 2: the composition root's siting chain, function by function.
-    // NOT whole-file: `windows/worldgen/src/lib.rs` is a ~13k-line god file
-    // that ALREADY contains `classify_soil(` — inside `soil_of`, which Task 1
-    // established is called from five places, NONE of them in the siting
-    // path. A whole-file grep here is therefore red on arrival and proves
-    // nothing; the arm has to name the functions whose output actually
-    // reaches K.
-    let worldgen = include_str!("../src/lib.rs");
-    for signature in SITING_CHAIN {
-        let body = body_of(worldgen, signature);
-        for spelling in SOIL_SPELLINGS {
-            assert!(
-                !body.contains(spelling),
-                "the siting-chain function `{signature}` now mentions \
-                 `{spelling}` — The Ground has been wired into siting, and \
-                 this probe's arm-C null is STALE. Re-take the reading and \
-                 rewrite this assertion."
-            );
-        }
-    }
+    // expensive half unreadable. The clauses themselves now live in
+    // [`assert_no_soil_reaches_siting`] and are ALSO run by
+    // `the_siting_path_does_not_read_soil` on the commit gate; calling them
+    // here as well keeps this battery's fail-fast order intact, which is the
+    // property this comment used to describe.
+    assert_no_soil_reaches_siting();
 
     let wc = WorldComponents::assemble().expect("components assemble");
     let arm_a_mask = ChannelMask {
@@ -1867,9 +1859,116 @@ fn movement_of(
     }
 }
 
+/// Arm C's two connectivity clauses: no siting-path source reads a soil order
+/// or a soil fertility.
+///
+/// Extracted from
+/// [`the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap`] in the
+/// fix wave so it can run on the COMMIT GATE — see
+/// [`the_siting_path_does_not_read_soil`] for why that mattered. Both callers
+/// run it; it is pure over the source tree, so running it twice costs
+/// milliseconds and cannot disagree with itself.
+///
+/// Clause 1 is the demography domain, where the whole siting ARITHMETIC lives
+/// (carrying capacity, the coexistence pack, both condensations). The claim
+/// being made is "this domain does not know soil exists at all", so the scan
+/// must cover the WHOLE domain.
+///
+/// **Clause 1 is ENUMERATED AT RUNTIME**, not by a list of `include_str!`
+/// paths (fix round 2, 2026-08-12). The first encoding named four files —
+/// carrying_capacity, coexist, condense, stack_condense — while claiming the
+/// domain, leaving niche.rs (home of `ConditionNiche`, the natural place a
+/// soil axis would be added), founder.rs, flow.rs, footprint.rs, render.rs,
+/// byproducts.rs and lib.rs unscanned. A hand-written path list cannot make a
+/// whole-domain claim, because a file added tomorrow is not in it; reading the
+/// directory can.
+///
+/// Clause 2 is the composition root's siting chain, function by function, and
+/// deliberately NOT whole-file: `windows/worldgen/src/lib.rs` is a ~13k-line
+/// god file that ALREADY contains `classify_soil(` — inside `soil_of`, which
+/// Task 1 established is called from five places, NONE of them in the siting
+/// path. A whole-file grep here is red on arrival and proves nothing; the arm
+/// has to name the functions whose output actually reaches K.
+fn assert_no_soil_reaches_siting() {
+    let demography_src = concat!(env!("CARGO_MANIFEST_DIR"), "/../../domains/demography/src");
+    let sources = rust_sources_under(std::path::Path::new(demography_src));
+    assert!(
+        sources.len() >= 11,
+        "expected the demography domain to have at least the 11 sources it \
+         had when this clause was written, found {} — this fires when the \
+         scan finds FEWER sources than the domain is known to have, which \
+         almost always means it is pointed at the wrong directory rather \
+         than that the domain shrank. Verify the path before raising this.",
+        sources.len()
+    );
+    for (path, src) in &sources {
+        for spelling in SOIL_SPELLINGS {
+            assert!(
+                !src.contains(spelling),
+                "the demography source {path} now mentions `{spelling}` — The \
+                 Ground has been wired into the siting arithmetic, and this \
+                 probe's arm-C null is STALE. Re-take the reading and rewrite \
+                 this assertion."
+            );
+        }
+    }
+
+    let worldgen = include_str!("../src/lib.rs");
+    for signature in SITING_CHAIN {
+        let body = body_of(worldgen, signature);
+        for spelling in SOIL_SPELLINGS {
+            assert!(
+                !body.contains(spelling),
+                "the siting-chain function `{signature}` now mentions \
+                 `{spelling}` — The Ground has been wired into siting, and \
+                 this probe's arm-C null is STALE. Re-take the reading and \
+                 rewrite this assertion."
+            );
+        }
+    }
+}
+
+/// **THE §6.6 TRIPWIRE, ON THE COMMIT GATE.**
+///
+/// Spec §6.6 declares the exposure probe a *regression tripwire*: re-run it
+/// after any campaign that touches settlement siting or soil fertility,
+/// because the chronicle's central finding — that the measured exposure
+/// gradient is carried by neither modelled channel — rests on soil having no
+/// application point in the siting path at all.
+///
+/// **A tripwire nothing runs is not a tripwire.** These two clauses used to
+/// live inside
+/// [`the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap`], which
+/// is `heavy:`-tagged and cost 322 s, so `make gate` skipped them entirely;
+/// and since decision 0125 there is no CI, so the heavy tier only runs when a
+/// human dispatches `make heavy-remote`. The failure that shape permits is
+/// specific and silent: someone wires The Ground into siting, the null goes
+/// stale, and the book keeps asserting a finding that no longer holds with
+/// nothing red anywhere.
+///
+/// The clauses are **pure source greps costing milliseconds** — they build no
+/// world and read no fixture — so there was never a cost reason for them to
+/// sit behind the ablation arms. Those arms stay where they are; only the free
+/// half moved. The heavy test still calls
+/// [`assert_no_soil_reaches_siting`] first, so its fail-fast ordering is
+/// unchanged.
+///
+/// What this does NOT establish is unchanged from arm C's own doc: the grep is
+/// coarse, it is a tripwire on specific wiring rather than a proof of absence,
+/// and the heavy test's `vacated > 0` positive controls remain what carry the
+/// real evidential weight.
+///
+/// claim: invariant(seed: none) — a static scan over the demography domain and
+/// ten named worldgen functions; no world is built.
+#[test]
+fn the_siting_path_does_not_read_soil() {
+    assert_no_soil_reaches_siting();
+}
+
 /// The spellings arm C treats as "a soil term has reached here". Coarse by
-/// construction — see [`the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap`]'s
-/// doc for what it cannot see.
+/// construction — see [`assert_no_soil_reaches_siting`]'s doc and
+/// [`the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap`]'s
+/// for what it cannot see.
 const SOIL_SPELLINGS: [&str; 4] = [
     "classify_soil",
     "SoilOrder",

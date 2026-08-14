@@ -205,12 +205,6 @@ impl TectonicGlobe {
         self.channel_seed
     }
 
-    /// The already-derived `streams::ARC_GATE` hash-noise seed the elevation
-    /// gated island-arc edifices with.
-    pub fn arc_gate_noise_seed(&self) -> Seed {
-        self.arc_gate_seed
-    }
-
     /// The already-derived `streams::RILL_PARTITION` hash-noise seed
     /// `branch.rs` uses directly for the sub-cell catchment partition.
     pub fn rill_partition_seed(&self) -> Seed {
