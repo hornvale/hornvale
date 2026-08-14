@@ -654,10 +654,17 @@ posted* anything (content age). A host that syncs on a healthy cadence looks
 fresh on the first signal forever, even after the peer itself has gone quiet;
 the second is the one that would actually tell you.
 
-**Nothing syncs the board for you, and nothing rebuilds its binary for you.**
-`SessionStart` only *renders* the local union, so a peer's `hold-off` is only
-as current as the last `make board-sync` or `make preflight` on this host;
-and `scripts/board-render.sh` prefers a prebuilt release binary it
+**SessionStart now syncs the board, one session behind.** Since The Staff the
+`SessionStart` hook runs `scripts/board-sync.sh` asynchronously, so peer
+mirrors refresh on every session instead of only on `make preflight` (which
+had 4 rows in the whole timings ledger). But the render runs *synchronously*
+and the sync does not, so **the board you read at session start reflects the
+PREVIOUS session's sync** — freshness is "as current as your last session",
+not "as current as this one". Run `make board-sync && make board` when you
+need the current state, e.g. before acting on a peer's `hold-off`.
+
+**Nothing rebuilds the board's binary for you.**
+`scripts/board-render.sh` prefers a prebuilt release binary it
 deliberately never compiles, so after any board change (including this
 merge) every checkout keeps reading with the previous binary until someone
 runs `cargo build --release --manifest-path tools/board/Cargo.toml`. The
