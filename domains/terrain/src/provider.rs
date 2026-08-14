@@ -415,15 +415,22 @@ impl GeneratedTerrain {
     /// The **source contact cell** of the edifice a cell belongs to, or
     /// `None` where there is no edifice (The Repose, Task 5).
     ///
-    /// This is the identity of a mountain, and it exists because an edifice
-    /// is wider than one cell: the gate is sampled once per contact, at the
-    /// source, precisely so a whole cone shares one value, and the elevation
-    /// then decays that value out to `ARC_EDIFICE_DECAY_CELLS`. Every cell of
-    /// one cone therefore answers with the *same* source, while the query
-    /// cell it was asked about differs — so a consumer that keys a mountain's
-    /// identity (or its name) on the query cell mints several mountains for
-    /// one landform. On the canonical seed-42 L6 globe that is 360 edifice
-    /// cells over ~187 contacts.
+    /// This is the identity of one edifice, and it exists because an
+    /// edifice is wider than one cell: the gate is sampled once per
+    /// **contact**, at the source, precisely so every cell attributed to
+    /// that contact shares one value, and the elevation then decays that
+    /// value out to `ARC_EDIFICE_DECAY_CELLS`. Every cell of one contact's
+    /// edifice therefore answers with the *same* source, while the query
+    /// cell it was asked about differs — so a consumer that keys identity
+    /// (or a name) on the query cell mints several edifices for one
+    /// landform. On the canonical seed-42 L6 globe that is 360 edifice
+    /// cells over ~187 **contact cells** — read that as 187 identities, not
+    /// 187 physically separate cones: adjacent contacts along one arc are
+    /// common (173 of the 187 have another contact as a same-plate
+    /// neighbor), so one continuous volcanic arc resolves to a *chain* of
+    /// separately identified edifices rather than a single one. See
+    /// `windows/worldgen/src/volcano.rs`'s module docs for what that means
+    /// for naming.
     ///
     /// Same purity as [`has_edifice`](Self::has_edifice), which is defined in
     /// terms of this: the arc gate is hash-noise resampled at the source, so

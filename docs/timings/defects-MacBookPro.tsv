@@ -3,3 +3,4 @@
 # git log -p on this file is the archaeology of what the suite defends.
 when_utc	commit	branch	changed_crates	failed_test
 2026-08-14T04:16:19Z	a1a33028	campaign/the-gnomon	docs/timings.md	hornvale::generated_paths$no_claude_md_restates_the_declared_path_list
+2026-08-14T12:47:19Z	3370ad9f	the-repose	docs/timings,domains/terrain,windows/worldgen	hornvale::claim_shape$every_seed_looping_test_in_the_repo_declares_its_claim_shape

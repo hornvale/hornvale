@@ -147,6 +147,18 @@ pub fn boundary_field(
 /// deterministic, O(cells). `None` only for a cell no same-plate boundary
 /// cell can reach (a fragmented plate at coarse resolution, or a plate with
 /// no boundary at all); callers treat that as "no boundary influence".
+///
+/// **A boundary cell always seeds itself**, at `(0, cell)` — the loop above
+/// enqueues every boundary cell with itself as its own source before the BFS
+/// runs. `GeneratedTerrain::edifice_source_at`
+/// (`domains/terrain/src/provider.rs`, The Repose) depends on exactly this:
+/// it treats a volcanic edifice's source contact as itself always being an
+/// edifice cell (same plate, same `arc_side`, same contact, same gate value
+/// as whatever query admitted it), which only holds because a boundary cell
+/// is its own zero-distance source here. If this function ever seeded a
+/// boundary cell some other way, that consumer's `.expect()` would start
+/// panicking on real terrain; noted here so the invariant has a note at both
+/// ends, not just the consumer's.
 /// type-audit: bare-ok(index: plate_of), bare-ok(count: return)
 pub fn boundary_distance(
     geo: &Geosphere,

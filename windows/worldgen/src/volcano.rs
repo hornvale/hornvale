@@ -17,21 +17,36 @@
 //! # The key is the edifice's source contact, not the cell you asked about
 //!
 //! An edifice is wider than one cell. The elevation samples the along-strike
-//! arc gate **once per contact, at the source**, precisely so a whole cone
-//! shares one value, then decays that value outward
-//! (`terrain::elevation::edifice_present`). On the canonical seed-42 L6 globe
-//! that is **360 edifice cells over roughly 187 contacts** — 187 cells at hop
-//! 0 and 173 at hop 1, a mean cluster of about 1.9 cells.
+//! arc gate **once per contact, at the source**, precisely so every cell
+//! attributed to one contact shares one value, then decays that value
+//! outward (`terrain::elevation::edifice_present`). On the canonical
+//! seed-42 L6 globe that is **360 edifice cells over roughly 187 contact
+//! cells** — 187 cells at hop 0 and 173 at hop 1, a mean cluster of about
+//! 1.9 cells per contact.
 //!
 //! So a `volcano_at` keyed on the **query** cell would mint up to 360
-//! mountains for 187 cones on one seed, and the two halves of one mountain
-//! would carry different identities, different recurrences and different
-//! names. This module keys on
+//! identities for 187 contacts on one seed, and the two halves of one
+//! contact's edifice would carry different identities, different
+//! recurrences and different names. This module keys on
 //! [`GeneratedTerrain::edifice_source_at`](hornvale_terrain::GeneratedTerrain::edifice_source_at)
 //! instead — the terrain's own unit of "one edifice" — and
-//! `every_cell_of_one_edifice_resolves_to_one_volcano` /
-//! `every_cell_of_one_edifice_carries_one_name` hold the property over a whole
-//! globe rather than by construction-by-inspection.
+//! `every_cell_of_one_edifice_resolves_to_one_volcano` holds that property
+//! over a whole globe rather than by construction-by-inspection.
+//!
+//! **This does NOT mean the globe carries 187 physically separate
+//! mountains.** "187" counts *contact cells*, and a contact cell is not the
+//! same unit as a volcanic cone in the terrain a player walks: 173 of the
+//! 187 contacts on seed 42 abut another contact on the same plate, so a
+//! single continuous stretch of gate-on arc — physically one ridge of
+//! coalesced cones — resolves to a *chain* of separately identified,
+//! separately named, separately styled `Volcano`s, one per contact, rotated
+//! onto the along-strike axis instead of across a cone's own width. This is
+//! a deliberate scale match, not a defect: an L6 cell is roughly 120 km and
+//! real arc cone spacing is 50-100 km, so one edifice identity per contact
+//! is physically defensible. But it means a settlement's horizon along one
+//! arc can hold on the order of **ten separately named volcanoes**, not
+//! one — Task 7's knownness needs to build on that shape, not on "a
+//! settlement sees at most one volcano per ridge."
 //!
 //! That key is a **place** in the fixed geosphere, never a generation
 //! ordinal. This project has met the "generation order is never an identity"
@@ -302,26 +317,50 @@ mod tests {
         }
     }
 
-    /// **The naming half of the identity property**, held separately so it
-    /// can fail on its own: one people has ONE word for one mountain, however
-    /// many cells that mountain spans and whichever of them was asked about.
+    /// **The distinctness half of the identity property**: two *different*
+    /// volcanoes carry two *different* names for the same people.
+    ///
+    /// This replaces an earlier test, `every_cell_of_one_edifice_carries_
+    /// one_name`, whose doc claimed it "can fail on its own" but could not:
+    /// under the shipped `volcano_name(&Volcano, …)` signature, the name is
+    /// a pure function of a `Volcano` value, and
+    /// `every_cell_of_one_edifice_resolves_to_one_volcano` already asserts
+    /// every cell of one cone resolves to the *same* `Volcano` (full
+    /// `PartialEq`, including `recurrence` and `style`). Two equal
+    /// `Volcano`s feeding a pure function are equal-name by construction —
+    /// that test's collapse-invariance was a theorem of its sibling, not an
+    /// independent check, and never could have gone red on its own.
+    ///
+    /// What was genuinely uncovered: nothing pinned that DIFFERENT volcanoes
+    /// get different names. Replacing the salt `u64::from(volcano.source.0)`
+    /// in [`volcano_name`] with a constant `0` left the old suite 9/9
+    /// green — every mountain on the globe would have carried the identical
+    /// name per people, and Task 7's knownness would let a people "remember"
+    /// a mountain indistinguishable by name from every other one it can see.
+    /// This test is the mutation-proved fix: it fails under that exact
+    /// mutation (verified by hand, not asserted in-suite — reverting the
+    /// salt to a constant is not itself a regression test here) and passes
+    /// on the real derivation, where 187 volcanoes on seed 42 produce 187
+    /// distinct names for `species = "aeldrin"` (worst collision count: 1,
+    /// i.e. none).
     #[test]
-    fn every_cell_of_one_edifice_carries_one_name() {
+    fn distinct_volcanoes_carry_distinct_names_for_one_people() {
         let (geo, terrain) = globe();
         let ph = phonology("aeldrin");
         let morph = morph();
-        let name_at = |cell: CellId| {
-            let volcano = volcano_at(Seed(42), &terrain, cell).expect("an edifice cell");
-            volcano_name(Seed(42), &volcano, "aeldrin", &ph, &morph).roman
-        };
-        for (source, cells) in &multi_cell_cones(&geo, &terrain) {
-            let first = name_at(cells[0]);
-            for cell in cells {
-                assert_eq!(
-                    name_at(*cell),
-                    first,
-                    "the cone at {source:?} is one mountain with two names: {cell:?} vs {:?}",
-                    cells[0]
+        let all_cones = cones(&geo, &terrain);
+        assert!(
+            all_cones.len() > 1,
+            "fewer than two volcanoes on the test globe — distinctness is untestable here"
+        );
+        let mut seen: BTreeMap<String, CellId> = BTreeMap::new();
+        for source in all_cones.keys() {
+            let volcano = volcano_at(Seed(42), &terrain, *source).expect("an edifice cell");
+            let name = volcano_name(Seed(42), &volcano, "aeldrin", &ph, &morph).roman;
+            if let Some(collision) = seen.insert(name.clone(), *source) {
+                panic!(
+                    "{source:?} and {collision:?} are different volcanoes yet share the name \
+                     {name:?}"
                 );
             }
         }
@@ -330,23 +369,42 @@ mod tests {
     /// The precondition [`volcano_at`]'s `expect` rests on, asserted rather
     /// than argued: an edifice's source contact is itself an edifice cell, so
     /// the hazard field always has a volcanic recurrence to read there.
+    ///
+    /// **Held over several seeds, not one.** The invariant this leans on —
+    /// a boundary cell always seeds `boundary_distance` at `(0, itself)` —
+    /// lives in `domains/terrain::boundaries::boundary_distance`, a
+    /// different crate this module cannot see the internals of; a single
+    /// seed-42 pass could not distinguish "true by construction" from "true
+    /// on this one globe's boundary layout by chance". Five seeds cost
+    /// ~1.4 s together, cheap enough to hold the property broadly rather
+    /// than by inspection of one world.
+    ///
+    /// claim: invariant(forall-seed) — a fixed, small seed set standing in
+    /// for "true by construction", per `boundary_distance`'s own doc note;
+    /// not a census candidate (no census metric names an edifice yet) and
+    /// not a rate or reachability claim.
     #[test]
     fn an_edifices_source_is_itself_an_edifice() {
-        let (geo, terrain) = globe();
-        let cones = cones(&geo, &terrain);
-        assert!(!cones.is_empty(), "no edifice on the test globe");
-        for source in cones.keys() {
-            assert_eq!(
-                terrain.edifice_source_at(*source),
-                Some(*source),
-                "{source:?} identifies a cone but is not an edifice cell of it"
-            );
+        for seed in [42, 43, 44, 45, 46] {
+            let (geo, terrain) = globe_of(Seed(seed));
+            let cones = cones(&geo, &terrain);
             assert!(
-                crate::hazard::hazard_at(&terrain, *source)
-                    .volcanic
-                    .is_some(),
-                "{source:?} identifies a cone with no eruption interval"
+                !cones.is_empty(),
+                "seed {seed}: no edifice on the test globe"
             );
+            for source in cones.keys() {
+                assert_eq!(
+                    terrain.edifice_source_at(*source),
+                    Some(*source),
+                    "seed {seed}: {source:?} identifies a cone but is not an edifice cell of it"
+                );
+                assert!(
+                    crate::hazard::hazard_at(&terrain, *source)
+                        .volcanic
+                        .is_some(),
+                    "seed {seed}: {source:?} identifies a cone with no eruption interval"
+                );
+            }
         }
     }
 
