@@ -7,10 +7,18 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 fails=0
+skips=0
+passed=0
 
-note() { printf '  %s\n' "$*"; }
-ok()   { printf 'ok   %s\n' "$*"; }
+ok()   { printf 'ok   %s\n' "$*"; passed=$((passed+1)); }
 bad()  { printf 'FAIL %s\n' "$*" >&2; fails=$((fails+1)); }
+# A case group that cannot run on this host (no flock) is neither a pass nor
+# a failure — it is its own outcome, printed unambiguously so the closing
+# line can report it separately rather than folding it silently into
+# "passed". Every case group below must call ok/bad/skip at least once: a
+# header with nothing after it is exactly the "did this run?" ambiguity this
+# helper exists to remove.
+skip() { printf 'SKIP %s\n' "$*"; skips=$((skips+1)); }
 
 # --- the guard REFUSES off-host (positive control) --------------------------
 # Direction enforced: `a non-canonical host is refused`. Driven by overriding
@@ -211,7 +219,7 @@ fi
 # covers that. Skipped where there is no flock (macOS ships none).
 echo "== the claim excludes =="
 if ! command -v flock >/dev/null 2>&1; then
-    note "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
+    skip "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
 else
     lock="$tmp/staff.lock"
     ( exec 9>"$lock"; flock 9; sleep 3 ) &
@@ -245,10 +253,16 @@ if command -v flock >/dev/null 2>&1; then
     else
         bad "grant order was not FIFO: $(tr '\n' ' ' < "$out")"
     fi
+else
+    skip "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
 fi
 
 if [ "$fails" -ne 0 ]; then
-    echo "test-lane: $fails failure(s)" >&2
+    echo "test-lane: $fails failure(s), $passed passed, $skips skipped" >&2
     exit 1
 fi
-echo "test-lane: all cases passed"
+if [ "$skips" -ne 0 ]; then
+    echo "test-lane: $passed passed, $skips skipped (no flock)"
+else
+    echo "test-lane: $passed passed"
+fi
