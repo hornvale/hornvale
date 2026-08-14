@@ -1,0 +1,18 @@
+[package]
+name = "hornvale-hearsay"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale hearsay window: derive held claims from committed history."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+hornvale-history = { path = "../../domains/history" }
+
+# Task 6's heavy battery builds a real world. These are DEV-only on purpose:
+# the library reads a ledger and nothing else, and a read-only window must not
+# depend on the composition root at runtime.
+[dev-dependencies]
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-terrain = { path = "../../domains/terrain" }

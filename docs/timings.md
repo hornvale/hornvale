@@ -869,3 +869,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T03:24:47Z | quick | 29.071 | 45.763 | 10.191 | 1.92 | 0 | 68d2ac4c | campaign/the-hearsay | MacBookPro | 10 |
 | 2026-08-14T03:26:39Z | quick | 28.023 | 37.404 | 11.029 | 1.73 | 0 | 75eb12be | campaign/the-hearsay | MacBookPro | 10 |
 | 2026-08-14T03:27:25Z | quick | 19.492 | 11.401 | 0.517 | 0.61 | 0 | 75eb12be | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T03:37:32Z | rebaseline | 64.315 | 200.978 | 12.710 | 3.32 | 0 | 9a5ff2c2 | campaign/the-hearsay | MacBookPro | 10 |
