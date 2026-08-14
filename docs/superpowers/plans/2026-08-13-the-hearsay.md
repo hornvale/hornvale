@@ -562,147 +562,24 @@ git commit -m "feat(hearsay): the window, and the founding tree read correctly"
 
 ---
 
-### Task 4: the independence test
+### Task 4: DEFERRED TO CAMPAIGN 2 — do not implement
 
-**Files:**
-- Create: `windows/hearsay/src/independence.rs`
-- Modify: `windows/hearsay/src/lib.rs` (add `pub mod independence;`)
-- Test: `windows/hearsay/tests/independence.rs`
+The independence test (`independent_witnesses`, stemmatics' *eliminatio
+codicum descriptorum*) was specified here, approved at G3, and then found to
+measure nothing on this campaign's substrate. Spec §5 carries the full finding.
 
-**Interfaces:**
-- Consumes: `Lineage` (Task 3).
-- Produces: `hornvale_hearsay::independence::independent_witnesses(&Lineage, &[EntityId]) -> usize`.
+The short version: claims reach holders by one route only — witness, then
+inherit — so an event's holder set is a single subtree and the function returns
+1 every time. Independence needs a claim to arrive by **two** routes, and two
+routes is diffusion, which is this campaign's first non-goal. It is a scope
+error, not a hard measurement.
 
-**The rule, from stemmatics** (*eliminatio codicum descriptorum*): a witness whose entire derivation ancestry is contained in another surviving witness's ancestry contributes nothing independent. Ten goblins who all heard it from one goblin are **one** observation wearing ten mouths.
+**Nothing here is to be built.** The function is correct and campaign 2 will
+want it verbatim; it is preserved in spec §7 and in the frontier row
+`KNOW-independence`, which stays `spec'd` against this document. Task numbering
+is left alone so the briefs, ledger and commits already referring to Tasks 5
+and 6 keep pointing at the same work.
 
-- [ ] **Step 1: Write the failing test**
-
-`windows/hearsay/tests/independence.rs`:
-
-```rust
-mod common;
-
-use common::{eid, ledger_with};
-use hornvale_hearsay::independence::independent_witnesses;
-use hornvale_hearsay::lineage::lineage_of;
-
-#[test]
-fn a_chain_of_three_holders_is_one_independent_witness() {
-    // 1 -> 2 -> 3. Everyone knows it because 1 did.
-    let lin = lineage_of(&ledger_with(&[(1, None), (2, Some(1)), (3, Some(2))]));
-    assert_eq!(
-        independent_witnesses(&lin, &[eid(1), eid(2), eid(3)]),
-        1,
-        "a descended copy adds no independent weight"
-    );
-}
-
-#[test]
-fn two_disjoint_lineages_are_two_independent_witnesses() {
-    let lin = lineage_of(&ledger_with(&[(1, None), (2, Some(1)), (10, None), (11, Some(10))]));
-    assert_eq!(independent_witnesses(&lin, &[eid(2), eid(11)]), 2);
-}
-
-#[test]
-fn siblings_share_their_parent_and_count_once() {
-    // 2 and 3 both founded from 1; neither witnessed independently.
-    let lin = lineage_of(&ledger_with(&[(1, None), (2, Some(1)), (3, Some(1))]));
-    assert_eq!(independent_witnesses(&lin, &[eid(2), eid(3)]), 1);
-}
-
-#[test]
-fn ten_mouths_one_observation() {
-    // The SOC-reputation-provenance case, at the size it was described.
-    let mut chain = vec![(1u64, None)];
-    for n in 2..=10u64 {
-        chain.push((n, Some(1)));
-    }
-    let lin = lineage_of(&ledger_with(&chain));
-    let holders: Vec<EntityId> = (1..=10u64).map(eid).collect();
-    assert_eq!(independent_witnesses(&lin, &holders), 1);
-}
-
-#[test]
-fn an_unrelated_root_holder_counts_for_itself() {
-    let lin = lineage_of(&ledger_with(&[(1, None), (2, Some(1)), (99, None)]));
-    assert_eq!(independent_witnesses(&lin, &[eid(2), eid(99)]), 2);
-}
-```
-
-- [ ] **Step 2: Run it and verify it fails**
-
-Run: `cargo test -p hornvale-hearsay --test independence`
-Expected: FAIL — `independence` module does not exist.
-
-- [ ] **Step 3: Write the implementation**
-
-`windows/hearsay/src/independence.rs`:
-
-```rust
-//! Stemmatic independence: how many of these holders are actually separate
-//! sources, rather than copies of one another.
-
-use crate::lineage::Lineage;
-use hornvale_kernel::ledger::EntityId;
-use std::collections::BTreeSet;
-
-/// The number of independent origins among `holders`.
-///
-/// The rule is textual criticism's *eliminatio codicum descriptorum*: a
-/// manuscript copied from another surviving manuscript is discarded when
-/// reconstructing the archetype, because it testifies only to its exemplar.
-/// Here, a holder whose ancestry is contained in another holder's ancestry is
-/// not a second witness.
-///
-/// Implemented as: map each holder to the earliest ancestor that is ALSO a
-/// holder (itself, if none is), and count the distinct results. Two holders
-/// resolve to the same origin exactly when one descends from the other or both
-/// descend from a common holder.
-///
-/// This is the frontier row `KNOW-independence` — "two traces are independent
-/// iff their ancestries are disjoint" — made computable.
-pub fn independent_witnesses(lineage: &Lineage, holders: &[EntityId]) -> usize {
-    let holder_set: BTreeSet<EntityId> = holders.iter().copied().collect();
-    let mut origins = BTreeSet::new();
-    for h in &holder_set {
-        // ancestry() is self-first, root-last; the LAST element that is also a
-        // holder is the earliest holding ancestor.
-        let origin = lineage
-            .ancestry(*h)
-            .into_iter()
-            .filter(|a| holder_set.contains(a))
-            .next_back()
-            .unwrap_or(*h);
-        origins.insert(origin);
-    }
-    origins.len()
-}
-```
-
-- [ ] **Step 4: Run the tests and verify they pass**
-
-Run: `cargo test -p hornvale-hearsay --test independence`
-Expected: PASS, 5 tests.
-
-- [ ] **Step 5: Prove the test would catch the naive implementation**
-
-A test that passes against a wrong implementation is worse than no test. Temporarily replace the body of `independent_witnesses` with `holders.len()` and re-run.
-
-Run: `cargo test -p hornvale-hearsay --test independence`
-Expected: FAIL on `a_chain_of_three_holders_is_one_independent_witness` (3 != 1) and on `ten_mouths_one_observation` (10 != 1).
-
-**Then restore the real implementation and re-run to green.** Record both outputs in the task report. If the mutation did *not* go red, the tests are vacuous and the task is not done.
-
-- [ ] **Step 6: Commit**
-
-```bash
-cargo fmt
-cargo clippy -p hornvale-hearsay --all-targets -- -D warnings
-git add windows/hearsay/src/independence.rs windows/hearsay/src/lib.rs windows/hearsay/tests/independence.rs
-git commit -m "feat(hearsay): eliminatio codicum descriptorum, as an echo test"
-```
-
----
 
 ### Task 5: deriving claim sets from committed history
 
@@ -722,42 +599,23 @@ git commit -m "feat(hearsay): eliminatio codicum descriptorum, as an echo test"
 `windows/hearsay/tests/derive.rs`:
 
 ```rust
+mod common;
+
+use common::{eid, ledger_with, put};
 use hornvale_hearsay::derive::claims_about;
 use hornvale_hearsay::lineage::lineage_of;
-use hornvale_kernel::ledger::{EntityId, Fact, Ledger, Value};
-use hornvale_kernel::registry::ConceptRegistry;
+use hornvale_kernel::ledger::{Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
-
-fn eid(n: u64) -> EntityId {
-    EntityId::new(n).expect("nonzero")
-}
 
 /// 1 (root) ends on day 100; 2 founded from 1; 3 founded from 2.
 fn world() -> Ledger {
-    let mut reg = ConceptRegistry::default();
-    reg.register_predicate(hornvale_history::OCC_FOUNDED_FROM, true, "founding")
-        .expect("reg");
-    reg.register_predicate(hornvale_history::OCC_ENDED, true, "ending")
-        .expect("reg");
-    let mut led = Ledger::default();
-    let mut put = |s: u64, p: &str, o: Value| {
-        led.commit(
-            Fact {
-                subject: eid(s),
-                predicate: p.to_string(),
-                object: o,
-                place: None,
-                day: None,
-                provenance: "test".to_string(),
-            },
-            &reg,
-        )
-        .expect("commit");
-    };
-    put(1, hornvale_history::OCC_FOUNDED_FROM, Value::Number(7449.0));
-    put(2, hornvale_history::OCC_FOUNDED_FROM, Value::Entity(eid(1)));
-    put(3, hornvale_history::OCC_FOUNDED_FROM, Value::Entity(eid(2)));
-    put(1, hornvale_history::OCC_ENDED, Value::Number(100.0));
+    let mut led = ledger_with(&[(1, None), (2, Some(1)), (3, Some(2))]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(100.0),
+    );
     led
 }
 
@@ -898,93 +756,30 @@ git commit -m "feat(hearsay): derive held claims from committed history"
 
 ---
 
-### Task 6: the echo ratio, measured on a real world
+### Task 6: transmission depth, measured on a real world
 
 **Files:**
-- Create: `windows/hearsay/tests/echo_ratio_seed42.rs`
+- Create: `windows/hearsay/tests/hop_depth_seed42.rs`
 - Modify: `windows/hearsay/src/lib.rs`, `windows/hearsay/src/lineage.rs` (adds `all`), `windows/lab/src/metrics.rs`, `windows/lab/Cargo.toml`
-- Test: as above, plus the lab registry drift check
 
 **Interfaces:**
-- Consumes: everything above.
-- Produces: `hornvale_hearsay::echo_ratio(&Ledger, &Lineage, subject, predicate) -> Option<f64>`, and the lab metric `history-echo-ratio-median`.
+- Consumes: `claims_about` (Task 5), `Lineage` (Task 3).
+- Produces: `hornvale_hearsay::hops_about(&Ledger, &Lineage, subject, predicate) -> Vec<u32>` and `hornvale_hearsay::median_hops(&Ledger, &Lineage, predicate) -> Option<f64>`, plus the lab metric `history-myth-hop-median`.
 
-**Measure the metric's cost BEFORE registering it.** Nine studies declare `"metrics": "all"`, `study.rs` resolves `MetricSelection::All(_) => Ok(reg)` — the entire registry — and `Metric` carries no cost or opt-in flag. A slow metric becomes a permanent ~2000-world census cost with no way to exclude it. See `windows/lab/CLAUDE.md`.
+**What is being measured, and why it matters** (spec §6): nothing in this
+campaign forgets, so the hop distribution is the **ceiling** on transmission
+depth — the shape myth takes when nothing opposes it. Campaign 2's forgetting
+is a shift against this curve. The prediction is frozen in spec §6 and was
+committed before any measurement; do not adjust the population to move it.
 
-- [ ] **Step 1: Write the seed-42 battery, `#[ignore]`d into the heavy tier**
+**Measure the metric's cost BEFORE registering it.** Nine studies declare
+`"metrics": "all"`, `study.rs` resolves `MetricSelection::All(_) => Ok(reg)`,
+and `Metric` carries no opt-out flag, so a slow metric is a permanent
+~2000-world cost. See `windows/lab/CLAUDE.md`.
 
-The ignore reason is compared **verbatim**, not by prefix (`cli/tests/heavy_tier.rs`). Use exactly this string.
+- [ ] **Step 1: Add the two library functions**
 
-```rust
-//! The preregistered readout (spec §6). Live worldgen; heavy tier only.
-
-use hornvale_hearsay::{echo_ratio, lineage::lineage_of};
-
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn echo_ratio_on_seed_42_has_a_denominator_and_a_median() {
-    // build_world takes five arguments; there is no one-arg form.
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
-        &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &hornvale_terrain::TerrainPins::default(),
-        &hornvale_worldgen::SettlementPins::default(),
-    )
-    .expect("seed 42 builds");
-    let lin = lineage_of(&world.ledger);
-    // `all()` already includes roots — do NOT chain roots() onto it or every
-    // root event is counted twice and the median is computed over a skewed set.
-    let mut ratios: Vec<f64> = Vec::new();
-    for subject in lin.all() {
-        if let Some(r) = echo_ratio(&world.ledger, &lin, subject, hornvale_history::OCC_ENDED) {
-            ratios.push(r);
-        }
-    }
-    assert!(
-        ratios.len() >= 30,
-        "NO VERDICT: {} qualifying events, spec §6 requires >= 30",
-        ratios.len()
-    );
-    ratios.sort_by(f64::total_cmp);
-    let median = ratios[ratios.len() / 2];
-    println!("echo_ratio: n={} median={median:.4}", ratios.len());
-    assert!((0.0..=1.0).contains(&median), "ratio out of range: {median}");
-}
-```
-
-- [ ] **Step 2: Run it and verify it fails**
-
-Run: `cargo test -p hornvale-hearsay --test echo_ratio_seed42 -- --ignored`
-Expected: FAIL — `echo_ratio` is undefined.
-
-- [ ] **Step 3: Implement `echo_ratio`**
-
-In `windows/hearsay/src/lib.rs`:
-
-```rust
-/// `independent_witnesses / holders` for one event, or `None` when fewer than
-/// three holders exist (spec §6's qualifying threshold).
-///
-/// Range is `(0, 1]`: 1.0 when every holder witnessed independently, `1/N`
-/// when all N inherited from one ancestor.
-pub fn echo_ratio(
-    ledger: &hornvale_kernel::ledger::Ledger,
-    lineage: &lineage::Lineage,
-    subject: hornvale_kernel::ledger::EntityId,
-    predicate: &str,
-) -> Option<f64> {
-    let claims = derive::claims_about(ledger, lineage, subject, predicate);
-    if claims.len() < 3 {
-        return None;
-    }
-    let holders: Vec<_> = claims.iter().map(|c| c.holder).collect();
-    let independent = independence::independent_witnesses(lineage, &holders);
-    Some(independent as f64 / holders.len() as f64)
-}
-```
-
-And in `windows/hearsay/src/lineage.rs`:
+In `windows/hearsay/src/lineage.rs`:
 
 ```rust
 impl Lineage {
@@ -1006,86 +801,178 @@ impl Lineage {
 }
 ```
 
-- [ ] **Step 4: Run it and record the real numbers**
+In `windows/hearsay/src/lib.rs`:
 
-Run: `cargo test -p hornvale-hearsay --test echo_ratio_seed42 -- --ignored --nocapture 2>&1 | tee /tmp/hv-echo.txt`
-Expected: PASS, and the printed `n=` and `median=` are the campaign's headline. **Report both figures verbatim in the task report** — do not paraphrase them.
+```rust
+/// The hop count of every holder of a claim about `(subject, predicate)`.
+/// Empty when the subject holds no such committed fact.
+pub fn hops_about(
+    ledger: &hornvale_kernel::ledger::Ledger,
+    lineage: &lineage::Lineage,
+    subject: hornvale_kernel::ledger::EntityId,
+    predicate: &str,
+) -> Vec<u32> {
+    derive::claims_about(ledger, lineage, subject, predicate)
+        .iter()
+        .map(|c| c.hops)
+        .collect()
+}
 
-Then apply spec §6's decision table to the median. All four rows are legitimate outcomes; `median >= 0.8` is the *headline*, not a failure.
+/// Median hop count over every (event, holder) pair in the world for
+/// `predicate`, or `None` when there are no pairs at all.
+///
+/// The median of an even-length population takes the lower of the two central
+/// values — a deterministic tie-break, never an average, so the result is
+/// always an observed hop count and never an interpolated one.
+pub fn median_hops(
+    ledger: &hornvale_kernel::ledger::Ledger,
+    lineage: &lineage::Lineage,
+    predicate: &str,
+) -> Option<f64> {
+    let mut hops: Vec<u32> = lineage
+        .all()
+        .into_iter()
+        .flat_map(|s| hops_about(ledger, lineage, s, predicate))
+        .collect();
+    if hops.is_empty() {
+        return None;
+    }
+    hops.sort_unstable();
+    Some(f64::from(hops[hops.len() / 2]))
+}
+```
 
-- [ ] **Step 5: Measure the metric's cost, then decide whether to register it**
+- [ ] **Step 2: Write the seed-42 battery, `#[ignore]`d into the heavy tier**
+
+The ignore reason is compared **verbatim**, not by prefix
+(`cli/tests/heavy_tier.rs`). Use exactly this string.
+
+`windows/hearsay/tests/hop_depth_seed42.rs`:
+
+```rust
+//! The preregistered readout (spec §6). Live worldgen; heavy tier only.
+
+use hornvale_hearsay::{hops_about, lineage::lineage_of, median_hops};
+
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn transmission_depth_on_seed_42_has_a_population_and_a_median() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .expect("seed 42 builds");
+    let lin = lineage_of(&world.ledger);
+    let mut all: Vec<u32> = Vec::new();
+    for s in lin.all() {
+        all.extend(hops_about(&world.ledger, &lin, s, hornvale_history::OCC_ENDED));
+    }
+    assert!(
+        all.len() >= 500,
+        "NO VERDICT: {} (event, holder) pairs, spec section 6 requires >= 500",
+        all.len()
+    );
+    all.sort_unstable();
+    let median = all[all.len() / 2];
+    let tail = all.iter().filter(|h| **h >= 10).count() as f64 / all.len() as f64;
+    println!(
+        "hops: pairs={} median={median} tail_ge_10={tail:.4} max={}",
+        all.len(),
+        all[all.len() - 1]
+    );
+    assert_eq!(
+        median_hops(&world.ledger, &lin, hornvale_history::OCC_ENDED),
+        Some(f64::from(median)),
+        "median_hops must agree with the battery's own computation"
+    );
+}
+```
+
+- [ ] **Step 3: Run it and record the real numbers**
+
+Run: `cargo nextest run -p hornvale-hearsay --run-ignored all -E 'test(transmission_depth)' --no-capture`
+Expected: PASS, with the printed line. **Paste the numbers verbatim into the
+report** — they are the campaign's readout, and spec §6's four-branch decision
+rule is applied to the median. All four branches are legitimate outcomes.
+
+For reference, a Python pass over the committed seed-42 ledger gave
+`pairs=5453 median=5 tail_ge_10=0.1883 max=21`. **If your figures differ, that
+is a finding, not a nuisance** — report the difference rather than reconciling
+it, because it would mean the Rust derivation and the direct ledger read
+disagree about what a holder is.
+
+- [ ] **Step 4: Measure the metric's cost, then decide whether to register it**
 
 ```bash
 cat > /tmp/hv-cost.study.json <<'JSON'
 { "name": "hearsay-cost-probe", "description": "cost probe, throwaway",
-  "seeds": [42, 43, 44], "pin_sets": [], "metrics": ["history-echo-ratio-median"] }
+  "seeds": [42, 43, 44], "pin_sets": [], "metrics": ["history-myth-hop-median"] }
 JSON
 time cargo run --release -p hornvale -- lab run /tmp/hv-cost.study.json
 ```
 
-Decision rule, applied to per-world wall time:
-- **< 0.5 s/world** → register it; the census absorbs it.
-- **0.5–3 s/world** → register it and say the projected census cost out loud in the commit message (multiply by ~2000 worlds and by the nine `"metrics": "all"` studies).
-- **> 3 s/world** → **do not register.** Keep the heavy-tier battery, report the finding from there, and file a registry row for a cheaper formulation. The Mire declined three metrics at ~3.5 s/world for exactly this reason.
+Decision rule on per-world wall time:
+- **< 0.5 s/world** → register it.
+- **0.5–3 s/world** → register it, and state the projected census cost in the
+  commit message (multiply by ~2000 worlds and by the nine `"all"` studies).
+- **> 3 s/world** → **do not register.** Keep the heavy battery, report from
+  there, and file a registry row for a cheaper formulation. The Mire declined
+  three metrics at ~3.5 s/world for exactly this reason.
 
-- [ ] **Step 6: If registering, add the metric and regenerate**
+- [ ] **Step 5: If registering, add the metric and regenerate**
 
-Add the dependency to `windows/lab/Cargo.toml` (a window may depend on another
-window; `windows/lab` already depends on `windows/worldgen`):
+Add to `windows/lab/Cargo.toml`:
 
 ```toml
 hornvale-hearsay = { path = "../hearsay" }
 ```
 
-Then, in `windows/lab/src/metrics.rs`'s `registry()`, in the `Domain::History`
-family block (beside `vestige-density`, whose shape this matches):
+In `windows/lab/src/metrics.rs`'s `registry()`, in the `Domain::History` family
+block (beside `vestige-density`, whose shape this matches):
 
 ```rust
 Metric {
-    name: "history-echo-ratio-median",
-    doc: "Median independent-witness fraction over historical endings with at \
-          least three holders: 1.0 = every holder witnessed independently, \
-          low = corroboration inherited from a common ancestor (The Hearsay, \
-          spec §6)",
+    name: "history-myth-hop-median",
+    doc: "Median inheritance depth of a held claim about a historical ending: \
+          0 = the witnessing community itself, higher = the claim is carried by \
+          communities further down the founding tree. The no-decay ceiling on \
+          transmission depth (The Hearsay, spec section 6)",
     summary: SummaryKind::Numeric {
-        bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
+        bucket_edges: &[1.0, 2.0, 3.0, 5.0, 8.0],
     },
     domain: Domain::History,
     role: Role::Descriptor,
     extract: Extractor::Full(|v: &FullView| {
         let ledger = &v.world().ledger;
         let lin = hornvale_hearsay::lineage::lineage_of(ledger);
-        let mut ratios: Vec<f64> = lin
-            .all()
-            .into_iter()
-            .filter_map(|s| {
-                hornvale_hearsay::echo_ratio(ledger, &lin, s, hornvale_history::OCC_ENDED)
-            })
-            .collect();
-        if ratios.is_empty() {
-            // Absent, never a sentinel number: a world with no qualifying
-            // event has no ratio, and 1.0 would read as "perfectly
-            // independent" in every downstream summary.
-            return MetricValue::Absent;
+        match hornvale_hearsay::median_hops(ledger, &lin, hornvale_history::OCC_ENDED) {
+            // Absent, never a sentinel: a world with no held claim has no
+            // median, and 0.0 would read as "every claim is first-hand".
+            None => MetricValue::Absent,
+            Some(m) => MetricValue::Number(m),
         }
-        ratios.sort_by(f64::total_cmp);
-        MetricValue::Number(ratios[ratios.len() / 2])
     }),
 },
 ```
 
-Then: `make rebaseline` and review the drift. **Expect `book/src/laboratory/` to move** — a new metric changes every `"metrics": "all"` study's schema, and the calibration binaries go red until the census fixtures are refreshed on lefford. That refresh is a G6 close activity, not this task's.
+Then `make rebaseline` and review the drift. **Expect `book/src/laboratory/` to
+move** — a new metric changes every `"metrics": "all"` study's schema, and the
+calibration binaries go red until the census fixtures refresh on lefford. That
+refresh is a G6 close activity requiring Nathan's authorization, not this
+task's.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cargo fmt
 cargo clippy --workspace --all-targets -- -D warnings
-git add windows/hearsay windows/lab/src/metrics.rs book/src/laboratory book/src/reference docs/audits
-git commit -m "feat(hearsay): the echo ratio, measured on seed 42"
+git add windows/hearsay windows/lab/src/metrics.rs windows/lab/Cargo.toml book/src/laboratory book/src/reference docs/audits
+git commit -m "feat(hearsay): transmission depth, measured on seed 42"
 ```
 
----
 
 ## Close (G6 — hard stop, do not self-approve)
 
