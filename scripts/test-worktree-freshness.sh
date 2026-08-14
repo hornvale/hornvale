@@ -2,21 +2,35 @@
 # scripts/test-worktree-freshness.sh — a worktree must never serve a binary
 # compiled under a different path.
 #
-# DIRECTION THIS CHECK ENFORCES: it asserts `no compiled artifact references a
-# SIBLING worktree's path`. It is blind to an artifact referencing a path that
-# is not a sibling worktree (a deleted worktree, a moved checkout), so a green
-# result means "no sibling contamination", not "every artifact is fresh". In
-# particular: once `git worktree repair` has run, the worktree's OWN former
-# name is gone from `git worktree list` entirely (the registry entry now
-# reports the new path), so this check cannot see a self-rename after the
-# fact — only DURING the narrow window between `mv` and `repair`, and only
-# against OTHER, currently-registered worktrees at any other time.
+# Usage: test-worktree-freshness.sh [old-path]
+#
+#   old-path (optional) — an EXTRA path to check artifacts against, beyond
+#   whatever `git worktree list` currently reports. Exists to close a real
+#   gap found in review: once `git worktree repair` has run after a rename,
+#   the worktree's OWN FORMER name is gone from `git worktree list`
+#   entirely — the registry now reports only the new path — so a call made
+#   after repair, with no argument, is architecturally blind to the exact
+#   self-rename staleness this task exists to catch; it can only ever detect
+#   contamination from a DIFFERENT, currently-live sibling. `worktree-take.sh`
+#   knows the old name directly ($recycled, a plain shell variable that
+#   `git worktree repair` does not touch or erase) and passes it here,
+#   closing the gap for the one caller that has the information. A caller
+#   with no such extra knowledge (lane-run.sh, a human at a shell) can omit
+#   it; the check then falls back to the sibling-only behaviour below.
+#
+# DIRECTION THIS CHECK ENFORCES: it asserts `no compiled artifact references
+# a SIBLING worktree's path, or the explicit old-path argument when given`.
+# It is blind to any OTHER path that is neither a currently-registered
+# sibling nor the supplied argument — some third worktree's former name that
+# nobody passed in — so a green result means "no contamination from what
+# this run was told to check for", not "every artifact is fresh".
 #
 # The defect: `make worktree-take` renames a pool member and keeps target/.
 # CARGO_MANIFEST_DIR and CARGO_TARGET_TMPDIR are baked at compile time, cargo
 # considers the tree fresh, and 31 files under kernel/ domains/ windows/ cli/
 # read one of those two macros. Six tests fail with a panic naming the OLD path.
 set -euo pipefail
+old_path="${1:-}"
 root="$(git rev-parse --show-toplevel)"
 deps="$root/target/debug/deps"
 
@@ -55,6 +69,17 @@ others="$(
             esac
           done
 )" || true
+
+# Fold in the caller-supplied old path, if any. Deduplicated against what git
+# already reported: a call made BEFORE `repair` runs would otherwise see the
+# same old name twice (once from git's still-stale registry, once from this
+# argument). Guarded against equalling $root itself, which would only ever
+# indicate a caller bug, not real contamination.
+if [ -n "$old_path" ] && [ "$old_path" != "$root" ]; then
+    if ! printf '%s\n' "$others" | grep -qxF "$old_path"; then
+        others="$(printf '%s\n%s\n' "$others" "$old_path" | grep -v '^$')"
+    fi
+fi
 
 if [ -z "$others" ]; then
     echo "worktree-freshness: no sibling worktrees to be contaminated by."

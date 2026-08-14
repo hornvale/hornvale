@@ -173,26 +173,42 @@ if [ -n "$recycled" ]; then
     fi
     echo "worktree-take: $DEST is warm — no prewarm needed" >&2
 
-    # VERIFY THE INVALIDATION AT THE MOMENT IT MATTERS. Measured cost: ~1 s per
+    # REPORT THE INVALIDATION AT THE MOMENT IT MATTERS. Measured cost: ~1 s per
     # sibling worktree scanning ONLY executables (target/debug/deps holds 24,544
     # entries; unrestricted this would cost ~5 s across a six-member pool), cheap
     # enough to run on every take.
     #
-    # NOTE WHAT THIS DOES AND DOES NOT VERIFY. `git worktree repair` (just above)
-    # has already run, and repair rewrites the registry entry to the NEW path —
-    # so by this point $DEST's OWN FORMER NAME is gone from `git worktree list`
-    # entirely; the freshness check cannot see it and this call is trivially
-    # green with respect to the rename just performed. (Verified directly: a
-    # scratch worktree renamed WITHOUT repair is correctly flagged red for its
-    # stale self-reference; the SAME scratch worktree, repaired, goes green
-    # while the identical stale binary is still sitting there untouched.) The
-    # touch invalidation above is what actually fixes THIS rename — this call
-    # exists to catch a DIFFERENT class of contamination: an artifact baking
-    # some OTHER, currently-live sibling worktree's path. `|| true`: a hit here
-    # reflects pre-existing state this take did not cause, so it must not abort
-    # a take that has already completed its real work — it only needs to be
-    # visible.
-    ( cd "$DEST" && bash "$ROOT/scripts/test-worktree-freshness.sh" ) || true
+    # THIS IS A DIAGNOSTIC, NOT A GATE, AND NOT A GREEN CHECK. An earlier
+    # version of this comment claimed this call "verifies the fix" and "gives
+    # the taker an immediate green" — that was wrong, caught in review. Nothing
+    # in this script rebuilds anything: the touch above only bumps mtimes so
+    # cargo recompiles the affected crates on the NEXT build, which happens
+    # whenever the taker next runs one. So the honest reading, called right
+    # here, is that this executable-scan is expected to be RED immediately
+    # after almost every recycle — the old binaries are still sitting in
+    # target/debug/deps, genuinely unrebuilt, and that is correct information,
+    # not a bug in the check. Forcing it to read green at this point would mean
+    # papering over real state, which is worse than reporting it honestly.
+    #
+    # WHAT THIS CALL ACTUALLY VERIFIES: that $recycled (the pool member's name
+    # a moment ago, still held in this shell variable, untouched by the
+    # `worktree repair` call above) is passed explicitly as the check's
+    # optional old-path argument. This closes a gap found in review: `git
+    # worktree repair` rewrites the registry to $DEST's new path, so by this
+    # point $recycled is ALREADY gone from `git worktree list` entirely — a
+    # call with no argument would be architecturally blind to the very rename
+    # this task exists to catch. (Verified directly with a scratch worktree:
+    # renamed WITHOUT repair, the check is correctly flagged red for its own
+    # stale self-reference from `git worktree list`; the SAME worktree,
+    # repaired, goes green via that path alone while the identical stale
+    # binary sits there untouched — passing $recycled here is what keeps this
+    # call able to see it even after repair.) So this line reports EXACTLY
+    # which cached executables still bake $recycled right now; they will
+    # recompile the next time something builds or tests the crate that owns
+    # them, per the touch above. `|| true`: a hit here is expected, common,
+    # and not something this take can fix synchronously — the take must not
+    # abort over information it is merely surfacing.
+    ( cd "$DEST" && bash "$ROOT/scripts/test-worktree-freshness.sh" "$recycled" ) || true
 else
     echo "worktree-take: no recyclable member; creating a cold worktree" >&2
     git -C "$ROOT" worktree add "$DEST" -b "campaign/$NAME" "origin/$BASE"
