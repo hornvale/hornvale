@@ -1179,7 +1179,24 @@ fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
 fn inter_event_times_recover_the_authored_recurrence() { /* … */ }
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+> **AMENDED 2026-08-14, after Task 6 shipped. The `#[ignore]` in the two
+> sketches above was wrong and was correctly overruled by the implementer, on
+> measurement.**
+>
+> These batteries run in **0.55 s** for all four tests (verified independently
+> after the fact, against the implementer's reported 0.86 s). Two things follow,
+> and the second is the one that matters:
+>
+> - The canonical heavy-tier reason string says **"(minutes)"** and is compared
+>   verbatim by `cli/tests/heavy_tier.rs`. Attaching it to a sub-second test
+>   puts a false claim inside a string whose whole purpose is to be exact.
+> - `#[ignore]`-ing them removes the **only** check on the magnitude laws from
+>   the commit gate, leaving `TOOL-analytic-limiting-case`'s guarantee to a
+>   tier nobody runs on an ordinary commit.
+>
+> The heavy tier is for batteries that genuinely cost minutes. A cheap test
+> earns its place in the gate, and this plan should not have assumed otherwise
+> without measuring.
 
 - [ ] **Step 3: Add the stream label**
 
