@@ -485,15 +485,36 @@ In `domains/astronomy/tests/genesis_properties.rs`:
 #[test]
 fn the_greenhouse_residual_is_drawn_and_isolated() {
     for seed in 0..100u64 {
-        let s = Seed(seed);
-        let star = generate_star(s);
-        let a = generate_anchor(s, &star, &SkyPins::default()).unwrap();
-        assert_eq!(a, generate_anchor(s, &star, &SkyPins::default()).unwrap());
+        let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+        let a = &outcome.system.anchor;
+        assert_eq!(
+            *a,
+            generate(Seed(seed), &SkyPins::default()).unwrap().system.anchor
+        );
         assert!(a.greenhouse_residual.is_finite());
         assert!((-1.0..=1.0).contains(&a.greenhouse_residual));
     }
 }
 ```
+
+**CORRECTED 2026-08-14 — the original sketch was silent-and-green.** It read
+`let s = Seed(seed); generate_star(s); generate_anchor(s, ...)`, passing the
+**bare world seed**. Production does not: `system.rs:44-46` is
+
+```rust
+let astronomy_seed = world_seed.derive(streams::ROOT);
+let star = generate_star(astronomy_seed);
+let anchor = generate_anchor(astronomy_seed, &star, pins)?;
+```
+
+so the sketch would have drawn the residual from a different leg than any
+world ever uses, and every one of its assertions — finite, in range,
+deterministic — is satisfiable on that wrong world. It would have passed while
+testing nothing. Going through `generate` also matches what every other test in
+this file already does (`outcome.system.anchor`), and needs no new imports;
+`generate_star`/`generate_anchor` are exported but are NOT currently imported
+here. This is the astronomy instance of the standing rule that a domain seed is
+`Seed(seed).derive(streams::ROOT)`, never bare.
 
 Isolation is the load-bearing half, and the plan does **not** prescribe the
 mutation: find a discriminating one by reading the draw order — the property to
@@ -552,7 +573,8 @@ and in `generate_anchor`, alongside the other draws:
 Register the predicate in `facts.rs` beside `INSOLATION_REL` (follow that
 constant's exact shape — `PredicateDef.name` duplicates its registry key,
 decision 0015), and add the `greenhouse-forcing-k` metric in
-`windows/lab/src/metrics.rs` next to `insolation-rel` (metrics.rs:1232).
+`windows/lab/src/metrics.rs` next to `insolation-rel` (metrics.rs:1266 as of
+the origin/main absorption — grep `"insolation-rel"`, do not trust the line).
 
 **Check its build rung.** `TOOL-rung-tag-unchecked` is a live defect with three
 known instances, one of which *panics*. Verify the new metric in a narrow study
