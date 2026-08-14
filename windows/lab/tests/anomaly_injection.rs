@@ -313,8 +313,125 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
+#[ignore = "PREREGISTERED, not met: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5667 over 120 pairs, below the preregistered 0.60 bar)"]
 #[test]
 fn h1_recall_at_10() {
+    let t = tally_recall();
+
+    assert!(
+        t.counted > 0,
+        "no (injection × seed) pair contributed to recall — every pair was void, so \
+         the figure is undefined rather than low. Re-author the battery."
+    );
+
+    let (adjudicates, why) = battery_adjudicates_h1(t.seeds);
+    if !adjudicates {
+        println!(
+            "[recall] PILOT BATTERY — H1 IS NOT ADJUDICATED HERE ({why}). The \
+             preregistered bar is deliberately NOT asserted against a battery this \
+             shape; author the full one on the canonical box with \
+             scripts/gnomon-injection.sh and re-read this test."
+        );
+        return;
+    }
+
+    let recall = t.recall();
+    assert!(
+        recall >= RECALL_BAR,
+        "H1 FALSIFIED: recall@10 = {recall:.4} over {} (injection × seed) \
+         pairs, below the preregistered bar of {RECALL_BAR}. This is the campaign's \
+         headline finding and is published as such. Do NOT adjust k, TAIL_DEPTH_BAR, \
+         REPORT_SIZE or the injection set to rescue it: retune the report and this \
+         test measures nothing. Record the figure, mark the row `refuted`, and say so \
+         in the chronicle.",
+        t.counted
+    );
+    println!(
+        "[recall] H1 MET: recall@10 = {recall:.4} >= {RECALL_BAR} over {} pairs",
+        t.counted
+    );
+}
+
+/// **The witness that keeps the falsification measured while H1 is
+/// `#[ignore]`d.**
+///
+/// [`h1_recall_at_10`] is ignored because its preregistered assertion is
+/// *not met* and the failure is the record (the roster entry in
+/// `cli/tests/heavy_tier.rs` carries the figure). But an ignored measurement
+/// stops being measured: change [`REPORT_SIZE`], `TAIL_DEPTH_BAR` or the
+/// scorer and nothing anywhere goes red, while the published 0.5667 quietly
+/// becomes fiction. No other test in this file pins it.
+///
+/// **This pins a witness, not a claim.** The numbers below are not a bar the
+/// report must clear — they are the exact integers this battery produced
+/// against this census on the canonical box, recorded so that any change to
+/// the report *forces a deliberate re-read*. Moving them is therefore not
+/// "updating a number": it means the falsification was re-measured, and the
+/// chronicle, the registry row and the roster entry must all be re-read and
+/// re-stated against the new figure in the same commit. Re-pinning without
+/// re-reading is the retuning the campaign's preregistration forbids.
+///
+/// It asserts integers rather than the float recall on purpose: a rate hides
+/// which of its two terms moved, and `hits`/`counted` separate a report that
+/// found less from a battery that offered less.
+///
+/// claim: invariant(the committed battery scores exactly 68 hits over 120
+/// evaluable (injection x seed) pairs, with no void pairs) — an identity over
+/// committed fixtures and a committed census, not a statistic.
+#[test]
+fn the_falsified_recall_is_pinned_as_a_witness() {
+    let t = tally_recall();
+    assert_eq!(
+        (
+            t.hits,
+            t.counted,
+            t.void_no_movement,
+            t.void_unrankable_only
+        ),
+        (68, 120, 0, 0),
+        "the injection battery's recall tally moved. This is the WITNESS to The \
+         Gnomon's headline falsification (recall@10 = 68/120 = 0.5667 against a \
+         preregistered bar of 0.60), and it is pinned so that a change to the \
+         report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable surface, \
+         the census, or the fixtures — cannot silently turn the published figure \
+         into fiction. Do not simply update these integers: re-read the finding, \
+         re-state it in book/src/chronicle/the-gnomon.md, in the \
+         TOOL-anomaly-ranking-concentrates-injection registry row and in the \
+         `#[ignore]` reason rostered in cli/tests/heavy_tier.rs, and re-pin all \
+         four in the same commit."
+    );
+}
+
+/// The recall tally, computed once and read by both
+/// [`h1_recall_at_10`] (which judges it against the preregistered bar) and
+/// [`the_falsified_recall_is_pinned_as_a_witness`] (which pins it). One
+/// computation, two readings — a second implementation here would be the
+/// duplication this campaign exists to name.
+struct Tally {
+    /// Pairs whose moved evaluable columns reached the world's report.
+    hits: usize,
+    /// Pairs that contributed to recall at all (moved something evaluable).
+    counted: usize,
+    /// Pairs where the perturbed row equalled baseline in every column.
+    void_no_movement: usize,
+    /// Pairs that moved only columns outside the evaluable surface.
+    void_unrankable_only: usize,
+    /// Seeds per arm, read off the baseline arm rather than declared.
+    seeds: usize,
+}
+
+impl Tally {
+    /// recall@[`REPORT_SIZE`], or NaN when nothing was counted.
+    fn recall(&self) -> f64 {
+        if self.counted == 0 {
+            f64::NAN
+        } else {
+            self.hits as f64 / self.counted as f64
+        }
+    }
+}
+
+fn tally_recall() -> Tally {
     let c = census();
     let (evaluable_list, _) = anomaly::evaluable_columns(&c);
     let evaluable: BTreeSet<String> = evaluable_list.into_iter().collect();
@@ -396,43 +513,20 @@ fn h1_recall_at_10() {
         println!("[recall] {name:14} moved columns: {arm_moved:?}");
     }
 
-    let seeds = base_rows.len();
-    let recall = if counted == 0 {
-        f64::NAN
-    } else {
-        hits as f64 / counted as f64
+    let t = Tally {
+        hits,
+        counted,
+        void_no_movement,
+        void_unrankable_only,
+        seeds: base_rows.len(),
     };
-    println!("[recall] TOTAL {hits}/{counted} = {recall:.4} (bar {RECALL_BAR})");
+    println!(
+        "[recall] TOTAL {hits}/{counted} = {:.4} (bar {RECALL_BAR})",
+        t.recall()
+    );
     println!(
         "[recall] void pairs: {void_no_movement} moved nothing at all, \
          {void_unrankable_only} moved only columns outside the evaluable surface"
     );
-
-    assert!(
-        counted > 0,
-        "no (injection × seed) pair contributed to recall — every pair was void, so \
-         the figure is undefined rather than low. Re-author the battery."
-    );
-
-    let (adjudicates, why) = battery_adjudicates_h1(seeds);
-    if !adjudicates {
-        println!(
-            "[recall] PILOT BATTERY — H1 IS NOT ADJUDICATED HERE ({why}). The \
-             preregistered bar is deliberately NOT asserted against a battery this \
-             shape; author the full one on the canonical box with \
-             scripts/gnomon-injection.sh and re-read this test."
-        );
-        return;
-    }
-
-    assert!(
-        recall >= RECALL_BAR,
-        "H1 FALSIFIED: recall@10 = {recall:.4} over {counted} (injection × seed) \
-         pairs, below the preregistered bar of {RECALL_BAR}. This is the campaign's \
-         headline finding and is published as such. Do NOT adjust k, TAIL_DEPTH_BAR, \
-         REPORT_SIZE or the injection set to rescue it: retune the report and this \
-         test measures nothing. Record the figure, mark the row `refuted`, and say so \
-         in the chronicle."
-    );
-    println!("[recall] H1 MET: recall@10 = {recall:.4} >= {RECALL_BAR} over {counted} pairs");
+    t
 }

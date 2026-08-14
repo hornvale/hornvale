@@ -358,6 +358,7 @@
 - [The Beacon](./chronicle/the-beacon.md)
 - [The Rill](./chronicle/the-rill.md)
 - [The Millrace](./chronicle/the-millrace.md)
+- [The Gnomon](./chronicle/the-gnomon.md)
 
 # Appendix: The Frontier
 
