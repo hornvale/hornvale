@@ -40,7 +40,8 @@ pub fn claims_about(
             .ancestry(holder)
             .iter()
             .position(|a| *a == subject)
-            .unwrap_or(0) as u32;
+            .expect("descendants_of(subject) guarantees subject is in holder's ancestry")
+            as u32;
         let mut c = witness.clone();
         c.holder = holder;
         c.grade = witness.grade.on_transmission();
