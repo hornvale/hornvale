@@ -69,12 +69,40 @@ mapfile -t generated < <(grep -v '^#' "$paths_file" | grep -v '^[[:space:]]*$')
 
 # ORIG_HEAD is the pre-merge tip; the range is what this merge brought in.
 touched="$(git diff --name-only ORIG_HEAD HEAD -- "${generated[@]}" 2>/dev/null || true)"
-[[ -n "$touched" ]] || exit 0
+
+# AND the code that PRODUCES those artifacts, which is the case the first
+# version of this hook missed — on its first substantive merge, which is
+# exactly the sort of thing an advisory hook gets to be embarrassed by.
+#
+# What happened: main had regenerated `docs/audits/type-audit-report.md`, this
+# branch had regenerated it too, and the merge resolved to something identical
+# to OUR tip. So the range above was EMPTY and the hook said nothing — while
+# the merged *code* now carried the incoming side's new `pub` items, leaving
+# the report stale by a few counts per row. The artifact did not move; the
+# thing it is a rendering of did.
+#
+# This is the blind spot the header below already described in prose ("a merge
+# carrying code changes alone stales an artifact just as thoroughly and says
+# nothing"), documented and then left unguarded. Rust is the crude but correct
+# proxy for "code that feeds a generated artifact": every generated path in
+# this repo is rendered by a Rust binary. A docs-only absorption still stays
+# silent, which is most of them.
+code="$(git diff --name-only ORIG_HEAD HEAD -- '*.rs' 2>/dev/null | head -5 || true)"
+
+[[ -n "$touched" || -n "$code" ]] || exit 0
 
 echo "" >&2
-echo "post-merge: this merge touched generated artifacts." >&2
-echo "" >&2
-printf '%s\n' "$touched" | sed 's/^/  /' >&2
+if [[ -n "$touched" ]]; then
+    echo "post-merge: this merge touched generated artifacts." >&2
+    echo "" >&2
+    printf '%s\n' "$touched" | sed 's/^/  /' >&2
+else
+    echo "post-merge: this merge brought in Rust changes, so a generated" >&2
+    echo "artifact may now be stale even though none of them moved in the diff." >&2
+    echo "" >&2
+    printf '%s\n' "$code" | sed 's/^/  /' >&2
+    echo "  …" >&2
+fi
 echo "" >&2
 echo "A generated artifact has no meaningful merge — it is a rendering of code," >&2
 echo "so a text merge of two regenerated copies can be a valid merge of neither." >&2
