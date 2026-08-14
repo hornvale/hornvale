@@ -207,7 +207,16 @@ live under `#[ignore]`.
   `docs/generated-paths.txt` drift check. Today's `make rebaseline`.
 - **outboard** — the suites guarding the repo from outside the cargo workspace:
   `tools/board` (~198 tests, run by nobody today), `tools/digest`,
-  `tools/type-audit`, and `make seam-guard`. **New set; closes a 0125 gap.**
+  `tools/type-audit`. **New set; closes a 0125 gap.**
+
+  **`seam-guard` is NOT in this set — it was, and measurement moved it.** At
+  853 s it was **99.7%** of `outboard`'s 855 s, on a set that fires at every
+  plan-stage boundary. It now has its own set at the `campaign` rung, and the
+  argument is the taxonomy's own rather than cost: what it guards — which
+  functions no test pins — moves only when seams or tests move. It also never
+  lived in the commit gate historically; it was in `gate-full`, the evidence
+  tier. `outboard` without it measures **17.5 s**, which is what its rung
+  implies.
 - **clients** — `vessel-check`, `world-check`, `game-check`, and `clients/atlas`
   (`deno fmt --check`, `deno lint`, `deno task check`, `deno task test`, plus
   `deno task build` and the `atlas.js` bundle diff). **atlas is new.**
