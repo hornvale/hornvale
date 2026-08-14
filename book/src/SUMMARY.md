@@ -361,6 +361,7 @@
 - [The Millrace](./chronicle/the-millrace.md)
 - [The Gnomon](./chronicle/the-gnomon.md)
 - [The Sexton](./chronicle/the-sexton.md)
+- [The Repose](./chronicle/the-repose.md)
 
 # Appendix: The Frontier
 

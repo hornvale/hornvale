@@ -1,0 +1,297 @@
+# Retrospective — The Repose
+
+Process lessons, not product. The product is in
+[the chronicle](../../book/src/chronicle/the-repose.md): a hazard field and a
+named mountain, a magnitude law recovered from its own authored input, a
+motivating premise wrong in both halves, and an exposure gradient that neither
+modelled channel carries.
+
+This campaign's process story has one spine: **eight assertions that could not
+fail.** Five originated in text the controller wrote. What makes it worth a
+page is not the count — it is that the last three were caught by their own
+authors, which is the direction that has to hold if the count is ever going to
+come down.
+
+## 1. Eight assertions that could not fail
+
+An assertion that cannot fail is worse than a missing one. A missing test is a
+known gap; a vacuous test is a *claimed* guarantee, and every reader downstream
+spends it. Eight were found across eight tasks. They are listed in the order
+they were found, with the shape named, because the shapes recur and the
+instances do not.
+
+**(1) Task 1 — the empty-fixture red recipe.** The brief's step-2 instruction
+for proving the readout test could fail was: write a zero-byte fixture, stub the
+producer to return an empty string, observe the red. An empty string equals an
+empty file byte-for-byte. The recipe's own red was a trivial pass. Caught by the
+implementer running it; repaired with a non-empty sentinel stub against a still
+empty fixture, which produces a real content mismatch.
+
+**(2) Task 2 — an identity test comparing a code path against itself.** The
+brief drafted the channel-mask no-op check as
+`suitability_fields(NONE) == suitability_fields_unmasked(…)`. After the mask was
+threaded, the unmasked entry point *delegates* to the masked one with `NONE`.
+The two sides are literally the same call. It would have been green whatever the
+mask did. Repaired by **independent recomputation**: the test writes the
+pre-mask formula out by hand at each of the two application points and compares
+on `to_bits()` over every cell of three worlds. Both directions
+mutation-proven.
+
+**(2b) Its mirror image, the same round.** The same brief's connectivity
+tripwire asserted that a name did *not* appear in a set of files. It already
+appeared in one of them. That assertion could never have *passed*. A defect in
+plan text has two symmetric failure modes and reviewing for only one of them
+finds half.
+
+**(3) Task 3 — a property already guaranteed by the architecture.** The brief
+sketched "naming a landform between two person-namings must not disturb the
+second". The namer derives a fresh stream from its seed on every call and holds
+no interior mutability, so the property holds unconditionally — including if the
+new variant's label *collided* with the existing one, which is the only thing
+the test was there to catch. The implementer proved the vacuity rather than
+arguing it: aliasing the new label to `"person"` left the sketch green. Repaired
+with a distinctness property at three salts, plus an exhaustiveness sentinel — a
+wildcard-free match that fails to **compile** when a variant is added without
+being listed — replacing a hand-listed array that had been silently
+under-covering the widening.
+
+**(4) Task 5 — a name with no coverage, and a test that was its sibling's
+theorem.** Replacing the per-mountain salt in the naming derivation with a
+constant left the nine-test suite 9/9 green: every mountain could have shared
+one name per people, undetected. Found by a reviewer. In the same file, a test
+whose doc claimed it "can fail on its own" could not — naming is a pure function
+of a mountain value, and the sibling test already asserts full structural
+equality of that value across the cone, so equal names follow by construction.
+It was **deleted, not kept**: a known-vacuous test retained as "redundant but
+cheap" is still a claimed guarantee.
+
+**(5) Task 6 — a sub-window test whose windows were round numbers.** The
+mutation *filter before drawing the magnitude, instead of after* came back
+green. The two designs differ only when a query boundary lands strictly between
+two events of one block, and a boundary at 0, 365 250, 730 500 … almost never
+does — the chance of catching it across all eight sampled pairs was about 10%,
+and it did not fire. Repaired by cutting the windows at **days taken from the
+draw itself**, plus a floor on how many such interior cuts the run must contain
+so the discriminating case cannot silently vanish. **Caught by its own author** —
+the campaign's first.
+
+**(6) Task 6 — two more, same round.** A half-open-interval claim asserted
+against ordinary drawn events is vacuous, because the probability that a drawn
+day equals an arbitrary boundary is zero; repaired by taking the boundary *from
+a drawn event* and asserting inclusion and exclusion at that exact value. And a
+magnitude-range test passed under a clamped law as happily as a truncated one,
+because clamping is monotone and reaches both endpoints; repaired with a
+discriminating probe near the top of the unit interval, where the two laws read
+9.38 and 9.5.
+
+**(7) Task 7 — a test that derived its expectation from the constant it was
+pinning.** The memory sink test computed its horizon as
+`MEMORY_HORIZON_HALF_LIVES × half_life`. Raising the constant from ten to twenty
+moved the test's own expectation along with it, and the whole file stayed green:
+the constant that decides where the sink sits was pinned by nothing. Repaired
+with an **absolute** expectation — 400 years, hand-derivable from a 20-year
+generation — which a change to the constant cannot follow, plus a second
+assertion pinning the depth from the other side. **Caught by its own author** —
+the second.
+
+**(8) Task 7 — `most-recent-wins`, pinned by nothing at all.** The memory fold
+takes the *latest* eruption in the horizon. Deleting the reversal, so it takes
+the earliest, left all eleven tests green — while moving the answer by
+essentially the whole unit interval on thousands of samples. Every existing test
+had selected an eruption with a quiet gap *after* it and never constrained the
+window *before* it, and the 400-year horizon is usually shorter than the
+200–5,000-year eruption intervals, so a second eruption rarely landed inside one
+by chance. A probe found 4,644 samples holding more than one eruption in a
+single horizon, worst-case stock delta 0.9989. Found by a reviewer. Repaired
+with a selector that **brackets the gap on both sides** — wide enough that the
+two candidate answers cannot converge by rounding, narrow enough that the
+earlier eruption is genuinely still in the window — and that asserts the earlier
+eruption is inside before asserting which one wins.
+
+### The generalisation worth keeping
+
+Six of the eight are one shape in different clothes: **the test and the thing
+under test shared a source.** A path compared to itself (2), a property
+guaranteed by the architecture rather than the code (3), a name derived from a
+value the sibling already pinned (4), an expectation computed from the constant
+it pinned (7). The fifth and eighth are a different shape and also one shape:
+**a fixture that never reaches the discriminating case** — round-numbered
+windows (5), and a one-candidate sample for a rule that picks among candidates
+(8).
+
+The second shape produced this campaign's most portable sentence, posted to the
+board when it was found:
+
+> A fold that **picks one element** from a set needs a test with **two
+> candidates**, because a one-candidate test passes under every selection rule
+> there is.
+
+## 2. What actually found them: mutation, run by the author, before review
+
+None of the eight was found by reading. Every one was found by *changing the
+code and watching what the suite said*. Two consequences the campaign should
+carry forward:
+
+- **Mutation-prove at authoring time, not at review time.** The three
+  self-caught ones (5, 6, 7) came from implementers who ran a mutation harness
+  over their own new tests as a matter of course. The reviewer-caught ones (4,
+  8) cost a full extra round each. The cost of the harness is a few minutes; the
+  cost of the round is an hour and a re-gate.
+- **Re-derive a reported mutation rather than inheriting it.** When Task 5's
+  reviewer reported a surviving mutation, the implementer reproduced it
+  independently before repairing, and the re-reviewer proved the fix a third
+  time. That is three cheap confirmations of a claim that would otherwise have
+  been a sentence in a report.
+
+## 3. A measurement defect with a signature you can read in the artifact
+
+The exposure readout tallied land under a settleable-land filter but counted
+settlements unfiltered. Marine settlements have no elevation above sea level, so
+the band classifier's running label fell through to its initial value and put
+every one of them in the lowest band — contaminating 51.9% of the pooled sample
+with a single aquatic people.
+
+The lesson is not "apply the filter to both sides", which is obvious in
+hindsight and was obvious to nobody in advance. It is that **the defect was
+legible in the committed fixture without re-running anything**:
+
+> Three kinds reading *exactly* 100.0% of one band with exact zeros in the other
+> three, beside one kind distributing normally.
+
+An exact 100.0% is not an ecology; it is a default branch. A category sitting at
+exactly the extreme of one bucket should be read as a bug report about the
+classifier until proven otherwise. That is the same reading rule an earlier
+campaign wrote down after a category came in at exactly 100% of one bucket, and
+it fired again here, which is the point of writing such rules down.
+
+The ruling on the repair is also worth keeping: the population was **narrowed
+back to the spec's own words** rather than widened to a new ocean band.
+Inventing a stratum after seeing the data is changing a preregistered population
+post hoc, however reasonable the new stratum sounds.
+
+## 4. Prose outrunning its own table — three rounds running
+
+Every defect in three consecutive review rounds was a *sentence* that claimed
+more than the table directly above it, and the code was right every time. The
+implementer's own diagnosis:
+
+> I generalise from the row I computed most recently, instead of reading across
+> the table I just produced.
+
+Instances: "monotonic in every band" against a table with two intermediate dips;
+"the prediction is refuted" against an arm with no power to refute it; a filter
+credited with closing a hole it does not touch, when what closed the hole was
+changing the statistic. And an adjacent one — **an appended correction that
+leaves the original standing is not a correction.** A report led with a
+retracted claim and carried its retraction 367 lines later. The fix was to
+rewrite the claim in place *and* post the correction to the board, because a
+stale claim in a durable ledger keeps misleading after the report is closed.
+
+## 5. Two amendments that measurement forced, and one that expired
+
+Three times the plan was amended mid-campaign, and the amendments split into two
+distinct kinds worth distinguishing.
+
+**Measured-wrong.** The recovery batteries were tagged as a heavy-tier battery
+"(minutes)" and measured 0.55 s; the byte-identity probes were tagged the same
+and measured 1.00 / 2.05 / 1.66 s. Both were untagged and moved into the commit
+gate. The canonical heavy reason string is checked *verbatim*, so a wrong cost
+estimate inside it is a false claim the guard actively preserves. **If a
+plan asserts a cost, measure it before you inherit it.**
+
+**Expired.** The design declined a cross-species memory prediction because the
+species trait it would rest on had no occupant. During the campaign, two other
+campaigns landed nine occupants on it. The decision was not wrong when written;
+its *reason* simply stopped being true. The ruling was kept anyway — adding a
+hypothesis after watching its axis go live is the post-hoc move preregistration
+exists to prevent, and the fact that it would now be a better prediction is what
+makes it inadmissible rather than what excuses it.
+
+That is a category the process did not previously name: **a decision can
+outlive its justification and still be right.** A plan amendment should say
+which kind it is, because "the reason is gone" and "the decision is wrong" get
+handled very differently.
+
+## 6. A crate-scoped green marked a task complete on a red branch
+
+Task 1 was marked complete while the branch was red: its population guard
+violated a workspace-wide enforcement test that lives in the CLI crate, and the
+task's evidence was a crate-scoped run that could not see it. This is the
+documented shape and it happened anyway.
+
+**Process change adopted mid-campaign and worth keeping:** no task is marked
+complete without a green whole-workspace gate. The cost is one gate per task;
+the alternative is discovering the red one task later, as the corpus already
+records twice.
+
+## 7. Attributing a heavy-tier red, cheaply
+
+The close's heavy tier came back 77 of 79, and the two failures were of
+completely different kinds — which is worth knowing because the reflex is to
+treat both the same way.
+
+- One was a **wall-clock ceiling** test that passes when re-run alone on the
+  same checkout. The full-tier run had 33 slow tests and a CPU ratio of 17.63 on
+  forty cores. A timing ceiling inside an oversubscribed tier is not evidence
+  about a branch.
+- The other was a **real red, inherited**: identical numbers at the merge-base
+  as at the branch head. Its own output prints the diagnosis — a min-versus-max
+  statistic that died when an earlier campaign widened the species roster, while
+  the whole-roster correlation survives at 0.840.
+
+The method generalises and is cheap:
+
+> For any heavy-tier red: **re-run it alone** (separates contention), then
+> **re-run it at the merge-base** (separates inheritance). Two scoped runs of a
+> few minutes each replace two full tiers of half an hour.
+
+The standing warning holds and gained a second instance: the heavy tier is
+invisible to the ordinary gate **including on main**, so a red there is
+invisible until someone happens to run it.
+
+## 8. An empty diff needed four positive controls, and they did not overlap
+
+The campaign's central claim is that nothing moved. Proving a negative needs the
+instrument shown failing, so each byte-identity probe was made red before it was
+trusted. The reds did not fall where the plan assumed they would:
+
+| mutation | world JSON | scene | almanac |
+|---|---|---|---|
+| edifice decay length 1.5 → 1.6 | RED | RED | green |
+| settlement name draw 2–3 → 2–4 syllables | RED | green | green |
+| a sentence prepended to the almanac render | green | green | RED |
+
+The almanac is a **summary** document, so it is nearly blind to a per-cell
+terrain move and to a name change that lands late in the ledger — and it is the
+only one of the three that sees a rendering change. The plan had treated the
+three as interchangeable evidence for one claim. They are not: each covers a
+different half, and had only one been written it would have been the wrong one
+roughly two times in three.
+
+A fourth probe sweeps every rendered artifact for the campaign's vocabulary and
+was reddened by appending a sentence naming a volcano to a published page. It
+is the cheap always-running half of the same claim.
+
+## 9. Smaller things worth carrying
+
+- **A control must be reproducible from its record.** The campaign's most
+  quotable number — 409 settlements on a volcano, 89 remembering — first came
+  from a probe that was run once and deleted. It is now three columns in the
+  committed artifact, and the columns reproduce the deleted probe's integers
+  exactly.
+- **A regenerated artifact has no merge.** A count table merged wrongly on every
+  row without conflicting, on *both* absorptions. The method that catches it:
+  regenerate the artifact and diff against what the merge produced — a correct
+  merge makes the regen a no-op, so any diff at all is the merge's error. Note
+  the asymmetry that makes this bite: a conflict-free merge is auto-committed
+  and runs no pre-commit hook, while a conflicted one does. The easy merge is
+  the unguarded one.
+- **An unmoved laboratory directory is not evidence about the census**, because
+  the regeneration script skips censuses. The gallery is the decisive tree.
+- **The host name is not stable.** This Mac reported two different names across
+  a reboot, and the timings baseline is keyed on it. Read `hostname -s` before
+  reading a baseline.
+- **A killed session's work is worth assessing before resetting it.** When an
+  editor crash killed a task mid-flight, the sweep found a coherent, compiling,
+  passing 480-line state including the two tests carrying the property the task
+  existed for. A fresh session finished it with no design changes.
