@@ -768,6 +768,32 @@ Goldens are committed **on lefford**. Cost from `docs/timings.md`, not from
 prose. `book/src/domesday/` drifts on any census change — it is a pure read
 over the census.
 
+**A SECOND HOST-PINNED REFRESH IS OWED, AND `census-run.sh` DOES NOT DO IT.**
+Task 3 registered `greenhouse-forcing-k`, which restages **every fixture frozen
+against the registry**, not only the census goldens — `windows/lab/CLAUDE.md`
+§2b. The measured consequence here: `hornvale-lab::anomaly_injection` fails with
+`rows.csv header does not match study 'gnomon-injection' schema`, whose expected
+header now carries `greenhouse-forcing-k` after `insolation-rel`. Those fixtures
+live under `windows/lab/tests/fixtures/injection/`, are **deliberately absent
+from `docs/generated-paths.txt`** (so no drift check sees them), are untouched by
+`make rebaseline`, and are **never mentioned by `census-run.sh` or
+`regenerate-artifacts.sh`** — verified by grep, not assumed. Refreshing the
+census alone leaves this red, which is precisely how The Hearsay's instance was
+found: after the census refresh had already run.
+
+So the close runs BOTH, in the same sitting, on lefford:
+
+```bash
+ssh lefford 'cd ~/Projects/hornvale && git fetch --all && \
+  git checkout <full-sha> && scripts/gnomon-injection.sh'
+```
+
+`HV_GNOMON_PILOT=1` exists only to validate the machinery off-host; it does not
+author committable evidence. Before closing, re-run
+`grep -rl 'rows.csv\|schema.json' windows/lab/tests/fixtures/` and confirm every
+directory it lists has had its own authoring path run — that grep, not this
+list, is the source of truth.
+
 - [ ] **Step 4: Book DoD belongs to the campaign close, not this stage**
 
 Chronicle entry, registry status flips (`MAP-craton-rescale-shortfall` →
