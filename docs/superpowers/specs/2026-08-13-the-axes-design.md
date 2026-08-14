@@ -23,8 +23,14 @@ stated a criterion that cannot fail.
    names.
 2. **An executable preregistration** — the compression bounds, the named
    resisters, and the per-arm stop rules as `#[test]`, not as prose.
-3. **An additive unification** of `ConditionNiche` and `BiomeAffinity` that
-   leaves `tolerance_liebig`'s flooring structure untouched.
+3. **The unification's invariant, pinned** — `ConditionNiche`'s flooring
+   structure is proven unchanged and made executable. **AMENDED mid-campaign
+   (Nathan, at Task 6): the unification's `EnvironmentNiche` *type* is deferred
+   to campaign 2.** Nothing in this campaign would construct it — the axes are
+   not yet derived from world state, and that derivation is world-side and
+   Glasshouse-gated — so shipping the struct now would add a type with no
+   producer, the same shape as F-5's `ChamberOrigin::Made`. The unification's
+   *claim* is measured regardless, by §6.4.
 4. **A measured verdict on factoring versus fidelity**, stated at the strength
    the measurement supports and no higher.
 
@@ -284,6 +290,11 @@ build already sitting one crate over — after The Fathom's `water_column_at` an
 this program's most reliably load-bearing lesson.
 
 ### 4.3 Additive unification — the flooring structure does not move
+
+**Scope amended mid-campaign** (see §1.3). The *type* is deferred to campaign 2;
+what ships here is the invariant that makes the addition safe whenever it comes,
+pinned by a test proven to fire. The design below is what campaign 2 inherits,
+and it is recorded now because the constraint is discovered now.
 
 Campaign 1's brief is to unify `ConditionNiche` with `BiomeAffinity` into one
 response vector. The unification is **additive**:
