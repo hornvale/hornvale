@@ -511,6 +511,13 @@ done
 echo "regenerate-artifacts: the domesday survey" >&2
 run -p hornvale -- lab domesday
 
+# The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
+# world rather than per column. Also a pure read over the same COMMITTED
+# census — it never triggers a census itself — so it runs unconditionally
+# here too, right after the domesday survey it shares a reader with.
+echo "regenerate-artifacts: the anomaly report" >&2
+run -p hornvale -- lab anomalies
+
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 

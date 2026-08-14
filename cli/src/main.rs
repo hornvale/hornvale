@@ -125,6 +125,8 @@ usage:
   hornvale lab list-metrics                list every metric in the lab's registry
   hornvale lab claim-status                is a heavy run holding the box? (0081)
   hornvale lab domesday                    render the Domesday survey (book/src/domesday/) from the committed census
+  hornvale lab anomalies [--seed N]        render the anomaly report (book/src/domesday/anomalies.md); --seed N prints
+                                            one world's report instead, writing nothing
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -1295,6 +1297,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some("domesday") => cmd_lab_domesday(),
+        Some("anomalies") => cmd_lab_anomalies(args),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1305,7 +1308,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|anomalies [--seed N]|claim-status)\n{}",
             usage()
         )),
     }
@@ -1448,6 +1451,50 @@ fn cmd_lab_domesday() -> Result<(), String> {
         domains.len(),
         findings.len(),
         out_dir.display()
+    );
+    Ok(())
+}
+
+/// Render the anomaly report (the Domesday's transpose, spec §3): read the
+/// committed census from its fixed path and either print one world's report
+/// (`--seed N`, writes nothing) or rank every world and write the committed
+/// page. Like `cmd_lab_domesday`, this never re-runs the census — it is a
+/// pure read over whatever `book/src/laboratory/generated/the-census`
+/// already holds.
+fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
+    let census_dir = std::path::Path::new("book/src/laboratory/generated/the-census");
+    let census = hornvale_lab::domesday::census::load(census_dir)?;
+
+    if let Some(raw_seed) = flag_value(args, "--seed") {
+        let seed: u64 = raw_seed
+            .parse()
+            .map_err(|e| format!("--seed must be a u64: {e}"))?;
+        let anomaly = hornvale_lab::domesday::anomaly::for_seed(&census, seed)
+            .ok_or_else(|| format!("anomalies: seed {seed} is not in the committed census"))?;
+        println!("seed {seed}: {} flagged columns", anomaly.flags.len());
+        for flag in &anomaly.flags {
+            println!(
+                "  {} depth={:.6} value={}",
+                flag.metric, flag.depth, flag.value
+            );
+        }
+        return Ok(());
+    }
+
+    let ranked = hornvale_lab::domesday::anomaly::rank(&census);
+    let (_, excluded) = hornvale_lab::domesday::anomaly::evaluable_columns(&census);
+    let page = hornvale_lab::domesday::render::render_anomalies(&census, &ranked, &excluded);
+
+    let out_dir = std::path::Path::new("book/src/domesday");
+    std::fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
+    let out_path = out_dir.join("anomalies.md");
+    std::fs::write(&out_path, page).map_err(|e| format!("writing {}: {e}", out_path.display()))?;
+
+    println!(
+        "anomalies: {} worlds ranked, {} columns excluded -> {}",
+        ranked.len(),
+        excluded.len(),
+        out_path.display()
     );
     Ok(())
 }

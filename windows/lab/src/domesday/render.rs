@@ -20,6 +20,7 @@
 //! enforces this for both the per-domain findings section and could be
 //! reused by an index-level rollup if one is ever added.
 
+use crate::domesday::anomaly::{REPORT_SIZE, TAIL_DEPTH_BAR, TOP_WORLDS, WorldAnomaly};
 use crate::domesday::census::{Census, Column};
 use crate::domesday::detect::{DECLARED_DETECTORS, Finding};
 use crate::domesday::stats::{categorical, numeric};
@@ -571,6 +572,84 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
     out
 }
 
+/// Render the anomaly report's single committed page (spec §3.6): a header
+/// naming the three frozen selection bars as selection bars, not
+/// significance claims, the top [`TOP_WORLDS`] worlds with their flagged
+/// metrics/depths/values, and the full exclusion roster with reasons.
+///
+/// `ranked` is expected to already be ordered most-anomalous-first (as
+/// [`crate::domesday::anomaly::rank`] returns it) — this function only
+/// takes the first [`TOP_WORLDS`] of whatever order it is given, it does
+/// not re-sort.
+/// type-audit: bare-ok(artifact: return), bare-ok(artifact: excluded)
+pub fn render_anomalies(
+    c: &Census,
+    ranked: &[WorldAnomaly],
+    excluded: &[(String, String)],
+) -> String {
+    let mut out = format!(
+        "{HEADER}\n\n# Anomalies — The Domesday's transpose\n\n\
+         Per world, which of its metric values sit deep in the tail of that column's \
+         distribution across the {} census worlds — so a world volunteers its own \
+         outliers instead of waiting for someone to ask the right question. This is \
+         a pure read over the same committed census the rest of the Domesday reads, \
+         and never builds a world (spec §3.1).\n\n\
+         **Frozen selection bars, not significance claims** (spec §3.4 — the same \
+         precedent D1's 80% share bar and D3's 5% IQR bar carry, decision 0016): a \
+         column counts toward a world's score once its two-sided tail depth is at or \
+         below **{TAIL_DEPTH_BAR}**; each world's published report below carries its \
+         **{REPORT_SIZE}** columns of smallest tail depth; this page publishes the top \
+         **{TOP_WORLDS}** worlds by score. None of the three is retuned after seeing a \
+         result.\n\n",
+        c.rows.len(),
+    );
+
+    out.push_str("## Top worlds\n\n");
+    if ranked.is_empty() {
+        out.push_str("No worlds ranked — the evaluable surface is empty.\n\n");
+    }
+    for wa in ranked.iter().take(TOP_WORLDS) {
+        let flagged = wa
+            .flags
+            .iter()
+            .filter(|f| f.depth <= TAIL_DEPTH_BAR)
+            .count();
+        out.push_str(&format!(
+            "### Seed `{}`\n\n{flagged} of its {} reported columns clear the \
+             {TAIL_DEPTH_BAR} tail-depth bar.\n\n| metric | depth | value |\n|---|---|---|\n",
+            wa.seed,
+            wa.flags.len(),
+        ));
+        for flag in &wa.flags {
+            out.push_str(&format!(
+                "| `{}` | {} | {} |\n",
+                flag.metric,
+                quantize(flag.depth),
+                quantize(flag.value)
+            ));
+        }
+        out.push('\n');
+    }
+
+    out.push_str("## Excluded columns\n\n");
+    out.push_str(
+        "Every numeric/integer census column with a domain and a role that this report \
+         did NOT score, and why (spec §3.3). Categorical and flag columns carry no \
+         ordering — a tail is an ordering — so they are never candidates at all, and are \
+         not listed here (see the module doc on `anomaly.rs`).\n\n",
+    );
+    if excluded.is_empty() {
+        out.push_str("No columns excluded.\n");
+    } else {
+        out.push_str("| metric | reason |\n|---|---|\n");
+        for (metric, reason) in excluded {
+            out.push_str(&format!("| `{metric}` | {reason} |\n"));
+        }
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1026,5 +1105,72 @@ mod tests {
                 );
             }
         }
+    }
+
+    // --- render_anomalies ---
+
+    #[test]
+    fn the_anomalies_page_carries_the_generated_header_and_frozen_constants() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let (_, excluded) = crate::domesday::anomaly::evaluable_columns(&c);
+        let page = render_anomalies(&c, &ranked, &excluded);
+        assert!(
+            page.starts_with("<!-- GENERATED FILE — do not edit."),
+            "header required"
+        );
+        assert!(page.contains("0.01"), "the tail-depth bar must be named");
+        assert!(page.contains("10"), "the report size must be named");
+        assert!(page.contains("25"), "the top-worlds cap must be named");
+        assert!(
+            page.contains("not significance claims"),
+            "the header must say these are selection bars, not significance claims"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_lists_the_top_worlds_ranked_first() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let page = render_anomalies(&c, &ranked, &[]);
+        let top_seed = ranked.first().expect("at least one ranked world").seed;
+        assert!(
+            page.contains(&format!("### Seed `{top_seed}`")),
+            "the top-ranked world's seed must appear on the page: {page}"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_only_publishes_up_to_top_worlds_worlds() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let page = render_anomalies(&c, &ranked, &[]);
+        let seed_headings = page.matches("### Seed `").count();
+        assert_eq!(
+            seed_headings,
+            crate::domesday::anomaly::TOP_WORLDS,
+            "exactly TOP_WORLDS worlds must be published, not the full ranked list"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_carries_the_full_exclusion_roster_with_reasons() {
+        let c = census();
+        let (_, excluded) = crate::domesday::anomaly::evaluable_columns(&c);
+        assert!(!excluded.is_empty(), "sanity: some columns are excluded");
+        let page = render_anomalies(&c, &[], &excluded);
+        for (metric, reason) in &excluded {
+            assert!(
+                page.contains(&format!("`{metric}`")) && page.contains(reason.as_str()),
+                "{metric}'s exclusion reason must be published verbatim: {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_exclusion_roster_says_so_rather_than_rendering_an_empty_table() {
+        let c = census();
+        let page = render_anomalies(&c, &[], &[]);
+        assert!(page.contains("No columns excluded."));
     }
 }

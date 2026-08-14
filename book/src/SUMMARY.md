@@ -92,6 +92,7 @@
   - [Language](./domesday/language.md)
   - [Naming](./domesday/naming.md)
   - [History](./domesday/history.md)
+  - [Anomalies](./domesday/anomalies.md)
 
 # Reference
 
