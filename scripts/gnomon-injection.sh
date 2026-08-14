@@ -65,8 +65,8 @@ PUBLISHED="book/src/laboratory/generated/gnomon-injection"
 # figure is not five readings of one mechanism.
 # ---------------------------------------------------------------------------
 ARMS=(
-    "baseline-a|||the unperturbed run: the comparison arm every injection is diffed against"
-    "baseline-b|||a SECOND independent unperturbed run: H1's false-positive arm compares its top-10s against baseline-a's"
+    "baseline-a||||the unperturbed run: the comparison arm every injection is diffed against"
+    "baseline-b||||a SECOND independent unperturbed run: H1's false-positive arm compares its top-10s against baseline-a's"
     "geothermal|domains/terrain/src/strata.rs|const CRATONIC_GRADIENT_K_PER_KM: f64 = 15.0;|const CRATONIC_GRADIENT_K_PER_KM: f64 = 22.5;|the cratonic floor of the geothermal gradient clamp (strata.rs:28,54); expected to move mean-geothermal-gradient and little else"
     "unconformity|domains/terrain/src/strata.rs|const UNCONFORMITY_COVER_M: f64 = 200.0;|const UNCONFORMITY_COVER_M: f64 = 400.0;|the cover depth below which an old surface counts as an unconformity (strata.rs:146); expected to move unconformity-fraction"
     "aquifer|domains/terrain/src/lithology.rs|const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;|const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.30;|the porosity above which clastic rock is an aquifer (lithology.rs:366); expected to move aquifer-fraction"
@@ -141,8 +141,13 @@ if [ ${#requested[@]} -eq 0 ]; then
 fi
 
 sha="$(git rev-parse HEAD)"
-rm -rf "${FIXTURES:?}"
+# Clear the arms and the manifest, never the whole directory: the README is
+# committed prose that lives here and explains why these fixtures are absent
+# from docs/generated-paths.txt. A blanket `rm -rf "$FIXTURES"` deletes it,
+# and the next run commits a fixture set with no explanation attached.
 mkdir -p "$FIXTURES"
+find "${FIXTURES:?}" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+rm -f "$FIXTURES/manifest.json"
 
 manifest_arms=""
 seed_from=""
