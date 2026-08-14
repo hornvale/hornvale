@@ -231,26 +231,45 @@ variety and saturates by ~0.8.
 
 - [ ] **Step 1: Write the failing property test**
 
-In `domains/terrain/tests/tectonic_properties.rs`:
+**Controller's correction — the first draft put this test in the wrong file, and
+its seed derivation was silently wrong.** Verified against the tree Task 1 left:
+
+- **The test goes in `crust.rs`'s own `mod tests`**, beside
+  `continental_supply_is_the_area_the_rescale_budgets` (now `crust.rs:1735`),
+  **not** in `tectonic_properties.rs`. That file is an *integration* test and
+  sees only `pub` items; `CRATON_RADIUS_MAX_RAD` is `pub(crate)` and
+  `default_ocean_target` is a helper defined *inside* `mod tests`
+  (`crust.rs:1178`). Do not widen either to `pub` just to place a test.
+- **The terrain seed is `Seed(seed).derive(streams::ROOT)`, never `Seed(seed)`.**
+  The sketch below originally used the bare world seed. That compiles, runs, and
+  measures a *different craton population* — a silent wrong answer, not a red.
+  Both existing sweeps use the `derive` form; copy it.
+- The rescale site is now **`crust.rs:650-655`** (Task 1's constant shifted it
+  from the 634-640 this plan first named).
+
+In `domains/terrain/src/crust.rs`, inside `mod tests`:
 
 ```rust
-/// claim: readout(over 200 default seeds — the rescale must deliver the
-/// budget it solves for, or saturate with every craton at the clamp)
+/// claim: invariant(forall-seed) — the rescale must deliver the budget it
+/// solves for, unless the clamp makes that budget unreachable
 #[test]
 fn the_rescale_delivers_its_own_budget() {
-    let mut shortfalls = Vec::new();
     for seed in 0..200u64 {
-        let terrain_seed = Seed(seed);
+        let terrain_seed = Seed(seed).derive(streams::ROOT);
         let ocean_target = default_ocean_target(terrain_seed);
-        let cratons = crust::draw_cratons(
-            terrain_seed, &TerrainPins::default(), ocean_target, &mut Vec::new(),
+        let cratons = draw_cratons(
+            terrain_seed,
+            &TerrainPins::default(),
+            ocean_target,
+            &mut Vec::new(),
         );
-        let supply = crust::continental_supply(&cratons);
+        let supply = continental_supply(&cratons);
         let budget = budget_for(terrain_seed, ocean_target);
-        let all_clamped = cratons.iter().all(|c| c.radius_rad >= CRATON_RADIUS_MAX_RAD - 1e-9);
+        let all_clamped = cratons
+            .iter()
+            .all(|c| c.radius_rad >= CRATON_RADIUS_MAX_RAD - 1e-9);
         // Either it hit the budget, or the clamp made the budget unreachable.
         if !all_clamped {
-            shortfalls.push((seed, (budget - supply) / budget));
             assert!(
                 (supply - budget).abs() / budget < 0.02,
                 "seed {seed}: supply {supply:.4} vs budget {budget:.4}, \
@@ -261,10 +280,13 @@ fn the_rescale_delivers_its_own_budget() {
 }
 ```
 
-Expose whatever `budget_for` needs (the `margin` draw is the first `f64` off
-the `CRATONS` stream) rather than duplicating the arithmetic — a duplicated
-formula drifts silently, which is the trap §1.1 of the audit already
-documented.
+`budget_for` does not exist. **Do not re-type `(1.0 - ocean_target) * (1.0 + margin)`
+in the test** — that is the duplicated-formula drift audit §1.1 documents.
+Extract the two lines at `crust.rs:629-631` into a crate-internal helper that
+both `draw_cratons_unrepelled` and the test call, so one edit moves both.
+The `margin` draw is the first `f64` off the `CRATONS` stream, so the helper
+must consume that stream identically — **it is a save-format contract; the
+helper must not change how many draws are taken or in what order.**
 
 - [ ] **Step 2: Run it and confirm it fails**
 
@@ -359,8 +381,16 @@ cargo nextest run -p hornvale-terrain
 Expected: the new test PASSES. **Other tests are expected to move** — this is a
 deliberate epoch. Two that specifically encode the old behaviour:
 
-- `continental_supply_is_the_area_the_rescale_budgets` (`crust.rs:1718`)
-- `default_worlds_never_trip_the_supply_fallback` (`tectonic_properties.rs`)
+- `continental_supply_is_the_area_the_rescale_budgets` (`crust.rs:1735`). Its
+  single-pinned-craton arm asserts `supply < 0.037`, and that bound is *derived
+  from the 0.6 clamp* in its own comment: `(1 − cos 0.6)/2 ≈ 8.73%` of the
+  sphere × the best-case continental fraction `≈ 0.415` ≈ 3.63%. At 0.8 the same
+  arithmetic gives `(1 − cos 0.8)/2 ≈ 15.16%` × 0.415 ≈ **6.29%**. Recompute the
+  bound *and rewrite the comment* — a stale comment beside a corrected number is
+  worse than either alone. Its default-draw arm (`0.15..=0.60`) should still
+  hold as supply rises from ~0.27 to ~0.41; if it does not, report rather than
+  widen it.
+- `default_worlds_never_trip_the_supply_fallback` (`tectonic_properties.rs:457`)
 
 The second is load-bearing and **must still pass**: decision 0053 chose
 `SUPPLY_SHORTFALL_FACTOR = 0.5` so default worlds provably keep the
