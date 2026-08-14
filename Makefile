@@ -29,7 +29,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log lane lane-status lane-log lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -300,6 +300,34 @@ heavy-remote: ## Run the heavy tier on the canonical box (The Siding); REF=<full
 		echo "  and may only run on the canonical box (decisions 0063/0079)."; \
 		exit 1; }
 	ssh lefford 'cd ~/Projects/hornvale && HV_HEAVY_REF=$(REF) scripts/heavy-run.sh'
+
+# The Staff's lane: one strictly serial queue on the canonical box for every
+# set above the commit gate. lane-dispatch.sh validates and ssh's, then
+# RETURNS — it never waits (flock -w pins its caller otherwise, and a job can
+# sit tens of minutes behind a heavy tier or a census). Read the job back with
+# `make lane-status` or `make lane-log`.
+lane: ## Dispatch one set to the lane (SET=<set> REF=<full-sha>)
+	@test -n "$(SET)" || { echo "usage: make lane SET=<set> REF=<full-sha>"; exit 2; }
+	@bash scripts/lane-dispatch.sh "$(SET)" "$(REF)"
+
+lane-status: ## Who holds the staff on the canonical box, and who is queued
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
+	    scripts/heavy-run.sh status; \
+	    d=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    echo; echo "== recent jobs (utc, id, set, why, rc, wall_s, ref) =="; \
+	    tail -10 "$$d/jobs.tsv" 2>/dev/null || echo "  (no jobs recorded yet)"'
+
+lane-log: ## Read a lane job back (JOB=<id>, or omit for the most recent)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; else f=$$(ls -t "$$d"/*.log 2>/dev/null | head -1); fi; \
+	    if [ -n "$$f" ] && [ -f "$$f" ]; then echo "-- $$f"; tail -60 "$$f"; \
+	    else echo "  (no such job)"; fi'
+
+lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the default
+	@test -n "$(JOB)" || { echo "usage: make lane-wait JOB=<id>"; exit 2; }
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    until grep -q "	$(JOB)	" "$$d/jobs.tsv" 2>/dev/null; do sleep 20; done; \
+	    grep "	$(JOB)	" "$$d/jobs.tsv"'
 
 fmt: ## Format the workspace in place
 	cargo fmt
