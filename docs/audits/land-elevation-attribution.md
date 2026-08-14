@@ -1,8 +1,10 @@
 # Land-elevation attribution
 
-**Status:** committed finding. **Task:** The Glasshouse, Stage A Task 4.
-**Measured:** 2026-08-12, this Mac, 12 worlds at the canonical level 6,
-default pins, against
+**Status:** committed finding. **Task:** The Glasshouse, Stage A Task 4;
+extended by Stage B Task 1 (§2's closing blocks, §3.5's measured resolution,
+§3.6, §6's cost rows).
+**Measured:** 2026-08-12 (Stage A) and 2026-08-13 (Stage B), this Mac, 12
+worlds at the canonical level 6, default pins, against
 `docs/superpowers/specs/2026-08-12-the-glasshouse-design.md` §3.3 and
 decisions [0053](../decisions/0053-ocean-fraction-is-a-target-under-supply-limited-crust.md) /
 [0106](../decisions/0106-a-constants-justification-must-match-its-kind.md).
@@ -177,6 +179,35 @@ WHY SEA LEVEL LANDS THERE (sphere fractions, mean over the sweep)
   supply / land quota                                          0.6948  (the shelf-break fallback fires below SUPPLY_SHORTFALL_FACTOR = 0.5)
 ```
 
+**Stage B added three accumulators** (Task 1) and changed nothing else. The
+blocks above are byte-identical to the Stage A run that produced them — which
+is the first evidence that the addition is inert — and the probe now closes
+with:
+
+```
+THE RETAINED SET (the cells that would still be land if sea level rose to the shelf break)
+  retained cells                                    133888
+  conditional mean crust over the retained set       29.59 km
+  mean crust over TODAY's land                       25.73 km
+  retained land would stand above the shelf break by    1725.72 m
+  today's land stands above today's coastline by        2143.75 m
+  => raising sea level to the shelf break recovers       418.02 m of mean land elevation (NOT the 1112.96 m cut depth)
+
+CRATON RADIUS DISTRIBUTION (majors only — microcontinents and terranes excluded)
+  cratons over the sweep                               132
+  min / mean / max radius (rad)       0.1922   0.5054   0.6000
+  coefficient of variation                          0.2428
+  at the clamp (>= 0.60 rad)                            67  (50.8% of cratons)
+
+POST-REPULSION PAIR SEPARATION (majors only; target = 1.2 x (r_i + r_j))
+  pairs over the sweep                                 673
+  min / mean / max centre angle (rad)    0.3083   1.6688   3.1024
+  min / mean / max angle / target        0.2552   1.4113   4.6013
+  pairs still inside their target                      128  (19.0% of pairs)
+```
+
+§3.5 reads the first block; §3.6 reads the other two.
+
 ### 2.1 Reading the two variance columns
 
 Naive shares (`Var(cᵢ)/Var(y)`) do not sum to 1, because the components are
@@ -342,6 +373,34 @@ the old — a recovery of about **500 m**. Sweeping the band average over
 the assumption. An independent review estimate put it nearer **650 m**. Both
 are far from 1113 m, which is the load-bearing point.
 
+**Measured, Stage B Task 1 — and the estimate above was optimistic.** The
+conditional mean crust over the retained set is **29.59 km**, not the
+estimated 29.1 km, over 133,888 cells. Higher retained crust means *less*
+recovery, not more, because the retained set stands that much further above
+the new coastline:
+
+| quantity | estimated (§3.5, above) | **measured** |
+|---|---|---|
+| conditional mean crust over the retained set | ~29.1 km | **29.59 km** |
+| retained land above the shelf break | ~1646 m | **1725.72 m** |
+| today's land above today's coastline | 2144 m | **2143.75 m** |
+| **recovery** | ~500 m | **418.02 m** |
+| ΔT at `LAPSE_C_PER_M = 6.5/1000` | ~3.3 K | **2.7 K** |
+
+So the ordering of the three candidate figures is now settled by measurement
+rather than by argument: **1113 m (the cut depth) is not achievable, 650 m
+(the independent review estimate) is falsified, ~500 m (this document's own
+area-weighted estimate) is 20% high, and the real budget is 418 m — about
+2.7 K, under a fifth of the campaign's 14.7 K.** The band-average assumption
+the estimate rested on (~16.5 km over the dropped band) was the wrong end of
+the sweep; the honest reading is that the dropped band is thicker than
+assumed, so less of the height is in it.
+
+This does not change §5's verdict, and it sharpens it: Route 2 alone was
+already not a solution, and it is a smaller partial fix than the estimate
+suggested. It is a *bound*, not an argument against acting — the number to
+plan Route 3 against.
+
 In temperature, using the rate the sim itself applies —
 `LAPSE_C_PER_M = 6.5 / 1000` (`domains/climate/src/temperature.rs:23`), the
 same rate that turns 2266.87 m into the campaign's −14.7 K:
@@ -360,6 +419,54 @@ climate code actually applies, so the K column above is the one to plan
 against.) **Stage B must measure the conditional mean over the retained set
 before quoting any budget at all** — it is one extra accumulator in this
 probe.
+
+### 3.6 The craton geometry baseline (Stage B's before-arm)
+
+Two distributions the Stage A probe never computed, added in Stage B Task 1
+so that a change to the rescale can be *judged* rather than merely observed.
+Both are over **majors only** — `TectonicGlobe::cratons` excludes
+microcontinents and terranes by construction, and `continental_supply` counts
+the same set, so this is exactly the population the rescale budgets for.
+Pooling the other two in would have made the variety number describe a
+different population silently.
+
+| quantity | measured (12 worlds, 132 majors) |
+|---|---|
+| radius min / mean / max | 0.1922 / 0.5054 / **0.6000** rad |
+| radius coefficient of variation | **0.2428** |
+| cratons at the clamp (≥ `CRATON_RADIUS_MAX_RAD` = 0.6) | **67 of 132 — 50.8%** |
+| pair centre-angle min / mean / max | 0.3083 / 1.6688 / 3.1024 rad |
+| pair angle ÷ repulsion target, min / mean | **0.2552** / 1.4113 |
+| pairs still inside their target | **128 of 673 — 19.0%** |
+
+Three readings:
+
+- **The clamp binds on half the population, on the grid, exactly as the
+  20,000-draw simulation projected** (50.3% simulated against 50.8% measured
+  here, and radius CV 0.227 simulated against 0.2428 measured). The two are
+  independent — one re-implements the draw arithmetic, one reads the real
+  globes — so the agreement is a cross-check on the simulation, and the
+  ledger's projected variants can be read with more confidence than a paper
+  model usually earns.
+- **Today's variety is real but modest.** A CV of 0.2428 is the number any
+  fix has to beat, or at least not destroy; the simulated "exact solve, clamp
+  0.6" variant collapses it to 0.001 by pinning every craton at the clamp,
+  which is the concrete cost of an exact solve that leaves the clamp where it
+  is.
+- **The repulsion pass leaves a fifth of pairs inside their target, and the
+  worst pair at a quarter of it.** That is consistent with what
+  `repel_cratons` documents — it promises *reduction*, not attainment — but it
+  is now a number rather than a caveat, and it is the baseline against which a
+  saturating repulsion pass (larger radii, same sphere) would show up as a
+  fall in the min ratio and a rise in the 19%.
+
+**The constant this section names was named, not moved.**
+`CRATON_RADIUS_MAX_RAD` is the `0.6` that was previously a bare literal at the
+`.min()` site in `crust.rs`; Task 1 gave it a name, a `hornvale-choice` kind
+and decision 0106 provenance so the probe could count cratons at the clamp
+without duplicating the literal — the same drift trap §1.1 documents for the
+per-term helpers. Its *value* is untouched, which is why every number in §2's
+original blocks is byte-identical.
 
 ---
 
@@ -551,9 +658,20 @@ than a single number** — which is why a range is recorded here instead of one 
 | `cargo nextest run -p hornvale-terrain` | 5.702 s | 6.675 s | moderate load, later in the session |
 | independent review re-run | 3.80 s | 5.406 s | loadavg ~16 |
 | `cargo nextest run -p hornvale-terrain` | 14.792 s | 16.156 s | loadavg ~28, other sessions gating |
+| **after Stage B's three accumulators**, `cargo test`, single test | **2.85 s** | — | quiet box |
+| **after Stage B's three accumulators**, `cargo nextest run -p hornvale-terrain` | **4.086 s** | **5.564 s** | quiet box |
 
-The last row is contention, not the probe: the whole suite scales by the same
-~2.7×. Every figure is well inside the plan's ~30 s threshold, so the probe
+The 14.792 s row is contention, not the probe: the whole suite scales by the
+same ~2.7×.
+
+**Stage B's accumulators did not move the cost, and the table is the evidence
+rather than the claim.** The three additions are a second pass over the cells
+(O(cells), no globe rebuild), a copy of ≤14 radii per world, and an
+all-pairs loop over ≤14 cratons — 673 pairs across the whole sweep. The
+post-Stage-B figures sit at the fast end of the pre-existing range, not
+outside it, on a quieter box; the probe stays in the commit gate with no
+`heavy:` deferral, and the conservation assert of §1.2 keeps running on every
+gate. Every figure is well inside the plan's ~30 s threshold, so the probe
 carries no `#[ignore]` and the conservation assert of §1.2 runs on every gate
 rather than only under `make gate-full`. The probe's own doc comment records
 the same range, so the two cannot drift apart.
@@ -568,7 +686,12 @@ The probe also required a `claim: readout(…)` tag: `cli/tests/claim_shape.rs`
 (decision 0093) fails any test that iterates seeds without declaring its
 quantifier, and it caught this one immediately.
 
-**New constants:** none. The probe introduces no constant of any kind, so
-decision 0106's provenance requirement does not apply. `LEVEL` and
-`SEED_COUNT` are sample-size parameters of a test, and `LEVEL` is
-`crate::GLOBE_LEVEL` rather than a fresh literal.
+**New constants:** none in Stage A — `LEVEL` and `SEED_COUNT` are sample-size
+parameters of a test, and `LEVEL` is `crate::GLOBE_LEVEL` rather than a fresh
+literal. Stage B Task 1 introduces **one name for an existing value**,
+`crust::CRATON_RADIUS_MAX_RAD = 0.6`, carrying a `hornvale-choice` kind and
+decision 0106 provenance (§3.6). It replaces a bare literal at its one live
+site and at the internal post-rescale bound assert; nothing reads a duplicated
+`0.6` any more. `REPEL_SEPARATION_FACTOR` was widened from private to
+`pub(crate)` for the same reason — the probe reads the real constant instead of
+retyping `1.2`.

@@ -600,6 +600,22 @@ pub fn continental_supply(cratons: &[Craton]) -> f64 {
         / (4.0 * std::f64::consts::PI)
 }
 
+/// The maximum angular radius of a craton, radians — the cap the
+/// area-normalization rescale applies to every radius it scales.
+///
+/// kind: **hornvale-choice** (decision 0106). Not a geometric limit and not
+/// a measured one: it is a bound on how much of one world a single craton may
+/// be, chosen with the rescale itself (Crust epoch, Task 8) and carried since
+/// as a bare `0.6` literal at the `.min()` site. The Glasshouse names it
+/// without moving it, so the land-elevation probe can count cratons *at* the
+/// clamp without duplicating the literal — the drift trap
+/// `docs/audits/land-elevation-attribution.md` §1.1 documents for the
+/// per-term helpers. That audit's §5 Route 3 is the standing case against the
+/// value: at 0.6 the clamp truncates roughly half of all cratons on an
+/// average world and accounts for 89% of the rescale's 34.4% miss against its
+/// own continental budget.
+pub(crate) const CRATON_RADIUS_MAX_RAD: f64 = 0.6;
+
 /// Everything in `draw_cratons` except the final repulsion pass: the draws,
 /// the area-normalization rescale, and the `--supercontinent` transform.
 /// Split out so the repulsion test can measure the pre-pass geometry.
@@ -635,7 +651,7 @@ fn draw_cratons_unrepelled(
     if continental_area > 0.0 {
         let scale = ((budget * 4.0 * std::f64::consts::PI) / continental_area).sqrt();
         for c in cratons.iter_mut() {
-            c.radius_rad = (c.radius_rad * scale).min(0.6);
+            c.radius_rad = (c.radius_rad * scale).min(CRATON_RADIUS_MAX_RAD);
         }
     }
     // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
@@ -653,7 +669,7 @@ fn draw_cratons_unrepelled(
 /// 2's implicit 1.0x): pairs are pushed toward 1.2x their combined radii
 /// rather than exact rim tangency, leaving a moat of open ocean the lobed
 /// rims' overlapping skirts are less likely to bridge back together.
-const REPEL_SEPARATION_FACTOR: f64 = 1.2;
+pub(crate) const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 
 /// One deterministic repulsion pass over craton centers (Task 9
 /// iteration 2, retargeted in iteration 3'): for each craton i > 0 in id
@@ -1270,11 +1286,12 @@ mod tests {
                 // Post-rescale bound, exact by construction rather than
                 // observed: scale = sqrt(budget * 4pi / continental_area) is
                 // strictly positive (budget > 0, continental_area > 0), so
-                // radius_rad = min(r * scale, 0.6) is always in (0, 0.6].
+                // radius_rad = min(r * scale, CRATON_RADIUS_MAX_RAD) is
+                // always in (0, CRATON_RADIUS_MAX_RAD].
                 // The pre-rescale draw range (0.10..=0.45) no longer bounds
                 // it — that is the area-normalization's whole point.
                 assert!(
-                    c.radius_rad > 0.0 && c.radius_rad <= 0.6,
+                    c.radius_rad > 0.0 && c.radius_rad <= CRATON_RADIUS_MAX_RAD,
                     "radius {}",
                     c.radius_rad
                 );
