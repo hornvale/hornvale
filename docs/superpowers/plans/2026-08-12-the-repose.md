@@ -1197,6 +1197,33 @@ Constants (`B_VALUE`, `M_MIN`, the VEI weights) are **authored**, each with a
 doc comment saying so and a `type-audit:` tag. Draws come from
 `seed.derive(HAZARD_EVENT)` mixed with the cell id and the window bounds.
 
+> **AMENDED 2026-08-14, at Task 6's pre-dispatch verification. The sentence
+> immediately above contradicts the sub-window property two paragraphs down,
+> and the sentence above is the wrong half.**
+>
+> Keying the draw on the window bounds gives a *different stream per window*,
+> so `events_in(seed, cell, (0, 100))` and `events_in(seed, cell, (0, 50))`
+> would draw unrelated event sets and the second could not be a subset of the
+> first. The two requirements cannot both hold as written.
+>
+> **The window must be a filter, not a key.** The event sequence for a
+> `(seed, cell)` exists independently of who asks about it: draw inter-arrival
+> times from a fixed origin, and let `events_in` walk that sequence and return
+> the events falling inside the requested window. Sub-window consistency is
+> then automatic rather than asserted, and any window is answerable from the
+> same sequence.
+>
+> That is also the stronger reading of §3.3's "authored, never predicted" and
+> `BIO-36`'s "narrated backwards, never forward-simulated": the events are a
+> property of the world, not of the query. A design where the answer depends
+> on how you asked is a simulation with extra steps.
+>
+> The mechanism — where the origin sits, how the sequence is indexed, how a
+> long window stays cheap — is the implementer's to choose. The property is
+> not: **a sub-window query returns exactly the enclosing window's events that
+> fall inside it, and that must be demonstrated over real worlds rather than
+> argued.**
+
 `events_in` must be a pure function of its arguments: the same
 `(seed, cell, window)` yields the same `Vec<HazardEvent>`, and a query for a
 sub-window must return exactly the events of the enclosing window that fall
