@@ -136,7 +136,7 @@ comparing — is what made the number interpretable.
 | `worktree-take.sh` `ROOT` empty-string shape | this file; fails loud (`git -C ''` → 128), not destructive |
 | `hv-guard-bash.sh` command-text false positives | §7 above |
 | `load_rows` raw `{:?}` header-mismatch dump | this file; pre-existing, legibly distinct from value drift |
-| `lab claim-status` exit-code contract (0 free / 1 held) | registry — would remove every shell caller's prose dependency |
+| `lab claim-status` exit-code contract (0 free / 1 held) | registry row `TOOL-claim-status-exit-code` — would remove every shell caller's prose dependency |
 | `make board-post NOTE=` macro expansion executes `$(shell …)` | registry row `PROC-board-post-note-is-macro-expanded`, board lane |
 | `gate-fast` mixes scoped and full runs under one label | this file; introduced by this campaign |
 | The I7 doc test is brittle to prose rewrap | this file; introduced by this campaign |
