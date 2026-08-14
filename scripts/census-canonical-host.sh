@@ -42,7 +42,39 @@
 # run and the two layers disagree about what "canonical" means, which is
 # exactly the silent cross-host divergence decision 0063 exists to prevent.
 CANONICAL_HOST_FILE="${HV_CANONICAL_HOST_FILE:-$(dirname "${BASH_SOURCE[0]}")/census-canonical-host.txt}"
-CANONICAL_CENSUS_HOST="$(cat "$CANONICAL_HOST_FILE")"
+# `2>/dev/null || true`: a missing/unreadable file must not crash here with a
+# bare `cat` stack trace — it must fall through to the empty-string check
+# below and get the guard's OWN refusal message instead.
+CANONICAL_CENSUS_HOST="$(cat "$CANONICAL_HOST_FILE" 2>/dev/null || true)"
+
+# Fail closed if the canonical host could not be determined AT ALL — the file
+# is missing, unreadable, or present but empty. This is STRUCTURAL, not
+# incidental: without it, "unknown" is an empty string, and an empty string
+# only fails to compare-equal to `here_lc` by accident of `hostname` also
+# never returning empty. Every caller of this guard happens to run under
+# `set -euo pipefail` today, which is what turned the OLD bare-`cat` crash
+# above into a hard stop — but that was the CALLER's discipline, not this
+# guard's, and it would take exactly one future caller without it for "I
+# don't know" to silently read as "yes". This repo has already shipped that
+# shape once: an empty nextest.rc read as green until gate-run started
+# treating missing/empty/non-numeric as failure.
+#
+# Checked ONCE, here, at the point both entry points share, so neither
+# require_canonical_census_host nor require_canonical_host below has to
+# re-derive it.
+if [ -z "$CANONICAL_CENSUS_HOST" ]; then
+    cat >&2 <<EOF
+census-canonical-host: REFUSING — the canonical host could not be determined
+from '$CANONICAL_HOST_FILE' (missing, unreadable, or empty after reading).
+
+If this is a real run: check that scripts/census-canonical-host.txt exists,
+is readable, and contains a hostname (one line, in version control).
+
+If this is a test: HV_CANONICAL_HOST_FILE pointed somewhere that could not be
+read as a non-empty hostname.
+EOF
+    return 1
+fi
 
 # Exit 0 on the canonical box; otherwise print why and exit 1.
 #

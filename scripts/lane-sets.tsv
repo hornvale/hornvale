@@ -1,8 +1,10 @@
 # The set roster (The Staff). THE SINGLE SOURCE OF TRUTH for what a set is.
-# Read by the Makefile, scripts/lane-dispatch.sh, scripts/lane-run.sh,
-# scripts/census-canonical-host.sh and cli/tests/lane_sets.rs. Do not restate
-# this list in prose anywhere — cli/tests/lane_sets.rs fails on a second copy,
-# for the reason docs/generated-paths.txt exists.
+# Read by the Makefile, scripts/lane-dispatch.sh, scripts/lane-run.sh, and
+# cli/tests/lane_sets.rs. scripts/census-canonical-host.sh does NOT read this
+# file — its require_canonical_host() only takes a set NAME as $1, to name
+# the right dispatch line in its refusal prose. Do not restate this list in
+# prose anywhere — cli/tests/lane_sets.rs fails on a second copy, for the
+# reason docs/generated-paths.txt exists.
 #
 # TSV, not JSON: /bin/sh on lefford is dash and must parse this without a tool,
 # and decision 0004 admits no TOML parser to the workspace.
