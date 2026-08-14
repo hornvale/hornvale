@@ -288,9 +288,24 @@ this confound by construction.
 Measured on this Mac after Task 5 landed. **These are the real figures; the
 spec's earlier blank cell is now filled, and the honest answer is bimodal.**
 
+**The cost is a function of WHERE you edited in the layering**, which is what
+the constitution's `kernel → domains/* → windows/* → cli` ordering predicts. One
+line added and reverted in each, `make gate-commit` timed end to end:
+
+```
+  kernel/   (base; everything depends on it)   470.8 s   <- as costly as `make gate`
+  domains/  (mid layer)                         ~84   s
+  cli/      (top; nothing depends on it)         17   s
+  no source change at all                       10-16 s
+```
+
+**This is also why `gate-fast` only ever bought 10%.** It scoped *tests* to
+changed crates; it could not scope the *build*, which is where the cost is. The
+same ceiling binds any test-selection strategy, including this one.
+
 ```
   no source change       gate-commit   10.4 s / 15.6 s
-  after a one-line edit  gate-commit   ~84 s
+  after a one-line edit  gate-commit   ~84 s (a domain crate; see the table above)
 
   decomposed, clean tree:
     style-run    (fmt + clippy + type-audit + report)   20.7 s
