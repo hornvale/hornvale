@@ -5340,6 +5340,23 @@ index over the code, declared and default-deny, which fails when a file
 instantiates a named pattern without saying so. That last one is itself a
 ratchet, which is either the joke or the point.
 
+*Three of those four rungs are built (The Gnomon, 2026-08-13), and the
+outcome is worth the sentence because it is not the one this passage
+expects.* The `refuted` status shipped, and a preregistered audit of the 47
+rows that mention falsification admitted **one** — so the greppable epistemic
+record starts almost empty and accrues forward rather than retroactively. The
+first-occurrence index shipped, narrower than argued here: keyed on
+`(predicate, object)` rather than predicate, and degenerate for 93 of 115
+predicates, because only 22 ever carry a non-genesis day. The anomaly report
+shipped and **its own usefulness claim was falsified** — recall@10 = 0.5667
+against a preregistered 0.60 bar, over a battery of six injected generative
+constants. The finding underneath it is the transferable one: *a percentile
+tail rank measures unusualness against a thousand worlds, and a perturbation
+produces unusualness only sometimes.* A world can be different without being
+strange, and an instrument that ranks by extremity cannot see the difference.
+That constrains every later rung on this list which proposes to find defects
+by looking for outliers. The shape index remains unbuilt.
+
 ## Intellectual lineage
 
 So the reasoning is recoverable when it has gone cold: benign-violation
