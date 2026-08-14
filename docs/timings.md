@@ -888,3 +888,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T15:07:32Z | quick | 6.845 | 9.452 | 9.600 | 2.78 | 0 | 84589e49 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T15:08:10Z | quick | 21.110 | 27.303 | 32.219 | 2.82 | 0 | 84589e49 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T15:16:51Z | rebaseline | 53.075 | 186.679 | 9.110 | 3.69 | 0 | 84589e49 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T15:26:55Z | quick | 27.933 | 34.770 | 42.677 | 2.77 | 0 | 84589e49 | campaign/the-glasshouse | ambrose | 12 |
