@@ -359,6 +359,23 @@ roster on two Book pages.
 Run: `cargo test -p hornvale-lab --lib first_day`
 Expected: PASS, both directions.
 
+- [ ] **Step 5b: Confirm the roster's tests discriminate, and say what they discriminate against**
+
+Task 1's review found that its two tests could not tell `min` from `max`:
+`is_finite()` holds for the latest day exactly as well as the earliest, and the
+Absent test never reaches the comparison branch. Task 1 fixed that for the
+unkeyed path. **Do not reintroduce the same gap on the keyed path.**
+
+For each shape this task adds — keyed-by-species, keyed-by-tech,
+keyed-by-cause — satisfy yourself that some committed test would fail if
+`first_day` returned the maximum, and that some committed test would fail if
+the object filter were dropped entirely (returning the first day of *any*
+object under that predicate). Those are the two mutations this roster is
+actually exposed to.
+
+State in the report which test catches which mutation. "The tests pass" is not
+the answer to this step; naming the mutation each test kills is.
+
 - [ ] **Step 6: Confirm the Absent path is exercised, not merely written**
 
 Run the roster over seed 42 and record which of the 19 are `Absent`. At least
