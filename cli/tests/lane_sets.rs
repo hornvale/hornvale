@@ -2,14 +2,28 @@
 //!
 //! # DIRECTION EACH CHECK ENFORCES
 //!
-//! These are three separate directions and none implies another:
+//! Two checks are LIVE in this file today; a third direction is named but not
+//! yet implemented anywhere in the repo — read the third bullet before
+//! assuming all three run:
 //!
 //! - `every rostered set has a well-formed row` — blind to a set that exists
 //!   in the Makefile and is missing from the roster.
-//! - `every `gate-*` Makefile target names only rostered sets` — that is the
-//!   direction which catches the omission above.
 //! - `CLAUDE.md names the roster file and does not restate its rows` — blind
 //!   to a restatement in any other document.
+//! - **NOT YET IMPLEMENTED**: `every `gate-*` Makefile target names only
+//!   rostered sets` — the direction that would catch the omission the first
+//!   bullet is blind to. It cannot be written honestly until the `gate-*`
+//!   Makefile targets exist to read (Task 7 of this campaign); writing it
+//!   today would assert over an empty set, which is a vacuous guard rather
+//!   than a real one. Task 7 adds this test and its own positive control (a
+//!   bogus set name in a `gate-*` recipe must turn it red).
+//!
+//! The asymmetry between the two live checks and the missing one is the
+//! reason the third direction matters at all, not a detail to skim: the two
+//! live checks both read the *roster* and are blind to a set the Makefile
+//! invents out of nowhere; the missing one reads the *Makefile* and is blind
+//! to a rostered set nobody ever runs. Neither implies the other, and until
+//! Task 7 lands, only the roster side of that pair is checked.
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -7,6 +7,12 @@
 # TSV, not JSON: /bin/sh on lefford is dash and must parse this without a tool,
 # and decision 0004 admits no TOML parser to the workspace.
 #
+# SOME COMMANDS BELOW DO NOT EXIST YET. `style-run`, `subfloor-run`,
+# `gate-suite-run`, `clients-check-run` (Makefile targets) and
+# scripts/lane-outboard.sh land in later tasks of this campaign (Tasks 5, 7,
+# 8, 9) — a cold reader hitting a missing target or script is not looking at
+# a typo or breakage, just an earlier task than the one that adds it.
+#
 # name	gate	where	authors	command
 style	commit	local	no	make --no-print-directory style-run
 subfloor	commit	local	no	make --no-print-directory subfloor-run
