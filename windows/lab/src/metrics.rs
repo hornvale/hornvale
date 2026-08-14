@@ -1280,6 +1280,21 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "greenhouse-forcing-k",
+            doc: "Dimensionless atmospheric greenhouse residual at the anchor, \
+                   -1..1, mean 0 (The Glasshouse) — the spread the \
+                   carbonate-silicate thermostat alone would not give it. \
+                   Nothing consumes this metric yet.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, -0.6, -0.2, 0.2, 0.6, 1.0],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(v.system.anchor.greenhouse_residual)
+            }),
+        },
+        Metric {
             name: "zone-position",
             doc: "Where in the habitable zone the anchor sits, normalized: \
                    (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 \
@@ -9616,7 +9631,12 @@ mod tests {
         // rows.csv rather than living only in a heavy-tier battery. Cost
         // measured before keeping it (~0.16 s/world, well under the 0.5
         // s/world KEEP threshold in `windows/lab/CLAUDE.md`).
-        assert_eq!(registry().len(), 223);
+        //
+        // +1 for THE GLASSHOUSE (Stage B, Task 3: greenhouse-forcing-k) — the
+        // dimensionless atmospheric greenhouse residual drawn in astronomy.
+        // A field read directly off `AstronomyView`, no sweep, so no cost
+        // concern; nothing consumes the predicate or the metric yet.
+        assert_eq!(registry().len(), 224);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

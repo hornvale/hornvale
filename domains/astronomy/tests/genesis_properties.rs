@@ -664,3 +664,27 @@ fn alignment_battery_dating_round_trip() {
         }
     }
 }
+
+/// The Glasshouse (astronomy half): the greenhouse residual is drawn,
+/// deterministic, and in range. Isolation (that no existing draw moves) is
+/// proven the cheaper way, by the Step 5 artifact drift check, not by a
+/// hand-written oracle here.
+///
+/// claim: readout(over 100 seeds — the greenhouse residual is drawn, in
+/// range, and perturbs no existing astronomy quantity)
+#[test]
+fn the_greenhouse_residual_is_drawn_and_isolated() {
+    for seed in 0..100u64 {
+        let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+        let a = &outcome.system.anchor;
+        assert_eq!(
+            *a,
+            generate(Seed(seed), &SkyPins::default())
+                .unwrap()
+                .system
+                .anchor
+        );
+        assert!(a.greenhouse_residual.is_finite());
+        assert!((-1.0..=1.0).contains(&a.greenhouse_residual));
+    }
+}
