@@ -91,6 +91,7 @@ pub mod graph_derive;
 pub mod hazard;
 pub mod history_bake;
 pub mod history_emit;
+pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod render;
@@ -131,6 +132,7 @@ pub use history_emit::{
 /// (The Quire: `hornvale_vessel::WorldContext` stores one). A re-export, not a
 /// new dependency edge — the layering graph is unchanged.
 pub use hornvale_demography::DemographyReport;
+pub use knownness::{Knownness, knownness, memory_half_life};
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{

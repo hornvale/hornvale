@@ -35,5 +35,6 @@ comment.
   - `windows/worldgen/src/history_emit.rs:336`
   - `windows/worldgen/src/history_emit.rs:363`
   - `windows/worldgen/src/person_promote.rs:303`
+  - `windows/worldgen/tests/repose_exposure.rs:856`
   - `windows/worldgen/tests/tolerance_draw.rs:99`
 

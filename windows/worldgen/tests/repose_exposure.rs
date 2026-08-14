@@ -506,6 +506,68 @@
 //! Everything else in the Task-2 section above is measured in the corrected
 //! units, and the positive controls are unaffected (both arms still move
 //! settlements, which is all they assert).
+//!
+//! # Dated measurement (2026-08-14, Task 7: the knownness column)
+//!
+//! The readout gains a tenth column, `knownness` — the population-weighted
+//! mean of [`hornvale_worldgen::knownness`]'s stock over the settlements of
+//! each stratum, so that spec §7's named risk ("knownness ships with no
+//! consumer and cannot be seen to be wrong") is closed by an actual consumer.
+//! **The regen was purely ADDITIVE and that was proven rather than asserted**:
+//! both fixtures cut to columns 1–9 are byte-identical (md5
+//! `f44dda61bb5685a8da819944c56e256b` before and after), so every Task-1 and
+//! Task-2 number above still reads exactly as it did.
+//!
+//! **The column is SPARSE, and the sparsity is the finding rather than a
+//! defect.** 10 of the 240 rows are non-zero. All ten are `twig-blight` and
+//! its `pooled` reflection, and all ten sit in unrest deciles 8 and 9 — which
+//! is where they must be, since an edifice is an island-arc feature and an arc
+//! is high-unrest ground by construction.
+//!
+//! **Per people, over the 30-seed settleable-land sweep** (measured directly,
+//! not read off the column):
+//!
+//! | people | settlements | on an edifice | remembering | generation | half-life | horizon |
+//! |---|---|---|---|---|---|---|
+//! | `twig-blight` | 25,510 | 409 | **89** | 15.70 y | 31.40 y | 313.9 y |
+//! | `shrieker` | 352 | **0** | 0 | 25.53 y | 51.07 y | 510.7 y |
+//! | `drow` | 153 | **0** | 0 | 140.95 y | 281.90 y | 2,819.0 y |
+//! | `rust-monster` | 104 | **0** | 0 | 48.50 y | 97.00 y | 970.0 y |
+//! | `kobold` | 27 | **0** | 0 | 30.24 y | 60.48 y | 604.8 y |
+//!
+//! **Read the four zeros correctly: they are "no mountain", NOT "forgot".**
+//! Four of the five peoples place not one settlement on an edifice cell
+//! anywhere in the sweep, so their stock is zero for want of anything to
+//! remember. Conflating that with forgetting would be the campaign's own
+//! headline claim asserted on a population that cannot support it.
+//!
+//! **The one people that does live on mountains is mostly wrong about them.**
+//! Of `twig-blight`'s 409 settlements on an edifice, **89 remember an
+//! eruption and 320 — 78.2% — do not**, at a half-life of 31.4 years against
+//! eruption intervals authored at 200–5,000 years. That is spec §1's Vesuvius
+//! sentence measured on a world: towns on the flanks of a mountain nobody
+//! remembers going off. It is an OBSERVATION and no part of it was
+//! preregistered.
+//!
+//! **The cross-species spread is also an observation, and the instrument
+//! CANNOT test the obvious hypothesis.** `drow` carry a `LifeSchedule::paced`
+//! factor of 5.0 and therefore a 2,819-year memory horizon against
+//! `twig-blight`'s 314 — nine times the reach — so "long-lived peoples
+//! remember longer" would be a natural prediction and this readout has **zero
+//! power** to test it: `drow` hold no edifice settlements at all, so the
+//! comparison has no sample on one side. See
+//! [`hornvale_worldgen::knownness`]'s module doc for why this campaign
+//! declines to preregister that claim in any case (the spec froze "no
+//! cross-species claim" before the axis went live, and adding one after
+//! seeing that it had is the post-hoc move decision 0016 exists to prevent).
+//! A campaign that wants the question answered needs a roster whose
+//! long-lived peoples settle volcanic ground, and should say so in a fresh
+//! spec before measuring.
+//!
+//! **`now` is the same in every world.** The present frame `present_year`
+//! reports is exactly 2000.0 years on all 30 seeds — a constant of the bake
+//! configuration, not a per-world draw — so none of the variation above comes
+//! from asking different worlds about different moments.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -514,7 +576,8 @@ use hornvale_demography::stack_condense::HeadcountRender;
 use hornvale_kernel::{CellId, KindId, Seed, World, quantize};
 use hornvale_worldgen::{
     ChannelMask, SettlementPins, SkyChoice, WorldComponents, build_world_from_components,
-    climate_from, demography_report_from, demography_report_from_masked, terrain_of,
+    climate_from, demography_report_from, demography_report_from_masked, generation_length_of,
+    knownness, terrain_of,
 };
 
 /// How many unrest deciles the readout stratifies into.
@@ -570,6 +633,21 @@ struct ExposureRow {
     /// Share of this stratum's land cells classified `Andosol` — the
     /// discrimination guard's input (spec §6.7).
     andosol_share: f64,
+    /// **Population-weighted mean knownness** of this stratum's settlements
+    /// (Task 7): `sum(population * stock) / sum(population)`, or 0.0 where
+    /// the stratum holds no population.
+    ///
+    /// **The mean is over EVERY settlement in the stratum, not over the few
+    /// that have a mountain**, so it reads as a share: how much of this
+    /// stratum's population lives with a remembered eruption. A settlement on
+    /// a cell with no edifice contributes a 0 by
+    /// [`hornvale_worldgen::knownness`]'s own definition — there is nothing
+    /// there to remember — and only 409 of the 26,146 settleable-land
+    /// settlements, 1.56%, sit on an edifice at all (measured, module doc).
+    /// A reader who wants "of those with a mountain, how much is remembered"
+    /// must divide by that share; this column deliberately does not, because
+    /// the denominator is itself a finding rather than a constant.
+    knownness: f64,
 }
 
 /// The seed-`n` world at full build depth, built through the composition
@@ -647,6 +725,11 @@ struct SettlementTally {
     count: u64,
     /// Total headcount ([`headcount_of`]) at those settlements.
     population: f64,
+    /// `sum(population * knownness_stock)` over those settlements — the
+    /// NUMERATOR of the population-weighted mean, accumulated rather than the
+    /// mean itself so that seeds pool without a weighted average of weighted
+    /// averages. Divided by `population` at row-render time.
+    knownness_weight: f64,
 }
 
 /// Build the full exposure-row vector for `seeds`: one row per (decile,
@@ -714,6 +797,15 @@ fn exposure_rows_masked(
     let mut settle: BTreeMap<(usize, &'static str, &'static str), SettlementTally> =
         BTreeMap::new();
     let mut peoples: BTreeSet<&'static str> = BTreeSet::new();
+    // TASK 7. A people's generation length, resolved ONCE and reused for
+    // every settlement of that people in every seed. `generation_length_of`
+    // re-assembles every canonical registry on each call, and the answer is a
+    // property of the roster rather than of the world (its `world` argument is
+    // unused today), so resolving it per settlement would cost ~26,000
+    // registry assemblies to learn five values. `None` is a real answer, not
+    // a lookup failure: an `Ametabolic` kind has no mass-derived life history,
+    // and `memory_half_life` has an authored fallback for exactly that.
+    let mut generations: BTreeMap<&'static str, Option<hornvale_kernel::Years>> = BTreeMap::new();
 
     for seed in seeds {
         let world = world_of(seed, &wc);
@@ -755,6 +847,16 @@ fn exposure_rows_masked(
             }
         }
 
+        // TASK 7. The moment knownness is asked about: this world's own
+        // present frame, the same "today" every other backward-looking read
+        // in this repo measures from. Not `WorldTime::GENESIS` and not an
+        // arbitrary epoch — a stock evaluated at genesis would report what a
+        // people knew before it existed.
+        let now = hornvale_kernel::WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(
+            hornvale_worldgen::present_year(&world),
+        ))
+        .expect("the present frame is a finite day");
+
         let report = demography_report_from_masked(&world, &wc, &terrain, &climate, mask)
             .expect("demography report reconstructs");
         for s in &report.stack_settlements {
@@ -782,13 +884,27 @@ fn exposure_rows_masked(
             let people = kinds[s.dominant as usize].0;
             peoples.insert(people);
 
+            // TASK 7. What THIS people still knows of the mountain under this
+            // settlement, at this world's present. The holder is the
+            // settlement's dominant kind — the same key
+            // `hornvale_worldgen::volcano_name` uses for the name that people
+            // has for the mountain, so a people that forgets its mountain
+            // loses its name for it too.
+            let generation = *generations.entry(people).or_insert_with(|| {
+                generation_length_of(&world, people)
+                    .and_then(|y| hornvale_kernel::Years::new(y).ok())
+            });
+            let stock = knownness(Seed(seed), &terrain, people, generation, s.cell, now).stock;
+
             let per_people = settle.entry((decile, band, people)).or_default();
             per_people.count += 1;
             per_people.population += population;
+            per_people.knownness_weight += population * stock;
 
             let pooled = settle.entry((decile, band, "pooled")).or_default();
             pooled.count += 1;
             pooled.population += population;
+            pooled.knownness_weight += population * stock;
         }
     }
 
@@ -871,6 +987,16 @@ fn exposure_rows_masked(
                 } else {
                     0.0
                 };
+                // Guarded on the WEIGHT's own denominator, matching the
+                // shares above: a stratum this people has no population in
+                // reads 0.0 rather than 0/0 = NaN. Named `_mean` rather than
+                // taking the field's shorthand so it does not shadow the
+                // `knownness` FUNCTION this file imports.
+                let knownness_mean = if settle_tally.population > 0.0 {
+                    settle_tally.knownness_weight / settle_tally.population
+                } else {
+                    0.0
+                };
 
                 rows.push(ExposureRow {
                     decile,
@@ -882,6 +1008,7 @@ fn exposure_rows_masked(
                     exposure_ratio,
                     weighted_ratio,
                     andosol_share,
+                    knownness: knownness_mean,
                 });
             }
         }
@@ -896,11 +1023,11 @@ fn exposure_rows_masked(
 fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
     let rows = exposure_rows(seeds);
     let mut out = String::from(
-        "decile,band,people,land_cells,settlements,population,exposure_ratio,weighted_ratio,andosol_share\n",
+        "decile,band,people,land_cells,settlements,population,exposure_ratio,weighted_ratio,andosol_share,knownness\n",
     );
     for r in &rows {
         out.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{}\n",
             r.decile,
             r.band,
             r.people,
@@ -910,6 +1037,7 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
             quantize(r.exposure_ratio),
             quantize(r.weighted_ratio),
             quantize(r.andosol_share),
+            quantize(r.knownness),
         ));
     }
     out
@@ -1825,6 +1953,115 @@ fn which_channel_carries_the_exposure_gradient() {
              the attribution table is measuring one reading four times"
         );
     }
+}
+
+/// KNOWNNESS HAS A CONSUMER, AND THE CONSUMER CAN SEE IT (Task 7). Spec §7
+/// names "knownness ships with no consumer and cannot be seen to be wrong" as
+/// a risk; this is the assertion that closes it, and The Hollow is why it is
+/// not left to the fixture alone.
+///
+/// **Direction: it catches a knownness column wired to a constant** — either
+/// constant, and the pair is what makes that true. Both assertions run over
+/// SETTLED strata only (`settlements > 0`), because a stratum with no
+/// settlements reads 0.0 by the row-render guard whatever knownness does, and
+/// including those would have let a constant-1.0 wiring through: the column
+/// would still have varied (1.0 where settled, 0.0 where empty) and a bare
+/// "not constant" test would have passed it. That was a real hole in this
+/// test's first encoding, found by mutating the stock to 1.0 rather than by
+/// reading it. It does NOT check that any
+/// particular stratum's value is right, and it asserts no direction, no
+/// magnitude and no cross-species ordering: the per-people spread it prints is
+/// an OBSERVATION under spec §6.3's per-people requirement, never a tested
+/// prediction. See `hornvale_worldgen::knownness`'s module doc for why this
+/// campaign declines to preregister a cross-species memory claim even though
+/// the axis it would run on is now live.
+///
+/// **What the numbers mean before anyone reads them.** The column is a
+/// population-weighted mean over EVERY settlement in a stratum, and a
+/// settlement whose cell carries no edifice contributes a 0 because there is
+/// no mountain to remember. Only 1.56% of settleable-land settlements sit on
+/// an edifice (measured, module doc), so a stratum mean of 0.01 does not mean
+/// "everyone half-remembers"; it means a small, remembering minority inside a
+/// large, mountainless majority. The right comparison is BETWEEN strata and
+/// between peoples, never against 1.
+///
+/// **The per-people means this prints are NOT a memory comparison**, and the
+/// module doc's Task-7 table is the reason: four of the five peoples read
+/// exactly zero because they place no settlement on an edifice anywhere in
+/// the sweep, not because they forgot. A reader who takes those zeros as
+/// evidence about memory is reading a settlement-siting fact as a
+/// transmission fact.
+///
+/// claim: readout(seed: 1..=30, off-gate heavy:) — reports the knownness
+/// column's spread over one fixed sweep and asserts only that it varies. Not
+/// a rate: no threshold on any value is claimed, because none was
+/// preregistered and inventing one after unblinding would be a rescue.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn the_readout_can_see_a_people_remember_and_a_people_forget() {
+    let rows = exposure_rows(1..=30);
+
+    // The per-people observation (spec §6.3). Population-weighted over all of
+    // a people's strata, which is the same statistic as the column itself,
+    // pooled up one level.
+    let mut peoples: Vec<&'static str> = rows.iter().map(|r| r.people).collect();
+    peoples.dedup();
+    for people in &peoples {
+        let population: f64 = rows
+            .iter()
+            .filter(|r| r.people == *people)
+            .map(|r| r.population)
+            .sum();
+        let weighted: f64 = rows
+            .iter()
+            .filter(|r| r.people == *people)
+            .map(|r| r.knownness * r.population)
+            .sum();
+        let mean = if population > 0.0 {
+            weighted / population
+        } else {
+            0.0
+        };
+        let highest = rows
+            .iter()
+            .filter(|r| r.people == *people)
+            .map(|r| r.knownness)
+            .fold(0.0_f64, f64::max);
+        println!(
+            "REPOSE KNOWNNESS: people {people:14} population {population:12.0} \
+             mean knownness {mean:.8} highest stratum {highest:.8}"
+        );
+    }
+
+    // SETTLED pooled strata only — see this test's doc for why an empty
+    // stratum must not count on either side.
+    let settled: Vec<f64> = rows
+        .iter()
+        .filter(|r| r.people == "pooled" && r.settlements > 0)
+        .map(|r| r.knownness)
+        .collect();
+    let remembering = settled.iter().filter(|k| **k > 0.0).count();
+    let highest = settled.iter().copied().fold(0.0_f64, f64::max);
+    println!(
+        "REPOSE KNOWNNESS: settled pooled strata {} — {remembering} remember something, \
+         highest {highest:.8}",
+        settled.len()
+    );
+
+    assert!(
+        highest > 0.0,
+        "not one of the {} settled pooled strata remembers an eruption — knownness reaches \
+         the readout as a constant zero and cannot be seen to be wrong",
+        settled.len()
+    );
+    assert!(
+        remembering < settled.len(),
+        "all {} settled pooled strata remember something — nobody is forgetting anywhere, \
+         which is what a knownness welded to 1 would look like. If the world really has \
+         changed this much, this is a FINDING and not a defect: re-read it before touching \
+         the assertion.",
+        settled.len()
+    );
 }
 
 /// Rewrites the committed fixture. Deliberately NOT part of any gate: it
