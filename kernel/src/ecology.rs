@@ -290,6 +290,149 @@ pub fn sovereignty_floor(mass: Mass, potency: f64) -> f64 {
     SOVEREIGNTY_FLOOR_MAX * (1.0 - crate::math::exp(-e.max(0.0)))
 }
 
+/// How an environment axis carries its values — declared because the axes are
+/// deliberately **not** homogeneous, and a consumer must not assume otherwise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AxisValence {
+    /// Ranked categories with a meaningful order (open ground to closed canopy).
+    Ordinal,
+    /// A continuous magnitude, normalised to `[0, 1]`.
+    Scalar,
+    /// Unordered categories; the numeric value is an index, never a magnitude.
+    Nominal,
+    /// A frequency rather than a state. See [`DISTURBANCE`].
+    Rate,
+}
+
+/// A registered member of the environment-axis basis: one dimension an
+/// [`EnvironmentVector`] can carry a value on.
+///
+/// The sibling of [`ResourceAxis`], and deliberately the same shape. That basis
+/// describes what a niche *consumes*; this one describes what a place *is*.
+/// type-audit: bare-ok(index: id), bare-ok(identifier-text: label)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnvironmentAxis {
+    /// Stable numeric id — the key an [`EnvironmentVector`] stores this axis's
+    /// value under, and a save-format contract once this basis ships.
+    pub id: u16,
+    /// Human-readable label for diagnostics and the almanac.
+    pub label: &'static str,
+    /// How this axis's values are to be read.
+    pub valence: AxisValence,
+}
+
+/// Vegetation structure: how the living cover is built, open to closed.
+pub const PHYSIOGNOMY: EnvironmentAxis = EnvironmentAxis {
+    id: 0,
+    label: "physiognomy",
+    valence: AxisValence::Ordinal,
+};
+
+/// Available energy for primary production.
+pub const ENERGY: EnvironmentAxis = EnvironmentAxis {
+    id: 1,
+    label: "energy",
+    valence: AxisValence::Scalar,
+};
+
+/// Water availability, as a regime rather than an instantaneous depth.
+pub const WATER: EnvironmentAxis = EnvironmentAxis {
+    id: 2,
+    label: "water",
+    valence: AxisValence::Scalar,
+};
+
+/// What the ground is made of. The numeric value indexes an unordered set and
+/// is never a magnitude — see [`AxisValence::Nominal`].
+pub const SUBSTRATE: EnvironmentAxis = EnvironmentAxis {
+    id: 3,
+    label: "substrate",
+    valence: AxisValence::Nominal,
+};
+
+/// Light reaching the community. Grounded differently per realm: derived on
+/// land, **identical to the depth rung** in the sea (the pelagic ladder is a
+/// light ladder — its own rungs are named "twilight" and "lightless"), and
+/// constant zero underground.
+pub const LIGHT: EnvironmentAxis = EnvironmentAxis {
+    id: 4,
+    label: "light",
+    valence: AxisValence::Scalar,
+};
+
+/// Disturbance return frequency. **A rate, not a state** — which is why a
+/// whole-community name cannot carry a value on it, and why the names expected
+/// to resist assignment are *phases* (ground recovering from fire, a meltwater
+/// pool on sea ice) rather than communities.
+pub const DISTURBANCE: EnvironmentAxis = EnvironmentAxis {
+    id: 5,
+    label: "disturbance",
+    valence: AxisValence::Rate,
+};
+
+/// The environment-axis basis, version 1.
+///
+/// **Append-only.** Order carries meaning: any argmax or dominant-axis read
+/// resolves a total tie by basis position, so inserting an axis at or before an
+/// existing one silently changes which axis wins those ties. A new axis takes
+/// the next free id at the END; a change to the sequence is a `v2` basis, never
+/// an edit in place.
+///
+/// Pinned by `the_environment_basis_ids_are_append_only`, which is what makes
+/// this a rule rather than a hope.
+pub fn environment_v1_basis() -> &'static [EnvironmentAxis] {
+    &[PHYSIOGNOMY, ENERGY, WATER, SUBSTRATE, LIGHT, DISTURBANCE]
+}
+
+/// A sparse environment vector: axis id to value.
+///
+/// The zero vector (no axes) is legal and means **unassigned** — which is how a
+/// name the axes cannot place is represented, rather than by an error. That is
+/// deliberate: a name that resists assignment is a finding to be counted, not a
+/// failure to be handled.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnvironmentVector(BTreeMap<u16, f64>);
+
+impl EnvironmentVector {
+    /// Validating constructor: rejects any non-finite value and any value
+    /// outside `[0, 1]`. An empty slice is legal and produces the zero vector.
+    /// Repeated axis ids overwrite rather than combine (last write wins),
+    /// matching the map-like semantics of the sparse representation.
+    /// type-audit: bare-ok(constructor-edge: values)
+    pub fn new(values: &[(EnvironmentAxis, f64)]) -> Result<Self, UnitError> {
+        let mut map = BTreeMap::new();
+        for (axis, value) in values {
+            if !value.is_finite() || *value < 0.0 || *value > 1.0 {
+                return Err(UnitError {
+                    unit: "environment axis value",
+                    value: *value,
+                    reason: "must be finite and within [0, 1]",
+                });
+            }
+            map.insert(axis.id, *value);
+        }
+        Ok(Self(map))
+    }
+
+    /// This vector's value on `axis`, or `None` if unassigned.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn get(&self, axis: EnvironmentAxis) -> Option<f64> {
+        self.0.get(&axis.id).copied()
+    }
+
+    /// The axis ids carrying a value, ascending.
+    /// type-audit: bare-ok(index: return)
+    pub fn axis_ids(&self) -> Vec<u16> {
+        self.0.keys().copied().collect()
+    }
+
+    /// Whether this vector assigns no axis at all — the unassigned case.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_unassigned(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 /// A per-cell **dimensionless suitability** in `[0, 1]`: how well conditions
 /// suit a population, carrying no units and no magnitude.
 ///
@@ -424,6 +567,23 @@ impl CapacityMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_environment_basis_ids_are_append_only() {
+        // Imitates `the_basis_ids_are_append_only` above, for the same reason
+        // and with the same knowledge: pinning a *sum* or a zero-contribution
+        // catches nothing, because reordering leaves arithmetic bit-identical.
+        // Position is what carries meaning — any argmax or dominant-axis read
+        // over this basis resolves a total tie to index 0 — so the id SEQUENCE
+        // is what to pin.
+        let ids: Vec<u16> = environment_v1_basis().iter().map(|a| a.id).collect();
+        assert_eq!(
+            ids,
+            vec![0, 1, 2, 3, 4, 5],
+            "the environment basis is append-only: ids must be dense and \
+             ascending from 0, and a new axis takes the next free id at the END"
+        );
+    }
 
     #[test]
     fn zero_vector_is_legal_and_overlaps_nothing() {
