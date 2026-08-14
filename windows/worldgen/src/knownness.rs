@@ -4,10 +4,20 @@
 //! # The flow balance `UNI-15` requires
 //!
 //! ```text
-//!   SOURCE   an eruption occurs        ->  stock := 1
+//!   SOURCE   an eruption occurs        ->  stock := 1   (the MOST RECENT one wins)
 //!   DECAY    time passes               ->  stock *= decay(half-life)
 //!   SINK     no living memory remains  ->  stock -> 0
 //! ```
+//!
+//! **The parenthesis on SOURCE is a real rule and not a clarification.** Where
+//! two eruptions share one horizon the stock decays from the later one and the
+//! earlier contributes nothing — a people that has just watched its mountain
+//! erupt knows it erupts, whatever it had forgotten the day before. That
+//! sentence went un-asserted through the first round of this task while
+//! reading as though it were obvious;
+//! `the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon`
+//! now holds it, and its doc records how a mutation worth 0.9989 of the unit
+//! interval stayed green.
 //!
 //! **A fold over the event stream and nothing else.** No accumulation, no
 //! state between calls, pure in its arguments — the same property
@@ -128,9 +138,21 @@ const MEMORY_GENERATIONS: f64 = 2.0;
 /// It also bounds the query, which matters for a second reason:
 /// [`crate::hazard::events_in`]'s block loop is unbounded and a caller must
 /// not hand it an unclamped span. The window here is ten half-lives wide —
-/// tens to a few thousands of years on the shipped roster, one to a handful
-/// of 1,000-year blocks — so the clamp is structural rather than a guard
-/// somebody has to remember.
+/// on the shipped roster that is 314 years (`twig-blight`) to 2,819 years
+/// (`drow`), one to three 1,000-year blocks.
+///
+/// **The bound is relative to the half-life, not absolute, and the scope of
+/// that matters because [`knownness`] is `pub`.** It clamps the window
+/// against the *present* — a caller cannot ask "everything since genesis" by
+/// accident — but it cannot clamp against its own input: a caller passing a
+/// generation length of `Years::new(1e12)` gets a window of 2e13 years and
+/// hands `events_in` roughly 2e10 blocks, which will look hung exactly as
+/// Task 6 warns. Nothing here defends against that, deliberately: a
+/// generation length is resolved from the roster by
+/// `generation_length_of`, and inventing a ceiling for a number that
+/// physically cannot be large would be an unauthored constant guarding a
+/// caller error. What is claimed is narrower than "structural": **the horizon
+/// cannot be forgotten, only mis-supplied.**
 const MEMORY_HORIZON_HALF_LIVES: f64 = 10.0;
 
 /// The generation length assumed for a holder whose own cannot be derived.
@@ -221,6 +243,13 @@ pub fn knownness(
     let horizon_days = MEMORY_HORIZON_HALF_LIVES * half_life_days;
     let start = WorldTime::new(now.day() - horizon_days)
         .expect("a finite horizon before a finite present is a finite day");
+    // `.rev()` IS THE SOURCE RULE, not a style choice: `events_in` returns
+    // time-ordered events, so reversing before `find` takes the MOST RECENT
+    // eruption in the horizon rather than the earliest. Deleting it type-
+    // checks, keeps every other test in this file green, and moves the stock
+    // by up to 0.9989 wherever two eruptions share one horizon.
+    // `the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon`
+    // is the only assertion that objects.
     let last = crate::hazard::events_in(seed, terrain, cell, (start, now))
         .into_iter()
         .rev()
@@ -341,6 +370,40 @@ mod tests {
         panic!("no eruption on the globe is followed by {min_gap_days} quiet days");
     }
 
+    /// The first `(cell, earlier, later)` on the globe where two CONSECUTIVE
+    /// eruptions both fall inside one horizon measured from just after the
+    /// later one — the only shape that can tell "most recent wins" from "any
+    /// eruption in the horizon wins".
+    ///
+    /// The gap is bracketed on both sides and each bound is load-bearing.
+    /// **Above one half-life**, so the two candidate answers are far apart
+    /// (decaying from the earlier one has already lost at least half its
+    /// stock) and a test comparing them cannot pass on a rounding accident.
+    /// **Below 90% of the horizon**, so that with `now` set just after the
+    /// later eruption the earlier one is still genuinely INSIDE the window —
+    /// if it fell outside, the fold could not have picked it whatever its
+    /// order, and the test would be vacuous for a second reason.
+    fn two_eruptions_inside_one_horizon(
+        seed: u64,
+        geo: &Geosphere,
+        terrain: &GeneratedTerrain,
+    ) -> (CellId, HazardEvent, HazardEvent) {
+        let (lower, upper) = (half_life_days(), 0.9 * horizon_days());
+        for source in cones(geo, terrain).keys() {
+            let events = eruptions(seed, terrain, *source);
+            for pair in events.windows(2) {
+                let gap = pair[1].day.day() - pair[0].day.day();
+                if gap > lower && gap < upper {
+                    return (*source, pair[0], pair[1]);
+                }
+            }
+        }
+        panic!(
+            "no cone on the globe has two consecutive eruptions between {lower} and {upper} \
+             days apart — the most-recent-wins property is untestable here"
+        );
+    }
+
     /// **SOURCE then DECAY.** The stock is 1 immediately after an eruption
     /// and exactly half of it one half-life later.
     ///
@@ -391,6 +454,63 @@ mod tests {
             "the stock did not fall between {} and {}",
             just_after.stock,
             one_half_life.stock
+        );
+    }
+
+    /// **SOURCE, the half the other tests could not see: the MOST RECENT
+    /// eruption wins.** With two eruptions inside one horizon, the stock
+    /// decays from the LATER one, and the earlier one contributes nothing.
+    ///
+    /// **This property was pinned by NOTHING until this test existed**, and
+    /// the gap is worth recording rather than quietly closing. Deleting
+    /// `.rev()` from the fold — making it take the EARLIEST eruption in the
+    /// horizon instead of the latest — left all eleven of this file's tests
+    /// green, while moving the answer by up to 0.9989 on 4,644 (cell, now)
+    /// samples of seed 42 alone. It hid because every other test here selects
+    /// an eruption with a quiet gap AFTER it and never constrains the window
+    /// BEFORE it, and because the 400-year test horizon is usually shorter
+    /// than the 200–5,000 year eruption intervals, so a second eruption
+    /// rarely landed inside it by chance. The committed fixture did catch the
+    /// mutation, but that is a gate-full byte golden with no named meaning:
+    /// the commit-gate battery was blind, and the module doc's load-bearing
+    /// sentence — "every earlier eruption is irrelevant by construction" —
+    /// was asserted by nothing.
+    ///
+    /// Direction: red under any fold that picks a different eruption from the
+    /// horizon's set — earliest, largest, first-found. The two `assert`s are
+    /// a pair: the first says the answer IS the later eruption's decay, the
+    /// second says the earlier eruption's decay is a materially different
+    /// number, so the first cannot be satisfied by accident.
+    #[test]
+    fn the_most_recent_eruption_wins_over_an_earlier_one_in_the_same_horizon() {
+        let (geo, terrain) = globe();
+        let (cell, earlier, later) = two_eruptions_inside_one_horizon(42, &geo, &terrain);
+        let now = at(later.day.day() + 1.0);
+
+        // Non-vacuity, asserted rather than argued: BOTH eruptions must lie
+        // inside the window the fold actually reads, or the later one wins
+        // for the trivial reason that the earlier one was never a candidate.
+        let elapsed_since_earlier = now.day() - earlier.day.day();
+        assert!(
+            elapsed_since_earlier < horizon_days(),
+            "the earlier eruption is {elapsed_since_earlier} days back, outside the \
+             {} day horizon — it was never a candidate and this test proves nothing",
+            horizon_days()
+        );
+
+        let stock = knownness(Seed(42), &terrain, "aeldrin", test_generation(), cell, now).stock;
+        let from_later = math::powf(0.5, (now.day() - later.day.day()) / half_life_days());
+        let from_earlier = math::powf(0.5, elapsed_since_earlier / half_life_days());
+        assert!(
+            (stock - from_later).abs() < 1e-9,
+            "the stock reads {stock}, which is not the decay from the LATER eruption \
+             ({from_later}); the decay from the earlier one is {from_earlier}"
+        );
+        assert!(
+            (from_later - from_earlier).abs() > 0.4,
+            "the two candidate answers are only {} apart ({from_later} against \
+             {from_earlier}) — the assertion above cannot distinguish them",
+            (from_later - from_earlier).abs()
         );
     }
 
@@ -563,7 +683,7 @@ mod tests {
         assert_eq!(memory_half_life(Some(long)).get(), 200.0);
 
         let (geo, terrain) = globe();
-        let (cell, event, _) = eruption_with_quiet_after(42, &geo, &terrain, 400.0 * 365.25);
+        let (cell, event, _) = eruption_with_quiet_after(42, &geo, &terrain, horizon_days());
         let now = at(event.day.day() + memory_half_life(Some(short)).days());
         let quick = knownness(Seed(42), &terrain, "aeldrin", Some(short), cell, now);
         let slow = knownness(Seed(42), &terrain, "khorrun", Some(long), cell, now);

@@ -524,8 +524,13 @@
 //! is where they must be, since an edifice is an island-arc feature and an arc
 //! is high-unrest ground by construction.
 //!
-//! **Per people, over the 30-seed settleable-land sweep** (measured directly,
-//! not read off the column):
+//! **Per people, over the 30-seed settleable-land sweep.** Every count below
+//! is now READ OFF THE COMMITTED FIXTURE's `edifice_settlements` and
+//! `remembering_settlements` columns (fix round 1). It previously came from a
+//! probe run once and deleted, which meant the single fact separating a
+//! siting result from a transmission result was not re-derivable from
+//! anything in the repo — a control must be reproducible from its record. The
+//! committed columns reproduce the deleted probe's 409 and 89 exactly.
 //!
 //! | people | settlements | on an edifice | remembering | generation | half-life | horizon |
 //! |---|---|---|---|---|---|---|
@@ -568,6 +573,40 @@
 //! reports is exactly 2000.0 years on all 30 seeds — a constant of the bake
 //! configuration, not a per-world draw — so none of the variation above comes
 //! from asking different worlds about different moments.
+//!
+//! # Fix round 1 (2026-08-14): the column was DILUTED, and what that hid
+//!
+//! `knownness` collapses three independent facts into one scalar — SITING
+//! (what share of a stratum sits on an edifice), TRANSMISSION (what share of
+//! those remember) and DECAY (how deep the memory runs) — and the ~64×
+//! dilution is dominated by the first, which is not what the column is named
+//! after. It satisfied The Hollow's letter (the wiring is live, and MR1/MR2
+//! prove it can be seen to be grossly wrong) without carrying the finding.
+//!
+//! Three columns were added: `edifice_settlements`,
+//! `remembering_settlements`, `knownness_on_edifice`. `knownness` is
+//! unchanged, so the addition is strictly informative — the three decompose,
+//! `knownness == knownness_on_edifice × (edifice population ÷ stratum
+//! population)`. The regen was again proven additive over columns 1–10 by
+//! cut-and-diff (md5 `548f4188e9e75a704796bfb447a7bbee` either side).
+//!
+//! **What the artifact could not previously say, and now does.** Only 5 of
+//! the 40 settled pooled strata carry any memory, but **8 carry settlements
+//! on an edifice**. The three-stratum difference is the case this campaign is
+//! about, and it was invisible: deciles 6 and 7 hold 5, 15 and 3 edifice
+//! settlements with **zero** of them remembering anything. Those rows read
+//! `knownness = 0` exactly like the mountainless strata around them.
+//!
+//! **A second finding, which only the conditional column can express: the
+//! dilution was INVERTING the band ordering.** In decile 9, `1000-2500m`
+//! reads a diluted `knownness` of 0.00097 against `0-250m`'s 0.0058 — six
+//! times lower, which reads as "the lowlands remember better". Conditioned on
+//! having a mountain at all, it reverses: **0.0649 against 0.0488**, the
+//! highest conditional memory in the fixture. The lowland number was large
+//! because lowland strata hold more settlements per edifice, not because
+//! anyone there remembers more. This is reported as an OBSERVATION; nothing
+//! about it was preregistered, and no directional claim is asserted anywhere
+//! in the suite.
 #![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -645,9 +684,47 @@ struct ExposureRow {
     /// there to remember — and only 409 of the 26,146 settleable-land
     /// settlements, 1.56%, sit on an edifice at all (measured, module doc).
     /// A reader who wants "of those with a mountain, how much is remembered"
-    /// must divide by that share; this column deliberately does not, because
-    /// the denominator is itself a finding rather than a constant.
+    /// reads [`ExposureRow::knownness_on_edifice`] instead; this column
+    /// deliberately keeps the dilution, so that the two together decompose
+    /// (see below).
     knownness: f64,
+    /// Settlements in this stratum whose cell belongs to a volcano — the
+    /// population knownness can say anything at all about.
+    ///
+    /// **Added in fix round 1 because the column above collapses three
+    /// independent facts into one scalar** and the dilution is dominated by
+    /// the wrong one. `knownness` mixes SITING (what share of a stratum sits
+    /// on an edifice — ~1.6%, a ~64× dilution), TRANSMISSION (what share of
+    /// those remember) and DECAY (how deep the memory runs). Only the last
+    /// two are what the column is named after. Without this count, a zero is
+    /// indistinguishable between "this people forgot its mountain" and "this
+    /// people has no mountain", and **that distinction is the campaign's
+    /// entire claim.**
+    ///
+    /// The evidence separating them previously rested on a probe run once and
+    /// deleted, which is not a record anything can be re-derived from. It is
+    /// a committed column now.
+    ///
+    /// The predicate is `volcano_at(...).is_some()`, which is exactly the gate
+    /// [`hornvale_worldgen::knownness`] itself opens with — not
+    /// `has_edifice`, so this count cannot disagree with the column it
+    /// explains even if the two terrain reads ever diverged.
+    edifice_settlements: u64,
+    /// Of [`ExposureRow::edifice_settlements`], those with a non-zero stock —
+    /// the ones that actually remember an eruption. The rest live on a
+    /// mountain they know nothing about, which is spec §1's Vesuvius case
+    /// counted directly rather than inferred.
+    remembering_settlements: u64,
+    /// The population-weighted mean stock restricted to
+    /// [`ExposureRow::edifice_settlements`] — **the honest memory number**,
+    /// with the siting dilution divided out.
+    ///
+    /// The three columns decompose exactly, which is why adding these is
+    /// strictly informative and `knownness` did not need to change:
+    /// `knownness == knownness_on_edifice × (edifice population ÷ stratum
+    /// population)`. Guarded to 0.0 where no edifice settlement carries
+    /// population.
+    knownness_on_edifice: f64,
 }
 
 /// The seed-`n` world at full build depth, built through the composition
@@ -729,7 +806,19 @@ struct SettlementTally {
     /// NUMERATOR of the population-weighted mean, accumulated rather than the
     /// mean itself so that seeds pool without a weighted average of weighted
     /// averages. Divided by `population` at row-render time.
+    ///
+    /// It is also the numerator of `knownness_on_edifice`, and that is not a
+    /// shortcut: a settlement off an edifice has a stock of exactly 0, so it
+    /// contributes nothing to this sum either way. Only the DENOMINATOR
+    /// differs between the two columns.
     knownness_weight: f64,
+    /// Settlements here whose cell belongs to a volcano.
+    edifice_count: u64,
+    /// Of those, the ones with a non-zero stock.
+    remembering_count: u64,
+    /// Headcount at the edifice settlements alone — the denominator of
+    /// `knownness_on_edifice`.
+    edifice_population: f64,
 }
 
 /// Build the full exposure-row vector for `seeds`: one row per (decile,
@@ -890,21 +979,52 @@ fn exposure_rows_masked(
             // `hornvale_worldgen::volcano_name` uses for the name that people
             // has for the mountain, so a people that forgets its mountain
             // loses its name for it too.
+            //
+            // `None` FROM THIS LOOKUP HAS TWO CAUSES AND ONLY ONE IS LEGAL
+            // (fix round 1). `generation_length_of` returns `None` both for an
+            // `Ametabolic` kind — no mass-derived life history, the case
+            // `memory_half_life`'s authored fallback exists for — and for a
+            // species absent from the roster, which is a genuine lookup
+            // failure. An `.ok()` on the constructor conflated the two and
+            // would have turned either into a silent 26.4 years. The biosphere
+            // row is what distinguishes them, so it is checked directly, and a
+            // rejected `Years` now fails loudly instead of falling back.
             let generation = *generations.entry(people).or_insert_with(|| {
-                generation_length_of(&world, people)
-                    .and_then(|y| hornvale_kernel::Years::new(y).ok())
+                assert!(
+                    wc.biosphere.get_by_label(people).is_some(),
+                    "{people} founds settlements in this world yet carries no biosphere row \
+                     — a roster lookup failure, NOT the Ametabolic case the knownness \
+                     fallback is authored for"
+                );
+                generation_length_of(&world, people).map(|y| {
+                    hornvale_kernel::Years::new(y)
+                        .expect("a derived generation length is finite and non-negative")
+                })
             });
             let stock = knownness(Seed(seed), &terrain, people, generation, s.cell, now).stock;
+            // The predicate `knownness` itself gates on, so the count cannot
+            // disagree with the column it explains.
+            let on_edifice = hornvale_worldgen::volcano_at(Seed(seed), &terrain, s.cell).is_some();
 
             let per_people = settle.entry((decile, band, people)).or_default();
             per_people.count += 1;
             per_people.population += population;
             per_people.knownness_weight += population * stock;
+            per_people.edifice_count += u64::from(on_edifice);
+            per_people.remembering_count += u64::from(stock > 0.0);
+            if on_edifice {
+                per_people.edifice_population += population;
+            }
 
             let pooled = settle.entry((decile, band, "pooled")).or_default();
             pooled.count += 1;
             pooled.population += population;
             pooled.knownness_weight += population * stock;
+            pooled.edifice_count += u64::from(on_edifice);
+            pooled.remembering_count += u64::from(stock > 0.0);
+            if on_edifice {
+                pooled.edifice_population += population;
+            }
         }
     }
 
@@ -997,6 +1117,14 @@ fn exposure_rows_masked(
                 } else {
                     0.0
                 };
+                // Same numerator, edifice-only denominator — the siting
+                // dilution divided back out. See `ExposureRow`'s field docs
+                // for the identity the two columns satisfy.
+                let knownness_on_edifice = if settle_tally.edifice_population > 0.0 {
+                    settle_tally.knownness_weight / settle_tally.edifice_population
+                } else {
+                    0.0
+                };
 
                 rows.push(ExposureRow {
                     decile,
@@ -1009,6 +1137,9 @@ fn exposure_rows_masked(
                     weighted_ratio,
                     andosol_share,
                     knownness: knownness_mean,
+                    edifice_settlements: settle_tally.edifice_count,
+                    remembering_settlements: settle_tally.remembering_count,
+                    knownness_on_edifice,
                 });
             }
         }
@@ -1023,11 +1154,11 @@ fn exposure_rows_masked(
 fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
     let rows = exposure_rows(seeds);
     let mut out = String::from(
-        "decile,band,people,land_cells,settlements,population,exposure_ratio,weighted_ratio,andosol_share,knownness\n",
+        "decile,band,people,land_cells,settlements,population,exposure_ratio,weighted_ratio,andosol_share,knownness,edifice_settlements,remembering_settlements,knownness_on_edifice\n",
     );
     for r in &rows {
         out.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
             r.decile,
             r.band,
             r.people,
@@ -1038,6 +1169,9 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
             quantize(r.weighted_ratio),
             quantize(r.andosol_share),
             quantize(r.knownness),
+            r.edifice_settlements,
+            r.remembering_settlements,
+            quantize(r.knownness_on_edifice),
         ));
     }
     out
@@ -1961,14 +2095,30 @@ fn which_channel_carries_the_exposure_gradient() {
 /// not left to the fixture alone.
 ///
 /// **Direction: it catches a knownness column wired to a constant** — either
-/// constant, and the pair is what makes that true. Both assertions run over
-/// SETTLED strata only (`settlements > 0`), because a stratum with no
-/// settlements reads 0.0 by the row-render guard whatever knownness does, and
-/// including those would have let a constant-1.0 wiring through: the column
-/// would still have varied (1.0 where settled, 0.0 where empty) and a bare
-/// "not constant" test would have passed it. That was a real hole in this
-/// test's first encoding, found by mutating the stock to 1.0 rather than by
-/// reading it. It does NOT check that any
+/// constant, and **it is the STATISTIC that makes that true, not the
+/// `settlements > 0` filter.** This wants stating precisely, because the
+/// first version of this comment credited the filter and was wrong:
+///
+/// - The first encoding asserted `highest > lowest` over pooled strata. A
+///   constant-1.0 wiring PASSES that, and mutating the stock to 1.0 is how it
+///   was found — not by reading the code.
+/// - The repair that actually closed it was changing the statistic to
+///   `remembering < settled.len()`: "somebody, somewhere, is forgetting".
+///   Welding the stock to 1 makes every stratum remember and reds it.
+/// - **The `settlements > 0` filter is INERT here and must not be mistaken
+///   for the guard.** Rows are pushed unconditionally for all 10 deciles ×
+///   4 bands, and in the committed `1..=30` sweep all 40 pooled rows have
+///   settlements — the printed line reads "settled pooled strata 40", i.e.
+///   40 of 40, filtering nothing. It is kept because it makes the statistic
+///   mean what its name says on some future sweep where a stratum IS empty,
+///   not because it is doing work today.
+///
+/// Recording the correction rather than silently fixing it: prose outrunning
+/// its evidence is this campaign's recurring shape (the module doc above
+/// carries three earlier instances), and an inert guard described as
+/// load-bearing is how the next reader inherits a false sense of coverage.
+///
+/// It does NOT check that any
 /// particular stratum's value is right, and it asserts no direction, no
 /// magnitude and no cross-species ordering: the per-people spread it prints is
 /// an OBSERVATION under spec §6.3's per-people requirement, never a tested
@@ -1985,12 +2135,13 @@ fn which_channel_carries_the_exposure_gradient() {
 /// large, mountainless majority. The right comparison is BETWEEN strata and
 /// between peoples, never against 1.
 ///
-/// **The per-people means this prints are NOT a memory comparison**, and the
-/// module doc's Task-7 table is the reason: four of the five peoples read
-/// exactly zero because they place no settlement on an edifice anywhere in
-/// the sweep, not because they forgot. A reader who takes those zeros as
-/// evidence about memory is reading a settlement-siting fact as a
-/// transmission fact.
+/// **The per-people `knownness` means this prints are NOT a memory
+/// comparison**: four of the five peoples read exactly zero because they place
+/// no settlement on an edifice anywhere in the sweep, not because they forgot.
+/// A reader who takes those zeros as evidence about memory is reading a
+/// settlement-siting fact as a transmission fact. That used to rest on a probe
+/// run once and deleted; since fix round 1 it rests on the committed
+/// `edifice_settlements` column, and this test prints and asserts on it.
 ///
 /// claim: readout(seed: 1..=30, off-gate heavy:) — reports the knownness
 /// column's spread over one fixed sweep and asserts only that it varies. Not
@@ -2027,9 +2178,24 @@ fn the_readout_can_see_a_people_remember_and_a_people_forget() {
             .filter(|r| r.people == *people)
             .map(|r| r.knownness)
             .fold(0.0_f64, f64::max);
+        // The decomposition (fix round 1): siting, then transmission. Without
+        // these two counts a zero mean is ambiguous between "forgot its
+        // mountain" and "has no mountain", which is the campaign's whole
+        // claim.
+        let on_edifice: u64 = rows
+            .iter()
+            .filter(|r| r.people == *people)
+            .map(|r| r.edifice_settlements)
+            .sum();
+        let remembering: u64 = rows
+            .iter()
+            .filter(|r| r.people == *people)
+            .map(|r| r.remembering_settlements)
+            .sum();
         println!(
             "REPOSE KNOWNNESS: people {people:14} population {population:12.0} \
-             mean knownness {mean:.8} highest stratum {highest:.8}"
+             mean knownness {mean:.8} highest stratum {highest:.8} | on an edifice \
+             {on_edifice:5} remembering {remembering:5}"
         );
     }
 
@@ -2062,6 +2228,54 @@ fn the_readout_can_see_a_people_remember_and_a_people_forget() {
          the assertion.",
         settled.len()
     );
+
+    // THE DECOMPOSITION IS IN THE ARTIFACT, AND IT IS CONSISTENT (fix round
+    // 1). Three checks, each catching a different way the new columns could be
+    // wired wrong, and together they are what makes the four zero-reading
+    // peoples self-explaining from the committed CSV rather than from a
+    // deleted probe.
+    let pooled_edifice: u64 = rows
+        .iter()
+        .filter(|r| r.people == "pooled")
+        .map(|r| r.edifice_settlements)
+        .sum();
+    let pooled_remembering: u64 = rows
+        .iter()
+        .filter(|r| r.people == "pooled")
+        .map(|r| r.remembering_settlements)
+        .sum();
+    println!(
+        "REPOSE KNOWNNESS: pooled — {pooled_edifice} settlements on an edifice, \
+         {pooled_remembering} of them remembering"
+    );
+    assert!(
+        pooled_edifice > 0,
+        "no settlement anywhere in the sweep sits on an edifice — every knownness in this \
+         fixture is zero for want of a mountain, and the column measures nothing about memory"
+    );
+    // Direction: red if `remembering_settlements` were ever counted over a
+    // wider population than `edifice_settlements` — a stock can only be
+    // non-zero where there is a mountain.
+    assert!(
+        pooled_remembering <= pooled_edifice,
+        "{pooled_remembering} settlements remember an eruption but only {pooled_edifice} \
+         sit on an edifice — something is remembering a mountain it does not have"
+    );
+    // Direction: red if the two knownness columns stopped decomposing, which
+    // is the one property that makes adding `knownness_on_edifice` strictly
+    // informative rather than a second, disagreeing opinion.
+    for r in rows.iter().filter(|r| r.knownness > 0.0) {
+        assert!(
+            r.knownness_on_edifice >= r.knownness,
+            "stratum (decile {}, band {}, people {}) reads a conditional mean {} BELOW its \
+             diluted mean {} — the edifice-only denominator is not a subset of the whole",
+            r.decile,
+            r.band,
+            r.people,
+            r.knownness_on_edifice,
+            r.knownness
+        );
+    }
 }
 
 /// Rewrites the committed fixture. Deliberately NOT part of any gate: it
