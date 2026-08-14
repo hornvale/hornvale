@@ -105,26 +105,43 @@ asserts, on every land cell of every seed, that the components re-add to the
 pipeline's own elevation within `1e-9`. **That assert stays exactly as it is** —
 it is what makes every share in the readout meaningful.
 
-- [ ] **Step 2: Add the five new accumulators**
+- [ ] **Step 2: Add the three genuinely missing accumulators**
 
-Add to the existing readout, without removing anything already printed:
+**Controller's correction, verified against the code before dispatch — the
+first draft of this step was wrong.** It asked for five accumulators; **two of
+them already exist**. The probe's seed loop already maintains `supply_sum`,
+`threshold_sum` and `land_sum` — analytic continental supply, the grid area
+clearing `CONTINENTAL_THRESHOLD_KM`, and the land the percentile granted — and
+already prints them as the audit's "WHY SEA LEVEL LANDS THERE" block (0.2592 /
+0.2724 / 0.3731). **Do not re-add them.** Read the loop at
+`land_elevation_attribution.rs:256-300` first.
 
-1. **grid-realised continental fraction** — the fraction of *all* cells with
-   `crust >= CONTINENTAL_THRESHOLD_KM`. Today's value is 0.2724; this is the
-   number that actually competes with the land quota.
-2. **land quota** — `1 - ocean_target`, per world and meaned.
-3. **conditional mean crust over the retained set** — the mean crust thickness
-   over cells that clear the threshold. This is the accumulator §3.5 owes, and
-   it is what converts "sea level would rise to the shelf break" into a
+Three are actually missing:
+
+1. **conditional mean crust over the retained set** — mean crust thickness over
+   cells that clear the threshold. This is the accumulator audit §3.5 says is
+   owed, and it converts "sea level would rise to the shelf break" into a
    defensible elevation figure instead of the 1113 m cut depth everyone
-   misreads.
-4. **craton radius distribution** — min / mean / max / coefficient of variation,
+   misreads. §3.5's own estimate is ~29.1 km; measure it rather than adopt it.
+2. **craton radius distribution** — min / mean / max / coefficient of variation,
    and the count at the clamp. CV is the variety axis ledger #10 found the
-   obvious fix destroys; without it here, Task 2 cannot be judged.
-5. **post-repulsion pair separation** — min and mean centre-to-centre angle
-   over craton pairs, against `REPEL_SEPARATION_FACTOR * (r_i + r_j)`. Records
-   what `repel_cratons` actually achieves *today*, so Task 2 can tell a
-   saturating repulsion pass from a working one.
+   obvious fix destroys; without it, Task 2 cannot be judged.
+3. **post-repulsion pair separation** — min and mean centre-to-centre angle over
+   craton pairs, against `REPEL_SEPARATION_FACTOR * (r_i + r_j)`. Records what
+   `repel_cratons` achieves *today*, so Task 2 can tell a saturating repulsion
+   pass from a working one.
+
+Two facts that will otherwise cost you a wrong measurement:
+
+- **`TectonicGlobe` already retains the craton set** — `globe.cratons`, no need
+  to re-call `draw_cratons`. But it holds **majors alone**: `microcontinents`
+  and `terranes` are separate fields, and the field's own doc says craton-census
+  metrics count majors only. Compute the CV over `globe.cratons` and say so in
+  the readout label, or the variety number silently means something else.
+- **`REPEL_SEPARATION_FACTOR` is private to the `crust` module** (`crust.rs:656`,
+  a bare `const`), so the probe cannot read it today. Widen it to `pub(crate)`.
+  **Do not re-type the literal `1.2`** — a duplicated constant drifts silently,
+  which is the exact trap audit §1.1 documents for the per-term helpers.
 
 - [ ] **Step 3: Keep the probe in the commit gate**
 
