@@ -25,16 +25,19 @@ decision.
    contract and triggers no epoch.
 3. **A witness derivation** — `windows/hearsay`, which reads committed facts
    and produces the claim set for a world. Reads only; draws nothing.
-4. **The independence test** — stemmatics' *eliminatio codicum descriptorum*
-   as executable code: a holder whose derivation ancestry is a subchain of
-   another's contributes **no independent weight**.
-5. **A preregistered measurement** of the echo ratio (§6), with its null.
+4. **A preregistered measurement of transmission depth** (§6), with its null —
+   the **no-decay baseline** every later campaign's forgetting is measured
+   against.
 
 ## 2. Non-goals
 
 - **Diffusion.** Nobody tells anybody anything in this campaign. Claims arise
   from witnessing and are inherited along the *already-committed* founding
   tree. Transmission dynamics are campaign 2 (`DOM-transmission`).
+- **Independence, and the conflict measurement with it.** Both need a claim to
+  reach a holder by two routes, and **two routes is diffusion** — so both are
+  campaign 2 by this spec's own first non-goal. See §5, which records why this
+  was not obvious.
 - **The play ledger.** 0100 designed it; no code implements it (verified:
   `grep -rn "PlayLedger" kernel/ windows/` returns nothing). Campaign 3.
 - **Creatures as listeners.** `absorb_common` already transfers a falsehood
@@ -131,10 +134,10 @@ A `Number` is a *site*, not an ancestor. The corrected tree on seed 42:
 ```
 
 **The 46 roots are load-bearing, not a rounding detail.** A root lineage
-witnessed its own origin with no ancestor to inherit from, so every root is an
-independent origin by construction — the echo ratio's ceiling is set by how
-many distinct roots a claim's holders descend from. A design that read all 704
-as a single chain would have predicted far more echo than the world contains.
+witnessed its own origin with no ancestor to inherit from, so a root caps the
+hop count of everything descending from it: no claim can be more hops old than
+its lineage is deep. Reading all 704 as one chain — as an earlier draft did —
+would have overstated the reachable depth by a factor of several.
 
 `domains/history/src/descent.rs` already walks generational distance
 (`remove`, `kinship`, `ancestor`). Nothing new needs generating.
@@ -162,91 +165,94 @@ there is a reason to distinguish two holders inside one community.
 `Inferred` is reserved and unused in this campaign; it is where campaign 2's
 deduction lands (`KNOW-deduction-gain`).
 
-## 5. The independence test
+## 5. Why independence is NOT measured here
 
-Ported from stemmatics, where the problem — reconstructing what was true from
-copies that corrupt — has two centuries of worked answers.
+This section replaces an independence measurement that was specified, approved
+at G3, and then found unfalsifiable before any of it was built. The finding is
+worth more than the metric was.
 
-**The rule (*eliminatio codicum descriptorum*):** a witness whose entire
-derivation ancestry is contained in another surviving witness's ancestry
-contributes nothing independent. In a manuscript tree, a copy made from a
-surviving copy is discarded for reconstruction. Here: an occupation that knows
-of an event *only* because its parent did is not a second witness to it.
+**What was wrong.** Claims reach holders by exactly one route: an occupation
+witnesses an event, and its descendants inherit. The holder set of any event is
+therefore a single subtree, every holder's earliest holding ancestor is the
+witness, and `independent_witnesses` returns **1 for every event on every
+world**. The ratio it fed was `1/N`, and since the metric only reported when
+N >= 3, it was always <= 1/3 against a predicted median of 0.5. The hypothesis
+was true by construction. Traced, not argued: a subtree of six holders returns
+1 independent witness and a ratio of 0.167.
 
-This is `KNOW-independence` — "two traces are independent if disjoint derivation
-ancestry" — with an algorithm attached, and it is the direct fix for
-`SOC-reputation-provenance`:
+**Why the obvious repair was refused.** An ending has two parties —
+`occ-ended-by` names an Entity ender on 234 of 474 endings — so extending the
+witness rule to both parties would have produced two origins and rescued the
+number. It was refused because **that is a rescue, not a correction**: it
+changes the model to save a measurement, removing a constraint rather than
+adding one.
 
-> ten goblins who all heard it from one goblin is **one** observation wearing
-> ten mouths … without a grade a rumour strengthens by retelling.
+**The root cause, one level above the repair.** Independence requires a claim
+to arrive by two routes, and *two routes is diffusion*. Diffusion is this
+campaign's first non-goal. So the hypothesis was a campaign-2 hypothesis
+wearing campaign-1 clothes, and no witness-rule patch fixes that — it only
+smuggles a second route in under another name. The generalisable form: **a
+measurement that requires the mechanism a campaign has excluded is not a hard
+measurement, it is a scope error**, and it will read as a merely difficult
+metric right up until you notice it cannot fail.
 
-`independent_witnesses(claim_set, event)` returns the count of maximal
-disjoint-ancestry chains, never the holder count.
+`independent_witnesses` itself is correct and worth having; it is deferred
+whole to campaign 2, which supplies the second route. `KNOW-independence`
+stays `spec'd` against this document, because the definition landed here even
+though the measurement could not.
 
 ## 6. Preregistration
 
 Frozen here, before the code that would move it (decision 0016). The study
 JSON carries no hypothesis field, so this section is the freeze.
 
-**An *event*, for this section, is a committed history fact with a time and a
-locus: a founding (`occ-founded` + `occ-founded-from`) or an ending
-(`occ-ended` + `occ-ended-by`). 704 and 474 of them respectively on seed 42.
-Nothing else counts, so the denominator is fixed before the measurement.**
+**What is measured.** For every held claim, its `hops` — the number of
+inheritance steps between the witnessing occupation and the holder. Zero is the
+witness itself. The population is every (event, holder) pair the derivation
+produces, across the census seed set.
 
-**H1 — the echo ratio is small.** Define
+**This is the no-decay baseline, and that is its point.** Nothing in this
+campaign forgets, decays, or declines to pass a claim on: every descendant
+inherits, always. So the distribution measured here is the *ceiling* on
+transmission depth — the shape myth takes when nothing opposes it. Campaign 2's
+forgetting is a **shift against this curve**, and without it that campaign has
+nothing to measure its own mechanism against.
+
+**Known before predicting** (§4.1): the founding tree has 704 occupations, 46
+roots, max depth 21, median depth 8, branching at most 5. **Not computed at
+the time of writing:** the distribution of hop counts over (event, holder)
+pairs, which is what the prediction is about. A branching tree concentrates
+pairs at short distances; a chain-like one spreads them evenly. 704 nodes over
+46 roots is about 15 per lineage against depths reaching 21, which does not
+settle it either way.
+
+**H1 — myth stays near its source.** Median `hops` over all pairs is **<= 2**.
+
+**Decision rule** (a branch table cannot be wrong where a prediction can):
 
 ```
-  echo_ratio(event) = independent_witnesses(event) / holders_of_a_claim(event)
+  median hops <= 2   -> H1 CONFIRMED. Lineages are bushy: most communities
+                        holding a claim are close to the event. Report the
+                        full distribution, not only the median.
+  2 < median <= 5    -> H1 REFUTED, and the honest reading is that the hop
+                        distribution is simply the tree's own shape restated.
+                        Say so: myth adds no structure the founding tree did
+                        not already carry, and the baseline is still the
+                        baseline.
+  median > 5         -> H1 REFUTED, and this is the headline: lineages are
+                        chain-like, so a typical holder is remote from the
+                        event it holds, and campaign 2's decay will bite
+                        hard and early.
+  fewer than 500 pairs across the seed set -> NO VERDICT; report the count.
 ```
 
-Range is `(0, 1]`: 1.0 when every holder witnessed it independently, `1/N` when
-all N inherited it from one ancestor.
+**H2 — the tail is thin.** Fewer than 10% of pairs sit at `hops >= 10`. The
+null is a fat tail, which would mean whole lineages carry founding-era claims
+to the present unchanged — interesting, and an argument that decay is the
+first thing campaign 2 must add rather than a refinement.
 
-**Prediction: median `echo_ratio` < 0.5** over events with ≥3 holders — most
-apparent corroboration is inherited, not independent.
-
-**The decision rule, not just the prediction** (a branch table cannot be wrong
-where a prediction can):
-
-```
-  median < 0.5   -> H1 CONFIRMED. Report the ratio and the distribution's
-                    shape, not only the median; a bimodal result means two
-                    populations of event and is the more interesting finding.
-  0.5 <= m < 0.8 -> H1 REFUTED, echo present but weak. Report as refuted;
-                    do NOT retune the >=3-holder cutoff to rescue it.
-  median >= 0.8  -> H1 REFUTED, and this is the headline: Hornvale's committed
-                    history does not naturally produce echo chambers. That is
-                    a finding about the history bake, and campaign 2's
-                    diffusion is then the thing that would create them.
-  <30 qualifying events across the seed set -> NO VERDICT. The measurement did
-                    not have a denominator; say so rather than reporting a
-                    median over a handful.
-```
-
-**The denominator is measured, not hoped for.** On seed 42, 403 of 704
-occupations have a subtree (self + descendants) of ≥3, and 234 endings carry an
-entity-attributed cause — so a single world already clears the 30-event floor
-by an order of magnitude, and the census seed set multiplies it. The NO VERDICT
-row exists for a *changed* world, not as a live worry about this one.
-
-The tree branches at ≤5 with median depth 8 and carries 46 independent roots,
-which may well be enough to put the result in the third row. That outcome is a
-result, not a failure.
-
-**H2 — echo ratio falls with event age.** Older events have had more
-generations to propagate along the tree, so their holders should be
-increasingly dominated by inheritance. **Prediction: negative rank correlation
-between event age and `echo_ratio`.**
-
-**Stop rules.** H1 is decided on the median over all qualifying events across
-the census seed set, not on seed 42 — one world is an anecdote. H2 requires the
-sign of the correlation, not a magnitude threshold; a null result is |rho| <
-0.1.
-
-**Not preregistered here, deliberately:** *lectio difficilior potior* — that
-surviving variants are simpler than their archetypes — is the strongest
-prediction stemmatics offers, and it **cannot be tested until claims can
-mutate**. It belongs to campaign 2 and is recorded in §7 so it is not lost.
+**Do not retune the pair population to move either number.** If the result is
+uncomfortable, the result is the finding.
 
 ## 7. Carried forward
 
@@ -257,6 +263,11 @@ mutate**. It belongs to campaign 2 and is recorded in §7 so it is not lost.
   strictly cheaper than a seeded random walk and consistent with belief-as-fold.
   Campaign 2.
 - **Persons as holders** — refinement, campaign 2 (§4.2).
+- **`independent_witnesses` and the echo ratio** — correct, deferred whole to
+  campaign 2, which supplies the second route that makes them measurable (§5).
+- **Conflict between lineages** — whether two peoples hold incompatible
+  accounts of one event. Needs two parties per event *and* distortion, so it
+  is campaign 2 at the earliest.
 - **`KNOW-lost-revision`** — keeping the contradiction when a belief changes.
   Needs revision, which needs diffusion. Campaign 2.
 
@@ -266,12 +277,10 @@ mutate**. It belongs to campaign 2 and is recorded in §7 so it is not lost.
   `type-audit:` tags on every primitive at a `pub` boundary.
 - `windows/hearsay` deriving claim sets from committed facts; layering test
   green (a window may depend on domains; it must not be depended on).
-- `independent_witnesses` unit-tested against hand-built trees, including the
-  subchain case that must return 1 and not N.
-- Lab metrics for `echo_ratio` registered, **with the metric cost measured
-  before registration** — nine studies declare `"metrics": "all"` and there is
-  no opt-out flag, so an expensive metric is a permanent ~2000-world cost
-  (`windows/lab/CLAUDE.md`).
+- A lab metric for the median hop count registered, **with the metric cost
+  measured before registration** — nine studies declare `"metrics": "all"` and
+  there is no opt-out flag, so an expensive metric is a permanent ~2000-world
+  cost (`windows/lab/CLAUDE.md`).
 - The preregistered readout run and reported **at the strength the measurement
   supports**, null or not.
 - Chronicle entry, book freshness sweep, retrospective, and the registry rows
