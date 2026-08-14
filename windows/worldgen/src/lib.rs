@@ -114,7 +114,7 @@ pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
 };
-pub use hazard::{Recurrence, has_edifice, hazard_at};
+pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
     bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,

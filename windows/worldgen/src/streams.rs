@@ -43,4 +43,16 @@ hornvale_kernel::stream_labels! {
     /// Salt, The Tolerance); nothing here carries an ordinal so that mistake
     /// cannot recur.
     VOLCANO = "volcano/v1" => "the volcano-identity derivation, keyed on the edifice's source contact cell";
+    /// The per-cell hazard-event draw (The Repose). Keyed on a **place in
+    /// space and a place in time** — the cell, the process (seismic or
+    /// eruption), and the index of a fixed 1,000-year block of world time —
+    /// and **never on the window a caller asked about**. That is the whole
+    /// design: the event sequence of a `(seed, cell)` exists independently of
+    /// who asks, so a narrower query filters the same sequence rather than
+    /// drawing an unrelated one. A block index is a coordinate on a lattice
+    /// that tiles the timeline before anything is generated into it, exactly
+    /// as `ChamberAddr`'s `band`/`slot` are — not a generation ordinal
+    /// (decision 0102, The Salt, The Tolerance). `crate::hazard`'s private
+    /// `event_key` is the one place the composed key is spelled.
+    HAZARD_EVENT = "hazard/event/v1" => "the per-cell hazard-event draw, keyed on (cell, process, world-time block)";
 }
