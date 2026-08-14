@@ -3,6 +3,7 @@ mod common;
 use common::{eid, ledger_with, put};
 use hornvale_hearsay::derive::{claims_about, witnesses_of};
 use hornvale_hearsay::lineage::lineage_of;
+use hornvale_hearsay::{divergent_witnesses, echo_ratio};
 use hornvale_kernel::ledger::{Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
 
@@ -223,4 +224,54 @@ fn a_non_ending_predicate_has_only_its_subject_as_witness() {
     let lin = lineage_of(&led);
     let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_FOUNDED);
     assert_eq!(w, vec![eid(1)], "only an ending has other parties");
+}
+
+#[test]
+fn echo_ratio_is_witnesses_over_holders() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    // Witnesses: 1, 2, 3, 50. Holders: those plus 4, 6, 51 = 7.
+    let holders = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED).len();
+    let witnesses = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED).len();
+    assert_eq!((witnesses, holders), (4, 7));
+    let r = echo_ratio(&led, &lin, eid(1), hornvale_history::OCC_ENDED).expect("qualifies");
+    assert!((r - 4.0 / 7.0).abs() < 1e-12, "got {r}");
+}
+
+#[test]
+fn echo_ratio_is_absent_below_three_holders() {
+    // A lone root with an ending and no descendants: one holder, no ratio.
+    let mut led = ledger_with(&[(1, None)]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_FOUNDED,
+        Value::Number(0.0),
+    );
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(5.0));
+    let lin = lineage_of(&led);
+    assert_eq!(
+        echo_ratio(&led, &lin, eid(1), hornvale_history::OCC_ENDED),
+        None
+    );
+}
+
+#[test]
+fn divergent_witnesses_drops_a_witness_descended_from_another() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    // 2 and 3 descend from 1, which is also a witness; 50 does not.
+    let d = divergent_witnesses(&lin, &w);
+    assert_eq!(d, vec![eid(1), eid(50)]);
+}
+
+#[test]
+fn two_unrelated_witnesses_are_both_divergent() {
+    let led = ledger_with(&[(1, None), (50, None)]);
+    let lin = lineage_of(&led);
+    assert_eq!(
+        divergent_witnesses(&lin, &[eid(1), eid(50)]),
+        vec![eid(1), eid(50)]
+    );
 }
