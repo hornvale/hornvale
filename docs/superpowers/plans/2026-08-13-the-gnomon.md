@@ -623,16 +623,58 @@ git commit -m "feat(lab): the anomaly report — the Domesday's transpose, per w
 
 ## Task 5: H1, the injection battery — the campaign's headline
 
+> **CORRECTED AT DISPATCH (ledger #11).** As originally written, this task
+> told the implementer to `assert!(src.contains(OLD))` and substitute *inside*
+> `windows/lab/tests/anomaly_injection.rs`. **That cannot work.** A compiled
+> test binary cannot change the constants it was compiled from; source
+> substitution only takes effect after a rebuild, which no `#[test]` can
+> perform on itself. This is exactly the imperative-hides-an-assertion shape
+> the plan's own preamble warns about — "assert the target text exists before
+> substituting it" quietly asserts that substituting is a thing this file can
+> do. The repo's only source-mutating machinery, `tools/seam-guard`
+> (`src/lib.rs:224` `probe`: write → run scoped tests → restore, guarded by
+> `tree_is_clean()` at `:194`), is a standalone binary **outside the cargo
+> workspace** for precisely this reason.
+>
+> The steps below are rewritten along the authoring/reading seam
+> `scripts/census-run.sh` already uses: an expensive, host-pinned **authoring
+> script** produces evidence; the evidence is **committed**; a cheap **test**
+> reads it. H1 therefore leaves the heavy tier entirely. H2 is unchanged.
+
 **Files:**
-- Create: `windows/lab/tests/anomaly_injection.rs`
-- Create: `windows/lab/tests/anomaly_holdout.rs`
+- Create: `studies/gnomon-injection.study.json`
+- Create: `scripts/gnomon-injection.sh` (the authoring path; human-run)
+- Create: `windows/lab/tests/fixtures/injection/` (committed CSVs + manifest)
+- Create: `windows/lab/tests/anomaly_injection.rs` (**cheap — not heavy tier**)
+- Create: `windows/lab/tests/anomaly_holdout.rs` (**heavy tier**, unchanged)
+- Modify: `windows/lab/src/domesday/anomaly.rs` (add `score_row`)
 
 **Interfaces:**
-- Consumes: `anomaly::{rank, for_seed, evaluable_columns}` from Task 4.
+- Consumes: `anomaly::{rank, for_seed, evaluable_columns}` from Task 4, and
+  `hornvale_lab::render_diff` (the library behind `hornvale lab diff` —
+  "report which census metrics moved between two rows.csv snapshots", which
+  *is* the positive control, already built; do not write a second one).
 
-Both files are **heavy tier**: every `#[ignore]` carries a reason with the
-`heavy:` token (`cli/tests/heavy_tier.rs` checks the reason string verbatim).
-They build worlds, so they run on lefford via `make heavy-remote REF=<full-sha>`.
+Only `anomaly_holdout.rs` is heavy tier: its `#[ignore]` reason carries the
+`heavy:` token (`cli/tests/heavy_tier.rs` checks the reason string verbatim,
+and — see progress.md — its scanner is blind to multi-line reasons, so keep
+the reason on ONE line). It runs on lefford via
+`make heavy-remote REF=<full-sha>`.
+
+- [ ] **Step 0: The missing scoring seam**
+
+`rank` and `for_seed` can only score rows already *inside* the census. A
+perturbed world's row must be scored against the **unperturbed** index, so add:
+
+```rust
+pub fn score_row(c: &Census, seed: u64, row: &BTreeMap<String, String>) -> WorldAnomaly
+```
+
+composing the existing `evaluable_columns` / `build_index` / `depths_for_row` /
+`score_world` — no new percentile code (Global Constraints). Splicing the
+perturbed row into the census instead would contaminate the very percentiles it
+is scored against; say so in the doc comment, because the splice is the
+obvious-looking shortcut and nothing would go red if someone took it.
 
 - [ ] **Step 1: Build the positive control BEFORE the recall measurement**
 
@@ -641,20 +683,45 @@ only what it perturbs, and a recall of zero is unreadable without it — it mean
 either "the report missed it" or "the mutation did nothing", which demand
 opposite responses.
 
-For each injection:
+`scripts/gnomon-injection.sh` does the perturbing, following seam-guard's
+discipline exactly:
 
-1. Assert the target text exists before substituting it
-   (`assert!(src.contains(OLD), "TARGET NOT FOUND: {OLD}")`). A `cargo fmt`
-   rewrap has previously made a single-line replacement match nothing and
-   produced a green that looked like a robust implementation.
-2. Rebuild the affected seeds and assert the affected metric's values **differ
-   from baseline**. Record which metric moved and by how much.
+1. **Refuse on a dirty tree** (`git status --porcelain` non-empty → exit 1).
+   The script rewrites tracked source in place; a dirty tree makes the restore
+   ambiguous.
+2. **Assert the target text is present before substituting** — `grep -qF` on
+   the literal, exiting non-zero with `TARGET NOT FOUND: <text>` when it is
+   not. A `cargo fmt` rewrap has previously made a single-line replacement
+   match nothing and produced a green that looked like a robust
+   implementation.
+3. Substitute, `cargo run -p hornvale -- lab run
+   studies/gnomon-injection.study.json`, copy the produced `rows.csv` into the
+   fixture directory, **restore under a `trap ... EXIT`** so an interrupt
+   cannot leave the tree mutated.
+4. Record, per injection, in a committed `manifest.json`: file, OLD text, NEW
+   text, seed range, and the SHA authored at.
+
+Then, in the test, for each injection: which columns moved (via `render_diff`
+against the baseline fixture), **and the moved metric's `tail_depth` in the
+perturbed world**. Record the depth, not merely the fact of movement — a recall
+miss on a metric that barely moved is a different finding from a miss on one
+that moved hugely, and a bare recall number hides which. This costs nothing and
+turns a scalar into a recall-vs-effect-size reading.
 
 **Decision rule:**
 - The metric moved → proceed to recall.
 - Nothing moved → that injection is void. Do not count it in either the
   numerator or the denominator, and say in the report that it was dropped and
   why. Silently dropping it would make the recall look better than it is.
+
+**Fixture staleness — assert it, do not hope.** The fixtures are scored against
+the committed census, so a census refresh that *adds* columns stales them. The
+test asserts the fixture column set against the census's and fails loudly.
+Branch table for a red there:
+- Census gained columns, fixtures unchanged → re-author the fixtures in the
+  same commit as the refresh (Task 7 carries this).
+- Fixture columns the census lacks → the fixtures were authored against a
+  different schema; re-author, do not filter the mismatch away.
 
 - [ ] **Step 2: Choose the injections from inside the code**
 
@@ -676,11 +743,22 @@ the same reason it makes a poor seam.
 
 - **Recall**: over the injection battery, the share where the provably-moved
   metric appears in the affected worlds' top-10 ranking. **Success: ≥ 0.60.**
-- **False positives**: run the ranking twice with no perturbation; the number
-  of worlds whose top-10 changes must be **zero**. The census is deterministic,
-  so this is an identity check, not a statistic — a non-zero result means the
-  scorer has a nondeterministic tie-break, which is a determinism bug and
-  outranks everything else in this campaign.
+  The denominator is **(injection × seed) pairs**, not injections — five
+  injections alone would make recall a five-point scale on which the 0.60 bar
+  is just "3 of 5". Use enough seeds per injection that the figure means
+  something (~20 is ≈100 pairs and costs ~30 s of wall on lefford at the
+  census's measured throughput).
+- **False positives**: **two independently generated baseline CSVs** must
+  produce identical top-10s. Note what this replaces and why: as originally
+  written this step said "run the ranking twice with no perturbation", and two
+  calls to `rank` on one in-memory `Census` are a pure function of fixed input
+  — they cannot disagree, so the guard could never fail (cf.
+  `five-vacuous-guards-one-campaign`). The content is in whether two *separate
+  world-build runs* produce identical rows, so the authoring script emits the
+  baseline arm twice, as separate invocations, and both are committed. A
+  non-zero result means the generative path or the scorer has a
+  nondeterministic tie-break, which is a determinism bug and outranks
+  everything else in this campaign.
 
 - [ ] **Step 4: H2, the held-out calibration control**
 
@@ -708,11 +786,28 @@ Heavy tier, lefford, never the commit gate.
 
 - [ ] **Step 6: Commit**
 
+Use `git commit -- <paths>`, never a bare `git commit` — that takes the whole
+index, and this worktree may carry unrelated staged work.
+
 ```bash
 cargo fmt
-git add windows/lab/tests/anomaly_injection.rs windows/lab/tests/anomaly_holdout.rs
+git add studies/gnomon-injection.study.json scripts/gnomon-injection.sh \
+        windows/lab/tests/fixtures/injection/ \
+        windows/lab/tests/anomaly_injection.rs windows/lab/tests/anomaly_holdout.rs \
+        windows/lab/src/domesday/anomaly.rs
 git commit -m "test(lab): H1 injection recall and H2 held-out calibration for the anomaly report"
 ```
+
+`shellcheck scripts/gnomon-injection.sh` before committing — it is not in
+`make gate`, so nothing else will run it.
+
+**`windows/lab/tests/fixtures/injection/` is deliberately NOT added to
+`docs/generated-paths.txt`.** Those paths are drift-checked by regenerating
+them; regenerating these would require `regenerate-artifacts.sh` to mutate
+tracked source, which it must never do. They are *authored evidence*, like a
+census's committed goldens — reproducible from the manifest by a human running
+the script, never by the artifact sweep. Say this in the fixture directory's
+own README so the next person does not "fix" the omission.
 
 ---
 
