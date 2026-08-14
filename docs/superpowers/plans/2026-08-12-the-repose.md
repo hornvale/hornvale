@@ -87,6 +87,29 @@ It exists and is about `ExposureClass` — a *perception* concept from The Words
 / The Vigil, nothing to do with hazard exposure. The probe in Task 1 is
 `repose_exposure.rs`. Do not rename the existing file.
 
+### 0.4 The byte-identity test cannot live in `windows/worldgen`, and is not heavy
+
+Two amendments to Task 8, both forced by measurement rather than preference.
+Added at execution time, after the plan's own text was tried.
+
+**Home.** The plan sites the test at
+`windows/worldgen/tests/repose_byte_identity.rs`. A test there can reach
+exactly one of the three surfaces it is supposed to compare:
+`hornvale-worldgen` depends on `hornvale-almanac` but not on `hornvale-scene`,
+and `hornvale-scene` depends on `hornvale-worldgen` — so the scene probe would
+need a dev-dependency cycle. The file is `cli/tests/repose_byte_identity.rs`
+instead, beside `lens_purity.rs` and every other workspace-wide invariant
+(`cli/CLAUDE.md`: `cli/` is the only crate that depends on everything).
+
+**Tier.** The plan tags all three probes `heavy:`. Measured at HEAD on
+`MacBookPro` under the optimized dev profile (decision 0113): **1.00 s**
+(almanac), **2.05 s** (scene), **1.66 s** (world JSON) — 4.71 s serial,
+2.14 s wall in parallel. The tag is dropped and they run in `make gate`. A
+`heavy:` tier is invisible to `make gate` on `main` as well as on a branch,
+so deferring two seconds would have bought nothing and cost the guarantee.
+This is the same call Task 6 already made ("the recovery batteries are not
+heavy, and measurement says so").
+
 ---
 
 ## Global Constraints
