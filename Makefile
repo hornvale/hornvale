@@ -29,7 +29,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log lane lane-status lane-log lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-fast-run gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -112,8 +112,25 @@ subfloor-run: nextest-check
 	fi; \
 	cargo nextest run --workspace -E "$$filter"
 
-gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
-	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
+gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the lane (REF=<full-sha>)
+	@bash scripts/lane-dispatch.sh gate "$(REF)"
+	@bash scripts/lane-dispatch.sh artifacts "$(REF)"
+	@bash scripts/lane-dispatch.sh outboard "$(REF)"
+	@bash scripts/lane-dispatch.sh clients "$(REF)"
+
+gate-campaign: ## THE CAMPAIGN GATE: the stage gate plus heavy and census (REF=<full-sha>)
+	@$(MAKE) --no-print-directory gate-stage REF="$(REF)"
+	@bash scripts/lane-dispatch.sh heavy "$(REF)"
+	@bash scripts/lane-dispatch.sh census "$(REF)"
+
+# The former `make gate` body, now a set that runs ON the lane
+# (scripts/lane-sets.tsv's `gate` row: `make --no-print-directory
+# gate-suite-run`). `lane-run.sh` supplies the `timed.sh`/dispatch wrapping
+# that the old top-level `gate` target used to do itself; this target's own
+# job is unchanged from before The Staff — run the cheap checks, then the
+# nextest+doctest body below (gate-run), unchanged.
+gate-suite-run: fmt-check clippy type-audit type-audit-report nextest-check
+	@$(MAKE) --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it. Until this split,
 # docs/timings.md carried ZERO rows labelled `gate` (0086's amendment): the
@@ -179,7 +196,7 @@ gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy 
 # Mac and fail there, silently reporting `tee`'s exit status (always 0) as the
 # gate's verdict — a gate that can never go red. Writing the status inside the
 # brace group is POSIX and reads the same everywhere.
-gate-run: fmt-check clippy type-audit type-audit-report nextest-check
+gate-run:
 	@mkdir -p target/nextest/ci docs/timings
 # THE STATUS FILE IS DELETED FIRST AND VALIDATED AFTER, and both halves are
 # load-bearing. nextest's status reaches us through a file because the brace
@@ -243,16 +260,37 @@ gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	bash scripts/census-advisory.sh || true; \
 	exit $$alarm_status
 
-gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
-	@bash scripts/timed.sh gate-fast -- make --no-print-directory gate-fast-run
-
 gate-fast-run:
 	@bash scripts/gate-fast.sh
 
-gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
-	@bash scripts/gate-full-heavy.sh
-	@$(MAKE) --no-print-directory seam-guard
-	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+# SIGNPOSTS, NOT ALIASES. Aliasing `gate` to the commit gate would silently
+# change what 417 runs a month mean: a caller expecting the full suite would
+# get lints plus the sub-floor tier and no warning. Refusing is the same shape
+# scripts/hv-guard-bash.sh uses when it intercepts a raw whole-workspace
+# `cargo test` and names the project's own targets instead.
+# `gate-full` IS IN THIS LIST AND THE REASON IS NOT COSMETIC. It was declared
+# `gate-full: gate` — a prerequisite — so the moment `gate` becomes a refusing
+# signpost, `gate-full` would inherit the refusal and stop doing its job. It is
+# also genuinely superseded: `gate-full` was `gate` + the heavy tier, and
+# `gate-campaign` is `gate-stage` + heavy + census, which strictly contains it.
+# Leaving it as a live target pointing at a dead prerequisite would be the
+# worst of both. Verified before this task: `gate-full` and `ci` were the only
+# two targets that took `gate` as a prerequisite.
+# `gate-fast` IS ALSO RETIRED (n=4 measurement: it only bought ~10% over the
+# full gate) rather than pointed at a set — see docs/decisions/0132.
+gate ci gate-fast gate-full:
+	@echo "make $@ no longer exists. Since The Staff there are three gates," >&2
+	@echo "named for the campaign moment each one gates:" >&2
+	@echo "" >&2
+	@echo "  make gate-commit                    local, seconds, every commit" >&2
+	@echo "  make gate-stage    REF=<full-sha>   the lane, each plan-stage boundary" >&2
+	@echo "  make gate-campaign REF=<full-sha>   the lane, before merging" >&2
+	@echo "" >&2
+	@echo "gate-full is superseded by gate-campaign, which contains it." >&2
+	@echo "" >&2
+	@echo "One set on demand:  make lane SET=<set> REF=<full-sha>" >&2
+	@echo "The roster:         scripts/lane-sets.tsv" >&2
+	@exit 2
 
 # Deliberately NOT in the commit gate: each registered call site costs a full
 # scoped test run, so cost scales with the roster. gate-full is the evidence
@@ -263,13 +301,6 @@ seam-guard: ## Neutralise each registered seam and report the ones no test notic
 
 seam-guard-list: ## Print the registered seams and their call sites (cheap, no build)
 	@cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- list
-
-# `ci` is now an alias for `gate` (The Sexton, Task 3): the libtest-json
-# stream, the duration alarm and `ci-record` moved into `gate-run` itself, so
-# there is no separate suite left to run here. Retained so existing muscle
-# memory and documentation keep working.
-ci: gate ## Alias for `make gate`, which now carries the timing alarm (The Sexton)
-	@echo "make ci: \`make gate\` now records the baseline and runs the alarm; this is an alias." >&2
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is
