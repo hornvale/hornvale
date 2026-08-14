@@ -158,7 +158,49 @@ A campaign whose subject is naming discipline that leaves its own homonyms
 unrecorded is leaving the next grep to fail the same way. Captured as
 `DOM-kernel-owns-vocabulary` and in the follow-ups below.
 
-## 9. What held up well
+## 9. The timing alarm fired twice on contention, and the third run settled it
+
+The gate ran three times. The suite was green every time — 3555 passed, 124
+skipped, zero failures — and the red was always `timings_alarm`.
+
+| run | loadavg at start | `cpu_ratio` | wall | verdict |
+|---|---|---|---|---|
+| 1 | (I was building concurrently) | 5.81 | 501.7 s | WHOLE-SUITE +30% |
+| 2 | 12.03 on 10 cores | 7.90 | 334.2 s | PER-TEST, 7 tests at 2.0–2.2× |
+| 3 | 8.48, no other builds | **8.43** | **310.9 s** | **green, no alarms** |
+
+This is CLAUDE.md's documented blind spot 1 firing for real, with numbers: the
+guard asks only whether a *census claim* is held, so parallel agent sessions are
+invisible to it and it enforces against thoroughly contended timings. Five
+worktrees exist on a box whose stated working ceiling is two to three.
+
+Two things made the diagnosis rather than the excuse:
+
+- **`cpu_ratio` is the tell.** The documented saturating range on this host is
+  8.25–8.50. Run 1 reported 5.81 — *less* parallelism achieved, not more work
+  done. A real regression raises wall time at unchanged `cpu_ratio`; contention
+  lowers `cpu_ratio`.
+- **A uniform multiplier is not a pathology.** Run 2's alarm named seven
+  unrelated tests in three crates, every one at 2.0–2.2×, and told the reader
+  *"something specific went pathological in this test; investigate it
+  directly."* Seven pathologies do not share a multiplier. The message is
+  well-written for the single-test case and actively misleading for this one.
+
+Two hypotheses were checked and ruled out before contention was accepted: the
+baseline was **not** stale (recorded on this host one commit back, after
+everything the branch absorbed), and it was **not** the wrong host's file
+(`hostname -s` is `MacBookPro` and that is the file being read, so blind spot 2
+was not in play).
+
+**The baseline was not re-recorded to make the gate pass.** The green came from
+a quiet box, and the re-record then happened automatically because The Sexton
+folded the recorder into the gate. It verifies itself: the `<below-floor>`
+aggregate moved **2837 → 2850**, exactly the thirteen sub-second tests this
+campaign added, and every other row moved down or mixed. **The Fathom's F-12 is
+genuinely discharged** — it asked for a step nobody was routed to, and there is
+now no step to miss.
+
+## 10. What held up well
 
 **The freeze was genuinely frozen, and it held.** The ten predicted resisters
 came back exactly, with no substitutions, and the compression bounds were
