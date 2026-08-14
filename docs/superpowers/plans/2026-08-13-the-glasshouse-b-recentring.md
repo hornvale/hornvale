@@ -436,7 +436,7 @@ git diff --stat book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/
 |---|---|
 | `book/src/gallery/` (elevation map, biome maps, almanacs) | expected — commit |
 | `book/src/laboratory/` (live study rows) | expected — commit |
-| `book/src/reference/` | **STOP** unless you added a stream label or predicate. This task adds neither. |
+| `book/src/reference/` — **name the FILE, not the directory** | The directory holds two different kinds of page and the STOP applies to only one. **Contract-bearing:** `stream-manifest-generated.md`, `concept-registry-generated.md`, `concept-manifest-generated.md` — if any of these moves and you added no stream label or predicate, **STOP**. **World-derived:** `dictionary-generated.md`, `locale-seed-42.json` and the other seed-42 renders — these move on any world-output change and are expected. Task 2 tripped this: the directory moved, the three manifests were byte-unchanged, and a directory-level STOP would have halted a correct run. Task 3 is the inverse case — it *does* add a label and a predicate, so the manifests moving is expected there and the manifests **not** moving is the STOP. |
 | `windows/vessel/tests/fixtures/` | expected — this is why `rebaseline-goldens` is a separate step |
 | nothing at all | **STOP** — the change did not take effect, or a path has no index entry and the check is vacuous |
 
