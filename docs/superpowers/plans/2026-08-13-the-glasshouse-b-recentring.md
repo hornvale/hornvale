@@ -181,10 +181,15 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 | `docs/audits/type-audit-report.md` only | you changed a `pub` boundary; regenerate and commit it in this task |
 | anything under `book/src/gallery/` or `book/src/laboratory/` | **STOP** — a read-only probe moved world output; you perturbed the arithmetic |
 
-`regenerate-artifacts.sh` may abort at `lab backfill-schema`; that is this
-campaign's known deliberate red (the committed census predates Stage A's three
-metrics). Run the post-abort steps by hand as the audit's §4 note describes,
-and sweep the `schema.json.tmp` it leaks (`TOOL-regen-leaks-schema-tmp`).
+**The known deliberate red is GONE — measured, not assumed.** Earlier drafts of
+this plan (and Task 1's dispatch) said `regenerate-artifacts.sh` aborts at `lab
+backfill-schema` because the committed census predated Stage A's three metrics.
+Task 1 ran it and it **exited 0**, leaking no `schema.json.tmp`. Cause: Stage A
+merged to `main`, and The Rill's census refresh on `main` regenerated with those
+metrics present, so the absorbed census is a strict superset of the branch's own
+(identical blob to `main`'s, `324b38cb`). **No task should budget for the abort
+or run post-abort steps by hand.** If a regen *does* abort at that step, that is
+new information — stop and report it.
 
 - [ ] **Step 6: Commit**
 
@@ -272,7 +277,15 @@ Expected: FAIL, with a shortfall around 34% on most seeds.
 - [ ] **Step 3: Implement the exact solve and the named clamp**
 
 Replace the closed-form `sqrt` with a deterministic bisection that includes the
-clamp inside the objective, and give the clamp a name and a kind:
+clamp inside the objective.
+
+**`CRATON_RADIUS_MAX_RAD` ALREADY EXISTS.** Task 1 introduced it at
+`crust.rs:617` as `pub(crate) const … = 0.6` (byte-inert: it replaced a bare
+literal at the `.min()` site and an internal bound assert). **You are CHANGING
+its value and rewriting its doc, not adding it** — pasting the block below as a
+new declaration is a duplicate definition. That fails loudly at compile time
+rather than silently, but do not spend a cycle on it. Keep `pub(crate)`; nothing
+outside the crate needs it.
 
 ```rust
 /// The maximum angular radius of a craton, radians.
@@ -281,11 +294,11 @@ clamp inside the objective, and give the clamp a name and a kind:
 /// geometric limit — a bound on how much of one world a single craton may be.
 /// Raised from 0.6 by The Glasshouse: at 0.6 the rescale's own budget is
 /// unreachable on 97.1% of worlds, so an exact solve could only pin every
-/// craton at the clamp, collapsing continent-size variety (radius CV 0.001).
-/// Overlap-deducted continental area rises with this constant and saturates
-/// by ~0.8; beyond that, added radius lands on ground another craton already
-/// covers.
-pub const CRATON_RADIUS_MAX_RAD: f64 = 0.8;
+/// craton at the clamp, collapsing continent-size variety (radius CV 0.001
+/// simulated, against 0.2428 measured on the grid today). Overlap-deducted
+/// continental area rises with this constant and saturates by ~0.8; beyond
+/// that, added radius lands on ground another craton already covers.
+pub(crate) const CRATON_RADIUS_MAX_RAD: f64 = 0.8;
 
 /// Solve for the radius scale that makes the craton set deliver `target`
 /// steradians of continental area, with `CRATON_RADIUS_MAX_RAD` applied
