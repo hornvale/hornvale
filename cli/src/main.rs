@@ -1289,7 +1289,8 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 }
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
-/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, and `domesday`.
+/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, `domesday`,
+/// `anomalies [--seed N]`, and `claim-status`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
@@ -1471,7 +1472,15 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
             .map_err(|e| format!("--seed must be a u64: {e}"))?;
         let anomaly = hornvale_lab::domesday::anomaly::for_seed(&census, seed)
             .ok_or_else(|| format!("anomalies: seed {seed} is not in the committed census"))?;
-        println!("seed {seed}: {} flagged columns", anomaly.flags.len());
+        // F2 (fix round 1): print the TRUE, uncapped score (`anomaly.score`),
+        // not `anomaly.flags.len()` — the latter is always REPORT_SIZE-capped
+        // and was wrong, not merely uninformative: `--seed 0` printed "10
+        // flagged columns" when its real score was 0.
+        println!(
+            "seed {seed}: score {} (report below lists its {} closest-to-extreme columns)",
+            anomaly.score,
+            anomaly.flags.len()
+        );
         for flag in &anomaly.flags {
             println!(
                 "  {} depth={:.6} value={}",

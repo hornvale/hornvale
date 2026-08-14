@@ -3,11 +3,24 @@
 //! The Domesday (`detect.rs`) asks *is this column weak across 1000
 //! worlds*; this module asks *is this world strange across the census's
 //! columns*. Same census, same reader (`census::load`), axis rotated ninety
-//! degrees. It **reuses** [`crate::domesday::census`] and
-//! [`crate::domesday::stats`] and implements neither a percentile nor a
-//! census loader of its own (Global Constraints) — the one genuinely new
-//! computation here is [`tail_depth`], a per-world *rank*, which is not a
-//! thing `stats::numeric` computes at all.
+//! degrees. It **reuses** [`crate::domesday::census`] — `Census::values`
+//! and `Census::columns` are the only reads over the committed CSV anywhere
+//! in this file — and implements no census loader of its own (Global
+//! Constraints).
+//!
+//! **It does NOT import `crate::domesday::stats` (F4, fix round 1), and
+//! that is a need-based fact, not an oversight to restate as reuse.**
+//! `stats::numeric` returns five summary numbers (min/p25/median/p75/max);
+//! it exposes neither the *sorted vector* [`tail_depth`] needs to compute a
+//! per-world rank, nor the *rail tie counts* [`evaluable_columns`] needs to
+//! detect a both-rails-tied column — both require walking the underlying
+//! values directly, which is what `evaluable_columns` and `build_index` do.
+//! Re-deriving a sorted `Vec<f64>` from `Census::values` here is therefore
+//! not the percentile duplication the Global Constraints forbid: it is
+//! `stats.rs` not having the shape this module's actual computation
+//! ([`tail_depth`], a per-world rank — a thing `stats::numeric` does not
+//! compute at all) needs, verified by reading `stats.rs` rather than
+//! assumed.
 //!
 //! **The tautology this design exists to avoid (spec §3.2).** If the prior
 //! is census percentiles and the evaluation set is that same census, a
@@ -91,19 +104,29 @@ pub struct Flag {
     pub value: f64,
 }
 
-/// One world's anomaly report: its seed, and its [`REPORT_SIZE`] columns of
-/// smallest [`tail_depth`], ascending (most extreme first).
+/// One world's anomaly report: its seed, its true (uncapped) score, and its
+/// [`REPORT_SIZE`] columns of smallest [`tail_depth`], ascending (most
+/// extreme first).
 ///
-/// This is the *report*, not the *score* — a world's ranking position
-/// (computed by [`rank`]) depends on how many of its columns clear
-/// [`TAIL_DEPTH_BAR`], which may be more or fewer than [`REPORT_SIZE`]; that
-/// count is not itself a field here because it is a sort key, not part of
-/// what a reader is shown.
-/// type-audit: bare-ok(constructor-edge: seed)
+/// `flags` is the *report* — capped at [`REPORT_SIZE`] for display. `score`
+/// is the *ranking key* [`rank`] sorts on: the count of ALL of this world's
+/// evaluable columns at or below [`TAIL_DEPTH_BAR`], which may be more or
+/// fewer than [`REPORT_SIZE`]. The two are independent (F2, fix round 1): a
+/// world with 21 flagged columns and one with exactly 10 both show a
+/// 10-column `flags` report, and only `score` — not `flags.len()` —
+/// distinguishes them. Never recompute an approximation of `score` by
+/// counting `flags` at or below the bar; that count saturates at
+/// `REPORT_SIZE` and silently underreports every world whose true score
+/// exceeds it.
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(count: score)
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorldAnomaly {
     /// The world's seed.
     pub seed: u64,
+    /// The count of ALL evaluable columns at or below [`TAIL_DEPTH_BAR`] for
+    /// this world — uncapped, and the value [`rank`] sorts on. See the
+    /// struct doc: this is not `flags.len()`.
+    pub score: usize,
     /// Its columns of smallest tail depth, ascending, capped at
     /// [`REPORT_SIZE`].
     pub flags: Vec<Flag>,
@@ -269,15 +292,18 @@ fn depths_for_row(
 }
 
 /// Turn one world's raw `(metric, depth, value)` triples into its published
-/// report and its (unexposed) sort key: `(flag_count, tiebreak)`, both
-/// descending — see the module doc's tautology note for why the count comes
-/// from the FULL depth list (every column at or below [`TAIL_DEPTH_BAR`]),
-/// not merely the [`REPORT_SIZE`]-capped report a reader is shown.
+/// `WorldAnomaly` (carrying both the capped `flags` report AND the
+/// true, uncapped `score` — F2) plus the tie-break `rank` sorts on.
+/// `WorldAnomaly::score` and the returned `f64` tie-break are always
+/// computed from the FULL depth list (every column at or below
+/// [`TAIL_DEPTH_BAR`]), never from the [`REPORT_SIZE`]-capped `flags` a
+/// reader is shown — see the module doc's tautology note and
+/// [`WorldAnomaly`]'s own doc for why the two must never be conflated.
 fn score_world(
     seed: u64,
     mut depths: Vec<(String, f64, f64)>,
     idx: &BTreeMap<String, ColumnIndex>,
-) -> (WorldAnomaly, usize, f64) {
+) -> (WorldAnomaly, f64) {
     depths.sort_by(|a, b| a.1.total_cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
     let flags: Vec<Flag> = depths
         .iter()
@@ -302,7 +328,7 @@ fn score_world(
         })
         .sum();
 
-    (WorldAnomaly { seed, flags }, score, tiebreak)
+    (WorldAnomaly { seed, score, flags }, tiebreak)
 }
 
 /// The `seed` column's value for one census row, or `None` if it is missing
@@ -328,7 +354,7 @@ pub fn rank(c: &Census) -> Vec<WorldAnomaly> {
     let (evaluable, _) = evaluable_columns(c);
     let idx = build_index(c, &evaluable);
 
-    let mut scored: Vec<(WorldAnomaly, usize, f64)> = c
+    let mut scored: Vec<(WorldAnomaly, f64)> = c
         .rows
         .iter()
         .filter_map(|row| {
@@ -339,12 +365,13 @@ pub fn rank(c: &Census) -> Vec<WorldAnomaly> {
         .collect();
 
     scored.sort_by(|a, b| {
-        b.1.cmp(&a.1)
-            .then_with(|| b.2.total_cmp(&a.2))
+        b.0.score
+            .cmp(&a.0.score)
+            .then_with(|| b.1.total_cmp(&a.1))
             .then_with(|| a.0.seed.cmp(&b.0.seed))
     });
 
-    scored.into_iter().map(|(wa, _, _)| wa).collect()
+    scored.into_iter().map(|(wa, _)| wa).collect()
 }
 
 /// One world's report, by seed — the `--seed N` CLI path: prints without
@@ -356,7 +383,7 @@ pub fn for_seed(c: &Census, seed: u64) -> Option<WorldAnomaly> {
     let idx = build_index(c, &evaluable);
     let row = c.rows.iter().find(|r| seed_of(r) == Some(seed))?;
     let depths = depths_for_row(row, &evaluable, &idx);
-    let (wa, _, _) = score_world(seed, depths, &idx);
+    let (wa, _) = score_world(seed, depths, &idx);
     Some(wa)
 }
 
@@ -411,17 +438,24 @@ mod tests {
     /// assertion below is byte-for-byte the one the brief specified, and it
     /// is `#[ignore]`d rather than weakened (its five failures are named
     /// here, not hidden inside a loosened check).
+    ///
+    /// **Kept unweakened rather than narrowed (fix round 1).** A version of
+    /// this test scoped only to the 42 columns that DO partition would pass
+    /// today and forever, including after the D2/D4 blind spot is closed —
+    /// it could never go stale and could never signal the finding was
+    /// discharged, the exact STALE-DECL failure `seam-guard` exists to
+    /// catch. The narrowed claim is asserted separately, as an
+    /// always-running test, by
+    /// `partitioning_columns_are_all_covered_by_d2_or_d4` below — that one
+    /// guards the 42 columns nothing else currently pins; this one stays
+    /// the honest, falsifiable whole claim.
+    ///
+    /// Registered in `cli/tests/heavy_tier.rs`'s `EXPECTED_UNTOKENISED`
+    /// roster (the ignore-reason ratchet) and tracked as
+    /// `PROC-domesday-all-absent-blind-spot` in
+    /// `book/src/frontier/idea-registry.md`.
     #[test]
-    #[ignore = "FALSIFIED (spec §3.3's partition claim, decision 0016 preregistration \
-                discipline): 5 zero-present-value columns (first-day-occ-cause-burned, \
-                first-day-occ-cause-plague, pantheon-size-goblin-twin, \
-                name-length-goblin-twin, pantheon-cyclic-share-goblin-twin) are excluded \
-                by evaluable_columns but reported by neither D2 nor D4, because both \
-                detectors require stats::numeric to return Some, which it cannot for a \
-                column with zero present values. See this test's own doc comment and \
-                task-4-report.md for the full finding; do not silently re-enable without \
-                first fixing D2/D4's blind spot on all-absent columns or re-scoping this \
-                exclusion."]
+    #[ignore = "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)"]
     fn exclusions_agree_with_domesday() {
         let c = committed();
         let (_, excluded) = evaluable_columns(&c);
@@ -432,6 +466,40 @@ mod tests {
                     && (f.detector.starts_with("D2") || f.detector.starts_with("D4"))),
                 "{metric} is excluded here but reported by neither D2 nor D4 — the two \
                  instruments were claimed to partition and do not"
+            );
+        }
+    }
+
+    /// The narrowed half of the partition claim, always-running: every
+    /// excluded column with **at least one present value** is reported by
+    /// D2 or D4. This is the direction that actually holds today (42 of the
+    /// 47 excluded columns) — the ignored `exclusions_agree_with_domesday`
+    /// above is the ONLY thing that had ever exercised it, so before this
+    /// test existed a regression on any of those 42 columns would have gone
+    /// undetected by the everyday gate. Added as a second test, not a
+    /// replacement (fix round 1, item 3): narrowing the ignored test itself
+    /// would let it go stale silently once the blind spot closes.
+    #[test]
+    fn partitioning_columns_are_all_covered_by_d2_or_d4() {
+        let c = committed();
+        let (_, excluded) = evaluable_columns(&c);
+        let findings = detect(&c, &[], &[]);
+        let partitioning: Vec<&(String, String)> = excluded
+            .iter()
+            .filter(|(metric, _)| !c.values(metric).is_empty())
+            .collect();
+        assert!(
+            !partitioning.is_empty(),
+            "sanity: some excluded columns have at least one present value"
+        );
+        for (metric, _) in partitioning {
+            assert!(
+                findings.iter().any(|f| &f.metric == metric
+                    && (f.detector.starts_with("D2") || f.detector.starts_with("D4"))),
+                "{metric} has a present value and is excluded here, but is reported by \
+                 neither D2 nor D4 — this is the direction that is supposed to always \
+                 hold; the zero-present-value gap is tracked separately \
+                 (PROC-domesday-all-absent-blind-spot)"
             );
         }
     }
@@ -502,6 +570,13 @@ mod tests {
     /// flagged columns.
     #[test]
     fn the_log_guard_holds_for_a_real_extreme_holding_world() {
+        // F1 (fix round 1): the original version of this test asserted only
+        // on `min_representable_depth(n)` in isolation, never on the
+        // tie-break `score_world` actually computes — so removing the
+        // clamp entirely (`-ln(depth.max(floor))` -> `-ln(*depth)`) left
+        // this test, and the whole domesday suite, green. Fixed by calling
+        // `score_world` directly, on a REAL extreme-holding row, and
+        // asserting on the tie-break IT returns.
         let c = committed();
         let (evaluable, _) = evaluable_columns(&c);
         let metric = evaluable.first().expect("at least one evaluable column");
@@ -515,7 +590,7 @@ mod tests {
             "sanity: the column's own minimum must have depth exactly 0.0"
         );
 
-        let extreme_seed = c
+        let extreme_row = c
             .rows
             .iter()
             .find(|row| {
@@ -524,10 +599,29 @@ mod tests {
                     .map(|v| v == min_value)
                     .unwrap_or(false)
             })
-            .and_then(seed_of)
             .expect("a real census row holds this column's true minimum");
+        let extreme_seed = seed_of(extreme_row).expect("the extreme row carries a seed");
 
-        let wa = for_seed(&c, extreme_seed).expect("the extreme-holding seed is a real world");
+        let depths = depths_for_row(extreme_row, &evaluable, &idx);
+        assert!(
+            depths.iter().any(|(m, d, _)| m == metric && *d == 0.0),
+            "sanity: the extreme row's own depths must carry the 0.0 for {metric}"
+        );
+
+        // The load-bearing assertion: call the SAME function `rank`/
+        // `for_seed` call, on this real row, and check the tie-break IT
+        // returns — not a value recomputed alongside it.
+        let (wa, tiebreak) = score_world(extreme_seed, depths, &idx);
+        assert!(
+            wa.score >= 1,
+            "sanity: the extreme-holding world must flag at least this one column"
+        );
+        assert!(
+            tiebreak.is_finite(),
+            "score_world's tie-break must be finite for a real extreme-holding world, \
+             not +inf (tiebreak was {tiebreak})"
+        );
+
         let flag = wa
             .flags
             .iter()
@@ -538,26 +632,14 @@ mod tests {
             "Flag::depth is the TRUE tail depth, unclamped, even for the extreme holder"
         );
 
-        let floor = min_representable_depth(ci.n);
-        assert!(
-            floor.is_finite() && floor > 0.0,
-            "the clamp floor itself must be finite"
-        );
-        assert!(
-            (-ln(floor)).is_finite(),
-            "the tie-break's log term must be finite once clamped, not +inf"
-        );
         assert!(
             (-ln(0.0_f64)).is_infinite(),
-            "sanity: the UNCLAMPED case really would have been infinite"
+            "sanity: the UNCLAMPED case really would have been infinite — this is the \
+             control that proves the guard above is doing real work"
         );
 
         // End to end: ranking every world must not panic or produce a
-        // non-finite ordering key reaching the sort — if it did, `rank`
-        // would still return (Rust does not panic on comparing infinities),
-        // but every extreme-holding world's tie-break would collapse to the
-        // same +inf, which this world's presence in a stable, repeatable
-        // position rules out indirectly via the determinism check below.
+        // non-finite ordering key reaching the sort.
         let ranked = rank(&c);
         assert_eq!(ranked.len(), c.rows.len(), "every world is ranked");
         assert!(

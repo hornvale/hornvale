@@ -163,11 +163,12 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 29] = [
+const EXPECTED_UNTOKENISED: [&str; 30] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
+    "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
     "compiles the workspace in release; CI runs it with -- --ignored",

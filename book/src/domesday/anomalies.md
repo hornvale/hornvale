@@ -1,4 +1,4 @@
-<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab domesday`. -->
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab anomalies`. -->
 
 # Anomalies — The Domesday's transpose
 
@@ -10,7 +10,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `396`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **21**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -27,7 +27,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `124`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **19**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -44,7 +44,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `438`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **18**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -61,7 +61,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `652`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **17**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -78,7 +78,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `172`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -95,7 +95,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `562`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **16**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -112,7 +112,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `187`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **14**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -129,7 +129,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `417`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -146,7 +146,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `878`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -163,7 +163,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `335`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -180,7 +180,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `531`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -197,7 +197,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `619`
 
-10 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -214,7 +214,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `850`
 
-9 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -231,7 +231,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `608`
 
-9 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -248,7 +248,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `719`
 
-9 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -265,7 +265,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `642`
 
-9 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -282,7 +282,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `332`
 
-9 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -299,7 +299,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `597`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -316,7 +316,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `442`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -333,7 +333,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `766`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -350,7 +350,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `781`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -367,7 +367,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `440`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -384,7 +384,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `738`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -401,7 +401,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `611`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
@@ -418,7 +418,7 @@ Per world, which of its metric values sit deep in the tail of that column's dist
 
 ### Seed `285`
 
-8 of its 10 reported columns clear the 0.01 tail-depth bar.
+Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
 
 | metric | depth | value |
 |---|---|---|
