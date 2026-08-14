@@ -5,7 +5,11 @@
 # dependency; this uses `make`, already present everywhere.
 #
 #   make quick        # cheap half: fmt --check + clippy + type-audit
-#   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier (local, seconds)
+#   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier
+#                     # (local; ~10-16 s on a clean tree, up to ~470 s after a
+#                     # kernel/-layer edit — cost is the edit's blast radius in
+#                     # the kernel -> domains/* -> windows/* -> cli layering;
+#                     # see spec 2026-08-14-the-staff-design.md §4.2b)
 #   make gate         # the full workspace gate: fmt + clippy + type-audit + nextest --workspace + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
@@ -37,7 +41,7 @@ quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-r
 
 quick-run: fmt-check clippy type-audit type-audit-report
 
-gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local, seconds)
+gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local; ~10-16 s clean, up to ~470 s after a kernel/-layer edit — see spec §4.2b)
 	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
 
 gate-commit-run: style-run subfloor-run
@@ -62,9 +66,14 @@ style-run: fmt-check clippy type-audit type-audit-report
 #
 # WHY THE ROSTER'S LINE COUNT DOES NOT MATCH THIS TARGET'S TEST COUNT, AND WHY
 # THAT IS EXPECTED. docs/timings/subfloor-roster.tsv carries 2748 non-comment
-# lines (2730 distinct trailing test names — 18 names are duplicated across
-# crates) but a Mac's `cargo nextest run --workspace -E "$$filter"` selects
-# 2746. Two effects, opposite in direction:
+# lines but only 2730 DISTINCT trailing test names: 12 names are each
+# duplicated across crates, which is what makes those two counts differ
+# (2748 - 2730 = 18 excess LINE-occurrences of an already-seen name — a
+# property of the roster FILE). A Mac's
+# `cargo nextest run --workspace -E "$$filter"` then selects 2746 tests, not
+# 2730 — a different number counting a different thing (excess SELECTED
+# TESTS at run time, not excess lines; see the +19 bullet below). Two
+# effects, opposite in direction, explain the run-time number:
 #   -3  three roster names match ZERO tests in this host's compiled binary:
 #       `census_claim::tests::a_claim_naming_a_dead_pid_is_stale`,
 #       `a_live_ancestor_holding_the_lock_makes_a_claim_a_no_op` and
