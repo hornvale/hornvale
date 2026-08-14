@@ -62,7 +62,7 @@ fn p1_the_decomposition_is_compressive() {
 #[test]
 fn p1_no_two_names_share_a_vector() {
     let mut by_vector: BTreeMap<Vec<(u16, u64)>, Vec<&'static str>> = BTreeMap::new();
-    for AssignedName { name, vector } in assignment() {
+    for AssignedName { name, vector, .. } in assignment() {
         if vector.is_unassigned() {
             continue; // a resister; p2 owns those
         }

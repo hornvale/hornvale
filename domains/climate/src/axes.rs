@@ -98,21 +98,24 @@ const L_GLARE: f64 = 1.0;
 
 /// The ten names that resist assignment: phases, not states. Frozen as a
 /// prediction in the campaign spec §6.2 before this assignment was written.
-const RESISTERS: &[&str] = &[
-    "forest-gap",
-    "mossy-deadfall",
-    "burn",
-    "fire-scrub",
-    "reef-rubble",
-    "urchin-barren",
-    "pressure-ridge",
-    "ice-lead",
-    "rafted-floe",
-    "melt-pond",
+const RESISTERS: &[(&str, &[&str])] = &[
+    ("forest-gap", &["temperate-forest", "temperate-rainforest"]),
+    (
+        "mossy-deadfall",
+        &["temperate-forest", "temperate-rainforest"],
+    ),
+    ("burn", &["taiga"]),
+    ("fire-scrub", &["shrubland"]),
+    ("reef-rubble", &["reef"]),
+    ("urchin-barren", &["kelp-forest"]),
+    ("pressure-ridge", &["sea-ice"]),
+    ("ice-lead", &["sea-ice"]),
+    ("rafted-floe", &["sea-ice"]),
+    ("melt-pond", &["sea-ice"]),
 ];
 
 /// One corpus name and the vector assigned to it.
-/// type-audit: bare-ok(identifier-text: name)
+/// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: genera)
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignedName {
     /// The name's registry spelling — `Variant::concept_name()` where one
@@ -120,6 +123,12 @@ pub struct AssignedName {
     pub name: &'static str,
     /// Its position in the basis. Unassigned means the name resisted.
     pub vector: EnvironmentVector,
+    /// The formation(s) this name is a variant of, empty for a formation
+    /// itself. Derived from `variant_pool`'s own match arms, never guessed —
+    /// several variants have TWO genera (`Tundra | Alpine`,
+    /// `TemperateForest | TemperateRainforest`), and those pairs do not always
+    /// agree with each other.
+    pub genera: &'static [&'static str],
 }
 
 fn v(values: &[(EnvironmentAxis, f64)]) -> EnvironmentVector {
@@ -127,10 +136,11 @@ fn v(values: &[(EnvironmentAxis, f64)]) -> EnvironmentVector {
 }
 
 /// A name the axes cannot place. Not an error — a counted finding.
-fn resists(name: &'static str) -> AssignedName {
+fn resists(name: &'static str, genera: &'static [&'static str]) -> AssignedName {
     AssignedName {
         name,
         vector: EnvironmentVector::new(&[]).expect("the empty vector is legal"),
+        genera,
     }
 }
 
@@ -152,14 +162,40 @@ fn a(
             (SUBSTRATE, substrate),
             (LIGHT, light),
         ]),
+        genera: &[],
+    }
+}
+
+/// A variant: a name under one or more genera, all five axes assigned.
+#[allow(clippy::too_many_arguments)]
+fn var(
+    name: &'static str,
+    genera: &'static [&'static str],
+    physiognomy: f64,
+    energy: f64,
+    water: f64,
+    substrate: f64,
+    light: f64,
+) -> AssignedName {
+    AssignedName {
+        name,
+        vector: v(&[
+            (PHYSIOGNOMY, physiognomy),
+            (ENERGY, energy),
+            (WATER, water),
+            (SUBSTRATE, substrate),
+            (LIGHT, light),
+        ]),
+        genera,
     }
 }
 
 /// A genus that declines one axis its own variants disagree on.
-fn genus(name: &'static str, values: &[(EnvironmentAxis, f64)]) -> AssignedName {
+fn declining(name: &'static str, values: &[(EnvironmentAxis, f64)]) -> AssignedName {
     AssignedName {
         name,
         vector: v(values),
+        genera: &[],
     }
 }
 
@@ -168,7 +204,7 @@ fn build() -> Vec<AssignedName> {
         // ---- The 12 land formations, read off `classify_land`'s tree. ----
         // LIGHT declined: snowfield, crevasse-field and scoured-ice are surface
         // forms that scatter light differently, so the genus does not fix it.
-        genus(
+        declining(
             "ice",
             &[
                 (PHYSIOGNOMY, BARE),
@@ -181,11 +217,27 @@ fn build() -> Vec<AssignedName> {
         a("taiga", OPEN_WOOD, COLD, W_MESIC, S_ORGANIC, L_SHADED),
         a("temperate-grassland", HERB, COOL, W_ARID, S_SOIL, L_OPEN),
         a("shrubland", SHRUB, COOL, W_SEMI, S_SOIL, L_OPEN),
-        a("temperate-forest", CLOSED, COOL, W_MESIC, S_SOIL, L_SHADED),
-        a("temperate-rainforest", CLOSED, COOL, W_SAT, S_SOIL, L_DIM),
+        declining(
+            "temperate-forest",
+            &[
+                (PHYSIOGNOMY, CLOSED),
+                (ENERGY, COOL),
+                (WATER, W_MESIC),
+                (LIGHT, L_SHADED),
+            ],
+        ),
+        declining(
+            "temperate-rainforest",
+            &[
+                (PHYSIOGNOMY, CLOSED),
+                (ENERGY, COOL),
+                (WATER, W_SAT),
+                (LIGHT, L_DIM),
+            ],
+        ),
         // SUBSTRATE declined: `variant_pool` branches a desert into erg, playa,
         // hamada and reg *by ground*, so the genus cannot fix it.
-        genus(
+        declining(
             "desert",
             &[
                 (PHYSIOGNOMY, BARE),
@@ -195,15 +247,24 @@ fn build() -> Vec<AssignedName> {
             ],
         ),
         a("savanna", OPEN_WOOD, HOT, W_SEMI, S_SOIL, L_OPEN),
-        a(
+        declining(
             "tropical-seasonal-forest",
-            CLOSED,
-            HOT,
-            W_MESIC,
-            S_SOIL,
-            L_SHADED,
+            &[
+                (PHYSIOGNOMY, CLOSED),
+                (ENERGY, HOT),
+                (WATER, W_MESIC),
+                (LIGHT, L_SHADED),
+            ],
         ),
-        a("tropical-rainforest", CLOSED, HOT, W_SAT, S_SOIL, L_DARK),
+        declining(
+            "tropical-rainforest",
+            &[
+                (PHYSIOGNOMY, CLOSED),
+                (ENERGY, HOT),
+                (WATER, W_SAT),
+                (LIGHT, L_DARK),
+            ],
+        ),
         // Alpine is the tree-line gate, not a temperature band: it shares
         // tundra's structure and energy and is separated by SUBSTRATE (thin
         // rock over slope) — precisely an input `classify_land` does not read.
@@ -214,69 +275,349 @@ fn build() -> Vec<AssignedName> {
         a("kelp-forest", CLOSED, COLD, W_SAT, S_ROCK, L_OPEN),
         a("vent", SHRUB, HOT, W_SAT, S_ROCK, L_DARK),
         a("upwelling", HERB, COOL, W_SAT, S_SOIL, L_DAPPLED),
-        a("open-water", BARE, COOL, W_SAT, S_SOIL, L_OPEN),
+        declining(
+            "open-water",
+            &[
+                (PHYSIOGNOMY, BARE),
+                (ENERGY, COOL),
+                (WATER, W_SAT),
+                (LIGHT, L_OPEN),
+            ],
+        ),
         // ---- The 3 cave formations. LIGHT is constant zero underground. ----
         a("karst-cave", BARE, COLD, W_WET, S_ROCK, L_DARK),
         a("lava-tube", BARE, COLD, W_ARID, S_ROCK, L_DARK),
         a("fracture-cave", BARE, COLD, W_SEMI, S_ROCK, L_DARK),
         // ---- Desert variants: SUBSTRATE is what separates them. ----
-        a("erg", BARE, HOT, W_NONE, S_SAND, L_GLARE),
-        a("playa", BARE, HOT, W_ARID, S_EVAPORITE, L_GLARE),
-        a("hamada", BARE, HOT, W_NONE, S_ROCK, L_GLARE),
-        a("reg", CRUST, HOT, W_NONE, S_ROCK, L_GLARE),
+        var("erg", &["desert"], BARE, HOT, W_NONE, S_SAND, L_GLARE),
+        var(
+            "playa",
+            &["desert"],
+            BARE,
+            HOT,
+            W_ARID,
+            S_EVAPORITE,
+            L_GLARE,
+        ),
+        var("hamada", &["desert"], BARE, HOT, W_NONE, S_ROCK, L_GLARE),
+        var("reg", &["desert"], CRUST, HOT, W_NONE, S_ROCK, L_GLARE),
         // ---- Temperate-forest variants. ----
-        a("old-growth", CLOSED, COOL, W_MESIC, S_ORGANIC, L_DARK),
-        a("damp-hollow", SHRUB, COOL, W_SAT, S_ORGANIC, L_DIM),
+        var(
+            "old-growth",
+            &["temperate-forest", "temperate-rainforest"],
+            CLOSED,
+            COOL,
+            W_MESIC,
+            S_ORGANIC,
+            L_DARK,
+        ),
+        var(
+            "damp-hollow",
+            &["temperate-forest", "temperate-rainforest"],
+            SHRUB,
+            COOL,
+            W_SAT,
+            S_ORGANIC,
+            L_DIM,
+        ),
         // ---- Taiga variants. ----
-        a("boreal-stand", OPEN_WOOD, COLD, W_MESIC, S_ORGANIC, L_DIM),
-        a("muskeg", HERB, COLD, W_SAT, S_ORGANIC, L_OPEN),
+        var(
+            "boreal-stand",
+            &["taiga"],
+            OPEN_WOOD,
+            COLD,
+            W_MESIC,
+            S_ORGANIC,
+            L_DIM,
+        ),
+        var("muskeg", &["taiga"], HERB, COLD, W_SAT, S_ORGANIC, L_OPEN),
         // ---- Tundra variants. ----
-        a("frost-heave", CRUST, COLD, W_MESIC, S_SOIL, L_OPEN),
-        a("felsenmeer", BARE, COLD, W_ARID, S_ROCK, L_OPEN),
-        a("wind-scour", BARE, COLD, W_NONE, S_ROCK, L_GLARE),
+        var(
+            "frost-heave",
+            &["tundra", "alpine"],
+            CRUST,
+            COLD,
+            W_MESIC,
+            S_SOIL,
+            L_OPEN,
+        ),
+        var(
+            "felsenmeer",
+            &["tundra", "alpine"],
+            BARE,
+            COLD,
+            W_ARID,
+            S_ROCK,
+            L_OPEN,
+        ),
+        var(
+            "wind-scour",
+            &["tundra", "alpine"],
+            BARE,
+            COLD,
+            W_NONE,
+            S_ROCK,
+            L_GLARE,
+        ),
         // ---- Grassland variants. ----
-        a("grass-sward", HERB, COOL, W_SEMI, S_SOIL, L_GLARE),
-        a("wooded-grassland", SHRUB, COOL, W_SEMI, S_SOIL, L_DAPPLED),
+        var(
+            "grass-sward",
+            &["savanna", "temperate-grassland"],
+            HERB,
+            COOL,
+            W_SEMI,
+            S_SOIL,
+            L_GLARE,
+        ),
+        var(
+            "wooded-grassland",
+            &["savanna", "temperate-grassland"],
+            SHRUB,
+            COOL,
+            W_SEMI,
+            S_SOIL,
+            L_DAPPLED,
+        ),
         // ---- Tropical-rainforest variants. ----
-        a("closed-canopy", CLOSED, HOT, W_SAT, S_ORGANIC, L_DARK),
-        a("liana-forest", CLOSED, HOT, W_WET, S_ORGANIC, L_DARK),
-        a("gallery-forest", CLOSED, HOT, W_SAT, S_SOIL, L_DIM),
+        var(
+            "closed-canopy",
+            &["tropical-rainforest", "tropical-seasonal-forest"],
+            CLOSED,
+            HOT,
+            W_SAT,
+            S_ORGANIC,
+            L_DARK,
+        ),
+        var(
+            "liana-forest",
+            &["tropical-rainforest", "tropical-seasonal-forest"],
+            CLOSED,
+            HOT,
+            W_WET,
+            S_ORGANIC,
+            L_DARK,
+        ),
+        var(
+            "gallery-forest",
+            &["tropical-rainforest", "tropical-seasonal-forest"],
+            CLOSED,
+            HOT,
+            W_SAT,
+            S_SOIL,
+            L_DIM,
+        ),
         // ---- Ice variants. ----
-        a("snowfield", BARE, FROZEN, W_NONE, S_ICE, L_GLARE),
-        a("crevasse-field", BARE, FROZEN, W_ARID, S_ICE, L_SHADED),
-        a("scoured-ice", BARE, FROZEN, W_NONE, S_ICE, L_OPEN),
+        var("snowfield", &["ice"], BARE, FROZEN, W_NONE, S_ICE, L_GLARE),
+        var(
+            "crevasse-field",
+            &["ice"],
+            BARE,
+            FROZEN,
+            W_ARID,
+            S_ICE,
+            L_SHADED,
+        ),
+        var("scoured-ice", &["ice"], BARE, FROZEN, W_NONE, S_ICE, L_OPEN),
         // ---- Shrubland variants. ----
-        a("thorn-scrub", SHRUB, HOT, W_ARID, S_SOIL, L_GLARE),
-        a("sclerophyll-scrub", SHRUB, WARM, W_SEMI, S_SOIL, L_OPEN),
+        var(
+            "thorn-scrub",
+            &["shrubland"],
+            SHRUB,
+            HOT,
+            W_ARID,
+            S_SOIL,
+            L_GLARE,
+        ),
+        var(
+            "sclerophyll-scrub",
+            &["shrubland"],
+            SHRUB,
+            WARM,
+            W_SEMI,
+            S_SOIL,
+            L_OPEN,
+        ),
         // ---- Reef variants. ----
-        a("coral-head", CLOSED, HOT, W_SAT, S_ROCK, L_OPEN),
-        a("spur-and-groove", SHRUB, HOT, W_SAT, S_ROCK, L_GLARE),
-        a("staghorn-stand", OPEN_WOOD, HOT, W_SAT, S_ROCK, L_GLARE),
+        var("coral-head", &["reef"], CLOSED, HOT, W_SAT, S_ROCK, L_OPEN),
+        var(
+            "spur-and-groove",
+            &["reef"],
+            SHRUB,
+            HOT,
+            W_SAT,
+            S_ROCK,
+            L_GLARE,
+        ),
+        var(
+            "staghorn-stand",
+            &["reef"],
+            OPEN_WOOD,
+            HOT,
+            W_SAT,
+            S_ROCK,
+            L_GLARE,
+        ),
         // ---- Kelp variants. ----
-        a("kelp-canopy", CLOSED, COLD, W_SAT, S_ROCK, L_GLARE),
-        a("holdfast-tangle", SHRUB, COLD, W_SAT, S_ROCK, L_SHADED),
+        var(
+            "kelp-canopy",
+            &["kelp-forest"],
+            CLOSED,
+            COLD,
+            W_SAT,
+            S_ROCK,
+            L_GLARE,
+        ),
+        var(
+            "holdfast-tangle",
+            &["kelp-forest"],
+            SHRUB,
+            COLD,
+            W_SAT,
+            S_ROCK,
+            L_SHADED,
+        ),
         // ---- Vent variants. ----
-        a("smoker-field", CRUST, HOT, W_SAT, S_ROCK, L_DARK),
-        a("tubeworm-thicket", SHRUB, WARM, W_SAT, S_ROCK, L_DARK),
-        a("vent-plume", BARE, HOT, W_SAT, S_ROCK, L_DARK),
+        var("smoker-field", &["vent"], CRUST, HOT, W_SAT, S_ROCK, L_DARK),
+        var(
+            "tubeworm-thicket",
+            &["vent"],
+            SHRUB,
+            WARM,
+            W_SAT,
+            S_ROCK,
+            L_DARK,
+        ),
+        var("vent-plume", &["vent"], BARE, HOT, W_SAT, S_ROCK, L_DARK),
         // ---- Upwelling variants. ----
-        a("plankton-bloom", HERB, COOL, W_SAT, S_SOIL, L_OPEN),
-        a("cold-upwelling", BARE, COLD, W_SAT, S_SOIL, L_DAPPLED),
-        a("bait-ball", SHRUB, COOL, W_SAT, S_SOIL, L_DAPPLED),
+        var(
+            "plankton-bloom",
+            &["upwelling"],
+            HERB,
+            COOL,
+            W_SAT,
+            S_SOIL,
+            L_OPEN,
+        ),
+        var(
+            "cold-upwelling",
+            &["upwelling"],
+            BARE,
+            COLD,
+            W_SAT,
+            S_SOIL,
+            L_DAPPLED,
+        ),
+        var(
+            "bait-ball",
+            &["upwelling"],
+            SHRUB,
+            COOL,
+            W_SAT,
+            S_SOIL,
+            L_DAPPLED,
+        ),
         // ---- Open-water variants. LIGHT descends the pelagic ladder. ----
-        a("open-blue", BARE, WARM, W_SAT, S_SOIL, L_GLARE),
-        a("sargassum-drift", HERB, WARM, W_SAT, S_ORGANIC, L_GLARE),
-        a("fish-shoal", SHRUB, WARM, W_SAT, S_SOIL, L_GLARE),
-        a("twilight-water", BARE, COOL, W_SAT, S_SOIL, L_SHADED),
-        a("scattering-layer", CRUST, COOL, W_SAT, S_SOIL, L_SHADED),
-        a("lightless-water", BARE, COLD, W_SAT, S_SOIL, L_DARK),
-        a("marine-snow", CRUST, COLD, W_SAT, S_ORGANIC, L_DARK),
-        a("abyssal-plain", BARE, COLD, W_SAT, S_SOIL, L_DIM),
-        a("nodule-field", CRUST, COLD, W_SAT, S_ROCK, L_DIM),
-        a("trench-wall", BARE, FROZEN, W_SAT, S_ROCK, L_DARK),
-        a("trench-floor", CRUST, FROZEN, W_SAT, S_SOIL, L_DARK),
+        var(
+            "open-blue",
+            &["open-water"],
+            BARE,
+            WARM,
+            W_SAT,
+            S_SOIL,
+            L_GLARE,
+        ),
+        var(
+            "sargassum-drift",
+            &["open-water"],
+            HERB,
+            WARM,
+            W_SAT,
+            S_ORGANIC,
+            L_GLARE,
+        ),
+        var(
+            "fish-shoal",
+            &["open-water"],
+            SHRUB,
+            WARM,
+            W_SAT,
+            S_SOIL,
+            L_GLARE,
+        ),
+        var(
+            "twilight-water",
+            &["open-water"],
+            BARE,
+            COOL,
+            W_SAT,
+            S_SOIL,
+            L_SHADED,
+        ),
+        var(
+            "scattering-layer",
+            &["open-water"],
+            CRUST,
+            COOL,
+            W_SAT,
+            S_SOIL,
+            L_SHADED,
+        ),
+        var(
+            "lightless-water",
+            &["open-water"],
+            BARE,
+            COLD,
+            W_SAT,
+            S_SOIL,
+            L_DARK,
+        ),
+        var(
+            "marine-snow",
+            &["open-water"],
+            CRUST,
+            COLD,
+            W_SAT,
+            S_ORGANIC,
+            L_DARK,
+        ),
+        var(
+            "abyssal-plain",
+            &["open-water"],
+            BARE,
+            COLD,
+            W_SAT,
+            S_SOIL,
+            L_DIM,
+        ),
+        var(
+            "nodule-field",
+            &["open-water"],
+            CRUST,
+            COLD,
+            W_SAT,
+            S_ROCK,
+            L_DIM,
+        ),
+        var(
+            "trench-wall",
+            &["open-water"],
+            BARE,
+            FROZEN,
+            W_SAT,
+            S_ROCK,
+            L_DARK,
+        ),
+        var(
+            "trench-floor",
+            &["open-water"],
+            CRUST,
+            FROZEN,
+            W_SAT,
+            S_SOIL,
+            L_DARK,
+        ),
     ];
-    named.extend(RESISTERS.iter().copied().map(resists));
+    named.extend(RESISTERS.iter().map(|(name, genera)| resists(name, genera)));
     named
 }
 
