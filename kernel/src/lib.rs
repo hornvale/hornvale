@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod astar;
+pub mod claim;
 pub mod color;
 pub mod component;
 pub mod domain;
@@ -33,6 +34,7 @@ pub mod units;
 pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
+pub use claim::Claim;
 pub use color::{
     BAND_CENTERS_NM, BANDS, ChannelRole, Illuminant, Mixture, Observer, Projection, Reflectance,
     Signal, Spectrum, standard_observer,
