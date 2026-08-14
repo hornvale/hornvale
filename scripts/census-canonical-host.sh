@@ -29,7 +29,20 @@
 
 # The short hostname (`hostname -s`) of the one box that may author census
 # goldens. Compared case-insensitively.
-CANONICAL_CENSUS_HOST="$(cat "$(dirname "${BASH_SOURCE[0]}")/census-canonical-host.txt")"
+#
+# The host file is overridable so the guard's own REFUSAL path is testable.
+# Without this the only way to exercise a refusal is to be on the wrong
+# machine, which means the refusal branch is never tested on the machine that
+# has to trust it. `scripts/test-lane.sh` drives it.
+#
+# TEST-ONLY. `windows/lab/src/census_guard.rs` bakes the canonical hostname
+# in at COMPILE TIME via `include_str!` on census-canonical-host.txt itself
+# (see that file's module doc) — it has no environment to read, so
+# HV_CANONICAL_HOST_FILE moves only this shell-side guard. Set it in a real
+# run and the two layers disagree about what "canonical" means, which is
+# exactly the silent cross-host divergence decision 0063 exists to prevent.
+CANONICAL_HOST_FILE="${HV_CANONICAL_HOST_FILE:-$(dirname "${BASH_SOURCE[0]}")/census-canonical-host.txt}"
+CANONICAL_CENSUS_HOST="$(cat "$CANONICAL_HOST_FILE")"
 
 # Exit 0 on the canonical box; otherwise print why and exit 1.
 #
@@ -95,6 +108,49 @@ Verify HEAD there matches your SHA before trusting the output.
 If '$CANONICAL_CENSUS_HOST' is no longer the canonical box, change
 CANONICAL_CENSUS_HOST in scripts/census-canonical-host.sh — deliberately, in a
 reviewable commit.
+EOF
+    return 1
+}
+
+# Refuse unless this is the canonical box, naming the dispatch line for `$1`
+# (a set name from scripts/lane-sets.tsv, or a gate name).
+#
+# DIRECTION THIS ENFORCES: `this host is the canonical one`. It says nothing
+# about whether the SET is one that belongs on the lane — `lane-dispatch.sh`
+# owns that, reading the roster.
+#
+# `require_canonical_census_host` above is untouched and keeps its own two
+# callers (census-run.sh, heavy-run.sh) and its own carefully-worded prose.
+# This is the general entry point The Staff's lane sets dispatch through.
+require_canonical_host() {
+    local set_name here here_lc want_lc
+    set_name="${1:-gate}"
+    here="$(hostname -s 2>/dev/null || hostname)"
+    here_lc="$(printf '%s' "$here" | tr '[:upper:]' '[:lower:]')"
+    want_lc="$(printf '%s' "$CANONICAL_CENSUS_HOST" | tr '[:upper:]' '[:lower:]')"
+    if [ "$here_lc" = "$want_lc" ]; then
+        return 0
+    fi
+    cat >&2 <<EOF
+$set_name: REFUSING to run on '$here' ($(uname -s)).
+
+Since The Staff, every check above the commit gate runs in one strictly serial
+lane on '$CANONICAL_CENSUS_HOST'. Running it here would produce a verdict on a
+contended, non-canonical box — and the Macs saturate at cpu_ratio 8.25-8.50 on
+ten cores, so a second concurrent run roughly doubles both.
+
+Locally you may run:   make gate-commit
+
+Push, then dispatch:   make gate-stage     REF=<full-sha>
+                       make gate-campaign  REF=<full-sha>
+                       make lane SET=$set_name REF=<full-sha>
+
+A SHA, not a branch name: the ref feeds 'reset --hard', which can land on a
+stale local branch of that name over there.
+
+There is deliberately no force override (spec 2.1). If '$CANONICAL_CENSUS_HOST'
+is no longer the canonical box, change scripts/census-canonical-host.txt — one
+line, in version control, visible in review.
 EOF
     return 1
 }
