@@ -15,7 +15,7 @@ records as Nathan's call rather than a work item.
 
 ## 1. The problem
 
-### 1.1 The commit gate is priced like a merge gate
+### 1.1 The commit gate is priced like an integration gate
 
 This is the campaign's central finding and it reframed everything after it.
 Summed from `docs/timings.md`:
@@ -67,23 +67,68 @@ all".
 
 ## 2. The ruling
 
-**Three gates, named for what they gate. One lane for the two that cost
-minutes.**
+**Three gates, named for the campaign moment each one gates. One lane for the
+two that cost minutes.**
 
 ```
-  commit gate    LOCAL, seconds        every commit
-                 lints + tripwires + the sub-floor test tier
+  make gate-commit     LOCAL, seconds        every commit
+                       style + subfloor
 
-  merge gate     LANE, minutes         branch integration, plan-stage boundaries
-                 gate + artifacts + outboard + clients
+  make gate-stage      LANE, minutes         each plan-stage boundary
+                       gate + artifacts + outboard + clients
 
-  close gate     LANE, tens of minutes pre-merge
-                 merge + heavy + census
+  make gate-campaign   LANE, tens of minutes before merging the campaign
+                       gate-stage + heavy + census
 ```
 
-**The Macs run the commit gate and nothing above it.** `make gate`,
-`gate-full`, `rebaseline`, the client checks, `census-check` and `seam-guard`
-**refuse** on a Mac and print the dispatch line. `make gate-fast` is retired.
+### 2.0 Why the gates are named for moments, not for machinery
+
+An earlier draft dispatched with `make lane SET=gate REF=<sha>` and grouped sets
+into rungs called `commit`/`merge`/`close`. That names the *implementation* —
+which machine, which bundle — and never answers the question a caller actually
+has, which is **when am I supposed to run this**. The comparator is the one
+`PROC-dispatch-preamble` already reaches for: aviation checklists are named for
+the **phase of flight** (before-start, taxi, before-takeoff, descent), never for
+the subsystems they exercise. A crew does not need to know what a checklist
+touches.
+
+Naming by moment also separated two things this spec had conflated. **Three
+gates fire on scheduled campaign events** and are named for the moment; **one
+escape is on demand** — "re-run just `artifacts` after that absorption" — and is
+named for the set. Both survive because they answer different questions. What
+shrinks is `lane` as a *verb*: it becomes queue introspection only, and nobody
+needs to know a lane exists to obtain a verdict.
+
+```
+  make lane SET=<set> REF=<sha>   the on-demand escape, named for the set
+  make lane-status               who holds the staff, who is waiting
+  make lane-log [JOB=<id>]       read a finished job back
+  make lane-wait JOB=<id>        opt-in blocking, never the default
+```
+
+**Prefix rather than suffix** (`gate-campaign`, not `campaign-gate`): `gate`,
+`gate-fast`, `gate-full` and `gate-remote` are the existing four and `make help`
+sorts alphabetically, so the family stays together. Prose still says "the
+campaign gate", exactly as it says "the full gate" for `gate-full`.
+
+**`gate-stage` collides mildly with git's staging area.** Taken anyway: "Stage
+N" is `IMPLEMENTATION_PLAN.md`'s own vocabulary and "plan-stage boundary" is
+CLAUDE.md's, so it is the campaign's word before it is git's. `gate-boundary`
+was the alternative.
+
+**`make gate` and `make ci` become signposts that REFUSE**, printing the three
+names and exiting non-zero. Deliberately not aliases: aliasing `gate` to the
+commit gate would silently change what 417 runs a month mean, and a caller
+expecting the full suite would receive lints plus the sub-floor tier and no
+warning. This is the shape `scripts/hv-guard-bash.sh` already uses when it
+intercepts a raw whole-workspace `cargo test` and names the project's own
+targets instead.
+
+**The Macs run `gate-commit` and nothing above it.** `gate-stage`,
+`gate-campaign`, `gate-full`, `rebaseline`, the client checks, `census-check`
+and `seam-guard` **refuse** on a Mac and print the dispatch line.
+`make gate-fast` is retired, and `make gate` / `make ci` become the signposts
+described above.
 
 **The lane is one strictly serial queue on lefford.** Every job in it takes one
 shared claim, first-come-first-served, no exceptions and no priority tiers.
@@ -94,8 +139,8 @@ both of which it strengthens.
 
 ### 2.1 The costs, stated rather than engineered around
 
-**A merge gate can queue behind an hour of work.** One lane means a ~7-minute
-merge gate may wait behind a ~46-minute heavy tier or a census that has ranged
+**A stage gate can queue behind an hour of work.** One lane means a ~7-minute
+stage gate may wait behind a ~46-minute heavy tier or a census that has ranged
 from 949 s to 19,207 s. This is precisely the arithmetic decision 0081 declined.
 It is accepted because §5 makes dispatch asynchronous — the wait costs queue
 position, not attention — and because §1.1 removes the *frequent* caller from the
@@ -104,7 +149,7 @@ enqueuing the census overnight, via the written-but-never-installed
 `scripts/scheduled/`) was offered and declined; the census stays a deliberate
 human act.
 
-**lefford unreachable means no merge gate anywhere.** The guard fails closed.
+**lefford unreachable means no stage or campaign gate anywhere.** The guard fails closed.
 There is deliberately no `HV_LANE_FORCE=1`: an override that exists is an
 override used under deadline, and one comparable result set is the whole point.
 The recovery is to fix lefford or change one line in the roster, in a reviewable
@@ -183,7 +228,7 @@ live under `#[ignore]`.
 
 ### 3.2 The roster is one file with several readers
 
-`scripts/lane-sets.tsv` defines every set: name, rung, where it may run, whether
+`scripts/lane-sets.tsv` defines every set: name, gate, where it may run, whether
 it authors artifacts, a cost hint, and its command. The Makefile, the
 dispatcher, the host guard and the enforcement test all read that one file.
 
@@ -213,7 +258,7 @@ and `docs/timings/test-baseline-lefford.tsv` carries the fold:
 
 **77% of the suite's tests cost 58 CPU-seconds combined; the other 23% cost
 6,879.** The tier is derived from committed data and rewritten by every green
-merge gate, so it is self-maintaining rather than hand-kept — which matters,
+stage gate, so it is self-maintaining rather than hand-kept — which matters,
 because `cli/tests/heavy_tier.rs` already carries two guards whose whole job is
 catching hand-maintained rosters drifting, and its own module doc calls one of
 them "a FLOOR, NOT A CENSUS".
@@ -241,25 +286,25 @@ this confound by construction.
 ### 4.3 Unknown tests default to EXCLUDED
 
 A test with no baseline row is **not** in the commit gate. It enters on the next
-green merge gate, which measures it and rewrites the baseline.
+green stage gate, which measures it and rewrites the baseline.
 
 This inverts the repo's usual default-deny instinct (type-audit, `tropes check`,
 the seam-guard verdict) and the inversion is deliberate: **the commit gate is a
-speed tier, not a coverage guarantee.** Coverage is the merge gate's job, and it
+speed tier, not a coverage guarantee.** Coverage is the stage gate's job, and it
 runs the whole suite regardless. Defaulting to *included* is what produced the
 178.6 s above. Defaulting to *excluded* makes the tier self-healing and bounds
 its cost by construction.
 
 The residual risk is honest and must be stated in the plan: **a test written and
-committed but never merge-gated never runs in the commit gate.** The mitigation
-is not a mechanism, it is the merge gate's cadence — CLAUDE.md already requires
+committed but never stage-gated never runs in the commit gate.** The mitigation
+is not a mechanism, it is the stage gate's cadence — CLAUDE.md already requires
 absorbing main at every plan-stage boundary.
 
 ## 5. Dispatch
 
 ```bash
 make lane SET=gate REF=<full-sha>        # enqueue; prints a job id; RETURNS
-make lane RUNG=merge REF=<full-sha>      # enqueue the rung's sets, in order
+make gate-stage REF=<full-sha>            # the stage gate, on the lane
 make lane-status                         # who holds the staff, who is waiting
 make lane-log [JOB=<id>]                 # read a finished job back
 make lane-wait JOB=<id>                  # opt-in blocking, never the default
@@ -359,15 +404,15 @@ The refusal names the exact dispatch line for the set the caller attempted.
 
 ```
   edit  ->  commit gate (local, seconds)  ->  commit  ->  push
-        ->  make lane RUNG=merge REF=<sha>  ->  read back  ->  amend if red
+        ->  make gate-stage REF=<sha>  ->  read back  ->  amend if red
 ```
 
-The merge gate runs against a **pushed SHA**. Campaign branches are disposable
+The stage gate runs against a **pushed SHA**. Campaign branches are disposable
 and rewritable, so amending a red commit is cheap.
 
 ## 9. What this fixes for free
 
-- **One timing baseline.** Every merge gate runs on one host, so the three
+- **One timing baseline.** Every stage gate runs on one host, so the three
   forked `test-baseline-*.tsv` files collapse to one and CLAUDE.md's blind
   spot (2) stops existing.
 - **The duration alarm becomes trustworthy.** Blind spot (1) is that the guard
@@ -407,9 +452,9 @@ states only "it works" is silently mistaken for total.
 
 | Risk | Disposition |
 |---|---|
-| A merge gate queues behind an hour of heavy/census work | Accepted, §2.1. Dispatch is asynchronous; §1.1 removes the frequent caller from the lane. |
-| lefford down = no merge gate anywhere | Accepted, §2.1. No force override, deliberately. |
-| A test never merge-gated never enters the commit gate | Accepted, §4.3. Bounded by merge-gate cadence, which CLAUDE.md already requires. |
+| A stage gate queues behind an hour of heavy/census work | Accepted, §2.1. Dispatch is asynchronous; §1.1 removes the frequent caller from the lane. |
+| lefford down = no stage or campaign gate anywhere | Accepted, §2.1. No force override, deliberately. |
+| A test never stage-gated never enters the commit gate | Accepted, §4.3. Bounded by merge-gate cadence, which CLAUDE.md already requires. |
 | Cold worktree build (771 s) dominates a lane job | Mitigated by warm per-branch worktrees; **must be measured**, and §7 must land first or the mitigation carries the bug. |
 | lefford's `wasm-opt` differs from the Mac's | Acceptance step, §10.8. Blocks moving `world-check` until proven. |
 | An adopted orphan suite is red right now | Expected. A red `tools/board` or `atlas` is a real finding for the chronicle, not a topology problem. |
