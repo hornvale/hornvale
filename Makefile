@@ -105,12 +105,37 @@ gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy 
 # brace group is POSIX and reads the same everywhere.
 gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	@mkdir -p target/nextest/ci docs/timings
+# THE STATUS FILE IS DELETED FIRST AND VALIDATED AFTER, and both halves are
+# load-bearing. nextest's status reaches us through a file because the brace
+# group runs in a subshell feeding `tee` (whose own status is always 0), and a
+# POSIX-portable capture is required — `$${PIPESTATUS[0]}` is a bashism and
+# this Makefile sets no SHELL, so under lefford's dash it would silently
+# evaluate to nothing.
+#
+# But a status read from a file has two failure modes a `$$?` does not, and
+# BOTH report GREEN:
+#   - an EMPTY or unwritable file: `[ '' -eq 0 ]` is a syntax error, and `if`
+#     reads an errored test as false, so the red branch never fires. Verified
+#     directly: an empty rc file made the gate report green.
+#   - a STALE file: if the brace group dies before reaching its `echo` (OOM
+#     kill, SIGKILL — a shape this repo already documents for parallel heavy
+#     jobs), `cat` returns the PREVIOUS run's value, which on a previously
+#     green box is 0.
+# So: remove it before the run, and treat missing / empty / non-numeric as a
+# failure rather than as success. A gate that reports green when it does not
+# know is worse than one that reports red when it is unsure.
+	@rm -f target/nextest/ci/nextest.rc
 	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
 	    --message-format libtest-json-plus \
 	    2>&1 1>target/nextest/ci/run.json; \
 	   echo $$? > target/nextest/ci/nextest.rc; \
 	 } | tee target/nextest/ci/run.log >&2; \
-	nextest_status=$$(cat target/nextest/ci/nextest.rc); \
+	nextest_status=$$(cat target/nextest/ci/nextest.rc 2>/dev/null); \
+	case "$$nextest_status" in \
+	    ''|*[!0-9]*) \
+	        echo "make gate: FAILED — nextest's status file is missing, empty or non-numeric ('$$nextest_status'). The run did not complete; treating as RED." >&2; \
+	        nextest_status=1 ;; \
+	esac; \
 	cargo test -q --workspace --doc; \
 	doctest_status=$$?; \
 	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
