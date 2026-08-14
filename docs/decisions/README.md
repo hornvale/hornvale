@@ -171,3 +171,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0129](0129-the-board-gets-a-risk-scoped-lane-and-a-path-scoped-hook-rule.md) | The board gets a risk-scoped lane and a path-scoped hook rule | Accepted |
 | [0130](0130-a-sub-threshold-watercourse-is-a-narrow-channel.md) | A sub-threshold watercourse is a narrow channel, not an absent one | Accepted |
 | [0131](0131-refuted-is-a-seventh-registry-status.md) | `refuted` is a seventh registry status | Accepted |
+| [0132](0132-three-gates-named-for-the-campaign-moment.md) | Three gates, named for the campaign moment | Accepted |
+| [0133](0133-nontrivial-checks-run-in-one-serial-lane.md) | Nontrivial checks run in one serial lane | Accepted |

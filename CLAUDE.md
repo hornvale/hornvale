@@ -47,38 +47,39 @@ orientation for a fresh session.
 
 ## Commands
 
-**Where things run (decision 0086, The Siding).** Campaign worktrees and the
-commit gate run on the **Mac**; the **heavy tier and censuses run on lefford**,
-the canonical box for the artifacts they author. The heavy tier is an
-*authoring* path, not merely an expensive one — three of its tests write
-committed artifacts and one compares a live probe against lefford-authored
-census fixtures — so `heavy-run.sh` carries the same canonical-host guard a
-census does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>`
-(a SHA, not a branch name). `make gate` on lefford is not forbidden, but it
-oversubscribes a box whose other jobs are long; that contention is what 0086
-exists to remove.
+**Where things run (decision 0133, The Staff, amending 0086).** Campaign
+worktrees and the commit gate (`gate-commit`) run on the **Mac** — it is
+local, host-unguarded, and seconds-scale, so nothing about it needs the
+canonical box. Everything costing minutes or more —
+`gate-stage`, `gate-campaign`, the heavy tier, and censuses — runs on
+**lefford**, the canonical box for the artifacts several of them author,
+behind one strictly serial lane (below). The heavy tier is an *authoring*
+path, not merely an expensive one — three of its tests write committed
+artifacts and one compares a live probe against lefford-authored census
+fixtures — so `heavy-run.sh` carries the same canonical-host guard a census
+does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>` (a
+SHA, not a branch name).
 
-**One gating agent at a time on the Mac.** 0081's claim serializes the
-canonical box at the *write seam* — censuses and `heavy-run.sh` take it, gates
-deliberately do not — so **lefford is protected and the Mac is not**. Nothing
-stops N parallel sessions from running gates on ten cores, and during The
-Timekeeper that put this box at loadavg 42–63. The measured reason it is not
-worth doing: a single `make ci` already reports `cpu_ratio` **8.25–8.50 on ten
-cores** (the `ci` rows in `docs/timings.md`), so nextest is saturating the
-machine on its own. Two concurrent gates do not cost 15 minutes each — they
-cost about thirty, and both look hung.
+**The lane, not the Mac, absorbs contention now (decision 0133).** The old
+loadavg-42–63 shape The Timekeeper measured — three campaign sessions each
+running a full-workspace gate concurrently on ten cores — cannot recur
+locally, because there is nothing left above `gate-commit` to run on the
+Mac at all. In its place: one strictly serial queue on lefford. Every lane
+job — a stage gate, a campaign gate, a heavy run, a census — takes the same
+shared claim, one at a time, first-come-first-served, no priority tiers, no
+force override. A stage gate queuing behind an hour of heavy or census work
+is an accepted cost, not a bug: dispatch is asynchronous, so the wait costs
+queue position, not attention.
 
-So: edit, read, plan, and review across as many worktrees as you like — that
-is what worktrees are for — but **stagger the gates**, and treat two to three
-active campaigns as the Mac's working ceiling. This is a human-staggering
-rule, not a lock: 0081 declined to claim the gate because waiting twelve
-minutes to start a four-minute gate is worse than the contention. That
-arithmetic assumed a four-minute gate; the drift to ~15 min looked like it
-argued the other way. **The Whetstone (decision 0113) took it back to ~8 min**
-(`make gate` 460.8 s, `make ci` 412.3 s, both green on `ambrose`), so 0081's
-original arithmetic broadly holds again and the case for claiming the gate is
-weaker, not stronger. Reopen it only with fresh `cpu_ratio` rows in hand, do
-not merely re-express the preference.
+**`gate-commit` is not entirely free of the old concern.** Its cost tracks
+the edit's blast radius in the kernel → domains/\* → windows/\* → cli
+layering, and a kernel-layer edit costs **470.8 s — as costly as the old
+full-workspace gate**; a domains/-layer or cli/-layer edit costs far less
+(~84 s, 17 s — see the gate ladder below). Several sessions committing
+kernel-layer changes at the same moment can still contend for Mac cores the
+way the old gate did. So: staggering still matters specifically for
+kernel-layer work, and the lane — not the Mac — is where every other gate's
+contention now lives.
 
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
@@ -86,89 +87,95 @@ make doctor        # the repo self-map — run this first in a fresh session
 # The set roster — what each gate runs — is `scripts/lane-sets.tsv`, the single
 # source of truth (`cli/tests/lane_sets.rs` fails on a second copy).
 
-# The gate ladder (`make help` lists all targets). The commit gate is
-# `make gate`; it runs `cargo nextest run` (test binaries in PARALLEL) plus
-# doctests. The heavy live-worldgen batteries (censuses, the full pin
-# product, byte-identity rebuilds) are #[ignore]d out of it and run in
-# `make gate-full`. The #[ignore] tier AND nextest's parallelism together
-# got the commit gate to ~4 min at decision 0040 (234 s, 2026-07-13);
-# neither lever alone got there. It then drifted to ~15 min (934.5 s,
-# 2026-07-29 — The Timekeeper), and The Whetstone (0113: the dev profile is
-# optimized workspace-wide) took it back to ~8 min — `make gate` 460.8 s and
-# `make ci` 412.3 s on ambrose, 2026-08-09. `make ci` is what watches this.
-# The batteries this tiering deferred carry a
-# `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
-#   make quick       # cheap half only: fmt-check + clippy + type-audit
-#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~8 min since 0113; 0040 budgeted 4)
-#   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
-#   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
-#   make ci          # ALIAS for `make gate` since The Sexton. The Timekeeper's
-#                     # duration alarm and baseline recorder now run inside the
-#                     # gate itself, because `make ci` had run 9 times against
-#                     # `make gate`'s 368 while every gate already computed the
-#                     # durations it needed and discarded them.
-#                     # It writes target/nextest/ci/run.json + run.log, alarms
-#                     # on a per-test or whole-suite duration
-#                     # shift against docs/timings/test-baseline-<host>.tsv,
-#                     # THEN (only if the alarm passed) rewrites that baseline
-#                     # from this run. The baseline is per HOST and committed,
-#                     # so `git log -p` on it is the archaeology of how the
-#                     # suite's cost moved over time; a red run leaves it
-#                     # untouched, and re-recording a regression is deliberate
-#                     # (re-record in the same commit that caused it).
-#                     # ENFORCES BY DEFAULT; SUPPRESSES ONLY ON CONTENTION: the
-#                     # alarm asserts unless `hornvale_lab::census_claim::current_holder()`
-#                     # (HV_CENSUS_CLAIM_PATH or the default /tmp/hv-census.claim)
-#                     # reports a LIVE holder — `make ci` acquires no claim
-#                     # itself, so a claim present can only mean some OTHER
-#                     # heavy job (a census, the heavy tier) is running here
-#                     # right now and timings are contended and meaningless.
-#                     # On an ordinary quiet machine there is no claim, so it
-#                     # always enforces. `ci-record` carries the matching
-#                     # guard: it refuses to write the baseline at all when the
-#                     # box is contended, so a contended run can neither false-
-#                     # alarm nor poison the baseline it would compare against
-#                     # next time.
-#                     # TWO KNOWN BLIND SPOTS, both open follow-ups in
-#                     # docs/retrospectives/the-timekeeper.md:
-#                     # (1) THE GUARD CANNOT SEE ORDINARY LOAD. It asks only
-#                     #     whether a CENSUS CLAIM is held, so parallel agent
-#                     #     sessions are invisible to it and `make ci` will
-#                     #     enforce against thoroughly contended timings — it
-#                     #     did exactly that at loadavg 42-63 during The
-#                     #     Timekeeper's own runs. Run `make ci` on a QUIET box
-#                     #     and distrust a red alarm from a busy one. Candidate
-#                     #     fix: also suppress when loadavg exceeds core count.
-#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, and there
-#                     #     is now more than one Mac in the ledger. A new or
-#                     #     renamed host FORKS the baseline: the first run
-#                     #     under that name finds no file, records silently,
-#                     #     and cannot alarm. First-run-never-fails is
-#                     #     deliberate; knowing when you are spending it is
-#                     #     not automatic. THIS HAS NOW FIRED FOR REAL — The
-#                     #     Whetstone ran on `ambrose` (M3 Pro, 12 cores)
-#                     #     against a baseline keyed `MacBookPro` at 10, took
-#                     #     the free pass, and wrote
-#                     #     test-baseline-ambrose.tsv. Two consequences:
-#                     #     `hostname -s` FIRST when you read a baseline, and
-#                     #     do NOT rank the suite off another host's file (it
-#                     #     named the wrong hot crate; see the Whetstone
-#                     #     retrospective §1 — measure your own before-arm).
+# The gate ladder (`make help` lists every target). THREE GATES, NAMED FOR
+# THE CAMPAIGN MOMENT EACH ONE GATES — not for the machine or the suites
+# behind it (decision 0132). What each one runs lives in exactly one place,
+# `scripts/lane-sets.tsv` — the set roster; `cli/tests/lane_sets.rs` fails on
+# a second copy in prose, so this block points at it rather than restating it:
+#
+#   make quick                         # cheap half only: fmt-check + clippy + type-audit
+#   make gate-commit                   # THE COMMIT GATE: local, seconds, every commit
+#   make gate-stage    REF=<full-sha>  # THE STAGE GATE: the lane, minutes, each plan-stage boundary
+#   make gate-campaign REF=<full-sha>  # THE CAMPAIGN GATE: the lane, tens of minutes, before merging
+#
+# `make gate`, `make ci`, `make gate-fast` and `make gate-full` no longer run
+# anything. Each is now a REFUSING SIGNPOST: it prints the three replacements
+# above and exits non-zero (decision 0132). Deliberate, not an oversight —
+# aliasing `gate` to `gate-commit` would silently change what 417 calls a
+# month meant, so the project refuses rather than guessing which of the three
+# a caller wanted. `gate-fast` is retired outright, not repointed: it
+# measured only ~10% cheaper than the old full gate (n=4, 381 s vs 423 s)
+# because it scoped *tests* to changed crates but could not scope the
+# *build*, which is where nextest's wall time actually sits.
+#
+# WHY THREE, NOT ONE. The old full-workspace gate had drifted into pricing a
+# merge-gate workload at commit frequency: **417 calls/month at an average
+# 423 s is 49.0 h of Mac time**; the same 417 calls against the cheap
+# lint-only half would cost **1.8 h**. Splitting by *purpose* — protect main
+# from a broken commit (complete, occasional) vs. give the author confidence
+# to keep going (fast, continuous) — removes the mispricing at its source
+# rather than trying to make one instrument serve both. See decision 0132.
+#
+# GATE-COMMIT'S COST TRACKS THE EDIT'S BLAST RADIUS in the kernel ->
+# domains/* -> windows/* -> cli layering, not the size of the suite.
+# Measured end to end, one line added and reverted in each layer:
+#   kernel/   470.8 s   <- as costly as the old full-workspace gate
+#   domains/   ~84   s
+#   cli/       17   s
+#   no source change at all   10-16 s
+# The sub-floor test tier itself executes its 2,746 selected tests in
+# **4.4 s**; the rest of that wall time is compiling and linking test
+# binaries, which a gate that by definition runs after a source change
+# cannot avoid regardless of which tests it selects — this is also why
+# `gate-fast`'s test-scoping approach only ever bought ~10%. A test with no
+# recorded baseline duration is EXCLUDED from gate-commit by design (coverage
+# is the stage gate's job, not the commit gate's — see spec §4.3); it enters
+# on the next green stage gate, which measures it and rewrites the roster at
+# `docs/timings/subfloor-roster.tsv`, one file per canonical host.
+#
+# GATE-STAGE AND GATE-CAMPAIGN DISPATCH TO ONE STRICTLY SERIAL LANE on the
+# canonical box (decision 0133, amending 0086's placement table and
+# reversing 0081's advisory carve-out for the gates): every lane job — these
+# two gates, the heavy tier, and censuses — takes the same shared claim,
+# first-come-first-served, no priority tiers, no force override. Two trials
+# on the canonical box (six spaced waiters, then eight simultaneous ones)
+# granted the lock strictly in arrival order, 8/8 both times, so this needed
+# no separate ticket-spool runner — the existing primitive already was one.
+# lefford unreachable means no stage or campaign gate anywhere: it fails
+# closed rather than falling back to an uncontrolled local run.
+#
+#   make lane SET=<set> REF=<full-sha>   # on-demand escape, named for the set (e.g. re-run just artifacts after an absorption)
+#   make lane-status                     # who holds the staff on the canonical box, who is queued
+#   make lane-log [JOB=<id>]             # read a finished lane job back
+#   make lane-wait JOB=<id>              # opt-in blocking, never the default
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
+#
+# tools/board and tools/seam-guard are dev tools outside the cargo workspace
+# the same way tools/type-audit is, but neither is declared in root
+# Cargo.toml's `members` nor its `exclude` list — an omission, not a
+# violation, but worth knowing before assuming that list is exhaustive.
+#
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
 # with `cargo install cargo-nextest` or `brew install cargo-nextest`.
-# The raw checks `make gate` runs (every commit must pass all):
-cargo nextest run --workspace       # unit + integration, parallel (skips the heavy tier)
-cargo test --workspace --doc        # doctests (nextest does not run these)
+#
+# gate-commit's raw checks (every commit must pass all):
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check   # a LINT, not an artifact
+cargo nextest run --workspace -E "$(bash scripts/subfloor-roster.sh)"   # the sub-floor tier only
 
-# Iterate cost-ordered — the full gate is the FINAL step, not every check:
+# The stage gate's own suite runs the full thing, unchanged in content from
+# the old commit gate — it is what actually watches the duration baseline:
+cargo nextest run --workspace       # unit + integration, parallel (skips the heavy tier)
+cargo test --workspace --doc        # doctests (nextest does not run these)
+
+# Iterate cost-ordered while working — gate-commit, or a lane dispatch, is
+# the final step, not every check:
 #   1. fmt + clippy first (cheapest, and the most common review finding).
 #   2. Scope tests to what changed: `cargo test -p <crate>` / `--test <name>`.
-#      `--workspace` belongs at the pre-commit gate, not each intermediate run.
+#      Full `--workspace` coverage now belongs to the stage gate's lane
+#      dispatch, not a local intermediate run.
 #   3. Run ONCE, inspect many — never re-run the suite to grep a second line.
 #      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
 #      failure list in one pass:
@@ -176,8 +183,8 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
-# reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them.
+# reasons, so even `make gate-campaign` skips them; the everyday commit gate
+# never pays for them.
 #
 # THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
 # the pre-merge close, by a human on lefford — see the dispatch line below.
@@ -297,8 +304,9 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: returns(Option::<EntityId>::None) scope(hornvale-almanac)
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
-# clamps, wrappers); `returns(EXPR)` replaces it outright. Runs in
-# **gate-full, not the commit gate** — each call site costs a full scoped
+# clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
+# `campaign`-rung lane set (`make gate-campaign`, or `make lane SET=seam-guard
+# REF=<full-sha>`), not the commit gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
@@ -328,16 +336,21 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 make seam-guard-list   # the roster and its call sites (cheap, no build)
 make seam-guard        # neutralise each site, run scoped tests, report verdicts
 cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # narrow
-# `conquest_victim` is currently DECLARED unguarded (only the gallery drift
-# check pins it, and `make gate` never runs that). gate-full is green; the
-# finding stays visible in docs/audits/seam-guard-roster.md, a committed,
-# drift-checked artifact whose job is to keep declarations under review
-# pressure rather than buried in a doc comment.
+# Both registered seams are currently GUARDED across all 7 call sites — no
+# `expect(survives: …)` declaration exists anywhere in the tree, so a survivor
+# at any site would fail the gate. `docs/audits/seam-guard-roster.md` (the
+# committed, drift-checked artifact) lists what is registered and what has
+# been declared; it never carries verdicts (those cost a scoped test run per
+# site), so a "GUARDED" status is a fact about the last `make seam-guard` run,
+# not something this file or that one can assert on their own — re-run it for
+# the current answer. The declaration mechanism itself stays live: the point
+# is to keep any future declaration under review pressure, not that one is
+# expected.
 
 # The digest — the project's own fact ledger, also OUTSIDE the workspace (The
 # Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
 # the project asserts about itself (project time is git's); everything else is
-# scanned from source on read. `make gate` does NOT build this crate:
+# scanned from source on read. None of the three gates build this crate:
 cargo test --manifest-path tools/digest/Cargo.toml
 # EVERY `render` SUBCOMMAND PRINTS TO STDOUT. The committed artifact is
 # written by the `>` REDIRECT, which lives in scripts/regenerate-artifacts.sh
@@ -392,12 +405,15 @@ git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 # ever fail. Nothing in regenerate-artifacts.sh guards that.
 # **THERE IS NO CI** (decision 0125). `.github/workflows/` is deleted — the
 # repo is private, so runner minutes are metered and Pages is gone. The LOCAL
-# gate is the ONLY gate, and this `git diff --exit-code` list is the only
+# gates are the ONLY gate, and this `git diff --exit-code` list is the only
 # drift check that exists: nothing runs it for you. A red main is invisible
-# until someone runs `make gate` and `make rebaseline`. Three coverage gaps
-# 0125 names explicitly: `clients/atlas` has no gate at all (run its four
-# `deno` commands and the atlas.js bundle diff by hand), the book is
-# unpublished, and `world-wasm-v*` releases are cut by hand.
+# until someone runs a gate and `make rebaseline`. Of the three coverage gaps
+# 0125 named explicitly at ratification, two are still open — the book is
+# unpublished, and `world-wasm-v*` releases are cut by hand. The third,
+# `clients/atlas` having no gate at all, closed with The Staff: it is now in
+# the `clients` lane set (`make clients-check-run` runs its four `deno`
+# commands plus a build+bundle-diff drift check, closing the vacuous-drift
+# hazard §3.1 of the spec found while checking this table).
 
 # The browser clients (outside the cargo workspace; see clients/CLAUDE.md):
 make vessel-check       # the Casement: deno checks + wasm fmt/clippy + byte-identity smoke
@@ -679,7 +695,7 @@ with no human in the loop, on the one channel every session reads at
 commit and the board's own test suite still gate every change on it.
 
 **Nothing automatically runs the board's tests.** Its suite lives outside
-`make gate` (`tools/board` is not a workspace member) and there has been no
+every gate (`tools/board` is not a workspace member) and there has been no
 CI since decision 0125, so the only thing that runs those 194 tests is
 someone remembering to. `scripts/hooks/pre-commit`'s board-lane hook rule
 (see `scripts/CLAUDE.md`) helps only for a board-**only** commit — a mixed

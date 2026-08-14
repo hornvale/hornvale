@@ -87,14 +87,48 @@ Key knobs:
 
 ## The gate ladder
 
-- `gate-fast.sh` — scopes fmt/clippy/test to changed crates (iteration only).
-  Takes no claim: short jobs never queue behind long ones (decision 0081).
-- `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that the
-  commit gate defers (see `cli/tests/heavy_tier.rs`). **Takes the shared box
-  claim** (decision 0086) — here, at the seam, rather than only in the wrapper,
-  because a wrapper cannot guard a direct `make gate-full`. Where there is no
-  `flock` (macOS ships none) it proceeds unserialised with a note rather than
-  failing.
+Three gates now exist, named for the campaign moment each one gates rather
+than for the machine or the scripts behind it (decision 0132): `gate-commit`
+(local), `gate-stage` and `gate-campaign` (both dispatched to the one lane on
+the canonical box, decision 0133). The roster of what each lane set runs is
+`scripts/lane-sets.tsv`, the single source of truth this section does not
+restate.
+
+- **`subfloor-roster.sh`** — emits `gate-commit`'s nextest filter: every test
+  below `BASELINE_FLOOR_SECS` (1.0 s) in the committed duration baseline.
+  EXCLUDE-UNKNOWN: a test with no baseline row is not selected here; it is
+  picked up on the next green stage gate, which measures it and rewrites the
+  roster. Exit 3 means no roster exists for this host — a different thing
+  from an empty roster, and `gate-commit-run` treats it as a hard failure
+  rather than silently gating nothing.
+- **`lane-dispatch.sh`** — validates a set name against `scripts/lane-sets.tsv`
+  and a `REF` (a **full SHA**, never a branch name — it feeds `reset --hard`
+  on the far end, which can otherwise land on a stale local branch of that
+  name there), then ssh's to the canonical box and forks a detached
+  `lane-run.sh`. It RETURNS as soon as the job is enqueued and never blocks
+  the caller. `make gate-stage REF=<sha>` and `make gate-campaign REF=<sha>`
+  are thin wrappers dispatching one or more sets through this script.
+- **`lane-run.sh`** — runs one set under the **same shared canonical-box
+  claim** `heavy-run.sh` and `census-run.sh` already took (decisions
+  0086/0133), forked with `setsid` so a dropped ssh costs nothing. Writes
+  `<job-id>.log` and appends an outcome row to `jobs.tsv` on every exit path,
+  including a signal — read either back with `make lane-log [JOB=<id>]` or
+  `make lane-status`.
+- **`lane-outboard.sh`** — the driver for the `outboard` set: three suites
+  nothing ran before The Staff — `tools/board`, `tools/digest`, and
+  `tools/type-audit`'s own suite (distinct from the `type-audit check` lint
+  in `gate-commit`). Not fail-fast: independent suites, so it reports every
+  failure in one pass rather than stopping at the first. `seam-guard` is
+  deliberately not in it — it shipped here first, but measurement showed its
+  7 call sites were 97% of this set's wall time on a set that fires at every
+  plan-stage boundary, so it moved to its own `campaign`-rung set instead.
+- `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
+  `gate-commit` and the stage gate's own suite both defer (see
+  `cli/tests/heavy_tier.rs`). Runs as the `heavy` set, dispatched by
+  `gate-campaign`. **Takes the shared box claim** (decisions 0086/0133) —
+  here, at the seam, rather than only in a wrapper, because a wrapper cannot
+  guard a direct invocation of the script. Where there is no `flock` (macOS
+  ships none) it proceeds unserialised with a note rather than failing.
 - **`heavy-run.sh`** — run the heavy tier on THIS box under the shared claim,
   the same way `census-run.sh` runs a census. `HV_HEAVY_REF=<sha>` runs a
   pushed ref in a scratch worktree; `status` asks who holds the box and is
