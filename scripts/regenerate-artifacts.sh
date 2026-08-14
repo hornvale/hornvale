@@ -336,11 +336,31 @@ gen_possession_overtime() {
 # twelve lasting under a year, founding parties arriving from five distinct
 # neighbouring clearings, and the standing twelfth founded in the year 1775. No
 # layer ends in ice -- every founding party instead ARRIVED fleeing it, the
-# shape this page has carried at every cell it has ever pointed at. The deepest
-# column on this seed has now gone 16 -> 11 -> 10 -> 12 across four roster
-# changes; that is a reported number and this script asserts NO mechanism for
-# it, because a roster change moves several things at once.
-history_site=4604
+# shape this page has carried at every cell it has ever pointed at.
+#
+# THE CAMERA MOVED AGAIN, 4604 -> 35120, for decision 0131's terrain epoch (The
+# Glasshouse). New coastlines put cell 4604 under a different sea and emptied
+# it; `the_history_page_prose_names_the_cell_it_renders` caught it by name
+# rather than letting the showcase for stratigraphy quietly render "Nothing
+# ever settled here". The standing rule applied once more: is the WORLD empty,
+# or only this cell? Scanning occ-site over the live seed-42 sky world, cell
+# 35120 carries TEN layers, every one hobgoblin, tied with 7754 for the deepest
+# column on this seed. The world is not shallow, so repointing is legitimate,
+# exactly as at The Tolerance and The Delvers.
+#
+# Re-read off the live block for 35120: ten layers from the year 300, nine
+# completed -- five put to flight by other hobgoblins, four leaving because
+# they had taken a neighbour's ground and carried the settlement onto it -- one
+# layer lasting under a year, and the standing tenth founded in the year 1200.
+# Nine of the ten founding parties arrived fleeing ice, from three distinct
+# neighbouring clearings; the tenth was sent out from cell 35127. No layer ends
+# in ice, the shape this page has carried at every cell it has ever pointed at.
+# The column also carries its own technological arc, bronze -> iron ->
+# classical, which none of the previous cells showed this cleanly. The deepest
+# column on this seed has now gone 16 -> 11 -> 10 -> 12 -> 10 across five
+# roster changes; that is a reported number and this script asserts NO
+# mechanism for it, because a roster change moves several things at once.
+history_site=35120
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -350,23 +370,26 @@ gen_history() {
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 525 down to the present. Every one of the eleven\n'
-    printf 'completed layers ended at the hands of other gnolls: seven fell to a\n'
-    printf 'rival band, and four were not evictions at all — the occupants had\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and ten\n' "$history_site"
+    printf 'hobgoblin steadings have risen on it, one settling atop the ruins of\n'
+    printf 'the last, from the year 300 down to the present. Every one of the nine\n'
+    printf 'completed layers ended at the hands of other hobgoblins: five fell to\n'
+    printf 'a rival band, and four were not evictions at all — the occupants had\n'
     printf 'just taken better ground from a neighbour and carried the settlement\n'
     printf 'there, so the layer closes on a departure rather than a defeat. This\n'
     printf 'is a people with only itself to fight, contesting one rise in a\n'
     printf 'neighbourhood it had already filled.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
-    printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
-    printf 'driven off one of five neighbouring clearings. Five of the twelve\n'
-    printf 'layers did not last a single year — founded and put to flight in the\n'
-    printf 'same year they began, which is what the record looks like when refuge\n'
-    printf 'and contest are the same ground. The twelfth was founded in the year\n'
-    printf '1775 and stands yet, 225 years on: some 27 souls, a hut and a\n'
-    printf 'granary, and no ruin yet to read.\n\n'
+    printf 'here fell to ice; nine of the ten founding parties instead *arrived*\n'
+    printf 'fleeing it, driven off one of three neighbouring clearings, and the\n'
+    printf 'tenth was sent out from a settlement two ridges away. One layer did\n'
+    printf 'not last a single year — founded and put to flight in the same year it\n'
+    printf 'began, which is what the record looks like when refuge and contest are\n'
+    printf 'the same ground. Read bottom to top, the column also carries its own\n'
+    printf 'technological arc: bronze-working at the base, iron above it,\n'
+    printf 'classical at the top. The tenth was founded in the year 1200 and\n'
+    printf 'stands yet, 800 years on: some 67 souls, three huts and a granary,\n'
+    printf 'and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

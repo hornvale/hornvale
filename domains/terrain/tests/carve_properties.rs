@@ -527,8 +527,19 @@ fn trim_recaps_hold_after_the_final_solve() {
                 c.0,
                 g.elevation.get(c).get()
             );
+            // The same 1e-6 the construction-target assert above and the
+            // atoll cap below both carry, and for the same reason: these
+            // are metre-scale elevations compared against a SEA LEVEL
+            // CHOSEN BY AN ORDER STATISTIC over the elevation field, so
+            // the datum can land exactly on a barrier's own value. When it
+            // does, the comparison is decided by the last bit rather than
+            // by anything about the mechanism — this assert failed on seed
+            // 34 by 3e-13 m, which is 3e-10 mm, while the two asserts
+            // bracketing it would have passed the identical geometry.
+            // Bare `>=` here was an asymmetry, not a stricter standard
+            // (decision 0131).
             assert!(
-                *g.elevation.get(c) >= sea_final,
+                g.elevation.get(c).get() >= sea_final.get() - 1e-6,
                 "seed {seed} L{level}: barrier cell {} at {} sank below the final sea level {}",
                 c.0,
                 g.elevation.get(c).get(),

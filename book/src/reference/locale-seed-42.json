@@ -21,10 +21,10 @@
   "longitude": -132.49414,
   "biome": "taiga",
   "fields": {
-    "temperature_c": -5.9514739,
-    "moisture": 0.49358823,
-    "elevation_m": -108.56233,
-    "height_asl_m": 2827.6045,
+    "temperature_c": -3.7340217,
+    "moisture": 0.4849861,
+    "elevation_m": 666.16648,
+    "height_asl_m": 2486.458,
     "water": "dry-land"
   },
   "corners": [
@@ -51,7 +51,7 @@
     "micro": {
       "relief": 0.19504828,
       "aspect": 0.029023334,
-      "wetness": 0.085382904,
+      "wetness": -0.026263815,
       "openness": 0.66924456
     },
     "descriptor": "a peat hollow",
@@ -115,12 +115,12 @@
     }
   ],
   "cave": null,
-  "channel_distance": 0.0050572254,
+  "channel_distance": 0.0011583075,
   "channel_bands": [
-    0.000017199781,
-    0.000034399562,
-    0.00066288677,
-    0.00099433015
+    0.00001922994,
+    0.00003845988,
+    0.00013908548,
+    0.00020862822
   ],
   "resolution": {
     "grid_level": 6,

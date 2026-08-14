@@ -571,47 +571,109 @@ fn rift_pin_isolation_supercontinent_consumes_identical_draws() {
     }
 }
 
+/// The pinned-supercontinent assemblies over the sweep in which a craton
+/// interpenetrates an earlier one because the placed set leaves it nowhere
+/// clear to stand. **A geometric census, not a tolerance**: measured with an
+/// independent 200,000-point sphere sample asking whether *any* position
+/// clears every placed craton, 55 of the sweep's 400 non-anchor cratons have
+/// none — and the placements those 55 force on their successors bring the
+/// realised total to 67. See `pinned_supercontinent_is_sutured`.
+const SUTURE_FORCED_OVERLAPS: usize = 67;
+
+/// claim: invariant(forall-seed) — every major in every pinned-supercontinent
+/// world of the sweep touches an earlier major at exactly the contact
+/// separation, and interpenetration stays at its geometrically forced floor
+///
+/// **The sweep is half the assertion.** This ran on seed 42 alone until
+/// decision 0131, and that single seed is precisely what hid a real defect:
+/// `assemble_cratons` was leaving cratons floating clear of contact on 31 of
+/// these 400 non-anchor cratons — overlapping on 9 more, by up to 0.89 rad —
+/// while seed 42 happened to settle cleanly and the test stayed green through
+/// every campaign that touched the assembly. The same single-sample blindness
+/// hid the repulsion defect 0131 also records (seeds 0..8, all passing, over a
+/// pass that degraded 35 of 200 worlds). One seed is not a property.
+///
+/// **Why contact is asserted strictly and overlap is ratcheted.** These are
+/// not the same kind of claim, and measurement is what separates them:
+///
+/// - *Touching* is always achievable, and is now always achieved — every
+///   craton is placed at exactly the contact separation from some earlier
+///   one, because `settle_against_a_host` searches contact circles, on which
+///   every point attains contact by construction. This half is absolute; a
+///   single floating craton fails the test.
+/// - *Not overlapping* is **provably impossible** for part of the population.
+///   A contact separation reaches `CONTACT_FACTOR × 1.6 ≈ 1.36` rad, so one
+///   craton's forbidden cap covers ~31% of the sphere; eight of them cannot
+///   avoid covering all of it. An independent 200,000-point sphere sample
+///   confirms it directly rather than by area argument: **55 of 400** cratons
+///   here have no clear position anywhere on the sphere. This is not new with
+///   the raised clamp — the same probe finds **6 of 400** on shipped `main`
+///   (0.6 clamp, closed-form rescale) — it is newly *visible* because the
+///   sweep looks at more than one seed.
+///
+/// So the floor is ratcheted rather than wished away. It cannot grow silently,
+/// and lowering it means changing `CONTACT_FACTOR` or the clamp — a decision
+/// 0057 question this campaign deliberately did not open.
 #[test]
 fn pinned_supercontinent_is_sutured() {
     use hornvale_kernel::math;
     use hornvale_terrain::crust::CONTACT_FACTOR;
     let geo = Geosphere::new(4);
-    let on = generate(
-        Seed(42),
-        &geo,
-        &TerrainPins {
-            supercontinent: Some(true),
-            ..TerrainPins::default()
-        },
-    )
-    .unwrap();
-    let cratons = &on.globe.cratons;
-    assert!(cratons.len() > 1, "seed 42 must draw multiple majors");
     let sep_of = |a: [f64; 3], b: [f64; 3]| {
         math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
     };
-    // Under the pin every major's final center IS its `rift.assembly`
-    // position, so each craton i>0 touches at least one earlier craton at
-    // the contact separation (within 1e-9 rad) and none overlaps an earlier
-    // one deeper — a sutured supercontinent.
-    for i in 1..cratons.len() {
-        let mut touched = false;
-        for j in 0..i {
-            let sep = sep_of(cratons[i].center, cratons[j].center);
-            let contact = CONTACT_FACTOR * (cratons[i].radius_rad + cratons[j].radius_rad);
+    let (mut multi_major_seeds, mut overlapping) = (0, 0);
+    for seed in 0..40u64 {
+        let on = generate(
+            Seed(seed),
+            &geo,
+            &TerrainPins {
+                supercontinent: Some(true),
+                ..TerrainPins::default()
+            },
+        )
+        .unwrap();
+        let cratons = &on.globe.cratons;
+        if cratons.len() > 1 {
+            multi_major_seeds += 1;
+        }
+        // Under the pin every major's final center IS its `rift.assembly`
+        // position, so each craton i>0 must touch at least one earlier craton
+        // at the contact separation (within 1e-9 rad) — a sutured
+        // supercontinent.
+        for i in 1..cratons.len() {
+            let mut touched = false;
+            let mut overlaps = false;
+            for j in 0..i {
+                let sep = sep_of(cratons[i].center, cratons[j].center);
+                let contact = CONTACT_FACTOR * (cratons[i].radius_rad + cratons[j].radius_rad);
+                if sep < contact - 1e-9 {
+                    overlaps = true;
+                }
+                if sep <= contact + 1e-9 {
+                    touched = true;
+                }
+            }
             assert!(
-                sep >= contact - 1e-9,
-                "craton {i} overlaps {j} in the sutured supercontinent (sep {sep}, contact {contact})"
+                touched,
+                "seed {seed} craton {i} floats free of the sutured supercontinent"
             );
-            if sep <= contact + 1e-9 {
-                touched = true;
+            if overlaps {
+                overlapping += 1;
             }
         }
-        assert!(
-            touched,
-            "craton {i} floats free of the sutured supercontinent"
-        );
     }
+    assert!(
+        multi_major_seeds >= 35,
+        "the sweep must actually exercise multi-craton assemblies; only \
+         {multi_major_seeds}/40 seeds drew more than one major"
+    );
+    assert_eq!(
+        overlapping, SUTURE_FORCED_OVERLAPS,
+        "interpenetrating majors moved off their measured geometric floor — \
+         if this ROSE, the assembly regressed; if it FELL, the floor is stale \
+         and this constant should be lowered in the same commit"
+    );
 }
 
 #[test]

@@ -706,13 +706,24 @@ pub fn resolve_ocean_fraction(
 /// The shelf-break fallback activates when analytic continental supply
 /// (`crust::continental_supply`) is below this fraction of the
 /// ocean-fraction-implied land quota. The gap it bisects is wide and
-/// empty: default draws (8-14 cratons) bottom out at supply/quota ≈ 0.554
-/// over the frozen 1000-seed census (seed 558; 20/1000 below 0.6) — see
+/// empty: default draws (8-14 cratons) bottom out at supply/quota ≈ 1.050
+/// over the frozen 1000-seed census (seed 586) — see
 /// `default_worlds_never_trip_the_supply_fallback` in
-/// `tectonic_properties.rs` — while a lone 0.6 rad-clamped craton sits
-/// ≲ 0.18; the 0.5 factor bisects the genuinely empty gap between ~0.55
-/// and ~0.18, so default worlds provably keep the exact-percentile path
-/// byte-identical.
+/// `tectonic_properties.rs` — while a lone clamped craton sits ≲ 0.25
+/// (measured over 1000 single-craton draws); the 0.5 factor bisects the
+/// genuinely empty gap between ~1.05 and ~0.25, so default worlds provably
+/// keep the exact-percentile path byte-identical.
+///
+/// **Both endpoints moved with decision 0131** and the reasoning is
+/// unchanged, which is the point of recording them: at the old 0.6 clamp
+/// with the closed-form rescale the floor was ≈ 0.554 (seed 558; 20/1000
+/// below 0.6) against a single-craton ceiling of ≈ 0.18. The Glasshouse's
+/// exact solve made the rescale deliver the budget it had been missing by
+/// ~34%, which lifted the default floor clear past 1.0 — every default
+/// world now supplies *more* continent than its quota asks for — while the
+/// raised clamp lifted the single-craton ceiling proportionally. The gap
+/// widened rather than narrowed, so 0.5 still sits in empty space and is
+/// now a less marginal choice than when it was picked.
 /// type-audit: bare-ok(ratio)
 pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
 
