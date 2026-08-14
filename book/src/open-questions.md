@@ -621,7 +621,14 @@ choice, not a model constraint**, and it has a closed form. The condition
 response floors its buffer-able axes at the sovereignty floor and passes
 elevation a literal zero, so elevation is the limiting axis on every cell of
 every world exactly when a kind's authored elevation devotion falls below that
-floor — no terrain enters the derivation. Confirmed in both directions over
+floor — no terrain enters the derivation. *(That flooring structure is now
+**pinned** rather than merely observed:
+[The Axes](./chronicle/the-axes.md) added
+`exactly_one_axis_is_unfloored_and_it_is_the_undercutter`, after finding that
+the existing agreement test compares the fast path against a reference which
+hardcodes the same structure — so flooring elevation in both leaves it green.
+The closed form above is a statement about code that can change; it now fails
+loudly if it does. The bet itself is unmoved.)* Confirmed in both directions over
 three seeds: the two dwarves authored below their floors are elevation-bound on
 100.00% of land, and the one authored above binds there on 8.64–31.59%. That
 reproduces from arithmetic alone the earlier measurement that elevation binds

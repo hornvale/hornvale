@@ -86,6 +86,7 @@ under review. This file is.
 - [Single-craton hypsometry](single-craton-hypsometry.md) — SHIPPED to origin/main 2026-07-14 (4398cf0) — shelf-break fallback, decision 0053, land-normalized shelf ruling
 - [The Ground](the-ground.md) — (lithology/pedology substrate) — MERGED to local main @0900411 2026-07-14 (NOT pushed); census reds since cleared (2026-07-14 regen ebf196c)…
 - [The Fathom](the-fathom.md) — the column ALREADY EXISTED one crate over; H-1 falsified on my own unmeasured threshold
+- [The Axes](the-axes.md) — Chorography c1; the gate's own criterion COULD NOT FAIL (no-collisions is satisfied by one axis with 21 values, which is the enum); a rule applied reactively caught 8 more violations six tasks later; 4 plan defects found by executing, 0 by reviewing
 - [The Isotherm](the-isotherm.md) — cross-repo goldens producer-sourced
 - [The Freshet](the-freshet.md) — Salt/fresh water classification (DOM-5 first slice) — SHIPPED+PUSHED @207fc65
 - [BIO-2](bio2-life-history.md) — life-history allometry — first campaign-autopilot validation run SHIPPED to local main @35be669 (NOT pushed); zero G3 vetoes

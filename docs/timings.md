@@ -890,6 +890,13 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T00:31:30Z | gate | 338.099 | 2412.621 | 123.277 | 7.50 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-14T00:32:21Z | rebaseline | 33.943 | 184.632 | 8.545 | 5.69 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-14T00:32:55Z | preflight | 3.222 | 0.397 | 0.641 | 0.32 | 0 | f6556e1a | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T10:55:05Z | quick | 19.290 | 43.248 | 9.851 | 2.75 | 0 | 876aa60c | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T11:07:47Z | quick | 14.909 | 26.452 | 7.498 | 2.28 | 0 | 37c2bcbd | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T11:14:14Z | quick | 33.956 | 24.017 | 10.119 | 1.01 | 0 | baa5be6a | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T11:20:28Z | quick | 12.425 | 10.195 | 0.471 | 0.86 | 0 | d7327e4c | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T11:32:55Z | quick | 29.580 | 25.782 | 9.983 | 1.21 | 0 | f4c58bdb | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T12:18:05Z | quick | 13.447 | 20.249 | 8.090 | 2.11 | 0 | 1923be0c | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T12:19:03Z | quick | 14.656 | 23.222 | 8.851 | 2.19 | 0 | 1923be0c | campaign/the-axes | MacBookPro | 10 |
 | 2026-08-14T04:08:48Z | quick | 18.768 | 26.885 | 18.327 | 2.41 | 0 | a917db11 | campaign/the-gnomon | MacBookPro | 10 |
 | 2026-08-14T04:13:21Z | rebaseline | 56.151 | 198.919 | 12.196 | 3.76 | 0 | 4d9570e9 | campaign/the-gnomon | MacBookPro | 10 |
 | 2026-08-14T04:14:22Z | preflight | 3.747 | 0.798 | 0.637 | 0.38 | 0 | a1a33028 | campaign/the-gnomon | MacBookPro | 10 |
@@ -934,3 +941,12 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T18:15:15Z | rebaseline | 37.144 | 198.064 | 11.818 | 5.65 | 0 | 44b0ca06 | the-repose | MacBookPro | 10 |
 | 2026-08-14T18:16:15Z | quick | 10.775 | 9.896 | 0.345 | 0.95 | 0 | 44b0ca06 | the-repose | MacBookPro | 10 |
 | 2026-08-14T18:32:18Z | rebaseline | 88.936 | 198.997 | 9.685 | 2.35 | 0 | ad807d8b | the-repose | MacBookPro | 10 |
+| 2026-08-14T12:17:21Z | rebaseline | 127.388 | 205.482 | 14.105 | 1.72 | 0 | 2922712e | main | MacBookPro | 10 |
+| 2026-08-14T12:59:41Z | quick | 15.400 | 24.642 | 9.866 | 2.24 | 0 | d2ed7ebb | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T14:17:33Z | gate | 501.672 | 2765.821 | 146.820 | 5.81 | 0 | 5e667b4b | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T14:24:01Z | gate | 334.192 | 2523.643 | 116.869 | 7.90 | 0 | 5e667b4b | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T14:30:14Z | gate | 310.889 | 2505.804 | 113.713 | 8.43 | 0 | 5e667b4b | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T14:31:12Z | rebaseline | 38.594 | 195.737 | 10.980 | 5.36 | 0 | 5e667b4b | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T14:52:49Z | preflight | 3.419 | 0.790 | 0.595 | 0.41 | 0 | ff8eec1d | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T15:00:09Z | rebaseline | 73.403 | 196.509 | 10.948 | 2.83 | 0 | c32112c0 | main | MacBookPro | 10 |
+| 2026-08-14T18:37:14Z | rebaseline | 67.760 | 201.226 | 12.645 | 3.16 | 0 | aaa4c8c2 | the-repose | MacBookPro | 10 |
