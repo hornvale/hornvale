@@ -67,11 +67,27 @@ fn room_of(line: &str) -> RoomAddr {
 /// H2-2 — appending is byte-clean. A document is byte-identical to its
 /// pre-stage-2 form up to the first new key. This is the no-epoch claim,
 /// asserted rather than assumed.
+///
+/// # Two values are excused, by name, and only two
+///
+/// The Rill grounded `regime.micro.wetness` in the world (the climate supply a
+/// room's cells receive, allocated by its distance to its own watercourse) and
+/// the descriptor is rendered from it, so those two values legitimately moved
+/// after this fixture was captured. They are substituted out of the comparison
+/// **individually and by key**, leaving every other byte of the prefix — key
+/// order included, and `descriptor_noun` included, which reads the same pools
+/// and did not move — under the original assertion.
+///
+/// This is the narrowest amendment that keeps the claim true. Recapturing the
+/// fixture instead would have destroyed what it is *for*: it is The Ford's
+/// before-arm, and a before-arm re-rendered by later code proves nothing about
+/// the change it was captured for.
 #[test]
 fn the_document_is_byte_identical_up_to_the_first_new_key() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
+    let mut substituted = 0usize;
     for old in FIXTURE.lines() {
         let room = room_of(old);
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
@@ -79,6 +95,9 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
         let cut = json
             .find(",\"channel_distance\"")
             .expect("the new key is present");
+        let (old, moved) = with_the_rills_two_values(old, &json);
+        substituted += moved;
+        let old = old.as_str();
         // The old document minus its closing brace IS the new document's
         // prefix, if and only if nothing before the appended keys moved.
         // `strip_suffix` rather than `&old[..old.len() - 1]` so the assumption
@@ -96,6 +115,50 @@ fn the_document_is_byte_identical_up_to_the_first_new_key() {
         checked += 1;
     }
     assert_eq!(checked, 200, "the whole committed fixture was checked");
+    // Printed, not written down: how much of the fixture The Rill actually
+    // moved. A drop to zero would mean the substitution had gone vacuous.
+    // PINNED, not a floor of one. `substituted > 0` would stay green if this
+    // decayed to a single room, which is the shape a vacuous guard takes: the
+    // substitution would then be excusing two values on 199 rooms that no
+    // longer need excusing. The count is deterministic, so it is a change
+    // detector — and if The Rill's grounding is ever reverted it goes to 0 and
+    // this fails loudly instead of quietly excusing nothing.
+    println!("{substituted} of {checked} rooms needed a Rill substitution");
+    assert_eq!(
+        substituted, 178,
+        "the number of rooms whose wetness/descriptor The Rill moved has changed"
+    );
+}
+
+/// Replace `regime.micro.wetness` and `regime.descriptor` in a captured
+/// document with the values the live one carries, and report whether either
+/// actually differed.
+///
+/// String surgery rather than a parse-and-re-serialize, because re-serializing
+/// a `serde_json::Value` would reorder the keys and quietly destroy the very
+/// property this test exists to check.
+fn with_the_rills_two_values(old: &str, now: &str) -> (String, usize) {
+    /// The value that follows `key` in `doc`, as a slice — from the first byte
+    /// after `key` to the delimiter that closes it.
+    fn value_after<'a>(doc: &'a str, key: &str, end: char) -> (usize, &'a str) {
+        let at = doc.find(key).unwrap_or_else(|| panic!("{key} is present")) + key.len();
+        let len = doc[at..].find(end).expect("the value is terminated");
+        (at, &doc[at..at + len])
+    }
+    let mut out = old.to_string();
+    let mut moved = 0usize;
+    // `"descriptor":"` and not `"descriptor"`, so the search cannot land on
+    // `descriptor_noun` — which reads the variety pools, not the micro-field,
+    // and is deliberately still compared.
+    for (key, end) in [("\"wetness\":", ','), ("\"descriptor\":\"", '"')] {
+        let (at, was) = value_after(&out, key, end);
+        let (_, is) = value_after(now, key, end);
+        if was != is {
+            moved += 1;
+        }
+        out.replace_range(at..at + was.len(), is);
+    }
+    (out, moved.min(1))
 }
 
 /// The schema tag did NOT move. If this fails, an epoch happened by accident.
@@ -119,7 +182,7 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
-    let mut seen: Vec<Transverse> = Vec::new();
+    let mut seen: Vec<(Transverse, usize)> = Vec::new();
     for line in FIXTURE.lines() {
         let room = room_of(line);
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
@@ -141,8 +204,9 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
             "room {room:?}: the document's own numbers (d={d:?}, edges={edges:?}) band to \
              {recomputed:?} but the network says {expected:?}"
         );
-        if !seen.contains(&expected) {
-            seen.push(expected);
+        match seen.iter_mut().find(|(t, _)| *t == expected) {
+            Some((_, n)) => *n += 1,
+            None => seen.push((expected, 1)),
         }
         checked += 1;
     }
@@ -151,9 +215,32 @@ fn the_band_recomputes_from_the_stored_distance_and_edges() {
         "only {checked} rooms carried a reading; sweep too thin"
     );
     // Anti-vacuity: a sweep that lands in one band everywhere would agree with
-    // any classifier at all. The committed fixture spans all five (25 channel,
-    // 30 bank, 32 floodplain, 4 terrace, 109 dry at capture); three is the
-    // floor below which this stops being a test of the banding.
+    // any classifier at all; three is the floor below which this stops being a
+    // test of the banding.
+    //
+    // THE SPREAD IS PRINTED, NOT WRITTEN DOWN, because The Rill moved it. It
+    // used to read "(25 channel, 30 bank, 32 floodplain, 4 terrace, 109 dry at
+    // capture)"; re-measured after Task 3 rendered the whole land flow tree it
+    // is 41 channel, 22 bank, 26 floodplain, 2 terrace, 109 dry.
+    //
+    // **The dry count did not move, and that is the informative half.** The
+    // fixture's 200 rooms are fixed, and the wet/dry partition came out
+    // identical: the 91 wet rooms re-banded INWARD (channel +16, exactly
+    // balancing bank -8, floodplain -6, terrace -2) while the 109 dry ones
+    // stayed dry. An 8x denser network made the wet rooms wetter and recruited
+    // no new ones.
+    //
+    // **What that is NOT caused by.** The width law was not retuned — Task 1
+    // measured `channel_half_width` and shipped no recalibration
+    // (`CHANNEL_WIDTH_COEFF` is still 8.5e-4), and every one of the four edges
+    // is a fixed multiple of `channel_half_width(drainage, cell_edge)`, so the
+    // bands moved only through `drainage`. The cause is therefore the network
+    // itself: Task 3 renders every downhill step rather than the top 6.7%, and
+    // Task 4 repartitions discharge at branches. Which of those two dominates,
+    // and whether a room re-banded because it got nearer a centreline or
+    // because the drainage under its nearest vertex changed, is NOT measured
+    // here — do not read a decomposition into the counts above.
+    println!("H2-3: {checked} of 200 fixture rooms carried a reading; band spread {seen:?}");
     assert!(
         seen.len() >= 3,
         "the sweep reached only {seen:?}; it no longer exercises the banding"
@@ -411,26 +498,67 @@ fn the_room_declares_which_fields_are_grid_and_channel_resolution() {
 /// Anti-vacuity floors, each stated beside the value measured on seed 42 at
 /// level 6 so a future reader can tell a drifting world from an emptying test.
 ///
-/// Measured: 440 same-bank, same-channel adjacent pairs with a room inside its
-/// own bank edge (460 before the same-line filter, 20 of which select two
-/// different polylines), 126 outright-dry constructed sign changes, 123
-/// constructed inside a terrace band — the last two also after their own
-/// same-line filter (130 and 127 before it). The floors sit near half of each — terrain drift may move a river, but
-/// it will not halve the network.
-const SAME_BANK_PAIRS_FLOOR: usize = 200;
-/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 126.
-const DRY_FLIPS_FLOOR: usize = 60;
-/// See [`SAME_BANK_PAIRS_FLOOR`]. Measured 123.
-const TERRACE_FLIPS_FLOOR: usize = 60;
-/// Transects where a crossing exists at all, at walk depth. Measured 123 of 341.
+/// **RE-MEASURED AT THE RILL'S TASK 3** (fix round 1), which took the network
+/// from 883 vertices to 14,606 by rendering the whole land flow tree. Every
+/// figure below moved and none of the floors had, so each carried 20-27x
+/// headroom against a stated measurement that was no longer true — which is
+/// precisely the state a floor exists to prevent, since a floor that cannot
+/// fire until the population falls by 95% cannot tell a drifting world from an
+/// emptying test. The old figures are kept in parentheses because the RATIO
+/// between them is the finding.
+///
+/// Measured now: **4015** same-bank, same-channel adjacent pairs with a room
+/// inside its own bank edge (was 440 when the doc was written, 597 immediately
+/// before Task 3); **1620** outright-dry constructed sign changes (was 126,
+/// 139 before Task 3); **1456** constructed inside a terrace band (was 123,
+/// 134 before Task 3). The floors sit near half of each — terrain drift may
+/// move a river, but it will not halve the network.
+const SAME_BANK_PAIRS_FLOOR: usize = 2_000;
+/// See [`SAME_BANK_PAIRS_FLOOR`]. Guards `beyond_terrace`; measured 1620.
+const DRY_FLIPS_FLOOR: usize = 800;
+/// See [`SAME_BANK_PAIRS_FLOOR`]. Guards `in_terrace`; measured 1456.
+const TERRACE_FLIPS_FLOOR: usize = 700;
+/// Transects where a crossing exists at all, at walk depth. Measured **96**
+/// over the 395 strided transects plus 25 injected extremes (was 121 of 295
+/// before Task 3, and the doc said 123 of 341 from earlier still).
+///
+/// **This is the one floor that did NOT need raising, and the reason is worth
+/// knowing:** the count FELL while everything else grew, because the sample is
+/// capped at 400 transects and the added reaches are creeks whose rooms mostly
+/// read `NotACrossing`. 60 against 96 is 1.6x headroom — tighter than this
+/// file's usual half-of-measured, and left alone deliberately.
 const CROSSINGS_FLOOR: usize = 60;
-/// Crossings whose reach carries at least `WATERFALL_MIN_DRAINAGE`. Measured 8
-/// — the smallest population any assertion here runs on, and the reason the
-/// ordering claim rather than this count is the primary reference.
+/// Crossings whose reach carries at least `WATERFALL_MIN_DRAINAGE`, **within
+/// the population the discharge test assembles**. Measured **8** (10 before the
+/// ranking was de-duplicated by cell, which spent slots on the same trunk
+/// twice; 15 before Task 3; 8 when the doc was first written).
+///
+/// **READ THIS COUNT'S LIMITATION BEFORE TRUSTING IT.** Since Task 3 the
+/// strided 395-vertex sample contains exactly **one** vertex with Q >= 80 and
+/// it reads `NotACrossing`, so all eight of these come from the 25 extremes
+/// `transects_with_strongest` injects. The count therefore measures its own
+/// enrichment: it can no longer notice "strong water vanished from the sample",
+/// which is the job it was added to do. [`LOUD_REACH_CELLS_FLOOR`] is what
+/// notices that now — the injection SELECTS from the network's loud reaches, it
+/// cannot create them — and this stays only as a floor on the universal
+/// assertion having run on something.
 const STRONG_CROSSINGS_FLOOR: usize = 4;
-/// Vertices that flip verdict on the step length alone. Measured **96 of 96**
-/// examined — every pair that reaches the assertion flips, which is what a
-/// clause deciding something looks like.
+/// Distinct cells in the whole level-6 seed-42 network carrying at least
+/// `WATERFALL_MIN_DRAINAGE`. Measured **34** (91 vertices, since a trunk cell
+/// appears once per run that terminates on it).
+///
+/// This is the floor [`STRONG_CROSSINGS_FLOOR`] used to be before enrichment
+/// made that one circular: it is a property of the WORLD, read straight off
+/// `drainage`, so no sampling choice this file makes can inflate it. A world
+/// that stopped producing rivers big enough to refuse fails here.
+const LOUD_REACH_CELLS_FLOOR: usize = 17;
+/// Vertices that flip verdict on the step length alone. Measured **146 of 146**
+/// examined after The Rill's Task 3 (96 of 96 before it) — every pair that
+/// reaches the assertion flips, which is what a clause deciding something looks
+/// like. The rate at which a sampled vertex QUALIFIES fell from 24% to 9% when
+/// the network grew to the whole land flow tree, because a headwater creek is
+/// narrower than both step lengths and is filtered out; the test's own sample
+/// size absorbs that, and the note is at it.
 ///
 /// It read 98 of 98 until the precondition was restated over the step lengths
 /// the gate actually prices against (`min(home, step)` per step) instead of the
@@ -438,7 +566,7 @@ const STRONG_CROSSINGS_FLOOR: usize = 4;
 /// those two quantities disagreed — i.e. exactly the pairs the old filter was
 /// admitting on a quantity the gate does not use. A narrower population that
 /// still flips at 100% is the better instrument.
-const WIDTH_FLIP_FLOOR: usize = 50;
+const WIDTH_FLIP_FLOOR: usize = 70;
 
 /// Walk depth: six refinement levels below the canonical grid.
 ///
@@ -615,18 +743,83 @@ fn transects_at(ctx: &LocaleContext, wanted: usize, depth: u32) -> (Vec<Transect
                 continue;
             }
             seen += 1;
-            let home = RoomAddr::containing(line.points[j], depth);
-            if net.bank_reading(home.centroid()).is_none() {
-                drops.no_reading += 1;
-                continue;
+            match transect_at_vertex(ctx, i, j, depth) {
+                Some(t) => out.push(t),
+                None => drops.no_reading += 1,
             }
-            out.push(Transect {
-                vertex: (i, j),
-                steps: home.neighbors(),
-                home,
-                edges: net.band_edges[i][j],
-                cell: net.run_cells[i][j],
-            });
+        }
+    }
+    (out, drops, seen)
+}
+
+/// One transect at a named vertex — the body `transects_at` builds each of its
+/// samples from, factored out so a test can name a vertex the stride would not
+/// have reached.
+fn transect_at_vertex(ctx: &LocaleContext, i: usize, j: usize, depth: u32) -> Option<Transect> {
+    let net = ctx.terrain().channels();
+    let home = RoomAddr::containing(net.polylines[i].points[j], depth);
+    net.bank_reading(home.centroid())?;
+    Some(Transect {
+        vertex: (i, j),
+        steps: home.neighbors(),
+        home,
+        edges: net.band_edges[i][j],
+        cell: net.run_cells[i][j],
+    })
+}
+
+/// [`network_transects`], plus the `extra` highest-discharge vertices in the
+/// whole network.
+///
+/// **Why the stride alone stopped being enough** (The Rill, Task 3). A uniform
+/// stride over vertices was a sample of *rivers* while the network rendered
+/// only cells above `RIVER_MIN_DRAINAGE`. It now renders the whole land flow
+/// tree — 14,606 vertices on this world against 883 — and the added reaches are
+/// overwhelmingly headwater creeks, so a 400-sample of it is a sample of
+/// creeks: the strongest reach it happened to contain carried `drainage` 48,
+/// against a `WATERFALL_MIN_DRAINAGE` of 80. The stride is not wrong; it is
+/// still the unbiased sample H2-4 is read over. It is that a claim about *the
+/// strongest water in the world* needs the strongest water in the world to be
+/// in its population, and naming it is not cherry-picking when the claim names
+/// it too.
+///
+/// Deterministic: `total_cmp` on discharge with a `(line, vertex)` tie-break,
+/// and the union is de-duplicated by that same identity. The RANKING is
+/// de-duplicated by **cell** first, because `run_cells` carries a trunk cell
+/// once per run terminating on it — ranking vertices gave 25 slots covering
+/// only 13 distinct reaches.
+fn transects_with_strongest(
+    ctx: &LocaleContext,
+    wanted: usize,
+    extra: usize,
+) -> (Vec<Transect>, Drops, usize) {
+    let (mut out, drops, seen) = network_transects(ctx, wanted);
+    let depth = walk_depth(ctx);
+    let net = ctx.terrain().channels();
+    // ONE SLOT PER DISTINCT CELL, not per vertex. A trunk cell appears in
+    // `run_cells` once for every run that terminates on it, so a naive
+    // vertex-ranking spends its budget on duplicates: measured, the top 25
+    // VERTICES by discharge named only **13 distinct reaches**. The first
+    // (line, vertex) seen for a cell is its representative, which is
+    // deterministic because `run_cells` is in build order.
+    let mut seen_cell: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+    let mut ranked: Vec<(f64, usize, usize)> = Vec::new();
+    for (i, cells) in net.run_cells.iter().enumerate() {
+        for (j, &c) in cells.iter().enumerate() {
+            if seen_cell.insert(c.0) {
+                ranked.push((ctx.terrain().drainage_at(c), i, j));
+            }
+        }
+    }
+    ranked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let already: std::collections::BTreeSet<(usize, usize)> =
+        out.iter().map(|t| t.vertex).collect();
+    for &(_, i, j) in ranked.iter().take(extra) {
+        if already.contains(&(i, j)) {
+            continue;
+        }
+        if let Some(t) = transect_at_vertex(ctx, i, j, depth) {
+            out.push(t);
         }
     }
     (out, drops, seen)
@@ -743,28 +936,54 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///
 /// # What the attribution says, measured on seed 42 at level 6
 ///
+/// **Every figure in this section is now PRINTED by the test.** Three of these
+/// bullets went stale across The Rill's Task 3 and had to be reconciled by
+/// hand; the numbers below are emitted on every run, so read the log and treat
+/// the prose as the explanation rather than the source.
+///
 /// - **The width clause is inert at walk depth.** The widest full channel in
-///   the world is 1.89e-4 rad against a room edge of 2.71e-4, so `2·b0 < step`
-///   holds at every sampled vertex and all the discrimination is done by the
-///   discharge half (`Q < 80`; discharge runs 15 to 146, median 24). It is not
-///   inert in principle — `the_width_clause_binds_when_the_step_shrinks` is the
-///   positive control that exercises it at a depth where it does bind.
-/// - **The conjunction is not the fraction.** The clauses hold on 95.0% of
-///   transects (324 of 341) while 33.7% are Fordable and only 123 transects
-///   have any crossing at all; the gap is the crossing gate itself — the
-///   same-channel clause, the sign change, and §5.3's requirement that a room
-///   stand inside its own bank edge — not §8's criterion. Where the channel is
-///   wider than every step available, both rooms sit on one bank and the
-///   verdict is `NotACrossing` rather than `Impassable`: the geometry refuses
-///   before the criterion is consulted.
-/// - **Two different rivers are a small but real part of the population.** Of
-///   the 171 step pairs whose signs differ at walk depth, **5 are cross-line**
-///   — the two readings were selected against different polylines, so the two
-///   signs are expressed in **different frames** and the comparison between
-///   them is **uninterpretable** — and **all 5 also stand inside a bank edge**,
-///   i.e. every one of them was admitted as a crossing before
-///   `crossing_between` gained its same-channel clause. The printed counts
-///   above are read from the network, not from the gate.
+///   the world is 1.892e-4 rad against a room edge of 2.831e-4, so `2·b0 < step`
+///   holds at **every** sampled vertex (395 of 395) and all the discrimination
+///   is done by the discharge half. Task 3 did not move the widest channel —
+///   the reaches it added are narrower than the ones already there — but it
+///   moved the discharge distribution underneath it: over the sampled
+///   transects, `drainage` now runs **min 0, median 2, max 102** (it ran 15 to
+///   146, median 24, when only river cells were rendered; the 0 is a mouth
+///   vertex, whose cell is the sea). So the discharge clause holds on 99.75% of
+///   transects rather than 95.0%, and does correspondingly less discriminating.
+///   The clause is not inert in principle —
+///   `the_width_clause_binds_when_the_step_shrinks` is the positive control
+///   that exercises it at a depth where it does bind.
+/// - **The conjunction is not the fraction.** The clauses hold on **99.75%** of
+///   transects (394 of 395) while **22.28%** are Fordable and only **88**
+///   transects have any crossing at all (88 Fordable + 0 Impassable, printed as
+///   `crossings (F + I)`); the gap is the crossing gate itself —
+///   the same-channel clause, the sign change, and §5.3's requirement that a
+///   room stand inside its own bank edge — not §8's criterion. (It was 95.0%,
+///   33.7% and 123 of 341 at The Ford, so the gap has WIDENED: the criterion
+///   admits nearly everything and the geometry refuses more of it.)
+///
+///   **The crossing count belongs to THIS test's population and nothing
+///   else.** It read 96 for one round, which is `CROSSINGS_FLOOR`'s figure and
+///   belongs to the *enriched* population
+///   `the_discharge_clause_makes_the_strongest_crossing_impassable` assembles —
+///   these 395 strided transects plus 25 injected extremes. Two populations,
+///   two numbers, and the wrong one was transcribed while reconciling the
+///   figure that preceded it. It is a printed local now.
+///
+///   Where the
+///   channel is wider than every step available, both rooms sit on one bank and
+///   the verdict is `NotACrossing` rather than `Impassable`: the geometry
+///   refuses before the criterion is consulted.
+/// - **Two different rivers are no longer a small part of the population.** Of
+///   the **203** step pairs whose signs differ at walk depth, **36 are
+///   cross-line** — the two readings were selected against different polylines,
+///   so the two signs are expressed in **different frames** and the comparison
+///   between them is **uninterpretable** — and **22 of the 36 also stand inside
+///   a bank edge**, i.e. were admitted as crossings before `crossing_between`
+///   gained its same-channel clause. At The Ford it was 5 of 171, and all 5
+///   were inside a bank edge. The printed counts above are read from the
+///   network, not from the gate.
 ///
 ///   **"Uninterpretable" is the exact claim, and it is weaker than "nothing is
 ///   there".** A cross-line pair says the two signs cannot be compared; it does
@@ -778,22 +997,115 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///   knows only its own winning line. Recovering those crossings would need a
 ///   confluence-aware query (`run_cells` states the join topology outright,
 ///   which is why it is published) — not a loosening of this clause.
-/// - **Measured, at walk depth: 115 Fordable, 8 Impassable, 218 NotACrossing of
-///   341 — a fraction of 0.3372.** The step sweep: 0.2170 one level up (a
-///   longer step reaches further but puts the walker's rooms outside the bank
-///   band), 0.3372 at walk depth, 0.3900 one level down, 0.1026 two, 0.0000
-///   three — by then no step spans the water.
+/// # THE RILL, TASK 3: THIS WITNESS MOVED AND LOST A BRANCH
 ///
-///   **The same-channel clause moved the sweep and not the headline.** Adding
-///   it left walk depth exactly where it was (115/8/218, 0.3372) because none
-///   of the 5 cross-line pairs was the *deciding* step for its transect — each
-///   of those transects reached the same verdict through a same-line step
-///   anyway. One level up it moved 0.2229 → **0.2170** (76 → 74 Fordable) and
-///   one level down 0.3959 → **0.3900** (135 → 133); depths two and three
-///   below were unchanged. This is a **correction, not a tuning**: it *adds* a
-///   constraint (the two readings must be of the same river), which is the
-///   test that separates a correction from a rescue, and it was adopted before
-///   its effect on the fraction was known.
+/// Rendering the whole land flow tree (883 -> 14,606 vertices) moved the
+/// shipped reading without moving the interval it is scored against, so
+/// **nothing here went red and the change would have been silent**. Measured
+/// on the identical instrument, immediately before and after (the pre arm was
+/// reconstructed by reverting `build`'s reach predicate alone, and verified
+/// byte-identical to the pre-change level-5 golden):
+///
+/// ```text
+///                        pre                    post
+///   |V'| transects       295                    395   (the 400 cap now binds)
+///   Fordable             106                     88
+///   Impassable             8                      0
+///   NotACrossing         181                    307
+///   fordable fraction    0.3593                 0.2228   (-38% relative)
+///   drainage clause      281/295 (0.9525)       394/395 (0.9975)
+///   sign-flip pairs      150                    203
+///   of which CROSS-LINE    3                     36      (12x)
+/// ```
+///
+/// **The `Impassable` branch is now unexercised in this witness, and restoring
+/// it here is DECLINED ON COST rather than impossible.** At walk depth the
+/// width clause is inert (395/395), so `Impassable` requires a LOUD reach
+/// (`Q >= WATERFALL_MIN_DRAINAGE`) that is also a crossing. The network holds
+/// **91 loud vertices of 14,606** (0.62%), so a uniform 395-transect stride
+/// expects **2.46** of them — printed by this test as `network loud vertices`
+/// rather than typed, because it was typed wrong once: 0.67 is what you get by
+/// substituting the 25 injected extremes for the 91 loud vertices, and it
+/// contradicted the sample-size arithmetic two sentences later. Measured:
+/// exactly **one** loud vertex, and it reads `NotACrossing`.
+///
+/// **The cost of restoring it, from printed numbers on both arms.** The pre arm
+/// sampled 295 of 883 vertices and its `drainage clause` read 281, so **14**
+/// loud vertices were sampled and 8 of them were `Impassable`. Reaching 14
+/// again at 91-in-14,606 needs `14 × 14606/91 ≈ **2,247** transects — a **5.7x**
+/// sample`, which would take this test from ~8 s to roughly 45 s on the commit
+/// gate. (Not the 12x an earlier draft of this paragraph claimed; that figure
+/// was derived from the wrong expectation.) So the branch is **closer to
+/// recoverable than first stated**, and it is still declined — but the ordering
+/// of the reasons matters and the first one is not cost:
+///
+/// 1. **Enrichment is ruled out on correctness, not price.** Injecting loud
+///    reaches biases the very fraction this test exists to report.
+/// 2. **Enlargement is unbiased and merely expensive** — 5.7x for one gate
+///    test — and it is not even guaranteed to work: the conversion from "loud
+///    vertex sampled" to "`Impassable` verdict" was 8 of 14 pre, and the one
+///    loud vertex sampled post read `NotACrossing`, so 2,247 transects buys the
+///    sample, not the branch.
+/// 3. **A rare-branch positive control does not belong in an unbiased-fraction
+///    witness anyway.** It is exercised elsewhere, which is the better home:
+///    `the_discharge_clause_makes_the_strongest_crossing_impassable` asserts
+///    every loud crossing reads `Impassable` over a deliberately enriched
+///    population, and `LOUD_REACH_CELLS_FLOOR` guards that the world still has
+///    34 loud cells to enrich from.
+///
+/// The loud count, the network total and the stride's expectation are all
+/// printed by this test, so the log carries the arithmetic rather than only
+/// this paragraph.
+///
+/// **The 12x jump in cross-line pairs is the other half of the same fact.** The
+/// same-channel clause now refuses twelve times as many comparisons as the
+/// paragraph above was written against — 36 pairs, 22 of them inside a bank
+/// edge — so its false-negative side, described above as small, is no longer
+/// small. It is still the right trade, and it is now a much larger one.
+///
+/// - **Measured, at walk depth: 88 Fordable, 0 Impassable, 307 NotACrossing of
+///   395 — a fraction of 0.2228** (The Rill, Task 3). Two earlier readings, on
+///   the same instrument and progressively larger networks: 106/8/181 of 295,
+///   **0.3593**, immediately before Task 3; and 115/8/218 of 341, **0.3372**,
+///   at The Ford, which is the figure the rest of this doc block was written
+///   against.
+///
+///   **The step sweep changed SHAPE, not only level, and that is a finding
+///   about the world rather than about the instrument:**
+///
+///   ```text
+///     depth   step (rad)   The Ford   pre-Task-3   post-Task-3
+///      11      5.66e-4      0.2170      0.2169       0.1190
+///      12*     2.83e-4      0.3372      0.3593       0.2228
+///      13      1.42e-4      0.3900      0.4339       0.3089
+///      14      7.08e-5      0.1026      0.1017       0.3342
+///      15      3.54e-5      0.0000      0.0000       0.1848
+///     (* walk depth)
+///   ```
+///
+///   The peak moved from depth 13 to **depth 14**, and the collapse to zero at
+///   depth 15 — "by then no step spans the water", as this bullet used to read
+///   — **no longer happens**. The mechanism is the width law, not the gate: a
+///   3.54e-5 rad step cannot straddle a 1.9e-4 rad mainstem, which is what
+///   every reach in the old network was, but it comfortably straddles a
+///   7.35e-6 rad headwater creek, which is what most of the new one is. A
+///   denser network means there is still water to ford three levels below walk
+///   depth. Anyone reading fordability as a function of traversal scale should
+///   take this table, not the single walk-depth row.
+///
+///   **The same-channel clause moved the sweep and not the headline — as
+///   measured AT THE FORD, on a 341-transect population with 5 cross-line
+///   pairs.** Adding it left walk depth exactly where it was (115/8/218,
+///   0.3372) because none of those 5 was the *deciding* step for its transect.
+///   One level up it moved 0.2229 → 0.2170 (76 → 74 Fordable) and one level
+///   down 0.3959 → 0.3900 (135 → 133); depths two and three below were
+///   unchanged. This is a **correction, not a tuning**: it *adds* a constraint
+///   (the two readings must be of the same river), which is the test that
+///   separates a correction from a rescue, and it was adopted before its effect
+///   on the fraction was known. **The attribution is not re-derived for the
+///   current population and should not be read as if it were**: cross-line
+///   pairs are now 36 rather than 5, so how much the clause moves the sweep is
+///   an open number, not the one above.
 ///
 /// # H2-4 IS NOT RESOLVED, AND THE ASSERTION BELOW IS NOT A CONFIRMATION
 ///
@@ -810,7 +1122,8 @@ fn same_bank_neighbours_are_not_a_crossing() {
 ///    population was 34 of 341 pairs and read **0.7059** — **also outside
 ///    [0.10, 0.70]**, i.e. a *falsifying* reading, not merely a thin one;
 /// 3. the transect was rebuilt around three mesh steps per vertex — **adopted
-///    directly after that falsifying reading** — giving the **0.3372** above.
+///    directly after that falsifying reading** — giving **0.3372**, The Ford's
+///    column in the sweep table above.
 ///
 /// A fourth change landed in the pre-merge fix wave, and it is deliberately not
 /// in that list: `crossing_between` gained its same-channel clause. That is a
@@ -826,9 +1139,13 @@ fn same_bank_neighbours_are_not_a_crossing() {
 /// epistemic status of a hypothesis whose free parameter moved four times under
 /// unblinded observation.
 ///
-/// **So: H2-4 was not tested under preregistration and is not resolved. 0.3372
-/// at one room edge at walk depth is reportable as a measurement of the world at
-/// a stated step length — not as a confirmation of the [0.10, 0.70] interval.**
+/// **So: H2-4 was not tested under preregistration and is not resolved. The
+/// current reading — 0.2228 at one room edge at walk depth, on the whole-flow-
+/// tree network — is reportable as a measurement of the world at a stated step
+/// length AND a stated network, not as a confirmation of the [0.10, 0.70]
+/// interval.** Quote it with both qualifiers: the same instrument read 0.3372
+/// and 0.3593 on the two sparser networks that preceded it, all three inside
+/// the interval, so the interval is not what is distinguishing them.
 /// The range check below is a **witness** that pins today's reading and reddens
 /// if it moves; it is not a hypothesis test, and this test's name should be read
 /// as naming the check rather than announcing a result.
@@ -846,6 +1163,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     let mut drainage_clause = 0usize;
     let mut both_clauses = 0usize;
     let mut sign_flip_pairs = 0usize;
+    let mut loud_reaches = 0usize;
     let mut cross_line_pairs = 0usize;
     let mut cross_line_admitted = 0usize;
     for t in &transects {
@@ -899,6 +1217,7 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
         let step = room_edge(&t.home);
         let narrow = 2.0 * t.edges[0] < step;
         let quiet = ctx.terrain().drainage_at(t.cell) < WATERFALL_MIN_DRAINAGE;
+        loud_reaches += usize::from(!quiet);
         width_clause += usize::from(narrow);
         drainage_clause += usize::from(quiet);
         both_clauses += usize::from(narrow && quiet);
@@ -906,6 +1225,40 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 
     let usable = transects.len();
     let frac = fordable as f64 / usable as f64;
+    // The attribution numbers, COMPUTED AND PRINTED rather than left in prose.
+    // Three bullets in this doc block went stale across The Rill's Task 3 and
+    // had to be reconciled by hand; a number the test emits cannot.
+    let widest_full = net.widest_half_width() * 2.0;
+    // Crossings, computed rather than quoted. The doc block above stated 96
+    // here for one round — `CROSSINGS_FLOOR`'s number, which belongs to the
+    // ENRICHED population `the_discharge_clause_…` assembles (395 strided plus
+    // 25 injected extremes), not to this test's unenriched 395. A figure
+    // transcribed from a neighbouring population is exactly the defect this
+    // whole doc block was rewritten to remove, so this one is a local too.
+    let crossings = fordable + impassable;
+    // What a UNIFORM STRIDE can expect to catch of the network's loud reaches —
+    // the arithmetic behind declining to restore the `Impassable` branch here.
+    // Printed because it was typed wrong once: 91 loud of 14,606 at a 395
+    // sample is 2.46, and 0.67 is what you get by substituting the 25 injected
+    // extremes for the 91 loud vertices.
+    let network_vertices: usize = net.polylines.iter().map(|l| l.points.len()).sum();
+    let network_loud = net
+        .run_cells
+        .iter()
+        .flatten()
+        .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
+        .count();
+    let loud_expected = usable as f64 * network_loud as f64 / network_vertices.max(1) as f64;
+    let mut discharges: Vec<f64> = transects
+        .iter()
+        .map(|t| ctx.terrain().drainage_at(t.cell))
+        .collect();
+    discharges.sort_by(f64::total_cmp);
+    let (q_min, q_med, q_max) = (
+        discharges[0],
+        discharges[discharges.len() / 2],
+        discharges[discharges.len() - 1],
+    );
 
     // This floor comes BEFORE the diagnostic print, which indexes
     // `transects[0]` for the step length: on an empty population the print
@@ -918,8 +1271,17 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
     // CONSTRUCT each transect from a room and its own `neighbors()`, both drop
     // causes became structurally impossible and `|V'| = |V|` always. So this
     // now guards the network shrinking — a terrain change that stops producing
-    // polylines — not the sample selecting itself. Measured |V'| = 341 of 341
-    // sampled (681 vertices, stride 2), no drops.
+    // polylines — not the sample selecting itself.
+    //
+    // AND SINCE THE RILL'S TASK 3 IT GUARDS CATASTROPHE, NOT DRIFT, because
+    // `wanted` caps the sample: measured |V'| = 395 of 395 sampled, off a
+    // network of **14,606** vertices at stride 37 (it was 341 of 341 off 681
+    // vertices at stride 2 when this comment was written). |V'| is now pinned
+    // near 400 by the cap whatever the network does, so this can only fire on a
+    // collapse below ~200 vertices — a 73x shrink. Raising it toward 400 would
+    // make it a guard on the CAP rather than on the world. The floor that
+    // actually notices a shrinking network is
+    // `rill_properties.rs::MIN_RUNS_PER_SEED`, which reads the network itself.
     assert!(
         usable >= 200,
         "only {usable} usable transects of {sampled} sampled ({drops:?}); the fraction is an \
@@ -938,9 +1300,17 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
          width clause  (2*b0<step) = {width_clause} ({:.4})\n  \
          drainage clause (Q<{WATERFALL_MIN_DRAINAGE}) = {drainage_clause} ({:.4})\n  \
          conjunction               = {both_clauses} ({:.4})\n  \
+         loud reaches (Q>={WATERFALL_MIN_DRAINAGE}) = {loud_reaches}  (an Impassable verdict at \
+         this depth needs one; see this test's doc)\n  \
          sign-flip step pairs      = {sign_flip_pairs}\n  \
          of which CROSS-LINE       = {cross_line_pairs} ({cross_line_admitted} also inside a \
-         bank edge, i.e. admitted before the same-channel clause)",
+         bank edge, i.e. admitted before the same-channel clause)\n  \
+         crossings (F + I)         = {crossings}  (this test's UNENRICHED population; the \
+         discharge test's is larger because it injects extremes)\n  \
+         widest full channel       = {widest_full:e} rad (vs one room edge above)\n  \
+         transect discharge        = min {q_min}, median {q_med}, max {q_max}\n  \
+         network loud vertices     = {network_loud} of {network_vertices}; a uniform \
+         {usable}-transect stride expects {loud_expected:.2} of them",
         ctx.globe_level(),
         walk_depth(&ctx),
         room_edge(&transects[0].home),
@@ -996,6 +1366,13 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 /// by less than the interval's width — the suite stays green while half the
 /// task's named deliverable is gone.
 ///
+/// **The population is the strided sample PLUS the network's 25 strongest
+/// reaches** (The Rill, Task 3). Once every land cell is rendered, a uniform
+/// stride over 14,606 vertices is a sample of headwater creeks — its strongest
+/// reach carried `drainage` 48 against a threshold of 80, and this test went red
+/// for that reason and no other. See `transects_with_strongest` for why naming
+/// the extreme is not cherry-picking: the claim names it.
+///
 /// **The reference is the world's own discharge ORDERING, not the criterion's
 /// threshold.** Among the transects where a crossing exists at all, the one
 /// carrying the most water must not be wadeable and the one carrying the least
@@ -1008,7 +1385,8 @@ fn the_fordable_fraction_of_the_network_is_within_its_interval() {
 fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
-    let (transects, _, _) = network_transects(&ctx, 400);
+    let (transects, _, _) = transects_with_strongest(&ctx, 400, 25);
+    let net = ctx.terrain().channels();
 
     // Every transect where a crossing exists, paired with the discharge of the
     // reach it transects. `total_cmp` with an index tie-break, so the extremes
@@ -1071,10 +1449,36 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
             strong += 1;
         }
     }
-    println!("crossings above the discharge threshold: {strong}");
+    // THE WORLD-SIDE FLOOR, which is the one that can notice a disappearance.
+    // `strong` above counts crossings inside a population this test ENRICHES
+    // with the 25 strongest reaches, so it cannot fall while the enrichment
+    // works — measured, the strided 395 contribute exactly one Q >= 80 vertex
+    // and it is `NotACrossing`, so all of `strong` comes from the injection.
+    // This counts distinct loud CELLS in the network itself, read off
+    // `drainage`, which no sampling choice here can inflate.
+    let loud_cells: std::collections::BTreeSet<u32> = net
+        .run_cells
+        .iter()
+        .flatten()
+        .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
+        .map(|c| c.0)
+        .collect();
+    println!(
+        "crossings above the discharge threshold: {strong} (from a population enriched with the \
+         25 strongest reaches); distinct loud cells in the network: {}",
+        loud_cells.len()
+    );
+    assert!(
+        loud_cells.len() >= LOUD_REACH_CELLS_FLOOR,
+        "only {} distinct cells in the whole network carry Q >= {WATERFALL_MIN_DRAINAGE} \
+         (measured 34) — the world has stopped producing water strong enough to refuse, and no \
+         amount of sampling can put it back",
+        loud_cells.len()
+    );
     assert!(
         strong >= STRONG_CROSSINGS_FLOOR,
-        "only {strong} crossings carry enough water to be refused; the clause is barely exercised"
+        "only {strong} crossings carry enough water to be refused; the universal assertion above \
+         ran on almost nothing"
     );
 }
 
@@ -1082,7 +1486,11 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
 ///
 /// At walk depth the clause is inert on seed 42: the widest full channel is
 /// 1.89e-4 rad against a 2.71e-4 room edge, so `2·b0 < step` holds at every
-/// vertex and deleting the clause changes nothing. That is a fact about this
+/// vertex and deleting the clause changes nothing. (The Rill's Task 3 widened
+/// the network to the whole land flow tree without moving that: the reaches it
+/// added are NARROWER than the ones already there, so the widest channel in the
+/// world is unchanged and the clause is inert at walk depth for the same
+/// reason.) That is a fact about this
 /// world at this depth, not about the criterion — and an unexercised clause is
 /// an unguarded one.
 ///
@@ -1104,8 +1512,18 @@ fn the_width_clause_binds_when_the_step_shrinks() {
     let ctx = LocaleContext::build(&world).unwrap();
     let shallow_depth = walk_depth(&ctx);
     let deep_depth = shallow_depth + 3;
-    let (shallow, _, _) = transects_at(&ctx, 400, shallow_depth);
-    let (deep, _, _) = transects_at(&ctx, 400, deep_depth);
+    // 1600, not the 400 the other tests sample. Once the network renders the
+    // whole land flow tree, the qualifying population — reaches whose full
+    // width falls BETWEEN the deep step and the shallow one — is a shrinking
+    // fraction of a growing sample: 96 of 400 (24%) when only river cells were
+    // rendered, 37 of 400 (9%) now, because a headwater creek is narrower than
+    // both steps and is filtered out at the `wide >= longest_deep` clause. The
+    // rate is the measurement; the count is the anti-vacuity floor, and it is
+    // restored by sampling more rather than by lowering the floor. Both depths
+    // take the same `wanted` so the two strides agree and the vertices match.
+    let wanted = 1_600;
+    let (shallow, _, _) = transects_at(&ctx, wanted, shallow_depth);
+    let (deep, _, _) = transects_at(&ctx, wanted, deep_depth);
 
     let mut flipped = 0usize;
     let mut examined = 0usize;

@@ -60,6 +60,38 @@ its specification cannot catch a specification that disagrees with itself, and
 one of these did: the contention guard was wired backwards against a rationale
 written three lines above it, and passed review as faithful to the plan.
 
+The Sexton (2026-08-13) is the first campaign to **pair** one of those
+generators with a verifier in the everyday command, and the result argues the
+floor is right. The census is no longer checked only by the tier `make gate`
+ignores: a three-world, all-metric sentinel now runs *inside* the commit gate
+against the committed census, for about fifteen CPU-seconds. Within hours it
+had verified three other campaigns' byte-identity claims — The Millrace's, The
+Fathom's, The Holdfast's — on the census path, which is exactly the path a
+worldgen campaign cannot cheaply check for itself. That is the pairing the
+floor asked for, and it fires on a schedule nobody has to remember.
+
+The same campaign also supplies the sharpest instance yet of the floor's own
+failure mode, and it is worth scoring honestly against the bet. Decision 0130's
+channel work added **467 CPU-seconds** to the commit gate and made one test the
+slowest in the workspace at 187 s — unnoticed for the same structural reason,
+because the instrument that would have seen it (`make ci`) had run **nine times
+against `make gate`'s 368**. An unpaired check scores as unchecked; so does a
+paired one nobody runs. The Sexton folded the alarm into the gate, taking that
+instrument from nine samples a month to 368.
+
+**Score: the bet moves toward checkable, and the practice sharpens.** Four more
+instances of a check that could not fire arrived from this campaign's own plan
+text — an extractor whose grep matched zero of 3,449 real events, a
+scratch-sweep test that passed without entering the code under test, a
+worktree enumeration that would have switched the main checkout, and a status
+read from a file that reported green when the file was empty. All four were
+caught by making the check fail on command. But three of the campaign's own
+*measuring instruments* also lied — a sampler counting its own `grep`, a
+false-negative `grep`, a planted violation that was not one — which extends
+the practice by one clause: **make it fail on command, and run the positive
+control, because a negative result from an instrument nobody has seen fire is
+not evidence.**
+
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
 draws no seed and commits no fact — and produced the same family anyway, from
@@ -1445,6 +1477,26 @@ that could not, by construction, reflect the layer being changed, and four
 stages of evidence were vacuous before anyone noticed. The check that a
 measurement can move at all belongs beside the measurement, not after it.
 
+[The Millrace](./chronicle/the-millrace.md) supplies the sharpest measurement
+of that cost this chapter has, and it is a count rather than an argument. One
+of the census columns this chapter counts among the world's self-checks —
+`channel-connectivity`, which asks whether a tributary's junction with its
+trunk stays inside the channel band — was asking its continuation question
+with a stricter test than the network's own, so **82.83% of its walks ended
+before reaching the join they existed to test** and scored intact without ever
+testing one. The column read 1.0000. Repaired, on sixty-four worlds, it still
+reads 1.0000 — the value was right and the claim behind it was empty, which is
+the exact failure a drift check cannot see. The campaign then went looking for
+the same shape in its own work and found it **five more times**, twice inside
+the repair for the first instance and once in the file whose own documentation
+is a warning about it. Two consequences for this chapter's confidence
+accounting. A column's *value* being stable across campaigns is evidence about
+the world only if something independent establishes the column can move at all;
+and the discipline that catches these is not review but **mutation** — every
+one of the six was settled by neutralising the code under test and watching
+whether anything went red. Nothing in the standing gate does that for a
+Laboratory metric.
+
 [The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
 about weather and world structure that no earlier chapter entry had staked,
 and it too came back **no** — a double falsification rather than a single
@@ -1488,6 +1540,40 @@ And the result is a claim about **land only**: water edges were
 deliberately left ungated this campaign, so "the poles do not vary" may be
 true for land and false for the sea ice that borders it, on coastlines
 whose land itself never varies because it is permanently frozen.
+
+*Re-scored sideways by [The Fathom](./chronicle/the-fathom.md) (2026-08-13),
+which did not settle the underworld question above but corrected the premise
+the sentence rests on.*
+
+**"The way the sea's depth layers already are" was more generous to the sea
+than the sea deserved.** That clause reads as though the marine model were a
+finished thing to copy. It was not. The sea had the *vocabulary* — five pelagic
+strata, each pairing a community with a depth — and it did not have the
+*enumeration*: the accessor returned exactly one stratum per cell, the one its
+floor lies in, so the water standing above that floor was unaskable. A cell over
+a vent reported the vent and nothing about the kilometre of open water above it.
+Declaring the underworld as places was therefore never going to be a matter of
+copying a working pattern sideways; the pattern had to be built first, and this
+campaign built it.
+
+Two things fell out of asking the question for the first time, and both lower
+confidence in the sea as an exemplar. **Seed 42 has no cell whose floor reaches
+`Abyssal` or `Hadal`** — column heights come back `{1: 1749, 2: 6669,
+3: 21478}` over 29,896 ocean cells, so two of the five pelagic strata never
+occur as a floor in the flagship world at all, and the deepest arm of the marine
+classifier is unreachable there. And **8,916 of 9,695 sea-ice cells (92%) carry
+a stratum below the epipelagic** — ice filed four kilometres down, because the
+classifier picks sea ice on surface temperature with no depth condition while
+taking its stratum from the floor. Neither is a defect this campaign introduced;
+both are things that could not be seen while one value came back per cell, and
+both were left standing deliberately rather than repaired, because the campaign's
+acceptance criterion was that no world byte move.
+
+So the underworld question is **still open**, exactly as stated above, and the
+route to it is one step longer than the chapter thought: the column had to
+become askable before anything could be declared in it. What is now settled is
+only that asking is possible. Whether a realm's hard gate generalises past caves
+remains the thing a campaign placing a people underground will find out.
 
 ## Precedented but nontrivial (moderate confidence)
 
@@ -1701,6 +1787,40 @@ whose land itself never varies because it is permanently frozen.
   What moved is the menu: crossing the floor by *addition and disclosure* costs
   no conservation proof, and is available to any quantity willing to travel
   beside the coarse field rather than replacing it.
+  **Re-scored by [The Rill](./chronicle/the-rill.md) (2026-08-13): the
+  principle was *measured failing*, at a magnitude no previous campaign had
+  produced, and the repair converts it from a rule a design must respect into
+  a property of what kind of quantity is being refined.** Every re-score above
+  argues about what a fine layer may add, subtract or disclose. The Rill asked
+  the mechanical question underneath all of them — *which quantity is being
+  refined* — and got a dichotomy with a measurement on each side. A **scalar**
+  refines by area partition: the parts sum to the whole, so the fine answer
+  cannot disagree with the coarse one, by construction rather than by test. A
+  **direction** refines by a transfer operator between a mesh and its dual, and
+  **there is no canonical one**. The campaign built the direction lift first,
+  in good faith, and it delivered 26–31% of land to the sea where the coarse
+  graph delivers 74–82%, doubled the basin count, and sent 6.0–7.5% of interior
+  faces to a terminus outside their own coarse basin. Rebuilt as a partition of
+  the scalar with directions *inherited from attachment* rather than computed,
+  basin agreement is 41,415 of 41,415. Three consequences for this row. First,
+  the row's own long-standing framing was subtly wrong about the mesh: it has
+  read "a level-7 room literally *is* a level-7 triangle" as licence to lower
+  coarse structure onto rooms, and cells are the icosphere's **vertices** while
+  rooms are its **faces**, so a coarse flow edge runs *along* a room's boundary
+  and never through it — the primal/dual distinction is load-bearing and the
+  active-region swap this row still awaits inherits it. Second, **every local
+  invariant held while the composed one failed**, which is the sharpest
+  statement yet of what a refinement owes: agreement checked one step at a time
+  is not agreement, and the reference must be the coarse graph's *composed*
+  answer. Third, the harm has a visible signature — routing a direction out of
+  every element gives every element a channel, and the campaign's world came
+  out with 5–6% of its land underwater against a 0.5% ceiling. **Saturation is
+  the signature of having refined the wrong quantity**, and it is cheap to look
+  for. The bet's confidence rises: it now has a mechanical test (is this
+  quantity a scalar or a direction?) that predicts violations before they are
+  built, alongside The Grain's test (is this field ordinal or nominal?) that
+  predicts them for values. What is unchanged is that both tests were bought by
+  building the violation first.
 
 
 ## Genuinely open — split by whether the world can grade itself

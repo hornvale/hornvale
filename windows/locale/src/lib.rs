@@ -5,6 +5,7 @@ mod streams;
 pub use streams::stream_labels;
 
 mod regime;
+pub use micro::{grounded_wetness, wetness_is_grounded};
 pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 
 mod substrate;
@@ -22,6 +23,7 @@ use hornvale_kernel::{
     CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, band, quantize,
 };
 use hornvale_terrain::GeneratedTerrain;
+use hornvale_terrain::branch::{CatchmentCut, rill_reading};
 pub use hornvale_terrain::channel::Transverse;
 pub use hornvale_terrain::{CaveKind, WaterKind};
 use hornvale_worldgen::{climate_from, terrain_of};
@@ -614,36 +616,54 @@ impl LocaleContext {
     /// A cell's floor decides how deep its water goes — 50 m of water over a
     /// reef holds only the epipelagic, while 3,000 m holds three layers. This
     /// is the list a diver descends.
+    ///
+    /// Delegates to [`GeneratedClimate::strata_at`] for the water case (the
+    /// same take-the-ladder-up-to-the-floor derivation this method used to
+    /// hand-roll — collapsed to one implementation, The Fathom, so the two
+    /// could not silently diverge). The non-water guard stays here rather
+    /// than moving into `strata_at`: this method answers "what water is
+    /// there to descend through", so on land the answer is `Vec::new()`, not
+    /// climate's `[Surface]` (its answer for a *land* cell's own one-stratum
+    /// ladder — a different question this method never asks).
     pub fn water_column_at(&self, cell: CellId) -> Vec<Stratum> {
-        let expr = self.climate.biome_expr_at(cell);
-        if expr.realm != Realm::WATERWORLD {
+        if self.climate.biome_expr_at(cell).realm != Realm::WATERWORLD {
             return Vec::new();
         }
-        let floor = expr.stratum;
-        Realm::WATERWORLD
-            .strata()
-            .iter()
-            .copied()
-            .take_while(|s| *s != floor)
-            .chain(std::iter::once(floor))
-            .collect()
+        self.climate.strata_at(cell)
     }
 
     /// The biome expression at `cell` as seen from `stratum`. At the sea floor
     /// this is the cell's own community — a reef, a vent, a kelp forest. Above
     /// it there is only open water: the community lives on the floor, and
     /// floating a thousand metres over a reef is not being at the reef.
+    ///
+    /// Delegates to [`GeneratedClimate::biome_expr_at_stratum`] for every
+    /// stratum on the cell's own realm ladder at or above its floor (the
+    /// in-column cases). **The fallback below is live, not dead code**: the
+    /// stratum a caller passes here does not provably always resolve to a
+    /// cell whose column it is in-bounds for — `windows/vessel/src/
+    /// session.rs`'s `column_here()` (the source of a possessed session's
+    /// `submerged` stratum) picks its cell via
+    /// `corners.iter().max_by_key(|c| c.weight)`, which is Rust's
+    /// last-element-wins tie-break, while this window's own
+    /// `dominant_corner` (used by the two `describe_*` callers at `:763`/
+    /// `:792` that ultimately reach this method) tie-breaks to the *lowest*
+    /// `CellId` — and `RoomAddr::corner_weights` does not sort its three
+    /// corners by id, so the two selections are not provably identical on an
+    /// exact corner-weight tie. **BELOW-FLOOR FALLBACK, PRESERVED VERBATIM
+    /// AND KNOWN WRONG:** a rung beneath the seabed (or, on land, any
+    /// stratum but `Surface`) is rock, and this answers open water. Kept
+    /// byte-for-byte because The Fathom may not move behaviour; see
+    /// followup F-10.
     pub fn expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> BiomeExpr {
         let expr = self.climate.biome_expr_at(cell);
-        if stratum == expr.stratum {
-            expr
-        } else {
-            BiomeExpr {
+        self.climate
+            .biome_expr_at_stratum(cell, stratum)
+            .unwrap_or(BiomeExpr {
                 realm: expr.realm,
                 formation: Formation::OpenWater,
                 stratum,
-            }
-        }
+            })
     }
 
     /// [`LocaleContext::describe`], optionally as seen from a stratum within
@@ -787,11 +807,33 @@ impl LocaleContext {
         };
 
         let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
-        let micro = crate::micro::micro_field(addr.seed(self.seed));
         let expr = match stratum {
             Some(st) => self.expr_at_stratum(best.0, st),
             None => self.climate.biome_expr_at(best.0),
         };
+        // Wetness is a budget and an allocation (The Rill, R-7/R-8): the
+        // climate supply this room's cells receive, redistributed by where the
+        // room sits relative to its own sub-cell watercourse. Grounded only
+        // where the axis means ground wetness — at sea the same axis is the
+        // set of the current, on ice it is snow cover, and in the rock column
+        // it is seep, and a river's proximity governs none of those.
+        let grounded = crate::micro::wetness_is_grounded(expr).then(|| {
+            let globe = self.terrain.globe();
+            crate::micro::grounded_wetness(
+                fields.moisture,
+                rill_reading(
+                    addr.centroid(),
+                    self.terrain.channels(),
+                    globe,
+                    self.terrain.geosphere(),
+                    &self.index,
+                    // `Drawn`, never `Even`: `Even` is R-5's falsification
+                    // arm and is not a production partition.
+                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
+                ),
+            )
+        });
+        let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
         let mut regime = crate::grammar::derived_regime(self.seed, addr, expr, substrate, micro);
         if let Some(placed) = self.budget.regime_at(best.0) {
             let negations = Negations {

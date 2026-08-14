@@ -9,6 +9,7 @@
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
+#   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
@@ -23,29 +24,153 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full seam-guard seam-guard-list ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-quick: fmt-check clippy type-audit type-audit-report ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
+quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
+	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
+
+quick-run: fmt-check clippy type-audit type-audit-report
 
 gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
 
-# The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
-# and `ci-run` use. Until this split, docs/timings.md carried ZERO rows
-# labelled `gate` (0086's amendment): the ledger built to catch a suite
-# creeping "65s -> 43.5 min" was never wired to the most-run expensive command
-# in the repo, so a 4-minute budget drifting to 15+ was never observable.
-# Read them filtered — `scripts/timed.sh report gate` — because gates are
-# frequent and will dominate the ledger by row count.
-gate-run: fmt-check clippy type-audit type-audit-report test
-	@bash scripts/census-advisory.sh || true
+# The gate's body, split out so `timed.sh` can wrap it. Until this split,
+# docs/timings.md carried ZERO rows labelled `gate` (0086's amendment): the
+# ledger built to catch a suite creeping "65s -> 43.5 min" was never wired to
+# the most-run expensive command in the repo, so a 4-minute budget drifting to
+# 15+ was never observable. Read them filtered — `scripts/timed.sh report
+# gate` — because gates are frequent and will dominate the ledger by row count.
+#
+# THREE CORRECTIONS TO AN EARLIER DRAFT OF THIS RECIPE, all found by the
+# one-task-ahead brief check and all load-bearing:
+#
+# (a) `nextest-check` STAYS a prerequisite. The earlier draft dropped the
+#     `test` target as a prereq and called nextest directly, which silently
+#     discarded `test`'s own `nextest-check` prereq — the target whose entire
+#     job is to fail with an install hint when cargo-nextest is missing. A
+#     machine without it would have got `command not found` instead.
+#
+# (b) THE DEFAULT PROFILE, NOT `ci`. `.config/nextest.toml` states that
+#     `[profile.default]` is "deliberately left at nextest's own defaults:
+#     `make gate` must behave exactly as it did before this campaign", and the
+#     `ci` profile sets `fail-fast = false`. Running the gate under `ci` would
+#     silently turn every red gate into a full-suite run — 368 times a month,
+#     on the axis this campaign exists to protect. The durations the alarm
+#     needs are complete on a GREEN run regardless of profile, and a green run
+#     is the only run whose durations are ever recorded, so the `ci` profile
+#     buys nothing here and costs fast red feedback.
+#
+# (c) THE ALARM RUNS ONLY ON GREEN. Consequence of (b), and correct
+#     independently: under fail-fast a red run's `run.json` is TRUNCATED, so
+#     alarming against it compares a partial suite to a whole-suite baseline
+#     and can report a regression that does not exist. The spec already states
+#     this principle for S7 — "a duration measured under a partial run is not
+#     comparable to a baseline" — and it binds here first.
+#
+# THE GATE IS NOW ALSO THE MEASUREMENT (The Sexton, Task 3). `make ci` ran 9
+# times against this target's 368: an instrument watching a gate that crept
+# 234 s -> 934 s, running at 2.4% of that gate's frequency, while every gate
+# already computed the durations it needed and threw them away.
+#
+# ORDER IS LOAD-BEARING, unchanged from ci-run: the alarm must compare this run
+# against the baseline still on disk from the LAST recorded run, so it runs
+# BEFORE ci-record overwrites that file. Recording first would make every run
+# compare against itself and the alarm could never fire.
+#
+# A RED RUN NEVER BECOMES THE BASELINE — guarded on BOTH statuses, because the
+# unguarded version was a one-way ratchet: the alarm fired at 2x and ci-record
+# immediately wrote the inflated durations back as the new reference, erasing
+# its own evidence.
+#
+# THE HUMAN OUTPUT IS TEE'D, NOT REDIRECTED. `--message-format libtest-json-plus`
+# puts the JSON on STDOUT and the ordinary progress stream (Compiling…, PASS/FAIL
+# lines, the Summary) on STDERR. Sending stderr straight to run.log left the
+# most-run command in the repo printing NOTHING for ~7 minutes and pointing at a
+# file on failure. That was tolerable at `make ci`'s 9 runs a month; at `make
+# gate`'s 368 it is a daily regression, and staring at a silent terminal is how
+# a gate starts looking hung. So stderr goes through `tee`: the file the alarm
+# and the archaeology need still receives the complete stream, and the terminal
+# gets it live.
+#
+# WHY THE `.rc` FILE AND NOT `PIPESTATUS`/`pipefail`. This Makefile sets no
+# SHELL, so recipes run under `/bin/sh` — `dash` on lefford. `${PIPESTATUS[0]}`,
+# `set -o pipefail` and `2> >(tee …)` are all bashisms that would work on this
+# Mac and fail there, silently reporting `tee`'s exit status (always 0) as the
+# gate's verdict — a gate that can never go red. Writing the status inside the
+# brace group is POSIX and reads the same everywhere.
+gate-run: fmt-check clippy type-audit type-audit-report nextest-check
+	@mkdir -p target/nextest/ci docs/timings
+# THE STATUS FILE IS DELETED FIRST AND VALIDATED AFTER, and both halves are
+# load-bearing. nextest's status reaches us through a file because the brace
+# group runs in a subshell feeding `tee` (whose own status is always 0), and a
+# POSIX-portable capture is required — `$${PIPESTATUS[0]}` is a bashism and
+# this Makefile sets no SHELL, so under lefford's dash it would silently
+# evaluate to nothing.
+#
+# But a status read from a file has two failure modes a `$$?` does not, and
+# BOTH report GREEN:
+#   - an EMPTY or unwritable file: `[ '' -eq 0 ]` is a syntax error, and `if`
+#     reads an errored test as false, so the red branch never fires. Verified
+#     directly: an empty rc file made the gate report green.
+#   - a STALE file: if the brace group dies before reaching its `echo` (OOM
+#     kill, SIGKILL — a shape this repo already documents for parallel heavy
+#     jobs), `cat` returns the PREVIOUS run's value, which on a previously
+#     green box is 0.
+# So: remove it before the run, and treat missing / empty / non-numeric as a
+# failure rather than as success. A gate that reports green when it does not
+# know is worse than one that reports red when it is unsure.
+	@rm -f target/nextest/ci/nextest.rc
+	@{ NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --message-format libtest-json-plus \
+	    2>&1 1>target/nextest/ci/run.json; \
+	   echo $$? > target/nextest/ci/nextest.rc; \
+	 } | tee target/nextest/ci/run.log >&2; \
+	nextest_status=$$(cat target/nextest/ci/nextest.rc 2>/dev/null); \
+	case "$$nextest_status" in \
+	    ''|*[!0-9]*) \
+	        echo "make gate: FAILED — nextest's status file is missing, empty or non-numeric ('$$nextest_status'). The run did not complete; treating as RED." >&2; \
+	        nextest_status=1 ;; \
+	esac; \
+	cargo test -q --workspace --doc; \
+	doctest_status=$$?; \
+	bash scripts/defect-ledger.sh target/nextest/ci/run.json || true; \
+	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ]; then \
+	    cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	    alarm_status=$$?; \
+	else \
+	    alarm_status=0; \
+	    echo "make gate: skipping the duration alarm — the run was red, so its durations are truncated and not comparable to a baseline" >&2; \
+	fi; \
+	if [ $$nextest_status -eq 0 ] && [ $$doctest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
+	    cargo run --quiet -p hornvale -- ci-record; \
+	else \
+	    echo "make gate: NOT recording a baseline — the run was red, so these durations are not a reference" >&2; \
+	fi; \
+	echo ""; \
+	echo "== detail written to =="; \
+	echo "  target/nextest/ci/run.json   structured per-test durations"; \
+	echo "  target/nextest/ci/run.log    human output, including failures"; \
+	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
+	if [ $$nextest_status -ne 0 ]; then \
+	    echo "make gate: FAILED — nextest was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
+	    exit $$nextest_status; \
+	fi; \
+	if [ $$doctest_status -ne 0 ]; then \
+	    echo "make gate: FAILED — doctests were red (exit $$doctest_status)" >&2; \
+	    exit $$doctest_status; \
+	fi; \
+	bash scripts/census-advisory.sh || true; \
+	exit $$alarm_status
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
+	@bash scripts/timed.sh gate-fast -- make --no-print-directory gate-fast-run
+
+gate-fast-run:
 	@bash scripts/gate-fast.sh
 
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
@@ -63,75 +188,12 @@ seam-guard: ## Neutralise each registered seam and report the ones no test notic
 seam-guard-list: ## Print the registered seams and their call sites (cheap, no build)
 	@cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- list
 
-# The CI entry point. A WRAPPER: every decision it makes lives in Rust
-# (windows/lab/src/timings.rs, cli/tests/timings_alarm.rs). Raw output is
-# persisted before anything summarises it, so a surprise never costs a re-run.
-# ORDER IS LOAD-BEARING: the alarm must compare this run against the baseline
-# still sitting on disk from the LAST recorded run, so it runs BEFORE
-# ci-record overwrites that file — recording first would make every run
-# compare against itself and the alarm could never fire.
-#
-# The libtest-json-plus stream must survive a failing nextest run — the
-# alarm and ci-record still need to read it, and a red run's durations
-# belong on disk for archaeology — so this recipe cannot simply abort the
-# moment nextest exits nonzero. The whole recipe is one shell script (note
-# the backslash continuations) with no `set -e`, so a mid-script nonzero
-# exit does not by itself stop anything; the FIX is that nextest's status is
-# now CAPTURED immediately (`nextest_status=$$?`) instead of being discarded
-# by an `|| true` on that line — discarding it entirely was the original
-# bug: `make ci` reported success on a fully failing suite because nothing
-# downstream ever re-checked pass/fail. The alarm and ci-record still run in
-# the same order as before, and the captured status is re-raised at the very
-# end, after the summary prints, so a red suite now fails `make ci` while
-# still leaving every artifact on disk for inspection.
-#
-# A RED RUN NEVER BECOMES THE BASELINE. `ci-record` is guarded on both
-# statuses, because the un-guarded version was a one-way ratchet: the alarm
-# fired on two tests at 2x, and `ci-record` — running unconditionally on the
-# next line — immediately wrote those inflated durations back as the new
-# reference. The alarm erased its own evidence, and the following run would
-# have compared against the regression and seen nothing. Caught by running
-# `make ci` for real (2026-07-30) and noticing the alarmed values sitting in
-# the baseline afterwards. This is the same ratchet the final review found in
-# the CONTENTION path; the fix there guarded `cmd_ci_record` against a live
-# claim and did not guard this path. Re-recording a regression stays a
-# deliberate act: fix it, or re-record in the commit that caused it.
-#
-# `ci` is a thin timing wrapper around `ci-run`; the body lives there so
-# scripts/timed.sh can measure the WALL TIME a human actually waits through —
-# suite, alarm and record together — and append it to docs/timings.md beside
-# the `rebaseline` and `census` rows. This campaign exists because that ledger
-# carried ZERO rows for `make gate`, so the gate's creep from 234s to 934s was
-# unobservable; shipping a per-test recorder that did not record its own wall
-# time would have repeated the same omission one level up. `make timings
-# LABEL=ci` reads it back. timed.sh passes the wrapped command's exit status
-# through, so a red suite still fails `make ci`.
-ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
-	@bash scripts/timed.sh ci -- make --no-print-directory ci-run
-
-ci-run:
-	@mkdir -p target/nextest/ci docs/timings
-	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
-	    --profile ci --message-format libtest-json-plus \
-	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
-	nextest_status=$$?; \
-	cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
-	alarm_status=$$?; \
-	if [ $$nextest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
-	    cargo run --quiet -p hornvale -- ci-record; \
-	else \
-	    echo "make ci: NOT recording a baseline — the run was red, so these durations are not a reference" >&2; \
-	fi; \
-	echo ""; \
-	echo "== make ci: detail written to =="; \
-	echo "  target/nextest/ci/run.json   structured per-test durations"; \
-	echo "  target/nextest/ci/run.log    human output, including failures"; \
-	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
-	if [ $$nextest_status -ne 0 ]; then \
-	    echo "make ci: FAILED — the nextest run itself was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
-	    exit $$nextest_status; \
-	fi; \
-	exit $$alarm_status
+# `ci` is now an alias for `gate` (The Sexton, Task 3): the libtest-json
+# stream, the duration alarm and `ci-record` moved into `gate-run` itself, so
+# there is no separate suite left to run here. Retained so existing muscle
+# memory and documentation keep working.
+ci: gate ## Alias for `make gate`, which now carries the timing alarm (The Sexton)
+	@echo "make ci: \`make gate\` now records the baseline and runs the alarm; this is an alias." >&2
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is
@@ -257,6 +319,16 @@ nextest-check: ## Fail with an install hint if cargo-nextest is missing
 		exit 1; }
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
+	@bash scripts/timed.sh prewarm -- make --no-print-directory prewarm-run
+
+worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main])
+	@NAME="$(NAME)" BASE="$(BASE)" bash scripts/worktree-take.sh
+
+# THE COLD-BUILD COST WAS INVISIBLE UNTIL THIS LANDED (The Sexton, Task 2).
+# docs/timings.md carried five labels and 73 branches went through this target
+# in one month with zero rows — roughly eight unrecorded hours, comparable to
+# the census line. The wrapper above is the whole fix.
+prewarm-run:
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
@@ -319,6 +391,9 @@ regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via s
 	@scripts/aws-gate/regen-git.sh .
 
 preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
+	@bash scripts/timed.sh preflight -- make --no-print-directory preflight-run
+
+preflight-run:
 	@bash scripts/preflight-merge.sh
 
 doctor: ## Print the repo self-map (orientation for a fresh session)
@@ -346,14 +421,17 @@ gate-remote-teardown: ## Remove all remote-gate infra
 	@scripts/aws-gate/teardown.sh
 
 shellcheck: ## Lint all shell scripts
-	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* tools/census/*.sh
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* scripts/scheduled/*.sh tools/census/*.sh
 
 wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true
 	cargo build --manifest-path clients/vessel/wasm/Cargo.toml --release --target wasm32-unknown-unknown
 	cp clients/vessel/wasm/target/wasm32-unknown-unknown/release/hornvale_vessel_wasm.wasm book/src/gallery/vessel.wasm
 
-vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+vessel-check: ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+	@bash scripts/timed.sh vessel-check -- make --no-print-directory vessel-check-run
+
+vessel-check-run: wasm-vessel
 	cd clients/vessel && deno fmt --check && deno lint && deno task check && deno task test
 	cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
 	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
@@ -393,7 +471,10 @@ wasm-world: ## Build the world catalog wasm (external clients consume this; neve
 	  echo "WARNING: wasm-opt not found (brew install binaryen) — shipping unoptimized; CI will optimize"; \
 	fi
 
-world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity smoke + size gate
+world-check: ## The catalog's local gate: lint + golden byte-identity smoke + size gate
+	@bash scripts/timed.sh world-check -- make --no-print-directory world-check-run
+
+world-check-run: wasm-world
 	cargo fmt --check --manifest-path clients/world-wasm/Cargo.toml
 	cargo clippy --manifest-path clients/world-wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	cargo run -p hornvale -- new --seed 42 --out /tmp/hv-wc.json
@@ -426,6 +507,9 @@ world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity
 	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }
 
 game-check: ## The game client's local gate: fmt/clippy/test on both crates
+	@bash scripts/timed.sh game-check -- make --no-print-directory game-check-run
+
+game-check-run:
 	cargo fmt --check --manifest-path clients/game/core/Cargo.toml
 	cargo fmt --check --manifest-path clients/game/bin/Cargo.toml
 	cargo clippy --manifest-path clients/game/core/Cargo.toml --all-targets -- -D warnings

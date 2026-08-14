@@ -191,9 +191,20 @@ pub struct Micro {
     /// Slope aspect / insolation, shaded (`-1`) to sunlit (`+1`).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub aspect: f64,
-    /// Local wetness, dry (`-1`) to wet (`+1`). **Address noise, not
-    /// hydrology** — it does not say where the water is, and a consumer must
-    /// not band a water kind from it. `water` is the field that answers that.
+    /// Local wetness, dry (`-1`) to wet (`+1`).
+    ///
+    /// **Still not a water kind.** Since The Rill this axis *is* grounded in
+    /// hydrology on bare ground under open air — the climate moisture supply
+    /// the room's cells receive, allocated by the room's distance to its own
+    /// sub-cell watercourse, with the address draw retained only as local
+    /// variation about that value. At sea, on ice and in the rock column it
+    /// remains the address draw alone, because there the same axis is read as
+    /// the set of the current, snow cover and seep.
+    ///
+    /// A consumer must still not band a water kind from it: it says how wet the
+    /// ground is, never whether there is water to drink or cross. `water` is
+    /// the field that answers that, and `channel_distance` is the one that says
+    /// where the river is.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub wetness: f64,
     /// Canopy openness, closed (`-1`) to open (`+1`).

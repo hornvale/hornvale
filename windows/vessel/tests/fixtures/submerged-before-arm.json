@@ -1,0 +1,14 @@
+[
+  {"realm": "none", "stratum": null, "live": true, "submerged": false},
+  {"realm": "overworld", "stratum": "Surface", "live": true, "submerged": false},
+  {"realm": "waterworld", "stratum": "Epipelagic", "live": true, "submerged": true},
+  {"realm": "waterworld", "stratum": "Mesopelagic", "live": true, "submerged": true},
+  {"realm": "waterworld", "stratum": "Bathypelagic", "live": true, "submerged": true},
+  {"realm": "waterworld", "stratum": "Abyssal", "live": true, "submerged": true},
+  {"realm": "waterworld", "stratum": "Hadal", "live": true, "submerged": true},
+  {"realm": "underdark", "stratum": "Regolith", "live": false, "submerged": true},
+  {"realm": "underdark", "stratum": "Cover", "live": false, "submerged": true},
+  {"realm": "underdark", "stratum": "Basement", "live": false, "submerged": true},
+  {"realm": "underdark", "stratum": "Roots", "live": false, "submerged": true},
+  {"realm": "underdark", "stratum": "Underneath", "live": false, "submerged": true}
+]
