@@ -68,23 +68,28 @@ deno fmt --check && deno lint && deno task check && deno task test
 deno task build      # then `git diff --exit-code` the bundle it wrote
 ```
 
-`gate-commit` does **not** run any of these — it is local-only and cannot see
-this tree. A client change needs its own gate run, explicitly. Since 0125
-retired GitHub Actions, **nothing runs them for you either**; the runner used
-to catch a forgotten client gate on a manual dispatch, and now there is no
-backstop at all.
+**`gate-commit` still does not run any of these — it is local-only and
+cannot see this tree, so a purely local commit is never checked here.** That
+part has not changed. What has: since 0125 retired GitHub Actions, this
+paragraph used to say nothing ran them for you at all, and that stopped
+being true this campaign. `gate-stage`'s `clients` lane set
+(`make clients-check-run`) now runs `vessel-check`, `world-check`,
+`game-check`, **and** `atlas-check` together, dispatched at every plan-stage
+boundary (The Staff) — a real backstop, not a manual-discipline promise. A
+client change still needs to reach a pushed stage gate before anything
+catches it automatically; nothing local does, so don't mistake a clean
+`gate-commit` for a clean client tree.
 
-**`atlas` has no `make` target — this is the one real hole.** Its checks
-lived only in the deleted `ci.yml`. Touching `clients/atlas/` means running,
-from `clients/atlas/`:
+**`atlas` has a `make` target now: `make atlas-check`**, folded into
+`clients-check-run`. It used to be the one real hole — its checks lived only
+in the deleted `ci.yml`, and a proposal to add the target was declined at
+0125 (2026-08-11) — but The Staff closed it. What it runs, and what you can
+still run by hand from `clients/atlas/` while iterating:
 
 ```bash
 deno fmt --check && deno lint && deno task check && deno task test
 deno task build && git diff --exit-code ../../book/src/gallery/atlas.js
 ```
-
-A `make atlas-check` was proposed and declined at 0125 (2026-08-11); if that
-manual discipline slips, adding the target is the fix.
 
 **The byte-identity smoke is the load-bearing test.** `world-check` asserts
 the wasm catalog's scene output is byte-identical to the native `hornvale
