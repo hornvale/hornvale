@@ -12425,8 +12425,15 @@ mod tests {
     }
 
     /// The same earliest-not-latest claim, but through the `Some(object)`
-    /// branch — no other test reaches the comparison loop with the object
-    /// filter active, only the always-`continue`s-before-comparing shape in
+    /// branch. This sentence used to claim it was the *only* test reaching
+    /// the comparison loop with the object filter active; Task 2's iron test
+    /// (`first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum`)
+    /// now reaches it too, and the claim went stale the moment that test
+    /// landed — the two
+    /// are complementary rather than exclusive, since this one cannot
+    /// discriminate the drop-the-object-filter mutation on seed 42 (below)
+    /// and the iron test is chosen precisely so that it can. The
+    /// always-`continue`s-before-comparing shape stays in
     /// `first_day_of_an_unmatched_object_is_absent`. `occ-people` is a
     /// functional predicate (one fact per occupied settlement), so distinct
     /// settlements sharing a species text give multiple day-bearing matches

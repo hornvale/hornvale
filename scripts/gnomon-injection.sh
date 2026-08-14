@@ -50,6 +50,21 @@ PUBLISHED="book/src/laboratory/generated/gnomon-injection"
 # ---------------------------------------------------------------------------
 # The battery. One record per arm: name|file|old|new|why
 #
+# COUNT THE SEPARATORS. Each record needs FOUR `|`, and a baseline's three
+# empty fields therefore read as `name||||why` — four pipes with nothing
+# between them. Two of these records were first written with THREE, so `why`
+# landed in field 4 and each baseline's prose was recorded as the manifest's
+# `new` value. It was found by reading the manifest the first full run
+# produced, not by any test, and nothing would ever have caught it:
+# `windows/lab/tests/anomaly_injection.rs` reads `arms[].kind`, `[].name` and
+# `[].host` and NEVER reads `file`, `old`, `new` or `why`. The general form is
+# worth carrying past this script — **a manifest field no assertion reads is
+# unguarded data**, and it will be wrong silently and stay wrong, because the
+# only thing that ever looks at it is a human who happened to open the file.
+# The provenance fields here are exactly that class: they exist to let a
+# future reader reconstruct what was perturbed, which is precisely the moment
+# nobody is left who could notice they are garbage.
+#
 # A baseline arm carries empty file/old/new: it is the unperturbed run, and
 # TWO of them are authored (`baseline-a`, `baseline-b`) as SEPARATE
 # invocations because H1's false-positive arm is about whether two independent

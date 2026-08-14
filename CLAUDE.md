@@ -336,9 +336,15 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # the project asserts about itself (project time is git's); everything else is
 # scanned from source on read. `make gate` does NOT build this crate:
 cargo test --manifest-path tools/digest/Cargo.toml
-cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # make doctor's self-map
-cargo run --manifest-path tools/digest/Cargo.toml -- render decisions  # docs/digest/decisions-in-force.md
-cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/digest/intent-vs-reality.md
+# EVERY `render` SUBCOMMAND PRINTS TO STDOUT. The committed artifact is
+# written by the `>` REDIRECT, which lives in scripts/regenerate-artifacts.sh
+# (lines 507-510) — not by the command. Running one of these bare regenerates
+# nothing, so the drift check that follows it reports an empty diff and reads
+# as "no drift" when in fact nothing was rebuilt. The redirects are shown here
+# so the command you copy is the command that writes the file:
+cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # prints make doctor's self-map; no committed artifact
+cargo run --manifest-path tools/digest/Cargo.toml -- render decisions > docs/digest/decisions-in-force.md
+cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/digest/intent-vs-reality.md
 
 # Generated-artifact freshness. Two sources of truth, each authoritative for a
 # different half. WHAT IS GENERATED: scripts/regenerate-artifacts.sh (three

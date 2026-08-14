@@ -163,6 +163,64 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
+///
+/// # THIS ROSTER IS A FLOOR, NOT A CENSUS (The Gnomon, 2026-08-14)
+///
+/// `ignore_reasons()` calls `split_once("#[ignore = \"")` and then
+/// `split_once("\"]")` **on the same line**, so any `#[ignore]` whose reason
+/// wraps across lines with a trailing `\` is invisible to it — it is not
+/// rostered, it does not have to be canonical, and adding one never moves the
+/// array length. Replicating the scanner's logic over the tree at that date
+/// found **123 single-line reasons it sees and 7 multi-line ones it does not**:
+///
+/// - `windows/worldgen/src/lib.rs:13381` — a PREREGISTERED `>= 6`
+///   distinct-dominant target, honestly unmet
+/// - `windows/worldgen/src/lib.rs:13405`, `:13449` — mass/sovereignty
+///   calibration findings
+/// - `windows/vessel/src/liveness.rs:14716` — documents a DISPROVEN hypothesis
+/// - `windows/worldgen/tests/insolation_probe.rs:372` — a live Stage-0 probe
+/// - `windows/worldgen/tests/beta_calibration_sweep.rs:409` — a live sweep
+/// - `windows/lab/tests/depth_ladder.rs:112` — a full-depth registry evaluation
+///
+/// The first two of those are exactly the class this roster exists to surface,
+/// so the count here understates real deferrals by at least that many. **The
+/// evidence that this is a live hazard and not a theoretical one is in this
+/// campaign's own diff**: at `83eadd34` the roster went 29 → 30 without a
+/// single deferral being added. The Domesday exclusion test was *already*
+/// `#[ignore]`d, under a reason beginning `FALSIFIED (spec §3.3's partition
+/// claim, …` that wrapped over two lines and so was invisible; rewriting that
+/// reason onto one line is what made it appear. (Quoted without its attribute
+/// syntax on purpose — a complete literal in a doc comment would itself be
+/// scanned, which is why the roster's first entry is `"..."`.) The 30 → 31
+/// move at `a917db11` was, by contrast, a genuinely new pin, written
+/// single-line from the start — so this campaign contributed one of each,
+/// which is why the shape was visible at all.
+///
+/// Not fixed here deliberately: widening the scanner re-validates every
+/// currently-invisible reason against a verbatim rule they were never checked
+/// against, which is a campaign-sized change to a ratchet. Tracked as
+/// `TOOL-ignore-scanner-is-line-oriented` in the idea registry.
+///
+/// # ONE REASON STRING MUST SATISFY TWO GUARDS THAT DO NOT KNOW ABOUT EACH OTHER
+///
+/// This file's verbatim `heavy:` check and
+/// `windows/lab/tests/preregistration_guard.rs`'s default-deny scan both
+/// police `#[ignore]` reasons, and neither is aware the other exists. Their
+/// domains do not nest, they *overlap*:
+///
+/// - `heavy_tier.rs` scans **every `.rs` file in the repo** (`collect_rs` from
+///   the repo root) but only adjudicates reasons containing `heavy:` or
+///   `stale-second-opinion:`, plus this roster.
+/// - `preregistration_guard.rs` scans **only `windows/lab/tests/*calibration*.rs`**
+///   (see its `calibration_files()`), and demands every reason there name a
+///   cost or cite a decision number.
+///
+/// So a `heavy:` battery inside a lab calibration file must satisfy both at
+/// once — the canonical string is written to do that, which is why it is
+/// verbatim rather than a prefix. And an `#[ignore]` in any `src/` file is
+/// outside **both**: outside `preregistration_guard`'s path filter, and
+/// outside this file's adjudication unless its reason happens to carry a
+/// token. Four of the seven blind spots listed above are exactly that case.
 const EXPECTED_UNTOKENISED: [&str; 31] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
