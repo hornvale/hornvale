@@ -34,10 +34,9 @@ decision.
 - **Diffusion.** Nobody tells anybody anything in this campaign. Claims arise
   from witnessing and are inherited along the *already-committed* founding
   tree. Transmission dynamics are campaign 2 (`DOM-transmission`).
-- **Independence, and the conflict measurement with it.** Both need a claim to
-  reach a holder by two routes, and **two routes is diffusion** — so both are
-  campaign 2 by this spec's own first non-goal. See §5, which records why this
-  was not obvious.
+- **Conflict between lineages** — whether two peoples hold *incompatible*
+  accounts. That needs distortion, which is campaign 2. Independence itself is
+  back in scope; see §6.1 for why deferring it was an error.
 - **The play ledger.** 0100 designed it; no code implements it (verified:
   `grep -rn "PlayLedger" kernel/ windows/` returns nothing). Campaign 3.
 - **Creatures as listeners.** `absorb_common` already transfers a falsehood
@@ -165,7 +164,13 @@ there is a reason to distinguish two holders inside one community.
 `Inferred` is reserved and unused in this campaign; it is where campaign 2's
 deduction lands (`KNOW-deduction-gain`).
 
-## 5. Why independence is NOT measured here
+## 5. Why the first independence measurement failed
+
+**Superseded in part by §6.1**, which reinstates independence on a corrected
+witness rule. What stands here is the original defect and why it happened; what
+does not stand is this section's conclusion that independence belongs to
+campaign 2. Kept rather than rewritten, because the reasoning error is the more
+useful record.
 
 This section replaces an independence measurement that was specified, approved
 at G3, and then found unfalsifiable before any of it was built. The finding is
@@ -253,6 +258,109 @@ first thing campaign 2 must add rather than a refinement.
 
 **Do not retune the pair population to move either number.** If the result is
 uncomfortable, the result is the finding.
+
+### 6.1 Independence, reinstated — the witness rule was under-implemented
+
+§5 deferred independence on the grounds that it needs a claim to arrive by two
+routes, and two routes is diffusion. **That was wrong, and the error is worth
+recording because it was a generalisation from one case to a different one.**
+
+- **Two transmission routes to one holder** — a claim reaching a community from
+  two directions. That is diffusion, and it is still campaign 2.
+- **Two witnesses to one event, in separate lineages** — which is not diffusion
+  at all. It happens at the instant of the event, before anything travels.
+
+Independence only ever required the second. And the second is already in the
+committed substrate, because **a raid displaces its loser**
+(`history_bake.rs:3038`: *"the loser is driven off on EVERY raid"*). Village A
+is raided; its survivors found B and C; both parties were there. B and C are
+independent witnesses to one event, in lineages that then diverge forever.
+
+Measured on seed 42, as substrate — not as outcome:
+
+```
+  endings                                          474
+    naming an Entity attacker                      234
+  child foundings whose parent has an ending       562
+    founded EXACTLY at the parent's ending         477   survivors refounding
+    founded before it (ordinary colonies)           85
+    founded after it                                 0
+```
+
+The day equality is exact (all three gap quartiles are 0.0), so the two cases
+separate cleanly with no threshold to tune.
+
+**The corrected witness rule.** For the event *"X ended on day D"*, the
+witnesses are:
+
+1. **X itself** — it was there.
+2. **Every child of X founded on day D** — the survivors who fled and refounded.
+   A child founded *before* D was elsewhere when it happened and inherits
+   normally.
+3. **The attacker named by `occ-ended-by`**, when it is `Entity`-valued — a
+   different lineage entirely, and the strongest independence source available.
+
+Everyone else inherits, as before.
+
+**A witness is never eliminated by an ancestor.** This is the one place the
+stemmatic import needs care. *Eliminatio codicum descriptorum* discards copies
+made *from* a surviving exemplar; it does not discard a second scribe who saw
+the original. A survivor community is a descendant of the village it fled, but
+its testimony does not derive from that village's telling — it saw the raid
+with its own eyes. So elimination applies to inheritors only, and every
+`hops == 0` holder is its own origin by definition. Getting this backwards
+collapses the victim's side to one witness again and re-creates the degenerate
+metric §5 describes.
+
+**This is a correction, not a rescue.** §4.3 already named *"a raid it was
+party to"* as a witnessing case, before any measurement existed to be rescued;
+the implementation did subject-only and under-delivered against its own spec.
+Bringing an implementation up to its spec adds fidelity rather than removing a
+constraint.
+
+### 6.2 Preregistration — independence
+
+Frozen before computation, as §6 was. Substrate counts above were known;
+neither quantity below was computed at the time of writing.
+
+**H3 — most communities holding a story did not witness it.** Define
+
+```
+  echo_ratio(event) = witnesses(event) / holders(event)
+```
+
+over endings with at least three holders. **Prediction: median ≤ 0.15.**
+
+```
+  median <= 0.15   -> H3 CONFIRMED. Testimony is heavily outnumbered by
+                      inheritance; corroboration is scarce and worth modelling
+                      as a distinct event later.
+  0.15 < m <= 0.4  -> H3 REFUTED, and the reading is that fission keeps
+                      witnesses plentiful: a raid manufactures witnesses at the
+                      same moment it manufactures holders.
+  median > 0.4     -> H3 REFUTED, and this is the headline: most holders ARE
+                      witnesses, so the founding tree is shallow in practice
+                      and inheritance carries far less than depth suggested.
+  fewer than 100 qualifying events across the seed set -> NO VERDICT.
+```
+
+**H4 — cross-checkable corroboration is common.** The fraction of endings with
+witnesses in **two or more lineages that share no common ancestor** — the
+structural precondition for Village B's descendants and Village C's ever
+confirming each other. **Prediction: ≥ 0.60.**
+
+The null is that most endings have a single witness lineage, which would mean
+corroboration is rare enough that campaign 2 should treat it as a special
+event rather than a background rate. Note that 234 of 474 endings name an
+attacker, so ≥ 0.49 is close to guaranteed by that alone; the open question is
+whether survivor-fission carries it past 0.60, **and whether attacker and
+victim turn out to share an ancestor often enough to disqualify the pairing.**
+That second half is the genuinely unknown part.
+
+**Not preregistered, deliberately:** corroboration as an *experienced* event —
+someone from B meeting someone from C and the tale being confirmed — needs
+contact between communities and a notion of belief strength that changes on
+confirmation. Neither exists. H4 measures the structural precondition only.
 
 ## 7. Carried forward
 
