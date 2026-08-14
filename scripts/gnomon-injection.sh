@@ -109,11 +109,17 @@ fi
 # The tree must be clean before anything is rewritten: this script edits
 # TRACKED source in place, and a restore into a tree that already carried
 # uncommitted edits to those files would silently discard them.
-if [ -n "$(git status --porcelain)" ]; then
+#
+# The fixture directory is EXCLUDED from that check, and the exclusion is
+# what makes this a guard rather than a one-shot: it is this script's own
+# output, wiped and rebuilt from scratch on every invocation, so after the
+# very first run an unconditional check refuses forever — the second run
+# reports the first run's evidence as the dirt it must not destroy.
+if [ -n "$(git status --porcelain -- ":!$FIXTURES")" ]; then
     echo "gnomon-injection: REFUSING to run with a dirty tree — this script rewrites" >&2
     echo "tracked source in place and restores it with 'git checkout --'; uncommitted" >&2
     echo "work in those files would be destroyed. Commit or stash first:" >&2
-    git status --short >&2
+    git status --short -- ":!$FIXTURES" >&2
     exit 1
 fi
 
