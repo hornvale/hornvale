@@ -89,7 +89,10 @@ fn an_unrelated_lineage_holds_nothing_about_it() {
 /// A raid: village 1 (founded day 0) is ended on day 100 by village 50.
 /// Survivors found 2 and 3 on day 100 — they were there. Village 4 was
 /// founded from 1 back on day 10 and was elsewhere when it happened.
-/// Village 51 is founded from the attacker 50, later.
+/// Village 51 is founded from the attacker 50, later. Village 6 is founded
+/// from survivor-witness 2, later still: it is reachable from witness 1 at
+/// hops=2 (through 2) and from witness 2 at hops=1 directly — the nearer
+/// telling, from 2, is the one that must win.
 fn raid() -> Ledger {
     let mut led = ledger_with(&[
         (1, None),
@@ -98,6 +101,7 @@ fn raid() -> Ledger {
         (3, Some(1)),
         (4, Some(1)),
         (51, Some(50)),
+        (6, Some(2)),
     ]);
     for (occ, day) in [
         (1, 0.0),
@@ -106,6 +110,7 @@ fn raid() -> Ledger {
         (3, 100.0),
         (4, 10.0),
         (51, 200.0),
+        (6, 150.0),
     ] {
         put(
             &mut led,
@@ -193,6 +198,23 @@ fn the_attackers_line_holds_it_too() {
     assert_eq!(fifty.hops, 0);
     assert_eq!(fifty_one.grade, Provenance::Taught);
     assert_eq!(fifty_one.hops, 1);
+}
+
+#[test]
+fn a_holder_reachable_from_two_witnesses_takes_the_nearer_one() {
+    // 6 is founded from survivor-witness 2, so it is reachable from witness 2
+    // at hops=1 directly, AND from witness 1 at hops=2 (1 -> 2 -> 6, since 2
+    // is also 1's descendant). The nearer telling — hops=1, from 2 — must be
+    // the one held, regardless of which witness's walk reaches 6 first.
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let six = claims
+        .iter()
+        .find(|c| c.holder == eid(6))
+        .expect("6 holds it");
+    assert_eq!(six.grade, Provenance::Taught);
+    assert_eq!(six.hops, 1);
 }
 
 #[test]
