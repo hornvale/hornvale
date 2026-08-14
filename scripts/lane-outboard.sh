@@ -8,9 +8,11 @@
 # `make gate-stage`'s `gate` set owns that.
 #
 # seam-guard is DELIBERATELY NOT HERE. It shipped here first, but Task 8's
-# own measurement showed its 7 call sites cost 13m51s against well under a
-# minute for the three suites below combined (97% of the set's 855.222 s
-# total) — and cost aside, what it guards (which functions no test pins)
+# own measurement showed its 7 call sites cost 853.284 s (the
+# `lane:seam-guard` row in docs/timings.md) against well under a minute for
+# the three suites below combined — 99.8% of the set's 855.222 s total (the
+# `lane:outboard` row) — and cost aside, what it guards (which functions no
+# test pins)
 # moves on a campaign cadence, not a per-plan-stage-boundary one, matching
 # the `outboard`/`gate`/`artifacts`/`clients` sets here. It now lives at its
 # own `campaign`-rung row in scripts/lane-sets.tsv; see the Makefile's

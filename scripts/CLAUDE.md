@@ -120,8 +120,10 @@ restate.
   in `gate-commit`). Not fail-fast: independent suites, so it reports every
   failure in one pass rather than stopping at the first. `seam-guard` is
   deliberately not in it — it shipped here first, but measurement showed its
-  7 call sites were 97% of this set's wall time on a set that fires at every
-  plan-stage boundary, so it moved to its own `campaign`-rung set instead.
+  7 call sites cost 853.284 s — 99.8% of this set's 855.222 s wall time (the
+  `lane:seam-guard` row in `docs/timings.md`, not the standalone probe some
+  earlier notes cite) — on a set that fires at every plan-stage boundary, so
+  it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
   `gate-commit` and the stage gate's own suite both defer (see
   `cli/tests/heavy_tier.rs`). Runs as the `heavy` set, dispatched by

@@ -17,8 +17,9 @@
 #
 # `seam-guard` moved OUT of `outboard` and onto its own `campaign`-rung row.
 # Task 8's own measurement forced this: 855.222 s for the four-suite
-# `outboard` set, of which seam-guard's 7 call sites alone cost 13m51s (97%)
-# -- the other three suites finish in well under a minute combined. The
+# `outboard` set (the `lane:outboard` row in docs/timings.md), of which
+# seam-guard's 7 call sites alone cost 853.284 s (99.8%, the `lane:seam-guard`
+# row) -- the other three suites finish in well under a minute combined. The
 # taxonomy sorts sets by the DIRECTION their guarantee moves in, not by
 # cost: a seam changes when seams or tests change (slow-moving,
 # campaign-shaped), which is a `campaign`-rung cadence, not a

@@ -68,7 +68,7 @@ deno fmt --check && deno lint && deno task check && deno task test
 deno task build      # then `git diff --exit-code` the bundle it wrote
 ```
 
-`make gate` does **not** run any of these — the workspace gate cannot see
+`gate-commit` does **not** run any of these — it is local-only and cannot see
 this tree. A client change needs its own gate run, explicitly. Since 0125
 retired GitHub Actions, **nothing runs them for you either**; the runner used
 to catch a forgotten client gate on a manual dispatch, and now there is no

@@ -15,7 +15,7 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- check
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 ```
 
-`make gate` runs `check`; the artifact-freshness step regenerates and
+`make gate-commit` runs `check`; the artifact-freshness step regenerates and
 drift-checks the report.
 
 ## The tag, and where it goes
