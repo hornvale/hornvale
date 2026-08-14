@@ -78,9 +78,61 @@ use hornvale_terrain::GeneratedTerrain;
 pub struct Recurrence {
     /// Mean interval between seismic events at or above the catalogue's
     /// lower magnitude cutoff.
+    ///
+    /// This is the rate the events at this cell are actually drawn at:
+    /// seismicity is per-cell, so field and draw agree everywhere.
     pub seismic: Years,
-    /// Mean interval between eruptions, or `None` where there is no edifice
-    /// to erupt from.
+    /// **The volcanic field's LOCAL value at this cell** — the eruption
+    /// interval this cell's own `unrest` maps to — or `None` where there is
+    /// no edifice.
+    ///
+    /// # Off-source this is NOT the rate eruptions are drawn at
+    ///
+    /// Read this before using it as "how often this place erupts". An
+    /// edifice spans one or two cells and belongs to **one mountain**, whose
+    /// recurrence is sampled once at the edifice's source contact — the same
+    /// sample-once-at-the-source shape terrain uses for the arc gate itself
+    /// (`crate::volcano`'s module doc). [`events_in`] therefore draws
+    /// eruptions at `volcano_at(seed, terrain, cell).recurrence`, which is
+    /// this field read **at the source**, not here. On a flank cell the two
+    /// disagree.
+    ///
+    /// **The rate eruptions actually happen at is
+    /// `volcano_at(seed, terrain, cell).recurrence`.** A consumer asking how
+    /// often the ground under a settlement erupts — Task 7's knownness
+    /// half-life is exactly this question — wants that, not this field.
+    ///
+    /// Measured on 2026-08-14 (`hazard.rs`'s own module tests hold the shape
+    /// of it; these are the counts behind them):
+    ///
+    /// | globe | cones | multi-cell | non-source cells | disagreeing | worst ratio |
+    /// |---|---|---|---|---|---|
+    /// | seed 42, L6 | 187 | 114 | 173 | 173 | 1.9885 |
+    /// | seed 43, L6 | 173 | 109 | 168 | 168 | 2.2977 |
+    /// | seed 42, L5 | 89 | 47 | 76 | 76 | 1.8914 |
+    /// | seed 43, L5 | 89 | 48 | 82 | 82 | 2.2811 |
+    ///
+    /// So **every** off-source edifice cell disagrees, by up to a factor of
+    /// about 2.3 on the globes measured. The disagreement is one-sided and
+    /// that is structural rather than lucky: within one cone all of `unrest`'s
+    /// factors but proximity are the contact's own, proximity decays away from
+    /// the boundary, and `geometric_years` is strictly decreasing in `unrest`,
+    /// so a flank cell's local value is always the *quieter* one.
+    /// `off_source_the_local_field_is_never_more_active_than_the_drawn_rate`
+    /// holds that, and
+    /// `an_edifice_sources_field_value_is_the_rate_its_eruptions_are_drawn_at`
+    /// pins the equality where it does hold.
+    ///
+    /// # Why the field is still defined off-source
+    ///
+    /// Because it is a *field*, and a cone's flank is volcanic ground: the
+    /// value answers "how volcanic is it here", which is a different question
+    /// from "how often does that mountain go off". Making it `None` off-source
+    /// would say the flank of a volcano is not volcanic, and would break the
+    /// property Task 4 deliberately established — that a volcanic recurrence
+    /// exists exactly where an edifice does. The defect was never that the
+    /// field exists; it was that its one-line doc described it as the other
+    /// quantity.
     pub volcanic: Option<Years>,
 }
 
@@ -154,6 +206,14 @@ pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
 
 /// The hazard field at a cell: mean intervals between seismic events, and
 /// between eruptions where there is an edifice to erupt from.
+///
+/// **A field read, and only that.** [`Recurrence::seismic`] is the rate this
+/// cell's quakes are drawn at, but [`Recurrence::volcanic`] is the local field
+/// value and is *not* the rate its eruptions are drawn at unless the cell is
+/// its edifice's source contact — an eruption belongs to a mountain, and a
+/// mountain samples the field once, at its source. For the rate that actually
+/// governs events, ask `volcano_at(seed, terrain, cell).recurrence`. See
+/// [`Recurrence::volcanic`] for the measured size of the gap.
 ///
 /// Pure and stateless (spec §3.1). Composes exactly three shipped readings —
 /// `unrest_at`, and the boundary kind and edifice presence that
@@ -416,6 +476,14 @@ fn process_events(
         let mut stream = event_stream(seed, key, kind, block);
         let count = poisson_count(stream.next_f64(), lambda);
         let block_start = block as f64 * BLOCK_DAYS;
+        // `next_f64()` is in [0, 1), so a day belongs to its own block by
+        // construction — with one theoretical exception, recorded rather than
+        // guarded: for a large `block`, `block_start + u * BLOCK_DAYS` can
+        // round up to exactly the next block's start, putting the event in a
+        // block that did not draw it. It needs `u` within an ulp of 1 (P ~
+        // 1e-15 per event) and costs, at worst, one event landing a moment
+        // early. A guard would be a branch on every event of every query to
+        // move an event by one ulp.
         let mut days: Vec<f64> = (0..count)
             .map(|_| block_start + stream.next_f64() * BLOCK_DAYS)
             .collect();
@@ -470,6 +538,12 @@ fn process_events(
 /// event in those blocks. Long windows are linear in their own length, so the
 /// caller owns that: nothing here caps or truncates a window, because a cap
 /// would silently answer a different question than the one asked.
+///
+/// **The block loop is therefore unbounded, and a caller must not hand it an
+/// unclamped span.** A window of ~1e12 days — the kind an
+/// "everything since genesis" default or a user-supplied number produces —
+/// iterates ~1e9 blocks and looks hung rather than failing. Clamp the span at
+/// the call site to what the question actually needs.
 pub fn events_in(
     seed: Seed,
     terrain: &GeneratedTerrain,
@@ -505,6 +579,7 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
     use hornvale_terrain::{BoundaryKind, GeneratedTerrain, TerrainPins};
+    use std::collections::BTreeMap;
 
     /// A globe small enough to build in a unit test and large enough to
     /// carry every boundary kind.
@@ -868,6 +943,133 @@ mod tests {
         assert!(
             compared > 0,
             "no cone spans more than one cell — the property is untestable here"
+        );
+    }
+
+    /// Every edifice cell on a globe, grouped by the source contact that
+    /// identifies its cone.
+    fn cones(geo: &Geosphere, terrain: &GeneratedTerrain) -> BTreeMap<CellId, Vec<CellId>> {
+        let mut cones: BTreeMap<CellId, Vec<CellId>> = BTreeMap::new();
+        for cell in geo.cells() {
+            if let Some(source) = terrain.edifice_source_at(cell) {
+                cones.entry(source).or_default().push(cell);
+            }
+        }
+        cones
+    }
+
+    fn l6_globe(seed: u64) -> (Geosphere, GeneratedTerrain) {
+        let geo = Geosphere::new(6);
+        let outcome = hornvale_terrain::generate(Seed(seed), &geo, &TerrainPins::default())
+            .expect("default pins generate");
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        (geo, terrain)
+    }
+
+    /// **Where the field and the draw must agree, they do.** At an edifice's
+    /// source contact, [`Recurrence::volcanic`] IS the rate `events_in` draws
+    /// that mountain's eruptions at.
+    ///
+    /// This is the honest half of a divergence documented on
+    /// [`Recurrence::volcanic`]: off-source the two differ by up to ~2.3x,
+    /// because a mountain samples the field once at its source. At the source
+    /// there is nothing to diverge, and pinning that keeps the relationship a
+    /// stated one instead of a coincidence — a future `volcano_at` that drew
+    /// its own recurrence, or scaled the field's, would make the field
+    /// unrelated to the events everywhere rather than merely off-source.
+    ///
+    /// Direction: red if the volcano's recurrence stops being the field read
+    /// at its source. It says nothing about off-source cells; its sibling
+    /// below owns those, and the two were mutation-proved as a pair. Making
+    /// `volcano_at` read the field at the QUERY cell leaves **this** test
+    /// green — at a source, `cell` and `source` are the same cell, so no
+    /// assertion here could ever see that mutation — and turns the sibling
+    /// red on its non-vacuity guard. Neither test covers the other; the
+    /// division is deliberate, and stating it is what stops a future reader
+    /// from deleting one as redundant.
+    #[test]
+    fn an_edifice_sources_field_value_is_the_rate_its_eruptions_are_drawn_at() {
+        let (geo, terrain) = l6_globe(42);
+        let cones = cones(&geo, &terrain);
+        assert!(!cones.is_empty(), "no edifice on the test globe");
+        for source in cones.keys() {
+            let field = hazard_at(&terrain, *source)
+                .volcanic
+                .expect("a source contact is an edifice cell");
+            let drawn = crate::volcano::volcano_at(Seed(42), &terrain, *source)
+                .expect("a source contact has a volcano")
+                .recurrence;
+            assert_eq!(
+                field, drawn,
+                "{source:?} is a source contact, yet its field value and the rate its \
+                 eruptions are drawn at disagree"
+            );
+        }
+    }
+
+    /// **The off-source divergence is one-sided, and that is the known
+    /// geometry.** A flank cell's local field value is never *more* active
+    /// than the rate its mountain's eruptions are drawn at.
+    ///
+    /// Structural rather than lucky: within one cone every factor of `unrest`
+    /// but proximity is the contact's own, proximity decays away from the
+    /// boundary, and `geometric_years` is strictly decreasing in `unrest`. So
+    /// the source — sitting on the boundary — is the most active cell of its
+    /// cone, and every flank reads quieter. Measured over four globes on
+    /// 2026-08-14: 499 disagreeing off-source cells, **zero** of them more
+    /// active, worst ratio 2.2977.
+    ///
+    /// The non-vacuity assertion is the load-bearing half. Without it this
+    /// test passes trivially against a `volcano_at` keyed on the query cell,
+    /// where the two quantities are equal everywhere by construction — and
+    /// that is precisely the design Task 5 exists to prevent.
+    ///
+    /// The worst ratio itself is deliberately NOT asserted: it is a property
+    /// of terrain's unrest decay profile, not of this module, and pinning it
+    /// here would make an unrelated terrain change look like a hazard defect.
+    /// It is recorded on [`Recurrence::volcanic`] as measured data instead.
+    ///
+    /// claim: invariant(forall-seed) — a fixed, small seed set standing in for
+    /// a structural property of the composition, in the shape
+    /// `volcano.rs::an_edifices_source_is_itself_an_edifice` already uses.
+    /// Not a rate and not a reachability claim, so not a census candidate.
+    #[test]
+    fn off_source_the_local_field_is_never_more_active_than_the_drawn_rate() {
+        let mut disagreeing = 0_u32;
+        let mut off_source = 0_u32;
+        for seed in [42, 43, 44] {
+            let (geo, terrain) = l6_globe(seed);
+            for (source, cells) in &cones(&geo, &terrain) {
+                for cell in cells.iter().filter(|c| *c != source) {
+                    off_source += 1;
+                    let local = hazard_at(&terrain, *cell)
+                        .volcanic
+                        .expect("an edifice cell")
+                        .get();
+                    let drawn = crate::volcano::volcano_at(Seed(seed), &terrain, *cell)
+                        .expect("an edifice cell")
+                        .recurrence
+                        .get();
+                    assert!(
+                        local >= drawn,
+                        "seed {seed}: {cell:?} is a flank of the cone at {source:?} yet its \
+                         local field is MORE active than the rate its eruptions are drawn \
+                         at: {local} y against {drawn} y"
+                    );
+                    disagreeing += u32::from(local != drawn);
+                }
+            }
+        }
+        assert!(
+            off_source > 100,
+            "only {off_source} off-source cells scanned"
+        );
+        // Non-vacuity: if the two quantities agreed everywhere there would be
+        // no divergence to bound, and the inequality above would be free.
+        assert!(
+            disagreeing > 100,
+            "only {disagreeing} off-source cells disagree with their drawn rate — the \
+             divergence this test bounds has vanished, so the bound is vacuous"
         );
     }
 

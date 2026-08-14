@@ -260,8 +260,13 @@ fn a_sub_window_query_returns_exactly_the_enclosing_windows_events() {
 /// world is like this.** See the module doc.
 ///
 /// Tolerance arithmetic, so the number is not arbitrary: the MLE's relative
-/// standard error is `1/sqrt(N)`, which at N = 200,000 is 0.22%, so 0.02
-/// absolute on `b = 1.0` is a nine-sigma band. The sample is drawn from the
+/// standard error is `1/sqrt(N)`. The single 0.02 band on `b = 1.0` is
+/// therefore two different sigma counts, one per arm — **9σ** at the busiest
+/// cell (N = 200,000, s.e. 0.22%) and **4.5σ** at the quietest (N = 50,000,
+/// s.e. 0.45%). Quote the weaker arm: this test is a 4.5σ band that happens
+/// to be 9σ on one of its two cells, not a nine-sigma test.
+///
+/// The sample is drawn from the
 /// TRUNCATED law while the estimator is stated for the untruncated one; that
 /// bias is `L*e^{-beta L}/(1 - e^{-beta L})` = 1.8e-5 magnitude units at
 /// `L = 4.5`, i.e. about 4e-5 in `b` — four orders of magnitude inside the
@@ -312,18 +317,41 @@ fn drawn_magnitudes_recover_the_authored_gutenberg_richter_b_value() {
     }
 }
 
-/// §6.8's implementation check for the inter-event times: given the rate, the
-/// process is Poisson, so the mean interval between consecutive events
-/// recovers the authored recurrence.
+/// §6.8's implementation check for the **rate**: the mean interval between
+/// consecutive events recovers the authored recurrence.
 ///
 /// **The recurrence was authored** (`hazard.rs`'s four interval constants) —
 /// this recovers the field's own value through the event draw, and is a check
 /// on the plumbing between them, not a measurement of anything.
 ///
-/// Tolerance: the relative standard error of a mean of N exponential
-/// intervals is `1/sqrt(N)`, which at N = 200,000 is 0.22%; 2% is a
-/// nine-sigma band. Held at three cells spanning the field's range, because a
-/// draw that ignored the rate entirely would still pass at one.
+/// # What this battery constrains, and what it does not
+///
+/// It constrains the rate and **not** exponentiality, and the distinction is
+/// not pedantry: the estimator is `mean(gaps)`, which telescopes to
+/// `(last - first) / (N - 1)`. Every interior event cancels. A perfectly
+/// regular clock ticking at the authored recurrence would pass this battery
+/// unchanged, so nothing here would notice a draw that placed events evenly
+/// instead of at random.
+///
+/// **Poisson-ness lives elsewhere**, in two `hazard.rs` unit tests that hold
+/// the two halves of the construction: `the_block_count_inverts_the_poisson_cdf`
+/// pins the per-block count as the Poisson quantile, and the block draw places
+/// those events uniformly inside the block. A Poisson count with uniform
+/// conditional positions *is* a Poisson process, and its gaps are exponential
+/// as a consequence — but that consequence is inherited from those tests, not
+/// demonstrated by this one. An earlier version of this doc said "the mean of
+/// N exponential intervals" and so implied it checked a distribution it never
+/// touches.
+///
+/// # Tolerance
+///
+/// The relative standard error of the estimator scales as `1/sqrt(N)`. The
+/// 2% band is therefore not one sigma count but three, one per arm: **9σ** at
+/// the busiest cell (N = 200,000, s.e. 0.22%), **6.3σ** at the median
+/// (N = 100,000, 0.32%), and **4.5σ** at the quietest (N = 50,000, 0.45%).
+/// The weakest arm is the one to quote. Held at three cells spanning the
+/// field's range because a draw that ignored the rate entirely would still
+/// pass at one.
 #[test]
 fn inter_event_times_recover_the_authored_recurrence() {
     let (geo, terrain) = globe_of(Seed(42));
