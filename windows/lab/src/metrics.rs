@@ -12431,6 +12431,26 @@ mod tests {
     /// functional predicate (one fact per occupied settlement), so distinct
     /// settlements sharing a species text give multiple day-bearing matches
     /// for the same key.
+    ///
+    /// **This test discriminates the return-the-maximum mutation (the
+    /// `min != max` guard below), but it cannot discriminate the drop-the-
+    /// object-filter mutation, and that is a measured fact about seed 42, not
+    /// an oversight.** Every one of `occ-people`'s fifteen distinct objects on
+    /// this seed — the four census-keyed species included — has a minimum
+    /// day of `0.0`, identical to the predicate's own unfiltered global
+    /// minimum (also `0.0`, from `occ-people`'s `n=704` facts, probed
+    /// 2026-08-13): many settlements across many species begin their
+    /// occupation at world genesis, so goblin's filtered minimum and the
+    /// unfiltered minimum are the same value for a reason that has nothing to
+    /// do with whether the filter ran. Dropping the filter is therefore
+    /// invisible to an `occ-people`-keyed assertion on this seed, for *any*
+    /// object choice — not just goblin's.
+    /// `first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum`
+    /// below closes that gap on `occ-tech`/`iron`, a witness where the
+    /// filtered and unfiltered minima measurably differ; since `first_day`
+    /// has one code path with no branching on the predicate string, that
+    /// witness stands for the shared `Some(object)` branch every keyed metric
+    /// in this roster (species, tech, and cause) runs through.
     #[test]
     fn first_day_of_a_keyed_object_matches_an_independently_computed_minimum() {
         let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
@@ -12458,6 +12478,81 @@ mod tests {
                 d, expected_min,
                 "must be the earliest goblin-keyed day ({expected_min}), not the latest \
                  ({expected_max}) or anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    /// Closes the gap the doc comment above names: a keyed test whose
+    /// filtered minimum is *provably distinct from the predicate's own
+    /// unfiltered minimum*, so dropping the `Some(object)` filter in
+    /// `first_day` is something this test can actually see. `occ-tech`'s
+    /// `iron` horizon is the witness — probed on seed 42:
+    /// `occ-tech` unfiltered min is `0.0` (neolithic settlements exist from
+    /// genesis) but `iron`-keyed occupations do not begin until day
+    /// `36_525.0`, strictly later. No `occ-people` species has an analogous
+    /// gap (see above), which is why this test reaches for a different
+    /// predicate rather than a different species — `first_day` has no
+    /// branching on the predicate string, so the code path this exercises is
+    /// identical to the one every species-, tech-, and cause-keyed metric in
+    /// the roster calls.
+    ///
+    /// Both self-defence guards from the sibling tests apply here together:
+    /// `expected_min != expected_max` (catches `first_day` silently returning
+    /// the maximum) and `expected_min` strictly greater than the predicate's
+    /// own unfiltered minimum (catches the object filter being dropped —
+    /// without this, `first_day` would fall back to `occ-tech`'s unfiltered
+    /// `0.0`, not `iron`'s `36_525.0`). If a later world change collapses
+    /// either gap, this test must fail loudly rather than quietly start
+    /// passing for the wrong reason.
+    #[test]
+    fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut unfiltered_days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-tech")
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            !unfiltered_days.is_empty(),
+            "need at least one day-bearing occ-tech fact to compute an unfiltered minimum"
+        );
+        unfiltered_days.sort_by(f64::total_cmp);
+        let unfiltered_min = unfiltered_days[0];
+
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-tech")
+            .filter(|f| matches!(&f.object, Value::Text(t) if t == "iron"))
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two iron-keyed day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        assert!(
+            expected_min > unfiltered_min,
+            "the iron-keyed minimum ({expected_min}) must be strictly later than occ-tech's own \
+             unfiltered minimum ({unfiltered_min}) for this test to discriminate a dropped \
+             object filter from a correctly applied one"
+        );
+        match first_day(v.world(), "occ-tech", Some("iron")) {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest iron-keyed day ({expected_min}), not the latest \
+                 ({expected_max}), not occ-tech's unfiltered minimum ({unfiltered_min}), or \
+                 anything else"
             ),
             other => panic!("expected a Number, got {other:?}"),
         }
