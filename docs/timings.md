@@ -866,3 +866,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T00:32:21Z | rebaseline | 33.943 | 184.632 | 8.545 | 5.69 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-14T00:32:55Z | preflight | 3.222 | 0.397 | 0.641 | 0.32 | 0 | f6556e1a | campaign/the-sexton | ambrose | 12 |
 | 2026-08-14T00:58:54Z | gate | 506.433 | 3088.289 | 206.998 | 6.51 | 0 | dcd568e4 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T01:00:12Z | preflight | 3.531 | 0.413 | 0.679 | 0.31 | 0 | a9c8dd18 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T01:41:34Z | quick | 18.092 | 26.779 | 17.951 | 2.47 | 0 | 439828a9 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T01:50:03Z | gate | 405.969 | 2391.591 | 159.884 | 6.28 | 0 | 30e2a639 | campaign/the-glasshouse | ambrose | 12 |
