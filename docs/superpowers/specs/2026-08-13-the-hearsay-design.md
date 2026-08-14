@@ -110,18 +110,34 @@ Measured on the seed-42 world, not assumed
   history-now          1      occ-ended-by       474
 ```
 
-And the founding tree those parent links describe:
+**`occ-founded-from` is a sum type, and reading it as a plain parent pointer is
+wrong.** `history_emit.rs:282` writes one of two shapes:
 
 ```
-  occupations with a parent link   704
-  max depth                         22
-  median depth                       9
+  Founding::Genesis(cell)  ->  Value::Number(cell_id)     NO parent: a root
+  Founding::From(entity)   ->  Value::Entity(parent_occ)  a real parent link
+```
+
+A `Number` is a *site*, not an ancestor. The corrected tree on seed 42:
+
+```
+  occupations                      704
+    roots (Genesis at a cell)       46
+    with a real parent (From)      658
+  max depth                         21
+  median depth                       8
   max children of one parent         5
+  parents having any children      516
 ```
 
-**`occ-founded-from` is already an inheritance chain**, 704 nodes deep enough
-to matter, and `domains/history/src/descent.rs` already walks generational
-distance (`remove`, `kinship`, `ancestor`). Nothing new needs generating.
+**The 46 roots are load-bearing, not a rounding detail.** A root lineage
+witnessed its own origin with no ancestor to inherit from, so every root is an
+independent origin by construction — the echo ratio's ceiling is set by how
+many distinct roots a claim's holders descend from. A design that read all 704
+as a single chain would have predicted far more echo than the world contains.
+
+`domains/history/src/descent.rs` already walks generational distance
+(`remove`, `kinship`, `ancestor`). Nothing new needs generating.
 
 ### 4.2 Who holds a claim
 
@@ -207,9 +223,15 @@ where a prediction can):
                     median over a handful.
 ```
 
-The founding tree branches at ≤5 children with median depth 9, which may well
-be bushy enough to put this in the third row. That outcome is a result, not a
-failure.
+**The denominator is measured, not hoped for.** On seed 42, 403 of 704
+occupations have a subtree (self + descendants) of ≥3, and 234 endings carry an
+entity-attributed cause — so a single world already clears the 30-event floor
+by an order of magnitude, and the census seed set multiplies it. The NO VERDICT
+row exists for a *changed* world, not as a live worry about this one.
+
+The tree branches at ≤5 with median depth 8 and carries 46 independent roots,
+which may well be enough to put the result in the third row. That outcome is a
+result, not a failure.
 
 **H2 — echo ratio falls with event age.** Older events have had more
 generations to propagate along the tree, so their holders should be
