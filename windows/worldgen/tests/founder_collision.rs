@@ -21,12 +21,21 @@
 //!    2 and 2 before it.
 //!
 //! The drop stays because the widening is **not total**, and this file is where
-//! that is visible: at seeds 2634 and 2898 the colliding pair's two *parents*
-//! are themselves twins, so the ancestry hop folds identically and the pair
-//! ties on everything else too. Those two are the whole residual over 0–2999.
-//! Restoring `select_founders`'s old fatal assert would therefore stop two
-//! legal seeds from building at all — which is why The Ell measured the
-//! proposal instead of shipping it.
+//! that is visible: at a colliding seed the pair's two *parents* are themselves
+//! twins, so the ancestry hop folds identically and the pair ties on everything
+//! else too. Restoring `select_founders`'s old fatal assert would therefore stop
+//! legal seeds from building at all — which is why The Ell measured the proposal
+//! instead of shipping it.
+//!
+//! **WHICH seeds those are is a property of the placement, not of the key, and
+//! decision 0131 proved it.** The Ell's residual over 0–2999 was 2634 and 2898.
+//! The terrain epoch re-placed every settlement in every world and cleared both;
+//! a fresh full sweep of 0–2999 on the post-epoch tree (781 s, ten threads)
+//! found `[20, 514, 1412, 1505, 1738, 1892]`, one drop each — a completely
+//! different membership at a materially unchanged rate (6 in 3000, against 2
+//! after The Ell and 5 before it). Read the rate, never the membership: the
+//! seeds in this file are witnesses that the residual exists and is small, and
+//! they will not survive the next epoch either.
 //!
 //! What this battery pins:
 //!
@@ -79,18 +88,25 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// the depth `promote` runs at, so this is the end-to-end liveness claim rather
 /// than a claim about `select_founders` alone.
 ///
-/// **These are 2634 and 2898, not 283 and 705.** The Ell's widening cleared the
-/// census range, so 283 and 705 no longer collide and building them would prove
-/// only that a world without a collision survives — the vacuous form of this
-/// test. The seeds kept here are the ones where the drop genuinely fires, and
-/// the drop firing is asserted below so that a future widening which clears
-/// them too reddens this file rather than quietly hollowing it out.
+/// **These are 20 and 514, not 2634 and 2898.** The Ell's widening cleared 283
+/// and 705, and decision 0131's terrain epoch has now cleared 2634 and 2898 as
+/// well — a re-placed world collides on a different set entirely. Building a
+/// cleared seed would prove only that a world without a collision survives,
+/// which is the vacuous form of this test, and the assertion below is what made
+/// the clearing visible instead of letting it hollow the test out silently.
 ///
-/// claim: structural(seed: [2634, 2898]) — two named worlds, built once each. No
+/// The seeds come from a **re-run of the full 0–2999 sweep** on the post-epoch
+/// tree (781 s, ten threads), so the positive-set claim below is a fresh
+/// measurement and not an inherited one: `[20, 514, 1412, 1505, 1738, 1892]`,
+/// one drop each. The rate is materially unchanged (six worlds in three
+/// thousand, against two after The Ell and five before it); the membership
+/// turned over completely.
+///
+/// claim: structural(seed: [20, 514]) — two named worlds, built once each. No
 /// search: the seeds come from a completed 0–2999 sweep, not from this test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [2634u64, 2898] {
+    for seed in [20u64, 514] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -112,29 +128,43 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// change that moves them is a change in promotion coverage and must be read,
 /// not re-pinned reflexively.
 ///
-/// **Five of these seven now read zero, and that is The Ell's headline.** Under
-/// the pre-Ell key the row for 283, 705, 2403, 2634 and 2898 each read 1. The
-/// widening cleared the first three (and the whole census range with them) and
-/// left the last two, whose colliding pairs have twin parents.
+/// **Five of these seven read zero after The Ell, and all seven read zero now.**
+/// Under the pre-Ell key 283, 705, 2403, 2634 and 2898 each read 1; the
+/// widening cleared the first three and left the last two, whose colliding
+/// pairs have twin parents. Decision 0131's terrain epoch re-placed every
+/// settlement in every world and cleared those two as well — the whole
+/// pre-epoch positive set is now empty, and a **fresh 0–2999 sweep** (781 s,
+/// ten threads, run outside this test) found a completely different one:
+/// `[20, 514, 1412, 1505, 1738, 1892]`, one drop each.
 ///
-/// claim: structural(seed: [42, 283, 705, 2403, 2634, 2793, 2898]) — seven
-/// named worlds with pinned per-seed values. Not a sweep and not a search: the
-/// enumeration is the whole of a completed 0–2999 sweep's positive set plus two
-/// controls, so nothing here scans for an instance.
+/// The old seeds are KEPT as zero rows rather than deleted. They are the
+/// cheapest possible statement of what the epoch did — a collision set does not
+/// survive a re-placement — and they redden if a future change resurrects one,
+/// which is a thing worth knowing. The cost is four extra `Settlements` builds
+/// (ten seeds against seven, roughly +7 s).
+///
+/// claim: structural(seed: [20, 42, 514, 1412, 1505, 1738, 1892, 2634, 2793,
+/// 2898]) — ten named worlds with pinned per-seed values. Not a sweep and not a
+/// search: the enumeration is the whole of a completed 0–2999 sweep's positive
+/// set plus two controls and the three superseded rows, so nothing here scans
+/// for an instance.
 #[test]
 fn the_dropped_founders_are_pinned_per_seed() {
-    // (seed, founders dropped). The five seeds are the whole of
-    // `the-radiation`'s failure set over seeds 0–2999 (the campaign's
-    // founder-collision diagnosis); 42 and 2793 are the controls. The values
-    // are The Ell's re-measurement on this tree.
-    let expected: [(u64, usize); 7] = [
+    // (seed, founders dropped). The first six are the whole of the post-0131
+    // positive set over seeds 0–2999; 42 and 2793 are the long-standing
+    // controls; 2634 and 2898 are the pre-epoch positives, kept to record that
+    // they cleared. Values measured on this tree.
+    let expected: [(u64, usize); 10] = [
+        (20, 1),
         (42, 0),
-        (283, 0),
-        (705, 0),
-        (2403, 0),
-        (2634, 1),
+        (514, 1),
+        (1412, 1),
+        (1505, 1),
+        (1738, 1),
+        (1892, 1),
+        (2634, 0),
         (2793, 0),
-        (2898, 1),
+        (2898, 0),
     ];
     for (seed, drops) in expected {
         let w = build(seed, BuildDepth::Settlements);
@@ -209,22 +239,27 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// to stand on.** It used to run on seed 283, whose losing people held more
 /// than `MEMORY_DEPTH` occupations, so a backfill would have had a real
 /// candidate below the cut to pull up. The Ell cleared 283, and neither seed
-/// that still collides can replace it: 2634's losing people holds exactly
-/// `MEMORY_DEPTH` occupations and 2898's holds nine. So the depth-binding case
-/// is asserted where it can be constructed — `person_promote.rs`'s
+/// that still collided could replace it. So the depth-binding case is asserted
+/// where it can be constructed — `person_promote.rs`'s
 /// `a_drop_costs_one_founder_and_is_not_backfilled`, on a synthetic record set
 /// — and what runs here is the live-world half: whatever the cap does, the
 /// people ends one short and nothing was substituted in.
+///
+/// **Seed 20, not 2898 (The Glasshouse, decision 0131).** The terrain epoch
+/// re-placed every world and cleared 2898 along with the rest of the pre-epoch
+/// positive set; 20 is the first seed of the fresh sweep's set. The
+/// `available > 1` premise below is what makes the substitution question
+/// answerable at all, and it is asserted rather than assumed for exactly this
+/// reason.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    // Seed 2898, not 283: The Ell cleared 283, so it drops nobody to observe.
-    let w = build(2898, BuildDepth::Settlements);
+    let w = build(20, BuildDepth::Settlements);
     let occs = occupation_records(&w);
     let cast = select_founders(&occs);
     let dropped = cast
         .unremembered
         .first()
-        .expect("seed 2898 drops exactly one founder");
+        .expect("seed 20 drops exactly one founder");
     let people = dropped.people;
     let promoted = cast
         .remembered
@@ -234,7 +269,7 @@ fn a_dropped_founder_is_not_backfilled() {
     let available = occs.iter().filter(|o| o.core.people == people).count();
     assert!(
         available > 1,
-        "seed 2898's {people:?} must hold more than one occupation \
+        "seed 20's {people:?} must hold more than one occupation \
          ({available}), or there is nothing a backfill could have reached for"
     );
     assert_eq!(

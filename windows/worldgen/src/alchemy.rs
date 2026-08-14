@@ -530,12 +530,34 @@ mod tests {
     /// production-set divergence needs a world small enough that this
     /// saturation does NOT happen: [`sparse_terrain_pins`] pins a small,
     /// mostly-ocean globe (few land cells, few plates), and at THAT
-    /// configuration seeds do diverge — e.g. seed 0 reaches 6 productions
-    /// (no `dissolve-salt`: this particular small landmass never rolls
-    /// evaporite rock or arid-enough soil) while seed 2 reaches all 7. Pins
-    /// are held fixed and identical between the two builds; only the seed
-    /// differs, so the divergence is attributable to the seed, exactly as
-    /// item 3 asks for.
+    /// configuration seeds do diverge — a minority reach all 7 while the rest
+    /// miss `dissolve-salt`, because their particular small landmass never
+    /// rolls evaporite rock or arid-enough soil. Pins are held fixed and
+    /// identical across every build; only the seed differs, so the divergence
+    /// is attributable to the seed, exactly as item 3 asks for.
+    ///
+    /// **THE SEEDS ARE SCANNED, NOT PINNED (The Glasshouse, decision 0131).**
+    /// This asserted `productions_of(0) != productions_of(2)`, and the terrain
+    /// epoch made those two agree — both now reach 6. That is not a
+    /// counterexample to the claim, which is existential ("two seeds reach
+    /// different sets"), and re-pinning it on a freshly-measured pair would
+    /// restore exactly the one-sample-for-a-property shape the epoch just
+    /// falsified. The loop below instead asserts that the sparse-pin
+    /// population is NOT DEGENERATE — at least two distinct reachable-
+    /// production sets across seeds 0..16 — which is the claim itself rather
+    /// than one witness to it, and which reddens only if the seed genuinely
+    /// stops mattering.
+    ///
+    /// This is not the seed-hunting decision 0093 forbids. Nothing is being
+    /// hunted: the whole scanned population is the assertion's subject, no
+    /// build is discarded as a miss, and the sparse pins make each build
+    /// cheap (all sixteen measured in 0.2 s, against 1.7 s for the two
+    /// default-pin builds above).
+    /// claim: reachability(seed: exists two seeds in 0..16 at identical
+    /// small-globe pins reaching different reachable-production sets) — an
+    /// existence claim over an enumerated population, and the population itself
+    /// is the assertion's subject rather than a search space: no build is
+    /// discarded as a miss.
     #[test]
     fn materially_different_geology_reaches_materially_different_productions() {
         // The substance-set claim holds even at default pins.
@@ -551,13 +573,25 @@ mod tests {
         // The reachable-production claim needs the small-globe pins (see
         // the doc comment above for why default-size worlds saturate).
         let pins = sparse_terrain_pins();
-        let (sparse_a, sparse_climate_a) = terrain_and_climate_with_pins(0, &pins);
-        let (sparse_b, sparse_climate_b) = terrain_and_climate_with_pins(2, &pins);
-        let productions_a = reachable_productions_of_world(&sparse_a, &sparse_climate_a);
-        let productions_b = reachable_productions_of_world(&sparse_b, &sparse_climate_b);
-        assert_ne!(
-            productions_a, productions_b,
-            "seeds 0 and 2 at the same small-globe pins must reach different production sets: {productions_a:?} vs {productions_b:?}"
+        let mut sets: Vec<(u64, Vec<&str>)> = Vec::new();
+        for seed in 0..16u64 {
+            let (t, c) = terrain_and_climate_with_pins(seed, &pins);
+            sets.push((seed, reachable_productions_of_world(&t, &c)));
+        }
+        let distinct: Vec<&Vec<&str>> = {
+            let mut d: Vec<&Vec<&str>> = Vec::new();
+            for (_, p) in &sets {
+                if !d.contains(&p) {
+                    d.push(p);
+                }
+            }
+            d
+        };
+        assert!(
+            distinct.len() >= 2,
+            "every seed in 0..16 at the same small-globe pins reaches the SAME \
+             reachable-production set, so the seed no longer decides which \
+             productions a world can support: {sets:?}"
         );
     }
 

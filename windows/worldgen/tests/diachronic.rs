@@ -338,6 +338,44 @@ type Row = (
 // disappears) and `book::reckoning_at_...` (its one crisis-margin line goes).
 // Four surfaces, one fact: a culture with no organized cult cannot exceed
 // Counted, which is this test's own structural law.
+//
+// **THE GLASSHOUSE re-measure (Stage B, decision 0131).** The craton rescale
+// delivers its budget, so every world's coastline rose to the shelf break and
+// mean land elevation fell 2257 -> 1783 m; every settlement was re-placed.
+// Re-measured wholesale by the same scaffold, not hand-edited. Twelve of the
+// seventy-five rows move rung:
+//
+//   seed 1 high-elf      Predictive -> Counted    (6472 witnessed, unchanged)
+//   seed 1 snow-elf      Predictive -> Counted    (6472)
+//   seed 3 drow          Predictive -> Counted    (53)
+//   seed 3 high-elf      Predictive -> Counted    (53)
+//   seed 3 wood-elf      Predictive -> Counted    (32)
+//   seed 2 high-elf      Counted    -> Predictive (81)
+//   seed 3 kobold        Counted    -> Predictive (53)
+//   seed 4 drow          Counted    -> Predictive (3785)
+//   seed 4 gully-dwarf   Counted    -> Predictive (2067)
+//   seed 4 snow-elf      Counted    -> Predictive (3785)
+//   seed 5 desert-dwarf  Counted    -> Predictive (500)
+//   seed 5 snow-elf      Counted    -> Predictive (500)
+//
+// **THE ROSTER IS UNCHANGED AND SO IS EVERY OTHER COLUMN.** All 75 (seed,
+// kind) pairs are the same pairs; every epoch-1 rung is still `Unknown`; every
+// witnessed count and every prediction day is byte-identical to the previous
+// table. Only column 4 moves, and it moves BOTH WAYS — five losses, seven
+// gains, net +2 predictive — which is what this file has recorded at every
+// re-measure since The Range and is the reason the threshold reading stands.
+//
+// That every other column held is the informative half, and it is stronger
+// evidence here than at any prior re-measure, because the cause this time is
+// the GROUND rather than the roster. A terrain epoch re-placed every
+// settlement in every world and moved not one observation count and not one
+// predicted day: those are functions of the eclipse geometry and the observer
+// cadence, which the coastline does not touch. What it does touch is which
+// flagships are large enough to support a shaman caste — the structural law
+// stated above — and that is exactly and only what moved. The same fact is
+// visible from the religion side in `doctrine::the_soc1_gate_is_the_flagship_
+// cult_form`, whose bounded 50..=60 scan found folk cult-forms rising 20 -> 58
+// over the same epoch.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -399,9 +437,9 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
     ),
     (
         1,
@@ -447,9 +485,9 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         6472,
-        Some(36531.74198950235),
+        None,
     ),
     (
         1,
@@ -519,9 +557,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         81,
-        None,
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -607,9 +645,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -639,9 +677,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -671,9 +709,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         53,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -695,9 +733,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "wood-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         32,
-        Some(36125.669504115634),
+        None,
     ),
     (
         4,
@@ -727,9 +765,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         3785,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -751,9 +789,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "gully-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         2067,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -807,9 +845,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         3785,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -831,9 +869,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "desert-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -927,9 +965,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,

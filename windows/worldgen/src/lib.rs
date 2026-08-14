@@ -9289,7 +9289,18 @@ mod tests {
         // changed. Seed 42 now carries 230 settlements and 13,389 ledger
         // facts. Same reading as The Range's, one campaign later and thirty-
         // eight glosses larger.
-        assert_eq!(count("name-gloss"), 355);
+        //
+        // THE GLASSHOUSE (Stage B, decision 0131): 355 -> 321, and the three
+        // counts above are UNCHANGED at 145 — the split this file keeps on two
+        // lines holds for the fourth consecutive campaign. The roster did not
+        // move; the ground did. The craton rescale delivers its budget, so the
+        // coastline rose to the shelf break and mean land elevation fell
+        // 2257 -> 1783 m, re-deciding where settlements survive: seed 42 now
+        // carries 196 settlements (was 230) and 10,787 ledger facts (was
+        // 13,389). Fewer named things, so fewer glosses; the pantheon, being a
+        // function of the peopled ROSTER, did not notice. Post-unblinding
+        // re-measure, declared per decision 0016.
+        assert_eq!(count("name-gloss"), 321);
     }
 
     #[test]
@@ -9874,25 +9885,46 @@ mod tests {
             "every cell's dread stays in [0,1]"
         );
 
-        // The fixture cell `vestige.rs`'s own tests use: ancient continental
-        // crust whose presence noise fires the pre-human gate-scar test, so
-        // its stack's first (and only) layer is breached + forgotten
-        // (dread 0.9). See `vestige::DEEP_ANCIENT_NUMINOUS_CELL`'s doc comment
-        // for how this cell was found.
-        let haunted_cell = hornvale_kernel::CellId(21966);
+        // The most-dreaded cell that carries any vestige at all.
+        //
+        // SEARCHED, not pinned. This read `CellId(21966)` — the single
+        // pre-human gate-scar cell `vestige.rs` had pinned, whose stack's only
+        // layer is breached + forgotten at dread 0.9. The terrain epoch of
+        // decision 0131 turned that cell to ocean, and seed 42 now carries NO
+        // pre-human scar anywhere (the finding is recorded on
+        // `vestige::PREHUMAN_SEED`), so there is no seed-42 cell to move the
+        // pin to.
+        //
+        // The claim below does not need a pre-human cell in particular: it is
+        // that a haunted cell reads strictly higher than an unhaunted one, and
+        // seed 42's people-made vestiges — abandoned delvings, buried ruins,
+        // sealed vaults — are haunted ground too. Taking the MAXIMUM makes the
+        // comparison the sharpest one the world offers rather than whichever
+        // cell a scan happens to reach first.
+        //
+        // Both cells come out of ONE `vestiges_field` scan rather than a
+        // per-cell `vestiges_at` sweep. That is what the batched field exists
+        // for, and the difference is not cosmetic: `vestiges_at` walks the
+        // ledger per cell, and a whole-globe sweep of it took this test from
+        // 3.8 s to 132 s when it was written that way.
         let terrain = terrain_of(&world).unwrap();
-        let haunted_stack = vestiges_at(&world, &terrain, haunted_cell);
+        let geo = terrain.geosphere();
+        let stacks = crate::vestige::vestiges_field(&world, &terrain);
+        let haunted_cell = geo
+            .cells()
+            .filter(|&c| !stacks.get(c).is_empty())
+            .max_by(|&x, &y| a.get(x).total_cmp(a.get(y)))
+            .expect("some cell in a seed-42 world carries a vestige");
         assert!(
-            !haunted_stack.is_empty(),
-            "the fixture cell must carry at least the pre-human vestige"
+            !stacks.get(haunted_cell).is_empty(),
+            "the fixture cell must carry at least one vestige layer"
         );
 
-        // Find a genuinely empty-stack cell by scanning: land or ocean, no
-        // pre-human scar, no occupation ever founded there.
-        let geo = terrain.geosphere();
+        // A genuinely empty-stack cell: land or ocean, no pre-human scar, no
+        // occupation ever founded there.
         let empty_cell = geo
             .cells()
-            .find(|&cell| vestiges_at(&world, &terrain, cell).is_empty())
+            .find(|&cell| stacks.get(cell).is_empty())
             .expect("some cell in a seed-42 world has no vestige at all");
 
         let haunted_dread = *a.get(haunted_cell);
@@ -10509,8 +10541,17 @@ mod tests {
         // present day's, and the flagship's millennia of growth compound
         // against a lower ceiling. Exactly the "deliberate bake/carrying-
         // capacity change moves world identity" case this comment anticipates.
+        //
+        // THE GLASSHOUSE re-pin (Stage B, decision 0131): 68 -> 66. The craton
+        // rescale now delivers its budget, so seed 42's coastline sits at the
+        // shelf break instead of ~1.1 km below it and mean land elevation falls
+        // 2257 -> 1783 m. Land area, land temperature and carrying capacity all
+        // move together, so the flagship's ceiling — and the peak the bake
+        // grows it to — moves with them. Exactly the "deliberate terrain change
+        // moves world identity" case this comment already anticipates, two
+        // units down. Post-unblinding re-measure, declared per decision 0016.
         assert_eq!(
-            village.population, 68,
+            village.population, 66,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -11267,7 +11308,44 @@ mod tests {
         let terrain = terrain_of(&world).unwrap();
         assert_eq!(terrain.globe().plates.len(), 12);
         let summary = hornvale_terrain::summarize(terrain.globe());
-        assert!((summary.ocean_fraction - 0.7).abs() < 0.01);
+        // THE GLASSHOUSE (Stage B, decision 0131): the tolerance widens
+        // 0.01 -> 0.015, and the reason is MEASURED rather than assumed. Seed
+        // 42 realises 0.68881 against a pinned 0.7 — a residual of 0.01119,
+        // which is 0.00119 past the old bound.
+        //
+        // It is not a pin that stopped working, and it is not a supply
+        // shortfall: at this pin the land quota is 0.3 against a continental
+        // supply of ~0.41, so `SUPPLY_SHORTFALL_FACTOR` (decision 0053) is
+        // nowhere near tripping and the exact-percentile path is taken. Swept
+        // across four pin values on this tree, the residual is SYSTEMATIC and
+        // one-signed — always slightly more land than asked for:
+        //
+        //     pinned  realised   residual
+        //       0.5    0.49265   -0.00735
+        //       0.6    0.58891   -0.01109
+        //       0.7    0.68881   -0.01119
+        //       0.8    0.79454   -0.00546
+        //
+        // Sea level is an order statistic over a finite cell grid and the
+        // sculpting that follows it moves cells across the shoreline, so a
+        // pinned ocean fraction has always been a TARGET rather than a
+        // guarantee — which is decision 0053's own word for it. What the epoch
+        // changed is the size of that residual, by delivering the continental
+        // budget the rescale had been under-delivering by ~34%. 0.015 is the
+        // measured accuracy of the pin rounded up, not a bound loosened until
+        // the test passed; the residual is printed so the next reader can see
+        // whether it has moved rather than inferring it from the bound.
+        let residual = summary.ocean_fraction - 0.7;
+        println!(
+            "ocean-fraction pin 0.7 realised {} (residual {residual:+.5})",
+            summary.ocean_fraction
+        );
+        assert!(
+            residual.abs() < 0.015,
+            "the ocean-fraction pin realised {} against a target of 0.7 (residual \
+             {residual:+.5}) — outside the pin's measured accuracy",
+            summary.ocean_fraction
+        );
     }
 
     #[test]
@@ -13067,7 +13145,14 @@ mod tests {
             &affinity,
         );
         let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
-        assert_eq!(land.len(), 11_066, "P5's land-cell count (spec §1)");
+        // THE GLASSHOUSE re-pin (Stage B, decision 0131): 11_066 -> 11_283.
+        // The craton rescale delivers its budget, so seed 42's ocean fraction
+        // falls slightly and the land mask grows by 217 cells (+1.96%). This is
+        // a COUNT of the population P5's claim quantifies over, not the claim
+        // itself: the assertion below — that no land cell is emptied of every
+        // kind — is what this test is for, and it holds over the larger mask.
+        // Post-unblinding re-measure, declared per decision 0016.
+        assert_eq!(land.len(), 11_283, "P5's land-cell count (spec §1)");
 
         let undominated: Vec<hornvale_kernel::CellId> = land
             .iter()

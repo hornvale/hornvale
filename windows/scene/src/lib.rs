@@ -1561,15 +1561,42 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: exists seed in 44..=60 with a waterfall site) —
+    /// an existence probe over a bounded range, not a distribution: waterfall
+    /// sites are sparse and the scan stops at the first hit.
     #[test]
     fn water_fields_are_sized_legend_matches_and_ocean_has_no_drainage() {
-        // Seed 44 (generated sky, default pins): unlike seed 42 (which has
-        // zero waterfall sites at the canonical globe level — waterfall
-        // sites are sparse, per `waterfalls_exist_across_a_seed_sweep`'s
-        // note in domains/terrain/src/carve.rs), seed 44 carries 4 waterfall
-        // sites, so it exercises every assertion below including the
-        // nonempty-waterfalls one.
-        let scene = tiles_scene(&gen_world_for(44), 32).unwrap();
+        // The seed is SEARCHED FOR, not pinned. Waterfall sites are sparse
+        // (`waterfalls_exist_across_a_seed_sweep`, domains/terrain/src/carve.rs)
+        // and the population moved under the terrain epoch of decision 0131:
+        // seed 44 carried 4 sites and now carries 0, because a coastline at
+        // the shelf break drains land over a shorter distance, shrinking
+        // catchments and with them the drainage that clears
+        // `WATERFALL_MIN_DRAINAGE`. Measured over seeds 40..=60 after the
+        // epoch, only 45, 50, 52 and 56 carry a site at all, one each.
+        //
+        // Re-pinning on 45 would restore exactly the sample the epoch just
+        // falsified, so the test scans instead and asserts it found one
+        // inside the bound: a world that stops making waterfalls entirely is
+        // then a finding this test reports, rather than a pin that quietly
+        // needs moving every epoch. It costs one extra world build today
+        // (44 has none, 45 does).
+        let mut found = None;
+        for seed in 44..=60u64 {
+            let s = tiles_scene(&gen_world_for(seed), 32).unwrap();
+            if !s.waterfalls.is_empty() {
+                found = Some((seed, s));
+                break;
+            }
+        }
+        let (seed, scene) = found.expect(
+            "no seed in 44..=60 carries a waterfall site — the world has stopped \
+             producing them, which is a finding to report, not a bound to widen",
+        );
+        println!(
+            "water fields measured on seed {seed}, {} waterfalls",
+            scene.waterfalls.len()
+        );
         let tiles = scene.width as usize * scene.height as usize;
         assert_eq!(scene.water.len(), tiles);
         assert_eq!(

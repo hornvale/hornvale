@@ -883,11 +883,36 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // cold-adapted in the field" may well be true of this commit, but **this
     // line is not the measurement that says so** and must not be cited as
     // one.
+    // THE GLASSHOUSE re-pin (Stage B, decision 0131): 36.3288 -> 36.2088, and
+    // **the identity in the two paragraphs above is no longer true**. Read the
+    // printed decomposition rather than the arithmetic those paragraphs assume:
+    // `raw_pole_mean` is now 0.011362 and `pole floored: false`, against `true`
+    // at EVERY prior reading in this comment's history. The polar term has come
+    // off `POLE_FLOOR` for the first time, so `ratio` is a genuine
+    // tropics/poles ratio (0.411404 / 0.011362 = 36.2088) and NOT
+    // `100 * trop_mean` — that equality held only while the denominator was the
+    // constant. Anyone re-deriving this number from `trop_mean` alone will get
+    // 41.14 and conclude something is broken.
+    //
+    // The mechanism is the terrain epoch. The craton rescale delivers its
+    // budget, so the coastline sits at the shelf break; the land mask grows and
+    // mean land elevation falls 2257 -> 1783 m. Lower, warmer polar land is
+    // what lifts `raw_pole_mean` 0.004589 -> 0.011362 — which is, incidentally,
+    // the movement the withdrawn-paragraph above predicted a cold-adapted
+    // PEOPLE would produce and which no roster change ever did. It came from
+    // the ground, exactly where that paragraph said it no longer lived. Do not
+    // read this as vindication of the roster mechanism; it is the opposite.
+    //
+    // The degeneracy this assertion documents is therefore REDUCED, not gone,
+    // and it stays a drift tripwire on a Hornvale-internal number (0106's valid
+    // use), not evidence for the biomass-by-latitude gradient. Post-unblinding
+    // re-measure, declared per decision 0016.
     assert!(
-        (ratio - 36.3288).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~36.3288). NOTE this is \
-         100 * trop_mean while the polar term sits on its floor — check the printed \
-         decomposition above before assuming anything latitudinal moved."
+        (ratio - 36.2088).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~36.2088). Check the \
+         printed decomposition above before assuming anything latitudinal moved — and \
+         note that since The Glasshouse the polar term is OFF its floor, so this is a \
+         real tropics/poles ratio and no longer 100 * trop_mean."
     );
 }
 

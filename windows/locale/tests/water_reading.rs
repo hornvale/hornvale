@@ -6,13 +6,33 @@
 //! Three claims are asserted here, each against a reference that lives
 //! **outside** the thing it checks:
 //!
-//! - **H2-2, appending is byte-clean.** Every document is byte-identical to
-//!   its pre-stage-2 form up to the first new key. The reference is
+//! - **H2-2, appending is additive.** Every document still carries every key
+//!   its pre-stage-2 form carried, in the same order, with the stage-2 keys
+//!   appended after them and nothing removed or reordered. The reference is
 //!   `fixtures/pre-stage-2-rooms.jsonl`, captured and committed on the
 //!   unmodified locale window in the commit *before* the fields existed. It
 //!   ships without a regenerator on purpose: a fixture re-rendered by the
 //!   current code and compared against itself proves nothing, so the only
 //!   honest way to recapture it is to check out a pre-stage-2 commit.
+//!
+//!   **The claim used to be byte-identity of the value prefix, and The
+//!   Glasshouse converted it to its world-independent core.** A before-arm
+//!   fixture that regenerates with the code is not a before-arm
+//!   (`PROC-before-arm-dies-with-an-epoch`), and the terrain epoch of decision
+//!   0131 moved every VALUE in every captured document — seed 42's coastline
+//!   rose to the shelf break, so the sampled rooms changed biome, elevation,
+//!   water kind and prose. The value comparison could only be restored by
+//!   re-capturing, which would compare current-against-current and pass
+//!   vacuously while proving nothing about The Ford's refactor.
+//!
+//!   What The Ford actually claimed is STRUCTURAL — stage 2 added keys and
+//!   removed none — and a document's key SHAPE is not a function of the world.
+//!   That is what is asserted below, and it survived the epoch untouched: the
+//!   key order, the key sets at every nesting level, and the identity of the
+//!   appended keys are all exactly what the pre-stage-2 fixture recorded. The
+//!   fixture is therefore still a genuine before-arm for the claim that
+//!   remains, because the half of it this test now reads was captured before
+//!   the change and has not been rewritten since.
 //!
 //!   The sample it carries is 200 seed-42 rooms at walking depth, chosen by a
 //!   fixed rule over the channel network — every polyline's mid vertex first
@@ -64,101 +84,182 @@ fn room_of(line: &str) -> RoomAddr {
     }
 }
 
-/// H2-2 — appending is byte-clean. A document is byte-identical to its
-/// pre-stage-2 form up to the first new key. This is the no-epoch claim,
-/// asserted rather than assumed.
+/// H2-2 — appending is additive. Every key the pre-stage-2 document carried is
+/// still carried, in the same order, and the stage-2 keys are appended after
+/// them. This is the no-epoch claim, asserted rather than assumed.
 ///
-/// # Two values are excused, by name, and only two
+/// **RENAMED by The Glasshouse**, from
+/// `the_document_is_byte_identical_up_to_the_first_new_key`, because it no
+/// longer compares bytes — the same discipline The Fathom's before-arm got when
+/// it was converted (a test's name must state what it now proves, decision
+/// 0106's "a wrong label defends itself").
 ///
-/// The Rill grounded `regime.micro.wetness` in the world (the climate supply a
-/// room's cells receive, allocated by its distance to its own watercourse) and
-/// the descriptor is rendered from it, so those two values legitimately moved
-/// after this fixture was captured. They are substituted out of the comparison
-/// **individually and by key**, leaving every other byte of the prefix — key
-/// order included, and `descriptor_noun` included, which reads the same pools
-/// and did not move — under the original assertion.
+/// # Why this is a key-shape check and not a byte-prefix one
 ///
-/// This is the narrowest amendment that keeps the claim true. Recapturing the
-/// fixture instead would have destroyed what it is *for*: it is The Ford's
-/// before-arm, and a before-arm re-rendered by later code proves nothing about
-/// the change it was captured for.
+/// It used to compare the fixture line, byte for byte, against the live
+/// document's prefix up to the first new key — with `regime.micro.wetness` and
+/// `regime.descriptor` substituted out by name, because The Rill had legitimately
+/// moved those two values after the capture.
+///
+/// **That comparison could not survive an epoch, and one arrived.** Decision
+/// 0131's craton rescale moved seed 42's coastline to the shelf break, and with
+/// it every value in every captured document — the sampled rooms changed biome,
+/// water kind, elevation, temperature and prose. Extending the by-name
+/// substitution to cover them would have excused nearly the whole document,
+/// leaving an assertion that excused everything it compared; re-capturing the
+/// fixture would have compared the current code against itself, which is exactly
+/// what its own module doc says proves nothing.
+///
+/// So the claim is asserted at the level it was always about. The Ford's H2-2 is
+/// **structural** — stage 2 *appended* fields to `Locale` and removed none — and
+/// a document's key shape is a function of the struct definition, not of the
+/// world. Three things are checked, none of which any world change can move:
+///
+/// 1. the live document's top-level key ORDER begins with the fixture's,
+///    exactly, so nothing was removed, inserted or reordered ahead of the new
+///    keys;
+/// 2. the keys appended after them are exactly [`APPENDED_SINCE_CAPTURE`];
+/// 3. every nested object shared by the two documents carries the same key set,
+///    recursively — so a field deleted from `regime`, `fields`, an `exits`
+///    entry or a `corners` entry reddens this too, not just a top-level one.
+///
+/// The fixture is still a genuine before-arm for that claim: the half of it this
+/// test reads was captured on the unmodified window and has never been rewritten.
+/// What is gone is the ability to notice a VALUE moving before the new keys —
+/// and after an epoch that moved every value deliberately, that ability had
+/// already been spent.
 #[test]
-fn the_document_is_byte_identical_up_to_the_first_new_key() {
+fn the_document_appends_keys_and_removes_none() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let mut checked = 0usize;
-    let mut substituted = 0usize;
     for old in FIXTURE.lines() {
         let room = room_of(old);
         let loc = ctx.describe(&room, WorldTime::GENESIS).unwrap();
         let json = serde_json::to_string(&loc).unwrap();
-        let cut = json
-            .find(",\"channel_distance\"")
-            .expect("the new key is present");
-        let (old, moved) = with_the_rills_two_values(old, &json);
-        substituted += moved;
-        let old = old.as_str();
-        // The old document minus its closing brace IS the new document's
-        // prefix, if and only if nothing before the appended keys moved.
-        // `strip_suffix` rather than `&old[..old.len() - 1]` so the assumption
-        // that a fixture line ends in `}` is stated where it is made: a
-        // recapture that ever emitted a trailing newline would otherwise trim
-        // that instead, and compare a prefix one byte short of the real one.
-        let expected = old
-            .strip_suffix('}')
-            .expect("every fixture line is one complete JSON document");
-        assert_eq!(
-            &json[..cut],
-            expected,
-            "room {room:?} moved before the new keys"
+
+        // (1) and (2): top-level key order, read out of the raw text rather
+        // than a parsed `Value` — serde_json's map is a `BTreeMap` here (the
+        // `preserve_order` feature is not enabled and could not be, decision
+        // 0004), so parsing would sort the keys and silently destroy the very
+        // property being checked.
+        let was = top_level_keys(old);
+        let now = top_level_keys(&json);
+        assert!(
+            now.starts_with(&was),
+            "room {room:?}: the pre-stage-2 keys are no longer this document's \
+             leading keys, in order.\n  was: {was:?}\n  now: {now:?}"
         );
+        assert_eq!(
+            &now[was.len()..],
+            APPENDED_SINCE_CAPTURE,
+            "room {room:?}: the keys appended after the pre-stage-2 document are \
+             not the ones this file accounts for"
+        );
+
+        // (3): nested key sets, recursively. Order is not asserted below the top
+        // level for the same `BTreeMap` reason; membership is, at every depth.
+        let was_doc: Value = serde_json::from_str(old).expect("fixture line is JSON");
+        let now_doc: Value = serde_json::from_str(&json).expect("the live document is JSON");
+        for key in &was {
+            assert_same_key_shape(&was_doc[key], &now_doc[key], key, &room);
+        }
         checked += 1;
     }
     assert_eq!(checked, 200, "the whole committed fixture was checked");
-    // Printed, not written down: how much of the fixture The Rill actually
-    // moved. A drop to zero would mean the substitution had gone vacuous.
-    // PINNED, not a floor of one. `substituted > 0` would stay green if this
-    // decayed to a single room, which is the shape a vacuous guard takes: the
-    // substitution would then be excusing two values on 199 rooms that no
-    // longer need excusing. The count is deterministic, so it is a change
-    // detector — and if The Rill's grounding is ever reverted it goes to 0 and
-    // this fails loudly instead of quietly excusing nothing.
-    println!("{substituted} of {checked} rooms needed a Rill substitution");
-    assert_eq!(
-        substituted, 178,
-        "the number of rooms whose wetness/descriptor The Rill moved has changed"
-    );
 }
 
-/// Replace `regime.micro.wetness` and `regime.descriptor` in a captured
-/// document with the values the live one carries, and report whether either
-/// actually differed.
+/// Every key appended to the room document since `pre-stage-2-rooms.jsonl` was
+/// captured, in emission order. Pinned rather than derived: the whole of H2-2
+/// is that appending is *all* that has happened, and a list computed from the
+/// live document would agree with itself no matter what had.
 ///
-/// String surgery rather than a parse-and-re-serialize, because re-serializing
-/// a `serde_json::Value` would reorder the keys and quietly destroy the very
-/// property this test exists to check.
-fn with_the_rills_two_values(old: &str, now: &str) -> (String, usize) {
-    /// The value that follows `key` in `doc`, as a slice — from the first byte
-    /// after `key` to the delimiter that closes it.
-    fn value_after<'a>(doc: &'a str, key: &str, end: char) -> (usize, &'a str) {
-        let at = doc.find(key).unwrap_or_else(|| panic!("{key} is present")) + key.len();
-        let len = doc[at..].find(end).expect("the value is terminated");
-        (at, &doc[at..at + len])
-    }
-    let mut out = old.to_string();
-    let mut moved = 0usize;
-    // `"descriptor":"` and not `"descriptor"`, so the search cannot land on
-    // `descriptor_noun` — which reads the variety pools, not the micro-field,
-    // and is deliberately still compared.
-    for (key, end) in [("\"wetness\":", ','), ("\"descriptor\":\"", '"')] {
-        let (at, was) = value_after(&out, key, end);
-        let (_, is) = value_after(now, key, end);
-        if was != is {
-            moved += 1;
+/// - `channel_distance`, `channel_bands` — The Ford, stage 2. These are the
+///   two H2-2 was written about.
+/// - `resolution` — decision 0123, a later campaign. **Its presence here is a
+///   finding, not a caveat.** The byte-prefix form of this test cut the live
+///   document at `channel_distance` and compared only what came before, so it
+///   could never see a key appended AFTER the stage-2 pair; `resolution` has
+///   been arriving unremarked ever since. The key-shape form notices, which
+///   makes it strictly stronger than what it replaces on this axis even though
+///   it gave up the value comparison on the other.
+///
+/// Appending to this list is a deliberate act: it is the assertion that a new
+/// field was added at the END of the document and nothing else moved.
+const APPENDED_SINCE_CAPTURE: &[&str] = &["channel_distance", "channel_bands", "resolution"];
+
+/// The top-level keys of a one-line JSON object, in emission order.
+///
+/// A deliberate scanner rather than a parse: `serde_json::Map` is a `BTreeMap`
+/// in this workspace, so `Value` cannot carry key order at all.
+fn top_level_keys(doc: &str) -> Vec<String> {
+    let mut keys = Vec::new();
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut start: Option<usize> = None;
+    let bytes = doc.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if b == b'\\' {
+                escaped = true;
+            } else if b == b'"' {
+                in_string = false;
+                // A string that closes at depth 1 and is followed by `:` is a
+                // key of the top-level object.
+                if depth == 1
+                    && let Some(s) = start
+                    && bytes.get(i + 1) == Some(&b':')
+                {
+                    keys.push(doc[s + 1..i].to_string());
+                }
+                start = None;
+            }
+            continue;
         }
-        out.replace_range(at..at + was.len(), is);
+        match b {
+            b'"' => {
+                in_string = true;
+                escaped = false;
+                start = Some(i);
+            }
+            b'{' | b'[' => depth += 1,
+            b'}' | b']' => depth -= 1,
+            _ => {}
+        }
     }
-    (out, moved.min(1))
+    keys
+}
+
+/// Assert that two values carry the same object keys, recursively.
+///
+/// Recurses only where both sides agree on shape: two objects are compared key
+/// by key, two arrays element-wise over their shared prefix. Anything else —
+/// a scalar, or an enum that serializes as a bare string on one side and as a
+/// single-key object on the other — is left alone, because that is a VALUE
+/// difference and values are exactly what this test no longer claims.
+fn assert_same_key_shape(was: &Value, now: &Value, path: &str, room: &RoomAddr) {
+    match (was, now) {
+        (Value::Object(a), Value::Object(b)) => {
+            let ka: Vec<&String> = a.keys().collect();
+            let kb: Vec<&String> = b.keys().collect();
+            assert_eq!(
+                ka, kb,
+                "room {room:?}: the key set at {path} moved\n  was: {ka:?}\n  now: {kb:?}"
+            );
+            for k in ka {
+                assert_same_key_shape(&a[k], &b[k], &format!("{path}.{k}"), room);
+            }
+        }
+        (Value::Array(a), Value::Array(b)) => {
+            for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
+                assert_same_key_shape(x, y, &format!("{path}[{i}]"), room);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// The schema tag did NOT move. If this fails, an epoch happened by accident.
@@ -551,6 +652,43 @@ const STRONG_CROSSINGS_FLOOR: usize = 4;
 /// made that one circular: it is a property of the WORLD, read straight off
 /// `drainage`, so no sampling choice this file makes can inflate it. A world
 /// that stopped producing rivers big enough to refuse fails here.
+///
+/// # THIS FLOOR IS CURRENTLY FIRING, AND IT IS LEFT FIRING ON PURPOSE
+///
+/// Under decision 0131's terrain epoch, seed 42's loud-cell count fell
+/// **34 -> 16** (network loud vertices 91 of 14,606 -> 58 of 15,360) and
+/// crossings above the threshold fell **8 -> 2**. Both this floor and
+/// [`STRONG_CROSSINGS_FLOOR`] therefore fail, and
+/// `the_discharge_clause_makes_the_strongest_crossing_impassable` is red.
+///
+/// **Nothing here was moved to make it pass.** This floor's whole purpose is
+/// stated in the paragraph above and in its own failure message — "the world
+/// has stopped producing water strong enough to refuse" — and it is doing
+/// exactly that job. Lowering it would delete the only instrument that noticed.
+///
+/// What did NOT fail is the claim the test is named for. The ordering still
+/// holds and still straddles the threshold: the strongest reachable crossing is
+/// Q=98 and reads `Impassable` (it was Q=146), the weakest is Q=2 and reads
+/// `Fordable`. The mechanism is coherent with the epoch rather than mysterious —
+/// sea level rose to the shelf break, so land drains a shorter distance to a
+/// nearer sea, catchments are smaller and peak discharge is lower. The same
+/// movement is visible in `hornvale-scene`'s water-fields test, where seed 44
+/// went from four waterfall sites to none, and in the channel golden's
+/// "more, shorter, narrower reaches" diff.
+///
+/// **What should happen instead of a nudge**, recorded here so the next session
+/// does not have to re-derive it:
+///
+/// 1. `WATERFALL_MIN_DRAINAGE = 80` is a constant calibrated against
+///    pre-epoch catchment sizes. If catchments have shrunk systematically, the
+///    threshold is the thing that is now mis-scaled, not the floor — a decision
+///    0106 provenance question about that constant, with the new hypsometry as
+///    its evidence.
+/// 2. "Worlds produce water strong enough to refuse" is a **census** question in
+///    decision 0093's sense, not a one-world pin. A `loud-reach-cells` metric
+///    would measure the frequency across the generator's distribution; this test
+///    would then keep only the ordering claim, which is world-independent and
+///    passes untouched, plus an existence check.
 const LOUD_REACH_CELLS_FLOOR: usize = 17;
 /// Vertices that flip verdict on the step length alone. Measured **146 of 146**
 /// examined after The Rill's Task 3 (96 of 96 before it) — every pair that
