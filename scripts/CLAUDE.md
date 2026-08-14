@@ -166,6 +166,38 @@ confirmation-gated in the Makefile.
   root `CLAUDE.md`'s board paragraph), so a mixed commit still needs `make
   quick` to catch a workspace regression, and neither arm catches a board
   regression introduced by a change that never gets committed at all.
+- **Two more pre-commit guards, both tripwires on the rare commit that needs
+  them.** The **conflict-marker guard** refuses a commit whose staged diff
+  *adds* a `<<<<<<<`/`>>>>>>>` line — anchored on `^+` so an already-committed
+  marker elsewhere is not this commit's problem, and read from the staged diff
+  so a half-resolved file sitting unstaged never blocks unrelated work. The
+  **stream-manifest tripwire** fires when any `src/streams.rs` is staged: it
+  regenerates `book/src/reference/stream-manifest-generated.md` and diffs,
+  refusing if they disagree. A stream label is a permanent save-format
+  contract (`kernel/CLAUDE.md`), the manifest is the only place the whole set
+  is visible for review, and nothing otherwise forces the regen into the same
+  commit — so the artifact lags the code and the drift check goes red later, on
+  someone else's commit. It runs the REAL check rather than the cheap proxy
+  ("is the manifest also staged?") because the proxy false-positives on a
+  comment-only edit, and a guard that cries wolf is a guard people bypass.
+- **`post-merge` is the second hook in this directory**, and it exists because
+  **`pre-commit` never runs on a merge** — git does not invoke it for
+  `git merge`, so every guard above is blind to the commit shape most likely to
+  need one. It is advisory (always exits 0): by the time it runs the merge
+  commit already exists, and blocking would only train a `--no-verify` reflex.
+  It speaks only when the merge touched a path in `docs/generated-paths.txt`.
+  **It does not replace PROC-12's merge driver, which is strictly better where
+  it applies** — but that driver only runs when *both* sides changed a file
+  *named in `.gitattributes`*, which leaves two holes. First, **most declared
+  generated paths are not Tier B at all** — compare `.gitattributes`' driven
+  list against `docs/generated-paths.txt` and the gap is most of it; this file
+  deliberately does not restate either list, because a second copy drifts the
+  moment a directory is added. Second, the
+  one-sided stale merge — this branch regenerated, the incoming side changed
+  only the generating code — produces a clean merge no driver can see. The hook
+  has its own blind spot to match: a merge carrying code changes alone stales an
+  artifact just as thoroughly and says nothing. After any absorption,
+  `make rebaseline` and read the diff.
 - **`git -C <dir>` DOES NOT SCOPE WHICH REPOSITORY GIT ACTS ON**, and wiring
   the board suite into the lane above is how the project learned it. Git runs
   a hook with `GIT_DIR` and `GIT_INDEX_FILE` **exported**, and from a linked

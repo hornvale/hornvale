@@ -358,13 +358,19 @@ fn registry_rows_have_five_columns() {
 /// deliberately hard-coded. The category vocabulary is open; the status
 /// vocabulary is closed, and leaving it open by omission is what let
 /// `registered` and three prose-filled Status cells into the file.
-const REGISTRY_STATUSES: [&str; 6] = [
+///
+/// The vocabulary was opened exactly once, deliberately, by decision 0131
+/// (`refuted`, distinct from `rejected`: a measurement rather than a
+/// decision). It is closed again at seven — 0131 is not a precedent for an
+/// eighth.
+const REGISTRY_STATUSES: [&str; 7] = [
     "raw",
     "elaborated",
     "spec'd",
     "shipped",
     "ratified",
     "rejected",
+    "refuted",
 ];
 
 /// Reduce a Status cell to its bare token: strip `**` emphasis, a trailing
@@ -410,6 +416,29 @@ fn registry_statuses_use_the_closed_vocabulary() {
         "registry rows whose Status is outside the closed vocabulary \
          {REGISTRY_STATUSES:?}:\n  {}",
         offenders.join("\n  ")
+    );
+}
+
+#[test]
+fn refuted_is_an_admissible_status() {
+    assert!(REGISTRY_STATUSES.contains(&"refuted"));
+}
+
+/// A `refuted` row must cite the campaign or decision that refuted it.
+/// This is stricter than any other status carries, and deliberately: an
+/// uncited refutation is an assertion with no way to check it, which is the
+/// exact defect PROC-project-epistemology names.
+#[test]
+fn every_refuted_row_cites_its_evidence() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| normalize_status(&r.status) == "refuted")
+        .filter(|r| !r.status.contains('('))
+        .map(|r| r.id.clone())
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "refuted rows must cite what refuted them, e.g. `refuted (The Mire)`: {offenders:?}"
     );
 }
 
