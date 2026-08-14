@@ -171,7 +171,7 @@ back to the spec's own words** rather than widened to a new ocean band.
 Inventing a stratum after seeing the data is changing a preregistered population
 post hoc, however reasonable the new stratum sounds.
 
-## 4. Prose outrunning its own table — four rounds running
+## 4. Prose outrunning its own table — five rounds, including inside the fix
 
 Every defect in three consecutive review rounds was a *sentence* that claimed
 more than the table directly above it, and the code was right every time. The
@@ -218,6 +218,38 @@ evaporates in the abstract, the heading, and the conclusion — the three places
 a reader in a hurry actually reads. Writing "this clause is load-bearing" next
 to the clause did not protect it. Re-reading every restatement against the
 clause did.
+
+**And then a fifth round, which is the one that actually settles the shape:
+the fix wave reproduced the defect inside its own correction, twice.** Both
+new sentences were written to discharge an overclaim and overclaimed in turn.
+One said `make rebaseline` *never* rewrites the laboratory directory — an
+absolute reached for while correcting an absolute, and false, because the
+chorus study regenerates there unconditionally from fifty live worlds. The
+other, written specifically to replace a stale sentence, stated a model
+retired two campaigns earlier (hostility as "the worse of unrest and
+aridity"), copied without checking from a book chapter that was itself stale.
+
+Two things this pins down that the first four rounds did not:
+
+- **A denial is a claim.** "X never happens" needs its own source read exactly
+  as "X always happens" does. Correcting an overclaim creates a fresh
+  opportunity to overclaim in the opposite direction, and the corrector feels
+  careful the whole time.
+- **Copying prose copies its staleness, silently.** The aridity error entered
+  by being lifted from `book/src/domains/terrain.md`, which had carried it
+  since The Tilth. The fix was not only to correct the copy but to correct the
+  source, because otherwise the next campaign makes the same copy. A freshness
+  sweep that repairs the passage it was pointed at and not the passage that
+  passage was copied from has done half the job.
+
+The count is now five rounds across one campaign, every instance the same
+shape, several of them in text written by the people fixing the previous
+instance. That is not a discipline failure to be exhorted away; it is
+evidence that **prose has no gate**. Code has a compiler and tests; a sentence
+has only whoever re-reads it against the table. The only mechanism that has
+actually worked here is the boring one — open the source, re-derive the
+number, then write the sentence — and it has to be applied to corrections with
+exactly the same suspicion as to originals.
 
 ## 5. Two amendments that measurement forced, and one that expired
 
