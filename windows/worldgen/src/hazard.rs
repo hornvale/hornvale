@@ -218,8 +218,20 @@ pub fn has_edifice(terrain: &GeneratedTerrain, cell: CellId) -> bool {
 /// Pure and stateless (spec §3.1). Composes exactly three shipped readings —
 /// `unrest_at`, and the boundary kind and edifice presence that
 /// [`has_edifice`] carries — and authors the mapping from them to intervals.
-/// `unrest` is clamped defensively: terrain documents and clamps it to
-/// `[0,1]`, and this module's monotonicity is stated over that range.
+/// `unrest` is range-clamped to `[0,1]` because this module's monotonicity is
+/// stated over that range and terrain already guarantees it
+/// (`tectonic_properties.rs`'s `every_default_globe_satisfies_every_invariant`
+/// asserts `(0.0..=1.0).contains(u)` for every cell of every swept globe).
+///
+/// **The clamp is a range guard for finite values, and deliberately not a
+/// total one.** `f64::clamp` PROPAGATES NaN rather than pinning it, so a NaN
+/// `unrest` would flow through `geometric_years` into
+/// `Years::new(..).expect(..)` — which rejects non-finite values — and panic
+/// there instead of being silently clamped to a plausible interval. That is
+/// the intended behaviour, not an oversight: a NaN unrest is a defect in the
+/// terrain field upstream, and the same range assertion above already fails
+/// on it (`contains` is false for NaN). Pinning it here would convert a
+/// loud upstream bug into a quiet 200-year recurrence.
 pub fn hazard_at(terrain: &GeneratedTerrain, cell: CellId) -> Recurrence {
     let unrest = terrain.unrest_at(cell).clamp(0.0, 1.0);
     let seismic = geometric_years(SEISMIC_QUIET_YEARS, SEISMIC_ACTIVE_YEARS, unrest);

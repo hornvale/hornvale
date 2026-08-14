@@ -267,6 +267,17 @@ measurement about the roster, not about the channel. It fired as a positive
 control — the harness is not blind, 193 settlements vacated and 206 founded —
 but its ~6% contribution to the gradient carries no attributive weight.
 
+**This reading has an expiry condition, and it is worth stating precisely
+because it is not a matter of time.** The null is a fact about *who is on the
+roster*, so it expires the moment a mineral-weighted kind joins the roster and
+settles in numbers — not when the terrain changes, not when the siting code
+changes, and not after any interval. Until then the arm can be re-run and will
+keep reporting the same non-answer at the same cost. A campaign that widens the
+roster inherits the obligation to re-read it, and inherits it silently: nothing
+in the gate can notice that the population the measurement was scoped to has
+been replaced. The same shape governs the cross-species memory question below,
+which is why the two are filed together as a class in the idea registry.
+
 **The two channels do not compose additively, and the sign of the error is not
 even stable.** Predicting the combined arm by subtracting the two single-arm
 deltas from baseline gives ×1.862 where the direct measurement reads ×1.873 in

@@ -404,6 +404,16 @@ impl GeneratedTerrain {
     /// shipped elevation holds nothing that separates a volcanic crest cell
     /// from a non-volcanic one there (see `elevation::edifice_present`).
     ///
+    /// **Read that limit as being about the tectonic LABEL, not about the
+    /// shape — a subaerial volcano on a continent-scale landmass is reachable
+    /// today.** Measured on seed 42 at L6 (40,962 cells): of 360 edifice
+    /// cells, **55 stand above sea level**, and they sit on land components
+    /// of 1, 40, 104, 1277, 1842, 1976 and 1994 cells — the four largest of
+    /// which are this world's four largest landmasses outright. So what the
+    /// paragraph above rules out is `CoastalRange`-labelled volcanism, not a
+    /// mountain that erupts over a continent; a campaign wanting the latter
+    /// needs no terrain epoch (The Repose, Task 4 review).
+    ///
     /// A pure restatement of [`edifice_source_at`](Self::edifice_source_at) —
     /// there is one derivation, and this is the question that only asks
     /// whether it answered.
@@ -650,6 +660,18 @@ mod tests {
             if ed_a != ed_b {
                 differing_verdicts += 1;
                 let (raised, lowered) = if ed_a { (a, b) } else { (b, a) };
+                // STRICT `>`, and that couples this assertion to a data
+                // property nothing states: an arc contact whose edifice
+                // magnitude happened to be exactly 0 would raise nothing,
+                // making `raised == lowered` and reddening a correct read.
+                // It holds on seed 42 deterministically (this is a fixed
+                // seed, so it is not a flake), and it is left strict on
+                // purpose — `>=` would also pass for a gate that moved no
+                // elevation at all, which is exactly the failure the
+                // "no phantom edifices" arm exists to catch. If a future
+                // seed or profile change trips this, the fix is to skip
+                // zero-magnitude contacts explicitly, NOT to weaken the
+                // comparison.
                 assert!(
                     raised > lowered,
                     "the gate field that calls {cell:?} an edifice does not stand higher \

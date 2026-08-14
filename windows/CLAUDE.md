@@ -19,8 +19,33 @@ cannot drift apart. Read the root `CLAUDE.md` "Architecture" and
 - **Draw new world-state.** Seeded draws belong in the domain that owns the
   concept, with a label in *that* crate's `streams.rs`. A window that draws
   has quietly become a domain with no registry entry and no pin-isolation
-  test. `windows/worldgen` is the one place cross-domain *wiring* lives, and
-  even there new draws are the only epoch-triggering additions.
+  test.
+
+  **The composition root is the standing exception, and it is a real one —
+  read `windows/worldgen/src/streams.rs` before applying the rule above.**
+  That file declares ten labels of its own, and only two of them are recent:
+  `SCHEMA`/`SKY`/`LEXEME`/`DOCTRINE_SCHEMA`/`DOCTRINE_LEXEME` (the chorus),
+  `RELIGION_DEITY_V2`, `SETTLEMENT_DISPOSITION` (The Tolerance), `CHAMBER`
+  (The Deep Realm), and `VOLCANO`/`HAZARD_EVENT` (The Repose). A rule
+  contradicted eight times before this campaign and ten after it is not a
+  rule, so state what actually governs:
+
+  A draw belongs in `windows/worldgen` when **no single domain can host it**
+  — because the draw's inputs come from two domains at once, and a domain
+  crate may not depend on a sibling. `SETTLEMENT_DISPOSITION` is the clean
+  case: it needs `hornvale_species::Dispersion` *and* the occupation's own
+  site, so neither `species` nor any siting domain can own it, and there is
+  nowhere else for the label to live. `VOLCANO` and `HAZARD_EVENT` are the
+  same shape over terrain plus world-time.
+
+  What does NOT change: such a label is still a save-format contract, still
+  goes through `stream_labels!` so it reaches the generated manifest, and
+  still owes the key discipline every other stream owes — key on a **place in
+  a fixed lattice**, never a generation ordinal (decision 0102). If the draw
+  *could* sit in one domain, it must; "the wiring is already here" is not a
+  reason. And at the composition root as everywhere else, **new draws are the
+  only epoch-triggering additions** — a derived read over an existing field
+  (`has_edifice`, `hazard_at`) consumes nothing and moves no saved world.
 - **Read the in-memory system instead of the ledger.** The strongest windows
   read only committed facts — `windows/explain` narrates a world's derivation
   from the ledger alone, which is precisely how it *validates* that the

@@ -343,8 +343,16 @@ is the cheap always-running half of the same claim.
   from a probe that was run once and deleted. It is now three columns in the
   committed artifact, and the columns reproduce the deleted probe's integers
   exactly.
-- **A regenerated artifact has no merge.** A count table merged wrongly on every
-  row without conflicting, on *both* absorptions. The method that catches it:
+- **A regenerated artifact has no merge.** The type-audit count table merged
+  wrongly on every row without conflicting, on **all four** of this branch's
+  absorptions — four for four, not the "both" this bullet said when it was
+  written after the second. Main carries a fifth instance of its own in
+  `b19c2166`, inside the very range the fourth absorption pulled in, so the
+  repo-wide count is **five**. The fourth was still producing fresh wrong
+  numbers (`bare-ok(count)` 417 against a true 420). A defect that recurs on
+  every single occurrence is not a mistake anyone is making; it is the merge
+  algorithm doing exactly what it is specified to do to a file that has no
+  meaningful line-wise merge. The method that catches it:
   regenerate the artifact and diff against what the merge produced — a correct
   merge makes the regen a no-op, so any diff at all is the merge's error. Note
   the asymmetry that makes this bite: a conflict-free merge is auto-committed
@@ -374,3 +382,85 @@ is the cheap always-running half of the same claim.
   editor crash killed a task mid-flight, the sweep found a coherent, compiling,
   passing 480-line state including the two tests carrying the property the task
   existed for. A fresh session finished it with no design changes.
+- **A truncated artifact is indistinguishable from drift, so check the regen's
+  exit code before believing a deletion.** `make rebaseline` exited 2 and the
+  drift check reported `docs/digest/decisions-in-force.md` and
+  `intent-vs-reality.md` losing exactly 130 and 5 lines — a clean, plausible,
+  entirely fictitious diff. Both digest renders had been **`Killed: 9`**,
+  SIGKILLed under memory pressure from parallel sessions on this box, and had
+  truncated their output files mid-write. Re-rendering them serially restored
+  exactly those 130 and 5 lines. The diff alone cannot separate a partial write
+  from a real artifact move, and the reflex it rewards — "the regen deleted
+  something, so something changed" — is exactly backwards. Read the exit code
+  first. (Recorded only in merge commit `b98d6853` until this close.)
+- **A per-test wall-time alarm measures co-scheduling, not cost.** The gate's
+  `durations_have_not_regressed` went red on ~24 tests at 2–4× baseline after an
+  absorption, and the first diagnosis — plain contention — did not survive its
+  second data point: the alarm fired *identically* at `cpu_ratio` 4.71 and at
+  7.41, the latter with **lower** user CPU than the green runs. What settled it
+  was isolation, not argument. The flagged tests cluster by test **binary**
+  (`scene::surrounds`, `worldgen::demesne`, `worldgen::depth`), which is how
+  nextest batches; the **suite total moved only +3%** (331.5 → 341.0 s), which a
+  genuine 2–4× slowdown of 24 tests cannot produce; and run alone they came in
+  at 2.2–3.8 s against 2.5–4.2 s baselines. A later green run at load 5.24
+  confirmed it. The baseline was deliberately **not** re-recorded: nothing had
+  caused the shift, so recording it would bake co-scheduling noise into the
+  reference every later run is judged against. Generalisation: when a
+  duration alarm flags a *cluster* while the aggregate barely moves, suspect the
+  scheduler before the code — and the cheap decisive test is one isolated run.
+- **A quiet box needs all three load averages low.** This campaign took a false
+  red by gating on a one-minute dip to 6.73 while the 5- and 15-minute averages
+  read 17.75 and 19.58 — a *draining* box, not a quiet one. The one-minute
+  figure is the one that recovers first and means least.
+- **`git checkout -- <file>` destroyed an unrelated uncommitted edit.** During a
+  mutation restore it reverted the whole file, silently taking a live edit to a
+  different part of it. Nothing warned, and no test could have: the lost edit was
+  prose. It was caught by grepping for a phrase that should have been there.
+  `git checkout` on a path is a file-level operation wearing a hunk-level intent.
+- **A guard that scans command text cannot tell setting a variable from writing
+  about one.** A pre-commit hook blocked a *ledger write* whose prose merely
+  quoted the census env-var name. This is the same shape as this campaign's own
+  `no_rendered_artifact_names_a_geohazard` guard reddening on the word "volcano"
+  appearing in a swept tree — and the two ended differently, which is the useful
+  part: the volcano red was **correct** (the word really had entered a rendered
+  artifact) while this one was pure false positive. A text-scanning guard cannot
+  distinguish use from mention, so before weakening one, establish which of the
+  two you are looking at.
+- **Rebuilding a world per arm cost 3× what reusing it did.** Task 2's per-arm
+  world rebuild measured **376 s** against the arms test's **127 s** for the
+  *same* worlds. Worth knowing before writing the next counterfactual battery:
+  the arms are cheap and the worlds are not, so build once and vary the arm.
+
+## 10. Two questions this campaign did not get to answer
+
+Recorded here because they exist nowhere else — the campaign's scratch dies
+with its worktree, and `git diff main...HEAD -- docs/superpowers/specs/
+docs/decisions/` is empty, so neither of these left a trace in a spec or a
+decision record.
+
+- **OPEN, FOR THE OWNER — does the framing change earn a spec amendment
+  record?** Spec §1's motivating sentence ("a world's most fertile and most
+  mineral-rich ground is its most tectonically violent ground, and nothing in
+  the model ever charges for it") is **half wrong in both halves**: the
+  fertility never reaches settlement siting at all, and unrest *is* already
+  charged for, through `hostility`. The campaign sharpened rather than
+  invalidated itself on this, and the chronicle carries the substance — but the
+  question of whether a spec whose premise did not survive contact with the code
+  should carry an amendment record was explicitly reserved for Nathan at G6 and
+  was never put to him. It is a process question, not a product one: the same
+  situation will recur.
+- **Provenance for two G4 ideonomy overturns, whose *decisions* landed in the
+  plan but whose *reasoning* did not.** Plan §0.1/§0.2 and §0.3 record what was
+  chosen; neither records that the first pass had chosen otherwise. (1) The
+  single-arm counterfactual: the first pass accepted the spec's single arm and
+  proposed only widening its tolerance; a **modularity substitution** over the
+  derive → project → price → site → render cycle overturned it, by showing
+  andosol enters at `render` and never at `price` — which is what turned one arm
+  into three and promoted the two live channels to controls. (2) Volcano naming:
+  the first pass named mountains in the flagship people's language; the **cycle
+  organon** overturned it, on the ground that naming → forgetting → renaming is
+  the *same* repose cycle the campaign is about, so a people losing its mountain
+  should lose its name for it — which only works if the name is per-people. Both
+  overturns changed the shape of the work, and in both the first answer was the
+  obvious one. That is the argument for the second pass being routine rather
+  than optional.

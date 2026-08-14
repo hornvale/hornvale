@@ -32,6 +32,23 @@
 //! (population 1,467,398) — spec §6.2's population applied correctly to
 //! both sides of the readout (land AND settlements).
 //!
+//! **NO GATE AND NO DRIFT CHECK CAN SEE THIS FIXTURE MOVE — only the heavy
+//! tier can.** It is committed, but it is authored by a hand-run test rather
+//! than by `scripts/regenerate-artifacts.sh`, so it is deliberately absent
+//! from `docs/generated-paths.txt` and therefore absent from the
+//! `git diff --exit-code` sweep that guards every other generated artifact.
+//! `make gate` cannot notice a change here; `make rebaseline` does not
+//! regenerate it; and since decision 0125 there is no CI to do either. The
+//! only thing that answers "do this file's numbers still describe the world
+//! they were measured on" is `make heavy-remote`, whose drift check over this
+//! fixture is the reason that run is not optional after a campaign touching
+//! siting, soil or terrain. It last answered yes: byte-identical after four
+//! absorptions and 331 commits of main, including a census refresh and The
+//! Axes' kernel work (`b6d5c420`, 9 passed, 352.0 s).
+//!
+//! Anyone editing this file's measurement, or reading a number out of the
+//! fixture, should know that the usual safety net is not underneath them.
+//!
 //! **The band labels are datum-neutral metre ranges, and land share by band
 //! is the context every reader needs before reading the table below.**
 //! `elevation_at` is relative to an isostatic reference datum, not to sea
