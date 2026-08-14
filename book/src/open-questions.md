@@ -60,6 +60,38 @@ its specification cannot catch a specification that disagrees with itself, and
 one of these did: the contention guard was wired backwards against a rationale
 written three lines above it, and passed review as faithful to the plan.
 
+The Sexton (2026-08-13) is the first campaign to **pair** one of those
+generators with a verifier in the everyday command, and the result argues the
+floor is right. The census is no longer checked only by the tier `make gate`
+ignores: a three-world, all-metric sentinel now runs *inside* the commit gate
+against the committed census, for about fifteen CPU-seconds. Within hours it
+had verified three other campaigns' byte-identity claims — The Millrace's, The
+Fathom's, The Holdfast's — on the census path, which is exactly the path a
+worldgen campaign cannot cheaply check for itself. That is the pairing the
+floor asked for, and it fires on a schedule nobody has to remember.
+
+The same campaign also supplies the sharpest instance yet of the floor's own
+failure mode, and it is worth scoring honestly against the bet. Decision 0130's
+channel work added **467 CPU-seconds** to the commit gate and made one test the
+slowest in the workspace at 187 s — unnoticed for the same structural reason,
+because the instrument that would have seen it (`make ci`) had run **nine times
+against `make gate`'s 368**. An unpaired check scores as unchecked; so does a
+paired one nobody runs. The Sexton folded the alarm into the gate, taking that
+instrument from nine samples a month to 368.
+
+**Score: the bet moves toward checkable, and the practice sharpens.** Four more
+instances of a check that could not fire arrived from this campaign's own plan
+text — an extractor whose grep matched zero of 3,449 real events, a
+scratch-sweep test that passed without entering the code under test, a
+worktree enumeration that would have switched the main checkout, and a status
+read from a file that reported green when the file was empty. All four were
+caught by making the check fail on command. But three of the campaign's own
+*measuring instruments* also lied — a sampler counting its own `grep`, a
+false-negative `grep`, a planted violation that was not one — which extends
+the practice by one clause: **make it fail on command, and run the positive
+control, because a negative result from an instrument nobody has seen fire is
+not evidence.**
+
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
 draws no seed and commits no fact — and produced the same family anyway, from

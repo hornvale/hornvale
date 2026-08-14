@@ -71,6 +71,44 @@ over the cap is a failure to fix, not a fixture to edit.
   forever.
 - **Where is never empty.** A row with nothing to point at is not a row.
 
+## A row's status is self-reported, and its prose is unchecked
+
+Nothing derives the Status column. It is written by whoever last touched the
+row, from their own sense of how settled the idea felt, and the drift-check
+validates only that the value is in the closed vocabulary — never that it is
+*true*. So:
+
+- **`spec'd` can mean "a brainstorm decided to do it."** `BIO-three-probes`
+  carried `spec'd` with no spec in existence; its **Where** cell cited a
+  conversation, not a file. A Where cell pointing at something unopenable is
+  the tell.
+- **A row's prose can encode design guesses never checked against the code.**
+  Two of that row's three technical claims were false: the elf's "long-lived"
+  cell was inexpressible (`lifespan` is a pure function of mass, with no
+  per-kind override), and "a people on the MINERAL axis" would have made
+  dwarves lithovores, because `MINERAL` is a trophic `Stock`.
+
+Before building on a row, verify its claims against the code the same way you
+would verify any other doc. A registry row is a *shelf-mark*, not evidence.
+
+## Scan before you mint — a targeted grep is not a scan
+
+`docs/README.md` says to scan the registry before proposing. Scanning means
+reading the category, not grepping your own phrasing: the same idea is
+routinely already banked in an **adjacent category under a different name**. A
+2026-07-16 magic brainstorm grepped `"graph grammar"`, got zero hits, concluded
+the idea was new, and ran nine ideonomy passes before reading the registry
+properly — by which point several "findings" turned out to be `MEM-7`, `UNI-8`
+and `UNI-9`, one of them stated more sharply than the new version reached.
+
+The numbered-ID collision this used to also cause is now closed by
+construction: decision `0026-slugs-not-numbers` froze the numbered era, so new
+IDs are category+slug and cannot be minted by taking "the next integer" from a
+staging doc. (That is how `TOOL-24` was minted twice, reaching a spec, a plan,
+a study JSON and a decision record before the campaign close caught it.) The
+*semantic* collision above is the half that survives, and nothing mechanical
+catches it.
+
 ## Link discipline
 
 Links between these two files stay relative. Links to anything under

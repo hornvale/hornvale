@@ -2,8 +2,10 @@
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
-# Rewritten by `make ci`; history lives in git, so `git log -p` on
-# this file is the record.
+# Rewritten by every GREEN `make gate` (The Sexton folded ci-record
+# into gate-run; `make ci` is now an alias). A red run leaves it
+# untouched. History lives in git, so `git log -p` on this file is
+# the record.
 <below-floor>	58.211	2073
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year	1.734
 hornvale-book::hornvale_book$tests::aggregated_predicates_drop_off_the_uncovered_list	5.110

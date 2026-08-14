@@ -67,9 +67,11 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   `render_csv` are the existing boundaries. Never quantize in the compute
   path.
 - **A rendering change is an artifact change.** Regenerate and review:
-  `make rebaseline`, then diff `book/src/gallery/ book/src/reference/
-  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/
-  clients/game/core/tests/fixtures/`. That last one is a window's artifact
+  `make rebaseline`, then diff the paths `docs/generated-paths.txt` declares —
+  `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`. That
+  file is the single source of truth and no guide restates it
+  (`cli/tests/generated_paths.rs` enforces it). One of its entries,
+  `clients/game/core/tests/fixtures/`, is a window's artifact
   too, despite living outside the workspace: a change to `windows/vessel`'s
   `snapshot_json` drifts the committed `vessel/session/v2` fixtures. **It is
   not the only surface that can.** The snapshot embeds

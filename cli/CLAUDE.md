@@ -51,6 +51,55 @@ Read the root `CLAUDE.md` first; this file is about the second half.
   structural guard for the post-Branches world, the connection-graph size
   gate, and campaign exit criteria transcribed verbatim from their specs.
 
+## A crate-scoped green is not a branch-green
+
+The root `CLAUDE.md` tells you to iterate cost-ordered — `cargo test -p <crate>`
+while working, `--workspace` at the commit gate — and that advice is right. But
+it has one consequence worth stating where the tests actually live: **every
+invariant listed above is asserted from `cli/`, and none of them is about the
+crate you edited.** A `cargo test -p hornvale-terrain` cannot see layering, the
+dependency allowlist, doc drift, `claim_shape`, `heavy_tier`, or
+`docs_consistency`, no matter how green it is.
+
+This is not hypothetical. The Ford's stage 2 shipped the one assertion carrying
+the campaign's durability guarantee without its `/// claim:` tag;
+`cli/tests/claim_shape.rs` failed from that commit onward and **nobody noticed
+for a whole task**, because the task's gate evidence was a crate-scoped run
+that was doing exactly what the guidance recommends. It surfaced only because
+the next implementer happened to run something wider.
+
+So: a task may *iterate* crate-scoped, but the evidence it reports as "green"
+must be workspace-wide, or it is reporting on a different question than the one
+being asked.
+
+## The heavy tier is invisible to `make gate`, including on `main`
+
+`make gate` skips the `heavy:` tier by design, so anything only that tier can
+see is unobserved on every ordinary commit — and `main` is no exception. Two
+shapes this has actually taken:
+
+- **A heavy cost gate sat RED on `main` and nothing reported it.** The Tithe's
+  close found `connection_graph_cost_is_bounded_on_seed_42` failing at 31.1 s
+  against a 15 s budget, red since the physics moved — the campaign's own
+  headline (tribute keeps communities alive) had taken seed 42 from 203
+  settlements to 344. It surfaced only when a task happened to run the tier.
+- **A heavy test can OWN a committed artifact**, which makes the tier an
+  *authoring* path and not merely an expensive one. That is why `heavy-run.sh`
+  carries the same canonical-host guard a census does (see `scripts/CLAUDE.md`).
+
+**The ignore reason is compared VERBATIM, not by prefix.** `heavy_tier.rs`
+asserts the string is exactly:
+
+```
+heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full
+```
+
+A bespoke reason naming its own cost — which is what
+`windows/lab/tests/preregistration_guard.rs` asks for elsewhere — fails this.
+The canonical string satisfies both guards, so use it unchanged on every
+`heavy:`-tagged battery. Guessing cost The Fare a full gate cycle across four
+batteries that each had a sensible, descriptive, rejected reason.
+
 ## Adding a command
 
 Flags are parsed by hand against the `*_FLAGS` help constants in `main.rs`;
@@ -73,7 +122,9 @@ tweak — drifts those. After any output change:
 
 ```bash
 make rebaseline
-git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
+# The path list is `docs/generated-paths.txt` — the single source of truth, so
+# no guide restates it (`cli/tests/generated_paths.rs` enforces that).
+git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 ```
 
 `clients/game/core/tests/fixtures/` belongs on that list even though it lives
