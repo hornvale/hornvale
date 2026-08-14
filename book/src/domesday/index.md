@@ -4,7 +4,7 @@
 
 A generated survey of the committed census: what Hornvale's worlds actually produce, and where the instrument finds them wanting.
 
-1000 worlds, 203 metrics across 12 domains.
+1000 worlds, 223 metrics across 12 domains.
 
 ## Domains
 
@@ -21,7 +21,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 48 | 35 | [page](./language.md) |
 | Naming | 17 | 9 | [page](./naming.md) |
-| History | 4 | 1 | [page](./history.md) |
+| History | 24 | 24 | [page](./history.md) |
 
 ## Crate coverage (D8)
 
@@ -38,9 +38,9 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | detector | findings |
 |---|---|
 | D1 | 29 |
-| D2 | 33 |
-| D3 | 9 |
-| D4 | 41 |
+| D2 | 40 |
+| D3 | 13 |
+| D4 | 53 |
 | D5 direction | 0 |
 | D5 strength | 20 |
 | D5 unmeasurable | 6 |

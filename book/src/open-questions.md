@@ -621,7 +621,14 @@ choice, not a model constraint**, and it has a closed form. The condition
 response floors its buffer-able axes at the sovereignty floor and passes
 elevation a literal zero, so elevation is the limiting axis on every cell of
 every world exactly when a kind's authored elevation devotion falls below that
-floor — no terrain enters the derivation. Confirmed in both directions over
+floor — no terrain enters the derivation. *(That flooring structure is now
+**pinned** rather than merely observed:
+[The Axes](./chronicle/the-axes.md) added
+`exactly_one_axis_is_unfloored_and_it_is_the_undercutter`, after finding that
+the existing agreement test compares the fast path against a reference which
+hardcodes the same structure — so flooring elevation in both leaves it green.
+The closed form above is a statement about code that can change; it now fails
+loudly if it does. The bet itself is unmoved.)* Confirmed in both directions over
 three seeds: the two dwarves authored below their floors are elevation-bound on
 100.00% of land, and the one authored above binds there on 8.64–31.59%. That
 reproduces from arithmetic alone the earlier measurement that elevation binds
@@ -2477,3 +2484,107 @@ differing only in which kind holds which ground, all three move the reading by a
 similar amount and only one crosses the floor — the *most* differentiated of the
 three does not. The bound is a real instrument again. It is not yet a sensitive
 one, and the difference is now written down where it will be read.
+
+### A self-scorable bet was scored, and the instrument did not clear its own bar (2026-08-14)
+
+This chapter's axis is **whether the world can grade itself on a claim**, and
+its standing hope is that the self-scorable half of a bet closes by instrument
+while the taste half shrinks to its honest size. *The Gnomon* is the first
+campaign to run that procedure on an instrument rather than on a world, and the
+result sharpens the axis in a direction the chapter had not written down.
+
+The anomaly report is maximally self-scorable by construction: it ranks a
+world's census columns by how deep each sits in the thousand-world
+distribution, and every input is committed and drift-checked. Its usefulness
+claim was preregistered as recall@10 ≥ 0.60 against a label the census cannot
+supply — perturb one generative constant, rebuild twenty worlds, and ask
+whether the columns the perturbation demonstrably moved surface in the top ten.
+**Measured: 0.5667 over 120 pairs. Falsified.** All three controls held; the
+figure is published a second way (0.35, excluding the two arms whose
+perturbation left the census's observed range entirely and could not fail to
+rank) because the second reading is the less flattering one.
+
+**The rescore is not to the report's confidence but to the chapter's own
+premise.** "The Laboratory can score this" was being carried as though it
+implied "and the score will be good". It does not. Being self-scorable makes a
+bet *decidable*; it says nothing about which way it decides, and a
+self-scorable instrument can be scored and found wanting exactly as readily as
+a self-scorable world claim can. That is the mechanism working, not failing —
+but the chapter had only ever illustrated the axis with bets that closed
+favourably, and one that closed against itself is the more informative
+illustration.
+
+Two specifics worth keeping, because both are about instrument design rather
+than about this instrument:
+
+- **A tail rank measures unusualness, not change.** These are different
+  quantities and the campaign is the first thing to make the difference cost
+  something. One injection moved exactly one column in every world and the
+  moved value remained an ordinary value in nineteen of twenty; the world was
+  different and it was not *strange*. Any future instrument that ranks by
+  extremity inherits this gap.
+- **The control that passes can be near-unfalsifiable while the headline
+  fails.** The campaign's held-out calibration check passed comfortably
+  (in-census share 0.7050, held-out 0.7500, ratio 1.0638 against a tolerance of
+  2) — and 70.5% of census worlds already carry a column at the flagging depth,
+  so a stationary distribution passes it while flagging nothing useful. It was
+  preregistered as a control and explicitly not a usefulness measure, which is
+  the only reason its green cannot be read as vindication. **Declaring which of
+  a campaign's hypotheses is allowed to count as support, before either is
+  measured, is what kept this pair honest.**
+
+### A third category, between self-scorable and taste-gated (2026-08-14)
+
+This chapter splits a bet into a **self-scorable half** the Laboratory can close
+and a **taste-gated half** that waits on a human read, and treats naming the
+seam as most of the progress. *The Hearsay* ran both halves of one bet at once
+and found the split incomplete: there is a third kind of half, and it is the one
+that wastes the most time, because it is indistinguishable from the first until
+you trace it.
+
+The bet was whether a derived world's committed history carries a legible
+epistemic structure — who could know what, and on what grounds. Half of it
+closed by instrument, cleanly. Transmission depth is a pure function of the
+committed founding tree: 7,778 (event, holder) pairs on seed 42, a median of
+four inheritance steps between the community that witnessed an ending and the
+community holding the claim, 15.4% beyond ten steps, reaching the tree's full
+depth of 21. Two predictions were frozen before the code and both were refuted,
+which is the self-scorable half behaving exactly as this chapter hopes.
+
+The other half — whether the communities holding a story are *independent*
+sources — looked equally self-scorable. Every input is committed. The question
+is pure structure over a tree. No taste is involved anywhere in it. It resisted
+three operationalisations, each plausible, each reviewed, each wrong in a
+different way, and the third scored its own motivating scenario at zero.
+
+The cause is not difficulty and not taste. **The world lacks the degree of
+freedom the concept is about.** Corroboration is agreement between accounts that
+could have differed; in a campaign that carries content unchanged by
+construction, no two accounts *can* differ, agreement is constant-true, and
+every structural measure is a proxy for a quantity with no variance. The
+measures were computing redundancy accurately and calling it corroboration.
+
+So the axis gains a third position, and its diagnostic is a question rather than
+a category:
+
+- **Self-scorable** — the instrument exists or can be built, and the world
+  varies along the axis being measured.
+- **Not-yet-scorable** — the instrument is trivial and the world *does not vary*
+  along that axis at all. Looks self-scorable, because all the data is committed
+  and the computation is easy. Fails as a constant, or worse, as a plausible
+  number that never moves.
+- **Taste-gated** — the world varies, the instrument is buildable, and the
+  reading is a judgment.
+
+The question that separates the first from the second, asked before any formula
+is written: **what would have to vary for this number to move?** If the answer
+is something the design holds constant, the bet is not self-scorable yet, and no
+amount of instrument work will make it so. It is waiting on a mechanism, not on
+a measurement.
+
+The practical consequence for this chapter is that a bet can be *demoted* by
+this test without anyone having been wrong about it — the Myth program's
+corroboration half moves from self-scorable to not-yet-scorable, and its
+precondition is now named and dated: it waits on distortion, which campaign 2
+supplies. The half that closed did so on the first honest attempt, and both
+halves lived inside a single sentence when the campaign opened.

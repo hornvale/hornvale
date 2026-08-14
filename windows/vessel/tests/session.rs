@@ -753,7 +753,7 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// own starting cell had no cave, so no walk was needed to observe the
 /// refusal.
 ///
-/// **THE SUBJECT MOVED, NOT THE VERB** (decision 0131, 2026-08-14). That was
+/// **THE SUBJECT MOVED, NOT THE VERB** (decision 0132, 2026-08-14). That was
 /// always a measured contingency about one cell, and the terrain epoch's new
 /// coastlines put a cave under it — a SEALED one, whose entrance resolves to
 /// no chamber. So the public path here now exercises the *sealed* refusal

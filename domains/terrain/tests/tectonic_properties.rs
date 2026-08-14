@@ -585,7 +585,7 @@ const SUTURE_FORCED_OVERLAPS: usize = 67;
 /// separation, and interpenetration stays at its geometrically forced floor
 ///
 /// **The sweep is half the assertion.** This ran on seed 42 alone until
-/// decision 0131, and that single seed is precisely what hid a real defect:
+/// decision 0132, and that single seed is precisely what hid a real defect:
 /// `assemble_cratons` was leaving cratons floating clear of contact on 31 of
 /// these 400 non-anchor cratons — overlapping on 9 more, by up to 0.89 rad —
 /// while seed 42 happened to settle cleanly and the test stayed green through

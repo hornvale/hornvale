@@ -523,7 +523,7 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// versus the plain-area match, since only a fraction of each nominal cap is
 /// actually continental.
 ///
-/// **How that equation is solved changed in The Glasshouse (decision 0131).**
+/// **How that equation is solved changed in The Glasshouse (decision 0132).**
 /// Iterations 1–3' carried iteration 1's closed form `s = sqrt(target /
 /// current)`, which is exact only if area scaled as `r²`; cap area is
 /// `2π(1 − cos r)`, sub-quadratic at these radii, so the closed form
@@ -622,7 +622,7 @@ pub fn continental_supply(cratons: &[Craton]) -> f64 {
 /// The maximum angular radius of a craton, radians — the cap the
 /// area-normalization rescale applies to every radius it scales.
 ///
-/// kind: **hornvale-choice** (decision 0106; re-decided in decision 0131).
+/// kind: **hornvale-choice** (decision 0106; re-decided in decision 0132).
 /// Not a geometric limit and not a measured one: it is a bound on how much of
 /// one world a single craton may be. Raised from 0.6 by The Glasshouse: at 0.6
 /// the rescale's own budget is unreachable on 97.1% of worlds, so an exact
@@ -631,7 +631,7 @@ pub fn continental_supply(cratons: &[Craton]) -> f64 {
 /// 0.6). Overlap-deducted continental area rises with this constant and
 /// saturates by ~0.8; beyond that, added radius lands on ground another craton
 /// already covers. See `docs/audits/land-elevation-attribution.md` §5 Route 3
-/// for the standing case, and decision 0131 for the evidence and the ceiling.
+/// for the standing case, and decision 0132 for the evidence and the ceiling.
 pub(crate) const CRATON_RADIUS_MAX_RAD: f64 = 0.8;
 
 /// Solve for the radius scale that makes the craton set deliver `target_sr`
@@ -775,7 +775,7 @@ pub(crate) const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 /// privileged there.
 ///
 /// **That guarantee is enforced, not merely intended (The Glasshouse,
-/// decision 0131).** It was stated in this doc and asserted by that test
+/// decision 0132).** It was stated in this doc and asserted by that test
 /// from the start, but nothing in the pass implemented it: the
 /// extrapolative slerp that clears craton `i` of craton `j` can drop it
 /// onto a third craton, and the pass had no way to notice. Measured over
@@ -869,7 +869,7 @@ pub const CONTACT_FACTOR: f64 = 0.85;
 /// The pull bisects the closed interval `[0, 1]`, so 64 halvings drive it
 /// to the float's own resolution. The count was verified sufficient rather
 /// than assumed — raising it to 128 or 200 changed not one bit of output
-/// (decision 0131) — which is how the *other* branch's failure was shown
+/// (decision 0132) — which is how the *other* branch's failure was shown
 /// to be structural rather than a precision shortfall. The overlapped
 /// branch no longer bisects anything: see `settle_against_a_host`.
 const ASSEMBLY_BISECTION_ITERS: u32 = 64;
@@ -965,7 +965,7 @@ fn tangent_toward(at: [f64; 3], toward: [f64; 3]) -> Option<[f64; 3]> {
 /// **exactly tangent to some already-placed craton**, clear of every
 /// other, and as close as it can be to where the world drew it.
 ///
-/// **Why tangency, after two simpler repairs failed** (decision 0131).
+/// **Why tangency, after two simpler repairs failed** (decision 0132).
 /// The obvious repairs both restrict the craton to the one great circle
 /// running from the anchor through its drawn position, and at these radii
 /// that circle can be *entirely* covered by the placed cratons' contact
@@ -1102,7 +1102,7 @@ fn settle_against_a_host(
 /// **Both branches attain contact** — every settled craton touches at
 /// least one earlier craton, to within float precision, and overlaps none
 /// (`the_assembly_attains_contact_across_the_sweep`). The push branch did
-/// not, before decision 0131: it searched an unbounded extrapolation
+/// not, before decision 0132: it searched an unbounded extrapolation
 /// multiplier whose sine argument lost all meaning past ~1e9 radians, and
 /// so returned cratons floating clear by up to 0.44 rad while reporting
 /// success. `settle_against_a_host`'s doc carries the mechanism, and the
@@ -1977,7 +1977,7 @@ mod tests {
         // sphere times the best-case (young, peak 45 km) continental fraction
         // ~0.415 ~= 6.29%. The ceiling moved with the clamp: at 0.6 rad the
         // same arithmetic gave (1 - cos 0.6)/2 ~= 8.73% x 0.415 ~= 3.63%, and
-        // this bound read 0.037 (decision 0131 raised the clamp to 0.8).
+        // this bound read 0.037 (decision 0132 raised the clamp to 0.8).
         for seed in 1..=8u64 {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);

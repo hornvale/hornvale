@@ -243,7 +243,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // unchanged and is not about these three compass points: it is that
         // `map` reports the drawn cell's OWN exits rather than the walk depth's,
         // which is why the pin is re-measured rather than relaxed to a count.
-        // Re-measured again under The Glasshouse (decision 0131, 2026-08-14):
+        // Re-measured again under The Glasshouse (decision 0132, 2026-08-14):
         // the terrain epoch moves every coastline, so the walk lands in a
         // different fine room again. `N, SW, SE` -> `NE, W, SE`. Note the
         // claim survives the re-measure in the strong form: the drawn cell's
@@ -263,7 +263,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
     // two-parity rule from this pin, which is what an earlier draft of this
     // comment did.)
     //
-    // The Glasshouse (decision 0131) re-measured both rungs and is the reason
+    // The Glasshouse (decision 0132) re-measured both rungs and is the reason
     // that warning stands: the fine room now exits `{NE, W, SE}` and the
     // coarse cell `{E, NW, SW}` — a pair neither of the previous readings
     // used, and one that includes `E` and `W`, which the old "two triads that

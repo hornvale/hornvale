@@ -28,7 +28,7 @@
 //! instead of shipping it.
 //!
 //! **WHICH seeds those are is a property of the placement, not of the key, and
-//! decision 0131 proved it.** The Ell's residual over 0–2999 was 2634 and 2898.
+//! decision 0132 proved it.** The Ell's residual over 0–2999 was 2634 and 2898.
 //! The terrain epoch re-placed every settlement in every world and cleared both;
 //! a fresh full sweep of 0–2999 on the post-epoch tree (781 s, ten threads)
 //! found `[20, 514, 1412, 1505, 1738, 1892]`, one drop each — a completely
@@ -89,7 +89,7 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// than a claim about `select_founders` alone.
 ///
 /// **These are 20 and 514, not 2634 and 2898.** The Ell's widening cleared 283
-/// and 705, and decision 0131's terrain epoch has now cleared 2634 and 2898 as
+/// and 705, and decision 0132's terrain epoch has now cleared 2634 and 2898 as
 /// well — a re-placed world collides on a different set entirely. Building a
 /// cleared seed would prove only that a world without a collision survives,
 /// which is the vacuous form of this test, and the assertion below is what made
@@ -245,7 +245,7 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// — and what runs here is the live-world half: whatever the cap does, the
 /// people ends one short and nothing was substituted in.
 ///
-/// **Seed 20, not 2898 (The Glasshouse, decision 0131).** The terrain epoch
+/// **Seed 20, not 2898 (The Glasshouse, decision 0132).** The terrain epoch
 /// re-placed every world and cleared 2898 along with the rest of the pre-epoch
 /// positive set; 20 is the first seed of the fresh sweep's set. The
 /// `available > 1` premise below is what makes the substitution question

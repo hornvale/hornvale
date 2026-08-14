@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus three
+# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus five
 # guards (see below).
 #
 # Runs `make quick` (fmt --check + clippy + type-audit + type-audit-report)
@@ -11,10 +11,20 @@
 # single commit with `git commit --no-verify` only when you have a reason —
 # never to skip the fmt gate (CLAUDE.md forbids --no-verify for that).
 #
-# ORDER MATTERS: the three guards below are pure-git and effectively free, so
-# they run BEFORE `make quick` — a commit that a guard will refuse should not
-# first pay a build. `make quick` is last because it is the only expensive step
-# in the common case.
+# ORDER MATTERS: the guards below run BEFORE `make quick` — a commit that a
+# guard will refuse should not first pay a build. The pure-git/pure-text ones
+# (worktree branch, .superpowers scratch, conflict markers) come first and are
+# effectively free; the two that shell out to a build (the golden-pins
+# tripwire, the stream-manifest tripwire) fire only on the rare commit that
+# stages their trigger files. `make quick` is last because it is the only step
+# that costs anything in the common case.
+#
+# NOTE — NONE OF THIS RUNS ON A MERGE COMMIT. Git does not invoke `pre-commit`
+# for `git merge`, so every guard here is blind to exactly the commit most
+# likely to need one: an absorption that mis-resolves a generated artifact
+# (which happened, 3 for 3, on a count table). That gap is why `post-merge`
+# exists beside this file — advisory, because a merge commit already exists by
+# the time a hook can see it.
 #
 # This file absorbed the two features of a second, orphaned hook that used to
 # sit at the repo root (`hooks/pre-commit`, deleted 2026-07-31): the
@@ -93,6 +103,57 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/
     echo "" >&2
     echo "Unstage with: git rm --cached <path>   (the file stays on disk)" >&2
     exit 1
+fi
+
+# The conflict-marker guard. Cheap, universal, and pure-text: a staged hunk
+# carrying `<<<<<<<` / `>>>>>>>` is an unresolved merge that compiles only by
+# accident (in markdown it does not even fail loudly — it just publishes).
+# Checked against the STAGED DIFF, not the working tree, so an unstaged
+# half-resolved file never blocks an unrelated commit. The `^+` anchor means
+# only lines this commit ADDS can trip it: a marker already committed
+# somewhere is someone else's problem, not this commit's.
+if git diff --cached -U0 | grep -qE '^\+(<{7}|>{7})( |$)'; then
+    echo "pre-commit: staged changes add merge-conflict markers." >&2
+    git diff --cached --name-only --diff-filter=d | while read -r f; do
+        if git diff --cached -U0 -- "$f" | grep -qE '^\+(<{7}|>{7})( |$)'; then
+            echo "  $f" >&2
+        fi
+    done
+    echo "Resolve the conflict before committing." >&2
+    exit 1
+fi
+
+# The stream-manifest tripwire. `stream_labels()` publishes each crate's seed
+# derivation labels into `book/src/reference/stream-manifest-generated.md`, a
+# drift-checked artifact. Adding a label is a SAVE-FORMAT change (kernel
+# CLAUDE.md: every `pub const` in a `streams` module is a permanent contract),
+# and the manifest is the only place the full set is visible for review — but
+# nothing forces the regen into the same commit, so the artifact lags the
+# code and the drift check goes red later, on someone else's commit.
+#
+# Same shape as the golden-pins tripwire above: run the REAL check, not a
+# proxy, and only on the rare commit that touches a `streams.rs`. A proxy
+# ("is the manifest also staged?") would false-positive on a comment-only
+# edit and train you to bypass it; regenerating and diffing cannot.
+if git diff --cached --name-only --diff-filter=ACMR | grep -qE '(^|/)src/streams\.rs$'; then
+    echo "pre-commit: a src/streams.rs is staged — checking the stream manifest is current..." >&2
+    manifest='book/src/reference/stream-manifest-generated.md'
+    fresh="$(mktemp)"
+    trap 'rm -f "$fresh"' EXIT
+    if ! cargo run --quiet -p hornvale -- streams > "$fresh"; then
+        echo "pre-commit: could not run 'cargo run -p hornvale -- streams' to check the manifest." >&2
+        exit 1
+    fi
+    if ! diff -q "$manifest" "$fresh" >/dev/null 2>&1; then
+        echo "pre-commit: $manifest is STALE against the staged streams.rs." >&2
+        echo "" >&2
+        diff -u "$manifest" "$fresh" | head -20 >&2
+        echo "" >&2
+        echo "A stream label is a permanent save-format contract (kernel/CLAUDE.md)." >&2
+        echo "Regenerate and stage it in THIS commit:" >&2
+        echo "    make rebaseline && git add $manifest" >&2
+        exit 1
+    fi
 fi
 
 # The board lane rule (B13, decision 0129). `tools/board` is deliberately NOT

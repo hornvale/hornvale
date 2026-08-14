@@ -62,7 +62,7 @@ fn world() -> hornvale_kernel::World {
 /// almanac instead of the possession artifact gives a plausible wrong answer,
 /// because this NPC does not live in the chief settlement.
 ///
-/// A SEVENTH time, with The Glasshouse (decision 0131, 2026-08-14): the
+/// A SEVENTH time, with The Glasshouse (decision 0132, 2026-08-14): the
 /// terrain epoch re-places seed 42's settlements, `Googo` -> **`Goodo`**.
 /// Re-read from `book/src/gallery/possession-seed-42.md`, the source the note
 /// above insists on. NOTE this constant is DUPLICATED in

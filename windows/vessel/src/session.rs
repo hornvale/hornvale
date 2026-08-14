@@ -1499,7 +1499,7 @@ impl<'w> Session<'w> {
     ///
     /// Split out for the same reason [`Self::delve_at`] was, one level up: the
     /// no-cave branch used to be reachable from a test only by the flagship's
-    /// own starting cell happening to be cave-free, and decision 0131's
+    /// own starting cell happening to be cave-free, and decision 0132's
     /// terrain epoch put a sealed cave under that cell and falsified the
     /// contingency. Production still reaches this exactly one way, through
     /// `delve` with `chamber_column_here()`, so nothing about the verb's
@@ -3899,7 +3899,7 @@ mod tests {
         // Skip entries whose first word is an ARTICLE. The head word is what
         // this test hands to `examine`, and nobody examines "a" — an entry
         // like "a karst cave" makes the assertion below vacuous while looking
-        // like it passed, or (as at decision 0131, when the terrain epoch
+        // like it passed, or (as at decision 0132, when the terrain epoch
         // reordered the legend and floated exactly that entry to the front)
         // fails on a word no matcher should ever have resolved. The property
         // under test is that a real noun in a multi-word name resolves; the
@@ -5358,7 +5358,7 @@ mod tests {
         // shadowcast and then finds the room anchor that draws there. Hardcoding
         // an anchor id would pin a number that moves with the pattern
         // inventory.
-        // THE WORLD IS SEARCHED, NOT PINNED (decision 0131). This read seed 42
+        // THE WORLD IS SEARCHED, NOT PINNED (decision 0132). This read seed 42
         // until the terrain epoch, and "some anchor draws outside sight" is a
         // property of whichever chamber the possession happens to open in —
         // seed 42's now has every anchor lit, so the precondition below failed

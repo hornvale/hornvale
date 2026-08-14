@@ -78,7 +78,7 @@ fn regenerate(ctx: &LocaleContext) -> String {
 /// Claim 1 — the sampled column is byte-stable.
 ///
 /// **THE FATHOM'S BEFORE-ARM IS SPENT, AND THIS TEST IS NO LONGER IT**
-/// (decision 0131, 2026-08-14). The fixture was captured at `aadf5920` on the
+/// (decision 0132, 2026-08-14). The fixture was captured at `aadf5920` on the
 /// unmodified, pre-delegation methods, and comparing the delegating code
 /// against it proved that the delegation moved nothing. That proof was made
 /// and holds; it is a fact about `aadf5920..` and cannot be re-made.

@@ -1748,6 +1748,28 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "history-myth-hop-median",
+            doc: "Median inheritance depth of a held claim about a historical ending: \
+                  0 = the witnessing community itself, higher = the claim is carried by \
+                  communities further down the founding tree. The no-decay ceiling on \
+                  transmission depth (The Hearsay, spec section 6)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 5.0, 8.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let ledger = &v.world().ledger;
+                let lin = hornvale_hearsay::lineage::lineage_of(ledger);
+                match hornvale_hearsay::median_hops(ledger, &lin, hornvale_history::OCC_ENDED) {
+                    // Absent, never a sentinel: a world with no held claim has no
+                    // median, and 0.0 would read as "every claim is first-hand".
+                    None => MetricValue::Absent,
+                    Some(m) => MetricValue::Number(m),
+                }
+            }),
+        },
+        Metric {
             name: "forgotten-fraction",
             doc: "Over land cells with a non-empty vestige stack, the fraction \
                   whose most-dread layer is Forgotten rather than Venerated \
@@ -1847,6 +1869,245 @@ pub fn registry() -> Vec<Metric> {
                     }
                 }
                 MetricValue::Number(if count == 0 { 0.0 } else { sum / count as f64 })
+            }),
+        },
+        // --- The Gnomon (Task 1): the first-occurrence index. Each column
+        // reads the earliest `Fact.day` for a predicate (optionally narrowed
+        // to a specific text object) via the shared `first_day` helper below
+        // the registry — Absent when the key never occurs, never collapsed
+        // into 0.0 (a world with none and a world settled at genesis are
+        // different facts). ---
+        Metric {
+            name: "first-day-is-settlement",
+            doc: "Earliest world-day on which any settlement existed; \
+                  Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "is-settlement", None)),
+        },
+        Metric {
+            name: "first-day-is-ruin",
+            doc: "Earliest world-day on which any occupation became a ruin (a dead \
+                  occupation); Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "is-ruin", None)),
+        },
+        Metric {
+            name: "first-day-pays-tribute-to",
+            doc: "Earliest world-day on which any community paid standing tribute to \
+                  another; Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "pays-tribute-to", None)),
+        },
+        Metric {
+            name: "first-day-is-person",
+            doc: "Earliest world-day on which any individual person existed; \
+                  Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "is-person", None)),
+        },
+        Metric {
+            name: "first-day-person-died",
+            doc: "Earliest world-day on which any person died; Absent if the world \
+                  has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "person-died", None)),
+        },
+        Metric {
+            name: "first-day-person-founded",
+            doc: "Earliest world-day on which any person founded the community whose \
+                  occupation they founded; Absent if the world has none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "person-founded", None)),
+        },
+        Metric {
+            name: "first-day-occ-people-goblin",
+            doc: "Earliest world-day on which any occupation was held by goblins; \
+                  Absent if goblins never occupy a site",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-people", Some("goblin"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-people-kobold",
+            doc: "Earliest world-day on which any occupation was held by kobolds; \
+                  Absent if kobolds never occupy a site",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-people", Some("kobold"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-people-hobgoblin",
+            doc: "Earliest world-day on which any occupation was held by hobgoblins; \
+                  Absent if hobgoblins never occupy a site",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-people", Some("hobgoblin"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-people-bugbear",
+            doc: "Earliest world-day on which any occupation was held by bugbears; \
+                  Absent if bugbears never occupy a site",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-people", Some("bugbear"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-tech-neolithic",
+            doc: "Earliest world-day on which any occupation held a neolithic \
+                  technological horizon; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-tech", Some("neolithic"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-tech-bronze",
+            doc: "Earliest world-day on which any occupation held a bronze \
+                  technological horizon; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-tech", Some("bronze"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-tech-iron",
+            doc: "Earliest world-day on which any occupation held an iron \
+                  technological horizon; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| first_day(v.world(), "occ-tech", Some("iron"))),
+        },
+        Metric {
+            name: "first-day-occ-tech-classical",
+            doc: "Earliest world-day on which any occupation held a classical \
+                  technological horizon; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-tech", Some("classical"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-cause-famine",
+            doc: "Earliest world-day on which any occupation ended by famine; \
+                  Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-cause", Some("famine"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-cause-burned",
+            doc: "Earliest world-day on which any occupation ended by burning; \
+                  Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-cause", Some("burned"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-cause-plague",
+            doc: "Earliest world-day on which any occupation ended by plague; \
+                  Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-cause", Some("plague"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-cause-fled",
+            doc: "Earliest world-day on which any occupation ended by its people \
+                  fleeing; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-cause", Some("fled"))
+            }),
+        },
+        Metric {
+            name: "first-day-occ-cause-migrated",
+            doc: "Earliest world-day on which any occupation ended by its people \
+                  migrating; Absent if none ever does",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50_000.0, 150_000.0, 300_000.0, 500_000.0, 750_000.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                first_day(v.world(), "occ-cause", Some("migrated"))
             }),
         },
         Metric {
@@ -4747,6 +5008,35 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
     ]
+}
+
+/// The earliest `Fact.day` among facts matching `predicate` — and, when
+/// `object` is `Some`, whose object is that exact text. `Absent` when nothing
+/// matches, or when no matching fact is time-bound.
+///
+/// Absent is deliberately distinct from `Number(0.0)`: a key that never occurs
+/// in a world and a key that occurs at genesis are different facts about that
+/// world, and collapsing them would make the census unable to express the
+/// difference.
+fn first_day(world: &World, predicate: &str, object: Option<&str>) -> MetricValue {
+    let mut best: Option<f64> = None;
+    for f in world.ledger.find(predicate) {
+        if let Some(want) = object {
+            match &f.object {
+                Value::Text(t) if t == want => {}
+                _ => continue,
+            }
+        }
+        let Some(d) = f.day else { continue };
+        best = Some(match best {
+            Some(b) if b <= d.day() => b,
+            _ => d.day(),
+        });
+    }
+    match best {
+        Some(d) => MetricValue::Number(d),
+        None => MetricValue::Absent,
+    }
 }
 
 /// One world's raid bookkeeping, read off its reconstructed occupation
@@ -9299,7 +9589,34 @@ mod tests {
         // committed metric read the thing itself. Land is `e >= sea`,
         // matching mountain-coverage so the hypsometry target compares the
         // two directly.
-        assert_eq!(registry().len(), 203);
+        //
+        // +1 for THE GNOMON (Task 1: first-day-is-settlement) — the first
+        // column of a first-occurrence index over the fact ledger, reading
+        // the earliest `Fact.day` for a predicate via the shared `first_day`
+        // helper. Eighteen more of the same shape land in a later task of
+        // this campaign; each will move this pin by one and redden the
+        // census-fixture-header tests below until the campaign's pre-merge
+        // census refresh (root CLAUDE.md's census block) catches them all
+        // up at once.
+        //
+        // +18 for THE GNOMON (Task 2: the rest of the frozen first-occurrence
+        // roster — first-day-is-ruin, first-day-pays-tribute-to,
+        // first-day-is-person, first-day-person-died,
+        // first-day-person-founded; first-day-occ-people-{goblin,kobold,
+        // hobgoblin,bugbear}; first-day-occ-tech-{neolithic,bronze,iron,
+        // classical}; first-day-occ-cause-{famine,burned,plague,fled,
+        // migrated}). All nineteen columns of the roster (204 + 18 = 222) are
+        // now registered; `FIRST_DAY_METRICS` in this module's tests asserts
+        // the set both ways. Census-fixture-header tests stay red (as noted
+        // above) until the pre-merge census refresh.
+        //
+        // +1 for THE HEARSAY (Task 6: history-myth-hop-median) — the
+        // preregistered readout (spec §6) needed a census column so the
+        // no-decay ceiling on transmission depth is re-derivable from
+        // rows.csv rather than living only in a heavy-tier battery. Cost
+        // measured before keeping it (~0.16 s/world, well under the 0.5
+        // s/world KEEP threshold in `windows/lab/CLAUDE.md`).
+        assert_eq!(registry().len(), 223);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -9429,7 +9746,7 @@ mod tests {
         // while absorbing ordinary terrain drift, which moves the network's
         // geometry far less than it moves any single reach.
         //
-        // RE-MEASURED, not widened, for decision 0131 (The Glasshouse): the
+        // RE-MEASURED, not widened, for decision 0132 (The Glasshouse): the
         // terrain epoch densified seed 42's network (3887 -> 3909 vertices)
         // and own-line/analytic fell 0.8306 -> 0.7377, outside the old window.
         // That is exactly the response the paragraph above predicted and asked
@@ -10285,7 +10602,7 @@ mod tests {
         // land on the same value, which is stronger provenance than a green
         // local re-run. Still inside the 2-3 target, the row's claim.
         //
-        // The Glasshouse re-pin (decision 0131, 2026-08-14): 2.375 -> 2.24.
+        // The Glasshouse re-pin (decision 0132, 2026-08-14): 2.375 -> 2.24.
         // The terrain epoch re-places settlements, so goblin names a
         // different set of sites and the mean syllable count moves with the
         // sample. Still inside the 2-3 target, which is the row's actual
@@ -10429,7 +10746,7 @@ mod tests {
         // it above 3 falsifies the target and is a finding to report, not a
         // bound to widen.
         //
-        // The Glasshouse (decision 0131, 2026-08-14): 2.9285714 -> 2.8, and
+        // The Glasshouse (decision 0132, 2026-08-14): 2.9285714 -> 2.8, and
         // the margin the paragraph above flagged has WIDENED rather than
         // closed — kobold now sits 0.2 below the ceiling instead of 0.071.
         // Goblin falls too (2.375 -> 2.24), so the two move together this
@@ -10599,7 +10916,7 @@ mod tests {
         // row (and 0.63636364 on the census this replaces, matching The
         // Range's pin above). Two independent computations agree.
         //
-        // The Glasshouse re-pin (decision 0131, 2026-08-14): 0.6 ->
+        // The Glasshouse re-pin (decision 0132, 2026-08-14): 0.6 ->
         // 0.5918367346938775, i.e. 29/49. The terrain epoch re-places
         // settlements and the denominator moves with them. Note what this
         // costs the paragraph above: 0.6 recurred at two very different
@@ -11173,7 +11490,7 @@ mod tests {
             // untouched. The coverage cost returns with it: the river gate
             // class only.
             //
-            // The Glasshouse re-pin (decision 0131, 2026-08-14): back to
+            // The Glasshouse re-pin (decision 0132, 2026-08-14): back to
             // three — "marsh" returns, a FIFTH oscillation between exactly
             // these two readings. Cause is the terrain epoch itself: the
             // craton rescale's exact solve and raised clamp move every
@@ -11849,7 +12166,7 @@ mod tests {
         // world-byte tripwire, not a claim about goblins**, and it should not
         // be cited as one.
         //
-        // Sixth pass (The Glasshouse, decision 0131, 2026-08-14): taiga ->
+        // Sixth pass (The Glasshouse, decision 0132, 2026-08-14): taiga ->
         // temperate-forest, a SEVENTH oscillation between the same two
         // biomes. Cause: the craton rescale's exact solve and raised clamp
         // move every coastline, so the flagship reseats. `flagship-subsistence`
@@ -12140,6 +12457,295 @@ mod tests {
             Extractor::Full(f) => f(view),
             other => panic!("metric {name} is {:?}-rung, not Full", other.rung()),
         }
+    }
+
+    #[test]
+    fn first_day_is_settlement_is_present_and_finite_on_seed_42() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        match extract(&v, "first-day-is-settlement") {
+            MetricValue::Number(d) => assert!(d.is_finite(), "a first day must be finite, got {d}"),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn first_day_of_an_unmatched_object_is_absent() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        assert!(
+            matches!(
+                first_day(v.world(), "occ-people", Some("no-such-species")),
+                MetricValue::Absent
+            ),
+            "an object that never occurs must be Absent, never 0.0"
+        );
+    }
+
+    /// Pins EARLIEST, not latest: the expected value is computed independently
+    /// of `first_day` (a `Vec` collect + `total_cmp` sort here, versus
+    /// `first_day`'s own running-minimum loop), so a `first_day` that
+    /// silently returned the maximum day — every other test at the time this
+    /// was added stayed green under that mutation — would fail this one.
+    /// `is-settlement` carries 62 distinct non-genesis days at seed 42 (The
+    /// Gnomon Task 1's build-depth probe), so min and max are guaranteed
+    /// distinct; the two `assert!`s below fail loudly instead of silently
+    /// passing if that ever stops being true.
+    #[test]
+    fn first_day_is_settlement_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("is-settlement")
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        match extract(&v, "first-day-is-settlement") {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest day ({expected_min}), not the latest ({expected_max}) \
+                 or anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    /// The same earliest-not-latest claim, but through the `Some(object)`
+    /// branch. This sentence used to claim it was the *only* test reaching
+    /// the comparison loop with the object filter active; Task 2's iron test
+    /// (`first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum`)
+    /// now reaches it too, and the claim went stale the moment that test
+    /// landed — the two
+    /// are complementary rather than exclusive, since this one cannot
+    /// discriminate the drop-the-object-filter mutation on seed 42 (below)
+    /// and the iron test is chosen precisely so that it can. The
+    /// always-`continue`s-before-comparing shape stays in
+    /// `first_day_of_an_unmatched_object_is_absent`. `occ-people` is a
+    /// functional predicate (one fact per occupied settlement), so distinct
+    /// settlements sharing a species text give multiple day-bearing matches
+    /// for the same key.
+    ///
+    /// **This test discriminates the return-the-maximum mutation (the
+    /// `min != max` guard below), but it cannot discriminate the drop-the-
+    /// object-filter mutation, and that is a measured fact about seed 42, not
+    /// an oversight.** Every one of `occ-people`'s fifteen distinct objects on
+    /// this seed — the four census-keyed species included — has a minimum
+    /// day of `0.0`, identical to the predicate's own unfiltered global
+    /// minimum (also `0.0`, from `occ-people`'s `n=704` facts, probed
+    /// 2026-08-13): many settlements across many species begin their
+    /// occupation at world genesis, so goblin's filtered minimum and the
+    /// unfiltered minimum are the same value for a reason that has nothing to
+    /// do with whether the filter ran. Dropping the filter is therefore
+    /// invisible to an `occ-people`-keyed assertion on this seed, for *any*
+    /// object choice — not just goblin's.
+    /// `first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum`
+    /// below closes that gap on `occ-tech`/`iron`, a witness where the
+    /// filtered and unfiltered minima measurably differ; since `first_day`
+    /// has one code path with no branching on the predicate string, that
+    /// witness stands for the shared `Some(object)` branch every keyed metric
+    /// in this roster (species, tech, and cause) runs through.
+    #[test]
+    fn first_day_of_a_keyed_object_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-people")
+            .filter(|f| matches!(&f.object, Value::Text(t) if t == "goblin"))
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two goblin-keyed day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        match first_day(v.world(), "occ-people", Some("goblin")) {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest goblin-keyed day ({expected_min}), not the latest \
+                 ({expected_max}) or anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    /// Closes the gap the doc comment above names: a keyed test whose
+    /// filtered minimum is *provably distinct from the predicate's own
+    /// unfiltered minimum*, so dropping the `Some(object)` filter in
+    /// `first_day` is something this test can actually see. `occ-tech`'s
+    /// `iron` horizon is the witness — probed on seed 42:
+    /// `occ-tech` unfiltered min is `0.0` (neolithic settlements exist from
+    /// genesis) but `iron`-keyed occupations do not begin until day
+    /// `36_525.0`, strictly later. No `occ-people` species has an analogous
+    /// gap (see above), which is why this test reaches for a different
+    /// predicate rather than a different species — `first_day` has no
+    /// branching on the predicate string, so the code path this exercises is
+    /// identical to the one every species-, tech-, and cause-keyed metric in
+    /// the roster calls.
+    ///
+    /// Both self-defence guards from the sibling tests apply here together:
+    /// `expected_min != expected_max` (catches `first_day` silently returning
+    /// the maximum) and `expected_min` strictly greater than the predicate's
+    /// own unfiltered minimum (catches the object filter being dropped —
+    /// without this, `first_day` would fall back to `occ-tech`'s unfiltered
+    /// `0.0`, not `iron`'s `36_525.0`). If a later world change collapses
+    /// either gap, this test must fail loudly rather than quietly start
+    /// passing for the wrong reason.
+    #[test]
+    fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut unfiltered_days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-tech")
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            !unfiltered_days.is_empty(),
+            "need at least one day-bearing occ-tech fact to compute an unfiltered minimum"
+        );
+        unfiltered_days.sort_by(f64::total_cmp);
+        let unfiltered_min = unfiltered_days[0];
+
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-tech")
+            .filter(|f| matches!(&f.object, Value::Text(t) if t == "iron"))
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two iron-keyed day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        assert!(
+            expected_min > unfiltered_min,
+            "the iron-keyed minimum ({expected_min}) must be strictly later than occ-tech's own \
+             unfiltered minimum ({unfiltered_min}) for this test to discriminate a dropped \
+             object filter from a correctly applied one"
+        );
+        match first_day(v.world(), "occ-tech", Some("iron")) {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest iron-keyed day ({expected_min}), not the latest \
+                 ({expected_max}), not occ-tech's unfiltered minimum ({unfiltered_min}), or \
+                 anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    // --- The Gnomon (Task 2): the remaining 18 columns of the frozen
+    // first-occurrence roster. ---
+
+    /// The frozen roster. Adding to this list is a deliberate act: it widens the
+    /// census schema, so it is asserted here rather than derived.
+    const FIRST_DAY_METRICS: [&str; 19] = [
+        // event onset, unkeyed
+        "first-day-is-settlement",
+        "first-day-is-ruin",
+        "first-day-pays-tribute-to",
+        "first-day-is-person",
+        "first-day-person-died",
+        "first-day-person-founded",
+        // keyed on occ-people, on the four species the census already keys on
+        "first-day-occ-people-goblin",
+        "first-day-occ-people-kobold",
+        "first-day-occ-people-hobgoblin",
+        "first-day-occ-people-bugbear",
+        // keyed on occ-tech, the closed TechHorizon set
+        "first-day-occ-tech-neolithic",
+        "first-day-occ-tech-bronze",
+        "first-day-occ-tech-iron",
+        "first-day-occ-tech-classical",
+        // keyed on occ-cause, the closed cause_label set
+        "first-day-occ-cause-famine",
+        "first-day-occ-cause-burned",
+        "first-day-occ-cause-plague",
+        "first-day-occ-cause-fled",
+        "first-day-occ-cause-migrated",
+    ];
+
+    /// Every name the frozen roster declares must actually be registered —
+    /// catches a typo or an entry that was described but never added.
+    #[test]
+    fn every_first_day_metric_is_registered() {
+        for name in FIRST_DAY_METRICS {
+            assert!(
+                registry().iter().any(|m| m.name == name),
+                "the frozen first-occurrence roster names {name}, which is not registered"
+            );
+        }
+    }
+
+    /// Every `first-day-*` metric actually registered must appear in the
+    /// frozen roster — catches silent over-admission (a new column added
+    /// without updating the roster that is supposed to enumerate them all).
+    #[test]
+    fn every_registered_first_day_metric_is_in_the_frozen_roster() {
+        for m in registry()
+            .iter()
+            .filter(|m| m.name.starts_with("first-day-"))
+        {
+            assert!(
+                FIRST_DAY_METRICS.contains(&m.name),
+                "{} is registered but absent from the frozen roster — widening the \
+                 census schema is deliberate, so add it to FIRST_DAY_METRICS on purpose",
+                m.name
+            );
+        }
+    }
+
+    /// Confirms the roster's `Absent` branch is exercised by a real world,
+    /// not merely written and never reached. Measured on seed 42: two of the
+    /// nineteen are `Absent` — `first-day-occ-cause-burned` and
+    /// `first-day-occ-cause-plague` (`cause_label`'s five-value set is closed
+    /// in code, per Step 1, but this world's occupations only ever end by
+    /// famine, fled, or migrated). All four keyed `occ-people` species and
+    /// all four `occ-tech` horizons are present on this seed. If this ever
+    /// finds all nineteen present, the decision rule in the campaign brief is
+    /// to swap in a probed seed that still has a gap, not to delete the
+    /// assertion.
+    #[test]
+    fn at_least_one_first_day_metric_is_absent_on_seed_42() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let absent: Vec<&str> = FIRST_DAY_METRICS
+            .iter()
+            .filter(|name| matches!(extract(&v, name), MetricValue::Absent))
+            .copied()
+            .collect();
+        assert!(
+            !absent.is_empty(),
+            "expected at least one first-day-* metric to be Absent on seed 42 — if this \
+             regresses to zero, the Absent branch has gone untested by this fixture and a \
+             probed seed with a real gap is needed instead"
+        );
     }
 
     #[test]
@@ -13131,7 +13737,7 @@ mod tests {
         // seven roster changes: still not monotone in anything, and still a
         // re-sweep rather than an extrapolation every time.
         //
-        // EIGHTH PASS (The Glasshouse, decision 0131, 2026-08-14). The
+        // EIGHTH PASS (The Glasshouse, decision 0132, 2026-08-14). The
         // terrain epoch re-places every world, and seed 14's high-elf lost
         // its barley band — the precondition repaired at the sixth pass
         // caught it by name, which is the repair working as intended. Re-swept

@@ -714,7 +714,7 @@ pub fn resolve_ocean_fraction(
 /// genuinely empty gap between ~1.05 and ~0.25, so default worlds provably
 /// keep the exact-percentile path byte-identical.
 ///
-/// **Both endpoints moved with decision 0131** and the reasoning is
+/// **Both endpoints moved with decision 0132** and the reasoning is
 /// unchanged, which is the point of recording them: at the old 0.6 clamp
 /// with the closed-form rescale the floor was ≈ 0.554 (seed 558; 20/1000
 /// below 0.6) against a single-craton ceiling of ≈ 0.18. The Glasshouse's

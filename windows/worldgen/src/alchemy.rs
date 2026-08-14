@@ -536,7 +536,7 @@ mod tests {
     /// identical across every build; only the seed differs, so the divergence
     /// is attributable to the seed, exactly as item 3 asks for.
     ///
-    /// **THE SEEDS ARE SCANNED, NOT PINNED (The Glasshouse, decision 0131).**
+    /// **THE SEEDS ARE SCANNED, NOT PINNED (The Glasshouse, decision 0132).**
     /// This asserted `productions_of(0) != productions_of(2)`, and the terrain
     /// epoch made those two agree — both now reach 6. That is not a
     /// counterexample to the claim, which is existential ("two seeds reach

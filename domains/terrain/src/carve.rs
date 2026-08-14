@@ -1785,7 +1785,7 @@ mod tests {
         // 84/2/79/148/100/1/1). Seed 42 (57 tied cells) is back in front —
         // the signature stays seed-dependent, not universal.
         //
-        // Re-pinned 42 → 12 for decision 0131 (the craton rescale's exact
+        // Re-pinned 42 → 12 for decision 0132 (the craton rescale's exact
         // solve, clamp 0.8, and the assembly repair). New coastlines move
         // which cells reach the exact trim cap; seed 42 fell to 1 tied cell.
         // Post-change survey over the SAME seed list, in the same order:

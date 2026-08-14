@@ -178,4 +178,25 @@ harness's pin-provenance report: every pinned calibration constant in the
 codebase is reproducible as a query against the committed fixture, so a
 calibration is never just a number someone once computed and typed in.
 
+The graduated queries under `queries/explore/` sit at different points on
+that doctrine's manual-to-mechanical spectrum. `interesting-worlds.sql`
+opens with a comment reading *"'interesting' is a query, not a generation
+stage"* and closes with *"Edit freely"* — it is the manual end: a filter
+template that only pays off once you already know which columns and
+thresholds define "interesting" for the question at hand. `emergent-
+conjunction.sql` answers a question that shape of query could not ask
+before this campaign's `first-day-*` metrics existed: not merely whether a
+seed's ledger satisfies several predicates at once, but the world-day by
+which all of them first held. Each `first-day-*` column already carries
+that day for one predicate (optionally narrowed to one object value); three
+`IS NOT NULL` guards are the set intersection over those predicates, and
+`greatest()` across the matching columns is the maximum — the earliest day
+a replay could witness every one of them true simultaneously. Run against
+kobold occupation, a ruin, and a paid tribute, it turns "find a world where
+a species and a condition and a place all hold" from an unbounded search
+into a set intersection and a three-way maximum, and hands back the exact
+world-time a replay should start from rather than just the seed. That is
+the payoff a first-occurrence index promises: not a faster *whether*, but a
+*when* the census could not previously name.
+
 {{#include generated/the-census/the-census-summary.md}}

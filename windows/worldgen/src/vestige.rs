@@ -313,7 +313,7 @@ mod tests {
     /// the module's default fixture rather than being re-pinned on a different
     /// cell of it. The scar gate is `land && crust_age > ANCIENT_CRUST_AGE &&
     /// fbm01(...) < PREHUMAN_SCAR_THRESHOLD (0.3)`, and seed 42 cleared it on
-    /// exactly ONE cell before decision 0131 — `CellId(21966)`, described in
+    /// exactly ONE cell before decision 0132 — `CellId(21966)`, described in
     /// this module's own comment as "the one pre-human hit among that seed's
     /// ~1900 ancient-crust cells". The terrain epoch moved the coastline to the
     /// shelf break, and seed 42's ancient-crust land fell to 1,664 cells whose
@@ -350,7 +350,7 @@ mod tests {
     /// constant `CellId(21966)`, described in its own doc comment as "the one
     /// pre-human hit among that seed's ~1900 ancient-crust cells" — a single
     /// sample standing in for a property, and the narrowest possible one. The
-    /// terrain epoch of decision 0131 turned it to ocean, so every test that
+    /// terrain epoch of decision 0132 turned it to ocean, so every test that
     /// read it went red on its own premise assert ("the fixture cell must be
     /// land"). Re-pinning on another seed-42 cell was not available either:
     /// that seed now has no qualifying cell whatever (see [`PREHUMAN_SEED`]).

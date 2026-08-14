@@ -655,7 +655,7 @@ const STRONG_CROSSINGS_FLOOR: usize = 4;
 ///
 /// # THIS FLOOR IS CURRENTLY FIRING, AND IT IS LEFT FIRING ON PURPOSE
 ///
-/// Under decision 0131's terrain epoch, seed 42's loud-cell count fell
+/// Under decision 0132's terrain epoch, seed 42's loud-cell count fell
 /// **34 -> 16** (network loud vertices 91 of 14,606 -> 58 of 15,360) and
 /// crossings above the threshold fell **8 -> 2**. Both this floor and
 /// [`STRONG_CROSSINGS_FLOOR`] therefore fail, and

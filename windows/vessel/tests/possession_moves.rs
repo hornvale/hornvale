@@ -585,7 +585,7 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// almanac instead of the possession artifact gives a plausible wrong answer,
 /// because this NPC does not live in the chief settlement.
 ///
-/// A SEVENTH time, with The Glasshouse (decision 0131, 2026-08-14): the
+/// A SEVENTH time, with The Glasshouse (decision 0132, 2026-08-14): the
 /// terrain epoch moves every coastline, so seed 42's settlements re-place
 /// once more and the flagship's name goes `Googo` -> **`Goodo`**. Re-read
 /// from `book/src/gallery/possession-seed-42.md` as the note above insists,

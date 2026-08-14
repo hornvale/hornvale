@@ -615,6 +615,21 @@
     },
     {
       "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0
+      ],
+      "doc": "Median inheritance depth of a held claim about a historical ending: 0 = the witnessing community itself, higher = the claim is carried by communities further down the founding tree. The no-decay ceiling on transmission depth (The Hearsay, spec section 6)",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "history-myth-hop-median",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
         0.0,
         0.2,
         0.4,
@@ -648,6 +663,310 @@
       "domain": "history",
       "kind": "numeric",
       "name": "mean-warning-legibility",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any settlement existed; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-settlement",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation became a ruin (a dead occupation); Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-ruin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any community paid standing tribute to another; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-pays-tribute-to",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any individual person existed; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-person",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any person died; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-person-died",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any person founded the community whose occupation they founded; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-person-founded",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by goblins; Absent if goblins never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by kobolds; Absent if kobolds never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by hobgoblins; Absent if hobgoblins never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by bugbears; Absent if bugbears never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a neolithic technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-neolithic",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a bronze technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-bronze",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held an iron technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-iron",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a classical technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-classical",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by famine; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-famine",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by burning; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-burned",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by plague; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-plague",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by its people fleeing; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-fled",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by its people migrating; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-migrated",
       "role": "descriptor",
       "rung": "full"
     },
@@ -2829,7 +3148,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x5f984058b11b3882"
+    "fnv1a64": "0x990f48ea87d9572a"
   },
   "schema_version": 1,
   "study": {

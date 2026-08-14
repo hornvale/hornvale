@@ -286,7 +286,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // its prediction when the diets are corrected, while duergar gains one on
     // four seeds). A dispersed arid forager does not build settlements big
     // enough to throw off a shaman caste.
-    // THE GLASSHOUSE re-found (Stage B, decision 0131), by the prescribed
+    // THE GLASSHOUSE re-found (Stage B, decision 0132), by the prescribed
     // method and not by widening anything: the bounded 50..=60 scan, run
     // OUTSIDE this test (decision 0093 — a test that sweeps seeds to find an
     // instance is doing the census's job badly). The craton rescale moved every
