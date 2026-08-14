@@ -1,5 +1,10 @@
 # Hornvale sub-floor roster (The Staff). One test id per line.
-# Every test measured strictly below BASELINE_FLOOR_SECS on this host.
+# Every test measured strictly below BASELINE_FLOOR_SECS on the
+# canonical gating host's last full-workspace run. NOT host-keyed:
+# a test's identity does not vary by machine even though its
+# duration does, and the commit gate runs on machines (the Macs)
+# that never author a roster of their own -- see `subfloor_path`'s
+# doc in windows/lab/src/timings.rs for the full reasoning.
 # The commit gate (`make gate-commit`) runs exactly these.
 # Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.
 # A test absent from this file is NOT in the commit gate — see the
