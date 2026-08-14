@@ -904,34 +904,24 @@ is a finding, not a nuisance** — report the difference rather than reconciling
 it, because it would mean the Rust derivation and the direct ledger read
 disagree about what a holder is.
 
-- [ ] **Step 4: Measure the metric's cost, then decide whether to register it**
+- [ ] **Step 4: Register the metric, then gate it on measured cost**
 
-```bash
-cat > /tmp/hv-cost.study.json <<'JSON'
-{ "name": "hearsay-cost-probe", "description": "cost probe, throwaway",
-  "seeds": [42, 43, 44], "pin_sets": [], "metrics": ["history-myth-hop-median"] }
-JSON
-time cargo run --release -p hornvale -- lab run /tmp/hv-cost.study.json
-```
+**Read this ordering note before doing anything.** An earlier draft told you to
+measure the metric's cost *before* registering it. That is impossible: a lab
+study can only name a metric that is already in `registry()`, and the cost
+cannot be timed inside a test instead because `std::time::Instant` is banned in
+workspace test code by `clippy.toml`. So the order is register → probe →
+**revert the registration if it is too slow**. Nothing slow ever reaches a
+commit, which is what the gate was for.
 
-Decision rule on per-world wall time:
-- **< 0.5 s/world** → register it.
-- **0.5–3 s/world** → register it, and state the projected census cost in the
-  commit message (multiply by ~2000 worlds and by the nine `"all"` studies).
-- **> 3 s/world** → **do not register.** Keep the heavy battery, report from
-  there, and file a registry row for a cheaper formulation. The Mire declined
-  three metrics at ~3.5 s/world for exactly this reason.
-
-- [ ] **Step 5: If registering, add the metric and regenerate**
-
-Add to `windows/lab/Cargo.toml`:
+First add the dependency to `windows/lab/Cargo.toml`:
 
 ```toml
 hornvale-hearsay = { path = "../hearsay" }
 ```
 
-In `windows/lab/src/metrics.rs`'s `registry()`, in the `Domain::History` family
-block (beside `vestige-density`, whose shape this matches):
+Then, in `windows/lab/src/metrics.rs`'s `registry()`, in the `Domain::History`
+family block (beside `vestige-density`, whose shape this matches):
 
 ```rust
 Metric {
@@ -958,13 +948,42 @@ Metric {
 },
 ```
 
-Then `make rebaseline` and review the drift. **Expect `book/src/laboratory/` to
-move** — a new metric changes every `"metrics": "all"` study's schema, and the
-calibration binaries go red until the census fixtures refresh on lefford. That
-refresh is a G6 close activity requiring Nathan's authorization, not this
-task's.
+Now probe the cost on three worlds:
 
-- [ ] **Step 6: Commit**
+```bash
+cat > /tmp/hv-cost.study.json <<'JSON'
+{ "name": "hearsay-cost-probe", "description": "cost probe, throwaway",
+  "seeds": [42, 43, 44], "pin_sets": [], "metrics": ["history-myth-hop-median"] }
+JSON
+time cargo run --release -p hornvale -- lab run /tmp/hv-cost.study.json
+```
+
+Subtract the world-build cost, which dominates and is not yours: run the same
+study again with `"metrics": ["settlement-count"]` (an existing cheap metric)
+and take the difference. **Report both numbers**, not just the difference.
+
+Decision rule on the *difference* in per-world wall time:
+
+```
+  < 0.5 s/world   -> KEEP the registration. The census absorbs it.
+  0.5-3 s/world   -> KEEP it, and state the projected census cost in the
+                     commit message: multiply by ~2000 worlds AND by the nine
+                     studies that declare "metrics": "all".
+  > 3 s/world     -> REVERT the registration (git checkout the two lab files).
+                     Keep the heavy battery, report the readout from there, and
+                     say so plainly in your report. The Mire declined three
+                     metrics at ~3.5 s/world for exactly this reason. This is
+                     a legitimate outcome, not a failure.
+```
+
+
+Then `make rebaseline` and review the drift. **Expect `book/src/laboratory/`
+to move if you kept the metric** — a new metric changes every
+`"metrics": "all"` study's schema, and the calibration binaries go red until
+the census fixtures refresh on lefford. That refresh is a G6 close activity
+requiring Nathan's authorization, not this task's.
+
+- [ ] **Step 5: Regenerate artifacts, then commit**
 
 ```bash
 cargo fmt
