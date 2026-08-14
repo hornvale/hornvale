@@ -12151,6 +12151,85 @@ mod tests {
         );
     }
 
+    /// Pins EARLIEST, not latest: the expected value is computed independently
+    /// of `first_day` (a `Vec` collect + `total_cmp` sort here, versus
+    /// `first_day`'s own running-minimum loop), so a `first_day` that
+    /// silently returned the maximum day — every other test at the time this
+    /// was added stayed green under that mutation — would fail this one.
+    /// `is-settlement` carries 62 distinct non-genesis days at seed 42 (The
+    /// Gnomon Task 1's build-depth probe), so min and max are guaranteed
+    /// distinct; the two `assert!`s below fail loudly instead of silently
+    /// passing if that ever stops being true.
+    #[test]
+    fn first_day_is_settlement_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("is-settlement")
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        match extract(&v, "first-day-is-settlement") {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest day ({expected_min}), not the latest ({expected_max}) \
+                 or anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    /// The same earliest-not-latest claim, but through the `Some(object)`
+    /// branch — no other test reaches the comparison loop with the object
+    /// filter active, only the always-`continue`s-before-comparing shape in
+    /// `first_day_of_an_unmatched_object_is_absent`. `occ-people` is a
+    /// functional predicate (one fact per occupied settlement), so distinct
+    /// settlements sharing a species text give multiple day-bearing matches
+    /// for the same key.
+    #[test]
+    fn first_day_of_a_keyed_object_matches_an_independently_computed_minimum() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut days: Vec<f64> = v
+            .world()
+            .ledger
+            .find("occ-people")
+            .filter(|f| matches!(&f.object, Value::Text(t) if t == "goblin"))
+            .filter_map(|f| f.day)
+            .map(|d| d.day())
+            .collect();
+        assert!(
+            days.len() > 1,
+            "need at least two goblin-keyed day-bearing facts for min and max to differ"
+        );
+        days.sort_by(f64::total_cmp);
+        let expected_min = days[0];
+        let expected_max = *days.last().expect("non-empty, checked above");
+        assert_ne!(
+            expected_min, expected_max,
+            "min and max must differ for this test to discriminate earliest from latest"
+        );
+        match first_day(v.world(), "occ-people", Some("goblin")) {
+            MetricValue::Number(d) => assert_eq!(
+                d, expected_min,
+                "must be the earliest goblin-keyed day ({expected_min}), not the latest \
+                 ({expected_max}) or anything else"
+            ),
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
     #[test]
     fn lexicon_regular_family_holds_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
