@@ -1,6 +1,7 @@
 //! Climate, tier 0: mild and temperate everywhere, forever.
 #![warn(missing_docs)]
 
+pub mod axes;
 pub mod biome;
 pub mod circulation;
 pub mod crops;
