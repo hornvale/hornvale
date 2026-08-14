@@ -172,3 +172,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0130](0130-a-sub-threshold-watercourse-is-a-narrow-channel.md) | A sub-threshold watercourse is a narrow channel, not an absent one | Accepted |
 | [0131](0131-refuted-is-a-seventh-registry-status.md) | `refuted` is a seventh registry status | Accepted |
 | [0132](0132-the-craton-clamp-is-a-budget-not-a-limit.md) | The craton clamp is a budget, not a limit | Accepted |
+| [0133](0133-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |

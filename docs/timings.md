@@ -943,3 +943,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T15:13:36Z | quick | 19.942 | 44.267 | 17.547 | 3.10 | 0 | 1bc34a99 | campaign/the-hearsay | MacBookPro | 10 |
 | 2026-08-14T15:36:53Z | census | 882.487 | 27996.712 | 330.979 | 32.10 | 0 | 17e0525a |  | lefford | 40 |
 | 2026-08-14T18:32:47Z | gate | 380.333 | 2516.308 | 116.721 | 6.92 | 0 | 8278f0be | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T19:57:18Z | quick | 34.299 | 67.147 | 57.167 | 3.62 | 0 | dfb96996 | campaign/the-glasshouse | ambrose | 12 |
