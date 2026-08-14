@@ -1,7 +1,7 @@
 mod common;
 
 use common::{eid, ledger_with, put};
-use hornvale_hearsay::derive::claims_about;
+use hornvale_hearsay::derive::{claims_about, witnesses_of};
 use hornvale_hearsay::lineage::lineage_of;
 use hornvale_kernel::ledger::{Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
@@ -84,4 +84,121 @@ fn an_unrelated_lineage_holds_nothing_about_it() {
     // 10 and 11 are real, committed entities that never descend from 1.
     assert!(!holders.contains(&eid(10)));
     assert!(!holders.contains(&eid(11)));
+}
+
+/// A raid: village 1 (founded day 0) is ended on day 100 by village 50.
+/// Survivors found 2 and 3 on day 100 — they were there. Village 4 was
+/// founded from 1 back on day 10 and was elsewhere when it happened.
+/// Village 51 is founded from the attacker 50, later.
+fn raid() -> Ledger {
+    let mut led = ledger_with(&[
+        (1, None),
+        (50, None),
+        (2, Some(1)),
+        (3, Some(1)),
+        (4, Some(1)),
+        (51, Some(50)),
+    ]);
+    for (occ, day) in [
+        (1, 0.0),
+        (50, 0.0),
+        (2, 100.0),
+        (3, 100.0),
+        (4, 10.0),
+        (51, 200.0),
+    ] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_FOUNDED,
+            Value::Number(day),
+        );
+    }
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(100.0),
+    );
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(50)),
+    );
+    led
+}
+
+#[test]
+fn the_victim_the_survivors_and_the_attacker_all_witnessed_it() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    assert_eq!(w, vec![eid(1), eid(2), eid(3), eid(50)]);
+}
+
+#[test]
+fn a_child_founded_before_the_ending_was_elsewhere() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    assert!(
+        !w.contains(&eid(4)),
+        "4 was founded on day 10, not at the ending"
+    );
+}
+
+#[test]
+fn a_survivor_is_a_witness_not_an_inheritor() {
+    // The trap: 2 is a DESCENDANT of 1 and would otherwise inherit at hops 1.
+    // It saw the raid. Witness wins over inheritance.
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let two = claims
+        .iter()
+        .find(|c| c.holder == eid(2))
+        .expect("2 holds it");
+    assert_eq!(two.grade, Provenance::Witnessed);
+    assert_eq!(two.hops, 0);
+}
+
+#[test]
+fn the_ordinary_child_inherits_at_one_hop() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let four = claims
+        .iter()
+        .find(|c| c.holder == eid(4))
+        .expect("4 holds it");
+    assert_eq!(four.grade, Provenance::Taught);
+    assert_eq!(four.hops, 1);
+}
+
+#[test]
+fn the_attackers_line_holds_it_too() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let fifty = claims
+        .iter()
+        .find(|c| c.holder == eid(50))
+        .expect("50 holds it");
+    let fifty_one = claims
+        .iter()
+        .find(|c| c.holder == eid(51))
+        .expect("51 holds it");
+    assert_eq!(fifty.grade, Provenance::Witnessed);
+    assert_eq!(fifty.hops, 0);
+    assert_eq!(fifty_one.grade, Provenance::Taught);
+    assert_eq!(fifty_one.hops, 1);
+}
+
+#[test]
+fn a_non_ending_predicate_has_only_its_subject_as_witness() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_FOUNDED);
+    assert_eq!(w, vec![eid(1)], "only an ending has other parties");
 }
