@@ -990,6 +990,38 @@ git commit -m "feat(the-repose): the hazard field, steady and non-accumulating"
 
   Task 7 consumes `volcano_at`.
 
+> **AMENDED 2026-08-14, after Task 5 shipped and was reviewed. The signatures
+> immediately above are WRONG and were not built. Mine, both of them.**
+>
+> **`volcano_name` must not take a cell.** An edifice is 1–2 hops wide —
+> measured on L6 seed 42: 187 cells at hop 0, 173 at hop 1, zero beyond, so
+> 360 cells over roughly 187 gated source contacts. A name keyed on the
+> *query* cell therefore gives the two halves of one mountain two different
+> names, which is precisely the bug an identity rule exists to prevent. As
+> built it takes `&Volcano`, so the name is keyed on the mountain's identity.
+>
+> **`Volcano` carries `source`, not `cell`,** for the same reason.
+> `elevation.rs` samples the arc gate at the *source* boundary cell so that a
+> whole edifice shares one value; keying identity anywhere else mints up to
+> 360 volcanoes for ~187 cones on seed 42 alone.
+>
+> **A third terrain read was needed and is not in the file table above:**
+> `edifice_source_at` in `domains/terrain/src/provider.rs`. `boundary_distance_at`
+> discards the source (`.map(|(hops, _)| hops)`), so nothing published it. Same
+> two constraints as Task 4's read, and both verified: it consumes no draw, and
+> it is a strict restatement of `has_edifice` rather than a second opinion.
+>
+> **What actually keeps this honest** is `every_cell_of_one_edifice_resolves_to_one_volcano`,
+> which is mutation-proven: keying on the query cell makes it report
+> "CellId(38078) and CellId(39) resolve to different volcanoes".
+>
+> **A caution Task 7 inherits.** Identity is per *contact cell*, and 173 of
+> 187 contacts abut another on seed 42 — so a continuous gate-on arc reads as
+> a chain of separately named mountains, and a settlement's horizon can hold
+> roughly ten of them along one ridge. Physically defensible at L6 (~120 km
+> cells against 50–100 km real cone spacing), but not what "187 cones"
+> suggests.
+
 **The split is load-bearing.** Identity is a pure function of `(seed, cell)`;
 the *name* is not, because `Namer::new(&seed, species, &phonology)` requires a
 language and a mountain has no language of its own. One identity, many names —
