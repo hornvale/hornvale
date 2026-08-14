@@ -83,6 +83,9 @@ not merely re-express the preference.
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
 
+# The set roster — what each gate runs — is `scripts/lane-sets.tsv`, the single
+# source of truth (`cli/tests/lane_sets.rs` fails on a second copy).
+
 # The gate ladder (`make help` lists all targets). The commit gate is
 # `make gate`; it runs `cargo nextest run` (test binaries in PARALLEL) plus
 # doctests. The heavy live-worldgen batteries (censuses, the full pin

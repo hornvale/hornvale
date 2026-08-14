@@ -1,0 +1,18 @@
+# The set roster (The Staff). THE SINGLE SOURCE OF TRUTH for what a set is.
+# Read by the Makefile, scripts/lane-dispatch.sh, scripts/lane-run.sh,
+# scripts/census-canonical-host.sh and cli/tests/lane_sets.rs. Do not restate
+# this list in prose anywhere — cli/tests/lane_sets.rs fails on a second copy,
+# for the reason docs/generated-paths.txt exists.
+#
+# TSV, not JSON: /bin/sh on lefford is dash and must parse this without a tool,
+# and decision 0004 admits no TOML parser to the workspace.
+#
+# name	gate	where	authors	command
+style	commit	local	no	make --no-print-directory style-run
+subfloor	commit	local	no	make --no-print-directory subfloor-run
+gate	stage	lane	no	make --no-print-directory gate-suite-run
+artifacts	stage	lane	yes	bash scripts/regenerate-artifacts.sh
+outboard	stage	lane	yes	bash scripts/lane-outboard.sh
+clients	stage	lane	yes	make --no-print-directory clients-check-run
+heavy	campaign	lane	yes	bash scripts/gate-full-heavy.sh
+census	campaign	lane	yes	bash scripts/census-run.sh
