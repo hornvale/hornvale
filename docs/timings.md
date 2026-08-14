@@ -917,3 +917,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T20:57:38Z | lane:outboard | 855.222 | 4720.972 | 378.628 | 5.96 | 0 | 9de7fc9b | campaign/the-staff | MacBookPro | 10 |
 | 2026-08-14T21:02:43Z | lane:outboard | 17.548 | 26.754 | 25.862 | 3.00 | 0 | 690ecb9d | campaign/the-staff | MacBookPro | 10 |
 | 2026-08-14T21:17:07Z | lane:seam-guard | 853.284 | 4731.543 | 366.363 | 5.97 | 0 | 690ecb9d | campaign/the-staff | MacBookPro | 10 |
+| 2026-08-14T22:13:30Z | preflight | 3.238 | 0.813 | 0.614 | 0.44 | 0 | 0e64f598 | campaign/the-staff | MacBookPro | 10 |
+| 2026-08-14T22:13:47Z | preflight | 2.730 | 0.807 | 0.617 | 0.52 | 0 | 0e64f598 | campaign/the-staff | MacBookPro | 10 |
