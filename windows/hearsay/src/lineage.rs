@@ -39,6 +39,18 @@ impl Lineage {
         }
         out
     }
+
+    /// Every occupation descending from `of`, ascending. Excludes `of` itself.
+    pub fn descendants_of(&self, of: EntityId) -> Vec<EntityId> {
+        let mut out: Vec<EntityId> = self
+            .parent
+            .keys()
+            .copied()
+            .filter(|k| *k != of && self.ancestry(*k).contains(&of))
+            .collect();
+        out.sort();
+        out
+    }
 }
 
 /// Read the founding tree out of a ledger.

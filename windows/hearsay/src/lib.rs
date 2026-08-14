@@ -6,4 +6,5 @@
 //! nothing, and owns no seed labels — it is a window, not a domain.
 #![warn(missing_docs)]
 
+pub mod derive;
 pub mod lineage;
