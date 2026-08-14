@@ -440,7 +440,6 @@ hornvale-history = { path = "../../domains/history" }
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
-hornvale-settlement = { path = "../../domains/settlement" }
 ```
 
 The workspace picks it up automatically — `members = ["kernel", "domains/*", "windows/*", "cli"]`.
@@ -930,7 +929,7 @@ fn echo_ratio_on_seed_42_has_a_denominator_and_a_median() {
         &hornvale_astronomy::SkyPins::default(),
         hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
-        &hornvale_settlement::SettlementPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
     )
     .expect("seed 42 builds");
     let lin = lineage_of(&world.ledger);
