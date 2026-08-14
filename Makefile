@@ -4,8 +4,9 @@
 # stops being tribal knowledge re-derived each session. `just` is not a repo
 # dependency; this uses `make`, already present everywhere.
 #
-#   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
-#   make gate         # the commit gate: fmt + clippy + nextest + doctests (heavy tier skipped)
+#   make quick        # cheap half: fmt --check + clippy + type-audit
+#   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier (local, seconds)
+#   make gate         # the full workspace gate: fmt + clippy + type-audit + nextest --workspace + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
@@ -24,7 +25,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -35,6 +36,42 @@ quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-r
 	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
 
 quick-run: fmt-check clippy type-audit type-audit-report
+
+gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local, seconds)
+	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
+
+gate-commit-run: style-run subfloor-run
+
+# NO FRESHNESS CHECK HERE. An earlier draft called
+# scripts/test-worktree-freshness.sh from this recipe. Ruled out on
+# measurement (R5): target/debug/deps holds 24,544 files and the scan costs
+# ~1 s per sibling worktree, so with six worktrees it is ~5 s on EVERY commit
+# gate — a third of the whole budget, paid continuously, for a condition that
+# arises exactly once, at worktree-take's `mv`. Task 1 placed the call in
+# scripts/worktree-take.sh instead, which is where the condition is created.
+style-run: fmt-check clippy type-audit type-audit-report
+
+# THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
+# roster is not run here, and enters on the next green `make gate-stage`.
+# That inverts this repo's default-deny instinct deliberately — the commit gate
+# is a SPEED tier and coverage is the stage gate's job. Defaulting the other
+# way was measured at 178.6 s against a ~14 s estimate.
+#
+# Exit 3 from the roster script means NO ROSTER for this host, which is a
+# different thing from an empty roster and must not read as a green gate.
+subfloor-run: nextest-check
+	@filter="$$(bash scripts/subfloor-roster.sh)"; \
+	status=$$?; \
+	if [ $$status -eq 3 ]; then \
+	    echo "gate-commit: no sub-floor roster for this host — the test tier is UNAVAILABLE, not empty." >&2; \
+	    echo "gate-commit: run a green 'make gate-stage REF=<sha>' to author one." >&2; \
+	    exit 1; \
+	fi; \
+	if [ -z "$$filter" ]; then \
+	    echo "gate-commit: the roster is EMPTY. That is never correct — it would make this gate vacuous." >&2; \
+	    exit 1; \
+	fi; \
+	cargo nextest run --workspace -E "$$filter"
 
 gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
