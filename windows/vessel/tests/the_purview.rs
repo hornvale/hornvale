@@ -243,28 +243,41 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // unchanged and is not about these three compass points: it is that
         // `map` reports the drawn cell's OWN exits rather than the walk depth's,
         // which is why the pin is re-measured rather than relaxed to a count.
-        vec!["N", "SW", "SE"],
+        // Re-measured again under The Glasshouse (decision 0131, 2026-08-14):
+        // the terrain epoch moves every coastline, so the walk lands in a
+        // different fine room again. `N, SW, SE` -> `NE, W, SE`. Note the
+        // claim survives the re-measure in the strong form: the drawn cell's
+        // exits and the walk-depth room's exits are STILL different sets, so
+        // this test would still have failed under the code that passed
+        // `self.ways()` unconditionally — a re-pin that kept the number but
+        // lost the divergence would have made it vacuous.
+        vec!["NE", "W", "SE"],
         "pin: the fine room's own exits at this point of the seed-42 walk \
          (if world-gen ever changes this, re-measure and update the pin)"
     );
     // The two triads SWAPPED under The Tense, which looks alarming and is not.
     // Each cell on this mesh offers three exits, and `{N, SW, SE}` and
-    // `{NE, NW, S}` are the pair the walk alternates between here — the walk
-    // now lands on the opposite one at both rungs, so the fine room took what
-    // the coarse cell used to have and vice versa. (These are not the ONLY
-    // triads the mesh admits: `{NW, SW, E}` occurs too, measured out at sea in
-    // `session.rs`'s water walk. Do not infer a global two-parity rule from
-    // this pin, which is what an earlier draft of this comment did.) The CLAIM
-    // this test makes is untouched, and is precisely that the two rungs report
-    // DIFFERENT triads: the footer must show the drawn cell's parity, never the
-    // walk-depth room's.
+    // `{NE, NW, S}` are the pair the walk alternated between there. (These are
+    // not the ONLY triads the mesh admits: `{NW, SW, E}` occurs too, measured
+    // out at sea in `session.rs`'s water walk. Do not infer a global
+    // two-parity rule from this pin, which is what an earlier draft of this
+    // comment did.)
+    //
+    // The Glasshouse (decision 0131) re-measured both rungs and is the reason
+    // that warning stands: the fine room now exits `{NE, W, SE}` and the
+    // coarse cell `{E, NW, SW}` — a pair neither of the previous readings
+    // used, and one that includes `E` and `W`, which the old "two triads that
+    // swap" framing had no room for. The alternation was a coincidence of two
+    // samples. The CLAIM this test makes is untouched, and is precisely that
+    // the two rungs report DIFFERENT triads: the footer must show the drawn
+    // cell's parity, never the walk-depth room's.
     let coarse = out(session.handle("map out 1"));
     assert!(
-        coarse.contains("ways on: NE, NW, S"),
+        coarse.contains("ways on: E, NW, SW"),
         "the footer must report the DRAWN cell's own exits: {coarse}"
     );
     assert!(
-        !coarse.contains("ways on: N, SW, SE"),
+        !coarse.contains("ways on: NE, W, SE"),
         "the footer must not leak the walk-depth room's exits onto a coarser chart: {coarse}"
     );
 }

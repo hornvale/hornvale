@@ -5,12 +5,15 @@
 //!
 //! Three claims:
 //!
-//! - **The before-arm holds.** `fixtures/column_before.txt` was captured on
-//!   the unmodified, pre-delegation methods (81 seed-42 cells, every
-//!   `Stratum` variant per cell). Re-running the identical capture procedure
-//!   against the delegating code and diffing byte-for-byte is the only
-//!   honest way to show nothing moved — a fixture re-derived from the new
-//!   code and compared to itself would prove nothing.
+//! - **The before-arm held, ONCE, and is now spent.**
+//!   `fixtures/column_before.txt` was captured on the unmodified,
+//!   pre-delegation methods (81 seed-42 cells, every `Stratum` variant per
+//!   cell); re-running the identical capture against the delegating code and
+//!   diffing byte-for-byte was the only honest way to show nothing moved.
+//!   That proof was made at `aadf5920` and cannot be re-made — decision
+//!   0131's terrain epoch moved the world the sample is drawn from, the
+//!   fixture was regenerated, and what remains is a drift tripwire rather
+//!   than cross-refactor evidence. See `the_sampled_column_is_byte_stable`.
 //! - **The two derivations agree wherever both are defined** — exhaustively,
 //!   over all 40,962 cells, not just the fixture's 81-cell sample.
 //! - **A regression guard against de-delegation**, also exhaustive. Read the
@@ -72,17 +75,37 @@ fn regenerate(ctx: &LocaleContext) -> String {
     out
 }
 
-/// Claim 1 — the before-arm holds. Every sampled value the fixture recorded
-/// is reproduced exactly by the delegating implementation.
+/// Claim 1 — the sampled column is byte-stable.
+///
+/// **THE FATHOM'S BEFORE-ARM IS SPENT, AND THIS TEST IS NO LONGER IT**
+/// (decision 0131, 2026-08-14). The fixture was captured at `aadf5920` on the
+/// unmodified, pre-delegation methods, and comparing the delegating code
+/// against it proved that the delegation moved nothing. That proof was made
+/// and holds; it is a fact about `aadf5920..` and cannot be re-made.
+///
+/// The Glasshouse's terrain epoch then moved every coastline, so the sampled
+/// cells' water columns legitimately changed, and the fixture was regenerated.
+/// From here it compares the current derivation against itself across time —
+/// which the module doc above is right to say "would prove nothing" about a
+/// REFACTOR. It is still worth keeping as a cheap drift tripwire on 81 cells
+/// × 11 strata, but read it as that and not as evidence about The Fathom.
+///
+/// **The ongoing guard is claim 2, not this one.** The exhaustive agreement
+/// between `expr_at_stratum` and `climate.biome_expr_at_stratum` over all
+/// 40,962 cells is what actually holds the delegation in place, it is
+/// world-independent, and it passed through this epoch untouched. A future
+/// campaign that needs a true before-arm here must capture a fresh one before
+/// its own change, exactly as The Fathom did.
 #[test]
-fn the_before_arm_holds() {
+fn the_sampled_column_is_byte_stable() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let after = regenerate(&ctx);
     assert_eq!(
         after, BEFORE_ARM,
-        "water_column_at/expr_at_stratum moved after delegating to \
-         GeneratedClimate — The Fathom may not move behaviour"
+        "water_column_at/expr_at_stratum moved against the committed sample — \
+         if a change to the WORLD caused it, regenerate the fixture and say so; \
+         if nothing about the world moved, this is a real regression"
     );
 }
 

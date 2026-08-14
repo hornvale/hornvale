@@ -61,7 +61,14 @@ fn world() -> hornvale_kernel::World {
 /// `Dadogogodaga`, a different place entirely. Reading the rename off the
 /// almanac instead of the possession artifact gives a plausible wrong answer,
 /// because this NPC does not live in the chief settlement.
-const GRIEVANCE_NPC: &str = "bugbear of Googo";
+///
+/// A SEVENTH time, with The Glasshouse (decision 0131, 2026-08-14): the
+/// terrain epoch re-places seed 42's settlements, `Googo` -> **`Goodo`**.
+/// Re-read from `book/src/gallery/possession-seed-42.md`, the source the note
+/// above insists on. NOTE this constant is DUPLICATED in
+/// `possession_moves.rs` and both copies must move together — they did here,
+/// but nothing enforces it, which is worth knowing before the eighth rename.
+const GRIEVANCE_NPC: &str = "bugbear of Goodo";
 
 fn out_text(t: Turn) -> String {
     match t {

@@ -350,6 +350,18 @@ rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh
 timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
 	@bash scripts/timed.sh report $(LABEL)
 
+# EVERY BYTE-GOLDEN IN THE TREE MUST HAVE A LINE HERE. This recipe is a hand-
+# maintained list of scoped invocations, not a sweep, so a golden added later
+# is accepted by nothing: `REBASELINE=1` is read by the golden helper, and
+# `cargo test` never runs a test binary this list does not name. The failure
+# mode is quiet and expensive — the fixture's own message says to run
+# `REBASELINE=1 ... or make rebaseline-goldens`, which reads as though either
+# works, so an omitted target sends you round the loop believing the golden is
+# broken rather than unlisted.
+#
+# `hornvale-terrain --test channel_golden` was missing for exactly that reason
+# and cost The Glasshouse a debugging cycle (decision 0131). When you add a
+# golden, add its line here in the same commit.
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
 	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
@@ -358,6 +370,7 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale-vessel --test session_snapshot
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test solitary_tongue
 	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
+	REBASELINE=1 cargo test -q -p hornvale-terrain --test channel_golden
 
 lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=the-census)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }

@@ -121,6 +121,13 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     //   19x19 rather than 19x10. Only the size moved — the 1:1 claim is exactly
     //   as testable at 19x19, since the doubling this guards against would
     //   render 39x39.
+    //   Re-measured again under The Glasshouse (decision 0131, 2026-08-14):
+    //   the terrain epoch re-places the walk, so it enters a structure of TWO
+    //   chambers whose first is 10 rows by 19 columns. Back to a non-square
+    //   extent, which is the more useful shape for this pin — a `(2w+1)`
+    //   regression would render 19x39, differing from the truth in BOTH
+    //   dimensions rather than only doubling a square. Only the size moved;
+    //   the 1:1 claim is untouched.
     // - the plan is ENCLOSED. A drawn border of unbroken `#` is what makes the
     //   picture read as a BUILDING rather than as a floating partition diagram,
     //   and it is what roughly a fifth to two fifths of the extent is spent on.
@@ -131,9 +138,9 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     let lines = picture_rows(&plan);
     assert_eq!(
         (lines.len(), lines[0].chars().count()),
-        (19, 19),
-        "the seed-42 structure's first chamber has extent 19x19, and the \
-         render is 1:1 (a doubling regression would draw 39x39): {plan}"
+        (10, 19),
+        "the seed-42 structure's first chamber has extent 10x19, and the \
+         render is 1:1 (a doubling regression would draw 19x39): {plan}"
     );
     let last = lines.len() - 1;
     for (y, row) in lines.iter().enumerate() {
