@@ -209,9 +209,25 @@ pub fn evaluable_columns(c: &Census) -> (Vec<String>, Vec<(String, String)>) {
 /// many worlds cannot make any one of them look extreme.
 ///
 /// `sorted` must be ascending and hold at least two values (guaranteed by
-/// [`evaluable_columns`]'s `>= 50 present` test); `value` need not be a
-/// member of `sorted` in general, but every caller here passes a value that
-/// came from the same column.
+/// [`evaluable_columns`]'s `>= 50 present` test). `value` need NOT be a
+/// member of `sorted`: [`score_row`] scores worlds that are not in the
+/// census at all, and such a world can hold a value outside every value the
+/// census ever saw.
+///
+/// **Out of range clamps to `0.0`, and that is a deliberate loss.** For a
+/// value beyond either rail the tied run `[first, last)` is empty, which
+/// leaves `avg_rank` half a rank outside `[0, n-1]` and the raw expression
+/// slightly NEGATIVE (`-0.5 / (n-1)`, at either end). Reporting a negative
+/// depth would put such a world ahead of the census's own extreme holder on
+/// a scale this module documents as `[0, 0.5]`, so the result is clamped to
+/// the scale's own floor instead. The clamp is provably a no-op for every
+/// in-census caller — for a `value` present in `sorted`, `first < n` and
+/// `last > first`, so `avg_rank ∈ [0, n-1]` and `min(avg_rank, n1 -
+/// avg_rank) >= 0` already. What it costs is magnitude: a world at 1.0001x
+/// the census maximum and one at 1000x both read `0.0`. That is honest for
+/// a RANK statistic — the census affords no way to rank beyond its own
+/// extreme — and inventing an extrapolated depth would be a different,
+/// unpreregistered instrument.
 fn tail_depth(sorted: &[f64], value: f64) -> f64 {
     let n = sorted.len();
     assert!(n > 1, "tail depth needs at least two values to have spread");
@@ -220,10 +236,18 @@ fn tail_depth(sorted: &[f64], value: f64) -> f64 {
     while last < n && sorted[last] == value {
         last += 1;
     }
-    // Average rank (0-indexed) of the tied run [first, last).
-    let avg_rank = (first as f64 + (last - 1) as f64) / 2.0;
+    // Average rank (0-indexed) of the tied run [first, last) — or, when the
+    // value is absent from `sorted` entirely and that run is EMPTY, the half
+    // rank between the two values it falls between. The empty-run branch is
+    // not cosmetic: `last - 1` on a `usize` with `last == 0` (a value below
+    // the census minimum) underflows and panics in debug.
+    let avg_rank = if last > first {
+        (first as f64 + (last - 1) as f64) / 2.0
+    } else {
+        first as f64 - 0.5
+    };
     let n1 = (n - 1) as f64;
-    (avg_rank.min(n1 - avg_rank)) / n1
+    ((avg_rank.min(n1 - avg_rank)) / n1).max(0.0)
 }
 
 /// The smallest representable tail depth for a column with `n` present
@@ -385,6 +409,39 @@ pub fn for_seed(c: &Census, seed: u64) -> Option<WorldAnomaly> {
     let depths = depths_for_row(row, &evaluable, &idx);
     let (wa, _) = score_world(seed, depths, &idx);
     Some(wa)
+}
+
+/// Score one world's row against this census's percentiles when that row is
+/// **not a member of the census** — the seam H1's injection battery and H2's
+/// held-out calibration arm both score through (spec §3.5).
+///
+/// [`rank`] and [`for_seed`] can only score rows already inside `c`. A
+/// perturbed world (a census seed rebuilt from mutated source) and a
+/// held-out world (a seed the census never covered) are neither, so the row
+/// arrives from the caller — read out of a separately authored `rows.csv` by
+/// the same [`crate::domesday::census::load`] every other reader here uses —
+/// while the ranking prior stays exactly the committed census.
+///
+/// **Never splice the row into the census and call [`for_seed`] instead.**
+/// That is the obvious-looking shortcut and nothing in the suite would go
+/// red if someone took it: adding the row to `c` contaminates the very
+/// percentiles it is then scored against. Every column index would be built
+/// over `n + 1` values including the perturbed one, so a planted extreme
+/// would partly *define* the tail it is being tested for membership in, and
+/// the more extreme the perturbation the more it would move its own
+/// yardstick. The index here is built from `c` alone, and `row` is read
+/// against it.
+///
+/// `row` is keyed by column name exactly as [`Census::rows`] entries are —
+/// an absent, empty or unparseable value for a column simply means this
+/// world contributes no depth for it, the same rule [`rank`] applies to a
+/// census row.
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(artifact: row)
+pub fn score_row(c: &Census, seed: u64, row: &BTreeMap<String, String>) -> WorldAnomaly {
+    let (evaluable, _) = evaluable_columns(c);
+    let idx = build_index(c, &evaluable);
+    let depths = depths_for_row(row, &evaluable, &idx);
+    score_world(seed, depths, &idx).0
 }
 
 #[cfg(test)]
@@ -791,6 +848,97 @@ mod tests {
             .1
             .clone();
         assert_eq!(tied_reason, "both rails tied: 190 at min, 10 at max of 200");
+    }
+
+    /// A value beyond either rail clamps to the scale's floor instead of
+    /// going negative — the case [`score_row`] introduced and no in-census
+    /// caller can reach. Both directions, because the raw expression is
+    /// symmetric and so is the bug.
+    #[test]
+    fn tail_depth_clamps_a_value_outside_the_census_range() {
+        let sorted = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        assert_eq!(tail_depth(&sorted, 0.0), 0.0, "below the minimum");
+        assert_eq!(tail_depth(&sorted, 99.0), 0.0, "above the maximum");
+    }
+
+    /// The seam agrees with the in-census path it generalises: handed a row
+    /// that IS a census row, [`score_row`] returns exactly what
+    /// [`for_seed`] does. Without this the two could drift into scoring the
+    /// same world differently depending on which door it came through.
+    #[test]
+    fn score_row_agrees_with_for_seed_on_a_census_row() {
+        let c = committed();
+        let row = c
+            .rows
+            .iter()
+            .find(|r| seed_of(r) == Some(42))
+            .expect("seed 42 is in the census");
+        assert_eq!(score_row(&c, 42, row), for_seed(&c, 42).expect("seed 42"));
+    }
+
+    /// The anti-splice property, with the contaminated alternative computed
+    /// alongside it as the positive control.
+    ///
+    /// A 100-world census over a plain `0..100` ramp; the scored row sits at
+    /// `0.5`, between the two lowest census values. Scored against the
+    /// census as committed its rank is `0.5` of `n-1 = 99` → depth
+    /// `0.005050…`. Spliced INTO the census first — the shortcut
+    /// [`score_row`]'s doc warns about — it becomes a member, `n` rises to
+    /// 101, its rank rises to 1 of 100, and the depth doubles to `0.01`:
+    /// the row moved the very yardstick it was being measured against, and
+    /// in this case across the frozen [`TAIL_DEPTH_BAR`]. Asserting only the
+    /// first number would pass just as well if someone rewrote `score_row`
+    /// to splice, so both are asserted and their inequality with them.
+    #[test]
+    fn score_row_scores_against_an_uncontaminated_index() {
+        let rows: Vec<BTreeMap<String, String>> = (0..100)
+            .map(|i: u32| {
+                BTreeMap::from([
+                    ("m".to_string(), i.to_string()),
+                    ("seed".to_string(), i.to_string()),
+                ])
+            })
+            .collect();
+        let census = Census {
+            columns: vec![numeric_column("m")],
+            rows: rows.clone(),
+        };
+
+        let outsider = BTreeMap::from([
+            ("m".to_string(), "0.5".to_string()),
+            ("seed".to_string(), "9999".to_string()),
+        ]);
+
+        let scored = score_row(&census, 9999, &outsider);
+        let depth = scored
+            .flags
+            .iter()
+            .find(|f| f.metric == "m")
+            .expect("the outsider is scored on m")
+            .depth;
+        assert_eq!(depth, 0.5 / 99.0, "scored against the census as committed");
+
+        // The contaminated alternative, computed rather than asserted about.
+        let mut spliced_rows = rows;
+        spliced_rows.push(outsider.clone());
+        let spliced = Census {
+            columns: vec![numeric_column("m")],
+            rows: spliced_rows,
+        };
+        let contaminated = for_seed(&spliced, 9999)
+            .expect("the spliced census carries the outsider")
+            .flags
+            .iter()
+            .find(|f| f.metric == "m")
+            .expect("scored on m")
+            .depth;
+        assert_eq!(contaminated, 1.0 / 100.0, "the splice's own arithmetic");
+        assert_ne!(
+            depth, contaminated,
+            "splicing the row into the census must be observably different from \
+             scoring it against the census — if these agree, this test can no \
+             longer tell the two apart"
+        );
     }
 
     #[test]
