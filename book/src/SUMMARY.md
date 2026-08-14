@@ -358,6 +358,7 @@
 - [The Holdfast](./chronicle/the-holdfast.md)
 - [The Rill](./chronicle/the-rill.md)
 - [The Millrace](./chronicle/the-millrace.md)
+- [The Sexton](./chronicle/the-sexton.md)
 
 # Appendix: The Frontier
 
