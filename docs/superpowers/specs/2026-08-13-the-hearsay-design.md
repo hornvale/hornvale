@@ -362,6 +362,58 @@ someone from B meeting someone from C and the tale being confirmed — needs
 contact between communities and a notion of belief strength that changes on
 confirmation. Neither exists. H4 measures the structural precondition only.
 
+### 6.3 Preregistration — divergent testimony, and why H4 is not being re-run
+
+H4 asked for the structural precondition of two lineages ever confirming each
+other, then operationalised it as **ancestor-disjoint** witness lineages. That
+measure does not measure the concept. When village A is raided and its
+survivors found B and C, B and C both descend from A — so the exact scenario
+the row was written about scores zero. H4 is **refuted as written and stays
+refuted**; it is not re-run, re-scoped, or quietly replaced. Its number
+(0.0588) stands in the record.
+
+What follows is a *new* hypothesis on the measure the concept implied, frozen
+before computation on the seed set, and stated separately so nobody can read it
+as H4 rehabilitated.
+
+**H5 — divergent testimony is common.** Two witnesses to one event have
+**divergent lines** when neither is an ancestor of the other: their accounts
+descend to the present through communities that never inherited from one
+another, so a later meeting between their descendants is a genuine
+cross-check rather than an echo. Measure the fraction of qualifying endings
+(≥3 holders) with two or more witnesses in divergent lines.
+
+**Prediction: ≥ 0.50.**
+
+```
+  fraction >= 0.50  -> H5 CONFIRMED. Cross-checkable testimony is a background
+                       condition of this world, not a special case, and
+                       campaign 2 should model confirmation as an ordinary
+                       event rather than a rare one.
+  0.20 <= f < 0.50  -> H5 REFUTED. Corroboration exists but is uncommon enough
+                       that it is worth modelling as a distinct, marked
+                       occurrence.
+  f < 0.20          -> H5 REFUTED, and the headline is that this world's
+                       testimony is almost always single-lineage: nobody is
+                       ever in a position to check anybody.
+  fewer than 100 qualifying endings across the seed set -> NO VERDICT.
+```
+
+**Disclosure, because it bears on how much this is worth.** A single-world
+exploratory pass over seed 42, run *after* H4 came back and *before* this
+section was written, gave 0.5662. That number is why 0.50 is the threshold
+here, and it means H5 is **not** an independent test on seed 42 — it is a
+prediction that the seed-42 figure generalises to the census set. Stated
+plainly so a later reader does not mistake a confirmation for a discovery:
+what H5 can genuinely falsify is *generality across worlds*, not the existence
+of the effect on the world it was derived from.
+
+**Consequence if H5 confirms:** the corroboration event that campaign 2 wants —
+someone from B meeting someone from C, decades on, and the tale holding up —
+has a substrate that already produces its precondition about half the time. It
+does not need manufacturing; it needs contact and a notion of belief strength,
+neither of which exists yet.
+
 ## 7. Carried forward
 
 - **`lectio difficilior potior`** → campaign 2's headline hypothesis.
