@@ -402,8 +402,16 @@ git commit -m "feat(lab): the frozen first-occurrence roster — 19 index column
 
 **Files:**
 - Create: `tools/census/queries/explore/emergent-conjunction.sql`
-- Modify: `book/src/laboratory/` documentation page for the census queries (find
-  it by `grep -rl 'interesting-worlds' book/`)
+- Modify: `book/src/laboratory/overview.md` — the page that documents
+  `tools/census`. (The plan originally said to find this by
+  `grep -rl 'interesting-worlds' book/`; that grep returns **nothing** — no book
+  page names the query files individually. Corrected at preflight.)
+
+**No registration is needed for a new query file**, verified: `tools/census/manifest.json`
+lists *studies*, not queries, and `tools/census/check.sh` reads exactly one query
+by name (`calibrate/golden-pins.sql`). A file under `queries/explore/` is a
+template, picked up by nothing automatically — which also means nothing will tell
+you if it rots.
 
 **Interfaces:**
 - Consumes: the 19 metric names from Task 2.
