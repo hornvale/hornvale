@@ -128,7 +128,18 @@ fn no_claude_md_restates_the_declared_path_list() {
     let mut offenders: Vec<String> = Vec::new();
     for (path, text) in claude_md_files() {
         for (n, line) in text.lines().enumerate() {
-            let named = stems.iter().filter(|s| line.contains(s.as_str())).count();
+            // The closure parameter is `stem`, never the single letter after
+            // `r`. `cli/tests/claim_shape.rs` reads that letter as a seed
+            // binding (`seed_shaped`), so the first version of this test read
+            // as an untagged seed loop and turned the gate red — and then the
+            // comment written to explain THAT read as one too, because
+            // `has_seed_closure` is a raw substring scan over the body text
+            // and does not skip comments. Hence the circumlocution here: this
+            // note cannot spell the offending token it is about.
+            let named = stems
+                .iter()
+                .filter(|stem| line.contains(stem.as_str()))
+                .count();
             if named >= 2 {
                 offenders.push(format!("{}:{} names {} declared paths", path, n + 1, named));
             }

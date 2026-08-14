@@ -3,3 +3,4 @@
 # git log -p on this file is the archaeology of what the suite defends.
 when_utc	commit	branch	changed_crates	failed_test
 2026-08-13T17:48:46Z	d426f96f	campaign/the-sexton	(none)	hornvale-kernel::hv_probe_red$hv_probe_deliberate_red
+2026-08-13T23:35:44Z	dbb48adc	campaign/the-sexton	docs/timings.md	hornvale::claim_shape$every_seed_looping_test_in_the_repo_declares_its_claim_shape

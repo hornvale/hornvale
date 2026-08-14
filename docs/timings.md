@@ -847,3 +847,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-13T22:31:58Z | ci | 706.738 | 3011.844 | 279.553 | 4.66 | 0 | 883c63ae | main | MacBookPro | 10 |
 | 2026-08-13T22:50:52Z | rebaseline | 56.474 | 202.620 | 9.170 | 3.75 | 0 | cec0ebeb | campaign/the-sexton | ambrose | 12 |
 | 2026-08-13T22:58:31Z | gate | 450.857 | 2892.454 | 189.725 | 6.84 | 0 | cec0ebeb | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:30:38Z | quick | 9.843 | 8.001 | 0.555 | 0.87 | 0 | 9467e6c4 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:31:59Z | quick | 12.269 | 13.802 | 5.469 | 1.57 | 0 | 82127c11 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:35:44Z | gate-fast | 68.397 | 66.056 | 22.238 | 1.29 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:49:17Z | gate-fast | 652.227 | 2700.393 | 142.155 | 4.36 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:02:06Z | gate-fast | 372.635 | 2671.241 | 129.699 | 7.52 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:03:08Z | rebaseline | 36.117 | 202.787 | 8.982 | 5.86 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
