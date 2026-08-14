@@ -766,6 +766,14 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// now reaches it directly through `delve_column(None)` rather than by
 /// standing somewhere that happens to qualify, so it can no longer be
 /// falsified by a coastline moving.
+///
+/// **THE SUBJECT MOVED AGAIN** (The Glasshouse, Stage B Task 4, the
+/// thermostat). The damped, greenhouse-forced insolation baseline
+/// re-places seed 42's settlements a second time this campaign, and the new
+/// flagship's own starting cell has no cave at all — back to the *no-cave*
+/// refusal, the same contingency this comment already names. Still a
+/// refusal that names what stopped you, which is the property this test
+/// holds regardless of which of the two fires.
 #[test]
 fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
     let world = seam_world();
@@ -774,7 +782,7 @@ fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
         Turn::Out(t) => t,
         _ => panic!("must not release"),
     };
-    assert!(out.contains("sealed"), "{out}");
+    assert!(out.contains("no cave"), "{out}");
     let up = match s.handle("climb") {
         Turn::Out(t) => t,
         _ => panic!("must not release"),

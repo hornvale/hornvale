@@ -251,7 +251,16 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // this test would still have failed under the code that passed
         // `self.ways()` unconditionally — a re-pin that kept the number but
         // lost the divergence would have made it vacuous.
-        vec!["NE", "W", "SE"],
+        //
+        // Re-measured a further time under The Glasshouse's Stage B Task 4
+        // (the thermostat): the damped, greenhouse-forced insolation
+        // baseline re-places the walk a second time this campaign.
+        // `NE, W, SE` -> `E, NW, SW` — the fine room's new triad is exactly
+        // the PREVIOUS coarse cell's triad, which is a coincidence of this
+        // mesh's limited exit alphabet, not evidence the two rungs merged;
+        // see the coarse re-measure below for the divergence check that
+        // rules that out directly.
+        vec!["E", "NW", "SW"],
         "pin: the fine room's own exits at this point of the seed-42 walk \
          (if world-gen ever changes this, re-measure and update the pin)"
     );
@@ -271,13 +280,19 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
     // samples. The CLAIM this test makes is untouched, and is precisely that
     // the two rungs report DIFFERENT triads: the footer must show the drawn
     // cell's parity, never the walk-depth room's.
+    //
+    // The Glasshouse, Stage B Task 4 (the thermostat) re-measured both rungs
+    // again: the fine room now exits `{E, NW, SW}` — exactly the PREVIOUS
+    // reading's coarse triad — and the coarse cell exits `{SE, NE, W}`, a
+    // triad neither rung has shown before. The two rungs are still genuinely
+    // different sets, which is the only thing this test asserts.
     let coarse = out(session.handle("map out 1"));
     assert!(
-        coarse.contains("ways on: E, NW, SW"),
+        coarse.contains("ways on: SE, NE, W"),
         "the footer must report the DRAWN cell's own exits: {coarse}"
     );
     assert!(
-        !coarse.contains("ways on: NE, W, SE"),
+        !coarse.contains("ways on: E, NW, SW"),
         "the footer must not leak the walk-depth room's exits onto a coarser chart: {coarse}"
     );
 }

@@ -376,6 +376,32 @@ type Row = (
 // visible from the religion side in `doctrine::the_soc1_gate_is_the_flagship_
 // cult_form`, whose bounded 50..=60 scan found folk cult-forms rising 20 -> 58
 // over the same epoch.
+//
+// **THE GLASSHOUSE re-measure (Stage B Task 4).** The thermostat (a damped,
+// greenhouse-forced insolation baseline replacing the fixed 288 K blackbody
+// one, plus Task 5's area-mean-zero latitude profile) re-placed every
+// settlement again. Re-measured wholesale by the same scaffold, not
+// hand-edited. Nine of the seventy-five rows move rung:
+//
+//   seed 1 high-elf      Counted    -> Predictive (6472 witnessed, unchanged)
+//   seed 3 drow          Counted    -> Predictive (53)
+//   seed 3 wood-elf      Counted    -> Predictive (32)
+//   seed 4 kobold        Counted    -> Predictive (3785)
+//   seed 4 high-elf      Predictive -> Counted    (3785)
+//   seed 4 snow-elf      Predictive -> Counted    (3785)
+//   seed 5 desert-dwarf  Predictive -> Counted    (500)
+//   seed 5 hobgoblin     Predictive -> Counted    (304)
+//   seed 5 kobold        Predictive -> Counted    (500)
+//
+// The roster is unchanged and so is every other column: all 75 (seed, kind)
+// pairs are the same pairs, every epoch-1 rung is still `Unknown`, and every
+// witnessed count and every prediction day is byte-identical to the previous
+// table. Four gains, five losses (net −1 predictive) — moves both ways again,
+// the same threshold shape every prior re-measure has shown, and again the
+// GROUND (a climate epoch, not a roster change) is the whole cause: no
+// observation count and no predicted day moved, only which flagships clear
+// the shaman-caste threshold. Post-unblinding re-measure, declared per
+// decision 0016.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -437,9 +463,9 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         6472,
-        None,
+        Some(36531.74198950235),
     ),
     (
         1,
@@ -645,9 +671,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         53,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -733,9 +759,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "wood-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         32,
-        None,
+        Some(36125.669504115634),
     ),
     (
         4,
@@ -797,9 +823,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -829,9 +855,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         3785,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -845,9 +871,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -869,9 +895,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "desert-dwarf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -933,9 +959,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         304,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -949,9 +975,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,

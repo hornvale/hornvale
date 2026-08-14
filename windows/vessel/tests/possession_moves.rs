@@ -597,7 +597,13 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// constant is: a NAME, re-derived from the namer every time anything moves
 /// settlement placement, and never a fact about the NPC. The co-location this
 /// test needs has held through all seven.
-const GRIEVANCE_NPC: &str = "bugbear of Goodo";
+///
+/// An EIGHTH time, with The Glasshouse's Stage B Task 4 (the thermostat): the
+/// damped, greenhouse-forced insolation baseline (replacing the fixed 288 K
+/// blackbody one) re-places seed 42's settlements a second time this
+/// campaign, and the flagship's name goes `Goodo` -> **`Doadaga`**. Re-read
+/// from `book/src/gallery/possession-seed-42.md` as the note above insists.
+const GRIEVANCE_NPC: &str = "bugbear of Doadaga";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

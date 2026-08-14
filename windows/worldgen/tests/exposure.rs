@@ -482,8 +482,18 @@ fn river_exposure_tracks_real_proximity() {
 ///
 /// All four tests are RENAMED to the shape they now measure, per this file's
 /// established policy (decision 0106 — a wrong label defends itself).
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** The thermostat (a damped,
+/// greenhouse-forced insolation baseline replacing the fixed 288 K blackbody
+/// one, plus Task 5's area-mean-zero latitude profile) re-placed every
+/// settlement again — a second cause on this list that is not a roster
+/// change. `spring` moves from 7 root/8 gap to 9 root/6 gap: bugbear,
+/// desert-dwarf, high-elf and hill-dwarf newly root it (hill-dwarf keeping
+/// its `Maqtog` from before); desert-elf and human, its two rooters under
+/// the craton-rescale reading, gap it instead. Re-measured wholesale, not
+/// hand-edited.
 #[test]
-fn spring_is_a_root_at_seed_42_for_eight_peoples() {
+fn spring_is_a_root_at_seed_42_for_nine_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -502,31 +512,29 @@ fn spring_is_a_root_at_seed_42_for_eight_peoples() {
     assert_eq!(
         gapped,
         vec![
-            "bugbear",
-            "desert-dwarf",
+            "desert-elf",
             "drow",
             "goblin",
-            "gully-dwarf",
-            "high-elf",
+            "human",
             "sea-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("desert-elf", "Zeuz".to_string()),
+            ("bugbear", "Dogao".to_string()),
+            ("desert-dwarf", "Shnaqdog".to_string()),
             ("gnoll", "Dzhaap".to_string()),
+            ("gully-dwarf", "Naqtog".to_string()),
+            ("high-elf", "Deoz".to_string()),
             ("hill-dwarf", "Maqtog".to_string()),
             ("hobgoblin", "Negao".to_string()),
-            ("human", "Kozme".to_string()),
             ("kobold", "Roraaxaa".to_string()),
             ("snow-elf", "Booz".to_string()),
-            ("wood-elf", "Deu".to_string()),
         ],
-        "at seed 42 NO placed people roots 'spring' — goblin, its sole rooter \
-         before The Range, lost the exposure when the competitive cascade \
-         re-placed it"
+        "the set of peoples rooting 'spring' at seed 42 moved"
     );
 }
 
@@ -598,8 +606,13 @@ fn spring_is_a_root_at_seed_42_for_eight_peoples() {
 /// shape from 0 rooters to 3. That is a threshold sitting near the middle of
 /// the roster's elevation spread, not a trend in anybody's niche, and this
 /// test asserts no mechanism for it.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `hill` splits 2/15 Root,
+/// 13/15 Gap: hobgoblin keeps its byte-identical `Nootea`, and gully-dwarf
+/// joins it as a second rooter (`Ngab`), the same climate epoch that moved
+/// `spring`/`valley`/`marsh` below. Re-measured wholesale, not hand-edited.
 #[test]
-fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
+fn hill_is_a_root_at_seed_42_for_two_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -628,7 +641,6 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
             "drow",
             "gnoll",
             "goblin",
-            "gully-dwarf",
             "high-elf",
             "hill-dwarf",
             "human",
@@ -641,14 +653,11 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
     );
     assert_eq!(
         rooted,
-        vec![("hobgoblin", "Nootea".to_string()),],
-        "at seed 42 three placed peoples root 'hill': kobold, the authored \
-         highland specialist, is back with the byte-identical `Roxoro` it \
-         carried before The Range took it away; gnoll and wood-elf are new \
-         rooters with new words. The partition is asserted EXACTLY, in both \
-         directions and by name, for the reason F11 gave — the exception is \
-         not noise to route around, it is what the elevation-maximum gate is \
-         FOR"
+        vec![
+            ("gully-dwarf", "Ngab".to_string()),
+            ("hobgoblin", "Nootea".to_string()),
+        ],
+        "the set of peoples rooting 'hill' at seed 42 moved"
     );
 }
 
@@ -702,8 +711,14 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
 /// already said neither of those alone; neither survives, so the name moves
 /// with the value. Sea-elf's `Nadbbeus` is BYTE-IDENTICAL to the word it
 /// carried at the previous pin.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `valley` moves from 6
+/// root/9 gap to 2 root/13 gap: gnoll, goblin, hobgoblin and kobold gap it
+/// now, leaving only drow (`Gadbvoo`) and sea-elf (`Nadbbeus`) rooting it —
+/// both BYTE-IDENTICAL to their previous words. Re-measured wholesale, not
+/// hand-edited.
 #[test]
-fn valley_is_a_root_at_seed_42_for_six_peoples() {
+fn valley_is_a_root_at_seed_42_for_two_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -725,10 +740,14 @@ fn valley_is_a_root_at_seed_42_for_six_peoples() {
             "bugbear",
             "desert-dwarf",
             "desert-elf",
+            "gnoll",
+            "goblin",
             "gully-dwarf",
             "high-elf",
             "hill-dwarf",
+            "hobgoblin",
             "human",
+            "kobold",
             "snow-elf",
             "wood-elf",
         ],
@@ -738,18 +757,9 @@ fn valley_is_a_root_at_seed_42_for_six_peoples() {
         rooted,
         vec![
             ("drow", "Gadbvoo".to_string()),
-            ("gnoll", "Dsavshmaov".to_string()),
-            ("goblin", "Konoa".to_string()),
-            ("hobgoblin", "Konoa".to_string()),
-            ("kobold", "Raxoroo".to_string()),
             ("sea-elf", "Nadbbeus".to_string()),
         ],
-        "at seed 42 exactly one people roots 'valley': sea-elf, with the \
-         BYTE-IDENTICAL `Nadbbeus` it took at the previous pin. Kobold, which \
-         held `Raxoroo` here unchanged across three roster epochs, now gaps \
-         `valley` and roots `hill` instead — the two concepts trade, which is \
-         what a flagship crossing between a local elevation minimum and a \
-         local maximum looks like from the lexicon's side"
+        "the set of peoples rooting 'valley' at seed 42 moved"
     );
 }
 
@@ -844,8 +854,16 @@ fn valley_is_a_root_at_seed_42_for_six_peoples() {
 /// Note desert-dwarf's `Dag` against hill-dwarf's departed `Tag`: two words in
 /// the same family's cohort, one letter apart and independently drawn — near
 /// neighbours, not a renamed pin.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `marsh` moves from 6
+/// root/9 gap to 7 root/8 gap: gnoll and desert-elf gap it now; bugbear,
+/// goblin and wood-elf gain it. **No dwarf roots it, for the fifth
+/// consecutive re-measure** (all three dwarf kinds — desert-dwarf,
+/// gully-dwarf, hill-dwarf — gap it). drow's `Goo`, hobgoblin's `Qaneo`,
+/// kobold's `Rorora` and snow-elf's `Boosh` are all BYTE-IDENTICAL to the
+/// words they carried before. Re-measured wholesale, not hand-edited.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_seven_peoples_and_no_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -864,34 +882,30 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     assert_eq!(
         gapped,
         vec![
-            "bugbear",
             "desert-dwarf",
-            "goblin",
+            "desert-elf",
+            "gnoll",
             "gully-dwarf",
             "high-elf",
             "hill-dwarf",
             "human",
             "sea-elf",
-            "wood-elf",
         ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("desert-elf", "Geesh".to_string()),
+            ("bugbear", "Qadoo".to_string()),
             ("drow", "Goo".to_string()),
-            ("gnoll", "Gshoovzngaov".to_string()),
+            ("goblin", "Taneo".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("kobold", "Rorora".to_string()),
             ("snow-elf", "Boosh".to_string()),
+            ("wood-elf", "Gee".to_string()),
         ],
-        "at seed 42 seven of FIFTEEN placed peoples root 'marsh' — one more \
-         than the last pin, and still exactly one dwarf, but a DIFFERENT one: \
-         hill-dwarf lost it and desert-dwarf gained it as `Dag`. Human lost \
-         it; snow-elf and wood-elf gained it. gnoll's `Gshoovzngaov`, \
-         hobgoblin's `Qaneo`, kobold's `Rorora` and drow's `Goo` are all \
-         byte-identical to the words they carried before"
+        "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
+         is among them"
     );
 }
 

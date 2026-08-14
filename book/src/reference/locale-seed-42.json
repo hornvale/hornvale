@@ -19,9 +19,9 @@
   "depth": 12,
   "latitude": 26.256007,
   "longitude": -132.49414,
-  "biome": "taiga",
+  "biome": "temperate forest",
   "fields": {
-    "temperature_c": -3.7340217,
+    "temperature_c": 10.863954,
     "moisture": 0.4849861,
     "elevation_m": 666.16648,
     "height_asl_m": 2486.458,
@@ -54,8 +54,8 @@
       "wetness": -0.026263815,
       "openness": 0.66924456
     },
-    "descriptor": "a peat hollow",
-    "descriptor_noun": "a peat hollow",
+    "descriptor": "a lichen-hung grove",
+    "descriptor_noun": "a lichen-hung grove",
     "strangeness": 0.0
   },
   "exits": [

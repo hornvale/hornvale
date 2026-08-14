@@ -46,6 +46,7 @@ fn sample_world() -> (Geosphere, GeneratedClimate) {
         year_length_std: 365.25,
         year_phase_offset: 0.0,
         seed: Seed(1),
+        greenhouse_forcing_k: 0.0,
     });
     (geo, climate)
 }

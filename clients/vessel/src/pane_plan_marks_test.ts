@@ -34,7 +34,7 @@ function glyphRows(grid: PaneGrid | null): string[] | null {
 // actually taken at.
 const OCCUPIED = Deno.readTextFileSync(
   new URL(
-    "../../../windows/vessel/tests/fixtures/snapshot-seed-0-chamber-occupied.json",
+    "../../../windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json",
     import.meta.url,
   ),
 );

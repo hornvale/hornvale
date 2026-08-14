@@ -22,6 +22,68 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomal
 /// 1976, troposphere lapse rate.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 
+/// The carbonate–silicate thermostat's compensation fraction, `k`: how much
+/// of a world's insolation deviation from Earth's (`S = 1`) the thermostat
+/// FAILS to compensate before the ordinary blackbody `S^(1/4)` response is
+/// applied (`Spinning` regime only; `Locked` keeps its own, unrelated `0.25`
+/// exponent applied directly to `S` — see that branch, and
+/// `greenhouse_forcing_k`'s doc comment for what this leaves disagreeing
+/// between the two regimes). `k = 1.0` is no thermostat at all (the
+/// pre-Glasshouse fixed-atmosphere model, full blackbody sensitivity to raw
+/// `S`); `k = 0.0` is a perfect thermostat (temperature independent of
+/// insolation). Implemented as `effective_S = 1 + k·(S − 1)`, then
+/// `T_eq ∝ effective_S^(1/4)`.
+///
+/// kind: **physics** (decision 0106; re-decided by The Glasshouse). A
+/// carbonate–silicate weathering thermostat (Walker, Hays & Kasting 1981)
+/// draws CO₂ down as a world warms and lets outgassing rebuild it as a world
+/// cools, DAMPING equilibrium temperature's sensitivity to insolation
+/// relative to a fixed atmosphere — this is the mechanism the classic
+/// habitable-zone width (0.53–1.11 `S`, `domains/astronomy/src/star.rs`)
+/// already assumes: a planet at the outer edge is habitable only because
+/// something keeps it from freezing solid at low insolation, and the
+/// pre-Glasshouse fixed-288K-atmosphere model had no such mechanism, which is
+/// exactly why it dominated the fixed population with ice
+/// (`docs/superpowers/plans/2026-08-13-the-glasshouse-b-recentring.md`
+/// Architecture). The thermostat is imperfect (weathering responds slowly,
+/// and the feedback saturates near the zone edges), so `k` is a partial
+/// compensation, not `0.0`.
+///
+/// Evaluated at `k ∈ {0.4, 0.5, 0.6, 0.7}` against the population's actual
+/// insolation-rel draw (p5/p25/median/p75/p95 over 300 generated skies:
+/// 0.549/0.630/0.742/0.887/1.053 — well below `S = 1` at the median, so MORE
+/// compensation, i.e. a SMALLER `k`, is what actually warms this population)
+/// and post-craton-rescale hypsometry (20 generated terrains, 314,609 land
+/// cells), holding the candidate Task 5 latitude profile fixed (this
+/// campaign's task report carries the full table). At the population median
+/// insolation, land mean ran from −5.4 °C (`k = 0.4`) to −11.6 °C (`k =
+/// 0.7`) — coincidentally near the pre-Glasshouse baseline's own −11.99 °C
+/// median at `k = 0.7`, confirming `k` near `1.0` reproduces the untherm-
+/// ostatted defect. **`0.4` was chosen**: it is the most-compensating value
+/// in the evaluated range, moving the population furthest from the ice-
+/// dominated baseline while remaining inside the range this campaign swept
+/// (a smaller, unswept `k` was not evaluated and is not asserted to be
+/// better). See also
+/// [`crate::provider::ClimateInputs::greenhouse_forcing_k`], the ADDITIVE
+/// residual this thermostat's own spread draws around.
+const THERMOSTAT_COMPENSATION_FRACTION: f64 = 0.4;
+
+/// The thermostat's anchor temperature, kelvin: the `Spinning`-regime
+/// equilibrium base at `S = 1` (before the latitude profile and lapse
+/// cooling are applied).
+///
+/// kind: **earth-biosphere** (decision 0106). Earth's global-mean annual
+/// surface temperature is ≈14 °C / 287.15 K (NASA GISS surface temperature
+/// analysis; IPCC AR6 WG1 gives a comparable figure) — the same datum
+/// `crate::provider::TEMPERATE_BASELINE_C` already anchors the felt-weather
+/// baseline to. Because [`crate::temperature::mean_temperature`]'s latitude
+/// term is constructed to have **zero area-weighted mean** (Task 5, spec
+/// §3.2), this constant alone fixes the model's global area-weighted mean at
+/// `S = 1` — it is the "+14 °C" anchor, not the "+8.6 °C land mean" anchor
+/// (that figure falls out of this constant plus the post-craton-rescale
+/// hypsometry's land-only lapse cooling, not a second free parameter).
+const THERMOSTAT_ANCHOR_K: f64 = 287.15;
+
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
 /// type-audit: bare-ok(ratio: return)
@@ -43,35 +105,56 @@ pub fn continentality(
     0.2 + 0.8 * land_fraction
 }
 
-/// Annual-mean temperature per cell, °C. Spinning: an insolation baseline
-/// (equator warm, poles cold) minus lapse-rate cooling above sea level.
-/// Locked: a substellar cosine, hottest at `+x` and floored on the night side.
-/// type-audit: pending(wave-2: insolation)
+/// Annual-mean temperature per cell, °C. Spinning: a thermostatted insolation
+/// baseline (equator warm, poles cold) minus lapse-rate cooling above sea
+/// level. Locked: a substellar cosine, hottest at `+x` and floored on the
+/// night side — unchanged by the thermostat (`CLIM-locked-regime` is a
+/// separate campaign's concern; see `greenhouse_forcing_k`'s doc comment for
+/// what that leaves disagreeing between the two regimes at equal insolation).
+/// type-audit: pending(wave-2: insolation), pending(wave-2: greenhouse_forcing_k)
 pub fn mean_temperature(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     insolation: f64,
     regime: &RotationRegime,
+    greenhouse_forcing_k: f64,
 ) -> CellMap<Temperature> {
-    // Equilibrium temperature scales as S^(1/4).
-    let scale = math::powf(insolation.max(0.0), 0.25);
+    // The Locked branch keeps the plain blackbody exponent applied to raw
+    // `S` — its own, unthermostatted formula (`locked_cell_temperature`),
+    // untouched by The Glasshouse. `Spinning` computes its own scale below,
+    // through `THERMOSTAT_COMPENSATION_FRACTION`'s damped `effective_s`.
+    let locked_scale = math::powf(insolation.max(0.0), 0.25);
     CellMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         let lapse = LAPSE_C_PER_M * above;
         let c = match regime {
             RotationRegime::Spinning { .. } => {
                 let lat = geo.coord(cell).latitude.to_radians();
-                // Blackbody baseline (288 K × S^(1/4)) plus a latitude term of +30 °C at the
-                // equator to -30 °C at the pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
-                let base_k = 288.0 * scale;
+                // The carbonate-silicate thermostat: insolation's deviation
+                // from Earth's (`S = 1`) is damped by
+                // `THERMOSTAT_COMPENSATION_FRACTION` before the ordinary
+                // blackbody `S^(1/4)` response is applied to the result, then
+                // this world's drawn greenhouse residual — already converted
+                // to kelvin by the composition root (see
+                // `ClimateInputs::greenhouse_forcing_k`) — is added.
+                // Additive, not insolation-scaled: it is the spread AROUND
+                // the thermostat, not a second insolation response.
+                let effective_s =
+                    1.0 + THERMOSTAT_COMPENSATION_FRACTION * (insolation.max(0.0) - 1.0);
+                let spinning_scale = math::powf(effective_s.max(0.0), 0.25);
+                let base_k = THERMOSTAT_ANCHOR_K * spinning_scale + greenhouse_forcing_k;
+                // Latitude term of +30 °C at the equator to -30 °C at the
+                // pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
+                // Task 5 (The Glasshouse) replaces this with an area-mean-zero
+                // profile — see that task's commit.
                 let lat_term = 30.0 - 60.0 * math::sin(lat) * math::sin(lat);
                 (base_k - 273.15) + lat_term - lapse
             }
             RotationRegime::Locked => {
                 let p = geo.position(cell);
                 let cos_theta = crate::substellar_cosine(p);
-                crate::locked_cell_temperature(cos_theta, scale, lapse)
+                crate::locked_cell_temperature(cos_theta, locked_scale, lapse)
             }
         };
         Temperature::new(c).expect("temperature is finite")
@@ -237,6 +320,7 @@ mod tests {
             ReferenceElevation::new(0.0).unwrap(),
             1.0,
             &RotationRegime::Spinning { day_std: 1.0 },
+            0.0,
         );
         let equator = geo
             .cells()
@@ -269,8 +353,8 @@ mod tests {
         let high = CellMap::from_fn(&geo, |_| ReferenceElevation::new(3000.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let sea = ReferenceElevation::new(0.0).unwrap();
-        let mlow = mean_temperature(&geo, &low, sea, 1.0, &regime);
-        let mhigh = mean_temperature(&geo, &high, sea, 1.0, &regime);
+        let mlow = mean_temperature(&geo, &low, sea, 1.0, &regime, 0.0);
+        let mhigh = mean_temperature(&geo, &high, sea, 1.0, &regime, 0.0);
         for c in geo.cells() {
             assert!(
                 mhigh.get(c) < mlow.get(c),
@@ -290,6 +374,7 @@ mod tests {
             ReferenceElevation::new(0.0).unwrap(),
             1.0,
             &RotationRegime::Locked,
+            0.0,
         );
         let sub = geo
             .cells()
@@ -311,7 +396,7 @@ mod tests {
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // Zero diurnal amplitude: this test targets the seasonal term only.
         let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         // A clearly-northern cell.
@@ -386,7 +471,7 @@ mod tests {
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         let year = 240.0;
         let obliq = 22.0;
@@ -446,7 +531,7 @@ mod tests {
             ReferenceElevation::new(m).unwrap()
         });
         let regime = RotationRegime::Locked;
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         // The substellar-ish cell: the position formula must agree with the
         // cell-based one everywhere, but pick a cell with nonzero lapse too
@@ -490,7 +575,7 @@ mod tests {
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         let cell = CellId(0);
         let a = temperature_at(
@@ -542,7 +627,7 @@ mod tests {
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         let diurnal_amp = CellMap::from_fn(&geo, |_| 12.0);
         let cell = geo
             .cells()
@@ -597,7 +682,7 @@ mod tests {
         // All land, well above sea level: every cell is fully continental.
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // A near-equatorial cell: the sun reliably rises there every day.
         let cell = geo
             .cells()
@@ -651,7 +736,7 @@ mod tests {
         // All land, well above sea level: every cell is fully continental.
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // A near-equatorial cell: the sun reliably rises there every day.
         let cell = geo
             .cells()
@@ -704,7 +789,7 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime, 0.0);
         // An equatorial cell: away from any polar-night clamp in the
         // waveform, so the zero-mean cancellation converges cleanly.
         let cell = geo

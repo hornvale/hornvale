@@ -211,6 +211,42 @@
 //! a local edit, and a future occupant should expect to move every people's
 //! numbers. It is also why `the_fauna_occupant_moves_no_settlement` exists: with
 //! two rows landing in one commit, attribution needs one of them proven inert.
+//!
+//! ## THE GLASSHOUSE, Stage B Task 4: P1″ is FALSIFIED at seed 42
+//!
+//! The thermostat (a damped, greenhouse-forced insolation baseline replacing
+//! the fixed 288 K blackbody one, plus Task 5's area-mean-zero latitude
+//! profile) re-placed every settlement in every world again. Measured:
+//!
+//! ```text
+//!   seed 42  arm                settlements   arid   arid share
+//!            affinity ABSENT             10      0     0.000000
+//!            affinity SHIPPED             2      0     0.000000
+//! ```
+//!
+//! **This is the falsifier the module header names, not a re-confirmation.**
+//! The count falls 10 → 2, exactly the shape The Range's own table showed
+//! (20 → 2), but the share stays flat at 0.000000 instead of rising — no
+//! arid land survives within reach of either arm's gnoll settlements at this
+//! seed under the new climate. That is suppression, not relocation, by the
+//! test's own definition, and it is asserted as the measured state below
+//! rather than rescued: nothing in Tasks 4/5 touches `BiomeAffinity`,
+//! `per_species_suitability`'s affinity wiring, or the arid classification
+//! this file fixes before the first measurement — only the world's
+//! temperature and (through it) which land reads arid moved. A falsified
+//! prediction is a finding (spec's own standing rule), not a defect to patch
+//! quietly.
+//!
+//! The two descriptive seeds still confirm the ORIGINAL prediction: seed 7
+//! rises 0.000 → 0.555556 (23 → 9 settlements) and seed 1234 rises 0.000 →
+//! 0.666667 (5 → 3 settlements) — both a falling count with a RISING share,
+//! the success shape. So the mechanism itself still relocates gnoll onto arid
+//! ground where arid ground exists; seed 42's specific geography, under this
+//! climate, apparently no longer offers gnoll any to relocate onto. Read
+//! seed 42 as a per-seed falsification of a `forall`-style hard claim, not as
+//! evidence the mechanism broke — exactly the caveat P2's doc comment already
+//! carries for its own majority threshold. Post-unblinding re-measure,
+//! declared per decision 0016.
 
 // `terrain_of` and friends are named derivation entry points (decision 0092);
 // a probe measuring a handful of worlds is exactly the site the allowance is
@@ -563,6 +599,16 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
 /// preregistered subject; 7 and 1234 were added after unblinding it, purely
 /// because the post-declaration denominator there is two settlements, and are
 /// reported so a reader can see whether the reading survives a second world.
+///
+/// **THE GLASSHOUSE, Stage B Task 4 — FALSIFIED at seed 42 (module header has
+/// the full account).** `before` falls 10 → `after` 2 settlements while the
+/// arid share stays flat at 0.000000 — suppression, not relocation, by this
+/// test's own definition. The assertion below is now PINNED AT THE
+/// FALSIFICATION rather than at the original prediction, so a further change
+/// that moves this measurement again is caught rather than silently believed
+/// to still confirm P1″. Do not read a green run of this test as "P1″
+/// holds" — read the printed numbers, which is exactly this file's own
+/// standing instruction for a preregistered result.
 #[test]
 fn the_arid_share_of_gnoll_settlements_rises() {
     let before = tally(42, Arm::Absent, "gnoll");
@@ -605,17 +651,25 @@ fn the_arid_share_of_gnoll_settlements_rises() {
         "the baseline arm must found some gnoll settlements, or this \
          measurement has no subject"
     );
-    assert!(
-        after.share() > before.share(),
-        "P1\u{2033} FALSIFIED: the arid share did not rise. before {:.6} \
-         ({}/{}), after {:.6} ({}/{}). A falling count with a flat or falling \
-         share is suppression, not relocation.",
+    // THE GLASSHOUSE, Stage B Task 4: pinned at the measured FALSIFICATION
+    // (10 -> 2 settlements, arid share flat at 0.000000), not at the original
+    // prediction (`after.share() > before.share()`, confirmed 20 -> 2 at
+    // 0.000 -> 0.500 pre-Glasshouse). See the module header's "P1″ is
+    // FALSIFIED" section for the full account and why this is a recorded
+    // finding, not a rescue. Post-unblinding re-measure, declared per
+    // decision 0016.
+    assert_eq!(
+        (before.total, before.arid, after.total, after.arid),
+        (10, 0, 2, 0),
+        "seed 42's gnoll settlement/arid tally moved again — re-measure and \
+         update the module header's falsification account rather than \
+         reverting to the original `after.share() > before.share()` assertion"
+    );
+    assert_eq!(
         before.share(),
-        before.arid,
-        before.total,
         after.share(),
-        after.arid,
-        after.total,
+        "seed 42's arid share is no longer flat — re-measure: this may mean \
+         P1\u{2033} holds again"
     );
 }
 

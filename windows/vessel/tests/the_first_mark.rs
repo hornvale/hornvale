@@ -68,7 +68,11 @@ fn world() -> hornvale_kernel::World {
 /// above insists on. NOTE this constant is DUPLICATED in
 /// `possession_moves.rs` and both copies must move together — they did here,
 /// but nothing enforces it, which is worth knowing before the eighth rename.
-const GRIEVANCE_NPC: &str = "bugbear of Goodo";
+///
+/// The EIGHTH rename arrived immediately, with The Glasshouse's Stage B
+/// Task 4 (the thermostat): `Goodo` -> **`Doadaga`**. Both copies moved
+/// together again — re-read from `book/src/gallery/possession-seed-42.md`.
+const GRIEVANCE_NPC: &str = "bugbear of Doadaga";
 
 fn out_text(t: Turn) -> String {
     match t {

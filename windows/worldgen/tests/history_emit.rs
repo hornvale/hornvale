@@ -678,11 +678,11 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // coincidence of particular occupation chains, not a property. This count
     // should not be cited as evidence of anything about `layer_key`.
     //
-    // THE GLASSHOUSE (Stage B, decision 0132): 1 -> 0, back to the FLOOR for
-    // the third time. The craton rescale delivers its budget, so the coastline
-    // rose to the shelf break and deep-history settlement survival was
-    // redecided by the GROUND rather than by the roster — the first cause on
-    // this line's history that is not a roster change. Measured 6072 pairs
+    // THE GLASSHOUSE, Stage B Task 2 (decision 0132): 1 -> 0, back to the
+    // FLOOR for the third time. The craton rescale delivers its budget, so the
+    // coastline rose to the shelf break and deep-history settlement survival
+    // was redecided by the GROUND rather than by the roster — the first cause
+    // on this line's history that is not a roster change. Measured 6072 pairs
     // compared (up from 3763: a larger land mask carries more restacked
     // sites), 0 ties. Recorded as a COST and NOT rescued: with nothing tying,
     // the per-tie assertions in the loop above are vacuous again, exactly as
@@ -690,12 +690,22 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // 1 -> 0 -> 2 -> 0 -> 1 -> 0 across six changes, and the paragraph above
     // stands: this witness is a coincidence of particular occupation chains,
     // not a property, and it should not be cited as evidence about
-    // `layer_key`. Post-unblinding re-measure, declared per decision 0016.
+    // `layer_key`.
+    //
+    // THE GLASSHOUSE, Stage B Task 4: 0 -> 1, and the witness is back a
+    // fourth time. The thermostat re-placed every settlement again; measured
+    // 5229 pairs compared (down from 6072: fewer restacked sites under the
+    // warmer, redistributed population), 1 tying pair. The per-tie assertions
+    // in the loop above are load-bearing again. The sequence is now
+    // 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 across seven changes, and the reading
+    // stands unchanged: this witness is a coincidence of particular
+    // occupation chains, not a property, and it should not be cited as
+    // evidence about `layer_key`. Post-unblinding re-measure, declared per
+    // decision 0016.
     assert_eq!(
-        ties, 0,
-        "measured 0 tying pairs on the live corpus over {pairs} compared pairs; the \
-         per-tie assertions above are VACUOUS at a count of 0 — a different count means \
-         the key's tie conditions changed"
+        ties, 1,
+        "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
+         different count means the key's tie conditions changed"
     );
 }
 
@@ -897,20 +907,29 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
             .count();
         measured.push((seed, changed));
     }
-    // THE GLASSHOUSE re-pin (Stage B, decision 0132): [1, 0, 1] -> [0, 1, 1].
-    // The craton rescale moved every world's coastline, redeciding deep-history
-    // settlement survival and so which sites restack at all. The TOTAL is
-    // unchanged at 2 and it simply moved seed: 42 lost its one order change and
-    // 7 gained one. That is exactly the reading the doc comment above already
-    // gives — a three-seed count landing on 0, 1 or 2 is an existence claim
-    // near a threshold (decision 0097), and a campaign needing this quantity as
-    // evidence should widen the sweep rather than read three worlds. This is a
-    // re-pin of a WITNESS; the claim it witnesses (the material fourth key
-    // barely moves the stratigraphy) is unmoved and if anything better
-    // supported. Post-unblinding re-measure, declared per decision 0016.
+    // THE GLASSHOUSE re-pin, Stage B Task 2 (decision 0132): [1, 0, 1] ->
+    // [0, 1, 1]. The craton rescale moved every world's coastline, redeciding
+    // deep-history settlement survival and so which sites restack at all. The
+    // TOTAL is unchanged at 2 and it simply moved seed: 42 lost its one order
+    // change and 7 gained one. That is exactly the reading the doc comment
+    // above already gives — a three-seed count landing on 0, 1 or 2 is an
+    // existence claim near a threshold (decision 0097), and a campaign
+    // needing this quantity as evidence should widen the sweep rather than
+    // read three worlds. This is a re-pin of a WITNESS; the claim it
+    // witnesses (the material fourth key barely moves the stratigraphy) is
+    // unmoved and if anything better supported.
+    //
+    // THE GLASSHOUSE re-pin, Stage B Task 4: [0, 1, 1] -> [3, 0, 0]. The
+    // thermostat re-placed every settlement a second time this campaign. The
+    // TOTAL moves from 2 to 3 — still "barely" against ~19k land cells per
+    // world — and concentrates entirely on seed 42 this time (7 and 1000 both
+    // lose their one restacking site). A three-seed count of 0, 1 or 3 stays
+    // the same existence-claim-near-a-threshold reading the paragraphs above
+    // already give; the claim this test is frozen for is unmoved.
+    // Post-unblinding re-measure, declared per decision 0016.
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 1), (1000, 1)],
+        vec![(42u64, 3usize), (7, 0), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }

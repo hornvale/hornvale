@@ -96,6 +96,12 @@ fn regenerate(ctx: &LocaleContext) -> String {
 /// world-independent, and it passed through this epoch untouched. A future
 /// campaign that needs a true before-arm here must capture a fresh one before
 /// its own change, exactly as The Fathom did.
+///
+/// **Regenerated a second time (Stage B Tasks 4/5, the thermostat and the
+/// latitude profile).** The thermostat and the area-mean-zero latitude
+/// profile move the climate field the water column reads from — a two-line
+/// diff in the fixture. Still just a drift tripwire, not evidence about any
+/// refactor.
 #[test]
 fn the_sampled_column_is_byte_stable() {
     let world = world();

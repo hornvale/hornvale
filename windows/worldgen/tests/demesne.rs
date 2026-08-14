@@ -905,11 +905,21 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     //
     // The degeneracy this assertion documents is therefore REDUCED, not gone,
     // and it stays a drift tripwire on a Hornvale-internal number (0106's valid
-    // use), not evidence for the biomass-by-latitude gradient. Post-unblinding
-    // re-measure, declared per decision 0016.
+    // use), not evidence for the biomass-by-latitude gradient.
+    //
+    // THE GLASSHOUSE re-pin (Stage B Task 4): 36.2088 -> 7.7803. The
+    // thermostat (a damped, greenhouse-forced insolation baseline replacing
+    // the fixed 288 K blackbody one, plus Task 5's area-mean-zero latitude
+    // profile) warms polar land far more than tropical land moves:
+    // `raw_pole_mean` rises 0.011362 -> 0.061245 while `trop_mean` moves only
+    // 0.411404 -> 0.476504, so the tropics/poles ratio compresses sharply. The
+    // pole term is still off `POLE_FLOOR` (`pole floored: false`), so this
+    // remains a genuine ratio, not the constant-denominator degeneracy the
+    // paragraphs above retire. Post-unblinding re-measure, declared per
+    // decision 0016.
     assert!(
-        (ratio - 36.2088).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~36.2088). Check the \
+        (ratio - 7.7803).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~7.7803). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

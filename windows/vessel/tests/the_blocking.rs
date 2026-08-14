@@ -128,6 +128,14 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     //   regression would render 19x39, differing from the truth in BOTH
     //   dimensions rather than only doubling a square. Only the size moved;
     //   the 1:1 claim is untouched.
+    //   Re-measured a further time under The Glasshouse's Stage B Task 4
+    //   (the thermostat): the damped, greenhouse-forced insolation baseline
+    //   re-places the walk a second time this campaign, into a structure of
+    //   THREE chambers whose first is 19x19 — square again, so the doubling
+    //   regression this pin guards against (`2w+1` -> 39x39) would still be
+    //   caught by the stated size even though it happens to coincide with a
+    //   square extent this time. Only the size moved; the 1:1 claim is
+    //   untouched.
     // - the plan is ENCLOSED. A drawn border of unbroken `#` is what makes the
     //   picture read as a BUILDING rather than as a floating partition diagram,
     //   and it is what roughly a fifth to two fifths of the extent is spent on.
@@ -138,9 +146,9 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     let lines = picture_rows(&plan);
     assert_eq!(
         (lines.len(), lines[0].chars().count()),
-        (10, 19),
-        "the seed-42 structure's first chamber has extent 10x19, and the \
-         render is 1:1 (a doubling regression would draw 19x39): {plan}"
+        (19, 19),
+        "the seed-42 structure's first chamber has extent 19x19, and the \
+         render is 1:1 (a doubling regression would draw 39x39): {plan}"
     );
     let last = lines.len() - 1;
     for (y, row) in lines.iter().enumerate() {

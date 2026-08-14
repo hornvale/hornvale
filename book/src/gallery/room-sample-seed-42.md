@@ -18,40 +18,40 @@ bathypelagic                     0.0  the lightless water, over a seamount
 bathypelagic                     0.0  the lightless water, in slack water, over a seamount
 bathypelagic                     0.0  marine snow, drifting down, over a trough
 tundra                           0.0  frost-heaved ground, shaded, dry
-tundra                           0.0  a boulder field, shaded, dry, in a hollow
+shrubland                        0.0  a chaparral slope, shaded, dry, in a hollow
 bathypelagic                     0.0  the lightless water, swept by a current, over a trough
 bathypelagic                     0.0  the lightless water, over a trough
-ice                              0.0  wind-carved sastrugi, in blue shadow
-sea ice                          0.0  rafted floe, drifted deep, on a swell of ice
+tundra                           0.0  wind scour, shaded, dry
+bathypelagic                     0.0  marine snow, drifting down, swept by a current, over a seamount
 bathypelagic                     0.0  the lightless water, over a trough
-temperate forest                 0.0  old-growth timber, shaded, on a rise
-ice                              0.0  a snowfield, glaring, drifted deep, on a swell of ice
+tropical seasonal forest         0.0  buttressed canopy, shaded, on a rise
+tundra                           0.0  frost-heaved ground, sun-warmed, damp, on a rise
 sea ice                          0.0  rafted floe, in blue shadow, drifted deep, in a hollow
-tundra                           0.0  frost-heaved ground, in a hollow
+shrubland                        0.0  thorn scrub, in a hollow
 bathypelagic                     0.0  the lightless water, swept by a current, over a trough
 tundra                           0.0  wind scour, shaded, dry
 sea ice                          0.0  a melt pond, in a hollow
-sea ice                          0.0  a pressure ridge, drifted deep, on a swell of ice
+bathypelagic                     0.0  the lightless water, swept by a current, over a seamount
 bathypelagic                     0.0  marine snow, drifting down, in slack water, over a seamount
-tundra                           0.0  wind scour, sun-warmed, dry, on a rise
+shrubland                        0.0  matorral, low and grey, sun-warmed, dry, on a rise
 sea ice                          0.0  rafted floe, in blue shadow, drifted deep, in a hollow
 sea ice                          0.0  a pressure ridge, drifted deep
 bathypelagic                     0.0  the lightless water, swept by a current, over a seamount
 bathypelagic                     0.0  marine snow, drifting down
 ice                              0.0  a snowfield, glaring, scoured bare, on a swell of ice
 sea ice                          0.0  rafted floe, in blue shadow, drifted deep
-taiga                            0.0  a peat hollow, shaded, in a hollow
-shrubland                        0.0  matorral, low and grey, sun-warmed, in a hollow
-sea ice                          0.0  a melt pond, in blue shadow
+temperate forest                 0.0  a lichen-hung grove, shaded, in a hollow
+savanna                          0.0  a scattered copse, sun-warmed, in a hollow
+bathypelagic                     0.0  marine snow, drifting down
 sea ice                          0.0  rafted floe, in blue shadow, scoured bare, in a hollow
-tundra                           0.0  frost-heaved ground, dry, in a hollow
+temperate grassland              0.0  open sward, dry, in a hollow
 bathypelagic                     0.0  marine snow, drifting down, in slack water, over a trough
-ice                              0.0  a snowfield, glaring, drifted deep
+alpine                           0.0  frost-heaved ground, sun-warmed, dry
 sea ice                          0.0  a pressure ridge, drifted deep
 bathypelagic                     0.0  the lightless water, swept by a current, over a trough
 coral reef                       0.0  a coral head
-taiga                            0.0  a boreal stand, shaded
-sea ice                          0.0  a pressure ridge, glaring, in a hollow
+temperate forest                 0.0  a mossy hollow, shaded
+mesopelagic                      0.0  the twilight water, over a trough
 bathypelagic                     0.0  the lightless water, swept by a current, over a seamount
 bathypelagic                     0.0  marine snow, drifting down
 bathypelagic                     0.0  the lightless water, swept by a current, over a seamount

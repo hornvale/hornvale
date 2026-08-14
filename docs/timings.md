@@ -947,3 +947,13 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T20:17:52Z | quick | 29.729 | 35.406 | 50.291 | 2.88 | 0 | 14521c43 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T20:54:41Z | rebaseline | 56.861 | 185.992 | 8.132 | 3.41 | 0 | fca5a3de | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T21:06:43Z | quick | 24.840 | 30.096 | 41.706 | 2.89 | 0 | fca5a3de | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:29:35Z | rebaseline | 61.413 | 201.886 | 9.638 | 3.44 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:40:01Z | gate | 234.254 | 207.711 | 151.314 | 1.53 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:43:56Z | gate | 37.472 | 62.607 | 10.432 | 1.95 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:45:02Z | rebaseline | 37.459 | 204.946 | 9.354 | 5.72 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:46:54Z | gate | 99.205 | 446.240 | 47.443 | 4.98 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T22:54:33Z | gate | 196.011 | 639.619 | 128.796 | 3.92 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T23:00:23Z | gate | 179.954 | 700.155 | 112.707 | 4.52 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T23:09:06Z | gate | 1.691 | 1.245 | 0.164 | 0.83 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T23:12:59Z | gate | 217.996 | 780.288 | 116.853 | 4.12 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T23:50:02Z | rebaseline | 52.196 | 204.942 | 9.037 | 4.10 | 0 | 2ad0bb19 | campaign/the-glasshouse | ambrose | 12 |

@@ -1719,7 +1719,13 @@ mod tests {
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
         let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
-        assert_eq!(loc.fields.temperature_c, 38.082618);
+        // THE GLASSHOUSE, Stage B Tasks 4/5 re-pin: 38.082618 -> 37.232618.
+        // The thermostat (a damped, greenhouse-forced insolation baseline
+        // replacing the fixed 288 K blackbody one) plus the area-mean-zero
+        // latitude profile move this address's blended temperature; the
+        // corners below (pure barycentric geometry over unchanged terrain)
+        // are untouched, confirming only the climate field moved.
+        assert_eq!(loc.fields.temperature_c, 37.232618);
         assert_eq!(
             loc.corners,
             vec![

@@ -55,6 +55,14 @@ pub struct ClimateInputs<'a> {
     /// is otherwise seed-free; this perturbs no existing draw.
     /// type-audit: bare-ok(constructor-edge: seed)
     pub seed: Seed,
+    /// Greenhouse forcing in kelvin, drawn in astronomy and passed through
+    /// here so climate stays a derived read (`domains/climate/src/streams.rs`
+    /// records that temperature, moisture and biome are seed-free). Additive
+    /// on the `Spinning` regime's thermostat baseline (see
+    /// `crate::temperature::mean_temperature`); the `Locked` regime does not
+    /// read it (`CLIM-locked-regime` is a separate campaign's concern).
+    /// type-audit: pending(wave-2: greenhouse_forcing_k)
+    pub greenhouse_forcing_k: f64,
 }
 
 /// The tier-1 climate: derived temperature/moisture/biome/habitability over
@@ -193,6 +201,7 @@ impl GeneratedClimate {
             inputs.sea_level,
             inputs.insolation,
             &inputs.regime,
+            inputs.greenhouse_forcing_k,
         );
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
@@ -799,6 +808,7 @@ pub mod test_support {
             year_length_std: 365.25,
             year_phase_offset: 0.0,
             seed: Seed(1),
+            greenhouse_forcing_k: 0.0,
         }
     }
 
@@ -980,6 +990,7 @@ mod tests {
             year_length_std: 360.0,
             year_phase_offset: 0.2,
             seed: Seed(2),
+            greenhouse_forcing_k: 0.0,
         });
         assert_eq!(climate.year_phase_offset(), 0.2);
     }

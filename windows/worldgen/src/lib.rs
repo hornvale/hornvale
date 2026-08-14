@@ -2142,6 +2142,46 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
     }
 }
 
+/// The greenhouse forcing this world's atmosphere carries, in kelvin — the
+/// composition-root conversion of astronomy's dimensionless residual
+/// (`Anchor.greenhouse_residual`, −1..1, mean 0 — The Glasshouse, Task 3)
+/// into the additive kelvin term `hornvale_climate::temperature
+/// ::mean_temperature`'s thermostat reads (`ClimateInputs::greenhouse_forcing_k`).
+/// A separate function rather than a sixth element on [`stellar_inputs`]'s
+/// tuple: most of that function's ten call sites need insolation/obliquity/
+/// regime for demography or substrate queries that never touch temperature,
+/// so widening its return would touch every one of them for no reason.
+/// Constant-sky worlds have no `Anchor` at all, so they get `0.0` — the
+/// residual's own mean, i.e. the Earth anchor with no drawn spread, matching
+/// `stellar_inputs`'s own Earth-baseline default for the constant-sky arm.
+fn greenhouse_forcing_k(sky: &Sky) -> f64 {
+    match sky {
+        Sky::Constant(_) => 0.0,
+        Sky::Generated(generated) => {
+            GREENHOUSE_FORCING_WIDTH_K * generated.system().anchor.greenhouse_residual
+        }
+    }
+}
+
+/// The width, in kelvin, astronomy's dimensionless greenhouse residual
+/// (−1..1, mean 0) is scaled by to become
+/// `ClimateInputs::greenhouse_forcing_k`.
+///
+/// kind: **hornvale-choice** (decision 0106). `Anchor::greenhouse_residual`'s
+/// own doc comment is explicit that "no Earth datum fixes its width" — unlike
+/// `hornvale_climate::temperature::THERMOSTAT_ANCHOR_K` (an Earth-biosphere
+/// datum) or `INSOLATION_RESPONSE_EXPONENT` (a physics citation), this
+/// constant is a judgment call about how much a world's atmosphere may vary
+/// from the thermostat's own prediction. `15.0` K is comparable in magnitude
+/// to Earth's own deep-time CO₂-driven excursions (the Paleocene-Eocene
+/// Thermal Maximum's ~5-8 K global-mean anomaly; Snowball Earth episodes
+/// implying tens-of-kelvin swings at the extreme), so a full ±15 K spread
+/// keeps individual worlds inside a physically defensible envelope while
+/// still being large enough to decouple temperature from insolation alone
+/// (spec §4.1 criterion 6 — see `the_greenhouse_residual_is_drawn_and_isolated`
+/// in `domains/astronomy/tests/genesis_properties.rs` for the draw itself).
+const GREENHOUSE_FORCING_WIDTH_K: f64 = 15.0;
+
 /// Reconstruct the tier-1 climate for this world: rebuild the terrain globe
 /// and the sky, map their outputs into climate's kernel-only inputs, and
 /// derive temperature/moisture/biome/habitability. The single construction
@@ -2182,6 +2222,7 @@ pub fn climate_from(
         year_length_std,
         year_phase_offset,
         seed: world.seed,
+        greenhouse_forcing_k: greenhouse_forcing_k(&sky),
     }))
 }
 
@@ -2515,6 +2556,12 @@ struct EraContext<'a> {
     /// full climate rebuild derives the same weather seed `climate_of` would
     /// (climate is otherwise seed-free; this perturbs no existing draw).
     seed: hornvale_kernel::Seed,
+    /// This world's greenhouse forcing, kelvin (constant per world; see
+    /// `greenhouse_forcing_k`) — threaded through so every era's temperature
+    /// diagnostic (`climate_at_era`) and the glacial maximum's full rebuild
+    /// (`glacial_maximum_habitable`) read the same thermostat `climate_of`
+    /// would.
+    greenhouse_forcing_k: f64,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -2559,6 +2606,7 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
         sea_level,
         ctx.insolation,
         &ctx.regime,
+        ctx.greenhouse_forcing_k,
     );
     // This era's absolute temperature: THIS era's own mean field (built with
     // this era's sea level, above — captures the lapse term) plus this
@@ -2635,6 +2683,7 @@ fn glacial_maximum_habitable(
         year_length_std: ctx.year_length_std,
         year_phase_offset: ctx.year_phase_offset,
         seed: ctx.seed,
+        greenhouse_forcing_k: ctx.greenhouse_forcing_k,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -2697,6 +2746,7 @@ pub fn paleoclimate_from(
     // reads each era's own obliquity from its `EraInputs` instead.
     let (insolation, _obliquity_deg, regime, year_length_std, year_phase_offset) =
         stellar_inputs(&sky);
+    let greenhouse_forcing = greenhouse_forcing_k(&sky);
 
     // The world's own unforced present temperature (era_day = 0, no albedo
     // offset), one per cell, absolute — the field every era's offset is
@@ -2717,6 +2767,7 @@ pub fn paleoclimate_from(
         present_sea_level,
         insolation,
         &regime,
+        greenhouse_forcing,
     );
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
     // The world's own present-day ice mask — no albedo offset, so this is
@@ -2742,6 +2793,7 @@ pub fn paleoclimate_from(
         present_ice: &present_ice,
         freeze,
         seed: world.seed,
+        greenhouse_forcing_k: greenhouse_forcing,
     };
 
     // Fine ice integration: sample the caloric index back through the window.
@@ -2863,6 +2915,7 @@ fn bake_eras(
     let present_sea_level = terrain.sea_level();
     let (insolation, _obliquity_deg, regime, _year_length_std, _year_phase_offset) =
         stellar_inputs(&sky);
+    let greenhouse_forcing = greenhouse_forcing_k(&sky);
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
 
     // The era's snowline. **The bake no longer reads this** (The Tense, step 4):
@@ -2893,7 +2946,12 @@ fn bake_eras(
                         offset: hornvale_kernel::TempAnomaly|
      -> hornvale_kernel::CellMap<bool> {
         let mean = hornvale_climate::temperature::mean_temperature(
-            geo, &elevation, sea_level, insolation, &regime,
+            geo,
+            &elevation,
+            sea_level,
+            insolation,
+            &regime,
+            greenhouse_forcing,
         );
         hornvale_kernel::CellMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
@@ -9299,9 +9357,9 @@ mod tests {
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 145, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 145);
-        assert_eq!(count("deity-name"), 145);
+        assert_eq!(count("is-belief"), 155, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 155);
+        assert_eq!(count("deity-name"), 155);
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -9365,17 +9423,27 @@ mod tests {
         // facts. Same reading as The Range's, one campaign later and thirty-
         // eight glosses larger.
         //
-        // THE GLASSHOUSE (Stage B, decision 0132): 355 -> 321, and the three
-        // counts above are UNCHANGED at 145 — the split this file keeps on two
-        // lines holds for the fourth consecutive campaign. The roster did not
-        // move; the ground did. The craton rescale delivers its budget, so the
-        // coastline rose to the shelf break and mean land elevation fell
-        // 2257 -> 1783 m, re-deciding where settlements survive: seed 42 now
-        // carries 196 settlements (was 230) and 10,787 ledger facts (was
-        // 13,389). Fewer named things, so fewer glosses; the pantheon, being a
-        // function of the peopled ROSTER, did not notice. Post-unblinding
-        // re-measure, declared per decision 0016.
-        assert_eq!(count("name-gloss"), 321);
+        // THE GLASSHOUSE (Stage B Task 2, decision 0132): 355 -> 321, and the
+        // three counts above are UNCHANGED at 145 — the split this file keeps
+        // on two lines holds for the fourth consecutive campaign. The roster
+        // did not move; the ground did. The craton rescale delivers its
+        // budget, so the coastline rose to the shelf break and mean land
+        // elevation fell 2257 -> 1783 m, re-deciding where settlements
+        // survive: seed 42 now carries 196 settlements (was 230) and 10,787
+        // ledger facts (was 13,389). Fewer named things, so fewer glosses;
+        // the pantheon, being a function of the peopled ROSTER, did not
+        // notice.
+        //
+        // THE GLASSHOUSE (Stage B Task 4): 321 -> 341, and the three counts
+        // above move 145 -> 155 TOGETHER for the first time since The
+        // Radiation — the thermostat (a damped, greenhouse-forced insolation
+        // baseline replacing the fixed 288 K blackbody one) warms seed 42's
+        // world enough to change which peoples settle where, so both the
+        // peopled roster (more peoples now find somewhere to settle, growing
+        // the pantheon) and settlement volume (more/different settlements,
+        // moving the gloss count) shift together. Post-unblinding re-measure,
+        // declared per decision 0016.
+        assert_eq!(count("name-gloss"), 341);
     }
 
     #[test]
@@ -10617,16 +10685,22 @@ mod tests {
         // against a lower ceiling. Exactly the "deliberate bake/carrying-
         // capacity change moves world identity" case this comment anticipates.
         //
-        // THE GLASSHOUSE re-pin (Stage B, decision 0132): 68 -> 66. The craton
-        // rescale now delivers its budget, so seed 42's coastline sits at the
-        // shelf break instead of ~1.1 km below it and mean land elevation falls
-        // 2257 -> 1783 m. Land area, land temperature and carrying capacity all
-        // move together, so the flagship's ceiling — and the peak the bake
-        // grows it to — moves with them. Exactly the "deliberate terrain change
-        // moves world identity" case this comment already anticipates, two
-        // units down. Post-unblinding re-measure, declared per decision 0016.
+        // THE GLASSHOUSE re-pin (Stage B Task 2, decision 0132): 68 -> 66. The
+        // craton rescale now delivers its budget, so seed 42's coastline sits
+        // at the shelf break instead of ~1.1 km below it and mean land
+        // elevation falls 2257 -> 1783 m. Land area, land temperature and
+        // carrying capacity all move together, so the flagship's ceiling —
+        // and the peak the bake grows it to — moves with them.
+        //
+        // THE GLASSHOUSE re-pin (Stage B Task 4): 66 -> 70. The thermostat
+        // (a carbonate-silicate compensation fraction damping insolation
+        // sensitivity, plus a drawn greenhouse residual) replaces the fixed
+        // 288 K blackbody baseline: seed 42's carrying capacity warms with
+        // its land temperature, raising the ceiling the flagship's millennia
+        // of growth compound against. Post-unblinding re-measure, declared
+        // per decision 0016.
         assert_eq!(
-            village.population, 66,
+            village.population, 70,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.

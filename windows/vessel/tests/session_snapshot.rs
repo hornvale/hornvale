@@ -28,7 +28,14 @@ mod common;
 /// arrangement exists to prevent — which means the Casement's
 /// `pane_plan_marks_test.ts` had to be re-pointed in the same commit, since it
 /// opens the fixture BY NAME.
-const OCCUPIED_SEED: u64 = 0;
+///
+/// **THE GLASSHOUSE, Stage B Task 4: re-pointed 0 → 1.** The thermostat (a
+/// damped, greenhouse-forced insolation baseline replacing the fixed 288 K
+/// blackbody one) moved seed 0's opening chamber to one with no creature in
+/// it — the alarm fired again, exactly as designed, and
+/// `common::world_that_draws_a_creature` reports 1 as the new lowest
+/// qualifying seed. Renamed to match for the same reason as before.
+const OCCUPIED_SEED: u64 = 1;
 
 fn world() -> World {
     hornvale_worldgen::build_world(

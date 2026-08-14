@@ -38,7 +38,7 @@ CELL 1536 COLUMN [Epipelagic, Mesopelagic, Bathypelagic]
 CELL 1536 STRATUM Surface EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Surface }
 CELL 1536 STRATUM Epipelagic EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Epipelagic }
 CELL 1536 STRATUM Mesopelagic EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Mesopelagic }
-CELL 1536 STRATUM Bathypelagic EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Bathypelagic }
+CELL 1536 STRATUM Bathypelagic EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: SeaIce, stratum: Bathypelagic }
 CELL 1536 STRATUM Abyssal EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Abyssal }
 CELL 1536 STRATUM Hadal EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Hadal }
 CELL 1536 STRATUM Regolith EXPR BiomeExpr { realm: Realm { medium: Water, access: Dive }, formation: OpenWater, stratum: Regolith }
@@ -695,7 +695,7 @@ CELL 29184 STRATUM Basement EXPR BiomeExpr { realm: Realm { medium: AirOverRock,
 CELL 29184 STRATUM Roots EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: OpenWater, stratum: Roots }
 CELL 29184 STRATUM Underneath EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: OpenWater, stratum: Underneath }
 CELL 29696 COLUMN []
-CELL 29696 STRATUM Surface EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: TemperateForest, stratum: Surface }
+CELL 29696 STRATUM Surface EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: Taiga, stratum: Surface }
 CELL 29696 STRATUM Epipelagic EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: OpenWater, stratum: Epipelagic }
 CELL 29696 STRATUM Mesopelagic EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: OpenWater, stratum: Mesopelagic }
 CELL 29696 STRATUM Bathypelagic EXPR BiomeExpr { realm: Realm { medium: AirOverRock, access: Default }, formation: OpenWater, stratum: Bathypelagic }
