@@ -891,3 +891,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T15:26:55Z | quick | 27.933 | 34.770 | 42.677 | 2.77 | 0 | 84589e49 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T18:14:22Z | quick | 2.324 | 1.408 | 0.359 | 0.76 | 0 | 7d79b1d1 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-14T18:15:32Z | quick | 33.529 | 50.964 | 58.217 | 3.26 | 0 | 7d79b1d1 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-14T18:16:04Z | quick | 9.654 | 7.961 | 0.539 | 0.88 | 0 | 7d79b1d1 | campaign/the-glasshouse | ambrose | 12 |
