@@ -1236,6 +1236,191 @@ git commit -m "feat(hearsay): the corrected witness rule -- survivors and the at
 
 ---
 
+### Task 8: the H3 and H5 readouts
+
+**Files:**
+- Modify: `windows/hearsay/src/lib.rs` (adds `echo_ratio`, `divergent_witnesses`)
+- Modify: `windows/hearsay/tests/derive.rs` (unit tests for both)
+- Modify: `windows/hearsay/tests/hop_depth_seed42.rs` (report H3 and H5 alongside the depth numbers)
+
+**Interfaces:**
+- Consumes: `derive::{witnesses_of, claims_about}`, `Lineage::{ancestry, all}`.
+- Produces: `hornvale_hearsay::echo_ratio(&Ledger, &Lineage, EntityId, &str) -> Option<f64>` and `hornvale_hearsay::divergent_witnesses(&Lineage, &[EntityId]) -> Vec<EntityId>`.
+
+**Do NOT register census metrics in this task.** H3 and H5 are heavy-battery
+readouts. Two campaigns' schema drift already wait on one census refresh (the
+metric-count pin is at 223); a further column compounds that run and buys
+nothing the battery cannot report.
+
+**One thing worth knowing before you write it.** The corrected witness rule
+made *eliminatio codicum descriptorum* unnecessary. The original design counted
+every holder and then eliminated those whose ancestry contained another holder.
+Now witnesses and inheritors are separated at derivation time, so copies are
+never counted in the first place and there is nothing to eliminate afterwards.
+`independent_witnesses(event)` is therefore just `witnesses_of(event).len()` —
+do not reintroduce an elimination pass.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `windows/hearsay/tests/derive.rs`, reusing the existing `raid()` fixture
+(village 1 ended on day 100 by village 50; survivors 2 and 3 founded that day;
+4 founded earlier from 1; 51 founded later from 50; 6 founded from 2):
+
+```rust
+#[test]
+fn echo_ratio_is_witnesses_over_holders() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    // Witnesses: 1, 2, 3, 50. Holders: those plus 4, 6, 51 = 7.
+    let holders = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED).len();
+    let witnesses = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED).len();
+    assert_eq!((witnesses, holders), (4, 7));
+    let r = echo_ratio(&led, &lin, eid(1), hornvale_history::OCC_ENDED).expect("qualifies");
+    assert!((r - 4.0 / 7.0).abs() < 1e-12, "got {r}");
+}
+
+#[test]
+fn echo_ratio_is_absent_below_three_holders() {
+    // A lone root with an ending and no descendants: one holder, no ratio.
+    let mut led = ledger_with(&[(1, None)]);
+    put(&mut led, 1, hornvale_history::OCC_FOUNDED, Value::Number(0.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(5.0));
+    let lin = lineage_of(&led);
+    assert_eq!(echo_ratio(&led, &lin, eid(1), hornvale_history::OCC_ENDED), None);
+}
+
+#[test]
+fn divergent_witnesses_drops_a_witness_descended_from_another() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    // 2 and 3 descend from 1, which is also a witness; 50 does not.
+    let d = divergent_witnesses(&lin, &w);
+    assert_eq!(d, vec![eid(1), eid(50)]);
+}
+
+#[test]
+fn two_unrelated_witnesses_are_both_divergent() {
+    let led = ledger_with(&[(1, None), (50, None)]);
+    let lin = lineage_of(&led);
+    assert_eq!(
+        divergent_witnesses(&lin, &[eid(1), eid(50)]),
+        vec![eid(1), eid(50)]
+    );
+}
+```
+
+- [ ] **Step 2: Run them and verify they fail**
+
+Run: `cargo test -p hornvale-hearsay --test derive`
+Expected: FAIL — `echo_ratio` and `divergent_witnesses` are undefined.
+
+- [ ] **Step 3: Implement**
+
+In `windows/hearsay/src/lib.rs`:
+
+```rust
+/// Witnesses over holders for one event, or `None` below three holders
+/// (spec §6.2's qualifying threshold).
+///
+/// Range is `(0, 1]`: 1.0 when everyone holding the claim saw it happen,
+/// low when a few witnesses are outnumbered by generations of inheritors.
+/// No elimination pass is needed or wanted — witnesses and inheritors are
+/// already separated by `derive::witnesses_of`, so a copy is never counted
+/// as a source in the first place (spec §6.1).
+pub fn echo_ratio(
+    ledger: &hornvale_kernel::ledger::Ledger,
+    lineage: &lineage::Lineage,
+    subject: hornvale_kernel::ledger::EntityId,
+    predicate: &str,
+) -> Option<f64> {
+    let holders = derive::claims_about(ledger, lineage, subject, predicate).len();
+    if holders < 3 {
+        return None;
+    }
+    let witnesses = derive::witnesses_of(ledger, lineage, subject, predicate).len();
+    Some(witnesses as f64 / holders as f64)
+}
+
+/// The witnesses whose lines diverge: those with no other witness among their
+/// ancestors, ascending.
+///
+/// Two such witnesses carry the event down lines that never inherited from one
+/// another, so a later meeting between their descendants is a genuine
+/// cross-check rather than an echo. A survivor community is a *descendant* of
+/// the village it fled, so it does not diverge from it — it is still an
+/// independent witness (it saw the raid), which is why this is a separate
+/// question from how many witnesses there were.
+pub fn divergent_witnesses(
+    lineage: &lineage::Lineage,
+    witnesses: &[hornvale_kernel::ledger::EntityId],
+) -> Vec<hornvale_kernel::ledger::EntityId> {
+    let mut out: Vec<_> = witnesses
+        .iter()
+        .copied()
+        .filter(|w| {
+            let anc = lineage.ancestry(*w);
+            !witnesses.iter().any(|o| *o != *w && anc.contains(o))
+        })
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+```
+
+- [ ] **Step 4: Run the tests and verify they pass**
+
+Run: `cargo test -p hornvale-hearsay`
+Expected: PASS, all of them. Every earlier test must still pass unchanged.
+
+- [ ] **Step 5: Report H3 and H5 from the heavy battery**
+
+Extend `windows/hearsay/tests/hop_depth_seed42.rs`'s existing test to also
+accumulate, over the same `lin.all()` loop, the `echo_ratio` of every ending
+that has one, and the count of endings whose `divergent_witnesses` number two
+or more. Print them on the existing line:
+
+```rust
+println!(
+    "hops: pairs={} median={median} tail_ge_10={tail:.4} max={} | \
+     H3 median_echo_ratio={h3:.4} over {n_ratio} endings | \
+     H5 divergent_fraction={h5:.4}",
+    all.len(), all[all.len() - 1]
+);
+```
+
+Assert only what must hold structurally — that every ratio is in `(0, 1]` and
+that the divergent fraction is in `[0, 1]`. **Do not assert the predicted
+values.** Spec §6.2 and §6.3 hold the decision rules; a test that asserted the
+prediction would fail on a legitimate refutation, which is the opposite of what
+preregistration is for.
+
+- [ ] **Step 6: Run the battery and record the numbers**
+
+Run: `cargo nextest run -p hornvale-hearsay --run-ignored all -E 'test(transmission_depth)' --no-capture`
+
+Cross-check against a Python pass over the committed seed-42 ledger, which
+gave: `pairs=7663 median=4 tail_ge_10=0.1558 median_echo_ratio=0.2727
+divergent_fraction=0.5662`. **If your figures differ, report the difference
+rather than reconciling it** — it would mean the Rust and a direct ledger read
+disagree, which is a finding.
+
+Then apply §6.2's and §6.3's decision rules and state which branch each lands
+in. All branches are legitimate.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-hearsay --all-targets -- -D warnings
+git add windows/hearsay
+git commit -m "feat(hearsay): the H3 and H5 readouts"
+```
+
+
+---
+
 ## Close (G6 — hard stop, do not self-approve)
 
 - [ ] `make gate` green on the branch. Stagger it: three other campaigns share this box, and two concurrent gates cost ~30 min each rather than 15.
