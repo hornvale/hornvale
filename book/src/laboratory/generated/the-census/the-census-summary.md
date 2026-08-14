@@ -563,6 +563,17 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 | [0.2, 0.3) | 0 | 0.0% |
 | >= 0.3 | 0 | 0.0% |
 
+### history-myth-hop-median — default
+
+| value | count | share |
+|---|---|---|
+| < 1 | 1 | 0.1% |
+| [1, 2) | 2 | 0.2% |
+| [2, 3) | 33 | 3.3% |
+| [3, 5) | 626 | 62.6% |
+| [5, 8) | 324 | 32.4% |
+| >= 8 | 14 | 1.4% |
+
 ### forgotten-fraction — default
 
 | value | count | share |

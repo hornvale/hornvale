@@ -112,6 +112,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-hearsay"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+]
+
+[[package]]
 name = "hornvale-historiography"
 version = "0.1.0"
 dependencies = [
@@ -142,6 +153,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-hearsay",
  "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",

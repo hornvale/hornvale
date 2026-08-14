@@ -775,16 +775,24 @@ mod tests {
     }
 
     #[test]
-    fn evaluable_columns_measured_surface_on_the_225_column_census() {
+    fn evaluable_columns_measured_surface_on_the_226_column_census() {
         // Pinned so a future census refresh that moves this materially is
         // visible here, not just in prose. See task-4-report.md for the
         // comparison against the spec's original 204-column figure
         // (107 evaluable / 34 degenerate).
+        //
+        // 116 -> 117 at The Hearsay's census refresh, which added exactly one
+        // column (`history-myth-hop-median`). It lands on the EVALUABLE side,
+        // not the excluded one, so the excluded count below is unchanged at 47
+        // — the metric is `SummaryKind::Numeric` and varies across worlds, so
+        // it is a real surface for the anomaly report rather than a constant
+        // the ranker has to skip. That asymmetry is the informative part: a
+        // new column moving `excluded` instead would mean it was degenerate.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            116,
+            117,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(

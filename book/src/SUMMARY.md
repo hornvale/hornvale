@@ -362,6 +362,7 @@
 - [The Gnomon](./chronicle/the-gnomon.md)
 - [The Sexton](./chronicle/the-sexton.md)
 - [The Axes](./chronicle/the-axes.md)
+- [The Hearsay](./chronicle/the-hearsay.md)
 
 # Appendix: The Frontier
 

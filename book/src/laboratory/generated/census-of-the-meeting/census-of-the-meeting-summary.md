@@ -561,6 +561,18 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.2, 0.3) | 0 | 0.0% |
 | >= 0.3 | 0 | 0.0% |
 
+### history-myth-hop-median — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 1 | 54 | 10.8% |
+| [1, 2) | 61 | 12.2% |
+| [2, 3) | 94 | 18.8% |
+| [3, 5) | 125 | 25.0% |
+| [5, 8) | 20 | 4.0% |
+| >= 8 | 3 | 0.6% |
+| absent | 143 | 28.6% |
+
 ### forgotten-fraction — goblin-solo
 
 | value | count | share |
@@ -3150,6 +3162,18 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.1, 0.2) | 0 | 0.0% |
 | [0.2, 0.3) | 0 | 0.0% |
 | >= 0.3 | 0 | 0.0% |
+
+### history-myth-hop-median — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 1 | 25 | 5.0% |
+| [1, 2) | 24 | 4.8% |
+| [2, 3) | 30 | 6.0% |
+| [3, 5) | 42 | 8.4% |
+| [5, 8) | 14 | 2.8% |
+| >= 8 | 4 | 0.8% |
+| absent | 361 | 72.2% |
 
 ### forgotten-fraction — goblin-twin-solo
 

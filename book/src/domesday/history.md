@@ -208,6 +208,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0.21698113 | 0.50511945 | 0.56912695 | 0.65795724 | 0.97368421 | 0.59652934 |
 
+### `history-myth-hop-median`
+
+Median inheritance depth of a held claim about a historical ending: 0 = the witnessing community itself, higher = the claim is carried by communities further down the founding tree. The no-decay ceiling on transmission depth (The Hearsay, spec section 6)
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 3 | 4 | 5 | 12 | 4.188 |
+
 ### `mean-warning-legibility`
 
 Mean warning_legibility over every land-cell vestige layer (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige

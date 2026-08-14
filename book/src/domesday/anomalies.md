@@ -144,6 +144,23 @@ Score **11**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 
 | `total-population` | 0.005005005 | 537 |
 | `goblin-flagship-population` | 0.007007007 | 3 |
 
+### Seed `608`
+
+Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
+
+| metric | depth | value |
+|---|---|---|
+| `coast-roughness-slope` | 0 | 0.30529804 |
+| `landmass-count` | 0 | 262 |
+| `forgotten-fraction` | 0.001001001 | 0.96917808 |
+| `mean-population` | 0.001001001 | 8.2520325 |
+| `climate-displacement-events` | 0.002002002 | 2364 |
+| `mean-depth-to-basement` | 0.002002002 | 61.922499 |
+| `fertile-land-fraction` | 0.005005005 | 0.00064038057 |
+| `shoreline-development` | 0.005005005 | 9.3767576 |
+| `history-myth-hop-median` | 0.0065065065 | 9 |
+| `delta-count` | 0.0095095095 | 8 |
+
 ### Seed `878`
 
 Score **10**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
@@ -228,23 +245,6 @@ Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `sediment-volume` | 0.002002002 | 792093.74 |
 | `karst-fraction` | 0.008008008 | 0.17965654 |
 | `unrest-coverage` | 0.01001001 | 0.0020506811 |
-
-### Seed `608`
-
-Score **9**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 closest-to-extreme columns are listed below).
-
-| metric | depth | value |
-|---|---|---|
-| `coast-roughness-slope` | 0 | 0.30529804 |
-| `landmass-count` | 0 | 262 |
-| `forgotten-fraction` | 0.001001001 | 0.96917808 |
-| `mean-population` | 0.001001001 | 8.2520325 |
-| `climate-displacement-events` | 0.002002002 | 2364 |
-| `mean-depth-to-basement` | 0.002002002 | 61.922499 |
-| `fertile-land-fraction` | 0.005005005 | 0.00064038057 |
-| `shoreline-development` | 0.005005005 | 9.3767576 |
-| `delta-count` | 0.0095095095 | 8 |
-| `kobold-flagship-population` | 0.010847107 | 3 |
 
 ### Seed `719`
 
@@ -345,8 +345,8 @@ Score **8**: this many evaluable columns clear the 0.01 tail-depth bar (its 10 c
 | `distinguishable-capacity-goblin` | 0.005005005 | 2052 |
 | `name-syllables-kobold` | 0.006714876 | 1.2173913 |
 | `per-cell-diversity` | 0.008008008 | 1.3412388 |
+| `history-myth-hop-median` | 0.019019019 | 2 |
 | `mean-land-temperature-c` | 0.02002002 | -32.624225 |
-| `fertile-land-fraction` | 0.025025025 | 0.0031772824 |
 
 ### Seed `781`
 
