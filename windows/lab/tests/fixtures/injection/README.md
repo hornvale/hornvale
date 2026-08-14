@@ -1,0 +1,46 @@
+# The injection battery — authored evidence, not a generated artifact
+
+These CSVs are H1's evidence (spec §3.5, The Gnomon). Each subdirectory is one
+**arm**: a `rows.csv` + `schema.json` pair loadable by the same
+`domesday::census::load` that reads the committed census, produced by running
+`studies/gnomon-injection.study.json` over twenty seeds with **one generative
+constant perturbed** — or, for the two `baseline-*` arms, with nothing
+perturbed at all.
+
+`manifest.json` says which constant, in which file, from what to what, why it
+was chosen, on which host, at which SHA. `windows/lab/tests/anomaly_injection.rs`
+reads all of it and computes recall@10.
+
+## Regenerate with the script, and only with the script
+
+```
+ssh lefford 'cd ~/Projects/hornvale && git fetch --all && \
+  git checkout <full-sha> && scripts/gnomon-injection.sh'
+```
+
+The script refuses on a dirty tree, asserts each target literal is present
+**exactly once** before substituting, and restores the file under a `trap` so
+an interrupt cannot leave the tree mutated. `HV_GNOMON_PILOT=1` lifts its
+canonical-host refusal for machinery validation and stamps the authoring host
+into the manifest; `anomaly_injection.rs` reads that stamp, and a battery with
+any off-host arm is a **pilot** that prints its recall figure and adjudicates
+nothing.
+
+## Why these are NOT in `docs/generated-paths.txt`
+
+That file lists paths whose freshness is checked by **regenerating them and
+diffing** — `make rebaseline` runs `scripts/regenerate-artifacts.sh`, then
+`git diff --exit-code` over the list. Regenerating these would require the
+artifact sweep to rewrite tracked source in place, which it must never do:
+a `make rebaseline` that mutates `domains/terrain/src/lithology.rs` on its way
+past is a far worse hazard than a stale fixture.
+
+So they are **authored evidence**, like a census's committed goldens:
+reproducible from `manifest.json` by a human running the script, never by the
+artifact sweep. Do not "fix" the omission by adding the directory to that
+list — the check would either be vacuous or actively dangerous.
+
+What guards them instead is `anomaly_injection.rs::the_fixture_columns_match_the_census`,
+which fails loudly when the census's column set and a fixture's disagree — the
+one staleness this evidence can actually suffer, since the fixtures are scored
+against the census's percentiles.
