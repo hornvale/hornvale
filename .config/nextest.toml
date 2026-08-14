@@ -94,15 +94,28 @@
 filter = 'test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/)'
 threads-required = "num-cpus"
 
+# UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
+# duration alarm now that `make ci` is an alias for it, see the Makefile's
+# `gate-run`) deliberately runs the DEFAULT profile, not this one — running
+# the gate under `fail-fast = false` would silently turn every red gate into
+# a full-suite run, 368 times a month, on the exact axis this campaign exists
+# to protect. Left in place as a hand-invocable profile
+# (`cargo nextest run --profile ci`) and as the historical record of why
+# `fail-fast = false` matters for a duration-collecting run — see
+# `[profile.heavy]` below, which exists for the same reason on the tier that
+# still needs it.
 [profile.ci]
 # Report a test that crosses this, but never terminate it.
 slow-timeout = { period = "60s" }
 # Full output for anything that fails, so the persisted log is self-contained.
 failure-output = "immediate-final"
-# Load-bearing: the duration alarm needs a time for EVERY test, and a
-# fail-fast run cancels the rest. The Siding lost a whole heavy-tier run to
-# exactly this — 28 tests cancelled after one failure, with no durations for
-# any of them.
+# Load-bearing FOR A HAND-RUN `--profile ci` invocation: the duration alarm
+# needs a time for EVERY test, and a fail-fast run cancels the rest. The
+# Siding lost a whole heavy-tier run to exactly this — 28 tests cancelled
+# after one failure, with no durations for any of them. `make gate` no longer
+# takes this path (see above); scoping this profile to nextest's default
+# fail-fast would silently reintroduce that loss for anyone who runs it by
+# hand for the reason it was written.
 fail-fast = false
 
 [profile.heavy]

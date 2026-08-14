@@ -20,6 +20,7 @@
 //! enforces this for both the per-domain findings section and could be
 //! reused by an index-level rollup if one is ever added.
 
+use crate::domesday::anomaly::{REPORT_SIZE, TAIL_DEPTH_BAR, TOP_WORLDS, WorldAnomaly};
 use crate::domesday::census::{Census, Column};
 use crate::domesday::detect::{DECLARED_DETECTORS, Finding};
 use crate::domesday::stats::{categorical, numeric};
@@ -27,11 +28,21 @@ use crate::metrics::Domain;
 use hornvale_kernel::quantize;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// The header every generated Domesday page opens with, matching the
-/// project's existing generated-page convention (`book/src/reference/`,
-/// `book/src/laboratory/generated/`).
+/// The header every generated Domesday page (index + one per domain) opens
+/// with, matching the project's existing generated-page convention
+/// (`book/src/reference/`, `book/src/laboratory/generated/`). **Not** shared
+/// with [`render_anomalies`], which is written by a different subcommand —
+/// see [`ANOMALIES_HEADER`].
 const HEADER: &str =
     "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab domesday`. -->";
+
+/// The header [`render_anomalies`]'s page opens with. A distinct constant
+/// from [`HEADER`] on purpose (F3): the anomaly report is written by
+/// `hornvale lab anomalies`, not `hornvale lab domesday`, and the two
+/// commands must never be conflated in the regenerate instruction a reader
+/// would actually run.
+const ANOMALIES_HEADER: &str =
+    "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab anomalies`. -->";
 
 /// The twelve domains a metric may declare (spec §4.1), in the order the
 /// survey presents them — also the file-stem roster for `book/src/domesday/`:
@@ -571,6 +582,86 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
     out
 }
 
+/// Render the anomaly report's single committed page (spec §3.6): a header
+/// naming the three frozen selection bars as selection bars, not
+/// significance claims, the top [`TOP_WORLDS`] worlds with their flagged
+/// metrics/depths/values, and the full exclusion roster with reasons.
+///
+/// `ranked` is expected to already be ordered most-anomalous-first (as
+/// [`crate::domesday::anomaly::rank`] returns it) — this function only
+/// takes the first [`TOP_WORLDS`] of whatever order it is given, it does
+/// not re-sort.
+/// type-audit: bare-ok(artifact: return), bare-ok(artifact: excluded)
+pub fn render_anomalies(
+    c: &Census,
+    ranked: &[WorldAnomaly],
+    excluded: &[(String, String)],
+) -> String {
+    let mut out = format!(
+        "{ANOMALIES_HEADER}\n\n# Anomalies — The Domesday's transpose\n\n\
+         Per world, which of its metric values sit deep in the tail of that column's \
+         distribution across the {} census worlds — so a world volunteers its own \
+         outliers instead of waiting for someone to ask the right question. This is \
+         a pure read over the same committed census the rest of the Domesday reads, \
+         and never builds a world (spec §3.1).\n\n\
+         **Frozen selection bars, not significance claims** (spec §3.4 — the same \
+         precedent D1's 80% share bar and D3's 5% IQR bar carry, decision 0016): a \
+         column counts toward a world's score once its two-sided tail depth is at or \
+         below **{TAIL_DEPTH_BAR}**; each world's published report below carries its \
+         **{REPORT_SIZE}** columns of smallest tail depth; this page publishes the top \
+         **{TOP_WORLDS}** worlds by score. None of the three is retuned after seeing a \
+         result.\n\n",
+        c.rows.len(),
+    );
+
+    out.push_str("## Top worlds\n\n");
+    if ranked.is_empty() {
+        out.push_str("No worlds ranked — the evaluable surface is empty.\n\n");
+    }
+    for wa in ranked.iter().take(TOP_WORLDS) {
+        // `wa.score` is the world's TRUE, uncapped count of evaluable columns
+        // at or below TAIL_DEPTH_BAR (F2) — never re-derived by counting the
+        // REPORT_SIZE-capped `flags` list below, which saturates at
+        // REPORT_SIZE and reads as a tie between every world whose true
+        // score exceeds it.
+        out.push_str(&format!(
+            "### Seed `{}`\n\nScore **{}**: this many evaluable columns clear the \
+             {TAIL_DEPTH_BAR} tail-depth bar (its {} closest-to-extreme columns are \
+             listed below).\n\n| metric | depth | value |\n|---|---|---|\n",
+            wa.seed,
+            wa.score,
+            wa.flags.len(),
+        ));
+        for flag in &wa.flags {
+            out.push_str(&format!(
+                "| `{}` | {} | {} |\n",
+                flag.metric,
+                quantize(flag.depth),
+                quantize(flag.value)
+            ));
+        }
+        out.push('\n');
+    }
+
+    out.push_str("## Excluded columns\n\n");
+    out.push_str(
+        "Every numeric/integer census column with a domain and a role that this report \
+         did NOT score, and why (spec §3.3). Categorical and flag columns carry no \
+         ordering — a tail is an ordering — so they are never candidates at all, and are \
+         not listed here (see the module doc on `anomaly.rs`).\n\n",
+    );
+    if excluded.is_empty() {
+        out.push_str("No columns excluded.\n");
+    } else {
+        out.push_str("| metric | reason |\n|---|---|\n");
+        for (metric, reason) in excluded {
+            out.push_str(&format!("| `{metric}` | {reason} |\n"));
+        }
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1026,5 +1117,113 @@ mod tests {
                 );
             }
         }
+    }
+
+    // --- render_anomalies ---
+
+    #[test]
+    fn the_anomalies_page_carries_the_generated_header_and_frozen_constants() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let (_, excluded) = crate::domesday::anomaly::evaluable_columns(&c);
+        let page = render_anomalies(&c, &ranked, &excluded);
+        assert!(
+            page.starts_with(
+                "<!-- GENERATED FILE — do not edit. Regenerate with \
+                               `hornvale lab anomalies`."
+            ),
+            "header required, and must name the ANOMALIES command (F3), not \
+             `hornvale lab domesday`: {page}"
+        );
+        assert!(page.contains("0.01"), "the tail-depth bar must be named");
+        // F6: a bare `page.contains("10")`/`("25")` matches any digit pair on
+        // a page dense with numbers (a metric value, a depth). Match the
+        // exact bolded substrings the format string actually emits instead.
+        assert!(
+            page.contains("**10** columns of smallest tail depth"),
+            "the report size must be named as the constant it is: {page}"
+        );
+        assert!(
+            page.contains("top **25** worlds by score"),
+            "the top-worlds cap must be named as the constant it is: {page}"
+        );
+        assert!(
+            page.contains("not significance claims"),
+            "the header must say these are selection bars, not significance claims"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_lists_the_top_worlds_ranked_first() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let page = render_anomalies(&c, &ranked, &[]);
+        let top_seed = ranked.first().expect("at least one ranked world").seed;
+        assert!(
+            page.contains(&format!("### Seed `{top_seed}`")),
+            "the top-ranked world's seed must appear on the page: {page}"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_only_publishes_up_to_top_worlds_worlds() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let page = render_anomalies(&c, &ranked, &[]);
+        let seed_headings = page.matches("### Seed `").count();
+        assert_eq!(
+            seed_headings,
+            crate::domesday::anomaly::TOP_WORLDS,
+            "exactly TOP_WORLDS worlds must be published, not the full ranked list"
+        );
+    }
+
+    #[test]
+    fn the_anomalies_page_carries_the_full_exclusion_roster_with_reasons() {
+        let c = census();
+        let (_, excluded) = crate::domesday::anomaly::evaluable_columns(&c);
+        assert!(!excluded.is_empty(), "sanity: some columns are excluded");
+        let page = render_anomalies(&c, &[], &excluded);
+        for (metric, reason) in &excluded {
+            assert!(
+                page.contains(&format!("`{metric}`")) && page.contains(reason.as_str()),
+                "{metric}'s exclusion reason must be published verbatim: {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_exclusion_roster_says_so_rather_than_rendering_an_empty_table() {
+        let c = census();
+        let page = render_anomalies(&c, &[], &[]);
+        assert!(page.contains("No columns excluded."));
+    }
+
+    /// F2: the printed score is the world's TRUE, uncapped count of columns
+    /// at or below `TAIL_DEPTH_BAR`, not the `REPORT_SIZE`-capped `flags`
+    /// count. Reviewer's finding: the top twelve real worlds' true scores
+    /// are 21, 19, 18, 17, 16, 16, 14, 11, 10, 10, 10, 10 — the top eight of
+    /// those exceed `REPORT_SIZE` (10), so counting `flags` instead would
+    /// have printed "10" for every one of them, an undetectable twelve-way
+    /// tie. Assert directly against `WorldAnomaly::score` (computed by
+    /// `rank`, not re-derived here), on the real top-ranked world.
+    #[test]
+    fn the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count() {
+        let c = census();
+        let ranked = crate::domesday::anomaly::rank(&c);
+        let top = ranked.first().expect("at least one ranked world");
+        assert!(
+            top.score > crate::domesday::anomaly::REPORT_SIZE,
+            "sanity: the top-ranked real world's true score must exceed REPORT_SIZE \
+             for this test to actually exercise the distinction (score was {})",
+            top.score
+        );
+        let page = render_anomalies(&c, &ranked, &[]);
+        assert!(
+            page.contains(&format!("Score **{}**:", top.score)),
+            "the page must print the true score ({}), not flags.len() ({}): {page}",
+            top.score,
+            top.flags.len()
+        );
     }
 }

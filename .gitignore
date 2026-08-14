@@ -60,3 +60,11 @@ perf.data.old
 # The Ford probe (studies/the-ford-probe.study.json): a run-on-demand
 # readout, deliberately not committed — same posture as the-pyx-probe.
 book/src/laboratory/generated/the-ford-probe/
+
+# The Gnomon's injection battery (studies/gnomon-injection.study.json): `lab
+# run` publishes here, but the COMMITTED evidence is what
+# scripts/gnomon-injection.sh copies into
+# windows/lab/tests/fixtures/injection/ — this directory is the scratch it
+# copies FROM, and the script deletes it after each arm. Ignored so a run
+# cannot dirty the tree the script's own clean-tree guard reads.
+book/src/laboratory/generated/gnomon-injection/

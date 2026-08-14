@@ -14,6 +14,21 @@ cd "$(git rev-parse --show-toplevel)"
 
 section() { printf '\n== %s\n' "$1"; }
 
+# THE FALLBACK EXECS THE GATE'S BODY, NEVER `make gate`. Both `gate` and
+# `gate-fast` are `scripts/timed.sh`-wrapped, so `exec make gate` from inside a
+# `make gate-fast` run made ONE human wait produce TWO ledger rows. Already in
+# the committed ledger:
+#   | 2026-08-13T18:30:14Z | gate      | 428.842 | …
+#   | 2026-08-13T18:30:14Z | gate-fast | 429.339 | …
+# The Sexton's headline method is summing that ledger, so a systematically
+# double-counted class inflates the very number the campaign argues from.
+# `gate-run` is the same work with no second `timed.sh`; the outer `gate-fast`
+# row still measures the whole wait, which is the row a reader wants.
+#
+# Used at all THREE fallback sites below (no merge-base, no changes, unscopable
+# path) — they are the only reason this script ever writes a `gate`-shaped row.
+full_gate_fallback() { exec make --no-print-directory gate-run; }
+
 # Dependents are DERIVED from the workspace's own Cargo.toml files, never
 # listed here. A hand-maintained roster is what made this script violate its
 # own header: `hornvale-vessel` was never added to it, so a change under
@@ -89,7 +104,7 @@ fi
 merge_base="$(git merge-base main HEAD 2>/dev/null || true)"
 if [[ -z "$merge_base" ]]; then
     echo "gate-fast: no merge-base with main found — can't scope; falling back to the full gate"
-    exec make gate
+    full_gate_fallback
 fi
 
 # Changed set: everything since the merge-base with main, plus uncommitted
@@ -104,7 +119,7 @@ changed_files="$(
 
 if [[ -z "$changed_files" ]]; then
     echo "gate-fast: no changes vs $(git rev-parse --short "$merge_base") (main) — nothing to scope; running the full gate"
-    exec make gate
+    full_gate_fallback
 fi
 
 section "Changed files (vs $(git rev-parse --short "$merge_base"), plus working tree)"
@@ -153,8 +168,8 @@ done <<<"$changed_files"
 if [[ "$full_gate" -eq 1 ]]; then
     section "Full-gate fallback"
     printf '  %s\n' "${fallback_reasons[@]}"
-    echo "  falling back to \`make gate\` (fmt + clippy + workspace tests)"
-    exec make gate
+    echo "  falling back to the full gate body \`make gate-run\` (fmt + clippy + workspace tests)"
+    full_gate_fallback
 fi
 
 packages_sorted="$(printf '%s\n' "${packages[@]}" | sort -u)"

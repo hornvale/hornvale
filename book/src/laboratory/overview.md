@@ -109,9 +109,21 @@ successive regenerations sweep different slices of the seed range — and
 compares them against the committed rows. It was authored as an always-on,
 few-seconds check on every `cargo test`, but as the worldgen pipeline
 deepened its cost grew to minutes, so it now runs in the heavy tier
-(`make gate-full`) rather than in the commit gate: a worldgen change that
-moves a census surfaces there and in CI's regenerate-and-diff, not on the
-developer's next local test run. The full census fixtures themselves are
+(`make gate-full`) rather than in the commit gate.
+
+That left a real gap, and [The Sexton](../chronicle/the-sexton.md) has since
+narrowed it. A three-world, all-metric **sentinel** now runs *inside* the
+commit gate, comparing the first three census rows against the committed
+`rows.csv` for about fifteen CPU-seconds — so a change that moves those worlds
+reddens on the developer's next local gate rather than at a campaign close
+hours later. It is a sample, not the census: it sees three worlds of a
+thousand, and a drift confined to the other 997 still waits for the full
+refresh. Its value showed immediately — within hours of shipping it had
+verified three separate campaigns' byte-identity claims on the census path,
+which is exactly the path a worldgen campaign cannot cheaply check for itself.
+Note also that the older sentence here promised the gap was covered by "CI's
+regenerate-and-diff": there has been no CI since decision 0125, and the local
+gate is the only gate. The full census fixtures themselves are
 refreshed once per campaign — locally (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
@@ -165,5 +177,26 @@ a query marks a missing metric, not a dead end. `golden-pins.sql` is the
 harness's pin-provenance report: every pinned calibration constant in the
 codebase is reproducible as a query against the committed fixture, so a
 calibration is never just a number someone once computed and typed in.
+
+The graduated queries under `queries/explore/` sit at different points on
+that doctrine's manual-to-mechanical spectrum. `interesting-worlds.sql`
+opens with a comment reading *"'interesting' is a query, not a generation
+stage"* and closes with *"Edit freely"* — it is the manual end: a filter
+template that only pays off once you already know which columns and
+thresholds define "interesting" for the question at hand. `emergent-
+conjunction.sql` answers a question that shape of query could not ask
+before this campaign's `first-day-*` metrics existed: not merely whether a
+seed's ledger satisfies several predicates at once, but the world-day by
+which all of them first held. Each `first-day-*` column already carries
+that day for one predicate (optionally narrowed to one object value); three
+`IS NOT NULL` guards are the set intersection over those predicates, and
+`greatest()` across the matching columns is the maximum — the earliest day
+a replay could witness every one of them true simultaneously. Run against
+kobold occupation, a ruin, and a paid tribute, it turns "find a world where
+a species and a condition and a place all hold" from an unbounded search
+into a set intersection and a three-way maximum, and hands back the exact
+world-time a replay should start from rather than just the seed. That is
+the payoff a first-occurrence index promises: not a faster *whether*, but a
+*when* the census could not previously name.
 
 {{#include generated/the-census/the-census-summary.md}}

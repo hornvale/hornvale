@@ -60,6 +60,38 @@ its specification cannot catch a specification that disagrees with itself, and
 one of these did: the contention guard was wired backwards against a rationale
 written three lines above it, and passed review as faithful to the plan.
 
+The Sexton (2026-08-13) is the first campaign to **pair** one of those
+generators with a verifier in the everyday command, and the result argues the
+floor is right. The census is no longer checked only by the tier `make gate`
+ignores: a three-world, all-metric sentinel now runs *inside* the commit gate
+against the committed census, for about fifteen CPU-seconds. Within hours it
+had verified three other campaigns' byte-identity claims — The Millrace's, The
+Fathom's, The Holdfast's — on the census path, which is exactly the path a
+worldgen campaign cannot cheaply check for itself. That is the pairing the
+floor asked for, and it fires on a schedule nobody has to remember.
+
+The same campaign also supplies the sharpest instance yet of the floor's own
+failure mode, and it is worth scoring honestly against the bet. Decision 0130's
+channel work added **467 CPU-seconds** to the commit gate and made one test the
+slowest in the workspace at 187 s — unnoticed for the same structural reason,
+because the instrument that would have seen it (`make ci`) had run **nine times
+against `make gate`'s 368**. An unpaired check scores as unchecked; so does a
+paired one nobody runs. The Sexton folded the alarm into the gate, taking that
+instrument from nine samples a month to 368.
+
+**Score: the bet moves toward checkable, and the practice sharpens.** Four more
+instances of a check that could not fire arrived from this campaign's own plan
+text — an extractor whose grep matched zero of 3,449 real events, a
+scratch-sweep test that passed without entering the code under test, a
+worktree enumeration that would have switched the main checkout, and a status
+read from a file that reported green when the file was empty. All four were
+caught by making the check fail on command. But three of the campaign's own
+*measuring instruments* also lied — a sampler counting its own `grep`, a
+false-negative `grep`, a planted violation that was not one — which extends
+the practice by one clause: **make it fail on command, and run the positive
+control, because a negative result from an instrument nobody has seen fire is
+not evidence.**
+
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
 draws no seed and commits no fact — and produced the same family anyway, from
@@ -1509,6 +1541,40 @@ deliberately left ungated this campaign, so "the poles do not vary" may be
 true for land and false for the sea ice that borders it, on coastlines
 whose land itself never varies because it is permanently frozen.
 
+*Re-scored sideways by [The Fathom](./chronicle/the-fathom.md) (2026-08-13),
+which did not settle the underworld question above but corrected the premise
+the sentence rests on.*
+
+**"The way the sea's depth layers already are" was more generous to the sea
+than the sea deserved.** That clause reads as though the marine model were a
+finished thing to copy. It was not. The sea had the *vocabulary* — five pelagic
+strata, each pairing a community with a depth — and it did not have the
+*enumeration*: the accessor returned exactly one stratum per cell, the one its
+floor lies in, so the water standing above that floor was unaskable. A cell over
+a vent reported the vent and nothing about the kilometre of open water above it.
+Declaring the underworld as places was therefore never going to be a matter of
+copying a working pattern sideways; the pattern had to be built first, and this
+campaign built it.
+
+Two things fell out of asking the question for the first time, and both lower
+confidence in the sea as an exemplar. **Seed 42 has no cell whose floor reaches
+`Abyssal` or `Hadal`** — column heights come back `{1: 1749, 2: 6669,
+3: 21478}` over 29,896 ocean cells, so two of the five pelagic strata never
+occur as a floor in the flagship world at all, and the deepest arm of the marine
+classifier is unreachable there. And **8,916 of 9,695 sea-ice cells (92%) carry
+a stratum below the epipelagic** — ice filed four kilometres down, because the
+classifier picks sea ice on surface temperature with no depth condition while
+taking its stratum from the floor. Neither is a defect this campaign introduced;
+both are things that could not be seen while one value came back per cell, and
+both were left standing deliberately rather than repaired, because the campaign's
+acceptance criterion was that no world byte move.
+
+So the underworld question is **still open**, exactly as stated above, and the
+route to it is one step longer than the chapter thought: the column had to
+become askable before anything could be declared in it. What is now settled is
+only that asking is possible. Whether a realm's hard gate generalises past caves
+remains the thing a campaign placing a people underground will find out.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,
@@ -2411,3 +2477,51 @@ differing only in which kind holds which ground, all three move the reading by a
 similar amount and only one crosses the floor — the *most* differentiated of the
 three does not. The bound is a real instrument again. It is not yet a sensitive
 one, and the difference is now written down where it will be read.
+
+### A self-scorable bet was scored, and the instrument did not clear its own bar (2026-08-14)
+
+This chapter's axis is **whether the world can grade itself on a claim**, and
+its standing hope is that the self-scorable half of a bet closes by instrument
+while the taste half shrinks to its honest size. *The Gnomon* is the first
+campaign to run that procedure on an instrument rather than on a world, and the
+result sharpens the axis in a direction the chapter had not written down.
+
+The anomaly report is maximally self-scorable by construction: it ranks a
+world's census columns by how deep each sits in the thousand-world
+distribution, and every input is committed and drift-checked. Its usefulness
+claim was preregistered as recall@10 ≥ 0.60 against a label the census cannot
+supply — perturb one generative constant, rebuild twenty worlds, and ask
+whether the columns the perturbation demonstrably moved surface in the top ten.
+**Measured: 0.5667 over 120 pairs. Falsified.** All three controls held; the
+figure is published a second way (0.35, excluding the two arms whose
+perturbation left the census's observed range entirely and could not fail to
+rank) because the second reading is the less flattering one.
+
+**The rescore is not to the report's confidence but to the chapter's own
+premise.** "The Laboratory can score this" was being carried as though it
+implied "and the score will be good". It does not. Being self-scorable makes a
+bet *decidable*; it says nothing about which way it decides, and a
+self-scorable instrument can be scored and found wanting exactly as readily as
+a self-scorable world claim can. That is the mechanism working, not failing —
+but the chapter had only ever illustrated the axis with bets that closed
+favourably, and one that closed against itself is the more informative
+illustration.
+
+Two specifics worth keeping, because both are about instrument design rather
+than about this instrument:
+
+- **A tail rank measures unusualness, not change.** These are different
+  quantities and the campaign is the first thing to make the difference cost
+  something. One injection moved exactly one column in every world and the
+  moved value remained an ordinary value in nineteen of twenty; the world was
+  different and it was not *strange*. Any future instrument that ranks by
+  extremity inherits this gap.
+- **The control that passes can be near-unfalsifiable while the headline
+  fails.** The campaign's held-out calibration check passed comfortably
+  (in-census share 0.7050, held-out 0.7500, ratio 1.0638 against a tolerance of
+  2) — and 70.5% of census worlds already carry a column at the flagging depth,
+  so a stationary distribution passes it while flagging nothing useful. It was
+  preregistered as a control and explicitly not a usefulness measure, which is
+  the only reason its green cannot be read as vindication. **Declaring which of
+  a campaign's hypotheses is allowed to count as support, before either is
+  measured, is what kept this pair honest.**

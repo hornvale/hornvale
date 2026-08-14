@@ -163,10 +163,71 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 28] = [
+///
+/// # THIS ROSTER IS A FLOOR, NOT A CENSUS (The Gnomon, 2026-08-14)
+///
+/// `ignore_reasons()` calls `split_once("#[ignore = \"")` and then
+/// `split_once("\"]")` **on the same line**, so any `#[ignore]` whose reason
+/// wraps across lines with a trailing `\` is invisible to it — it is not
+/// rostered, it does not have to be canonical, and adding one never moves the
+/// array length. Replicating the scanner's logic over the tree at that date
+/// found **123 single-line reasons it sees and 7 multi-line ones it does not**:
+///
+/// - `windows/worldgen/src/lib.rs:13381` — a PREREGISTERED `>= 6`
+///   distinct-dominant target, honestly unmet
+/// - `windows/worldgen/src/lib.rs:13405`, `:13449` — mass/sovereignty
+///   calibration findings
+/// - `windows/vessel/src/liveness.rs:14716` — documents a DISPROVEN hypothesis
+/// - `windows/worldgen/tests/insolation_probe.rs:372` — a live Stage-0 probe
+/// - `windows/worldgen/tests/beta_calibration_sweep.rs:409` — a live sweep
+/// - `windows/lab/tests/depth_ladder.rs:112` — a full-depth registry evaluation
+///
+/// The first two of those are exactly the class this roster exists to surface,
+/// so the count here understates real deferrals by at least that many. **The
+/// evidence that this is a live hazard and not a theoretical one is in this
+/// campaign's own diff**: at `83eadd34` the roster went 29 → 30 without a
+/// single deferral being added. The Domesday exclusion test was *already*
+/// `#[ignore]`d, under a reason beginning `FALSIFIED (spec §3.3's partition
+/// claim, …` that wrapped over two lines and so was invisible; rewriting that
+/// reason onto one line is what made it appear. (Quoted without its attribute
+/// syntax on purpose — a complete literal in a doc comment would itself be
+/// scanned, which is why the roster's first entry is `"..."`.) The 30 → 31
+/// move at `a917db11` was, by contrast, a genuinely new pin, written
+/// single-line from the start — so this campaign contributed one of each,
+/// which is why the shape was visible at all.
+///
+/// Not fixed here deliberately: widening the scanner re-validates every
+/// currently-invisible reason against a verbatim rule they were never checked
+/// against, which is a campaign-sized change to a ratchet. Tracked as
+/// `TOOL-ignore-scanner-is-line-oriented` in the idea registry.
+///
+/// # ONE REASON STRING MUST SATISFY TWO GUARDS THAT DO NOT KNOW ABOUT EACH OTHER
+///
+/// This file's verbatim `heavy:` check and
+/// `windows/lab/tests/preregistration_guard.rs`'s default-deny scan both
+/// police `#[ignore]` reasons, and neither is aware the other exists. Their
+/// domains do not nest, they *overlap*:
+///
+/// - `heavy_tier.rs` scans **every `.rs` file in the repo** (`collect_rs` from
+///   the repo root) but only adjudicates reasons containing `heavy:` or
+///   `stale-second-opinion:`, plus this roster.
+/// - `preregistration_guard.rs` scans **only `windows/lab/tests/*calibration*.rs`**
+///   (see its `calibration_files()`), and demands every reason there name a
+///   cost or cite a decision number.
+///
+/// So a `heavy:` battery inside a lab calibration file must satisfy both at
+/// once — the canonical string is written to do that, which is why it is
+/// verbatim rather than a prefix. And an `#[ignore]` in any `src/` file is
+/// outside **both**: outside `preregistration_guard`'s path filter, and
+/// outside this file's adjudication unless its reason happens to carry a
+/// token. Four of the seven blind spots listed above are exactly that case.
+const EXPECTED_UNTOKENISED: [&str; 32] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
+    "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
+    "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
+    "PREREGISTERED, not met: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5667 over 120 pairs, below the preregistered 0.60 bar)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
     "compiles the workspace in release; CI runs it with -- --ignored",
@@ -175,6 +236,7 @@ const EXPECTED_UNTOKENISED: [&str; 28] = [
     "measurement: builds eight full worlds; run explicitly with --ignored",
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
+    "one-shot before-arm capture (The Fathom, Task 4 Step 1); run by hand, not a standing regression test - see module doc",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: builds a seed-42 level-6 world and walks every mesh neighbour (0.2 s measured); run by hand",
     "probe: builds all 64 the-ford-probe worlds at the canonical grid (17.5 s measured, --release); run by hand",
@@ -221,18 +283,43 @@ const EXPECTED_UNTOKENISED: [&str; 28] = [
 /// what the module doc above describes. A future pass that adopts them should
 /// give them a token class and delete them from this roster.
 ///
-/// **A fourth kind is now here twice, and is neither of those things.** The two
-/// `"PREREGISTERED, not met: awaits <registry-slug> (<reason>)"` entries carry
-/// a preregistered prediction that was MEASURED and NOT MET — the test's
-/// failure is the record, and the slug names the registry row a successor must
-/// discharge it against. They are findable (the prefix greps cleanly) and they
-/// name an owner (the row), so they lack nothing a token class would give them
-/// except membership in the filter above; they sit in this roster rather than
-/// in a token class because that filter governs which tier RUNS a test, and a
-/// preregistered-not-met pin must be run by neither tier. Adding one is a
-/// review decision like any other entry here: The Radiation's is
-/// `BIO-rung-weighted-concentration`, reviewed 2026-08-10, and its evidence is
+/// **A fourth kind is now here five times, and is neither of those things.**
+/// The `"PREREGISTERED, not met: awaits <registry-slug> (<reason>)"` entries
+/// carry a preregistered prediction that was MEASURED and NOT MET — the
+/// test's failure is the record, and the slug names the registry row a
+/// successor must discharge it against. They are findable (the prefix greps
+/// cleanly) and they name an owner (the row), so they lack nothing a token
+/// class would give them except membership in the filter above; they sit in
+/// this roster rather than in a token class because that filter governs
+/// which tier RUNS a test, and a preregistered-not-met pin must be run by
+/// neither tier. Adding one is a review decision like any other entry here:
+/// The Radiation's is `BIO-rung-weighted-concentration`, reviewed
+/// 2026-08-10, evidence at
 /// `windows/worldgen/tests/radiation_readout.rs::desert_elf_concentrates_in_its_authored_stronghold_biomes`.
+/// The Fathom's is `CLIM-shelf-single-rung-threshold`, reviewed 2026-08-12 —
+/// not a falsified mechanism but an unmeasured threshold (5.85% measured
+/// against a 5% ceiling authored before anyone measured a real world's
+/// shelf fraction), which the ruling deliberately left unmoved rather than
+/// widened to fit the measurement; evidence at
+/// `windows/worldgen/tests/fathom_column_probe.rs::h1_clause_3_single_rung_share_preregistered_not_met`.
+/// The Gnomon added two, reviewed 2026-08-13:
+/// `PROC-domesday-all-absent-blind-spot` (evidence at
+/// `windows/lab/src/domesday/anomaly.rs`), and
+/// `TOOL-anomaly-ranking-concentrates-injection` — the campaign's own
+/// **headline falsification**, evidence at
+/// `windows/lab/tests/anomaly_injection.rs::h1_recall_at_10`.
+/// `BIO-supply-drowns-niche` predates all of these and carries no sentence
+/// here; its site is
+/// `windows/worldgen/tests/occupancy_readout.rs`.
+///
+/// **The Gnomon also found the rot this convention carries, and closed it for
+/// its own entry.** An `#[ignore]`d measurement stops being measured: the
+/// figure quoted in the reason above is a claim nothing re-derives, so a later
+/// change to the instrument turns it silently into fiction. The remedy is not
+/// a sixth ratchet — it is one always-running assertion beside the ignored
+/// test that pins the measured integers as a **witness**
+/// (`the_falsified_recall_is_pinned_as_a_witness`). An entry added here in
+/// future should carry the same, and the reviewer should ask for it.
 #[test]
 fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
     let reasons = ignore_reasons();

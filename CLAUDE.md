@@ -99,9 +99,13 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~8 min since 0113; 0040 budgeted 4)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
-#   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
-#                     # profile (~7 min since 0113), writes target/nextest/ci/run.json +
-#                     # run.log, alarms on a per-test or whole-suite duration
+#   make ci          # ALIAS for `make gate` since The Sexton. The Timekeeper's
+#                     # duration alarm and baseline recorder now run inside the
+#                     # gate itself, because `make ci` had run 9 times against
+#                     # `make gate`'s 368 while every gate already computed the
+#                     # durations it needed and discarded them.
+#                     # It writes target/nextest/ci/run.json + run.log, alarms
+#                     # on a per-test or whole-suite duration
 #                     # shift against docs/timings/test-baseline-<host>.tsv,
 #                     # THEN (only if the alarm passed) rewrites that baseline
 #                     # from this run. The baseline is per HOST and committed,
@@ -170,9 +174,28 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
 # reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them. Refreshed once per campaign at the pre-merge close, keeping
-# book/src/laboratory/generated/*/rows.csv current with main rather than
-# lagging it.
+# for them.
+#
+# THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
+# the pre-merge close, by a human on lefford — see the dispatch line below.
+#
+# A NIGHTLY ALTERNATIVE EXISTS BUT IS NOT INSTALLED. The Sexton wrote
+# `scripts/scheduled/` (a systemd user timer that runs the census on lefford
+# overnight, posts the diff to the board, and commits nothing), because The
+# Rill's refresh took 19,207 s to move three of the census's 206 columns (203
+# metrics) with a human waiting on it, and nothing about that needed to be
+# synchronous. But INSTALLING IT IS A MANUAL STEP ON LEFFORD THAT NOBODY HAS
+# RUN — `~/Projects/hornvale-scheduled` does not exist there — so as of this
+# writing no nightly result is being produced at all. The install procedure,
+# and the two rules a scheduled job obeys, are in
+# `scripts/scheduled/README.md`.
+#
+# SO: DO NOT CLOSE A CAMPAIGN ON "the nightly diff was empty". Until the timer
+# is installed AND has been observed producing correct diffs over several
+# nights, an absent notice means the job is not running, not that the census
+# agrees with main — and an earlier draft of this block told you the opposite.
+# Committing a moved column is a deliberate human act on the canonical box
+# either way; that part never changes.
 #
 # THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
 # whatever box you are sitting at". That ambiguity is the whole trap, and it
@@ -313,19 +336,38 @@ cargo run --manifest-path tools/seam-guard/Cargo.toml -- run <seam> <file>  # na
 # the project asserts about itself (project time is git's); everything else is
 # scanned from source on read. `make gate` does NOT build this crate:
 cargo test --manifest-path tools/digest/Cargo.toml
-cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # make doctor's self-map
-cargo run --manifest-path tools/digest/Cargo.toml -- render decisions  # docs/digest/decisions-in-force.md
-cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/digest/intent-vs-reality.md
+# EVERY `render` SUBCOMMAND PRINTS TO STDOUT. The committed artifact is
+# written by the `>` REDIRECT, which lives in scripts/regenerate-artifacts.sh
+# (lines 507-510) — not by the command. Running one of these bare regenerates
+# nothing, so the drift check that follows it reports an empty diff and reads
+# as "no drift" when in fact nothing was rebuilt. The redirects are shown here
+# so the command you copy is the command that writes the file:
+cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # prints make doctor's self-map; no committed artifact
+cargo run --manifest-path tools/digest/Cargo.toml -- render decisions > docs/digest/decisions-in-force.md
+cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/digest/intent-vs-reality.md
 
-# Generated-artifact freshness. The single source of truth is
-# scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
-# registry/manifest dumps, lab studies, the type-audit report, the digest's
-# decision index and delta report, the Domesday survey, the committed
-# vessel/session/v2 client fixtures); `make rebaseline` and CI both call it,
-# so they cannot silently diverge:
+# Generated-artifact freshness. Two sources of truth, each authoritative for a
+# different half. WHAT IS GENERATED: scripts/regenerate-artifacts.sh (three
+# seed-42 almanacs, the elevation map, registry/manifest dumps, lab studies,
+# the type-audit report, the digest's decision index and delta report, the
+# Domesday survey, the committed vessel/session/v2 client fixtures) — `make
+# rebaseline` calls it, so there is exactly one regeneration path. WHICH PATHS
+# ARE DRIFT-CHECKED: `docs/generated-paths.txt`, and NOT the prose below.
+#
+# THAT FILE IS THE LIST. This block used to restate all seven paths inline,
+# which is the exact drift shape the file was created to prevent: a campaign
+# that reads CLAUDE.md, adds a directory to the prose, and never touches the
+# file gets no tracked-ness check on it — and `git diff --exit-code` against an
+# untracked path is silently vacuous, so the check would pass forever. Add a
+# generated directory HERE, in docs/generated-paths.txt, and `git add` its
+# contents in the same commit. `cli/tests/generated_paths.rs` enforces both
+# that every declared path is tracked and that this block still names the file.
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
+# The drift check, reading its path list from the one file that declares it:
+git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+# The notes below explain WHY particular entries are in that file; they are
+# commentary on it, never a second copy of it.
 # docs/audits/ is in that list — the type-audit report drifts on any
 # pub-boundary change, and omitting it is a common miss. So is docs/digest/
 # (The Digest): the in-force decision index drifts whenever a decision record
@@ -532,9 +574,20 @@ see the same physics — finish the readout first), and never while main's
 checkout shows another session mid-landing (the preflight peeks and warns).
 Parallel sessions are the norm; small absorptions keep semantic drift next
 to its cause instead of surfacing it at a 105-commit merge. Campaigns run in
-git worktrees under `.claude/worktrees/<campaign>/` (untracked); `make
-prewarm` warms a fresh one's `target/` — start it in the background right
-after `git worktree add`, before the first gate.
+git worktrees under `.claude/worktrees/<campaign>/`
+(untracked), and since The Sexton those worktrees are a **recycled pool**, not
+one-per-campaign: `make worktree-take NAME=<campaign>` reuses a member whose
+branch is already merged, keeping its warm `target/` and sweeping its
+`.superpowers/sdd/` scratch. 73 branches went through this repo in one month
+against 3 live worktrees, each new one paying a full cold build (a measured
+771 s) that nothing recorded. `make prewarm` still warms a genuinely cold one —
+start it in the background right after taking it. **The scratch sweep is not
+optional**: `.superpowers/sdd/` is git-ignored and per-worktree, so a recycled
+worktree would otherwise hand the next campaign the previous one's decision
+ledger, silently, and it would read as its own. `make worktree-take` resolves
+the pool from the **main checkout** regardless of which worktree you run it
+from — running it from inside the campaign you are about to retire is normal,
+and the pool it finds is always the same one.
 
 `make preflight` mechanizes only the **checkable** half. It compares ancestry
 and peeks at main's checkout; it has no opinion about whether two campaigns

@@ -39,6 +39,19 @@ pub fn observable(
     observable_at(world, ctx, agent, at, None)
 }
 
+/// Whether `stratum` sits in a water-medium realm — the question is about
+/// the MEDIUM a rung belongs to, never about which rung of a ladder you are
+/// standing on. `None` (the surface projection) and every rock stratum
+/// answer `false`; every stratum [`hornvale_climate::Realm::WATERWORLD`]
+/// holds answers `true`.
+/// type-audit: bare-ok(flag)
+pub fn submerged_in(stratum: Option<hornvale_climate::Stratum>) -> bool {
+    match stratum {
+        Some(st) => hornvale_climate::Realm::WATERWORLD.strata().contains(&st),
+        None => false,
+    }
+}
+
 /// [`observable`], optionally from a stratum within the water column rather
 /// than from the surface — the depth band's vantage.
 pub fn observable_at(
@@ -61,7 +74,7 @@ pub fn observable_at(
         hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(cell))
             .map_err(|e| VesselError::Build(e.to_string()))?;
     Ok(Vantage {
-        submerged: matches!(stratum, Some(st) if st != hornvale_climate::Stratum::Surface),
+        submerged: submerged_in(stratum),
         locale,
         day: at,
         village: agent.village.clone(),

@@ -13,6 +13,13 @@ separates a *queued* run from a *slow* one. Rows predating the column simply
 lack it; this file is not drift-checked, so history is left as it was. This file is
 NOT drift-checked and never gates the build; it is a record you read.
 
+Since The Sexton the ledger covers **every command that makes a human wait**,
+not only the expensive milestone runs it was built for: `prewarm`, `preflight`,
+`gate-fast`, `quick` and the three client checks record rows alongside `gate`,
+`ci`, `rebaseline`, `census` and `heavy`. The reason is decision 0086's
+amendment generalised — a cost with no label is invisible to every decision
+about cost, and `prewarm` had zero rows against 73 branches in a month.
+
 **The build-failing half now exists, and it is a different file.** The
 Timekeeper (decision
 [0088](decisions/0088-the-suite-watches-its-own-clock.md)) gave the suite a
@@ -778,6 +785,10 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-12T19:24:02Z | gate | 200.136 | 429.073 | 75.111 | 2.52 | 0 | f46f0cd1 | the-repose | Greyjoy | 10 |
 | 2026-08-12T19:51:20Z | rebaseline | 123.472 | 218.548 | 10.156 | 1.85 | 0 | f46f0cd1 | the-repose | MacBookPro | 10 |
 | 2026-08-12T19:58:44Z | gate | 429.436 | 2937.945 | 178.083 | 7.26 | 0 | f46f0cd1 | the-repose | MacBookPro | 10 |
+| 2026-08-12T17:55:43Z | gate | 90.032 | 92.405 | 29.586 | 1.35 | 0 | 813a89d5 | the-fathom | MacBookPro | 10 |
+| 2026-08-12T18:05:45Z | gate | 493.815 | 2775.592 | 132.539 | 5.89 | 0 | 813a89d5 | the-fathom | MacBookPro | 10 |
+| 2026-08-12T18:08:25Z | rebaseline | 153.717 | 220.493 | 13.471 | 1.52 | 0 | 813a89d5 | the-fathom | MacBookPro | 10 |
+| 2026-08-12T18:14:54Z | gate | 377.168 | 2825.364 | 120.830 | 7.81 | 0 | 813a89d5 | the-fathom | MacBookPro | 10 |
 | 2026-08-12T11:48:08Z | rebaseline | 163.713 | 224.357 | 12.141 | 1.44 | 0 | 94355fdd | the-rill | MacBookPro | 10 |
 | 2026-08-12T11:55:56Z | gate | 459.335 | 3261.585 | 179.805 | 7.49 | 0 | 94355fdd | the-rill | MacBookPro | 10 |
 | 2026-08-12T14:31:52Z | rebaseline | 172.909 | 242.408 | 13.642 | 1.48 | 0 | 677637cc | the-rill | MacBookPro | 10 |
@@ -792,11 +803,33 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-12T21:04:17Z | census | 1718.995 | 55074.823 | 330.455 | 32.23 | 0 | 7304eb09 |  | lefford | 40 |
 | 2026-08-12T21:23:50Z | gate | 792.397 | 3164.587 | 278.844 | 4.35 | 0 | 65ef15c3 | campaign/the-glasshouse | ambrose | 12 |
 | 2026-08-12T21:30:14Z | rebaseline | 140.212 | 223.903 | 13.811 | 1.70 | 0 | 65ef15c3 | campaign/the-glasshouse | ambrose | 12 |
+| 2026-08-13T01:30:36Z | rebaseline | 129.899 | 174.998 | 6.758 | 1.40 | 0 | 46b18c8e | campaign/the-holdfast | ambrose | 12 |
+| 2026-08-13T01:55:26Z | gate | 397.595 | 2560.744 | 162.618 | 6.85 | 0 | e30862db | campaign/the-holdfast | ambrose | 12 |
 | 2026-08-12T23:46:14Z | gate | 524.352 | 3799.965 | 207.319 | 7.64 | 0 | 9706bfbc | the-rill | MacBookPro | 10 |
 | 2026-08-13T06:08:39Z | census | 19207.751 | 700215.149 | 783.494 | 36.50 | 0 | d8ed9bd6 |  | lefford | 40 |
 | 2026-08-13T11:20:38Z | rebaseline | 112.526 | 227.012 | 10.664 | 2.11 | 0 | cc576f08 | the-rill | MacBookPro | 10 |
 | 2026-08-13T11:51:02Z | rebaseline | 130.291 | 228.438 | 10.932 | 1.84 | 0 | 734d0a1b | the-rill | MacBookPro | 10 |
 | 2026-08-13T12:08:20Z | gate | 489.124 | 3536.576 | 177.917 | 7.59 | 0 | 856d1523 | the-rill | MacBookPro | 10 |
+| 2026-08-13T16:33:11Z | quick | 10.416 | 8.060 | 0.637 | 0.83 | 0 | 760b0121 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T16:52:38Z | gate | 470.049 | 3333.589 | 131.641 | 7.37 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:02:48Z | gate | 426.943 | 3356.194 | 135.646 | 8.18 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:12:04Z | gate | 430.710 | 3335.997 | 138.597 | 8.07 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:27:28Z | gate | 432.104 | 3333.637 | 138.146 | 8.03 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:27:50Z | gate | 2.012 | 1.321 | 0.261 | 0.79 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:30:31Z | gate | 143.330 | 629.350 | 49.983 | 4.74 | 0 | a3726caf | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:48:46Z | gate | 146.366 | 626.899 | 50.986 | 4.63 | 0 | d426f96f | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T17:57:13Z | gate | 440.488 | 3334.040 | 142.877 | 7.89 | 0 | d426f96f | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:11:38Z | preflight | 4.227 | 0.362 | 0.583 | 0.22 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:20:02Z | gate | 453.471 | 3348.510 | 147.192 | 7.71 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:22:37Z | rebaseline | 125.192 | 198.559 | 7.849 | 1.65 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:23:05Z | prewarm | 0.811 | 0.226 | 0.284 | 0.63 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:30:14Z | gate | 428.842 | 3350.700 | 133.602 | 8.12 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:30:14Z | gate-fast | 429.339 | 3350.735 | 133.658 | 8.12 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:32:36Z | game-check | 71.797 | 184.728 | 16.243 | 2.80 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:33:42Z | vessel-check | 56.763 | 75.907 | 7.724 | 1.47 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T18:34:30Z | world-check | 46.945 | 61.741 | 6.717 | 1.46 | 0 | 1ec240e9 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T19:13:14Z | rebaseline | 36.728 | 218.968 | 9.481 | 6.22 | 0 | d8435f61 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T19:13:51Z | rebaseline | 37.018 | 219.513 | 9.188 | 6.18 | 0 | d8435f61 | campaign/the-sexton | ambrose | 12 |
 | 2026-08-13T13:40:29Z | gate | 475.516 | 3635.033 | 163.694 | 7.99 | 0 | 8e007e2a | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T13:42:59Z | rebaseline | 143.694 | 230.531 | 11.703 | 1.69 | 0 | 8e007e2a | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T14:18:40Z | gate | 410.831 | 3452.995 | 120.050 | 8.70 | 0 | 8e22fc23 | campaign/the-millrace | MacBookPro | 10 |
@@ -818,7 +851,54 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-13T19:37:26Z | rebaseline | 127.760 | 226.699 | 12.894 | 1.88 | 0 | 11efd527 | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T19:44:42Z | gate | 356.234 | 2966.450 | 126.160 | 8.68 | 0 | 9db4f8df | campaign/the-millrace | MacBookPro | 10 |
 | 2026-08-13T19:47:02Z | rebaseline | 133.561 | 227.300 | 13.538 | 1.80 | 0 | 9db4f8df | campaign/the-millrace | MacBookPro | 10 |
+| 2026-08-13T20:16:53Z | rebaseline | 18.544 | 78.723 | 6.793 | 4.61 | 0 | b82572ef | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T20:18:06Z | rebaseline | 59.556 | 215.479 | 10.221 | 3.79 | 0 | b82572ef | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T20:19:30Z | rebaseline | 62.477 | 216.708 | 10.308 | 3.63 | 0 | b82572ef | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T20:20:58Z | rebaseline | 67.744 | 216.519 | 10.243 | 3.35 | 0 | b82572ef | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T20:30:49Z | gate | 551.188 | 3275.460 | 218.811 | 6.34 | 0 | eaa16a6b | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T20:44:35Z | quick | 9.785 | 7.963 | 0.562 | 0.87 | 0 | 69876dab | campaign/the-sexton | ambrose | 12 |
 | 2026-08-13T20:52:28Z | gate | 391.977 | 2868.289 | 157.465 | 7.72 | 0 | de001f3f | chore/ci-duration-triage | MacBookPro | 10 |
 | 2026-08-13T20:54:55Z | rebaseline | 139.398 | 225.888 | 17.866 | 1.75 | 0 | de001f3f | chore/ci-duration-triage | MacBookPro | 10 |
 | 2026-08-13T20:08:31Z | ci | 778.090 | 3486.519 | 265.627 | 4.82 | 0 | de001f3f | main | MacBookPro | 10 |
 | 2026-08-13T21:10:59Z | ci | 312.548 | 2737.764 | 112.446 | 9.12 | 0 | 13bdd375 | main | MacBookPro | 10 |
+| 2026-08-13T21:39:01Z | rebaseline | 118.465 | 170.907 | 6.986 | 1.50 | 0 | 2cf15549 | campaign/the-holdfast | ambrose | 12 |
+| 2026-08-13T21:48:49Z | gate | 581.983 | 2914.020 | 213.047 | 5.37 | 0 | 2cf15549 | campaign/the-holdfast | ambrose | 12 |
+| 2026-08-13T22:06:49Z | gate | 429.749 | 3154.100 | 154.255 | 7.70 | 0 | 465bfcaa | the-fathom | MacBookPro | 10 |
+| 2026-08-13T22:09:22Z | rebaseline | 124.224 | 218.258 | 13.258 | 1.86 | 0 | 465bfcaa | the-fathom | MacBookPro | 10 |
+| 2026-08-14T00:56:09Z | census | 920.212 | 26755.045 | 325.981 | 29.43 | 0 | 5eb5d5f5 |  | lefford | 40 |
+| 2026-08-14T01:31:44Z | gate | 10.607 | 9.742 | 0.287 | 0.95 | 0 | 11c55e14 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T01:41:59Z | gate | 601.846 | 2812.232 | 206.344 | 5.02 | 0 | 11c55e14 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T02:09:06Z | gate | 346.538 | 2806.997 | 120.296 | 8.45 | 0 | 42de6b2d | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T03:09:58Z | gate | 89.056 | 102.250 | 56.933 | 1.79 | 0 | 284832d0 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T03:16:27Z | gate | 358.513 | 2798.279 | 118.956 | 8.14 | 0 | 284832d0 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T03:24:55Z | gate | 376.610 | 2754.946 | 126.286 | 7.65 | 0 | e5d07691 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T03:31:38Z | gate | 402.809 | 2754.107 | 132.855 | 7.17 | 0 | e5d07691 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-13T22:31:58Z | ci | 706.738 | 3011.844 | 279.553 | 4.66 | 0 | 883c63ae | main | MacBookPro | 10 |
+| 2026-08-13T22:50:52Z | rebaseline | 56.474 | 202.620 | 9.170 | 3.75 | 0 | cec0ebeb | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T22:58:31Z | gate | 450.857 | 2892.454 | 189.725 | 6.84 | 0 | cec0ebeb | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:30:38Z | quick | 9.843 | 8.001 | 0.555 | 0.87 | 0 | 9467e6c4 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:31:59Z | quick | 12.269 | 13.802 | 5.469 | 1.57 | 0 | 82127c11 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:35:44Z | gate-fast | 68.397 | 66.056 | 22.238 | 1.29 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:49:17Z | gate-fast | 652.227 | 2700.393 | 142.155 | 4.36 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:02:06Z | gate-fast | 372.635 | 2671.241 | 129.699 | 7.52 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:03:08Z | rebaseline | 36.117 | 202.787 | 8.982 | 5.86 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:04:29Z | quick | 9.899 | 7.927 | 0.604 | 0.86 | 0 | dbb48adc | campaign/the-sexton | ambrose | 12 |
+| 2026-08-13T23:39:36Z | rebaseline | 138.749 | 176.943 | 7.452 | 1.33 | 0 | 62f2ae83 | campaign/the-holdfast | ambrose | 12 |
+| 2026-08-13T23:50:31Z | gate | 647.096 | 2585.853 | 184.428 | 4.28 | 0 | 62f2ae83 | campaign/the-holdfast | ambrose | 12 |
+| 2026-08-13T23:54:03Z | rebaseline | 155.906 | 166.498 | 6.938 | 1.11 | 0 | 7b9b56c6 | main | ambrose | 12 |
+| 2026-08-14T00:25:41Z | gate | 173.039 | 571.172 | 108.324 | 3.93 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:31:30Z | gate | 338.099 | 2412.621 | 123.277 | 7.50 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:32:21Z | rebaseline | 33.943 | 184.632 | 8.545 | 5.69 | 0 | 69efacb5 | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T00:32:55Z | preflight | 3.222 | 0.397 | 0.641 | 0.32 | 0 | f6556e1a | campaign/the-sexton | ambrose | 12 |
+| 2026-08-14T04:08:48Z | quick | 18.768 | 26.885 | 18.327 | 2.41 | 0 | a917db11 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T04:13:21Z | rebaseline | 56.151 | 198.919 | 12.196 | 3.76 | 0 | 4d9570e9 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T04:14:22Z | preflight | 3.747 | 0.798 | 0.637 | 0.38 | 0 | a1a33028 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T04:22:26Z | gate | 301.681 | 2518.280 | 119.022 | 8.74 | 0 | 01ccce74 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T11:09:07Z | rebaseline | 55.293 | 198.773 | 12.004 | 3.81 | 0 | 1d9e342c | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T11:10:03Z | quick | 14.410 | 15.063 | 7.572 | 1.57 | 0 | 1d9e342c | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T11:19:08Z | gate | 540.763 | 2548.152 | 154.537 | 5.00 | 0 | 29d815e5 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T11:31:51Z | gate | 575.018 | 2545.669 | 151.611 | 4.69 | 0 | 29d815e5 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T12:03:07Z | gate | 320.654 | 2503.168 | 122.491 | 8.19 | 0 | 29d815e5 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T12:10:41Z | gate | 316.402 | 2546.647 | 121.706 | 8.43 | 0 | 67fd64f6 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T12:11:42Z | rebaseline | 56.150 | 205.716 | 16.243 | 3.95 | 0 | 67fd64f6 | campaign/the-gnomon | MacBookPro | 10 |
+| 2026-08-14T12:18:07Z | rebaseline | 81.088 | 201.545 | 11.315 | 2.63 | 0 | c1a50f37 | the-repose | MacBookPro | 10 |

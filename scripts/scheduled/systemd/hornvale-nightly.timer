@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Hornvale's nightly checks
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# Survive a reboot: a missed run fires on next boot rather than being skipped.
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

@@ -55,7 +55,7 @@ page — a defect the reference checks above cannot see):
    separator;
 5. the Idea cell is ≤ 600 characters, unless the row is grandfathered in
    `cli/tests/fixtures/registry-length-waivers.txt` — an append-never list;
-6. Status is one of the six documented values (the category prefixes stay
+6. Status is one of the seven documented values (the category prefixes stay
    derived from the file; the status vocabulary is closed);
 7. no *new* numbered ID appears, per decision `0026-slugs-not-numbers` —
    the existing 403 are frozen in `cli/tests/fixtures/registry-numbered-ids.txt`;
