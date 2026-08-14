@@ -262,6 +262,10 @@ fn every_injection_moved_the_world_and_the_baselines_did_not() {
 /// campaign`). The content is in whether two separate world-BUILD runs
 /// produce identical rows, which is why the authoring script emits the
 /// baseline arm twice, as separate invocations, and commits both.
+///
+/// claim: invariant(every unperturbed world ranks identically across two
+/// independently generated baseline runs) — an identity check over committed
+/// rows, not a rate: one differing world is a determinism bug.
 #[test]
 fn two_independent_baseline_runs_rank_identically() {
     let c = census();
@@ -305,6 +309,10 @@ fn two_independent_baseline_runs_rank_identically() {
 /// Neither `k`, nor `TAIL_DEPTH_BAR`, nor `REPORT_SIZE`, nor the injection
 /// set may be adjusted to rescue a result. A recall below the bar falsifies
 /// H1 and is published as the finding.
+///
+/// claim: readout(preregistered) — recall@10 over the committed (injection x
+/// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
+/// battery's own arms rather than sampling a population.
 #[test]
 fn h1_recall_at_10() {
     let c = census();
