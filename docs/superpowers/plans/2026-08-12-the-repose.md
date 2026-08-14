@@ -1307,6 +1307,36 @@ correct and inert now and becomes real for free when C2c lands. Do not
 preregister an elves-remember/humans-forget hypothesis, and do not write one
 into the chronicle.
 
+> **AMENDED 2026-08-14, at Task 7's pre-dispatch verification. The factual
+> claim above has EXPIRED, and the campaign spec's §3.4 carries the same dead
+> claim.**
+>
+> `LifeSchedule::Paced` now has **nine occupants**: three dwarves at factor
+> 4.0 (C2c, The Delvers) and six elves at factor 5.0 (C2d, The Radiation).
+> `coverage.rs` records the move from `Declared` to `Witnessed` in its own
+> comment. The empty channel this campaign was written around is **full**, and
+> lifespan is no longer a pure function of mass.
+>
+> **The decision stands; only its reason is gone.** Do NOT preregister a
+> cross-species hypothesis now. The spec froze "no cross-species claim" before
+> the code existed, and adding one *after* discovering the axis went live is
+> precisely the post-hoc move decision 0016 exists to prevent — the fact that
+> it would now be a *better* prediction is what makes it tempting and what
+> makes it forbidden. This is a case where the original ruling survives its own
+> justification.
+>
+> **What to do instead.** Build the coupling as specified — it is now genuinely
+> differentiating rather than inert, which is a change in what the code
+> *means*, not in what it does. §6.3 already requires per-people rows, so any
+> cross-species spread in knownness will be **reported as an observation**. Say
+> plainly in the chronicle that it was observed and never predicted, and that
+> the spec's stated reason for declining the prediction had lapsed by the time
+> the code was written.
+>
+> A campaign that wants the elves-remember question answered properly now has
+> a live axis and should preregister against it **from a fresh spec**. That is
+> a follow-up, not a widening of this one.
+
 - [ ] **Step 1: Write the failing flow-balance tests**
 
 ```rust
