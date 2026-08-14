@@ -130,6 +130,23 @@ if [ -n "$recycled" ]; then
     git -C "$recycled" switch -c "campaign/$NAME" "origin/$BASE"
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
+    # THE RENAME INVALIDATES COMPILED PATHS AND CARGO DOES NOT KNOW IT.
+    # `env!("CARGO_MANIFEST_DIR")` and `CARGO_TARGET_TMPDIR` are baked at compile
+    # time; `cargo build --workspace --all-targets` reports the tree fresh after a
+    # rename, so every cached test binary still points at the previous campaign's
+    # directory. Measured taking the-axes -> the-staff: six failures whose panics
+    # named the old path, which read exactly like a red main.
+    #
+    # Touch the sources that read either macro, derived by grep rather than
+    # hand-listed, so a new call site is covered the day it lands. 29 of the 31 are
+    # under tests/ and recompile only their own test binary; 2 are under src/ and
+    # rebuild their crate. That is far cheaper than the 771 s cold build this pool
+    # exists to avoid.
+    #
+    # `|| true`: a worktree with no matching file is fine, and `worktree-take` must
+    # not fail on a convenience step.
+    grep -rl 'env!("CARGO_MANIFEST_DIR")\|CARGO_TARGET_TMPDIR' \
+        --include='*.rs' "$DEST" 2>/dev/null | xargs -r touch || true
     # `mv` leaves the MAIN REPO's back-pointer stale. Verified, and the naive
     # assumption is wrong in an important way: the moved worktree's own
     # commands keep working (its `.git` file is an absolute path to an
@@ -155,6 +172,27 @@ if [ -n "$recycled" ]; then
         exit 1
     fi
     echo "worktree-take: $DEST is warm — no prewarm needed" >&2
+
+    # VERIFY THE INVALIDATION AT THE MOMENT IT MATTERS. Measured cost: ~1 s per
+    # sibling worktree scanning ONLY executables (target/debug/deps holds 24,544
+    # entries; unrestricted this would cost ~5 s across a six-member pool), cheap
+    # enough to run on every take.
+    #
+    # NOTE WHAT THIS DOES AND DOES NOT VERIFY. `git worktree repair` (just above)
+    # has already run, and repair rewrites the registry entry to the NEW path —
+    # so by this point $DEST's OWN FORMER NAME is gone from `git worktree list`
+    # entirely; the freshness check cannot see it and this call is trivially
+    # green with respect to the rename just performed. (Verified directly: a
+    # scratch worktree renamed WITHOUT repair is correctly flagged red for its
+    # stale self-reference; the SAME scratch worktree, repaired, goes green
+    # while the identical stale binary is still sitting there untouched.) The
+    # touch invalidation above is what actually fixes THIS rename — this call
+    # exists to catch a DIFFERENT class of contamination: an artifact baking
+    # some OTHER, currently-live sibling worktree's path. `|| true`: a hit here
+    # reflects pre-existing state this take did not cause, so it must not abort
+    # a take that has already completed its real work — it only needs to be
+    # visible.
+    ( cd "$DEST" && bash "$ROOT/scripts/test-worktree-freshness.sh" ) || true
 else
     echo "worktree-take: no recyclable member; creating a cold worktree" >&2
     git -C "$ROOT" worktree add "$DEST" -b "campaign/$NAME" "origin/$BASE"
