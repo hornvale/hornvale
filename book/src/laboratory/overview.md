@@ -109,9 +109,21 @@ successive regenerations sweep different slices of the seed range — and
 compares them against the committed rows. It was authored as an always-on,
 few-seconds check on every `cargo test`, but as the worldgen pipeline
 deepened its cost grew to minutes, so it now runs in the heavy tier
-(`make gate-full`) rather than in the commit gate: a worldgen change that
-moves a census surfaces there and in CI's regenerate-and-diff, not on the
-developer's next local test run. The full census fixtures themselves are
+(`make gate-full`) rather than in the commit gate.
+
+That left a real gap, and [The Sexton](../chronicle/the-sexton.md) has since
+narrowed it. A three-world, all-metric **sentinel** now runs *inside* the
+commit gate, comparing the first three census rows against the committed
+`rows.csv` for about fifteen CPU-seconds — so a change that moves those worlds
+reddens on the developer's next local gate rather than at a campaign close
+hours later. It is a sample, not the census: it sees three worlds of a
+thousand, and a drift confined to the other 997 still waits for the full
+refresh. Its value showed immediately — within hours of shipping it had
+verified three separate campaigns' byte-identity claims on the census path,
+which is exactly the path a worldgen campaign cannot cheaply check for itself.
+Note also that the older sentence here promised the gap was covered by "CI's
+regenerate-and-diff": there has been no CI since decision 0125, and the local
+gate is the only gate. The full census fixtures themselves are
 refreshed once per campaign — locally (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
