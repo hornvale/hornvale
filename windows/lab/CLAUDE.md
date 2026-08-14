@@ -78,6 +78,58 @@ surface. Two consequences when editing it:
 - Calibration loads the drift-checked fixture, not a live recompute (decision
   0032).
 
+## Registering a metric is not a local act
+
+Adding one `Metric` to `registry()` has three consequences, in increasing
+order of what they cost you.
+
+**1. It reddens every census-reading calibration test** until the fixtures are
+refreshed on the canonical host at the campaign's close. They all carry the
+identical panic — `rows.csv header does not match study '<X>' schema`
+(`runner.rs`) — so a failure of a *different* shape is a real finding, not
+this. Two things make it bite:
+
+- **The fixtures are per-study, and more than one study is involved.** A
+  refresh that covers only `the-census` can leave a binary red on
+  `census-of-the-meeting`. Re-derive which binary reads which study with a
+  grep over `windows/lab/tests/*calibration*.rs` — **do not trust a mapping
+  written in a doc, including this one.** The mapping recorded when this was
+  first hit had `gathering_calibration` on `census-of-the-meeting`; today that
+  binary reads `the-census` and the other two read both. It moved without
+  anyone noticing, because nothing checks prose.
+- **Establish the exact count at the campaign's FIRST task** and carry it into
+  every review brief. Reviewers otherwise read a wall of reds as their own
+  breakage. Do not carry the *number* forward between campaigns either: it was
+  34 when first measured (2026-08-02) and the three binaries hold 46 `#[test]`s
+  now.
+
+**2. Nine studies declare `"metrics": "all"`, and there is no way to opt out.**
+`study.rs` resolves `MetricSelection::All(_) => Ok(reg)` — the entire registry,
+unfiltered — and `Metric` carries `name`/`doc`/`summary`/`domain`/`role`/
+`extract` and **no cost or opt-in flag**. So a metric you add for one study
+runs on every world of `the-census` (~2000) forever. This is the expensive
+half, and the one people miss: the fixture churn above is annoying and
+temporary, a slow metric is permanent. The Mire's three candidates each needed
+a ~3.5 s per-world computation, which would have added roughly two hours to
+every census refresh; they were not registered.
+
+**3. Census cost lives in SWEEPING the network, not building or querying it.**
+Measured across The Rill/The Millrace, on lefford: 93% of an 11.2× cost blowup
+was one function (`lab_band_transects`) computed **three times**, by three
+metrics reading three fields of one identical sweep. The fix was a private
+per-world `OnceCell<Option<…>>` on `TerrainView` — 3.01×, with peak RSS
+*falling* 2.2%, so no space/time trade. (`OnceCell` not `OnceLock`
+deliberately: `!Sync` stops a filled view crossing worker threads. The
+`Option` is inside so that "swept, found no channels" is a *filled* cell.)
+Three measured nulls, recorded so a future pass doesn't spend its first day
+rediscovering them: building the 16× network costs nothing (7.94 → 7.88
+CPU-s/world), the per-room `rill_reading` path is a non-event (0.42 → 0.45),
+and census RSS tracks **concurrency** at ~260 MB per concurrent world — so a
+large figure on a 40-core box is workers, not a leak.
+
+If you are adding a metric that reads a swept structure, check whether an
+existing metric already sweeps it before adding a second sweep.
+
 ## `metrics.rs` is large and splittable
 
 ~5.4k lines. Clean seams: `views.rs` (the `WorldView`→`FullView` build-rung
