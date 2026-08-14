@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 3f123e0d.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at c7c20c4c.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -6,7 +6,7 @@
 # into gate-run; `make ci` is now an alias). A red run leaves it
 # untouched. History lives in git, so `git log -p` on this file is
 # the record.
-<below-floor>	107.316	2877
+<below-floor>	107.316	2876
 hornvale-book::hornvale_book$tests::aggregated_predicates_drop_off_the_uncovered_list	2.119
 hornvale-book::hornvale_book$tests::comprehend_quantity_agrees_with_the_direct_render_at_every_rung	8.238
 hornvale-book::hornvale_book$tests::derived_report_matches_the_shipped_strings	3.597
@@ -22,8 +22,8 @@ hornvale-book::hornvale_book$tests::explanation_lines_render_for_the_measured_se
 hornvale-book::hornvale_book$tests::fact_for_inverts_fragment_for_over_the_closed_space	7.724
 hornvale-book::hornvale_book$tests::fact_for_itself_is_unchanged	2.425
 hornvale-book::hornvale_book$tests::folk_sections_are_byte_unchanged	3.816
-hornvale-book::hornvale_book$tests::from_entry_points_equal_their_wrappers	5.045
-hornvale-book::hornvale_book$tests::goblin_section_speaks_and_margins_seed_1	3.695
+hornvale-book::hornvale_book$tests::from_entry_points_equal_their_wrappers	6.141
+hornvale-book::hornvale_book$tests::goblin_section_speaks_and_margins_seed_1	4.641
 hornvale-book::hornvale_book$tests::identity_chorus_reproduces_the_gods_eye_lines	3.735
 hornvale-book::hornvale_book$tests::initiate_edition_supersets_the_committed_artifact	5.219
 hornvale-book::hornvale_book$tests::instance_of_collective_renders_the_autonym_are_species	3.864
@@ -33,7 +33,7 @@ hornvale-book::hornvale_book$tests::probe_success_path_yields_a_line	3.341
 hornvale-book::hornvale_book$tests::reckoning_at_matches_the_fixed_pair_and_renders_arbitrary_days	5.653
 hornvale-book::hornvale_book$tests::seed_1_doctrine_sections_render	4.540
 hornvale-book::hornvale_book$tests::seed_1_voices_disagree_on_stance	3.769
-hornvale-book::hornvale_book$tests::seed_2_kobold_sees_moons_goblin_margins_them	4.609
+hornvale-book::hornvale_book$tests::seed_2_kobold_sees_moons_goblin_margins_them	3.439
 hornvale-book::hornvale_book$tests::shallow_species_lines_are_byte_identical_to_c3	3.467
 hornvale-book::hornvale_book$tests::the_additivity_law	3.814
 hornvale-book::hornvale_book$tests::the_disclosure_law_both_directions	28.989
@@ -50,13 +50,14 @@ hornvale-book::hornvale_book$tests::volume_states_the_planet_is_a_planet	1.884
 hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_tie_break_matches_band_scan_at_edge_midpoints	2.323
 hornvale-lab::affect_trace_golden$seed_42_affect_trace_reproduces_the_pinned_bytes	13.829
 hornvale-lab::affect_trace_golden$the_affect_trace_digest_is_itself_deterministic	21.986
-hornvale-lab::anomaly_injection$the_falsified_recall_is_pinned_as_a_witness	6.135
-hornvale-lab::anomaly_injection$two_independent_baseline_runs_rank_identically	2.253
+hornvale-lab::anomaly_injection$the_falsified_recall_is_pinned_as_a_witness	9.579
+hornvale-lab::anomaly_injection$two_independent_baseline_runs_rank_identically	2.825
 hornvale-lab::cascade_firing$the_two_probe_species_do_not_report_the_same_inertness_on_seed_42	6.663
 hornvale-lab::census_sentinel$the_first_three_census_worlds_match_the_committed_rows	11.857
 hornvale-lab::depth_ladder$depth_scoped_metrics_match_full_build	6.869
 hornvale-lab::fixture_staleness$a_stale_fixture_fails_with_the_regeneration_instruction	4.441
 hornvale-lab::gathering_calibration$world_level_population_conserves_against_total_capacity	4.007
+hornvale-lab::health_calibration$a_stranded_creature_is_scored_chronic_end_to_end	1.179
 hornvale-lab::health_calibration$heat_hastens_thirst_end_to_end	1.738
 hornvale-lab::health_calibration$the_harness_scenarios_are_deterministic	1.844
 hornvale-lab::health_calibration$the_null_control_reads_no_chronic_distress	23.761
@@ -91,14 +92,14 @@ hornvale-lab::hornvale_lab$metrics::tests::first_day_of_an_unmatched_object_is_a
 hornvale-lab::hornvale_lab$metrics::tests::ground_metrics_extract_for_seed_42	2.659
 hornvale-lab::hornvale_lab$metrics::tests::homophony_count_is_a_nonnegative_number_for_every_daughter_at_seed_42	2.425
 hornvale-lab::hornvale_lab$metrics::tests::homophony_merger_share_is_a_unit_fraction_or_absent_for_every_daughter	2.291
-hornvale-lab::hornvale_lab$metrics::tests::inventory_closure_holds_for_every_daughter_at_seed_42	2.180
+hornvale-lab::hornvale_lab$metrics::tests::inventory_closure_holds_for_every_daughter_at_seed_42	2.631
 hornvale-lab::hornvale_lab$metrics::tests::land_metrics_extract_for_seed_42	2.476
 hornvale-lab::hornvale_lab$metrics::tests::lexicon_regular_family_holds_at_seed_42	2.313
 hornvale-lab::hornvale_lab$metrics::tests::locked_world_band_count_metric_is_locked	1.716
 hornvale-lab::hornvale_lab$metrics::tests::locked_world_goblin_belief_kind_is_eternal	1.703
 hornvale-lab::hornvale_lab$metrics::tests::monophyly_dwarf_holds_at_seed_42	2.336
 hornvale-lab::hornvale_lab$metrics::tests::monophyly_elf_holds_at_seed_42	2.420
-hornvale-lab::hornvale_lab$metrics::tests::monophyly_goblinoid_holds_at_seed_42	2.133
+hornvale-lab::hornvale_lab$metrics::tests::monophyly_goblinoid_holds_at_seed_42	2.597
 hornvale-lab::hornvale_lab$metrics::tests::monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke	8.103
 hornvale-lab::hornvale_lab$metrics::tests::narrowed_views_build_and_coerce	4.849
 hornvale-lab::hornvale_lab$metrics::tests::per_cell_diversity_is_finite_and_bounded_by_species_count_at_seed_42	2.838
@@ -214,13 +215,10 @@ hornvale-terrain::channel_properties$the_indexed_nearest_line_equals_the_linear_
 hornvale-terrain::hornvale_terrain$channel::tests::the_gather_covers_every_line_with_a_vertex_in_the_cap	2.696
 hornvale-terrain::hornvale_terrain$features::tests::uniformize_turns_the_cave_gate_noise_into_a_uniform_variate	1.291
 hornvale-terrain::hornvale_terrain$land_elevation_attribution::the_land_elevation_terms_attribute_their_variance	5.162
-hornvale-terrain::hornvale_terrain$lithology::tests::alluvium_and_coal_are_reachable_across_seeds	1.589
-hornvale-terrain::rill_properties$a_branchs_width_is_anchored_to_its_drained_area_not_to_a_level	1.023
+hornvale-terrain::hornvale_terrain$lithology::tests::alluvium_and_coal_are_reachable_across_seeds	1.235
 hornvale-terrain::rill_properties$a_cells_branches_partition_its_own_unit_of_catchment	1.757
 hornvale-terrain::rill_properties$every_branch_is_attached_to_the_line_above_it	2.261
-hornvale-terrain::rill_properties$every_run_reaches_its_outlet	1.058
 hornvale-terrain::rill_properties$the_network_renders_every_river_cells_downhill_edge	1.101
-hornvale-terrain::rill_properties$the_network_renders_the_whole_flow_tree	1.010
 hornvale-terrain::tectonic_properties$every_default_globe_satisfies_every_invariant	1.272
 hornvale-vessel::display_handle$a_short_handle_addresses_the_same_npc_the_label_does	3.122
 hornvale-vessel::display_handle$the_npc_listing_prints_a_short_handle_not_a_raw_entity_id	3.199
@@ -498,8 +496,8 @@ hornvale-worldgen::history_sundering$the_map_is_not_depopulated	2.362
 hornvale-worldgen::history_tithe$every_standing_relation_names_two_living_communities	1.958
 hornvale-worldgen::history_tithe$extraction_does_not_depopulate_the_map	2.000
 hornvale-worldgen::history_tithe$no_emitted_tribute_fact_predates_either_party	2.034
-hornvale-worldgen::history_tithe$subordination_fires_at_volume	1.599
-hornvale-worldgen::history_tithe$the_structure_accumulates_without_starving_its_holder	1.588
+hornvale-worldgen::history_tithe$subordination_fires_at_volume	1.929
+hornvale-worldgen::history_tithe$the_structure_accumulates_without_starving_its_holder	1.967
 hornvale-worldgen::history_tumult$cascades_do_not_depopulate_the_world	4.286
 hornvale-worldgen::history_tumult$conflict_fires_at_volume	1.649
 hornvale-worldgen::history_units$a_founding_fact_is_stamped_on_the_day_it_records	2.464
@@ -535,7 +533,6 @@ hornvale-worldgen::hornvale_worldgen$tests::build_world_is_deterministic	1.346
 hornvale-worldgen::hornvale_worldgen$tests::built_world_names_and_classifies_its_planet	1.147
 hornvale-worldgen::hornvale_worldgen$tests::climate_reconstructs_deterministically_and_maps_biomes	2.839
 hornvale-worldgen::hornvale_worldgen$tests::constant_choice_yields_constant_sky_and_unchanged_almanac_context	1.286
-hornvale-worldgen::hornvale_worldgen$tests::constant_sky_world_still_has_a_climate	1.025
 hornvale-worldgen::hornvale_worldgen$tests::culture_lines_name_the_flagship_and_its_subsistence	2.111
 hornvale-worldgen::hornvale_worldgen$tests::deposit_of_overlays_laterite_and_passes_through_primary_deposits	3.009
 hornvale-worldgen::hornvale_worldgen$tests::different_seeds_differ	3.595
@@ -549,17 +546,18 @@ hornvale-worldgen::hornvale_worldgen$tests::flagship_castes_match_the_structure_
 hornvale-worldgen::hornvale_worldgen$tests::flagship_has_a_non_empty_subsistence_and_castes	2.123
 hornvale-worldgen::hornvale_worldgen$tests::generated_sky_reconstructs_and_beliefs_are_non_empty	2.513
 hornvale-worldgen::hornvale_worldgen$tests::generated_sky_round_trips_through_save_and_load	3.062
-hornvale-worldgen::hornvale_worldgen$tests::generated_worlds_are_deterministic	4.149
-hornvale-worldgen::hornvale_worldgen$tests::genesis_observes_an_unoccluded_sky	2.109
-hornvale-worldgen::hornvale_worldgen$tests::glossed_names_are_stable_across_two_builds	4.095
+hornvale-worldgen::hornvale_worldgen$tests::generated_worlds_are_deterministic	5.034
+hornvale-worldgen::hornvale_worldgen$tests::genesis_observes_an_unoccluded_sky	2.608
+hornvale-worldgen::hornvale_worldgen$tests::glossed_names_are_stable_across_two_builds	4.993
 hornvale-worldgen::hornvale_worldgen$tests::goblin_lexicon_mechanism_is_stable_given_fixed_exposures	2.645
-hornvale-worldgen::hornvale_worldgen$tests::goblin_observation_reproduces_the_unlensed_path_bytewise	2.679
+hornvale-worldgen::hornvale_worldgen$tests::goblin_observation_reproduces_the_unlensed_path_bytewise	3.367
 hornvale-worldgen::hornvale_worldgen$tests::goblinoid_daughters_actually_diverge	2.685
 hornvale-worldgen::hornvale_worldgen$tests::goblinoid_daughters_are_cognate_where_both_hold_a_root	2.749
-hornvale-worldgen::hornvale_worldgen$tests::ground_lines_feed_the_almanac_context	1.602
+hornvale-worldgen::hornvale_worldgen$tests::ground_lines_feed_the_almanac_context	1.971
 hornvale-worldgen::hornvale_worldgen$tests::ground_lines_name_the_dominant_rock_and_soil	1.101
-hornvale-worldgen::hornvale_worldgen$tests::heliacal_lines_render_at_most_three_and_cap_the_year_phase_absence	2.013
+hornvale-worldgen::hornvale_worldgen$tests::heliacal_lines_render_at_most_three_and_cap_the_year_phase_absence	2.481
 hornvale-worldgen::hornvale_worldgen$tests::kobold_lexicon_mechanism_is_stable_given_fixed_exposures	2.874
+hornvale-worldgen::hornvale_worldgen$tests::land_lines_describe_the_globe	1.023
 hornvale-worldgen::hornvale_worldgen$tests::land_lines_name_point_observation_notables_when_present	1.334
 hornvale-worldgen::hornvale_worldgen$tests::land_list_lines_are_all_distinct_at_seed_42	3.430
 hornvale-worldgen::hornvale_worldgen$tests::land_stays_fully_occupied_after_the_gate	3.379
@@ -593,6 +591,7 @@ hornvale-worldgen::hornvale_worldgen$tests::settlement_site_concepts_orders_a_re
 hornvale-worldgen::hornvale_worldgen$tests::settlements_and_deities_gain_name_gloss_facts_when_a_gloss_exists	2.508
 hornvale-worldgen::hornvale_worldgen$tests::settlements_carry_founding_alignments	1.916
 hornvale-worldgen::hornvale_worldgen$tests::settlements_reorganize_between_spinning_and_locked	4.015
+hornvale-worldgen::hornvale_worldgen$tests::sky_and_climate_reports_come_from_the_composition_root	1.024
 hornvale-worldgen::hornvale_worldgen$tests::sky_calendar_accessor_present_for_generated_absent_for_constant	2.726
 hornvale-worldgen::hornvale_worldgen$tests::soil_of_land_cells_show_at_least_two_orders	2.754
 hornvale-worldgen::hornvale_worldgen$tests::species_facts_touch_no_pre_existing_predicate	2.054
@@ -655,11 +654,11 @@ hornvale::branches_identity$goblin_names_are_rebaselined_not_frozen	2.473
 hornvale::branches_identity$hobgoblin_and_bugbear_are_present	2.390
 hornvale::branches_identity$kobold_lexicon_is_the_singleton_build_lexicon_call	2.483
 hornvale::branches_identity$kobold_phonology_is_a_pure_function_of_seed_and_envelope	2.261
-hornvale::branches_identity$seed_42_is_deterministic_across_two_builds	4.373
-hornvale::branches_identity$the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42	2.486
+hornvale::branches_identity$seed_42_is_deterministic_across_two_builds	5.266
+hornvale::branches_identity$the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42	3.060
 hornvale::common_is_total$a_live_parse_context_has_no_surface_collisions	2.552
 hornvale::exit_criterion$almanac_is_byte_deterministic_and_seed_sensitive	9.929
-hornvale::exit_criterion$concepts_dump_contains_every_domain	2.635
+hornvale::exit_criterion$concepts_dump_contains_every_domain	3.331
 hornvale::exit_criterion$new_creates_a_world_and_reports_the_village	2.449
 hornvale::exit_criterion$repl_answers_sky_village_and_belief	1.660
 hornvale::gate_fast_closure$gate_fast_selects_every_transitive_dependent_of_every_crate	24.562
@@ -670,15 +669,17 @@ hornvale::hornvale$dictionary::tests::renders_a_header_row_and_one_row_per_regis
 hornvale::hornvale$dictionary::tests::word_line_reads_the_same_as_the_dictionary_row_for_every_kind_of_entry	2.669
 hornvale::hornvale$repl::tests::biomes_and_biome_answer_queries	2.844
 hornvale::hornvale$repl::tests::calendar_on_generated_world_reports_the_year	2.435
-hornvale::hornvale$repl::tests::facts_lists_an_entity	1.315
+hornvale::hornvale$repl::tests::eof_ends_the_loop_without_quit	1.114
+hornvale::hornvale$repl::tests::facts_lists_an_entity	1.667
 hornvale::hornvale$repl::tests::map_and_land_answer_terrain_queries	1.295
 hornvale::hornvale$repl::tests::phenomena_as_kobold_ranks_the_night_sky_first	2.655
 hornvale::hornvale$repl::tests::phenomena_as_unknown_species_fails_loudly	2.535
 hornvale::hornvale$repl::tests::phenomena_reports_an_error_instead_of_panicking_on_a_non_finite_day	1.050
-hornvale::hornvale$repl::tests::possess_hands_off_and_release_returns_to_the_scholar_loop	1.662
+hornvale::hornvale$repl::tests::possess_hands_off_and_release_returns_to_the_scholar_loop	2.028
 hornvale::hornvale$repl::tests::settlements_and_settlement_answer_queries	1.916
 hornvale::hornvale$repl::tests::site_facts_of_a_whole_concept_gloss_echoes_itself_across_the_entire_registry	2.134
-hornvale::hornvale$repl::tests::sky_reports_the_constant_sun	1.109
+hornvale::hornvale$repl::tests::sky_reports_the_constant_sun	1.340
+hornvale::hornvale$repl::tests::the_settlements_listing_qualifies_exactly_the_lines_that_would_repeat	1.124
 hornvale::hornvale$repl::tests::unknown_commands_are_reported_not_fatal	1.215
 hornvale::hornvale$repl::tests::village_and_castes_and_beliefs_report	1.288
 hornvale::hornvale$repl::tests::why_a_belief_recounts_through_the_species_eyes	4.826
@@ -689,16 +690,16 @@ hornvale::hornvale$repl::tests::word_with_an_unregistered_concept_is_reported_no
 hornvale::hornvale$repl::tests::word_with_no_argument_reports_usage	2.362
 hornvale::hornvale$tests::scene_system_emits_the_schema	2.309
 hornvale::hornvale$tests::scene_tiles_region_emits_the_schema	2.815
-hornvale::id_shift_invariance$identical_founding_keys_yield_identical_founder_handles_despite_different_ids	2.133
-hornvale::id_shift_invariance$identical_material_cores_yield_identical_flesh_despite_different_ids	2.170
-hornvale::id_stability_under_insertion$inserting_a_minting_stage_moves_no_unrelated_id	1.949
+hornvale::id_shift_invariance$identical_founding_keys_yield_identical_founder_handles_despite_different_ids	3.009
+hornvale::id_shift_invariance$identical_material_cores_yield_identical_flesh_despite_different_ids	3.208
+hornvale::id_stability_under_insertion$inserting_a_minting_stage_moves_no_unrelated_id	2.801
 hornvale::id_stability_under_insertion$inserting_a_stage_moves_no_id_a_later_session_stage_derives	14.849
-hornvale::lens_purity$seed_42_world_json_matches_the_committed_fixture	2.048
-hornvale::locale_cli$locale_json_is_deterministic_for_a_coordinate	2.959
-hornvale::locale_cli$locale_requires_a_target	2.480
+hornvale::lens_purity$seed_42_world_json_matches_the_committed_fixture	3.007
+hornvale::locale_cli$locale_json_is_deterministic_for_a_coordinate	3.871
+hornvale::locale_cli$locale_requires_a_target	3.096
 hornvale::prose_is_not_a_contract$a_referent_never_carries_prose	2.799
 hornvale::prose_is_not_a_contract$every_referent_key_is_registered	2.670
-hornvale::repose_byte_identity$seed_42_almanac_is_unmoved_by_the_repose	1.430
+hornvale::repose_byte_identity$seed_42_almanac_is_unmoved_by_the_repose	1.757
 hornvale::repose_byte_identity$seed_42_scene_output_is_unmoved_by_the_repose	2.898
 hornvale::repose_byte_identity$seed_42_world_json_is_unmoved_by_the_repose	2.440
 hornvale::scene_moons_cli$scene_moons_emits_the_schema	2.314
