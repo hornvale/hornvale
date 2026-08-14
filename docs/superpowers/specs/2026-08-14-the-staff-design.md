@@ -283,6 +283,47 @@ multiple than the last time it was recorded.
 **It describes lefford and was run on a Mac.** §2's single-host ruling removes
 this confound by construction.
 
+### 4.2b What the commit gate actually costs, and where the cost is
+
+Measured on this Mac after Task 5 landed. **These are the real figures; the
+spec's earlier blank cell is now filled, and the honest answer is bimodal.**
+
+```
+  no source change       gate-commit   10.4 s / 15.6 s
+  after a one-line edit  gate-commit   ~84 s
+
+  decomposed, clean tree:
+    style-run    (fmt + clippy + type-audit + report)   20.7 s
+    subfloor-run cold (rebuild needed)                  75.5 s
+    subfloor-run warm (nothing to rebuild)               5.6 s
+    nextest's own execution time, either way            ~4.4 s
+```
+
+**The sub-floor tier does exactly what it was designed to do: 2,746 tests
+execute in 4.4 seconds.** That part of the design is confirmed, not merely
+projected.
+
+**But wall time is dominated by compiling and linking test binaries, and
+selecting a subset of TESTS does not select a subset of the BUILD.** nextest
+must build every test binary that might contain a selected test, and the
+sub-floor tests are spread across nearly every crate. So a commit gate — which
+by definition runs after a source change — pays a rebuild the tier's cheapness
+cannot avoid.
+
+Against `make gate`'s 423 s this is still roughly a 5x improvement on the
+realistic path and better than 25x on the unchanged path, and it runs 2,746
+tests where the alternative (`make quick`) ran none. But **"seconds" is true
+only when nothing needed rebuilding**, and the spec should not have implied
+otherwise.
+
+**This sharpens an existing registry row rather than opening a new question.**
+`TOOL-test-binary-consolidation` observes that each integration-test file is its
+own binary, so a change relinks many of them; `TOOL-gate-non-test-half` observes
+that clippy is a second full check-build sharing no codegen with the test build.
+Both are now measured, and together they are the commit gate's entire cost. The
+lever, if this ever needs to be faster, is the build — not the test selection,
+which is already at 4.4 seconds.
+
 ### 4.3 Unknown tests default to EXCLUDED
 
 A test with no baseline row is **not** in the commit gate. It enters on the next
