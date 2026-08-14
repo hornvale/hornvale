@@ -423,11 +423,29 @@ neither of which exists yet.
   strictly cheaper than a seeded random walk and consistent with belief-as-fold.
   Campaign 2.
 - **Persons as holders** — refinement, campaign 2 (§4.2).
-- **`independent_witnesses` and the echo ratio** — correct, deferred whole to
-  campaign 2, which supplies the second route that makes them measurable (§5).
+- **Corroboration itself — and now the reason, not just the deferral.** Two
+  ideonomy passes on the concept, after H5 was refuted, found the cause of all
+  three failed operationalisations at once: **corroboration is semantic and
+  this campaign is structural by construction.** It needs accounts that COULD
+  differ. Content here is carried unchanged, so no two accounts can disagree,
+  agreement is constant-true, and every topological measure was standing in for
+  a property that does not vary. Sensor fusion puts it in one line — two
+  sensors are independent to the extent their *errors* are uncorrelated, and at
+  zero error that is undefined. Recorded as `KNOW-corroboration-needs-variation`.
+  Campaign 2, after distortion ships, not before.
+- **The precondition that IS measurable, named correctly at last.**
+  Corroboration is a *symmetric* relation; ancestry is a partial order and
+  therefore *antisymmetric*, so filtering a witness set by ancestry could never
+  express it — a type error underneath all three attempts. The symmetric
+  relation inside a partial order is **incomparability**, and a pairwise-
+  incomparable witness set is an **antichain**. For witnesses {A, B, C} with B
+  and C survivors of A, the maximum antichain is {B, C} — the target scenario —
+  while §6.3's minimal-elements rule returns {A}. A campaign-2 measure should
+  take the maximum antichain and should be called **divergent structure**, never
+  corroboration: it measures the precondition, not the event. Recorded as
+  `KNOW-divergence-antichain`.
 - **Conflict between lineages** — whether two peoples hold incompatible
-  accounts of one event. Needs two parties per event *and* distortion, so it
-  is campaign 2 at the earliest.
+  accounts of one event. Downstream of distortion, same as corroboration.
 - **`KNOW-lost-revision`** — keeping the contradiction when a belief changes.
   Needs revision, which needs diffusion. Campaign 2.
 
