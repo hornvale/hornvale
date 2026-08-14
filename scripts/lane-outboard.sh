@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-# scripts/lane-outboard.sh — the `outboard` set: the suites that guard this
-# repo from OUTSIDE the cargo workspace, and which nothing ran before The Staff.
+# scripts/lane-outboard.sh — the `outboard` set: the fast suites that guard
+# this repo from OUTSIDE the cargo workspace, and which nothing ran before
+# The Staff.
 #
-# DIRECTION: this runs the four out-of-workspace suites and reports every
-# failure. It is blind to anything inside the workspace — `make gate-stage`'s
-# `gate` set owns that.
+# DIRECTION: this runs the three out-of-workspace test suites and reports
+# every failure. It is blind to anything inside the workspace —
+# `make gate-stage`'s `gate` set owns that.
+#
+# seam-guard is DELIBERATELY NOT HERE. It shipped here first, but Task 8's
+# own measurement showed its 7 call sites cost 13m51s against well under a
+# minute for the three suites below combined (97% of the set's 855.222 s
+# total) — and cost aside, what it guards (which functions no test pins)
+# moves on a campaign cadence, not a per-plan-stage-boundary one, matching
+# the `outboard`/`gate`/`artifacts`/`clients` sets here. It now lives at its
+# own `campaign`-rung row in scripts/lane-sets.tsv; see the Makefile's
+# `seam-guard` target for why it refuses on an unclean tree (by design, not
+# a defect to route around).
 #
 # NOT fail-fast, deliberately: these are independent suites and a reader wants
 # the whole picture in one pass. `expensive runs emit their own evidence`.
@@ -29,7 +40,6 @@ run() {
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
 run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
-run "seam-guard"       make --no-print-directory seam-guard
 
 if [ "$fails" -ne 0 ]; then
     echo "outboard: $fails suite(s) failed" >&2

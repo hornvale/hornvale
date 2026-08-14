@@ -118,10 +118,11 @@ gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the l
 	@bash scripts/lane-dispatch.sh outboard "$(REF)"
 	@bash scripts/lane-dispatch.sh clients "$(REF)"
 
-gate-campaign: ## THE CAMPAIGN GATE: the stage gate plus heavy and census (REF=<full-sha>)
+gate-campaign: ## THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard (REF=<full-sha>)
 	@$(MAKE) --no-print-directory gate-stage REF="$(REF)"
 	@bash scripts/lane-dispatch.sh heavy "$(REF)"
 	@bash scripts/lane-dispatch.sh census "$(REF)"
+	@bash scripts/lane-dispatch.sh seam-guard "$(REF)"
 
 # The former `make gate` body, now a set that runs ON the lane
 # (scripts/lane-sets.tsv's `gate` row: `make --no-print-directory
@@ -293,9 +294,20 @@ gate ci gate-fast gate-full:
 	@exit 2
 
 # Deliberately NOT in the commit gate: each registered call site costs a full
-# scoped test run, so cost scales with the roster. gate-full is the evidence
-# tier, which is where a check this expensive belongs (the same argument that
-# put the heavy batteries there).
+# scoped test run, so cost scales with the roster. It is its own `campaign`
+# rung set in scripts/lane-sets.tsv (The Staff, Task 8's fix round) --
+# briefly folded into the `outboard` stage set, then split back out once
+# measurement showed its 7 sites were 97% of that set's 855.222 s wall time.
+# What a seam guards (which functions no test pins) moves only when seams or
+# tests change: slow-moving and campaign-shaped, not a per-plan-stage-boundary
+# cadence, and the same place it lived pre-Staff (the old gate-full evidence
+# tier) for the same cost reason.
+#
+# REFUSES ON AN UNCLEAN WORKING TREE, AND THAT IS CORRECT, NOT A BUG. The run
+# rewrites real source files in place and restores them; on the lane this
+# always operates on a fresh checkout of a committed ref, so it never sees a
+# dirty tree. If a local dev loop hits the refusal, that is the guard
+# working -- commit or stash first, do not "fix" the check.
 seam-guard: ## Neutralise each registered seam and report the ones no test notices
 	cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- run
 
