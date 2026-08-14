@@ -59,12 +59,42 @@ style-run: fmt-check clippy type-audit type-audit-report
 #
 # Exit 3 from the roster script means NO ROSTER for this host, which is a
 # different thing from an empty roster and must not read as a green gate.
+#
+# WHY THE ROSTER'S LINE COUNT DOES NOT MATCH THIS TARGET'S TEST COUNT, AND WHY
+# THAT IS EXPECTED. docs/timings/subfloor-roster.tsv carries 2748 non-comment
+# lines (2730 distinct trailing test names — 18 names are duplicated across
+# crates) but a Mac's `cargo nextest run --workspace -E "$$filter"` selects
+# 2746. Two effects, opposite in direction:
+#   -3  three roster names match ZERO tests in this host's compiled binary:
+#       `census_claim::tests::a_claim_naming_a_dead_pid_is_stale`,
+#       `a_live_ancestor_holding_the_lock_makes_a_claim_a_no_op` and
+#       `a_live_claim_is_reported_with_its_context`
+#       (windows/lab/src/census_claim.rs) are `#[cfg(target_os = "linux")]`-
+#       gated, so they never exist in the test binary on Darwin at all. The
+#       roster is authored on the canonical (Linux) gating host and read on
+#       every host, by design (`subfloor-roster.sh`'s own header) — the cost
+#       this buys is not host SPEED shifting membership at the margin, it is
+#       PLATFORM GATING, which is categorical: a whole class of test can be
+#       structurally absent from every Mac's commit gate while still reading
+#       as present in the roster. Benign here — those three still run in the
+#       stage gate on the canonical box — but worth knowing before treating a
+#       roster/run count mismatch as a bug.
+#  +19  twelve names collide across 2-7 crates each (nextest's `test(=NAME)`
+#       matches by test NAME, not by binary — see subfloor-roster.sh's own
+#       comment on why), so each such roster line over-selects every crate
+#       sharing that name. Over-selection is safe: it costs a little time and
+#       never hides a failure.
+#   2730 - 3 + 19 = 2746, which is exactly what this target runs.
 subfloor-run: nextest-check
 	@filter="$$(bash scripts/subfloor-roster.sh)"; \
 	status=$$?; \
 	if [ $$status -eq 3 ]; then \
 	    echo "gate-commit: no sub-floor roster for this host — the test tier is UNAVAILABLE, not empty." >&2; \
 	    echo "gate-commit: run a green 'make gate-stage REF=<sha>' to author one." >&2; \
+	    exit 1; \
+	elif [ $$status -ne 0 ]; then \
+	    echo "gate-commit: scripts/subfloor-roster.sh failed with an unrecognised exit status ($$status), not the empty-filter case." >&2; \
+	    echo "gate-commit: read its stderr above; this is a script fault, not a policy verdict." >&2; \
 	    exit 1; \
 	fi; \
 	if [ -z "$$filter" ]; then \
