@@ -993,6 +993,249 @@ git commit -m "feat(hearsay): transmission depth, measured on seed 42"
 ```
 
 
+### Task 7: the corrected witness rule
+
+**Files:**
+- Modify: `windows/hearsay/src/derive.rs` (adds `witnesses_of`, rewrites `claims_about`)
+- Modify: `windows/hearsay/tests/derive.rs`
+- Modify: `windows/hearsay/tests/common/mod.rs` if a helper is needed
+
+**Interfaces:**
+- Consumes: `Lineage` (`parent`, `ancestry`, `descendants_of`, `all`), `Claim`, `Provenance`.
+- Produces: `hornvale_hearsay::derive::witnesses_of(&Ledger, &Lineage, subject: EntityId, predicate: &str) -> Vec<EntityId>` (ascending, deduped), and a rewritten `claims_about` with the same signature as before.
+
+**Why this changes** (spec §6.1): the implementation made only the event's
+subject a witness, so every event had exactly one origin and independence was
+constant. §4.3 always said an occupation witnesses *"a raid it was party to"* —
+the implementation under-delivered against its own spec.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `windows/hearsay/tests/derive.rs`. `common::put` commits an extra fact;
+use it to give the fixture an `occ-founded` day per occupation and an
+`occ-ended` / `occ-ended-by` on the victim.
+
+```rust
+/// A raid: village 1 (founded day 0) is ended on day 100 by village 50.
+/// Survivors found 2 and 3 on day 100 — they were there. Village 4 was
+/// founded from 1 back on day 10 and was elsewhere when it happened.
+/// Village 51 is founded from the attacker 50, later.
+fn raid() -> Ledger {
+    let mut led = ledger_with(&[
+        (1, None), (50, None),
+        (2, Some(1)), (3, Some(1)), (4, Some(1)),
+        (51, Some(50)),
+    ]);
+    for (occ, day) in [(1, 0.0), (50, 0.0), (2, 100.0), (3, 100.0), (4, 10.0), (51, 200.0)] {
+        put(&mut led, occ, hornvale_history::OCC_FOUNDED, Value::Number(day));
+    }
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(100.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(50)));
+    led
+}
+
+#[test]
+fn the_victim_the_survivors_and_the_attacker_all_witnessed_it() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    assert_eq!(w, vec![eid(1), eid(2), eid(3), eid(50)]);
+}
+
+#[test]
+fn a_child_founded_before_the_ending_was_elsewhere() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    assert!(!w.contains(&eid(4)), "4 was founded on day 10, not at the ending");
+}
+
+#[test]
+fn a_survivor_is_a_witness_not_an_inheritor() {
+    // The trap: 2 is a DESCENDANT of 1 and would otherwise inherit at hops 1.
+    // It saw the raid. Witness wins over inheritance.
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let two = claims.iter().find(|c| c.holder == eid(2)).expect("2 holds it");
+    assert_eq!(two.grade, Provenance::Witnessed);
+    assert_eq!(two.hops, 0);
+}
+
+#[test]
+fn the_ordinary_child_inherits_at_one_hop() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let four = claims.iter().find(|c| c.holder == eid(4)).expect("4 holds it");
+    assert_eq!(four.grade, Provenance::Taught);
+    assert_eq!(four.hops, 1);
+}
+
+#[test]
+fn the_attackers_line_holds_it_too() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let claims = claims_about(&led, &lin, eid(1), hornvale_history::OCC_ENDED);
+    let fifty = claims.iter().find(|c| c.holder == eid(50)).expect("50 holds it");
+    let fifty_one = claims.iter().find(|c| c.holder == eid(51)).expect("51 holds it");
+    assert_eq!(fifty.grade, Provenance::Witnessed);
+    assert_eq!(fifty.hops, 0);
+    assert_eq!(fifty_one.grade, Provenance::Taught);
+    assert_eq!(fifty_one.hops, 1);
+}
+
+#[test]
+fn a_non_ending_predicate_has_only_its_subject_as_witness() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    let w = witnesses_of(&led, &lin, eid(1), hornvale_history::OCC_FOUNDED);
+    assert_eq!(w, vec![eid(1)], "only an ending has other parties");
+}
+```
+
+- [ ] **Step 2: Run them and verify they fail**
+
+Run: `cargo test -p hornvale-hearsay --test derive`
+Expected: FAIL — `witnesses_of` is undefined, and the survivor/attacker
+assertions fail against the current subject-only rule.
+
+- [ ] **Step 3: Implement**
+
+In `windows/hearsay/src/derive.rs`:
+
+```rust
+/// Everyone present when `(subject, predicate)` happened.
+///
+/// Only an ENDING has parties beyond its subject (spec §6.1). For an ending on
+/// day `d`, that is the subject itself, every child of the subject founded on
+/// exactly day `d` — the survivors who fled and refounded — and the occupation
+/// named by `occ-ended-by` when it is `Entity`-valued. Any other predicate has
+/// the subject alone.
+///
+/// The day comparison is exact equality, and deliberately so: the bake writes
+/// a refounding at precisely its parent's ending day (477 of 562 such pairs on
+/// seed 42, with all three gap quartiles at 0.0), so there is no threshold to
+/// tune and no near-miss band to argue about.
+pub fn witnesses_of(
+    ledger: &Ledger,
+    lineage: &Lineage,
+    subject: EntityId,
+    predicate: &str,
+) -> Vec<EntityId> {
+    let mut out = vec![subject];
+    if predicate == hornvale_history::OCC_ENDED {
+        if let Some(Value::Number(day)) = ledger.value_of(subject, hornvale_history::OCC_ENDED) {
+            for child in lineage.descendants_of(subject) {
+                if lineage.parent(child) != Some(subject) {
+                    continue; // survivors are DIRECT children, not deeper kin
+                }
+                if let Some(Value::Number(f)) =
+                    ledger.value_of(child, hornvale_history::OCC_FOUNDED)
+                {
+                    if f == day {
+                        out.push(child);
+                    }
+                }
+            }
+        }
+        if let Some(Value::Entity(attacker)) =
+            ledger.value_of(subject, hornvale_history::OCC_ENDED_BY)
+        {
+            out.push(*attacker);
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+```
+
+Then rewrite `claims_about` so every witness holds at `hops = 0` and each
+witness's descendants inherit, with **a holder that is itself a witness never
+demoted to inheritor**, and a holder reachable from two witnesses taking the
+nearer one:
+
+```rust
+pub fn claims_about(
+    ledger: &Ledger,
+    lineage: &Lineage,
+    subject: EntityId,
+    predicate: &str,
+) -> Vec<Claim> {
+    let Some(object) = ledger.value_of(subject, predicate) else {
+        return Vec::new();
+    };
+    let base = Claim {
+        holder: subject,
+        subject,
+        predicate: predicate.to_string(),
+        object: object.clone(),
+        grade: Provenance::Witnessed,
+        hops: 0,
+    };
+    let witnesses = witnesses_of(ledger, lineage, subject, predicate);
+    let mut held: BTreeMap<EntityId, Claim> = BTreeMap::new();
+    for w in &witnesses {
+        let mut c = base.clone();
+        c.holder = *w;
+        held.insert(*w, c); // hops 0, Witnessed
+    }
+    for w in &witnesses {
+        for d in lineage.descendants_of(*w) {
+            if witnesses.contains(&d) {
+                continue; // a witness is never demoted to an inheritor
+            }
+            let hops = lineage
+                .ancestry(d)
+                .iter()
+                .position(|a| a == w)
+                .expect("descendants_of(w) guarantees w is in d's ancestry")
+                as u32;
+            let entry = held.entry(d).or_insert_with(|| {
+                let mut c = base.clone();
+                c.holder = d;
+                c.grade = Provenance::Taught;
+                c.hops = hops;
+                c
+            });
+            // reachable from two witnesses: the NEARER telling is the one held
+            if entry.hops > hops {
+                entry.hops = hops;
+            }
+        }
+    }
+    held.into_values().collect()
+}
+```
+
+- [ ] **Step 4: Run the tests and verify they pass**
+
+Run: `cargo test -p hornvale-hearsay`
+Expected: PASS — the six new tests plus every existing one. **The existing
+Task 5 tests must still pass unchanged**; if one now fails, say so rather than
+editing it, because the old fixture has no ending day and should still behave
+as before.
+
+- [ ] **Step 5: Prove the survivor rule is load-bearing**
+
+Delete the survivor clause (the `f == day` block) and re-run.
+Expected: `the_victim_the_survivors_and_the_attacker_all_witnessed_it` and
+`a_survivor_is_a_witness_not_an_inheritor` go RED. Restore, confirm green,
+paste both outputs. A rule no test kills is a rule that is not there.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-hearsay --all-targets -- -D warnings
+git add windows/hearsay
+git commit -m "feat(hearsay): the corrected witness rule -- survivors and the attacker"
+```
+
+
+---
+
 ## Close (G6 — hard stop, do not self-approve)
 
 - [ ] `make gate` green on the branch. Stagger it: three other campaigns share this box, and two concurrent gates cost ~30 min each rather than 15.
