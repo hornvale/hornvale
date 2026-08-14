@@ -284,6 +284,7 @@ git commit -m "feat(kernel): Claim, the myth register's holder-bearing unit"
 
 **Files:**
 - Create: `windows/hearsay/Cargo.toml`, `windows/hearsay/src/lib.rs`, `windows/hearsay/src/lineage.rs`
+- Create: `windows/hearsay/tests/common/mod.rs` (shared by all three test files — Tasks 4 and 5 declare `mod common;` rather than copying it)
 - Test: `windows/hearsay/tests/lineage.rs`
 - Regenerate: `book/src/reference/layering-generated.md`
 
@@ -305,23 +306,26 @@ real parent links.
 
 - [ ] **Step 1: Write the failing test**
 
-`windows/hearsay/tests/lineage.rs`:
+First the shared helper, `windows/hearsay/tests/common/mod.rs`. Tasks 4 and 5
+reuse this file rather than copying it — three near-identical builders is a
+defect a reviewer will flag once per copy.
 
 ```rust
-//! Lineage reading against hand-built ledgers. A world build at Settlements
+//! Hand-built ledgers for the hearsay tests. A world build at Settlements
 //! depth is minutes; these are milliseconds and pin the shape exactly.
 
-use hornvale_hearsay::lineage::lineage_of;
 use hornvale_kernel::ledger::{EntityId, Fact, Ledger, Value};
 use hornvale_kernel::registry::ConceptRegistry;
 
-fn eid(n: u64) -> EntityId {
+/// `EntityId` from a small integer.
+pub fn eid(n: u64) -> EntityId {
     EntityId::new(n).expect("nonzero")
 }
 
-/// A ledger with `chain`: each (child, Some(parent)) is a From edge, each
-/// (child, None) is a Genesis root.
-fn ledger_with(chain: &[(u64, Option<u64>)]) -> (Ledger, ConceptRegistry) {
+/// A ledger holding one `occ-founded-from` per entry: `Some(parent)` is a
+/// `Founding::From` edge, `None` is a `Founding::Genesis` root (Number-valued,
+/// a site id — NOT an ancestor).
+pub fn ledger_with(chain: &[(u64, Option<u64>)]) -> Ledger {
     let mut reg = ConceptRegistry::default();
     reg.register_predicate(hornvale_history::OCC_FOUNDED_FROM, true, "founding")
         .expect("register");
@@ -344,12 +348,40 @@ fn ledger_with(chain: &[(u64, Option<u64>)]) -> (Ledger, ConceptRegistry) {
         )
         .expect("commit");
     }
-    (led, reg)
+    led
 }
+
+/// Commit one extra fact onto an existing ledger, registering its predicate.
+pub fn put(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(predicate, true, "test predicate")
+        .expect("register");
+    led.commit(
+        Fact {
+            subject: eid(subject),
+            predicate: predicate.to_string(),
+            object,
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        },
+        &reg,
+    )
+    .expect("commit");
+}
+```
+
+Then `windows/hearsay/tests/lineage.rs`:
+
+```rust
+mod common;
+
+use common::{eid, ledger_with};
+use hornvale_hearsay::lineage::lineage_of;
 
 #[test]
 fn a_number_valued_founding_is_a_root_not_a_parent() {
-    let (led, _) = ledger_with(&[(1, None)]);
+    let led = ledger_with(&[(1, None)]);
     let lin = lineage_of(&led);
     assert_eq!(lin.parent(eid(1)), None, "Genesis(cell) is not a parent link");
     assert_eq!(lin.roots(), &[eid(1)]);
@@ -357,7 +389,7 @@ fn a_number_valued_founding_is_a_root_not_a_parent() {
 
 #[test]
 fn an_entity_valued_founding_is_a_parent() {
-    let (led, _) = ledger_with(&[(1, None), (2, Some(1))]);
+    let led = ledger_with(&[(1, None), (2, Some(1))]);
     let lin = lineage_of(&led);
     assert_eq!(lin.parent(eid(2)), Some(eid(1)));
     assert_eq!(lin.roots(), &[eid(1)]);
@@ -365,14 +397,14 @@ fn an_entity_valued_founding_is_a_parent() {
 
 #[test]
 fn ancestry_runs_self_first_root_last() {
-    let (led, _) = ledger_with(&[(1, None), (2, Some(1)), (3, Some(2))]);
+    let led = ledger_with(&[(1, None), (2, Some(1)), (3, Some(2))]);
     let lin = lineage_of(&led);
     assert_eq!(lin.ancestry(eid(3)), vec![eid(3), eid(2), eid(1)]);
 }
 
 #[test]
 fn two_roots_stay_two_lineages() {
-    let (led, _) = ledger_with(&[(1, None), (2, Some(1)), (10, None), (11, Some(10))]);
+    let led = ledger_with(&[(1, None), (2, Some(1)), (10, None), (11, Some(10))]);
     let lin = lineage_of(&led);
     let mut roots = lin.roots().to_vec();
     roots.sort();
@@ -400,6 +432,15 @@ description = "Hornvale hearsay window: derive held claims from committed histor
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
 hornvale-history = { path = "../../domains/history" }
+
+# Task 6's heavy battery builds a real world. These are DEV-only on purpose:
+# the library reads a ledger and nothing else, and a read-only window must not
+# depend on the composition root at runtime.
+[dev-dependencies]
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-terrain = { path = "../../domains/terrain" }
+hornvale-settlement = { path = "../../domains/settlement" }
 ```
 
 The workspace picks it up automatically — `members = ["kernel", "domains/*", "windows/*", "cli"]`.
@@ -540,40 +581,11 @@ git commit -m "feat(hearsay): the window, and the founding tree read correctly"
 `windows/hearsay/tests/independence.rs`:
 
 ```rust
+mod common;
+
+use common::{eid, ledger_with};
 use hornvale_hearsay::independence::independent_witnesses;
 use hornvale_hearsay::lineage::lineage_of;
-use hornvale_kernel::ledger::{EntityId, Fact, Ledger, Value};
-use hornvale_kernel::registry::ConceptRegistry;
-
-fn eid(n: u64) -> EntityId {
-    EntityId::new(n).expect("nonzero")
-}
-
-fn ledger_with(chain: &[(u64, Option<u64>)]) -> Ledger {
-    let mut reg = ConceptRegistry::default();
-    reg.register_predicate(hornvale_history::OCC_FOUNDED_FROM, true, "founding")
-        .expect("register");
-    let mut led = Ledger::default();
-    for (child, parent) in chain {
-        let object = match parent {
-            Some(p) => Value::Entity(eid(*p)),
-            None => Value::Number(7449.0),
-        };
-        led.commit(
-            Fact {
-                subject: eid(*child),
-                predicate: hornvale_history::OCC_FOUNDED_FROM.to_string(),
-                object,
-                place: None,
-                day: None,
-                provenance: "test".to_string(),
-            },
-            &reg,
-        )
-        .expect("commit");
-    }
-    led
-}
 
 #[test]
 fn a_chain_of_three_holders_is_one_independent_witness() {
@@ -697,7 +709,7 @@ git commit -m "feat(hearsay): eliminatio codicum descriptorum, as an echo test"
 
 **Files:**
 - Create: `windows/hearsay/src/derive.rs`
-- Modify: `windows/hearsay/src/lib.rs`
+- Modify: `windows/hearsay/src/lib.rs`, `windows/hearsay/src/lineage.rs` (adds `descendants_of`)
 - Test: `windows/hearsay/tests/derive.rs`
 
 **Interfaces:**
@@ -891,7 +903,7 @@ git commit -m "feat(hearsay): derive held claims from committed history"
 
 **Files:**
 - Create: `windows/hearsay/tests/echo_ratio_seed42.rs`
-- Modify: `windows/lab/src/metrics.rs` (register one metric)
+- Modify: `windows/hearsay/src/lib.rs`, `windows/hearsay/src/lineage.rs` (adds `all`), `windows/lab/src/metrics.rs`, `windows/lab/Cargo.toml`
 - Test: as above, plus the lab registry drift check
 
 **Interfaces:**
