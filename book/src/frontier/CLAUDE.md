@@ -63,8 +63,8 @@ over the cap is a failure to fix, not a fixture to edit.
   left and silently drops the Where cell from the published page. Three rows
   sat that way undetected until the column check was written.
 - **Status is a closed vocabulary**: `raw`, `elaborated`, `spec'd`, `shipped`,
-  `ratified (NNNN)`, `rejected`. Category prefixes are open — coin a new one
-  freely — but statuses are not. Do not invent one.
+  `ratified (NNNN)`, `rejected`, `refuted (evidence)`. Category prefixes are
+  open — coin a new one freely — but statuses are not. Do not invent one.
 - **New IDs are category+slug** (`LANG-exonyms`, not `LANG-6`), per decision
   `0026-slugs-not-numbers`. The numbered era is frozen at the 403 IDs in
   `cli/tests/fixtures/registry-numbered-ids.txt`; those keep their names

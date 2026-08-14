@@ -80,14 +80,16 @@ set -euo pipefail
 #   this DAG (chorus, then the census pair), only their position in the
 #   overall script moved.
 #
-#   NOT IN A/B/C/D — the census-schema backfill loop and the domesday survey.
+#   NOT IN A/B/C/D — the census-schema backfill loop, the domesday survey,
+#   and the anomaly report.
 #   Traced: `backfill-schema` reads the CSVs Group D's census studies write
-#   (when HV_CENSUS=1) and `domesday` reads what `backfill-schema` just wrote,
-#   so both stay serial, right after Group D reaps — exactly where they sat
-#   in the original list, since Group D itself did not move relative to them.
+#   (when HV_CENSUS=1), and both `domesday` and `anomalies` read what
+#   `backfill-schema` just wrote, so all three stay serial, right after
+#   Group D reaps — exactly where they sat in the original list, since
+#   Group D itself did not move relative to them.
 #
-# Schedule: A, reap; B+C together, reap; D serially; then the two dependent
-# trailers (schema backfill, domesday) serially.
+# Schedule: A, reap; B+C together, reap; D serially; then the three dependent
+# trailers (schema backfill, domesday, anomalies) serially.
 #
 # FAN-OUT IS BOUNDED BY HV_JOBS, not by wishful thinking. Group B+C alone has
 # over 50 `spawn` call sites; left uncapped on a quiet box that is a >50-way
@@ -670,5 +672,14 @@ done
 # just wrote.
 echo "regenerate-artifacts: the domesday survey" >&2
 run -p hornvale -- lab domesday
+
+# The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
+# world rather than per column. Also a pure read over the same COMMITTED
+# census — it never triggers a census itself — so it runs unconditionally
+# here too. It is a SERIAL TRAILER for the same reason `domesday` is: it
+# reads the schema the backfill loop above just wrote, so it cannot be
+# spawned into Group B+C.
+echo "regenerate-artifacts: the anomaly report" >&2
+run -p hornvale -- lab anomalies
 
 echo "regenerate-artifacts: done." >&2

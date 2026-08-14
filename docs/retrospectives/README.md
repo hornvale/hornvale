@@ -118,6 +118,7 @@ under review. This file is.
 - [The Digest](the-digest.md) — time-free fact ledger behind `make doctor`
 - [The Armature](the-armature.md) — 0119; 30 links frozen BLIND
 - [The Domesday](the-domesday.md) — generated survey, 8 detectors
+- [The Gnomon](the-gnomon.md) — the Domesday's transpose; H1 FALSIFIED at recall@10 0.5667 vs a 0.60 bar — a tail rank measures unusualness, not change; `refuted` opened and spent in one campaign
 - [census-as-data](census-as-data.md) — campaign SHIPPED to main+origin 2026-07-13…
 - [The Assize](the-assize.md) — "move it to the census" is NOT the universal cure
 - [Single Saying](the-single-saying.md) — PROC-18 The Single Saying…

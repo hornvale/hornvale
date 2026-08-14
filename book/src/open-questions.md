@@ -2477,3 +2477,51 @@ differing only in which kind holds which ground, all three move the reading by a
 similar amount and only one crosses the floor — the *most* differentiated of the
 three does not. The bound is a real instrument again. It is not yet a sensitive
 one, and the difference is now written down where it will be read.
+
+### A self-scorable bet was scored, and the instrument did not clear its own bar (2026-08-14)
+
+This chapter's axis is **whether the world can grade itself on a claim**, and
+its standing hope is that the self-scorable half of a bet closes by instrument
+while the taste half shrinks to its honest size. *The Gnomon* is the first
+campaign to run that procedure on an instrument rather than on a world, and the
+result sharpens the axis in a direction the chapter had not written down.
+
+The anomaly report is maximally self-scorable by construction: it ranks a
+world's census columns by how deep each sits in the thousand-world
+distribution, and every input is committed and drift-checked. Its usefulness
+claim was preregistered as recall@10 ≥ 0.60 against a label the census cannot
+supply — perturb one generative constant, rebuild twenty worlds, and ask
+whether the columns the perturbation demonstrably moved surface in the top ten.
+**Measured: 0.5667 over 120 pairs. Falsified.** All three controls held; the
+figure is published a second way (0.35, excluding the two arms whose
+perturbation left the census's observed range entirely and could not fail to
+rank) because the second reading is the less flattering one.
+
+**The rescore is not to the report's confidence but to the chapter's own
+premise.** "The Laboratory can score this" was being carried as though it
+implied "and the score will be good". It does not. Being self-scorable makes a
+bet *decidable*; it says nothing about which way it decides, and a
+self-scorable instrument can be scored and found wanting exactly as readily as
+a self-scorable world claim can. That is the mechanism working, not failing —
+but the chapter had only ever illustrated the axis with bets that closed
+favourably, and one that closed against itself is the more informative
+illustration.
+
+Two specifics worth keeping, because both are about instrument design rather
+than about this instrument:
+
+- **A tail rank measures unusualness, not change.** These are different
+  quantities and the campaign is the first thing to make the difference cost
+  something. One injection moved exactly one column in every world and the
+  moved value remained an ordinary value in nineteen of twenty; the world was
+  different and it was not *strange*. Any future instrument that ranks by
+  extremity inherits this gap.
+- **The control that passes can be near-unfalsifiable while the headline
+  fails.** The campaign's held-out calibration check passed comfortably
+  (in-census share 0.7050, held-out 0.7500, ratio 1.0638 against a tolerance of
+  2) — and 70.5% of census worlds already carry a column at the flagging depth,
+  so a stationary distribution passes it while flagging nothing useful. It was
+  preregistered as a control and explicitly not a usefulness measure, which is
+  the only reason its green cannot be read as vindication. **Declaring which of
+  a campaign's hypotheses is allowed to count as support, before either is
+  measured, is what kept this pair honest.**

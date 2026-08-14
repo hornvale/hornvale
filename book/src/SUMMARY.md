@@ -92,6 +92,7 @@
   - [Language](./domesday/language.md)
   - [Naming](./domesday/naming.md)
   - [History](./domesday/history.md)
+  - [Anomalies](./domesday/anomalies.md)
 
 # Reference
 
@@ -358,6 +359,7 @@
 - [The Holdfast](./chronicle/the-holdfast.md)
 - [The Rill](./chronicle/the-rill.md)
 - [The Millrace](./chronicle/the-millrace.md)
+- [The Gnomon](./chronicle/the-gnomon.md)
 - [The Sexton](./chronicle/the-sexton.md)
 
 # Appendix: The Frontier

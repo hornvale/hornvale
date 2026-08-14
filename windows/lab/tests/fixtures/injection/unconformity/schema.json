@@ -1,0 +1,3153 @@
+{
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "doc": "Spectral class of the host star",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "star-class",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Whether the world is tidally locked to its star",
+      "domain": "astronomy",
+      "kind": "flag",
+      "name": "tidally-locked",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        16.0,
+        20.0,
+        24.0,
+        28.0,
+        32.0,
+        36.0,
+        40.0
+      ],
+      "doc": "Length of the solar day in standard hours; Absent if tidally locked",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "day-length-hours",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        200.0,
+        400.0,
+        600.0,
+        800.0,
+        1000.0,
+        1200.0,
+        1400.0
+      ],
+      "doc": "Length of the year in standard days",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "year-std-days",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        200.0,
+        400.0,
+        600.0,
+        800.0,
+        1000.0,
+        1200.0,
+        1400.0
+      ],
+      "doc": "Length of the year in local days; Absent if tidally locked",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "year-local-days",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0,
+        35.0
+      ],
+      "doc": "Axial tilt in degrees",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "obliquity-degrees",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "Peak-to-peak obliquity swing over one obliquity period (2× the deep-time forcing amplitude, SKY-21); a moonless world keeps the full drawn wobble, a moon damps it",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "obliquity-range",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of moons in orbit",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "moons-admitted",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Whether moon genesis recorded refusals",
+      "domain": "astronomy",
+      "kind": "flag",
+      "name": "refused-a-moon",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Sum of all moon tidal forces",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "total-tide",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        10.0,
+        25.0,
+        50.0,
+        100.0,
+        250.0,
+        700.0
+      ],
+      "doc": "How many cycles of the nearest moon fit in one year; Absent if no moons",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "months-per-year-innermost",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of notable neighbor stars",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "neighbor-count",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Spectral class of the brightest neighbor, in kebab-case",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "brightest-neighbor-class",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of star figures the reference observer's sky holds",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "figure-count",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Member count of the largest star figure (0 if none)",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "largest-figure-members",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of star figures standing on the ecliptic (the sun's road)",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "ecliptic-figure-count",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of genesis notes recorded",
+      "domain": "astronomy",
+      "kind": "categorical",
+      "name": "genesis-note-count",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "Eclipse year (the sun's return to the innermost moon's node line), standard days; Absent if moonless",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "eclipse-year-days",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25
+      ],
+      "doc": "The star's fractional main-sequence brightening per gigayear",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "brightening-per-gyr",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.5,
+        1.0
+      ],
+      "doc": "Absolute solstice-sunrise azimuth drift over the first kiloyear at the flagship settlement's latitude; Absent when locked, unplaced, or polar",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "alignment-drift-deg-per-kyr",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        100.0,
+        200.0,
+        400.0,
+        800.0,
+        1600.0
+      ],
+      "doc": "Dated solar eclipses anywhere on the world across a 100-year scan",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "solar-eclipses-per-century",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        100.0,
+        200.0,
+        400.0,
+        800.0,
+        1600.0
+      ],
+      "doc": "Dated lunar eclipses across a 100-year scan",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "lunar-eclipses-per-century",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        5.0,
+        10.0,
+        25.0,
+        50.0
+      ],
+      "doc": "Days in a 100-year scan carrying eclipse events from two or more different moons; zero for 0–1-moon worlds",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "coincidence-days-per-century",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1
+      ],
+      "doc": "Top-of-atmosphere stellar flux at the anchor, relative to Earth (L/a², Earth = 1, the shared SKY-15 definition, not a re-derivation) — the driver of the temperature baseline",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "insolation-rel",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Where in the habitable zone the anchor sits, normalized: (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 the cold outer edge. This is the DRAWN variable — the orbit is placed uniform in radius across the zone — and it is what temperature actually tracks; the ledger's `anchor-orbit-au` fact predicate (not a lab metric — there is no metric of that name) is 95% collinear with luminosity and so reads as uninformative on its own",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "zone-position",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of tectonic plates the globe drew or was pinned to",
+      "domain": "terrain",
+      "kind": "categorical",
+      "name": "plate-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9
+      ],
+      "doc": "Fraction of globe cells below sea level",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "ocean-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells standing above 2000 m over the sea",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mountain-coverage",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        500.0,
+        1000.0,
+        1500.0,
+        2000.0,
+        3000.0
+      ],
+      "doc": "Mean elevation above sea level over land cells, m — the term the lapse rate turns into a temperature penalty. Land is `e >= sea`, matching `mountain-coverage`'s land definition; `mean-land-temperature-c` uses `!is_ocean(cell)`, which is the same condition (`is_ocean` is `e < sea`), so the two metrics ARE mutually comparable — this is the coupling the campaign's lapse-rate regression rests on. Absent on a landless world",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mean-land-elevation-m",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "Circulation bands per hemisphere; 'locked' if tidally locked",
+      "domain": "climate",
+      "kind": "categorical",
+      "name": "band-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5
+      ],
+      "doc": "Fraction of cells that are habitable (land, water, tolerable season)",
+      "domain": "climate",
+      "kind": "numeric",
+      "name": "habitable-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Fraction of cells with tectonic unrest above 0.3",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "unrest-coverage",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land rock class by cell count, spec §4's fine taxonomy (The Ground); Absent on a landless world",
+      "domain": "terrain",
+      "kind": "categorical",
+      "name": "dominant-rock",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells whose hydrogeology classifies as karst (The Ground, spec §3)",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "karst-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "Which `Hydro` variants `hydro_at` reads anywhere on this world, as `+`-joined names in `Hydro::ALL` order (The Assay). Replaces `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability sweep: a variant no world in the census shows is structurally dead, and 1,000 worlds say so with a rate where 8 said so with a flag.",
+      "domain": "hydrology",
+      "kind": "categorical",
+      "name": "hydro-variant-coverage",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "doc": "Fraction of land cells whose hydrogeology classifies as an aquifer (The Ground, spec §3)",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "aquifer-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        300.0,
+        600.0,
+        1000.0,
+        2000.0
+      ],
+      "doc": "Mean depth to crystalline basement over land (m) — the sedimentary archive's thickness.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mean-depth-to-basement",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "unconformity-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        15.0,
+        18.0,
+        21.0,
+        24.0,
+        27.0,
+        30.0
+      ],
+      "doc": "Mean geothermal gradient over land (K/km) — the deep's energy base.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mean-geothermal-gradient",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with a cave (The Lode, spec §5; MAP-10's lab candidate)",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "cave-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with an ore deposit (The Lode, spec §5)",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "deposit-density",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land ore commodity by cell count (The Lode, spec §5); Absent where no land cell has a deposit",
+      "domain": "terrain",
+      "kind": "categorical",
+      "name": "dominant-commodity",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Mean ore grade [0,1] over land cells with a deposit (The Lode, spec §5); 0.0 where no land cell has a deposit",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "mean-ore-grade",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with a non-empty vestige stack (The Vestige, spec §9.2)",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "vestige-density",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Over land cells with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "forgotten-fraction",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "The most common hazard kind among land-cell vestiges by layer count (The Vestige, spec §9.2); Absent where no land cell bears a vestige",
+      "domain": "history",
+      "kind": "categorical",
+      "name": "dominant-hazard",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Mean warning_legibility over every land-cell vestige layer (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "mean-warning-legibility",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any settlement existed; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-settlement",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation became a ruin (a dead occupation); Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-ruin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any community paid standing tribute to another; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-pays-tribute-to",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any individual person existed; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-person",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any person died; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-person-died",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any person founded the community whose occupation they founded; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-person-founded",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by goblins; Absent if goblins never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by kobolds; Absent if kobolds never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by hobgoblins; Absent if hobgoblins never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation was held by bugbears; Absent if bugbears never occupy a site",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-people-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a neolithic technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-neolithic",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a bronze technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-bronze",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held an iron technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-iron",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation held a classical technological horizon; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-tech-classical",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by famine; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-famine",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by burning; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-burned",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by plague; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-plague",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by its people fleeing; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-fled",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any occupation ended by its people migrating; Absent if none ever does",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-occ-cause-migrated",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "The most common land biome by cell count, kebab-case",
+      "domain": "climate",
+      "kind": "categorical",
+      "name": "dominant-land-biome",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -30.0,
+        -20.0,
+        -10.0,
+        0.0,
+        10.0,
+        20.0,
+        30.0
+      ],
+      "doc": "Annual-mean temperature averaged over land cells, °C; Absent if the world has no land",
+      "domain": "climate",
+      "kind": "numeric",
+      "name": "mean-land-temperature-c",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land soil order by cell count, spec §4's soil taxonomy (The Ground); Absent on a landless world",
+      "domain": "climate",
+      "kind": "categorical",
+      "name": "dominant-soil-order",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Fraction of land cells whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)",
+      "domain": "climate",
+      "kind": "numeric",
+      "name": "fertile-land-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        10.0,
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        120.0
+      ],
+      "doc": "Number of settlements placed in the world",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "settlement-count",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "Mean population across every settlement's committed population fact; Absent if there are none",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "mean-population",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        500.0,
+        1000.0,
+        2000.0,
+        4000.0,
+        8000.0
+      ],
+      "doc": "Sum of every settlement's committed population fact; Absent if there are none",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "total-population",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        3.0,
+        5.0,
+        10.0,
+        20.0,
+        40.0,
+        60.0
+      ],
+      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "capacity-by-abs-latitude",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Mean per-cell species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land cells, of the demography report's `byproducts.strife` field — already the per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a cell, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable cells",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "per-cell-diversity",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.005,
+        0.01,
+        0.02,
+        0.05,
+        0.1
+      ],
+      "doc": "Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Recomputed via `hornvale_worldgen::demography_report_from` (the niche-differentiated coexistence shadow). Absent if the report fails to build or the world has fewer than 2 settlements",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "composition-variance",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0,
+        60.0
+      ],
+      "doc": "The population-weighted mean absolute latitude across every settlement: Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and LATITUDE facts. The area-weighted mean |latitude| on a uniform sphere is ≈32.7°; people concentrating off the poles (design spec §5) should read below that baseline. Absent if there are no settlements with both facts",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "pop-weighted-abs-latitude",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        -2.0,
+        -1.5,
+        -1.0,
+        -0.5,
+        0.0,
+        0.5,
+        1.0
+      ],
+      "doc": "The OLS slope of log(population) on log(rank) across every settlement in the world (the classic Zipf rank-size diagnostic). Recorded as an OBSERVED metric only — this campaign's interim per-species condensation is deliberately NOT tuned to a rank-size target (design spec §5; full Zipf calibration is the later MAP-22 coexistence-stack campaign's job, once size is measured by mass and composition is real). Absent if fewer than 2 settlements exist",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "rank-size-slope",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The goblin flagship settlement's committed subsistence mode (the pantheon's community, spec §6); Absent if there is no goblin flagship or no committed subsistence",
+      "domain": "settlement",
+      "kind": "categorical",
+      "name": "flagship-subsistence",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The goblin flagship settlement's committed biome; Absent if there is no goblin flagship",
+      "domain": "settlement",
+      "kind": "categorical",
+      "name": "flagship-biome",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if there is no goblin flagship",
+      "domain": "settlement",
+      "kind": "flag",
+      "name": "flagship-coastal",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of castes present in the goblin flagship settlement's emergent structure (a stratification proxy, matched against the same community religion's pantheon-verticality reasons about); Absent if there is no goblin flagship",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "flagship-structure-size",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells that are endorheic (interior-draining)",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "endorheic-coverage",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of beliefs in the goblin flagship's pantheon; Absent if there are none",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-size",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); Absent if no goblin beliefs",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "cult-form",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the goblin flagship's pantheon is ranked (a high god presides) or flat; Absent if there is no goblin flagship pantheon",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "pantheon-verticality",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "The sentiment tag of the goblin flagship's head deity (the most salient belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "head-deity-periodicity",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "The goblin flagship's committed role ladder, comma-joined, lowest to highest; Absent if goblins placed no settlement",
+      "domain": "settlement",
+      "kind": "categorical",
+      "name": "goblin-flagship-roles",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The kobold flagship's committed role ladder, comma-joined, lowest to highest; Absent if kobolds placed no settlement",
+      "domain": "settlement",
+      "kind": "categorical",
+      "name": "kobold-flagship-roles",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "The goblin flagship settlement's committed population; Absent if goblins placed no settlement",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "goblin-flagship-population",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "The kobold flagship settlement's committed population; Absent if kobolds placed no settlement",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "kobold-flagship-population",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The goblin flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "goblin-flagship-surplus",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The kobold flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "kobold-flagship-surplus",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if goblins placed no settlement",
+      "domain": "settlement",
+      "kind": "flag",
+      "name": "goblin-flagship-coastal",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the kobold flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if kobolds placed no settlement",
+      "domain": "settlement",
+      "kind": "flag",
+      "name": "kobold-flagship-coastal",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Number of settlements peopled by goblins",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "goblin-settlement-count",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Number of settlements peopled by kobolds",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "kobold-settlement-count",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "head-deity-domain-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "head-deity-domain-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the goblin flagship's pantheon; Absent without one",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-size-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the kobold flagship's pantheon; Absent without one",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-size-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "cult-form-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "cult-form-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "belief-kind-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "belief-kind-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the hobgoblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "belief-kind-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "belief-kind-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
+      "domain": "religion",
+      "kind": "flag",
+      "name": "blind-attribution-correct",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every generated name (settlement, deity, epithet) attributed to goblins in this world re-validates against the goblin phonology, independently re-derived and re-parsed from the surface string; Absent if goblins produced no names",
+      "domain": "language",
+      "kind": "flag",
+      "name": "phonotactic-validity-goblin",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every generated name (settlement, deity, epithet) attributed to kobolds in this world re-validates against the kobold phonology, independently re-derived and re-parsed from the surface string; Absent if kobolds produced no names",
+      "domain": "language",
+      "kind": "flag",
+      "name": "phonotactic-validity-kobold",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed goblin deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content: the committed word, case-folded, must end with the independently re-derived honorific-OFF stem and be strictly longer (Rank status basis → honorifics on, spec §7); Absent if goblins hold no pantheon",
+      "domain": "naming",
+      "kind": "flag",
+      "name": "epithet-honorific-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed kobold deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content (see epithet-honorific-goblin); kobold's Knowledge status basis leaves honorifics off, so the committed epithet equals the plain stem and this reads false; Absent if kobolds hold no pantheon",
+      "domain": "naming",
+      "kind": "flag",
+      "name": "epithet-honorific-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name (settlement, deity, epithet) attributed to goblins in this world; Absent if goblins produced no names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-length-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name (settlement, deity, epithet) attributed to kobolds in this world; Absent if kobolds produced no names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-length-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Mean syllable count of every generated name (settlement, deity, epithet) attributed to goblins in this world, counted as maximal vowel runs in the committed surface (an orthographic proxy — see the metric's own doc comment for its measured error bound); the reading The Wearing's claim needs, since character length cannot tell shorter words from the same words spelled tighter. Target 2-3; Absent if goblins produced no names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-syllables-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Mean syllable count of every generated name attributed to kobolds in this world (see name-syllables-goblin); Absent if kobolds produced no names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-syllables-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Share of this world's committed settlement names whose surface still contains, verbatim, the modern citation form of EVERY concept its own committed name-gloss names — read from the ledger and the lexicon, never from the naming code. The target is explicitly NOT 1.0 (The Wearing, spec §8): transparency was 100% by construction before this campaign, and that uniformity is the defect — most real toponyms are opaque to their own speakers. A distribution, pinned as a drift witness, never bounded. Absent if no settlement carries a non-empty gloss",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-transparency",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "doc": "Fraction of this world's settlement + deity names (across every species) that duplicate another name in the same world — uniqueness is de-facto, not enforced (Task 9), so this MEASURES the collision rate rather than asserting zero. Scope: settlement and deity proper nouns only; epithets are deliberately EXCLUDED (they are descriptive words expected to repeat by design, so they are not collision candidates). Absent if the world has no settlement or deity names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-collision-rate",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "head-deity-domain-goblin-twin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the goblin-twin flagship's pantheon (null control); Absent without one",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-size-goblin-twin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
+      "domain": "religion",
+      "kind": "categorical",
+      "name": "cult-form-goblin-twin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name attributed to the goblin-twin (null control); Absent if it produced no names",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-length-goblin-twin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of the goblin flagship pantheon's source phenomena that are periodic (the pick_kobold input the null control needs); Absent without a goblin pantheon",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-cyclic-share-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of the goblin-twin flagship pantheon's source phenomena that are periodic (null control); Absent without one",
+      "domain": "religion",
+      "kind": "numeric",
+      "name": "pantheon-cyclic-share-goblin-twin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts — up to twelve: the nine toponymic terrain concepts its own cell offers (hydrography, elevation extrema, landmass size, wetness), The Toponym's characteristic climate variant, the biome, and the presiding sky phenomenon. The Wearing's Task 5 widened this vector past the original biome + presiding pair, and the close merge with The Toponym added the variant. Rather than restate the vector, this metric re-derives it by calling worldgen's own settlement_site_concepts, so there is no hand-maintained parallel definition to go stale — only this sentence, which has now gone stale twice; Absent if no settlement in this world carries a gloss",
+      "domain": "naming",
+      "kind": "flag",
+      "name": "name-gloss-true",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblin lexicon Root entry's recorded sound-change derivation replays byte-identically through evolve (Neogrammarian regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "lexicon-regular-goblin",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "doc": "How many DISTINCT sound rules in the goblin cascade actually fire on at least one lexicon Root. Zero means the etymological layer is inert for this species (The Namesake §5.0); Absent if goblin is unrostered or minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "cascade-rules-fired-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "doc": "How many DISTINCT sound rules in the bugbear cascade actually fire on at least one lexicon Root. Zero means the etymological layer is inert for this species (The Namesake §5.0); Absent if bugbear is unrostered or minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "cascade-rules-fired-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "How many DISTINCT (ElementSource, Author) naming-pattern signatures this world's placed peoples derive from their society vectors (The Namesake §5.1(1); target >= 3); Absent if no placed people carries both psychology vectors",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-pattern-signatures",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "How many peoples hold a flagship settlement in this world — the n in the 1/n chance baseline The Namesake §5.1(2) is judged against, published so that verdict is re-derivable from rows.csv without inferring n; Absent if no people is placed",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "peoples-placed",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The share of this world's placed peoples whose naming-pattern signature is unique among them — the structure-alone recoverability of a figure's people (The Namesake §5.1(2); target >= 2x the 1/n_peoples chance baseline); Absent if fewer than two peoples are placed",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-people-recoverability",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The share of this world's occupation founders whose name renders in exactly one element against the other founders of their own site (The Namesake §5.2(1); target >= 0.80); Absent if the world has no founders",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-prefix-settlement-scope",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "The MEDIAN number of elements this world's occupation founders render in against every other founder in the world (The Namesake §5.2(2); target >= 2); Absent if the world has no founders",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-prefix-region-scope",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The share of this world's occupation founders whose region-scope render spends every element their name carries — the second, opposite half of The Namesake §5.2(2) (target < 0.50); Absent if the world has no founders",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "name-prefix-region-full-stack",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every kobold lexicon Root entry's recorded sound-change derivation replays byte-identically through evolve (Neogrammarian regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "lexicon-regular-kobold",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the goblin lexicon is exposure-sound: no concept an INDEPENDENT re-derivation of exposure classifies Unknown ever backs a Root entry, and every committed Gap carries a non-empty reason (spec §9.2); Absent if the goblin lexicon has no entries",
+      "domain": "language",
+      "kind": "flag",
+      "name": "exposure-sound-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the kobold lexicon is exposure-sound: no concept an INDEPENDENT re-derivation of exposure classifies Unknown ever backs a Root entry, and every committed Gap carries a non-empty reason (spec §9.2); Absent if the kobold lexicon has no entries",
+      "domain": "language",
+      "kind": "flag",
+      "name": "exposure-sound-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "The goblin hue-ladder acquisition depth (2-5) derived from its perception vector's night-vision (spec §7's pack-depth model card); Absent if goblin is not in this world's roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "hue-depth-goblin",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "The kobold hue-ladder acquisition depth (2-5) derived from its perception vector's night-vision (spec §7's pack-depth model card); Absent if kobold is not in this world's roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "hue-depth-kobold",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Shoreline development index: coastline length over the circumference of the circle with the land's area (1 = maximally compact); Absent without a shoreline",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "shoreline-development",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.5,
+        0.0,
+        0.25,
+        0.5,
+        1.0,
+        1.5
+      ],
+      "doc": "Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's cells onto the canonical L6 land/ocean truth (NearestCellIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "coast-roughness-slope",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Ashman's D between land and ocean elevation populations (Earth is strongly bimodal); Absent when a world lacks land or ocean",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "hypsometric-bimodality",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of cells within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "shelf-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Connected land components at least 0.5% of the world's total land cells (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "continent-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        0.9
+      ],
+      "doc": "Largest land component's share of all land cells; Absent on a landless world",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "largest-continent-share",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "doc": "Gini coefficient over plate cell counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "plate-size-gini",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Every connected land component regardless of size — the unfloored companion continent-count superseded away from; reported alongside forever",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "landmass-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Median shelf width over PASSIVE-margin coast land cells (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "shelf-width-passive-median",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Median shelf width over ACTIVE-margin coast land cells: hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "shelf-width-active-median",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        100000.0,
+        200000.0,
+        400000.0,
+        800000.0,
+        1600000.0,
+        3200000.0
+      ],
+      "doc": "Total deposited sediment volume proxy: Σ sediment thickness (meters) over every cell, one cell-area unit per cell — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "sediment-volume",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of waterfall (knickpoint) sites the carve found: land cells where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "waterfall-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of cells a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a cell count, not a mouth count: each of the top-K mouths can raise the mouth cell itself plus up to two adjacent hop-1 ocean cells",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "delta-count",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem cells whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "rerouted-flow-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.00005,
+        0.0001,
+        0.0002,
+        0.0005,
+        0.001
+      ],
+      "doc": "H1's axis (The Ford, spec §10): the fraction of LAND AREA the channel network occupies — the area of the river tube (every polyline segment's arc length times its channel width) over the land area (land cells over all cells, times 4π). Preregistered interval [0.005%, 0.5%]; below it rivers are invisible at room scale, above it a river is still effectively as wide as the cell carrying it. NOT a per-cell reading: the polylines run THROUGH cell centres, so sampling at them overstates this by ~127x. ABSENT ONLY ON A WORLD WITH NO LAND: unlike its four Ford siblings, which go Absent whenever the network is empty, this column reads a true Number(0.0) on a land-bearing world that happens to have no channels. The asymmetry is deliberate — zero channel area over positive land area is a measurement, while a connectivity or monotonicity fraction over zero transects has no denominator to divide by — but a consumer reading the five columns together must not treat a 0.0 here as the same state as an Absent there",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "channel-land-fraction",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.5,
+        0.8,
+        0.9,
+        0.95,
+        0.99
+      ],
+      "doc": "H2's axis (The Ford, spec §10): the fraction of downstream walks — one per channel run, each starting at a headwater — that reach the sea or a terminal sink without ever leaving the `channel` band. Preregistered floor 0.95: a river you fall out of is not a river. Travelling along a run is in-channel by construction, so this measures the JOINS. It first read 0.862-0.953 (falsified; 4 of 64 probe worlds cleared the floor), which diagnosed an anchoring asymmetry: a tributary's mouth sat at its cell's undisplaced position while the trunk's vertex for that same cell was meander-displaced. **Since the confluence repair this column is a CONSTANT: 1.0 on every world with a channel network, Absent on every world without one.** Both of its failure branches are unreachable — a join is now a zero-length crossing, and the walk can no longer leave the network because `build` pushes a cell onto its claiming run BEFORE testing whether it was already claimed, so any cell the flow continues past is necessarily a non-final vertex of a kept run and always has an owner. Read a 1.0 here as a tripwire that the repair is still in place, never as a measurement of the world. **THE RILL'S TASK 3 THEN LEFT THAT TRIPWIRE LARGELY UNARMED, AND THE MILLRACE MEASURED AND REPAIRED IT.** The walk used to continue only while the next cell classified as `River`, while `ChannelNetwork::build`'s reach predicate is `!Ocean && downhill.is_some()` — strictly wider once Task 3 rendered the whole land flow tree (3,606 runs at seed 42, from 183). A run ending on a SUB-THRESHOLD trunk — rendered as a narrow channel, but not classified a river — stopped the walk BEFORE its join was examined, and that walk scored intact with nothing tested. **Measured at last (The Millrace, prediction P3, seed 42 at the canonical grid): 2,987 of 3,606 walks — 82.83% — had a false FIRST continuation test**, 0.749-0.850 across the 64 probe worlds; The Rill's review had guessed ~3,500 and rightly declined to assert it. The walk now asks `build`'s own reach predicate, so it stops only where the flow stops: on seed 42 alone the joins actually crossed go 853 -> 2,333 (2.74x), and summed over all 64 probe worlds they go 90,537 -> 219,763 (2.43x). **The value did not move.** The two rules are bit-identical on all 64 probe worlds, both 1.0, so this is a vacuous 1.0 converted into a tested 1.0 — which is why the repair landed in this column rather than beside it in a second one, and why no census value changed. The 0.95 floor is The Ford's preregistration, scored against The Ford's network; it is neither restated, retuned, nor re-scored here. Above all, do not read this column's stillness across a change as evidence that joins are sound: it is a constant by construction, and a column that did not move because it became vacuous is not the same reassurance as one that did not move because nothing broke",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "channel-connectivity",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.9,
+        0.99,
+        0.999,
+        1.0
+      ],
+      "doc": "H4's axis (The Ford, spec §10), the position-continuous-noise guard stated as a measurement: the fraction of transects walked outward from a channel centreline whose transverse-band sequence is monotone with no re-entry. Preregistered floor 0.99; falsification means address-hashed noise leaked into a band edge. Scored over the prefix for which the originating polyline is still the nearest one — past that the ray has entered a DIFFERENT river's valley and is no longer a transect of this channel. Absent on a world with no channels",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "channel-band-monotonicity",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.9,
+        0.99,
+        0.999,
+        1.0
+      ],
+      "doc": "`channel-band-monotonicity` over the SAME transects with the nearest-line truncation switched off — the whole sweep scored, including the stretch where a different river has become the nearest and its band legitimately falls back to `channel`. Published because a rule that changes a verdict must have the reading it changes on the record beside it rather than in a campaign report — and the record now runs both ways. **Both of the readings below are ON THE FORD'S NETWORK** (183 polylines, 883 vertices at seed 42), and the second is that network's reading rather than a standing property of the rule: before the confluence repair the truncation was load-bearing (47 of 64 probe worlds read below H4's 0.99 floor un-truncated, and none reached 1.0); with tributary mouths placed on their trunks all 64 read 1.0 on BOTH columns. That PAIR is the measured evidence that the gap was the confluence separation and never band-edge speckle: two lines meeting at a point share their distance minimum AT that point, so a transect leaving a join recedes from both at once and cannot descend into the partner, while two lines held 4.5 half-widths apart have no shared minimum and did. **On The Rill's network the same 64 worlds read 12 of 64 above the floor and NONE at 1.0** (mean 0.9843, min 0.9724, max 0.9941). The repair is untouched and `channel-band-monotonicity` is still 1.0 on all 64 — what changed is density: with 3,606 polylines where there were 183, a transect walking outward meets an UNRELATED line far sooner, ending its own-channel prefix where this column scores the interruption as a failure. Read it beside `channel-transect-dry-reach` (mean 0.7577): about a quarter of transects are now truncated before reaching `dry`, against a Ford network on which truncation was doing nothing. Absent on a world with no channels",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "channel-band-monotonicity-untruncated",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.5,
+        0.8,
+        0.9,
+        0.95,
+        0.99
+      ],
+      "doc": "The anti-vacuity companion to `channel-band-monotonicity` (The Ford, spec §10): the fraction of the SAME transects whose own-channel prefix reached the `dry` band before a different river became the nearest and truncated it. Monotonicity scores a truncated transect as a success however short its prefix, so without this column a world where truncation fired immediately everywhere would report a perfect 1.0 with nothing to show it. Read the two together: monotonicity near 1 is only a claim about full transverse profiles while this stays high. Absent on a world with no channels",
+      "domain": "hydrology",
+      "kind": "numeric",
+      "name": "channel-transect-dry-reach",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "doc": "Whether every daughter's lexicon (goblin, hobgoblin, bugbear, kobold) is Neogrammarian-regular: every Root's recorded derivation replays byte-identically through evolve, checked for EVERY daughter in this world's roster (spec §9.1, generalized family-wide); Absent if no daughter minted a Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "lexicon-regular-family",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblinoid daughter's (goblin, hobgoblin, bugbear) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"goblinoid\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no goblinoid daughter minted a Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "monophyly-goblinoid",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"dwarf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "monophyly-dwarf",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every elf daughter's (desert-elf, drow, high-elf, sea-elf, snow-elf, wood-elf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"elf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no elf daughter minted a Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "monophyly-elf",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether kobold — the family with no siblings — never coincides with the goblinoid family: for every concept kobold holds as a Root, its recorded proto-root differs from an INDEPENDENT re-draw of the \"goblinoid\" family proto-root for that same concept (spec §3's clean outgroup); Absent if kobold minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "clean-outgroup-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblin lexicon Root's modern form draws only segments in goblin's own drawn inventory (spec §2.2's nativization contract); Absent if goblin minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "inventory-closure-goblin",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every hobgoblin lexicon Root's modern form draws only segments in hobgoblin's own drawn inventory (spec §2.2's nativization contract); Absent if hobgoblin minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "inventory-closure-hobgoblin",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every bugbear lexicon Root's modern form draws only segments in bugbear's own drawn inventory (spec §2.2's nativization contract); Absent if bugbear minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "inventory-closure-bugbear",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every kobold lexicon Root's modern form draws only segments in kobold's own drawn inventory (spec §2.2's nativization contract); Absent if kobold minted no Root",
+      "domain": "language",
+      "kind": "flag",
+      "name": "inventory-closure-kobold",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in goblin's own Root proto-roots that nativize.rs collapses onto an existing goblin inventory segment (i.e. absent from goblin's own inventory) — the measured cost of goblin's nativization under the loudness-drawn inventory (spec §3); Absent if goblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "divergence-magnitude-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in hobgoblin's own Root proto-roots that nativize.rs collapses onto an existing hobgoblin inventory segment (i.e. absent from hobgoblin's own inventory) — the measured cost of hobgoblin's nativization under the loudness-drawn inventory (spec §3); Absent if hobgoblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "divergence-magnitude-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in bugbear's own Root proto-roots that nativize.rs collapses onto an existing bugbear inventory segment (i.e. absent from bugbear's own inventory) — the measured cost of bugbear's nativization under the loudness-drawn inventory (spec §3); Absent if bugbear minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "divergence-magnitude-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether some concept rooted in ALL THREE goblinoid daughters (goblin, hobgoblin, bugbear) has ≥2 distinct present-day forms — the seed-swept stemmatics guard (spec §3): descent is proven by shared INNOVATIONS, not a shared ancestor alone, so a degenerate family whose daughters are silent aliases of one another must read false; Absent if no concept is rooted in all three",
+      "domain": "language",
+      "kind": "flag",
+      "name": "divergence-real",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose goblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant: homophony is legal and realistic, and this banks the confound L4's reconstruction will fight (homophones read as one word); Absent if goblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-count-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose hobgoblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; Absent if hobgoblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-count-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose bugbear Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; expected highest among the goblinoid daughters, bugbear drawing the smallest family inventory; Absent if bugbear minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-count-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose kobold Root.modern forms coincide (two proto-roots landed on one surface form) — an observation, not a pass/fail invariant, banked for the clean-outgroup comparison; Absent if kobold minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-count-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs) — the functional-load-restricted homophony the fix drives to zero; always ≤ homophony-count-goblin; Absent if goblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "core-homophony-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-hobgoblin; Absent if hobgoblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "core-homophony-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-bugbear; Absent if bugbear minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "core-homophony-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-kobold; Absent if kobold minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "core-homophony-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-merger-share-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of hobgoblin colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-merger-share-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of bugbear colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if bugbear has no collision",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-merger-share-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of kobold colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if kobold has no collision",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "homophony-merger-share-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain — universal/body/kin — so they compete in one context); the same-domain subset of core-homophony-goblin, always ≤ it; the complement is FREE cross-domain homophony; Absent if goblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "confusable-homophony-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-hobgoblin, always ≤ it; Absent if hobgoblin minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "confusable-homophony-hobgoblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-bugbear, always ≤ it; Absent if bugbear minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "confusable-homophony-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-kobold, always ≤ it; Absent if kobold minted no Root",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "confusable-homophony-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of goblin's realized tone inventory (spec §11): 1 for an atonal people; >1 only for a tone-capable species; Absent if goblin is off-roster",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "tone-count-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of kobold's realized tone inventory (spec §11): 1 for an atonal people; Absent if kobold is off-roster",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "tone-count-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Goblin's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings, a lower bound on distinct syllables (tone folded into the nucleus); Absent if goblin is off-roster",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Bugbear's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; bugbear draws the smallest family inventory; Absent if bugbear is off-roster",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-bugbear",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Kobold's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; Absent if kobold is off-roster",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        100.0
+      ],
+      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "lifespan-years-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        100.0
+      ],
+      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "lifespan-years-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ],
+      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "age-at-maturity-years-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ],
+      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "age-at-maturity-years-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Goblin's reference-temperature basal metabolic rate in watts (BIO-2 spec §4); Absent only if goblin is off-roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "basal-metabolic-rate-w-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Kobold's reference-temperature basal metabolic rate in watts (BIO-2 spec §4); Absent only if kobold is off-roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "basal-metabolic-rate-w-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "reproductive-tempo-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "reproductive-tempo-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "generation-length-years-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or Ametabolic",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "generation-length-years-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Goblin's overall life-history speed, 0 (fast) ... 1 (slow) — absolute and roster-independent (BIO-2 spec §5); Absent only if goblin is off-roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "pace-of-life-goblin",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Kobold's overall life-history speed, 0 (fast) ... 1 (slow) — absolute and roster-independent (BIO-2 spec §5); Absent only if kobold is off-roster",
+      "domain": "biology",
+      "kind": "numeric",
+      "name": "pace-of-life-kobold",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean distortion() over every placed culture's account (C4 LANG-41); Absent if no culture placed",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-distortion",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean pairwise distinctiveness() across every placed culture's account (C4 LANG-41); Absent if fewer than 2 cultures placed",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-distinctiveness",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean recoverability() over every placed culture's account (C4 LANG-41); Absent if no culture placed",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-recoverability",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.001,
+        0.01,
+        0.05,
+        0.1
+      ],
+      "doc": "Population variance of per-culture distortion() (C4 LANG-41) — the vacuity number, read against chorus-param-spread: a low variance can mean either every voice is genuinely alike or every voice hit the same floor; Absent if fewer than 2 cultures placed",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-variance",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "doc": "Mean pairwise absolute difference in sky_capability across every placed culture (C4 LANG-41) — the input-side companion to chorus-variance's output-side number; Absent if fewer than 2 cultures placed",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-param-spread",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        -0.5,
+        0.0,
+        0.5
+      ],
+      "doc": "Kendall tau between per-culture sky_capability and per-culture domain_distortion(..., \"sky\") over strictly-comparable pairs (both the capability and the distortion differ) (C4 LANG-41); expected sign ≤ 0 (distortion falls as capability rises); Absent if fewer than 2 cultures placed or no strictly-comparable pair exists (e.g. every pair ties on sky distortion)",
+      "domain": "language",
+      "kind": "numeric",
+      "name": "chorus-sky-calibration",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "M3: how many distinct peoples still hold a live community when the bake ends — the decision-0089 compliance reading",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "peoples-alive-at-bake-end",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        0.7
+      ],
+      "doc": "M2: the largest live community's PEAK population as a share of the summed peak population of every community alive at bake end (peak_population is each occupation's historical high-water mark, not a true bake-end census — no end-state population accessor exists today; see task-4-report.md) — the entity-size reading the criticality campaigns never took",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "largest-holding-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        -0.6,
+        -0.3,
+        0.0,
+        0.3,
+        0.6
+      ],
+      "doc": "M4: Spearman rank correlation between a habitable cell's weakest-point defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY terrain, climate, and connection graph — NOT the bake's own final era, which can differ on a world with real orbital forcing (spec §2.4 amendment 4). Checks §2.2's structural claim that defensible ground is also poor ground, on the geography as it stands today. Ties get average ranks; Absent if fewer than 2 habitable cells, or if either series is constant (no variance, so no correlation is defined)",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "defensibility-capacity-rank-corr",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0,
+        24.0
+      ],
+      "doc": "How many concepts this world's registry reports in the `toponymic` domain (The Assay). The denominator for `toponymic-roots-won`, kept as its own column so a registry change is distinguishable from a worlds change.",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "toponymic-core-size",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0,
+        24.0
+      ],
+      "doc": "How many toponymic-domain concepts reach `ExposureClass::Steeped` for at least one placed people (The Assay). Replaces `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a witness: a concept no world in the census ever steeps is a structurally dead gate, and the census says so as a rate.",
+      "domain": "naming",
+      "kind": "numeric",
+      "name": "toponymic-roots-won",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether any placed people holds a live prediction crisis at day 36,525 (the hundredth year, the diachronic battery's preregistered epoch) — The Assay. Replaces `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a single instance. A crisis needs a Generated sky, an organized flagship's doctrine, >= 8 witnessed events of one recurrence class and a tail miss-run, so it cannot be synthesised — which is why it is a rate here rather than a hand-built behaviour test.",
+      "domain": "religion",
+      "kind": "flag",
+      "name": "crisis-fires",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Share of this world's occupation records that ended at another community's hand (`Ended::By`) — the DEFENCE side of the raid mechanic (The Confusion). Over EVERY people with a record, not the six The Tolerance froze: this is the raid rate, not that campaign's readout. Absent on a world with no occupation records. Replaces `windows/worldgen/tests/tolerance_baseline.rs`'s 30-world victim-side proxy.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "raid-victim-rate",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Share of this world's occupation records that ended at least one OTHER record — the OFFENCE side, the side the raid gate actually decides (The Confusion). Its own column rather than a derivative of `raid-victim-rate`, because the ratio of the two is the mean raids per raider: the two rates separate 'many settlements each raiding once' from 'a few serial raiders', which one rate alone cannot. Same unfiltered population as `raid-victim-rate`; Absent on a world with no occupation records. Measured on a 12-world scratch probe (seeds 1-12, NOT the census) the ratio of the two rates sits at 1.00-1.03, i.e. a raider almost never raids twice — that near-identity is the column's current reading, not a reason to drop it: nothing else would detect a shift toward serial raiders.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "raid-initiator-rate",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "How many `Ended::By(raider)` references on this world fail to name EXACTLY ONE occupation record — the self-consistency guard the retired 30-world battery held, as a census-wide invariant (The Confusion). Expected 0 on every world; a nonzero count means the victim- and initiator-side rates beside it are attributing raids to the wrong settlements. Per-REFERENCE, so compensating errors cannot cancel the way they can in a pooled count comparison. Absent on a world with no occupation records.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "raid-attribution-unresolved",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        5.0,
+        25.0,
+        100.0,
+        300.0
+      ],
+      "doc": "How many occupations on this world ended in climate-driven migration (`occ-cause` = `migrated`), excluding conquest-relocations — the displacement mechanic's volume (The Assize). Replaces the seed-42 gate in `cli/tests/history_battery.rs` and the twelve-seed panel in `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit in single digits and a minority run to the hundreds, and a real minority measure zero — a mild deep past, not an inert bake. Absent on a world with no occupation records.",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "climate-displacement-events",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        25.0,
+        60.0,
+        100.0,
+        150.0
+      ],
+      "doc": "How many standing tribute relations (`pays-tribute-to`) this world holds at `now` — the subordination stock (The Assize). Replaces `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume panel, whose quantity lives on the bake's discarded tally and is unreachable from any census metric. Agrees with that flow at spearman 0.934 over 36 worlds — a measured witness, NOT an equivalence: this is a stock and that was a flow. Absent on a world with no occupation records.",
+      "domain": "society",
+      "kind": "numeric",
+      "name": "tribute-relations-standing",
+      "role": "descriptor",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.06,
+        0.15,
+        0.3,
+        0.5
+      ],
+      "doc": "The share of this world's built settlement rooms that read `is_cold` (below `FURNISHING_COLD_C` at the frozen furnishing-reference day) — the fraction of the settled world where `interior_of` would compose a hearth (The Range). Replaces the cold-DOMINATION clause of `windows/lab/tests/hearth_population_calibration.rs`, which asked over 15 seeds whether ANY world exceeded 0.5 here; decision 0097 converts an existence claim sitting on a threshold into a census rate, because at n=15 the answer is decided by one world and at n=1000 it is a fraction with a sampling bound. A world's whole settled area can be temperate (0.0 is a real reading, not a broken fold); Absent only when the world has no built rooms at all.",
+      "domain": "settlement",
+      "kind": "numeric",
+      "name": "cold-built-room-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 20,
+    "fnv1a64": "0x444820369a36a3c3"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Gnomon H1: the injection battery's world-building arm. Twenty census seeds (0-19), default pins, every registered metric — so a row produced here is column-for-column comparable with the-census's, which is the percentile prior the anomaly report scores it against. Run ONLY through scripts/gnomon-injection.sh, which perturbs one generative constant per arm and commits the resulting rows.csv as fixture evidence; a bare `lab run` of this study reproduces the unperturbed baseline arm and nothing else. Not a census (spec §3.5, decision 0016).",
+    "name": "gnomon-injection",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 20,
+      "from": 0
+    }
+  }
+}

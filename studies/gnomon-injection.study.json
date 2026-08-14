@@ -1,0 +1,5 @@
+{ "name": "gnomon-injection",
+  "description": "The Gnomon H1: the injection battery's world-building arm. Twenty census seeds (0-19), default pins, every registered metric — so a row produced here is column-for-column comparable with the-census's, which is the percentile prior the anomaly report scores it against. Run ONLY through scripts/gnomon-injection.sh, which perturbs one generative constant per arm and commits the resulting rows.csv as fixture evidence; a bare `lab run` of this study reproduces the unperturbed baseline arm and nothing else. Not a census (spec §3.5, decision 0016).",
+  "seeds": { "from": 0, "count": 20 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }
