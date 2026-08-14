@@ -870,3 +870,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T11:14:14Z | quick | 33.956 | 24.017 | 10.119 | 1.01 | 0 | baa5be6a | campaign/the-axes | MacBookPro | 10 |
 | 2026-08-14T11:20:28Z | quick | 12.425 | 10.195 | 0.471 | 0.86 | 0 | d7327e4c | campaign/the-axes | MacBookPro | 10 |
 | 2026-08-14T11:32:55Z | quick | 29.580 | 25.782 | 9.983 | 1.21 | 0 | f4c58bdb | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T12:18:05Z | quick | 13.447 | 20.249 | 8.090 | 2.11 | 0 | 1923be0c | campaign/the-axes | MacBookPro | 10 |
+| 2026-08-14T12:19:03Z | quick | 14.656 | 23.222 | 8.851 | 2.19 | 0 | 1923be0c | campaign/the-axes | MacBookPro | 10 |
