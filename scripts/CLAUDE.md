@@ -188,9 +188,10 @@ confirmation-gated in the Makefile.
   It speaks only when the merge touched a path in `docs/generated-paths.txt`.
   **It does not replace PROC-12's merge driver, which is strictly better where
   it applies** — but that driver only runs when *both* sides changed a file
-  *named in `.gitattributes`*, which leaves two holes: most generated paths are
-  not Tier B (nothing routes `book/src/laboratory/`, `docs/digest/`,
-  `book/src/domesday/`, the game fixtures, or `seam-guard-roster.md`), and the
+  *named in `.gitattributes`*, which leaves two holes: most of what
+  `docs/generated-paths.txt` declares is not Tier B (nothing routes the lab's
+  generated tree, the digest, the Domesday survey, the game fixtures, or
+  `seam-guard-roster.md`), and the
   one-sided stale merge — this branch regenerated, the incoming side changed
   only the generating code — produces a clean merge no driver can see. The hook
   has its own blind spot to match: a merge carrying code changes alone stales an
