@@ -1748,6 +1748,28 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "history-myth-hop-median",
+            doc: "Median inheritance depth of a held claim about a historical ending: \
+                  0 = the witnessing community itself, higher = the claim is carried by \
+                  communities further down the founding tree. The no-decay ceiling on \
+                  transmission depth (The Hearsay, spec section 6)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 5.0, 8.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| {
+                let ledger = &v.world().ledger;
+                let lin = hornvale_hearsay::lineage::lineage_of(ledger);
+                match hornvale_hearsay::median_hops(ledger, &lin, hornvale_history::OCC_ENDED) {
+                    // Absent, never a sentinel: a world with no held claim has no
+                    // median, and 0.0 would read as "every claim is first-hand".
+                    None => MetricValue::Absent,
+                    Some(m) => MetricValue::Number(m),
+                }
+            }),
+        },
+        Metric {
             name: "forgotten-fraction",
             doc: "Over land cells with a non-empty vestige stack, the fraction \
                   whose most-dread layer is Forgotten rather than Venerated \
@@ -9299,7 +9321,14 @@ mod tests {
         // committed metric read the thing itself. Land is `e >= sea`,
         // matching mountain-coverage so the hypsometry target compares the
         // two directly.
-        assert_eq!(registry().len(), 203);
+        //
+        // +1 for THE HEARSAY (Task 6: history-myth-hop-median) — the
+        // preregistered readout (spec §6) needed a census column so the
+        // no-decay ceiling on transmission depth is re-derivable from
+        // rows.csv rather than living only in a heavy-tier battery. Cost
+        // measured before keeping it (~0.16 s/world, well under the 0.5
+        // s/world KEEP threshold in `windows/lab/CLAUDE.md`).
+        assert_eq!(registry().len(), 204);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

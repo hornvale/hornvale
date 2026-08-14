@@ -51,6 +51,22 @@ impl Lineage {
         out.sort();
         out
     }
+
+    /// Every occupation this tree knows — roots and descendants alike —
+    /// ascending and deduplicated. Includes roots, so callers must not chain
+    /// `roots()` onto it.
+    pub fn all(&self) -> Vec<EntityId> {
+        let mut out: Vec<EntityId> = self
+            .parent
+            .keys()
+            .copied()
+            .chain(self.parent.values().copied())
+            .chain(self.roots.iter().copied())
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    }
 }
 
 /// Read the founding tree out of a ledger.

@@ -870,3 +870,11 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T03:26:39Z | quick | 28.023 | 37.404 | 11.029 | 1.73 | 0 | 75eb12be | campaign/the-hearsay | MacBookPro | 10 |
 | 2026-08-14T03:27:25Z | quick | 19.492 | 11.401 | 0.517 | 0.61 | 0 | 75eb12be | campaign/the-hearsay | MacBookPro | 10 |
 | 2026-08-14T03:37:32Z | rebaseline | 64.315 | 200.978 | 12.710 | 3.32 | 0 | 9a5ff2c2 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T03:39:41Z | quick | 16.264 | 26.183 | 11.993 | 2.35 | 0 | 9a5ff2c2 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T10:57:58Z | quick | 10.968 | 9.886 | 0.361 | 0.93 | 0 | 36e720d7 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T10:58:27Z | quick | 12.640 | 10.069 | 0.408 | 0.83 | 0 | 36e720d7 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T11:06:15Z | quick | 10.245 | 9.584 | 0.243 | 0.96 | 0 | 5783bfe5 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T11:15:51Z | rebaseline | 72.354 | 196.623 | 8.519 | 2.84 | 0 | e7891131 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T11:25:22Z | gate | 138.355 | 270.175 | 45.198 | 2.28 | 0 | e7891131 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T11:26:58Z | gate | 66.315 | 50.687 | 6.803 | 0.87 | 0 | e7891131 | campaign/the-hearsay | MacBookPro | 10 |
+| 2026-08-14T11:29:26Z | gate | 66.645 | 73.823 | 19.466 | 1.40 | 0 | e7891131 | campaign/the-hearsay | MacBookPro | 10 |
