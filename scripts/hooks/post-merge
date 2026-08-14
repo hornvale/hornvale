@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# scripts/hooks/post-merge — the absorption reminder.
+#
+# WHY THIS EXISTS, and why it is advisory rather than a gate.
+#
+# `pre-commit` never runs on a merge. Git does not invoke it for `git merge`,
+# so every guard in that file is blind to the one commit shape most likely to
+# need one. Campaign branches absorb `main` at every plan-stage boundary (root
+# CLAUDE.md), which makes absorptions frequent, and a generated artifact has no
+# meaningful merge: it is a rendering of code, so a three-way text merge of two
+# regenerated copies produces a file that is a valid merge of neither. That has
+# landed for real — a count-table artifact mis-merged 3 for 3.
+#
+# The failure is silent in both directions. `git merge` reports success; the
+# artifact is textually plausible; and the drift check that would catch it
+# (`make rebaseline` + `git diff`) is not part of `make gate` and is run only
+# when a human remembers. Since decision 0125 there is no CI to catch it later,
+# so "later" means "whenever someone next regenerates", which can be days and
+# several commits downstream of the merge that broke it.
+#
+# WHAT PROC-12 ALREADY COVERS, AND THE TWO HOLES THIS FILLS. `.gitattributes`
+# routes six fully-re-derived documents to `scripts/merge-regenerate.sh` (Tier
+# B) and three append-only lists to git's `union` driver (Tier A). Where that
+# applies it is strictly better than this hook: it fixes the artifact during
+# the merge instead of mentioning it afterwards. But a merge driver runs only
+# when BOTH SIDES CHANGED THE FILE, and only for a path named in
+# `.gitattributes`. So:
+#
+#   1. MOST GENERATED PATHS ARE NOT TIER B. `docs/generated-paths.txt` lists
+#      seven directories; the Tier B list names six individual files. Nothing
+#      routes `book/src/laboratory/`, `docs/digest/`, `book/src/domesday/`,
+#      `clients/game/core/tests/fixtures/`, `docs/audits/seam-guard-roster.md`,
+#      or most of `book/src/gallery/`.
+#
+#   2. THE ONE-SIDED STALE MERGE, which NO merge driver can catch. If this
+#      branch regenerated an artifact and the incoming side changed only the
+#      CODE that produces it, git sees one side changed the artifact and takes
+#      it cleanly — no conflict, no driver, no complaint — and the merged tree
+#      now holds an artifact that its own code does not generate. This is the
+#      common absorption shape, not an exotic one.
+#
+# THIS HOOK'S OWN BLIND SPOT, stated so nobody mistakes silence for safety: it
+# fires only when the merge TOUCHED a generated path. A merge that brings in
+# code changes alone can stale an artifact just as thoroughly and will not say
+# a word. The remedy is identical, which is why it is worth knowing: after any
+# absorption, `make rebaseline` and check the diff.
+#
+# It is ADVISORY (always exit 0) because a hook cannot fix this: by the time
+# `post-merge` runs the merge commit already exists, and regenerating is a
+# separate commit. Blocking would mean failing after the fact, which git
+# handles badly and which would train a `--no-verify` reflex on the one
+# operation where the guards above matter most. Printing the exact command at
+# the exact moment the risk is created is the whole job.
+#
+# Scope: only speaks when the merge actually touched a generated path, so an
+# ordinary absorption of unrelated code stays silent. `docs/generated-paths.txt`
+# is the single source of truth for that list (`cli/tests/generated_paths.rs`
+# fails on a second copy), so this reads it rather than restating it.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+paths_file='docs/generated-paths.txt'
+[[ -f "$paths_file" ]] || exit 0
+
+mapfile -t generated < <(grep -v '^#' "$paths_file" | grep -v '^[[:space:]]*$')
+[[ ${#generated[@]} -gt 0 ]] || exit 0
+
+# ORIG_HEAD is the pre-merge tip; the range is what this merge brought in.
+touched="$(git diff --name-only ORIG_HEAD HEAD -- "${generated[@]}" 2>/dev/null || true)"
+[[ -n "$touched" ]] || exit 0
+
+echo "" >&2
+echo "post-merge: this merge touched generated artifacts." >&2
+echo "" >&2
+printf '%s\n' "$touched" | sed 's/^/  /' >&2
+echo "" >&2
+echo "A generated artifact has no meaningful merge — it is a rendering of code," >&2
+echo "so a text merge of two regenerated copies can be a valid merge of neither." >&2
+echo "Nothing in 'make gate' checks this, and there is no CI (decision 0125)." >&2
+echo "" >&2
+echo "Regenerate and confirm the tree is clean before building on this merge:" >&2
+echo "    make rebaseline" >&2
+echo "    git diff --exit-code -- \$(grep -v '^#' $paths_file | grep -v '^\$')" >&2
+echo "" >&2
+
+exit 0
