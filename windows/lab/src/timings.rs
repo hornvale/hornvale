@@ -492,6 +492,49 @@ pub fn top_contributors(
     shifts
 }
 
+/// The sub-floor roster: every test id strictly below `floor`, sorted and
+/// deduped.
+///
+/// # Why a roster exists at all
+///
+/// [`fold_below_floor`] collapses these tests into one `<below-floor>` row
+/// carrying a sum and a count — deliberately, since per-test rows were the
+/// entire source of the baseline's churn. That makes the baseline unable to
+/// answer "which tests are fast?", which is exactly what the commit gate needs
+/// to select. So the roster is a SEPARATE artifact carrying names and no
+/// durations: it moves only when a test is added, removed, or crosses the
+/// floor, not on every millisecond of run-to-run variance.
+///
+/// # DIRECTION THIS ENFORCES
+///
+/// Strictly below, not at-or-below. A test measured at exactly the floor is
+/// stored individually by the baseline and must not ALSO appear here, or the
+/// two artifacts disagree about which tier owns it.
+/// type-audit: bare-ok(diagnostic-value: floor), bare-ok(identifier-text: return)
+pub fn subfloor_roster(rows: &[TestDuration], floor: f64) -> Vec<String> {
+    let mut out: Vec<String> = rows
+        .iter()
+        .filter(|r| r.seconds < floor)
+        .map(|r| r.id.clone())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Where the sub-floor roster for `host` lives. Two parameters, mirroring
+/// [`baseline_path`], so the two artifacts are resolved identically.
+///
+/// Host-keyed like the baseline, for the same reason and with the same hazard:
+/// a renamed host forks it. After The Staff there is one gating host, which is
+/// what makes that hazard tolerable.
+/// type-audit: bare-ok(identifier-text: host)
+pub fn subfloor_path(repo_root: &Path, host: &str) -> PathBuf {
+    repo_root
+        .join("docs/timings")
+        .join(format!("subfloor-{host}.tsv"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1069,6 +1112,45 @@ mod tests {
     }
 
     // --- per_test_shifts and the aggregate row ---------------------------------
+
+    // --- subfloor_roster --------------------------------------------------
+
+    #[test]
+    fn the_roster_holds_exactly_the_tests_below_the_floor() {
+        let row = |id: &str, seconds: f64| TestDuration {
+            id: id.to_string(),
+            seconds,
+            folded_count: None,
+        };
+        let rows = vec![
+            row("crate::bin$fast_one", 0.004),
+            row("crate::bin$exactly_at_floor", 1.0),
+            row("crate::bin$slow_one", 12.5),
+            row("crate::bin$another_fast", 0.999),
+        ];
+        let roster = subfloor_roster(&rows, BASELINE_FLOOR_SECS);
+        assert_eq!(
+            roster,
+            vec![
+                "crate::bin$another_fast".to_string(),
+                "crate::bin$fast_one".to_string(),
+            ],
+            "the roster is STRICTLY below the floor and sorted; a test exactly at \
+             the floor is tracked individually by the baseline and must not also \
+             be in the commit gate"
+        );
+    }
+
+    #[test]
+    fn the_roster_is_sorted_so_its_diff_shows_membership_not_ordering() {
+        let row = |id: &str| TestDuration {
+            id: id.to_string(),
+            seconds: 0.01,
+            folded_count: None,
+        };
+        let roster = subfloor_roster(&[row("z::bin$a"), row("a::bin$z")], BASELINE_FLOOR_SECS);
+        assert_eq!(roster, vec!["a::bin$z".to_string(), "z::bin$a".to_string()]);
+    }
 
     #[test]
     fn per_test_shifts_never_alarms_on_the_below_floor_aggregate_row() {

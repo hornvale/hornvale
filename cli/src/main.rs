@@ -1534,7 +1534,7 @@ fn cmd_ci_record() -> Result<(), String> {
     use hornvale_lab::census_claim::current_holder;
     use hornvale_lab::timings::{
         BASELINE_FLOOR_SECS, apply_hysteresis, baseline_path, fold_below_floor, parse_baseline,
-        parse_run, render_baseline,
+        parse_run, render_baseline, subfloor_path, subfloor_roster,
     };
 
     if let Some(holder) = current_holder() {
@@ -1587,6 +1587,29 @@ fn cmd_ci_record() -> Result<(), String> {
         BASELINE_FLOOR_SECS,
         path.display()
     );
+
+    // The sub-floor ROSTER, written beside the baseline and under exactly the
+    // same guards. A red run's `run.json` is truncated, so a roster derived
+    // from one would silently DROP tests from the commit gate — the failure
+    // mode is a quieter gate, which is the one thing a gate must never become.
+    let roster = subfloor_roster(&rows, BASELINE_FLOOR_SECS);
+    let roster_path = subfloor_path(&root, &host);
+    let mut roster_body = String::from(
+        "# Hornvale sub-floor roster (The Staff). One test id per line.\n\
+         # Every test measured strictly below BASELINE_FLOOR_SECS on this host.\n\
+         # The commit gate (`make gate-commit`) runs exactly these.\n\
+         # Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.\n\
+         # A test absent from this file is NOT in the commit gate — see the\n\
+         # spec's exclude-unknown rule. It enters on the next green stage gate.\n",
+    );
+    for id in &roster {
+        roster_body.push_str(id);
+        roster_body.push('\n');
+    }
+    std::fs::write(&roster_path, roster_body)
+        .map_err(|e| format!("ci-record: writing {}: {e}", roster_path.display()))?;
+    println!("wrote {} ({} tests)", roster_path.display(), roster.len());
+
     Ok(())
 }
 
