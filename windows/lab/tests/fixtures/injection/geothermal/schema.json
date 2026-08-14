@@ -614,6 +614,21 @@
     },
     {
       "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0
+      ],
+      "doc": "Median inheritance depth of a held claim about a historical ending: 0 = the witnessing community itself, higher = the claim is carried by communities further down the founding tree. The no-decay ceiling on transmission depth (The Hearsay, spec section 6)",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "history-myth-hop-median",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
         0.0,
         0.2,
         0.4,
@@ -3132,7 +3147,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0xfa1d5e2e986811b0"
+    "fnv1a64": "0xc11388a7c506ee96"
   },
   "schema_version": 1,
   "study": {

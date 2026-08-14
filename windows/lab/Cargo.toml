@@ -21,5 +21,6 @@ hornvale-culture = { path = "../../domains/culture" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-history = { path = "../../domains/history" }
 hornvale-language = { path = "../../domains/language" }
+hornvale-hearsay = { path = "../hearsay" }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -111,6 +111,8 @@ under review. This file is.
 
 ### Engine / ECS / infrastructure
 
+- [The Hearsay](the-hearsay.md) — myth gets its channel; four things that could not go red, all in controller text and all caught by mutation; violence is intramural twice over
+
 - [Dissolution](the-dissolution.md) — ECS Campaign 3 \"The Dissolution\" — SpeciesDef god-struct DELETED, dissolved into per-domain component registries…
 - [Individuation](the-individuation.md) — ECS Campaign 5 (instance ⋈ ledger) — the instance half of the entity-component substrate; SHIPPED+PUSHED @1acbe98
 - [Ordination](the-ordination.md) — ECS Campaign 6 (systems & schedule) — the derived execution schedule + BSP tick mechanism; SHIPPED+PUSHED @c9cb8b6

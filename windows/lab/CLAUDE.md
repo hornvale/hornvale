@@ -113,6 +113,22 @@ temporary, a slow metric is permanent. The Mire's three candidates each needed
 a ~3.5 s per-world computation, which would have added roughly two hours to
 every census refresh; they were not registered.
 
+**2b. The blast radius is wider than "nine studies", and the widest part has no
+drift check.** Registering a metric changes the schema of every `"all"` study,
+which means it restages **any fixture any campaign has ever frozen against the
+registry** — not just the census goldens. The Hearsay added exactly one metric
+and staled The Gnomon's injection fixtures under
+`windows/lab/tests/fixtures/injection/`, which are **deliberately absent from
+`docs/generated-paths.txt`** (see that directory's README and
+`scripts/gnomon-injection.sh`'s header) and therefore covered by no drift check
+and untouched by `make rebaseline`. Nothing caught it except their reader test
+going red in a full `make gate` — after the census refresh had already run.
+
+So the check before you register: `grep -rl 'rows.csv\|schema.json'
+windows/lab/tests/fixtures/` and ask which of those have their own host-pinned
+authoring path. Each one is a second refresh you owe, on the canonical box, in
+the same sitting as the census — and each has a different script.
+
 **3. Census cost lives in SWEEPING the network, not building or querying it.**
 Measured across The Rill/The Millrace, on lefford: 93% of an 11.2× cost blowup
 was one function (`lab_band_transects`) computed **three times**, by three

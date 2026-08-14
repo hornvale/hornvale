@@ -3,6 +3,9 @@
 # git log -p on this file is the archaeology of what the suite defends.
 when_utc	commit	branch	changed_crates	failed_test
 2026-08-14T04:16:19Z	a1a33028	campaign/the-gnomon	docs/timings.md	hornvale::generated_paths$no_claude_md_restates_the_declared_path_list
+2026-08-14T11:25:22Z	e7891131	campaign/the-hearsay	docs/audits,docs/timings.md,windows/hearsay,windows/lab	hornvale::architecture$the_layering_page_matches_the_enforced_graph
+2026-08-14T11:26:58Z	e7891131	campaign/the-hearsay	book/src,docs/audits,docs/timings,docs/timings.md,windows/hearsay,windows/lab	hornvale::claim_shape$every_seed_looping_test_in_the_repo_declares_its_claim_shape
+2026-08-14T11:29:26Z	e7891131	campaign/the-hearsay	book/src,docs/audits,docs/timings,docs/timings.md,windows/hearsay,windows/lab	hornvale::generated_paths$no_claude_md_restates_the_declared_path_list
 2026-08-14T12:47:19Z	3370ad9f	the-repose	docs/timings,domains/terrain,windows/worldgen	hornvale::claim_shape$every_seed_looping_test_in_the_repo_declares_its_claim_shape
 2026-08-14T13:41:47Z	1efd2c9e	the-repose	book/src,docs/audits,docs/timings.md,windows/worldgen	hornvale::hornvale$streams::tests::the_stamp_is_exactly_this_roster
 2026-08-14T18:07:52Z	44b0ca06	the-repose	book/src,docs/audits,docs/retrospectives,docs/timings.md,domains/terrain,windows/worldgen	hornvale::repose_byte_identity$no_rendered_artifact_names_a_geohazard

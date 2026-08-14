@@ -363,6 +363,7 @@
 - [The Sexton](./chronicle/the-sexton.md)
 - [The Repose](./chronicle/the-repose.md)
 - [The Axes](./chronicle/the-axes.md)
+- [The Hearsay](./chronicle/the-hearsay.md)
 
 # Appendix: The Frontier
 
