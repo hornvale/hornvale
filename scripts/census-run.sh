@@ -47,32 +47,44 @@ fi
 . "$(dirname "$0")/census-canonical-host.sh"
 require_canonical_census_host || exit 1
 
-exec 9>"$LOCK"
-timeout_s="${HV_CENSUS_WAIT_TIMEOUT:-2700}"
-echo "census-run: waiting for the census lock ($LOCK; up to ${timeout_s}s) …" >&2
-# Measure the queue wait here: this is where it actually happens, before
-# timed.sh starts, so `wall_s` stays the work and `waited_s` the queue
-# (decision 0081).
-wait_began=$SECONDS
-if ! flock -w "$timeout_s" 9; then
-    # Bounded, so a wedged holder fails loudly instead of hanging forever
-    # (decision 0081). Report WHO, not just that we gave up.
-    echo "census-run: TIMED OUT after ${timeout_s}s waiting for the census lock." >&2
-    echo "census-run: $(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || echo 'claim holder unknown')" >&2
-    exit 75
-fi
-HV_CENSUS_WAITED_S=$((SECONDS - wait_began))
-export HV_CENSUS_WAITED_S
-if [ "$HV_CENSUS_WAITED_S" -gt 0 ]; then
-    echo "census-run: lock acquired at $(date -Is) after ${HV_CENSUS_WAITED_S}s queued" >&2
+# An ANCESTOR already holds this lock (HV_CENSUS_LOCK_HELD names a live pid):
+# flock is per open-file-description, so re-flocking the same path on a fresh
+# fd would DEADLOCK against our own parent — bounded, so it would not hang
+# forever, but it would burn the full ${HV_CENSUS_WAIT_TIMEOUT:-2700}s and
+# then fail with a message that sends the reader hunting for another job that
+# was never there. This is the same re-entrancy guard gate-full-heavy.sh and
+# regenerate-artifacts.sh already carry; mirror them rather than inventing a
+# third shape.
+held_by="${HV_CENSUS_LOCK_HELD:-}"
+if [ -n "$held_by" ] && kill -0 "$held_by" 2>/dev/null; then
+    echo "census-run: box already claimed by ancestor pid $held_by — proceeding" >&2
+    HV_CENSUS_WAITED_S=0
 else
-    echo "census-run: lock acquired at $(date -Is)" >&2
+    exec 9>"$LOCK"
+    timeout_s="${HV_CENSUS_WAIT_TIMEOUT:-2700}"
+    echo "census-run: waiting for the census lock ($LOCK; up to ${timeout_s}s) …" >&2
+    # Measure the queue wait here: this is where it actually happens, before
+    # timed.sh starts, so `wall_s` stays the work and `waited_s` the queue
+    # (decision 0081).
+    wait_began=$SECONDS
+    if ! flock -w "$timeout_s" 9; then
+        # Bounded, so a wedged holder fails loudly instead of hanging forever
+        # (decision 0081). Report WHO, not just that we gave up.
+        echo "census-run: TIMED OUT after ${timeout_s}s waiting for the census lock." >&2
+        echo "census-run: $(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || echo 'claim holder unknown')" >&2
+        exit 75
+    fi
+    HV_CENSUS_WAITED_S=$((SECONDS - wait_began))
+    if [ "$HV_CENSUS_WAITED_S" -gt 0 ]; then
+        echo "census-run: lock acquired at $(date -Is) after ${HV_CENSUS_WAITED_S}s queued" >&2
+    else
+        echo "census-run: lock acquired at $(date -Is)" >&2
+    fi
+    # Announce the hold so the nested regenerate-artifacts.sh -> lab run path
+    # does not block against its own ancestor (this same guard, one level down).
+    export HV_CENSUS_LOCK_HELD=$$
 fi
-# Announce the hold so the nested regenerate-artifacts.sh -> lab run path does
-# not block against its own ancestor. flock is per open-file-description, so a
-# child re-flocking this same path on a fresh fd would DEADLOCK against us
-# (decision 0081).
-export HV_CENSUS_LOCK_HELD=$$
+export HV_CENSUS_WAITED_S
 trap 'echo "census-run: finished at $(date -Is)" >&2' EXIT
 
 run_root="$repo_root"

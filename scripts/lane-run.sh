@@ -29,12 +29,43 @@ began=$SECONDS
 # `~/.local/state`, not /tmp: a jobs ledger is the ONLY record that a job ever
 # existed, and /tmp does not survive a reboot. heavy-run.sh's /tmp default is
 # inherited history, not a precedent worth copying here.
+#
+# JOBS.TSV COLUMNS: when (utc) / job / set / why / rc / wall_s / ref /
+# waited_s / user_s / sys_s / cpu_ratio. The first seven are unchanged from
+# the original shape, in the original order, so anything already parsing
+# this file keeps working; the last four were added later, appended rather
+# than interleaved, for the same reason.
+#
+# `wall_s` (col 6) is this SCRIPT's own total elapsed time since `began` was
+# set, above — queue wait included, because it starts before the flock
+# acquisition below. `waited_s` (col 8) is the QUEUE portion of that alone
+# (set once acquisition succeeds, mirroring decision 0081's `waited_s` on
+# census-run.sh/heavy-run.sh); subtracting it from `wall_s` is what isolates
+# the actual work. `user_s`/`sys_s`/`cpu_ratio` (cols 9-11) are the numbers
+# CLAUDE.md names as *the* diagnostic that separates contention from a real
+# regression — timed.sh computes them internally for every run, but its own
+# `docs/timings.md` row lands in the LANE'S SCRATCH WORKTREE, which the next
+# dispatch's `checkout --force` + `reset --hard` (below) destroys before
+# anyone reviews it. jobs.tsv is the durable, per-host-independent home
+# already declared above as "the ONLY record that a job ever existed", so
+# these numbers are captured here too, independently of timed.sh's own
+# (still-written, still-discarded) row.
+#
+# All four default to empty (not 0): a job that never reached the relevant
+# stage — refused by the canonical-host guard, an unknown set, a flock
+# timeout — has no honest number to report, and an empty TSV field reads as
+# "not applicable" without being mistaken for a measured zero.
+waited_s=""
+job_user_s=""
+job_sys_s=""
+job_cpu_ratio=""
 
 why="exit"
 record() {
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$job_id" "$set_name" \
-        "$why" "$1" "$((SECONDS - began))" "$ref" >> "$jobs_tsv"
+        "$why" "$1" "$((SECONDS - began))" "$ref" \
+        "$waited_s" "$job_user_s" "$job_sys_s" "$job_cpu_ratio" >> "$jobs_tsv"
 }
 trap 'why=SIGINT'  INT
 trap 'why=SIGTERM' TERM
@@ -81,7 +112,8 @@ if ! flock -w "$timeout_s" 9; then
     echo "lane-run: TIMED OUT after ${timeout_s}s waiting for the staff." >&2
     exit 75
 fi
-echo "lane-run: holds the staff at $(date -Is) after $((SECONDS - wait_began))s queued"
+waited_s=$((SECONDS - wait_began))
+echo "lane-run: holds the staff at $(date -Is) after ${waited_s}s queued"
 export HV_CENSUS_LOCK_HELD=$$
 
 {
@@ -96,4 +128,29 @@ export HV_CENSUS_LOCK_HELD=$$
 # shellcheck disable=SC2154  # code is assigned first thing inside this same trap string
 trap 'code=$?; rm -f "$claim_path"; echo "lane-run: finished $(date -Is) rc=$code"; record "$code"' EXIT
 
-bash scripts/timed.sh "lane:$set_name" -- sh -c "$command_line"
+# Measured HERE, independently of timed.sh's own internal measurement of the
+# same command, so user_s/sys_s/cpu_ratio survive into jobs.tsv (the durable
+# ledger) rather than existing only in timed.sh's docs/timings.md row in this
+# scratch worktree, which the NEXT dispatch's checkout+reset above destroys
+# before anyone reviews it. Same technique timed.sh itself uses (bash's
+# builtin `time`, TIMEFORMAT, redirecting the command's own streams through
+# 8/9 so only `time`'s own report lands in the temp file) — duplicated rather
+# than parsed back out of timed.sh's stderr, so this has no dependency on that
+# script's log-line format.
+#
+# Wrapped in an explicit `if`, not a bare assignment: under `set -e` a failing
+# command directly after `{ time ...; }` would abort the script right here,
+# before `job_rc` is ever read and before user_s/sys_s/cpu_ratio are computed
+# — exactly the case (a failing command) most worth having cpu_ratio for, to
+# tell a real regression from contention on the box.
+_lane_time_tmp="$(mktemp)"
+if { TIMEFORMAT='%R %U %S'; time bash scripts/timed.sh "lane:$set_name" -- sh -c "$command_line" 1>&8 2>&9; } 8>&1 9>&2 2>"$_lane_time_tmp"; then
+    job_rc=0
+else
+    job_rc=$?
+fi
+read -r _lane_wall_s job_user_s job_sys_s < "$_lane_time_tmp"
+rm -f "$_lane_time_tmp"
+job_cpu_ratio="$(awk -v u="$job_user_s" -v s="$job_sys_s" -v r="$_lane_wall_s" \
+    'BEGIN{ if (r+0>0) printf "%.2f", (u+s)/r; else print "?" }')"
+exit "$job_rc"

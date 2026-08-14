@@ -314,7 +314,7 @@ lane-status: ## Who holds the staff on the canonical box, and who is queued
 	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
 	    scripts/heavy-run.sh status; \
 	    d=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
-	    echo; echo "== recent jobs (utc, id, set, why, rc, wall_s, ref) =="; \
+	    echo; echo "== recent jobs (utc, id, set, why, rc, wall_s, ref, waited_s, user_s, sys_s, cpu_ratio) =="; \
 	    tail -10 "$$d/jobs.tsv" 2>/dev/null || echo "  (no jobs recorded yet)"'
 
 lane-log: ## Read a lane job back (JOB=<id>, or omit for the most recent)
