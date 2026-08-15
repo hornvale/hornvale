@@ -1269,9 +1269,11 @@ pub fn render(corpus: &Corpus, path: &str) -> String {
     }
 
     // The `note` column (Task 5, 5a) surfaces the author's own
-    // qualification alongside the verdict — including the seven items
-    // whose note starts `ARGUABLE`, the strongest form of self-doubt this
-    // corpus records. Without it, those rows printed exactly as flat as a
+    // qualification alongside the verdict — including every item whose note
+    // opens `ARGUABLE`, the strongest form of self-doubt this corpus
+    // records. (Deliberately not counted here: a figure in this comment
+    // would decay on the next note edit, and the rendered artifact carries
+    // the roster itself.) Without it, those rows printed exactly as flat as a
     // strongly-anchored one, which is the same "scorecard, not an
     // instrument" failure the caveat above this table already exists to
     // avoid for the tally. `|` is escaped defensively in EVERY free-text

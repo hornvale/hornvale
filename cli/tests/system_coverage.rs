@@ -70,11 +70,11 @@ fn committed_absent_count_is_none_without_a_tally_line() {
 /// of the real corpus, so `live_absent` rises by exactly one above the
 /// committed artifact's count.
 ///
-/// The expected pair is READ FROM the committed report rather than written
-/// here. Task 4 authored the verdicts and took the `absent` count from 74 to
-/// 9, which reddened this test on a hard-coded `"74 to 75"` while the guard
-/// itself was behaving perfectly — an assertion pinned to a tally it does not
-/// test is a false alarm waiting on the next verdict that moves.
+/// **The expected pair is READ FROM its sources rather than written here**,
+/// because an assertion pinned to a tally it does not test is a false alarm
+/// waiting on the next verdict that moves. This test checks that `check`
+/// distinguishes novelty from ordinary drift; the tally is the artifact's
+/// business, not this test's.
 #[test]
 fn check_fails_on_novelty_when_the_absent_count_rises() {
     let root = workspace_root();
@@ -123,13 +123,12 @@ fn check_fails_on_novelty_when_the_absent_count_rises() {
     let baseline =
         hornvale::systems::committed_absent_count(&committed).expect("the report carries a tally");
     // BOTH ends are read, not just the baseline. `check` reports
-    // `<committed baseline> to <live count>`, and the two are independent:
+    // `<committed baseline> to <live count>`, and the two are INDEPENDENT:
     // the scratch corpus is the LIVE corpus plus one absent item, so the
-    // right-hand number tracks the live tally, which need not be the
-    // committed one. Deriving it as `baseline + 1` was correct only while
-    // the live corpus and the committed report agreed — it broke the moment
-    // the G6 re-verdict moved `absent` 10 -> 11 against a report still
-    // recording 10, reporting `10 to 12` against an expected `10 to 11`.
+    // right-hand number tracks the live tally, which need not equal the
+    // committed one. Deriving the right end as `baseline + 1` assumes they
+    // agree, which is true only between a verdict change and its rebaseline
+    // — exactly the window this test runs in when it matters most.
     let live_absent = load_wolverson()
         .items
         .iter()
@@ -179,8 +178,8 @@ fn the_corpus_declares_its_provenance_and_freeze() {
 use hornvale::systems::{Finding, RepoFacts, audit, load};
 
 /// Build a one-item, `ordered: true` corpus with the given verdict and
-/// anchor. All 8 existing call sites in this file want exactly that shape,
-/// so it keeps the bare two-argument signature; `corpus_with_ordered` below
+/// anchor. Almost every call site in this file wants exactly that shape, so
+/// it keeps the bare two-argument signature; `corpus_with_ordered` below
 /// is the narrow sibling for the one test that needs `ordered: false`,
 /// rather than threading a bare `true`/`false` through every call here.
 fn corpus_with(verdict: &str, anchor: Option<&str>) -> hornvale::systems::Corpus {
@@ -883,15 +882,14 @@ fn a_test_anchor_citing_an_ordinary_running_test_is_clean() {
 /// already covers this), but naming it explicitly, with a message that
 /// would name which anchor broke if one ever does.
 ///
-/// **The count is asserted NON-EMPTY, not exact.** It was a literal `26`,
-/// which is the roster size 5b happened to measure; the weakest-half
-/// re-verdict (G6) moved six items off `test:` anchors onto `registry:`
-/// and `path:` ones (26 -> 20) and reddened this test while nothing it exists to
-/// check had moved. The literal's only real job is anti-vacuity — a corpus
-/// with no `test:` anchors at all would pass the resolve-clean assertion
-/// trivially — and non-empty does that job without pinning a number this
-/// test does not test. Anchor CHANGES are already caught, byte for byte,
-/// by the report and matrix goldens.
+/// **The count is asserted NON-EMPTY, not exact**, and deliberately so. The
+/// only job a count has here is anti-vacuity: a corpus carrying no `test:`
+/// anchors at all would pass the resolve-clean assertion below trivially, and
+/// non-empty rules that out. An exact figure would pin a number this test does
+/// not test — anchor changes are already caught byte for byte by the report and
+/// matrix goldens — so it would be a second, decaying copy of a fact the
+/// committed artifact already holds, reddening this test whenever a verdict
+/// moves and nothing it exists to check has.
 #[test]
 fn every_real_test_anchor_in_the_corpus_still_resolves_clean() {
     let corpus = load_wolverson();
