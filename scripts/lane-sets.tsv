@@ -1,0 +1,43 @@
+# The set roster (The Staff). THE SINGLE SOURCE OF TRUTH for what a set is.
+# Read by the Makefile, scripts/lane-dispatch.sh, scripts/lane-run.sh, and
+# cli/tests/lane_sets.rs. scripts/census-canonical-host.sh does NOT read this
+# file — its require_canonical_host() only takes a set NAME as $1, to name
+# the right dispatch line in its refusal prose. Do not restate this list in
+# prose anywhere — cli/tests/lane_sets.rs fails on a second copy, for the
+# reason docs/generated-paths.txt exists.
+#
+# TSV, not JSON: /bin/sh on lefford is dash and must parse this without a tool,
+# and decision 0004 admits no TOML parser to the workspace.
+#
+# SOME COMMANDS BELOW DO NOT EXIST YET. `style-run`, `subfloor-run`,
+# `gate-suite-run`, `clients-check-run` (Makefile targets) and
+# scripts/lane-outboard.sh land in later tasks of this campaign (Tasks 5, 7,
+# 8, 9) — a cold reader hitting a missing target or script is not looking at
+# a typo or breakage, just an earlier task than the one that adds it.
+#
+# `seam-guard` moved OUT of `outboard` and onto its own `campaign`-rung row.
+# Task 8's own measurement forced this: 855.222 s for the four-suite
+# `outboard` set (the `lane:outboard` row in docs/timings.md), of which
+# seam-guard's 7 call sites alone cost 853.284 s (99.8%, the `lane:seam-guard`
+# row) -- the other three suites finish in well under a minute combined. The
+# taxonomy sorts sets by the DIRECTION their guarantee moves in, not by
+# cost: a seam changes when seams or tests change (slow-moving,
+# campaign-shaped), which is a `campaign`-rung cadence, not a
+# per-plan-stage-boundary one. It also never lived in the commit gate
+# historically -- it was in the old `gate-full` evidence tier for the same
+# reason (each call site costs a full scoped test run). No separate wrapper
+# script: `make seam-guard` is already one command with its own
+# three-valued verdict output, so naming it directly here is the same shape
+# as the `gate` row above (`make --no-print-directory gate-suite-run`), not
+# a special case.
+#
+# name	gate	where	authors	command
+style	commit	local	no	make --no-print-directory style-run
+subfloor	commit	local	no	make --no-print-directory subfloor-run
+gate	stage	lane	no	make --no-print-directory gate-suite-run
+artifacts	stage	lane	yes	bash scripts/regenerate-artifacts.sh
+outboard	stage	lane	yes	bash scripts/lane-outboard.sh
+clients	stage	lane	yes	make --no-print-directory clients-check-run
+heavy	campaign	lane	yes	bash scripts/gate-full-heavy.sh
+census	campaign	lane	yes	bash scripts/census-run.sh
+seam-guard	campaign	lane	no	make --no-print-directory seam-guard
