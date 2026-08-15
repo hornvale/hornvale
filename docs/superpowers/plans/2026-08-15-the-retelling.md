@@ -4,7 +4,7 @@
 
 **Goal:** Make myth content vary in transmission, so that divergence becomes measurable, by shipping a two-filter communication chain and a correct maximum-antichain measure of divergent structure.
 
-**Architecture:** A retelling passes through two deterministic filters — the teller's *incentive* (has this community ever raided?) and the hearer's *formation* (was it born of a catastrophe?). A retelling whose filter pair is **matched** is frictionless and carries content unchanged; a **mismatched** pair is lossy and coarsens the claim's day one step along a fixed grain ladder. Everything is derived from committed facts, so `windows/hearsay` stays a window: no seeded draw, no `streams.rs` label, no epoch.
+**Architecture:** A retelling passes through two deterministic filters — the teller's *incentive* (has this community ever raided?) and the hearer's *formation* (was it born of a catastrophe?). A retelling whose filter pair is **matched** is frictionless and carries content unchanged; a **mismatched** pair is lossy and coarsens the claim's day one step along a fixed precision ladder. Everything is derived from committed facts, so `windows/hearsay` stays a window: no seeded draw, no `streams.rs` label, no epoch.
 
 **Tech Stack:** Rust 2024, `hornvale-kernel` + `hornvale-history` only at runtime (`hornvale-worldgen`/`astronomy`/`terrain` are dev-dependencies for the live batteries). Std-only; the workspace dependency allowlist is `serde`, `serde_json`, `libm`.
 
@@ -27,8 +27,8 @@
 
 | File | Responsibility |
 |---|---|
-| `kernel/src/grain.rs` (create) | `Grain` — the five-rung coarsening ladder and its application to a day. |
-| `kernel/src/claim.rs` (modify) | `Claim` gains a `grain` field and a `retold_by` sibling to `inherited_by`. |
+| `kernel/src/precision.rs` (create) | `Precision` — the five-rung coarsening ladder and its application to a day. |
+| `kernel/src/claim.rs` (modify) | `Claim` gains a `precision` field and a `retold_by` sibling to `inherited_by`. |
 | `windows/hearsay/src/filters.rs` (create) | The two filter keys and the matched/lossy predicate. |
 | `windows/hearsay/src/divergence.rs` (create) | Maximum antichain over a witness set. |
 | `windows/hearsay/src/derive.rs` (modify) | `variants_about` — the path-aware walk that applies filters. |
@@ -40,16 +40,16 @@
 
 ---
 
-### Task 1: The grain ladder
+### Task 1: The precision ladder
 
 **Files:**
-- Create: `kernel/src/grain.rs`
-- Modify: `kernel/src/lib.rs` (add `pub mod grain;` and re-export)
-- Test: in-module `#[cfg(test)]` in `kernel/src/grain.rs`
+- Create: `kernel/src/precision.rs`
+- Modify: `kernel/src/lib.rs` (add `pub mod precision;` and re-export)
+- Test: in-module `#[cfg(test)]` in `kernel/src/precision.rs`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `pub enum Grain { Day, Season, Year, Decade, Generation }`; `Grain::coarser(self) -> Grain` (saturating at `Generation`); `Grain::apply(self, day: f64) -> f64`; `Grain::rungs() -> usize` returning `5`.
+- Produces: `pub enum Precision { Day, Season, Year, Decade, Generation }`; `Precision::coarser(self) -> Precision` (saturating at `Generation`); `Precision::apply(self, day: f64) -> f64`; `Precision::rungs() -> usize` returning `5`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -60,28 +60,28 @@ mod tests {
 
     #[test]
     fn coarser_walks_the_ladder_and_saturates_at_the_top() {
-        assert_eq!(Grain::Day.coarser(), Grain::Season);
-        assert_eq!(Grain::Season.coarser(), Grain::Year);
-        assert_eq!(Grain::Year.coarser(), Grain::Decade);
-        assert_eq!(Grain::Decade.coarser(), Grain::Generation);
-        assert_eq!(Grain::Generation.coarser(), Grain::Generation);
+        assert_eq!(Precision::Day.coarser(), Precision::Season);
+        assert_eq!(Precision::Season.coarser(), Precision::Year);
+        assert_eq!(Precision::Year.coarser(), Precision::Decade);
+        assert_eq!(Precision::Decade.coarser(), Precision::Generation);
+        assert_eq!(Precision::Generation.coarser(), Precision::Generation);
     }
 
     #[test]
-    fn applying_a_grain_snaps_a_day_down_to_its_rung() {
+    fn applying_a_precision_snaps_a_day_down_to_its_rung() {
         // 3661.75 days: within year 10 (365-day rungs), decade 10.
-        assert_eq!(Grain::Day.apply(3661.75), 3661.75);
-        assert_eq!(Grain::Year.apply(3661.75), 3650.0);
-        assert_eq!(Grain::Decade.apply(3661.75), 3650.0);
+        assert_eq!(Precision::Day.apply(3661.75), 3661.75);
+        assert_eq!(Precision::Year.apply(3661.75), 3650.0);
+        assert_eq!(Precision::Decade.apply(3661.75), 3650.0);
     }
 
     #[test]
-    fn a_coarser_grain_is_never_more_precise_than_a_finer_one() {
+    fn a_coarser_precision_is_never_more_precise_than_a_finer_one() {
         // The anti-symmetry that makes distortion monotone: coarsening twice
         // can only move the value further from, never back toward, the truth.
         let truth = 3661.75;
-        let once = Grain::Day.coarser().apply(truth);
-        let twice = Grain::Day.coarser().coarser().apply(truth);
+        let once = Precision::Day.coarser().apply(truth);
+        let twice = Precision::Day.coarser().coarser().apply(truth);
         assert!((twice - truth).abs() >= (once - truth).abs());
     }
 }
@@ -89,8 +89,8 @@ mod tests {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test -p hornvale-kernel --lib grain`
-Expected: FAIL — `cannot find type Grain`.
+Run: `cargo test -p hornvale-kernel --lib precision`
+Expected: FAIL — `cannot find type Precision`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -102,7 +102,7 @@ Expected: FAIL — `cannot find type Grain`.
 /// a rumour decay rather than sharpen.
 /// type-audit: bare-ok(count: rungs)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Grain {
+pub enum Precision {
     /// The exact day.
     Day,
     /// Snapped to a 91-day season.
@@ -115,31 +115,31 @@ pub enum Grain {
     Generation,
 }
 
-impl Grain {
-    /// The next rung coarser, saturating at [`Grain::Generation`].
-    pub fn coarser(self) -> Grain {
+impl Precision {
+    /// The next rung coarser, saturating at [`Precision::Generation`].
+    pub fn coarser(self) -> Precision {
         match self {
-            Grain::Day => Grain::Season,
-            Grain::Season => Grain::Year,
-            Grain::Year => Grain::Decade,
-            Grain::Decade | Grain::Generation => Grain::Generation,
+            Precision::Day => Precision::Season,
+            Precision::Season => Precision::Year,
+            Precision::Year => Precision::Decade,
+            Precision::Decade | Precision::Generation => Precision::Generation,
         }
     }
 
     /// The span of one rung, in standard days. `Day` is 1.0.
     fn span(self) -> f64 {
         match self {
-            Grain::Day => 1.0,
-            Grain::Season => 91.0,
-            Grain::Year => 365.0,
-            Grain::Decade => 3650.0,
-            Grain::Generation => 10950.0,
+            Precision::Day => 1.0,
+            Precision::Season => 91.0,
+            Precision::Year => 365.0,
+            Precision::Decade => 3650.0,
+            Precision::Generation => 10950.0,
         }
     }
 
     /// `day` snapped down to this rung. `Day` is the identity.
     pub fn apply(self, day: f64) -> f64 {
-        if self == Grain::Day {
+        if self == Precision::Day {
             return day;
         }
         let s = self.span();
@@ -155,29 +155,40 @@ impl Grain {
 }
 ```
 
-Add to `kernel/src/lib.rs`, beside the existing `claim` module declaration:
+**Why `Precision` and not `Grain`.** `Grain` would be the workspace's fourth
+homonym pair: `domains/alchemy`'s `Sign::Grain` is a **cereal trade good** and
+`domains/history/src/flesh.rs:561` documents "Grain storage — an agrarian
+occupation's surplus". The board already records three homonym pairs producing
+a wrong number someone nearly acted on; minting a fourth deliberately, in the
+kernel, would be a self-inflicted version of that. Verified free:
+`grep -rn 'enum Precision\|struct Precision' kernel/ domains/ windows/ cli/`
+returns nothing.
+
+Add to `kernel/src/lib.rs`. **The module list is alphabetical** — `precision`
+goes between `polyline` (line 24) and `provenance` (line 25), and the
+`pub use` between `png`'s and `provenance`'s:
 
 ```rust
-pub mod grain;
+pub mod precision;
 ```
 
 and beside the existing `pub use` lines:
 
 ```rust
-pub use grain::Grain;
+pub use precision::Precision;
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test -p hornvale-kernel --lib grain`
+Run: `cargo test -p hornvale-kernel --lib precision`
 Expected: PASS, 3 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cargo fmt
-git add kernel/src/grain.rs kernel/src/lib.rs
-git commit -m "feat(kernel): the grain ladder a retold claim descends"
+git add kernel/src/precision.rs kernel/src/lib.rs
+git commit -m "feat(kernel): the precision ladder a retold claim descends"
 ```
 
 ---
@@ -189,8 +200,8 @@ git commit -m "feat(kernel): the grain ladder a retold claim descends"
 - Test: in-module `#[cfg(test)]` in `kernel/src/claim.rs`
 
 **Interfaces:**
-- Consumes: `hornvale_kernel::Grain` from Task 1.
-- Produces: `Claim.grain: Grain` (new public field); `Claim::retold_by(&self, holder: EntityId, lossy: bool) -> Claim`. `Claim::inherited_by` keeps its exact existing behaviour and signature.
+- Consumes: `hornvale_kernel::Precision` from Task 1.
+- Produces: `Claim.precision: Precision` (new public field); `Claim::retold_by(&self, holder: EntityId, lossy: bool) -> Claim`. `Claim::inherited_by` keeps its exact existing behaviour and signature.
 
 **Why `inherited_by` is not replaced:** campaign 1's three tests assert on it and their meaning must not shift. `retold_by(h, false)` is behaviourally identical to `inherited_by(h)`; a test in this task pins that equivalence so the duplication cannot silently diverge.
 
@@ -200,19 +211,19 @@ Add to the existing `mod tests` in `kernel/src/claim.rs`:
 
 ```rust
     #[test]
-    fn a_frictionless_retelling_carries_content_and_grain_unchanged() {
+    fn a_frictionless_retelling_carries_content_and_precision_unchanged() {
         let heir = witnessed().retold_by(eid(2), false);
         assert_eq!(heir.object, witnessed().object);
-        assert_eq!(heir.grain, Grain::Day);
+        assert_eq!(heir.precision, Precision::Day);
         assert_eq!(heir.hops, 1);
         assert_eq!(heir.grade, Provenance::Taught);
     }
 
     #[test]
-    fn a_lossy_retelling_coarsens_the_grain_and_the_object_together() {
+    fn a_lossy_retelling_coarsens_the_precision_and_the_object_together() {
         let heir = witnessed().retold_by(eid(2), true);
-        assert_eq!(heir.grain, Grain::Season);
-        assert_eq!(heir.object, Value::Number(Grain::Season.apply(63918.75)));
+        assert_eq!(heir.precision, Precision::Season);
+        assert_eq!(heir.object, Value::Number(Precision::Season.apply(63918.75)));
         assert_ne!(heir.object, witnessed().object);
     }
 
@@ -231,26 +242,26 @@ Add to the existing `mod tests` in `kernel/src/claim.rs`:
             .retold_by(eid(2), true)
             .retold_by(eid(3), false)
             .retold_by(eid(4), true);
-        assert_eq!(c.grain, Grain::Year);
+        assert_eq!(c.precision, Precision::Year);
         assert_eq!(c.hops, 3);
     }
 
     #[test]
     fn a_non_numeric_object_is_carried_unchanged_by_a_lossy_retelling() {
-        // The ladder coarsens days. A Text or Entity object has no grain to
+        // The ladder coarsens days. A Text or Entity object has no precision to
         // descend, so it must pass through untouched rather than panic.
         let mut c = witnessed();
         c.object = Value::Text("razed".to_string());
         let heir = c.retold_by(eid(2), true);
         assert_eq!(heir.object, Value::Text("razed".to_string()));
-        assert_eq!(heir.grain, Grain::Season);
+        assert_eq!(heir.precision, Precision::Season);
     }
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `cargo test -p hornvale-kernel --lib claim`
-Expected: FAIL — `no method named retold_by`, `no field grain`.
+Expected: FAIL — `no method named retold_by`, `no field precision`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -258,8 +269,8 @@ Add the field to the struct (after `hops`), updating the type-audit tag on the s
 
 ```rust
     /// How precisely this holder remembers the claim's day. Witnesses hold
-    /// [`Grain::Day`]; each lossy retelling descends one rung.
-    pub grain: Grain,
+    /// [`Precision::Day`]; each lossy retelling descends one rung.
+    pub precision: Precision,
 ```
 
 Add the method beside `inherited_by`:
@@ -268,14 +279,14 @@ Add the method beside `inherited_by`:
     /// The claim as a new holder receives it through a retelling.
     ///
     /// `lossy` is the two-filter verdict: `false` when teller and hearer share
-    /// a frame (content and grain pass unchanged, identical to
-    /// [`Claim::inherited_by`]), `true` when they do not (the grain descends
+    /// a frame (content and precision pass unchanged, identical to
+    /// [`Claim::inherited_by`]), `true` when they do not (the precision descends
     /// one rung and a numeric object is snapped to it). A non-numeric object
-    /// has no grain to descend and is carried unchanged.
+    /// has no precision to descend and is carried unchanged.
     pub fn retold_by(&self, holder: EntityId, lossy: bool) -> Claim {
-        let grain = if lossy { self.grain.coarser() } else { self.grain };
+        let precision = if lossy { self.precision.coarser() } else { self.precision };
         let object = match (&self.object, lossy) {
-            (Value::Number(d), true) => Value::Number(grain.apply(*d)),
+            (Value::Number(d), true) => Value::Number(precision.apply(*d)),
             (other, _) => other.clone(),
         };
         Claim {
@@ -285,12 +296,12 @@ Add the method beside `inherited_by`:
             object,
             grade: self.grade.on_transmission(),
             hops: self.hops.saturating_add(1),
-            grain,
+            precision,
         }
     }
 ```
 
-Then fix the three construction sites: add `grain: self.grain` to `inherited_by`'s literal at `:38`, and `grain: Grain::Day` to the test helper at `:59`. `windows/hearsay/src/derive.rs:78` is fixed in Task 4.
+Then fix the three construction sites: add `precision: self.precision` to `inherited_by`'s literal at `:38`, and `precision: Precision::Day` to the test helper at `:59`. `windows/hearsay/src/derive.rs:78` is fixed in Task 4.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -465,7 +476,7 @@ impl Filters {
         self.catastrophe_born.contains(&occ)
     }
 
-    /// Whether a retelling from `teller` to `hearer` loses a rung of grain.
+    /// Whether a retelling from `teller` to `hearer` loses a rung of precision.
     /// Lossy exactly when the two keys disagree: a shared frame carries
     /// content, a mismatched one costs precision.
     pub fn is_lossy(&self, teller: EntityId, hearer: EntityId) -> bool {
@@ -498,7 +509,7 @@ git commit -m "feat(hearsay): the productive and receptive filters, keyed on rol
 - Test: `windows/hearsay/tests/derive.rs` (append)
 
 **Interfaces:**
-- Consumes: `Filters` (Task 3), `Claim::retold_by` and `Grain` (Tasks 1–2), `witnesses_of` and `Lineage` (existing).
+- Consumes: `Filters` (Task 3), `Claim::retold_by` and `Precision` (Tasks 1–2), `witnesses_of` and `Lineage` (existing).
 - Produces: `pub fn variants_about(ledger: &Ledger, lineage: &Lineage, filters: &Filters, subject: EntityId, predicate: &str) -> Vec<Claim>`, ascending by holder.
 
 **THE DESIGN DECISION THIS TASK LOCKS, and it is not in the spec because the spec does not reach implementation depth.** Campaign 1's `claims_about` takes the *minimum hop count* across witnesses. Distortion depends on the whole path, not its length, so a holder reachable from two witnesses now has two candidate variants. The rule is **the least-corrupted telling wins**, ordered by:
@@ -529,8 +540,8 @@ fn a_frictionless_chain_carries_the_day_to_every_descendant() {
     let vs = variants_about(&led, &lin, &f, eid(1), hornvale_history::OCC_ENDED);
     for v in &vs {
         assert_eq!(
-            v.grain,
-            Grain::Day,
+            v.precision,
+            Precision::Day,
             "no key disagrees anywhere, so nothing is lossy: {v:?}"
         );
         assert_eq!(v.object, Value::Number(63918.75));
@@ -555,11 +566,11 @@ fn a_lossy_step_coarsens_the_day_for_that_holder_and_its_descendants() {
             .clone()
     };
     // 2 is a WITNESS (founded on 1's ending day), so it holds first-hand.
-    assert_eq!(held(2).grain, Grain::Day);
+    assert_eq!(held(2).precision, Precision::Day);
     assert_eq!(held(2).hops, 0);
     // 3 hears it from 2: teller 2 does not raid, hearer 3 not born of
     // catastrophe -> keys agree -> frictionless.
-    assert_eq!(held(3).grain, Grain::Day);
+    assert_eq!(held(3).precision, Precision::Day);
 }
 
 #[test]
@@ -584,7 +595,7 @@ fn the_least_corrupted_telling_is_the_one_held() {
 }
 ```
 
-Add the imports the file needs at its top: `use hornvale_hearsay::derive::variants_about; use hornvale_hearsay::filters::Filters; use hornvale_kernel::Grain;`
+Add the imports the file needs at its top: `use hornvale_hearsay::derive::variants_about; use hornvale_hearsay::filters::Filters; use hornvale_kernel::Precision;`
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -593,14 +604,14 @@ Expected: FAIL — `cannot find function variants_about`.
 
 - [ ] **Step 3: Write the implementation**
 
-First fix the existing literal at `derive.rs:78` by adding `grain: hornvale_kernel::Grain::Day,` to it. Then add:
+First fix the existing literal at `derive.rs:78` by adding `precision: hornvale_kernel::Precision::Day,` to it. Then add:
 
 ```rust
 /// Every variant of `(subject, predicate)` held anywhere, ascending by holder.
 ///
 /// Like [`claims_about`], but content varies: each inheritance step is a
 /// retelling through the two filters, and a mismatched pair costs a rung of
-/// grain (see [`crate::filters`]).
+/// precision (see [`crate::filters`]).
 ///
 /// **A holder reachable from two witnesses holds the LEAST-CORRUPTED telling**
 /// — ordered by fewest lossy steps, then fewest hops, then smallest witness
@@ -627,7 +638,7 @@ pub fn variants_about(
         object: object.clone(),
         grade: Provenance::Witnessed,
         hops: 0,
-        grain: hornvale_kernel::Grain::Day,
+        precision: hornvale_kernel::Precision::Day,
     };
     let witnesses = witnesses_of(ledger, lineage, subject, predicate);
     // (lossy_steps, hops, witness) -> the claim reached by that path.
@@ -825,7 +836,7 @@ git commit -m "feat(hearsay): divergent structure as a maximum antichain, not mi
 
 **Interfaces:**
 - Consumes: everything from Tasks 1–5.
-- Produces: `pub fn variant_count(ledger, lineage, filters, subject, predicate) -> Option<usize>`; `pub fn finest_grain_hops(ledger, lineage, filters, subject, predicate) -> Vec<u32>`; `pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64>`.
+- Produces: `pub fn variant_count(ledger, lineage, filters, subject, predicate) -> Option<usize>`; `pub fn finest_precision_hops(ledger, lineage, filters, subject, predicate) -> Vec<u32>`; `pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64>`.
 
 **This task reports numbers against §6's decision tables. It does NOT retune anything to make a prediction come true.** A falsified prediction is the finding; several campaigns have shipped the null as the headline.
 
@@ -917,7 +928,7 @@ pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
     Some(num / (dx * dy).sqrt())
 }
 
-/// How many distinct `(grain, object)` variants of one event are held, or
+/// How many distinct `(precision, object)` variants of one event are held, or
 /// `None` when fewer than three holders qualify (§6's population rule).
 /// type-audit: bare-ok(count: return)
 pub fn variant_count(
@@ -931,15 +942,15 @@ pub fn variant_count(
     if vs.len() < 3 {
         return None;
     }
-    let mut seen: BTreeSet<(hornvale_kernel::Grain, String)> = BTreeSet::new();
+    let mut seen: BTreeSet<(hornvale_kernel::Precision, String)> = BTreeSet::new();
     for v in &vs {
-        seen.insert((v.grain, format!("{:?}", v.object)));
+        seen.insert((v.precision, format!("{:?}", v.object)));
     }
     Some(seen.len())
 }
 
-/// The hop counts of holders still at the FINEST grain — H1's population.
-pub fn finest_grain_hops(
+/// The hop counts of holders still at the FINEST precision — H1's population.
+pub fn finest_precision_hops(
     ledger: &Ledger,
     lineage: &Lineage,
     filters: &Filters,
@@ -948,7 +959,7 @@ pub fn finest_grain_hops(
 ) -> Vec<u32> {
     crate::derive::variants_about(ledger, lineage, filters, subject, predicate)
         .into_iter()
-        .filter(|c| c.grain == hornvale_kernel::Grain::Day)
+        .filter(|c| c.precision == hornvale_kernel::Precision::Day)
         .map(|c| c.hops)
         .collect()
 }
@@ -972,7 +983,7 @@ Expected: PASS.
 use hornvale_hearsay::derive::witnesses_of;
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::filters::Filters;
-use hornvale_hearsay::{finest_grain_hops, lineage::lineage_of, spearman, variant_count};
+use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
 
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
 /// occupation ids, not seeds.
@@ -991,11 +1002,11 @@ fn the_retelling_readout_on_seed_42() {
     let lin = lineage_of(led);
     let f = Filters::of(led, &lin);
 
-    // --- H1: per-hop counts of claims still at the finest grain ---
+    // --- H1: per-hop counts of claims still at the finest precision ---
     let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
     let mut finest_total = 0usize;
     for s in lin.all() {
-        for h in finest_grain_hops(led, &lin, &f, s, hornvale_history::OCC_ENDED) {
+        for h in finest_precision_hops(led, &lin, &f, s, hornvale_history::OCC_ENDED) {
             *by_hop.entry(h).or_default() += 1;
             finest_total += 1;
         }
@@ -1036,7 +1047,7 @@ fn the_retelling_readout_on_seed_42() {
     let rho = spearman(&widths, &counts);
 
     println!(
-        "H1 finest_grain_pairs={finest_total} per_hop={by_hop:?} \
+        "H1 finest_precision_pairs={finest_total} per_hop={by_hop:?} \
          ratios={ratios:?} mean={mean:.4} var={var:.4}"
     );
     println!("H2 qualifying={qualifying} median_variants={median} distribution={sorted:?}");
@@ -1045,13 +1056,13 @@ fn the_retelling_readout_on_seed_42() {
     // The only assertions are the floors and ceilings the spec states.
     assert!(
         finest_total >= 500 || qualifying < 100,
-        "H1 NO VERDICT floor: {finest_total} finest-grain pairs"
+        "H1 NO VERDICT floor: {finest_total} finest-precision pairs"
     );
     for n in &counts {
         assert!(
-            *n <= hornvale_kernel::Grain::rungs() as f64,
+            *n <= hornvale_kernel::Precision::rungs() as f64,
             "a variant count above the ladder's {} rungs is impossible: {n}",
-            hornvale_kernel::Grain::rungs()
+            hornvale_kernel::Precision::rungs()
         );
     }
 }
@@ -1182,10 +1193,10 @@ Then **stop**. G6 is a hard stop: present the post-G3 ledger digest to Nathan be
 
 ## Self-Review
 
-**Spec coverage.** §1.1 two-filter chain → Task 3. §1.2 derived keys → Task 3. §1.3 maximum antichain → Task 5. §1.4 preregistered measurement → Task 6. §5.2 grain ladder and `retold_by` → Tasks 1–2. §3.4 stale tiering → Task 7. §8 DoD → Tasks 7–8. §6 H1/H2/H3 decision tables → Task 6 reports, Task 8 records.
+**Spec coverage.** §1.1 two-filter chain → Task 3. §1.2 derived keys → Task 3. §1.3 maximum antichain → Task 5. §1.4 preregistered measurement → Task 6. §5.2 precision ladder and `retold_by` → Tasks 1–2. §3.4 stale tiering → Task 7. §8 DoD → Tasks 7–8. §6 H1/H2/H3 decision tables → Task 6 reports, Task 8 records.
 
 **Deliberately not covered, and why:** §7's blind reconstruction, misattribution drift and filter width are all `Carried forward` — campaign 3. No task implements them.
 
-**Type consistency.** `Grain` (Task 1) is used by name in Tasks 2, 4, 6. `Filters::is_lossy` (Task 3) is called in Task 4 only. `variants_about` (Task 4) is consumed by `variant_count` and `finest_grain_hops` (Task 6). `maximum_antichain` (Task 5) is consumed by Task 6. `Claim.grain` is added in Task 2 and read in Tasks 4 and 6.
+**Type consistency.** `Precision` (Task 1) is used by name in Tasks 2, 4, 6. `Filters::is_lossy` (Task 3) is called in Task 4 only. `variants_about` (Task 4) is consumed by `variant_count` and `finest_precision_hops` (Task 6). `maximum_antichain` (Task 5) is consumed by Task 6. `Claim.precision` is added in Task 2 and read in Tasks 4 and 6.
 
 **Known plan risk, stated rather than hidden.** Task 4's `variants_about` walks `lineage.ancestry(d)` inside a loop over `descendants_of(w)`, which is `O(n²)`-ish on a 704-node tree and fine there, but it is the function a census metric would call. If Task 6's battery exceeds Task 7's 20 s branch, the cause is most likely here, and the fix is to memoise ancestry once per world rather than to weaken the measurement.

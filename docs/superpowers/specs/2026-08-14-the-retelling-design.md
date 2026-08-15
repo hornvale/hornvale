@@ -164,7 +164,7 @@ distortion rate a property of the *path*, not a constant.
 ### 5.2 What distortion does to content
 
 `Claim.object` on the measured predicate `occ-ended` is a `Value::Number` — a
-day. Distortion coarsens it along a fixed grain ladder (day, season, year,
+day. Distortion coarsens it along a fixed precision ladder (day, season, year,
 decade, generation), one step per lossy retelling, never reversing. This is
 `lectio difficilior` in its numeric form: copyists regularise, and a round
 number is the easier reading.
@@ -207,7 +207,7 @@ every quantity below.
 
 Campaign 1's pair counts decline **almost linearly** with hops, which is the
 fingerprint of nothing being lost. With lossy retellings, counts of *claims
-still at the finest grain* should decline **geometrically**.
+still at the finest precision* should decline **geometrically**.
 
 Measure: the ratio of successive per-hop pair counts, `n(k+1)/n(k)`, over
 `k` in `1..=8`, and its variance.
@@ -222,22 +222,22 @@ Measure: the ratio of successive per-hop pair counts, `n(k+1)/n(k)`, over
            one that survived two. Say so; it inverts the intuition the
            baseline was built on.
   ratio falling with k
-        -> H1 REFUTED; decay accelerates, and the grain ladder is exhausting
+        -> H1 REFUTED; decay accelerates, and the precision ladder is exhausting
            before the tree does. Report the exhaustion hop.
-  fewer than 500 pairs at the finest grain -> NO VERDICT; report the count.
+  fewer than 500 pairs at the finest precision -> NO VERDICT; report the count.
 ```
 
 **Honest bound.** That *some* bend exists is close to analytic once a lossy
 step exists at all. What is not analytic, and what H1 actually tests, is the
 **shape** — whether the per-hop rate is constant, and where it bites. The
 ceiling is stated so the floor means something: the ladder has five rungs, so
-no event can show more than 5 distinct grains, and a result at exactly 5
+no event can show more than 5 distinct precisions, and a result at exactly 5
 means the ladder saturated and the measure is reporting my constant, not the
 world.
 
 ### H2 — distortion manufactures multiplicity
 
-Distinct surviving `(grain, value)` variants per qualifying ending (>= 3
+Distinct surviving `(precision, value)` variants per qualifying ending (>= 3
 holders), median over the seed set. **Prediction: median >= 2.**
 
 The null is that the tree's homogeneity swallows the filters — most events
@@ -277,7 +277,7 @@ tested it. Measure Spearman's rho between an ending's maximum-antichain width
   fewer than 100 qualifying endings -> NO VERDICT.
 ```
 
-**Do not retune the grain ladder to move any of these.** If a result is
+**Do not retune the precision ladder to move any of these.** If a result is
 uncomfortable, the result is the finding.
 
 ## 7. Carried forward
