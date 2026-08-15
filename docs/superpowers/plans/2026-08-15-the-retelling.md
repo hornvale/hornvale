@@ -794,6 +794,15 @@ fn an_empty_witness_set_has_an_empty_antichain() {
 }
 ```
 
+**Use `Lineage::is_ancestor`, not `ancestry().contains()`.** Task 3 shipped the
+per-node ancestor memo precisely so membership is an O(log n) lookup; walking
+`ancestry` here would reintroduce the 473.7x cost the memo removed.
+
+**Do NOT change or delete `divergent_witnesses`.** It is campaign 1's
+minimal-elements measure, its tests pin the published H5 figure of 0.4632, and
+the readout compares the two. `maximum_antichain` is a sibling that corrects
+the extremum, not a replacement that erases the record.
+
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cargo test -p hornvale-hearsay --test divergence`
@@ -835,7 +844,7 @@ pub fn maximum_antichain(lineage: &Lineage, witnesses: &[EntityId]) -> Vec<Entit
         .filter(|w| {
             !witnesses
                 .iter()
-                .any(|other| other != w && lineage.ancestry(*other).contains(w))
+                .any(|other| other != w && lineage.is_ancestor(*w, *other))
         })
         .collect();
     out.sort();
