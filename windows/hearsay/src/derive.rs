@@ -2,6 +2,7 @@
 
 use crate::lineage::Lineage;
 use hornvale_kernel::Claim;
+use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
 use std::collections::BTreeMap;
@@ -82,6 +83,9 @@ pub fn claims_about(
         object: object.clone(),
         grade: Provenance::Witnessed,
         hops: 0,
+        // A witness holds a claim at the finest rung; Task 2b/3/4 wire the
+        // ladder and the two filters that coarsen it on a lossy retelling.
+        precision: Precision::FINEST,
     };
     let witnesses = witnesses_of(ledger, lineage, subject, predicate);
     // BTreeMap keeps the result ascending and deterministic.
