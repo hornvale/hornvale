@@ -1,6 +1,9 @@
 # The Glasshouse — retrospective (IN PROGRESS)
 
-**Status: written mid-campaign, at a machine handoff.** Decision 0020 asks for
+**Status: written mid-campaign, extended at a second handoff.** Sections 1-7
+were written at the machine handoff of 2026-08-14; sections 8-11 and the
+HANDOFF block were added at the close of the resumed session on 2026-08-15,
+which absorbed The Staff, settled `k`, and ran both owed refreshes. Decision 0020 asks for
 this at close; it is being started early because `.superpowers/sdd/` is
 git-ignored and dies with its worktree, and this campaign's Stage B reasoning
 (ledger entries #10–#28) would otherwise not survive the move. The product
@@ -136,51 +139,160 @@ one, and is population-independent, which is the property that matters.
   the island-arc elevation path, so the same proof must be run rather than
   assumed.
 
+## 8. Three tests predicted their own futures, and all three were right
+
+The most transferable thing this campaign produced is not a finding about
+climate. It is that **a test carrying its own decision rule survived a physics
+change that broke everything pinned to a bare number.**
+
+- `range_readout`'s assertion message said "this may mean P1″ holds again" —
+  and P1″ did, once the world was warm enough for arid land to exist for an
+  arid-affine people to relocate *to*.
+- `gathering_calibration`'s doc said its narrowing margin "would become a
+  finding rather than a re-pin if it kept going". It kept going, a fourth
+  consecutive time, and was recorded as a finding rather than re-pinned
+  silently.
+- `founder_collision`'s liveness test asserts that its own seeds still collide,
+  so when 1741 stopped colliding the test said "this now proves only that an
+  uncontested world builds" instead of passing vacuously. It has caught a
+  cleared seed on two consecutive re-pins.
+
+Against that, the tests that cost the most were the ones pinned to an exact
+tuple with no rule attached. `range_readout` was pinned to `(10, 0, 2, 0)` and
+interrupted the campaign **twice** for reasons unrelated to its claim, because
+a *directional* prediction had been frozen as four integers. It is now back to
+the direction it preregistered.
+
+**Write the branch table, not the expected value.** A pinned number tells the
+next reader what was true once; a rule tells them what to do when it stops
+being true.
+
+## 9. Aggregate shape is not per-item ownership — twice, in both directions
+
+Section 4 records reading a wall of 45 identically-shaped reds as one cause
+when 44 shared it and one did not. The resumed session made the *same* error
+inverted: it read a shape histogram ("9 golden mismatches") as if it
+partitioned 25 failures, reported "~19 mechanical rebaselines" to Nathan, and
+was wrong — parsing the panic **per test** gave 8 golden-file and 17
+hand-written assertions.
+
+Both times the mistake was reasoning about a *population* of failures from a
+summary of their shapes. The fix is the same in both directions and is
+mechanical rather than attentional: attribute every failure individually
+before classifying any of them.
+
+## 10. Four ways to hide a failure from yourself, all found here
+
+Every one of these produced a confident wrong statement before being caught,
+and all four are the same underlying error — **optimising the output of a step
+whose success had not yet been established.**
+
+- `| tail -60` on a backgrounded run truncated the **output file itself**, so
+  three failures' details were unrecoverable and the run had to be repeated.
+- `cmd > f 2>&1; echo "EXIT=$?"` at the end of a chain made the task
+  notification report the *echo's* status. A gate that exited 2 was reported as
+  exit 0, twice.
+- `git stash apply <sha> | tail -6` hid an apply that had **refused** on a
+  dirty file. The surviving summary looked like success, and a content grep was
+  what actually caught it.
+- `git rev-parse <full-sha>` was used to ask "does the canonical box have this
+  commit?". It echoes any 40-hex string back **without touching the object
+  store**, so it answered yes about a commit that had never existed — because
+  the SHA had been *transcribed from a 12-character prefix and the remaining 28
+  invented*. `git cat-file -e <sha>^{commit}` is the check that asks.
+
+The last one deserves its own line: **derive a SHA into a variable, never type
+one.** `HV_CENSUS_REF` feeds `reset --hard`, which is exactly the hazard root
+`CLAUDE.md` names.
+
+## 11. The gate ladder changed mid-campaign, and the collision was structural
+
+The Staff landed while this campaign was mid-flight and rewrote the gate ladder
+(`make gate` and friends became refusing signposts). It also minted decisions
+0132 and 0133 — **both of which this campaign had already minted**, for
+entirely different things. Section 5 predicted this class and said nothing
+catches it; it then happened again, doubly, to the same campaign.
+
+Two things made the recovery cheap, and both are worth copying:
+
+- **The renumber was keyed on provenance, not on the number.** A citation line
+  was rewritten only if it was *absent from main's copy of the same file*. 63
+  lines across 31 files moved and 5 were correctly left as The Staff's. A bare
+  grep would have rewritten those five, and section 5's own warning (a search
+  for `012`+digit once matched `0.0126`, a standard deviation) says why.
+- **The new gate created a circular block**, and naming it was most of the fix:
+  `gate-commit` runs a sub-floor tier including the lab calibrations, so the
+  stale census blocked *every* commit — including the merge that would have
+  brought the new gate in. Broken by refreshing the census at the **pre-merge**
+  tip, justified by verifying The Staff touches only `kernel/CLAUDE.md` under
+  `kernel/`+`domains/` and nothing under `windows/lab/src/metrics.rs` or
+  `studies/`.
+
 ---
 
-## HANDOFF — state at the pause (2026-08-14)
+## HANDOFF — state at 2026-08-15
 
-**Branch:** `campaign/the-glasshouse`. **Absorbed:** `origin/main` at `1f3589e2`.
+**Branch:** `campaign/the-glasshouse` at `f8014156`, pushed, tree clean,
+`gate-commit` green at 2745/2745. **Absorbed:** `main` through The Staff
+(152f278c).
 
 | item | state |
 |---|---|
-| Task 1, 2 | complete (decision 0134, terrain epoch) |
-| H4 | diagnosed and restated; decision 0135; green |
-| Task 3 | complete — `91f19f2f` |
-| Task 4 | **committed** — `4c806ece`, but see below |
-| Task 5 | **WIP, UNVERIFIED** — `a5f1a373`, 4 known reds |
+| Tasks 1–5 | complete |
+| `k` | **settled at 0.30**, `THERMOSTAT_RESIDUAL_FRACTION` (decision: Nathan) |
+| census refresh | **done** — `c0211b18`, canonical box, 979.5 s |
+| gnomon-injection refresh | **done** — `c252f9a8`, canonical box |
+| Risk 4 | open |
 | Tasks 6, 7 | not started |
+| `toponymic_shape` | **deliberately red**, see below |
 
-**Immediate next actions, in order:**
+**Both host-pinned refreshes are complete.** Verify that nothing
+physics-moving has landed since `c0211b18` before relying on that — the check
+is whether anything under `kernel/`, `domains/`, `windows/worldgen/src` or
+`windows/lab/src/metrics.rs` has changed — and if nothing has, **do not re-run
+either**. A census is once per campaign and costs ~16 min of the canonical box.
 
-1. **Triage Task 5's four reds** (`history_emit` ×2, `range_readout`,
-   `solitary_tongue`). None triaged. The lexicon golden is the interesting one.
-2. **Evaluate spec §3.2's three bounds** — never produced, because the agent
-   died before reporting. Area-weighted mean within 1 K of +14 °C, equatorial
-   within 3 K of +26 °C, polar within 5 K of −25 °C. Remember `⟨sin²lat⟩ = 1/3`.
-3. **Answer Risk 4** — which of `FREEZE_C` / `HABITABLE_MIN_C` / `ICE_C` /
-   `TEMPERATE_BASELINE_C` actually moved behaviour. Unanswered.
-4. **Decide `k`** (§6 above). Carve-out: fidelity call, Nathan's.
-5. **Absorb `origin/main`** (49 commits, The Repose, tip `c9fb7701`) — deferred
-   deliberately, not forgotten. Then re-run the `hollow_readout` probe as the
-   geometry oracle.
-6. Tasks 6, 7.
+**Next actions, in order:**
 
-**Expected red baseline — do not read as new breakage:** `hornvale-lab` is
-**45 failed / 421 passed**. 42 census-schema, 2 from Task 2, 1
-(`anomaly_injection`) owed to `gnomon-injection.sh`. A failure of a *different
-shape* is a real finding.
+1. **Risk 4** — which of `FREEZE_C` / `HABITABLE_MIN_C` / `ICE_C` /
+   `TEMPERATE_BASELINE_C` actually moved behaviour. Cheaper than planned: the
+   refreshed census carries the after-arm directly. The structural half is
+   already established — `TEMPERATE_BASELINE_C` is a baseline for a *deviation*
+   and cannot switch; the other three are gates, and `FREEZE_C` at −10.0 sat on
+   the pre-campaign median of −10.49.
+2. **Task 6, the classifier gate.** Two independent lines already favour "no
+   code change" — P1″ un-falsified, and settlement rising 620 → 826
+   occupations — but the gate *is* the re-measurement, so run it.
+3. **Task 7** — all six criteria against Stage A's frozen baselines, then close.
+4. **`toponymic_shape`.** 27 of 29 pairs confirm; 2 invert by 0.033 and 0.111,
+   both inside one sampling standard error (~0.14 at n≈25, against a 0.15
+   separation). Its `forall` rule does not match its own sample sizes. **Freeze
+   a decision rule before measuring again** — choosing one after seeing which
+   pairs inverted is the same error as lowering `SHAPE_SAMPLE_FLOOR`, which was
+   already refused once. It is *not* in the sub-floor roster, so `gate-commit`
+   will not show it; it surfaces at `gate-stage`.
+5. **Definition of Done** — chronicle entry, this retrospective, a Confidence
+   Gradient re-score, and spec §10's registry updates (correct `SKY-19` and
+   `CLIM-cold-attractor`, resolve `CLIM-astronomy-unmeasured`, move
+   `CLIM-greenhouse` and `CLIM-biome-classifier-mixing` to in-progress, add a
+   hypsometry row, note this campaign as `CLIM-ice-albedo`'s unblocker).
 
-**Two host-pinned refreshes are owed at close, not one:** the census
-(`scripts/census-run.sh`) **and** `scripts/gnomon-injection.sh`. Both on lefford.
+**The headline, for the chronicle:** median land temperature **−11.99 →
+−3.649 °C**; ice-dominant worlds **651/1000 → 187/1000**; settlement at seed 42
+**620 occupations across 217 sites → 826 across 302**. Twenty-nine sky columns
+are byte-unchanged across a refresh that added a new seeded draw, which is the
+stream-isolation contract holding over 1000 worlds.
 
-**Open items:** H4a is blind to aggregate decalibration below ~10% at 30 seeds
-(more seeds is the only honest sharpening); The Hollow's spec §4 does not yet
-record H1's and H4's restatement the way §4.0 records this campaign's own
-supersession.
+**On a fresh session:**
 
-**On a fresh machine:** `docs/timings/test-baseline-<host>.tsv` is keyed on
-`hostname -s`, so a new host **forks the baseline** — the first gate there
-records silently and cannot alarm. Rebuild the board binary
-(`cargo build --release --manifest-path tools/board/Cargo.toml`); nothing does it
-for you. Start `make prewarm` immediately after `make worktree-take`.
+- **The gate ladder is not what this campaign started with.** `make gate`,
+  `ci`, `gate-fast`, `gate-full` refuse. Use `gate-commit` locally;
+  `gate-stage`/`gate-campaign` dispatch to one strictly serial lane on the
+  canonical box and **fail closed** if it is unreachable.
+- **This campaign's decisions are 0134 and 0135**, not 0132/0133 — The Staff
+  took those. Any prose citing the old numbers for the craton clamp or the
+  criterion restatement is stale.
+- Two stashes (`a04ffb26`, `a9e470f9`) are **superseded and already landed**.
+  Do not re-apply them; the stash stack is shared with other sessions.
+- `docs/timings/test-baseline-<host>.tsv` is keyed on `hostname -s`. This
+  session ran on `MacBookPro`; the earlier half ran on `ambrose`.
