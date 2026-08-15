@@ -412,6 +412,29 @@ pub fn present_year(world: &World) -> f64 {
         .unwrap_or(0.0)
 }
 
+/// [`present_year`], crossed forward into the standard **day** every
+/// [`WorldTime`] consumer needs — the composition a caller wanting "now" as a
+/// day would otherwise hand-write as
+/// `WorldTime::new(ledger_day_of_bake_year(present_year(world)))`.
+///
+/// That hand-written composition is exactly what sat at
+/// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, and it reported
+/// `tools/seam-guard`'s `ledger_day_of_bake_year` seam UNGUARDED: the call
+/// lived only inside a `heavy:`-ignored battery (`exposure_rows_masked`,
+/// reachable from no non-`#[ignore]`d test), so no scoped probe could ever
+/// observe a year substituted for a day there — and, contrary to this
+/// module's usual advice, **widening `scope(...)` could not have fixed it**.
+/// A scope only helps a mutation some crate's *non-ignored* tests can reach;
+/// this one only ever ran inside `#[ignore]`d code, at every scope. Naming the
+/// crossing here instead moves the one call site somewhere a cheap,
+/// non-ignored test can reach it —
+/// `present_frame_crosses_the_bake_year_by_days_per_year` in this crate's
+/// `tests/history_emit.rs`.
+pub fn present_frame(world: &World) -> WorldTime {
+    WorldTime::new(ledger_day_of_bake_year(present_year(world)))
+        .expect("a derived present-day crossing is finite")
+}
+
 /// Reconstruct every committed occupation from the ledger, in commit order —
 /// the shared decoder both this window (a future consumer, e.g. The Vestige)
 /// and `windows/almanac`'s prose renderer read history back through. Lifted
