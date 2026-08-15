@@ -5,5 +5,5 @@ $ hornvale scene surrounds --world world.json --render ascii
 ++++@++++
  +++++++
   + + +
-  ways on: SE, NE, W
-  legend: Doadaga, a stream gully, sun-warmed, damp, tropical rainforest
+  ways on: E, NW, SW
+  legend: Dooga, buttressed canopy, damp, tropical rainforest
