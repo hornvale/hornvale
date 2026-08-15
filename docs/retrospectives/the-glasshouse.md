@@ -443,3 +443,109 @@ settles that.
   re-fit deferred as census-moving.
 - The faint-young-Sun constraint at `S ≈ 0.75` remains the identified way to
   make `k` identifiable from Earth (§6), and is still unbuilt.
+
+---
+
+## HANDOFF — state at 2026-08-15, second close session
+
+**Branch** `campaign/the-glasshouse` at `c8f9c6a6`, worktree
+`.claude/worktrees/the-glasshouse`. `gate-commit` green at **2745/2745**.
+Absorbed `main` through The Staff (`152f278c`).
+
+**The campaign's own work is COMPLETE.** Tasks 1–7, Risk 4, the classifier
+gate, the six-criteria readout, both decisions (0134/0135), the chronicle, the
+Confidence Gradient re-score, the registry updates and this retrospective are
+all done and committed. What remains is **not campaign work** — it is the
+post-refresh witness sweep that nothing had run.
+
+### Both host-pinned refreshes are complete — DO NOT RE-RUN EITHER
+
+Census `c0211b18`, gnomon-injection `c252f9a8`, both on the canonical box.
+Verified at this session's start and unchanged since: the only edits under
+`kernel/`, `domains/`, `windows/worldgen/src`, `windows/lab/src/metrics.rs`,
+`studies/` are comment-only `0132`→`0134` renumbers plus test-module-only
+changes. **A census costs ~16 min of lefford and is once per campaign.**
+
+**`make gate-campaign` DISPATCHES A CENSUS REFRESH.** `scripts/lane-sets.tsv`
+maps the `census` set to `census-run.sh` — the real refresh, not
+`census-check` — and it fires on the standard pre-merge command. This session
+dispatched one by accident and killed it while still queued (no compute ever
+started). Either dispatch the sets individually, or kill the census job
+immediately: `ssh lefford 'pgrep -af "lane-run.sh census"'` then `kill -9`.
+
+### What is left: 11 failures and one blocked set
+
+Counted with `--no-fail-fast`. **The lane's `gate` set is fail-fast and
+reported 2 of 19** — never trust a dispatched gate's failure count.
+
+| # | where | status |
+|---|---|---|
+| 2 | `water_reading` floors, `wetness_reading` R-8 | **deliberate reds**, settled — see §16 |
+| 8 | the `heavy` tier | open |
+| 1 | `clients` — `the_shape_matches_the_sims_own_ascii_render` | open |
+| — | `seam-guard` | **blocked by a lane bug**, never actually ran |
+
+**The 8 heavy failures**, all census-refresh witnesses, none caused by this
+session's commits:
+
+```
+hornvale::session_cost                a_possessed_turn_stays_within_its_ceilings
+hornvale-lab::disposition_calibration non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders
+hornvale-lab::the_fare_calibration    weathering::the_fares_preregistered_readout
+hornvale-lab::the_mire_calibration    the_mires_preregistered_readout
+hornvale-worldgen::generalist_distinctness substituting_goblins_niche_for_humans_is_detected
+hornvale-worldgen::generalist_distinctness human_is_not_goblin_recentred
+hornvale-worldgen::repose_exposure    repose_exposure_readout_matches_the_committed_fixture
+hornvale-worldgen::occupancy_readout  occupancy_readout_is_current
+```
+
+They split three ways and the split decides the method:
+
+- **`repose_exposure` and `occupancy_readout` OWN COMMITTED ARTIFACTS.** The
+  heavy tier is an authoring path, so these must be regenerated **on lefford**
+  (`heavy-run.sh` carries the canonical-host guard). Mechanical.
+- **Three are PREREGISTERED CALIBRATION READOUTS** (`disposition`, `the_fare`,
+  `the_mire`). These are the same class as The Gnomon's witness, and §17 is
+  the warning: **re-read them, do not re-pin them.** Any one could be another
+  campaign's published finding quietly reversing. Each needs its own judgement
+  and, if a verdict moves, its chronicle + registry row + roster string
+  re-stated in the same commit.
+- **`session_cost` and the two `generalist_distinctness`** are ordinary
+  witnesses; re-read and re-pin with the mechanism named.
+
+### The seam-guard lane bug — file this, it is not ours
+
+`seam-guard` refused: *"refusing to run on a dirty working tree."* The
+`artifacts` set runs `regenerate-artifacts.sh` in the **same** lane worktree
+earlier in the serial queue and leaves it modified; `seam-guard` runs later and
+refuses. **So seam-guard has been silently not-running on every campaign gate
+that also dispatched artifacts** — it reports rc=2 in 28 s with no verdicts,
+which reads like a failure and is actually a no-op. Independent of this branch.
+
+### `outboard` is red on lefford only
+
+3 `tools/board` `sync` tests fail there (`None` where `Some(1000)` expected —
+a recorded sync invisible to a second `Repo` handle, smelling like worktree
+common-dir resolution). The same suite is **177/177 green on the Mac at this
+branch**, and `tools/board` is byte-identical to `main` here. Pre-existing on
+other refs too. Not this campaign's.
+
+### Decisions already taken — do not relitigate
+
+- **The Gnomon is "cannot tell"**, not confirmed (Nathan, this session). Its
+  witness now pins `(73, 120, 0, 0)`; registry row off `refuted`; chronicle
+  postscript written; roster string updated. §17 has the reasoning.
+- **`water_reading` and `wetness_reading` stay red**, documented at the
+  failing constant and filed as rows (Nathan, this session). §16.
+- **`toponymic_shape`'s rule is frozen** at 2 SE and must not be retuned.
+- **`k = 0.30`**, settled. Criterion 1 missing Earth by 12.25 K is the
+  published finding, not a thing to fix.
+
+### The tension to resolve before merging
+
+A **fully green** stage/campaign gate is incompatible with §16's two
+deliberate reds as they stand. Either the merge accepts two named, explained
+reds, or those two rows get picked up and genuinely fixed first — which is
+campaign-sized work (a 0106 provenance re-fit and a new census metric for one;
+a shared-predicate repair for the other). That is a scope call, not a
+technical one.
