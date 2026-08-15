@@ -535,3 +535,132 @@ fn a_deferral_against_a_shipped_then_superseded_status_is_stale() {
         "expected STALE-DEFERRED for a shipped-then-superseded status, got {f:?}"
     );
 }
+
+// --- Task 5: the surplus read, the matrix, and the two honesty fixes ------
+
+/// The surplus read: a subsystem no `present` verdict cites is one this
+/// catalogue has no vocabulary for. Derived, never authored — an authored
+/// list is the rot the anchor discipline exists to prevent.
+///
+/// The brief's own worked example uses a bare `|s| …` closure parameter;
+/// renamed to `dir` here because `cli/tests/claim_shape.rs`'s seed-loop scan
+/// treats a single-letter `s` binding as seed-shaped by convention (it is
+/// the idiom used across the tree's real seed loops) and flags any `.any(|s|
+/// …)` closure regardless of what `s` actually holds — a false positive
+/// against this string, not a seed. The rename is the whole fix: the
+/// assertion is unchanged.
+#[test]
+fn the_surplus_read_names_subsystems_no_chapter_cites() {
+    let surplus = hornvale::systems::surplus(&load_wolverson(), &facts());
+    assert!(
+        surplus.iter().any(|dir| dir.contains("language")),
+        "no chapter of a roguelike tutorial asks anything domains/language \
+         would answer; expected it in the surplus, got {surplus:?}"
+    );
+}
+
+/// The positive control the test above needs: a subsystem the real corpus
+/// DOES cite (`domains/terrain`, via `test:hornvale-terrain::…` anchors)
+/// must NOT appear in the surplus list. Without this, a `surplus` that
+/// returned every subsystem unconditionally would still pass the test
+/// above.
+#[test]
+fn the_surplus_read_excludes_a_subsystem_the_corpus_does_cite() {
+    let surplus = hornvale::systems::surplus(&load_wolverson(), &facts());
+    assert!(
+        !surplus.iter().any(|dir| dir == "domains/terrain"),
+        "domains/terrain is cited by test:hornvale-terrain::… anchors in the \
+         real corpus and must not read as surplus, got {surplus:?}"
+    );
+}
+
+#[test]
+fn committed_system_matrix_matches_the_live_render() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["systems", "matrix"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "systems matrix failed: {out:?}");
+    let live = String::from_utf8(out.stdout).expect("utf-8");
+    hornvale_kernel::golden::assert_golden(
+        &root.join("docs/audits/system-matrix.md"),
+        &live,
+        "the system matrix drifted; regenerate with `make rebaseline`",
+    );
+}
+
+/// 5b: a `test:` anchor citing a real, `#[ignore]`d test must be DANGLING,
+/// not clean. `arcs_are_discrete` (`domains/terrain/tests/carve_properties.rs`)
+/// is a real `heavy:`-tiered battery the gate never runs — exactly the shape
+/// Task 4's author hit by accident while evidencing item 4.2 and had to
+/// decline. Before the 5b fix this anchor read as resolved; this test is
+/// the "observe it red" half of that fix.
+#[test]
+fn a_test_anchor_citing_an_ignored_test_is_dangling() {
+    let f = audit(
+        &corpus_with("present", Some("test:hornvale-terrain::arcs_are_discrete")),
+        &facts(),
+    );
+    let [Finding::Dangling { why, .. }] = f.as_slice() else {
+        panic!("expected DANGLING for an #[ignore]d test, got {f:?}");
+    };
+    assert!(
+        why.contains("ignore"),
+        "expected the message to name the ignore, got: {why}"
+    );
+    assert!(
+        why.contains("gate actually runs") && why.contains("weaken the verdict"),
+        "expected the message to name both repairs (cite a gate-run test, or \
+         weaken the verdict), got: {why}"
+    );
+}
+
+/// The negative control 5b's fix must not break: an ordinary `#[test]` (no
+/// `#[ignore]` governing it) must still resolve clean. Without this, "reject
+/// every `test:` anchor" would also pass the test above.
+#[test]
+fn a_test_anchor_citing_an_ordinary_running_test_is_clean() {
+    let f = audit(
+        &corpus_with(
+            "present",
+            Some("test:hornvale-kernel::commit_and_query_roundtrip"),
+        ),
+        &facts(),
+    );
+    assert!(
+        f.is_empty(),
+        "commit_and_query_roundtrip is a plain #[test], not #[ignore]d; expected \
+         no findings, got {f:?}"
+    );
+}
+
+/// 5b's closing requirement: re-verify every real `test:` anchor in the
+/// shipped corpus still resolves clean under the new ignore-aware check —
+/// not just the wolverson-corpus-has-no-anchor-findings test above (which
+/// already covers this), but naming it explicitly as the 26-anchor
+/// regression 5b's brief asks for, with a message that would name which
+/// anchor broke if one ever does.
+#[test]
+fn every_real_test_anchor_in_the_corpus_still_resolves_clean() {
+    let corpus = load_wolverson();
+    let test_anchor_items: Vec<&hornvale::systems::Item> = corpus
+        .items
+        .iter()
+        .filter(|i| i.anchor.as_deref().is_some_and(|a| a.starts_with("test:")))
+        .collect();
+    assert_eq!(
+        test_anchor_items.len(),
+        26,
+        "expected 26 test: anchors in the frozen corpus, got {}",
+        test_anchor_items.len()
+    );
+    let f = audit(&corpus, &facts());
+    assert!(
+        f.is_empty(),
+        "one or more of the corpus's test: anchors no longer resolves clean \
+         under the ignore-aware check — this is a finding about that \
+         verdict, not about the check:\n{f:#?}"
+    );
+}

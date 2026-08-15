@@ -106,6 +106,10 @@ usage:
                           check: diff against the artifact committed for that corpus's id,
                           also failing on any anchor finding or a rising `absent` count;
                           default corpus: systems/wolverson-2021.system.json)
+  hornvale systems matrix  render every corpus side by side, plus the surplus read: which
+                          domains/*|windows/* subsystems no corpus's `present` verdicts cite
+                          at all (ignores --corpus — the columns are the declared list, not
+                          the caller's choice)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -1100,6 +1104,12 @@ fn cmd_systems(args: &[String]) -> Result<(), String> {
             break;
         }
     }
+    // Parsed BEFORE the corpus is read, mirroring `cmd_tropes`: the matrix is
+    // over every corpus in `systems::CORPORA` and must not fail because the
+    // caller happened to pass a `--corpus` that does not exist.
+    if mode == Some("matrix") {
+        return cmd_systems_matrix();
+    }
     let path = flag_value(args, "--corpus").unwrap_or(systems::CORPORA[0]);
     let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     let corpus = systems::load(&json)?;
@@ -1165,8 +1175,30 @@ fn cmd_systems(args: &[String]) -> Result<(), String> {
                 ))
             }
         }
-        Some(other) => Err(format!("systems: unknown mode '{other}' (report|check)")),
+        Some(other) => Err(format!(
+            "systems: unknown mode '{other}' (report|check|matrix)"
+        )),
     }
+}
+
+/// The matrix over every corpus in `systems::CORPORA`.
+///
+/// Deliberately takes no arguments, exactly as `cmd_tropes_matrix` does and
+/// for the same reason: the set of columns is a declared list, not a
+/// caller's choice, so there is no `--corpus` to honour. `RepoFacts` is
+/// gathered once and shared across every corpus, so two columns cannot
+/// silently disagree about what the live repo looked like when they were
+/// scored.
+fn cmd_systems_matrix() -> Result<(), String> {
+    let facts = systems::RepoFacts::gather(std::path::Path::new("."))?;
+    let mut corpora = Vec::new();
+    for path in systems::CORPORA {
+        let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        corpora.push(systems::load(&json)?);
+    }
+    let columns: Vec<&systems::Corpus> = corpora.iter().collect();
+    print!("{}", systems::render_matrix(&columns, &facts));
+    Ok(())
 }
 
 fn cmd_streams() -> Result<(), String> {

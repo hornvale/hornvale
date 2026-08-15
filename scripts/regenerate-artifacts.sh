@@ -67,10 +67,10 @@ set -euo pipefail
 #   internal builds), `tropes report`/`report --corpus …`/`matrix` (each
 #   builds its own `Seed(0)` world via `world_builder::build_world`,
 #   independent of Group A), and the seam-guard roster (a source-tree scan,
-#   no world at all). `systems report` (The Compendium) joined this group
-#   later still, and builds no world at all — not even its own — because its
-#   anchors resolve against the digest, the idea registry, and the
-#   filesystem, never a genesis. All of these are safe to co-schedule with B:
+#   no world at all). `systems report`/`matrix` (The Compendium) joined this
+#   group later still, and builds no world at all — not even its own —
+#   because its anchors resolve against the digest, the idea registry, and
+#   the filesystem, never a genesis. All of these are safe to co-schedule with B:
 #   distinct write targets, and no read dependency on B's or A's outputs.
 #
 #   GROUP D — the lab studies (`lab run`, traced: internally parallel across
@@ -501,6 +501,23 @@ gen_surrounds_seam() {
 
 echo "regenerate-artifacts: GROUP B+C — world readers and world-free dumps (parallel)" >&2
 
+# `systems matrix` (below) is the first Group C job with a dependency ON
+# ANOTHER GROUP C ARTIFACT: `RepoFacts::gather` reads
+# `docs/digest/decisions-in-force.md`, which `digest render decisions`
+# regenerates a few lines down — and until now nothing in this batch read a
+# sibling's OUTPUT, only $w42/$wsky/$wlocked from the already-reaped Group A.
+# Spawning both in the same untethered batch races: a `systems matrix` that
+# starts before the digest job finishes writing can read a truncated or
+# stale file and fail with "parsed to zero in-force decisions" (caught by
+# running this script, not by any test — nothing exercises the two
+# concurrently). So the digest decisions render runs first, alone, and is
+# reaped before anything that might read its output is spawned; `render
+# delta` has no such reader in this script and stays in the main batch
+# below.
+spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
+  > docs/digest/decisions-in-force.md
+reap
+
 # Group C: world-free dumps (see classification comment above).
 spawn run -p hornvale-kernel --example first_light
 spawn run -p hornvale -- book > book/src/gallery/the-book.md
@@ -523,8 +540,7 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
   > docs/audits/trope-coverage-tvtropes-2012.md
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
-spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
-  > docs/digest/decisions-in-force.md
+spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn build_atlas

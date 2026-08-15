@@ -133,6 +133,15 @@ pub struct RepoFacts {
     /// as a "subsystem" there — they only extend which crates a `test:`
     /// anchor may resolve against.
     crates: BTreeMap<String, String>,
+    /// The `domains/*`/`windows/*` subsystem directories (`domains/terrain`,
+    /// `windows/vessel`, …; 25 today), sorted, as `<parent>/<name>` strings.
+    /// Task 5's surplus read (spec §6) enumerates exactly these. Gathered by
+    /// a walk kept DELIBERATELY SEPARATE from `gather_crate_directories`:
+    /// that walk also folds in `kernel/` and `cli/`, which are legitimate
+    /// `test:` anchor targets but never "a subsystem the corpus has no
+    /// vocabulary for" — reading the surplus list off `crates`' keys would
+    /// silently count those two among the 25 and change the count.
+    subsystems: Vec<String>,
     /// A stamp of `docs/digest/decisions-in-force.md`'s current content —
     /// its byte length and a rolling checksum, never a shell-out to `git`.
     /// Printed only in `Decision`-anchor `Dangling` findings: that file is
@@ -184,20 +193,21 @@ impl RepoFacts {
             in_force,
             registry,
             crates: gather_crate_directories(root)?,
+            subsystems: gather_subsystem_directories(root)?,
             decisions_stamp,
             root: root.to_path_buf(),
         })
     }
 
-    /// Whether `spec` (`<crate>::<fn>`) resolves to a known crate whose
-    /// source defines `fn <symbol>` at a word boundary. A cheap text
-    /// search, not a compile — the resolver never shells out to `cargo`.
-    fn test_resolves(&self, spec: &str) -> bool {
+    /// How `spec` (`<crate>::<fn>`) resolves against the live repo. A cheap
+    /// text search, not a compile — the resolver never shells out to
+    /// `cargo`. See [`TestResolution`] for what each outcome means.
+    fn test_resolution(&self, spec: &str) -> TestResolution {
         let Some((crate_name, symbol)) = spec.rsplit_once("::") else {
-            return false;
+            return TestResolution::Missing;
         };
         let Some(dir) = self.crates.get(crate_name) else {
-            return false;
+            return TestResolution::Missing;
         };
         directory_defines_symbol(&self.root.join(dir), symbol)
     }
@@ -359,22 +369,130 @@ fn gather_crate_directories(root: &Path) -> Result<BTreeMap<String, String>, Str
     Ok(crates)
 }
 
+/// Walk `domains/*` and `windows/*`, collecting each crate directory as
+/// `<parent>/<name>` (`domains/terrain`, `windows/vessel`, …), sorted — the
+/// subsystem directories Task 5's surplus read enumerates (spec §6). A
+/// SECOND walk, not a projection of [`gather_crate_directories`]'s `crates`
+/// map: that map also carries `kernel/` and `cli/`, and unifying the two
+/// would make this list silently count those as subsystems too. Requires
+/// each entry to actually be a crate (has a readable `name = "…"` in its
+/// `Cargo.toml`), the same filter `gather_crate_directories` applies, so a
+/// stray non-crate directory under either parent is not mistaken for one.
+fn gather_subsystem_directories(root: &Path) -> Result<Vec<String>, String> {
+    let mut dirs = Vec::new();
+    for parent in ["domains", "windows"] {
+        let parent_path = root.join(parent);
+        let entries = std::fs::read_dir(&parent_path)
+            .map_err(|e| format!("reading {}: {e}", parent_path.display()))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("reading {}: {e}", parent_path.display()))?;
+            let path = entry.path();
+            if !path.is_dir() || crate_name_at(&path).is_none() {
+                continue;
+            }
+            let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            dirs.push(format!("{parent}/{dir_name}"));
+        }
+    }
+    dirs.sort();
+    Ok(dirs)
+}
+
 /// True when the character `c` cannot continue a Rust identifier — i.e. it
 /// is a valid boundary after a matched symbol name.
 fn is_identifier_boundary(c: char) -> bool {
     !(c.is_alphanumeric() || c == '_')
 }
 
-/// True when `text` defines a function named exactly `symbol` — `fn
-/// {symbol}` found at a word boundary, so the character immediately after
-/// `symbol` (if any) cannot continue an identifier. A plain substring
-/// search on `fn {symbol}` would read a short symbol as already "defining"
-/// any longer function name it happens to prefix — the wrong direction of
-/// error for an instrument whose job is to notice when an anchor stops
-/// resolving.
-fn text_defines_symbol(text: &str, symbol: &str) -> bool {
+/// How a `test:` anchor's symbol resolved against the live repo — three
+/// outcomes, not two, because "the source defines this symbol" and "the
+/// gate runs it" are different facts. Collapsing them is the fourth
+/// false-clean this resolver has produced: a raw-text search for `fn
+/// <symbol>` cannot see that the match is `#[ignore]`d, so an anchor citing
+/// a heavy or otherwise-skipped battery read as resolved exactly like one
+/// the gate actually exercises.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TestResolution {
+    /// No boundary-valid `fn <symbol>` definition found anywhere searched
+    /// (an unknown crate counts as this too).
+    Missing,
+    /// A definition was found, and at least one occurrence is NOT governed
+    /// by a preceding `#[ignore]` — the gate runs it.
+    Runs,
+    /// A definition was found, but every occurrence found is `#[ignore]`d —
+    /// the test exists in source, but the gate never executes it.
+    Ignored,
+}
+
+impl TestResolution {
+    /// Fold another text's or subdirectory's result into this one. `Runs`
+    /// wins over `Ignored`, which wins over `Missing` — one clean,
+    /// executable definition anywhere under the searched directory is
+    /// enough to call the anchor resolved, even if another same-named
+    /// definition elsewhere happens to be ignored.
+    fn combine(self, other: TestResolution) -> TestResolution {
+        use TestResolution::{Ignored, Missing, Runs};
+        match (self, other) {
+            (Runs, _) | (_, Runs) => Runs,
+            (Ignored, _) | (_, Ignored) => Ignored,
+            (Missing, Missing) => Missing,
+        }
+    }
+}
+
+/// How many lines above a matched `fn` definition to scan for a governing
+/// `#[ignore]` attribute, and why 10: attributes stack in either order
+/// (`#[test]` then `#[ignore]`, or the reverse — both occur in this repo
+/// today), a doc comment may sit between the definition and its attributes,
+/// and an `#[ignore]`'s string reason may itself wrap across several
+/// physical lines. Measured across the whole tree (the `fn` line minus the line that
+/// actually contains the literal text `#[ignore`), the longest observed gap
+/// is 6 — a wrapped multi-line reason string in `windows/worldgen/src/
+/// lib.rs`. This scans 10 for headroom past that measured maximum rather
+/// than tuning to it exactly.
+const IGNORE_SCAN_LINES: usize = 10;
+
+/// Whether the `fn` definition starting at byte offset `match_start` in
+/// `text` is governed by a preceding `#[ignore]` attribute within
+/// [`IGNORE_SCAN_LINES`] lines.
+///
+/// A flat line-count window, not a parse of the attribute block, because
+/// the window must also see INSIDE a multi-line `#[ignore]` reason string —
+/// a smarter scan that stopped at the first line not shaped like an
+/// attribute, doc comment, or blank line would stop on the string's own
+/// continuation lines (plain prose, no leading `#[` or `///`) before ever
+/// reaching the line that names the attribute.
+///
+/// **Known trade-off, not silently assumed safe:** a window this wide can
+/// in principle see an `#[ignore]` that governs a different, closely
+/// preceding item rather than this one, misreading a clean test as
+/// ignored. Checked against all 26 real `test:` anchors in
+/// `systems/wolverson-2021.system.json` (2026-08-15): none false-positive.
+/// If one someday did, the failure direction is a confusing-but-safe
+/// DANGLING, never the false-CLEAN this function exists to close.
+fn definition_is_ignored(text: &str, match_start: usize) -> bool {
+    let preceding = &text[..match_start];
+    let lines: Vec<&str> = preceding.lines().collect();
+    let start = lines.len().saturating_sub(IGNORE_SCAN_LINES);
+    lines[start..].iter().any(|l| l.contains("#[ignore"))
+}
+
+/// How `text` defines a function named exactly `symbol` — `fn {symbol}`
+/// found at a word boundary, so the character immediately after `symbol`
+/// (if any) cannot continue an identifier. A plain substring search on `fn
+/// {symbol}` would read a short symbol as already "defining" any longer
+/// function name it happens to prefix — the wrong direction of error for an
+/// instrument whose job is to notice when an anchor stops resolving.
+///
+/// Scans every boundary-valid occurrence (not just the first) and folds
+/// their [`TestResolution`]s with [`TestResolution::combine`], so one
+/// `#[ignore]`d match earlier in the file cannot hide a later clean one.
+fn text_defines_symbol(text: &str, symbol: &str) -> TestResolution {
     let needle = format!("fn {symbol}");
     let mut search_from = 0;
+    let mut result = TestResolution::Missing;
     while let Some(offset) = text[search_from..].find(needle.as_str()) {
         let match_start = search_from + offset;
         let after = match_start + needle.len();
@@ -384,18 +502,28 @@ fn text_defines_symbol(text: &str, symbol: &str) -> bool {
             .map(is_identifier_boundary)
             .unwrap_or(true);
         if boundary_ok {
-            return true;
+            let this = if definition_is_ignored(text, match_start) {
+                TestResolution::Ignored
+            } else {
+                TestResolution::Runs
+            };
+            result = result.combine(this);
+            if result == TestResolution::Runs {
+                return result;
+            }
         }
         search_from = match_start + 1;
     }
-    false
+    result
 }
 
-/// True when any `.rs` file under `dir` (recursively, skipping `target`)
-/// defines `fn <symbol>` at a word boundary.
-fn directory_defines_symbol(dir: &Path, symbol: &str) -> bool {
+/// How any `.rs` file under `dir` (recursively, skipping `target`) defines
+/// `fn <symbol>` at a word boundary — folded across every file the same way
+/// [`text_defines_symbol`] folds across every match within one file.
+fn directory_defines_symbol(dir: &Path, symbol: &str) -> TestResolution {
+    let mut result = TestResolution::Missing;
     let Ok(entries) = std::fs::read_dir(dir) else {
-        return false;
+        return result;
     };
     for entry in entries.flatten() {
         let path = entry.path();
@@ -403,60 +531,122 @@ fn directory_defines_symbol(dir: &Path, symbol: &str) -> bool {
             if path.file_name().and_then(|n| n.to_str()) == Some("target") {
                 continue;
             }
-            if directory_defines_symbol(&path, symbol) {
-                return true;
-            }
+            result = result.combine(directory_defines_symbol(&path, symbol));
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs")
             && let Ok(text) = std::fs::read_to_string(&path)
-            && text_defines_symbol(&text, symbol)
         {
-            return true;
+            result = result.combine(text_defines_symbol(&text, symbol));
+        }
+        if result == TestResolution::Runs {
+            return result;
         }
     }
-    false
+    result
 }
 
 #[cfg(test)]
 mod boundary_tests {
-    use super::text_defines_symbol;
+    use super::{TestResolution, text_defines_symbol};
 
     /// The bug this function exists to fix: `verdict` must NOT read as
     /// defining `verdict_name`.
     #[test]
     fn a_strict_prefix_does_not_count_as_a_definition() {
-        assert!(!text_defines_symbol(
-            "fn verdict_name(v: Verdict) {}",
-            "verdict"
-        ));
+        assert_eq!(
+            text_defines_symbol("fn verdict_name(v: Verdict) {}", "verdict"),
+            TestResolution::Missing
+        );
     }
 
     #[test]
     fn an_exact_match_counts() {
-        assert!(text_defines_symbol(
-            "fn verdict_name(v: Verdict) {}",
-            "verdict_name"
-        ));
+        assert_eq!(
+            text_defines_symbol("fn verdict_name(v: Verdict) {}", "verdict_name"),
+            TestResolution::Runs
+        );
     }
 
     #[test]
     fn a_match_at_end_of_file_counts() {
-        assert!(text_defines_symbol("pub fn resolve", "resolve"));
+        assert_eq!(
+            text_defines_symbol("pub fn resolve", "resolve"),
+            TestResolution::Runs
+        );
     }
 
     #[test]
     fn a_match_followed_by_punctuation_counts() {
-        assert!(text_defines_symbol(
-            "pub fn resolve<T>(x: T) -> T { x }",
-            "resolve"
-        ));
-        assert!(text_defines_symbol(
-            "pub fn resolve(x: T) -> T { x }",
-            "resolve"
-        ));
-        assert!(text_defines_symbol(
-            "pub fn resolve\n(x: T) -> T { x }",
-            "resolve"
-        ));
+        assert_eq!(
+            text_defines_symbol("pub fn resolve<T>(x: T) -> T { x }", "resolve"),
+            TestResolution::Runs
+        );
+        assert_eq!(
+            text_defines_symbol("pub fn resolve(x: T) -> T { x }", "resolve"),
+            TestResolution::Runs
+        );
+        assert_eq!(
+            text_defines_symbol("pub fn resolve\n(x: T) -> T { x }", "resolve"),
+            TestResolution::Runs
+        );
+    }
+
+    /// 5b's positive case: an ordinary `#[test]` (no `#[ignore]` anywhere
+    /// nearby) resolves `Runs`.
+    #[test]
+    fn an_ordinary_test_attribute_resolves_as_running() {
+        assert_eq!(
+            text_defines_symbol("#[test]\nfn plain_test() {}", "plain_test"),
+            TestResolution::Runs
+        );
+    }
+
+    /// 5b, the immediately-preceding case: `#[ignore]` directly above `fn`.
+    #[test]
+    fn an_ignore_attribute_immediately_above_fn_is_ignored() {
+        assert_eq!(
+            text_defines_symbol("#[test]\n#[ignore]\nfn skipped_test() {}", "skipped_test"),
+            TestResolution::Ignored
+        );
+    }
+
+    /// 5b, the stacking-order case this repo actually has (`windows/lab/
+    /// tests/anomaly_injection.rs`): `#[ignore]` BEFORE `#[test]`,
+    /// two lines above `fn`. The immediately-preceding-line case above is
+    /// not the only shape the scan must catch.
+    #[test]
+    fn an_ignore_attribute_before_a_test_attribute_is_still_seen() {
+        assert_eq!(
+            text_defines_symbol(
+                "#[ignore = \"reason\"]\n#[test]\nfn skipped_test() {}",
+                "skipped_test"
+            ),
+            TestResolution::Ignored
+        );
+    }
+
+    /// 5b, the multi-line reason case this repo actually has
+    /// (`windows/worldgen/src/lib.rs`): the `#[ignore]` reason string itself
+    /// wraps across several physical lines before `fn`.
+    #[test]
+    fn an_ignore_attribute_with_a_wrapped_multiline_reason_is_still_seen() {
+        let text = "#[test]\n#[ignore = \"line one \\\n            line two \\\n            line three\"]\nfn skipped_test() {}";
+        assert_eq!(
+            text_defines_symbol(text, "skipped_test"),
+            TestResolution::Ignored
+        );
+    }
+
+    /// A same-named definition elsewhere in the SAME file that runs must
+    /// win over an earlier ignored one — `combine` prefers `Runs`. The two
+    /// occurrences are separated by more than `IGNORE_SCAN_LINES` blank
+    /// lines so the second's scan window cannot see the first's
+    /// `#[ignore]` — isolating `combine`'s own behaviour from the window's
+    /// separately-documented reach.
+    #[test]
+    fn a_running_definition_elsewhere_in_the_file_wins_over_an_ignored_one() {
+        let filler = "\n".repeat(super::IGNORE_SCAN_LINES + 2);
+        let text = format!("#[ignore]\nfn dup() {{}}\n{filler}fn dup() {{}}\n");
+        assert_eq!(text_defines_symbol(&text, "dup"), TestResolution::Runs);
     }
 }
 
@@ -678,25 +868,100 @@ fn resolve_anchor(
                 })
             }
         }
-        Anchor::Test(t) => {
-            if facts.test_resolves(t) {
-                None
-            } else {
-                Some(Finding::Dangling {
-                    id: item.id.clone(),
-                    anchor: anchor_str.to_string(),
-                    why: format!(
-                        "{} cites test:{t}, which does not resolve to a known crate and a\n\
-                         `fn` definition of that name at a word boundary. Either the function\n\
-                         moved or was renamed (fix the anchor) or it was removed (re-verdict\n\
-                         this item).",
-                        item.id
-                    ),
-                })
-            }
-        }
+        Anchor::Test(t) => match facts.test_resolution(t) {
+            TestResolution::Runs => None,
+            TestResolution::Missing => Some(Finding::Dangling {
+                id: item.id.clone(),
+                anchor: anchor_str.to_string(),
+                why: format!(
+                    "{} cites test:{t}, which does not resolve to a known crate and a\n\
+                     `fn` definition of that name at a word boundary. Either the function\n\
+                     moved or was renamed (fix the anchor) or it was removed (re-verdict\n\
+                     this item).",
+                    item.id
+                ),
+            }),
+            TestResolution::Ignored => Some(Finding::Dangling {
+                id: item.id.clone(),
+                anchor: anchor_str.to_string(),
+                why: format!(
+                    "{} cites test:{t}, which exists but is `#[ignore]`d — the test does\n\
+                     not run under the gate, so it proves nothing about this item. Either\n\
+                     cite a test the gate actually runs, or weaken the verdict.",
+                    item.id
+                ),
+            }),
+        },
         Anchor::Reason(_) => None,
     }
+}
+
+/// How many of `corpus`'s `present` items' anchors cite each of `facts`'
+/// subsystem directories. The shared derivation behind both [`surplus`]
+/// (which only needs the set of keys) and [`render_matrix`]'s declared
+/// limitation (which needs the busiest one's count) — one pass over the
+/// corpus, not two, so the two readings cannot silently disagree about what
+/// "cited" means.
+///
+/// A subsystem counts as cited when some `present` item's anchor either:
+/// - is a `path:` anchor whose path starts with that directory, or
+/// - is a `test:` anchor whose crate maps (via `RepoFacts::crates`) to
+///   exactly that directory.
+fn citation_counts(corpus: &Corpus, facts: &RepoFacts) -> BTreeMap<String, usize> {
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    for item in &corpus.items {
+        if item.verdict != Verdict::Present {
+            continue;
+        }
+        let Some(anchor_str) = &item.anchor else {
+            continue;
+        };
+        let Some(anchor) = Anchor::parse(anchor_str) else {
+            continue;
+        };
+        match anchor {
+            Anchor::Path(p) => {
+                for dir in &facts.subsystems {
+                    if p.starts_with(&format!("{dir}/")) || p == *dir {
+                        *counts.entry(dir.clone()).or_insert(0) += 1;
+                    }
+                }
+            }
+            Anchor::Test(t) => {
+                if let Some((crate_name, _)) = t.rsplit_once("::")
+                    && let Some(dir) = facts.crates.get(crate_name)
+                    && facts.subsystems.contains(dir)
+                {
+                    *counts.entry(dir.clone()).or_insert(0) += 1;
+                }
+            }
+            Anchor::Decision(_) | Anchor::Registry(_) | Anchor::Reason(_) => {}
+        }
+    }
+    counts
+}
+
+/// The surplus read (spec §6): which of `facts`' subsystem directories no
+/// `present` item's anchor cites — the corpus has no vocabulary for them.
+/// Derived from the corpus and the live directory tree on every call, never
+/// authored, the same discipline the anchor audit itself follows: an
+/// authored list would rot exactly as the anchor requirement exists to
+/// prevent, and this one moves on its own as domains land.
+///
+/// **Declared limitation** (spec §6, printed by [`render_matrix`] next to
+/// the list this produces): subsystem granularity is coarse. A directory
+/// cited by a single item's single anchor reads as fully covered here, even
+/// when that anchor is one test among hundreds this instrument never
+/// inspects.
+/// type-audit: bare-ok(prose: return)
+pub fn surplus(corpus: &Corpus, facts: &RepoFacts) -> Vec<String> {
+    let cited = citation_counts(corpus, facts);
+    facts
+        .subsystems
+        .iter()
+        .filter(|d| !cited.contains_key(d.as_str()))
+        .cloned()
+        .collect()
 }
 
 // --- Rendering ---------------------------------------------------------
@@ -880,15 +1145,134 @@ pub fn render(corpus: &Corpus, path: &str) -> String {
         }
     }
 
-    s.push_str("\n## Items\n\n| id | title | verdict | anchor |\n|---|---|---|---|\n");
+    // The `note` column (Task 5, 5a) surfaces the author's own
+    // qualification alongside the verdict — including the seven items
+    // whose note starts `ARGUABLE`, the strongest form of self-doubt this
+    // corpus records. Without it, those rows printed exactly as flat as a
+    // strongly-anchored one, which is the same "scorecard, not an
+    // instrument" failure the caveat above this table already exists to
+    // avoid for the tally. `|` is escaped defensively: today no note
+    // contains one, but a table cell silently breaks the moment one does,
+    // and nothing else in this rendering pipeline checks for that.
+    s.push_str("\n## Items\n\n| id | title | verdict | anchor | note |\n|---|---|---|---|---|\n");
     for item in &corpus.items {
         s.push_str(&format!(
-            "| {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} | {} |\n",
             item.id,
             item.title,
             verdict_name(item.verdict),
-            item.anchor.as_deref().unwrap_or("")
+            item.anchor.as_deref().unwrap_or(""),
+            item.note.replace('|', "\\|")
         ));
+    }
+    s
+}
+
+/// The matrix over every corpus in [`CORPORA`] (one today).
+///
+/// The trope matrix's most valuable table is the demand read — what the
+/// catalogues disagree about. This family's analogue is the surplus read
+/// (spec §6), so that is the one thing this document holds that no single
+/// corpus's own report can: which subsystems no corpus's `present` verdicts
+/// cite AT ALL. With one corpus that reduces to that corpus's own
+/// [`surplus`]; the intersection below is written for the day a second
+/// corpus lands, so this function does not need to change shape then.
+///
+/// `corpora` and `facts` are both caller-supplied rather than loaded here
+/// (mirroring `tropes::render_matrix`): the caller reads every path in
+/// [`CORPORA`] once and gathers `facts` once, so two columns cannot
+/// silently disagree about what the live repo looked like when they were
+/// scored.
+/// type-audit: bare-ok(prose: return)
+pub fn render_matrix(corpora: &[&Corpus], facts: &RepoFacts) -> String {
+    let mut s = String::new();
+    s.push_str(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale systems matrix`. -->\n\n",
+    );
+    s.push_str("# The system matrix\n\n");
+
+    s.push_str(&wrap(
+        "One row per corpus in `systems::CORPORA`. Each column is that corpus's own \
+         five-verdict tally, recomputed here from the corpus rather than parsed back out \
+         of its committed report, so this document cannot inherit a report's mistake.",
+    ));
+    s.push_str("\n\n");
+
+    s.push_str("## Corpora\n\n");
+    s.push_str(
+        "| Corpus | present | refused | deferred | absent | inapplicable | Report |\n\
+         |---|---|---|---|---|---|---|\n",
+    );
+    for corpus in corpora {
+        let counts = tally(corpus);
+        let path = artifact_path(corpus);
+        let file = path.rsplit('/').next().unwrap_or(&path);
+        s.push_str(&format!(
+            "| `{}` | {} | {} | {} | {} | {} | [{file}](./{file}) |\n",
+            corpus.corpus, counts[0].1, counts[1].1, counts[2].1, counts[3].1, counts[4].1,
+        ));
+    }
+    s.push('\n');
+
+    // The surplus read: subsystems no corpus's `present` verdicts cite AT
+    // ALL. Starts from every subsystem and narrows by intersecting each
+    // corpus's own `surplus` — a directory only belongs here if it is
+    // surplus to EVERY corpus, i.e. cited by NONE of them.
+    let mut surplus_across = facts.subsystems.clone();
+    for corpus in corpora {
+        let this_surplus: BTreeSet<String> = surplus(corpus, facts).into_iter().collect();
+        surplus_across.retain(|d| this_surplus.contains(d));
+    }
+
+    // The caveat this list must never be read without (spec §6): the busiest
+    // cited subsystem across every corpus, named and counted from the SAME
+    // `citation_counts` the surplus read itself uses, so the illustration
+    // can never drift from what the list above it actually says. Derived
+    // fresh every run rather than a hand-picked example, because a hand-
+    // picked example is exactly the kind of thing that goes stale the
+    // moment a verdict moves.
+    let mut combined_counts: BTreeMap<String, usize> = BTreeMap::new();
+    for corpus in corpora {
+        for (dir, n) in citation_counts(corpus, facts) {
+            *combined_counts.entry(dir).or_insert(0) += n;
+        }
+    }
+    let busiest = combined_counts.iter().max_by_key(|(_, n)| **n);
+
+    s.push_str("## The surplus read\n\n");
+    s.push_str(&wrap(
+        "Enumerate `domains/*` and `windows/*`. Any subsystem that no chapter's `present` \
+         verdict cites, in any corpus above, is surplus — the catalogue family has no \
+         vocabulary for it. Derived from the corpora and the live directory tree on every \
+         run, never authored, so it moves on its own as domains land (spec §6).",
+    ));
+    s.push_str("\n\n");
+    match busiest {
+        Some((dir, n)) => s.push_str(&wrap(&format!(
+            "**Declared limitation:** subsystem granularity is coarse, and a domain cited by \
+             a single chapter reads as fully covered here. `{dir}` is the most-cited \
+             subsystem below, at {n} anchor(s) — it does not appear in the surplus list, and \
+             reads as fully covered. It is not: {n} anchors are not {n} anchors' worth of the \
+             crate's actual surface, and this instrument does not measure that surface at \
+             all. This read shows the instrument's own bias in its own output; it does not \
+             correct for it.",
+        ))),
+        None => s.push_str(&wrap(
+            "**Declared limitation:** subsystem granularity is coarse, and a domain cited by \
+             a single chapter would read as fully covered here — no subsystem is cited by \
+             any corpus above today, so this run has no example to name, but the limitation \
+             holds regardless. This read shows the instrument's own bias in its own output; \
+             it does not correct for it.",
+        )),
+    }
+    s.push_str("\n\n");
+
+    if surplus_across.is_empty() {
+        s.push_str("Every subsystem is cited by at least one corpus's `present` verdict.\n");
+    } else {
+        for dir in &surplus_across {
+            s.push_str(&format!("- `{dir}`\n"));
+        }
     }
     s
 }
