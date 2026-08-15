@@ -1013,3 +1013,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-15T16:47:24Z | gate-commit | 193.621 | 144.801 | 124.145 | 1.39 | 0 | bf0a87e5 | campaign/the-ballast | MacBookPro | 10 |
 | 2026-08-15T17:57:45Z | gate-commit | 73.142 | 84.447 | 99.990 | 2.52 | 0 | 13b07c4f | campaign/the-ballast | MacBookPro | 10 |
 | 2026-08-15T18:16:34Z | gate-commit | 19.265 | 39.752 | 10.340 | 2.60 | 0 | 6b401dc3 | campaign/the-ballast | MacBookPro | 10 |
+| 2026-08-15T18:24:46Z | preflight | 3.190 | 0.856 | 0.629 | 0.47 | 0 | 95efc676 | campaign/the-ballast | MacBookPro | 10 |
+| 2026-08-15T18:46:49Z | gate-commit | 49.133 | 39.057 | 10.478 | 1.01 | 0 | 95efc676 | campaign/the-ballast | MacBookPro | 10 |
+| 2026-08-15T18:54:08Z | rebaseline | 45.698 | 194.319 | 11.417 | 4.50 | 0 | e814df0c | campaign/the-ballast | MacBookPro | 10 |
