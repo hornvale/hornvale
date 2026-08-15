@@ -1,9 +1,11 @@
 mod common;
 
-use common::{eid, ledger_with, put};
-use hornvale_hearsay::derive::{claims_about, witnesses_of};
+use common::{eid, ledger_with, put, put_on};
+use hornvale_hearsay::derive::{claims_about, variants_about, witnesses_of};
+use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::lineage::lineage_of;
 use hornvale_hearsay::{divergent_witnesses, echo_ratio};
+use hornvale_kernel::Precision;
 use hornvale_kernel::ledger::{Ledger, Value};
 use hornvale_kernel::provenance::Provenance;
 
@@ -274,4 +276,204 @@ fn two_unrelated_witnesses_are_both_divergent() {
         divergent_witnesses(&lin, &[eid(1), eid(50)]),
         vec![eid(1), eid(50)]
     );
+}
+
+#[test]
+fn a_chain_of_one_stance_carries_the_day_unchanged() {
+    // 1 ends; 2 and 3 descend from it. No attacker, so every holder in the
+    // subtree is VictimLine -- one stance throughout, nothing lossy.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(745.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    assert!(!vs.is_empty(), "the subtree holds the claim");
+    for v in &vs {
+        assert_eq!(v.precision, Precision::FINEST, "no stance change: {v:?}");
+        assert_eq!(v.object, Value::Number(745.0));
+    }
+}
+
+#[test]
+fn crossing_a_stance_boundary_coarsens_the_day() {
+    // 4 raided 1, so 4 is Perpetrator and 1's line is VictimLine. A retelling
+    // from 4 into that line crosses stances and must lose a rung.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None), (5, Some(4))]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(745.0),
+    );
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(4)),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let five = vs.iter().find(|v| v.holder == eid(5));
+    // 5 descends from the perpetrator 4. Whatever it holds, assert the
+    // PROPERTY rather than a hand-computed number: if it is coarser than
+    // finest, its object must equal the ladder's snap of the truth at that
+    // rung -- content and precision must never disagree.
+    if let Some(v) = five
+        && v.precision != Precision::FINEST
+    {
+        assert_eq!(
+            v.object,
+            Value::Number(ladder.apply(v.precision, 745.0)),
+            "a coarsened claim's object must match its own rung"
+        );
+    }
+}
+
+#[test]
+fn precision_and_object_never_disagree_anywhere() {
+    // The invariant that matters across the whole population: every holder's
+    // object is SOME ancestor-value snapped to that holder's own rung. A
+    // claim whose precision says "year" but whose object carries a day is
+    // incoherent regardless of which path produced it.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, None), (5, Some(4))]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(745.0),
+    );
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(4)),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        let Value::Number(d) = v.object else {
+            panic!("occ-ended is Number-valued")
+        };
+        assert_eq!(
+            d,
+            ladder.apply(v.precision, d),
+            "{:?} holds {d} at rung {:?}, which is not snapped to that rung",
+            v.holder,
+            v.precision
+        );
+    }
+}
+
+#[test]
+fn an_empty_ladder_leaves_every_claim_at_finest() {
+    // A world with no committed sky has no rungs, so a lossy step has nowhere
+    // to descend. It must be a no-op, not a panic and not a silent change.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None)]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(745.0),
+    );
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED_BY,
+        Value::Entity(eid(4)),
+    );
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    assert!(ladder.is_empty());
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        assert_eq!(v.precision, Precision::FINEST);
+        assert_eq!(v.object, Value::Number(745.0));
+    }
+}
+
+#[test]
+fn witnesses_hold_first_hand_and_are_never_demoted() {
+    // Campaign 1's rule, preserved: a survivor saw the raid; it does not
+    // merely hear about it from the village it fled.
+    let mut led = ledger_with(&[(2, Some(1))]);
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(745.0),
+    );
+    put(
+        &mut led,
+        2,
+        hornvale_history::OCC_FOUNDED,
+        Value::Number(745.0),
+    );
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    for w in [eid(1), eid(2)] {
+        let v = vs.iter().find(|v| v.holder == w).expect("witness holds");
+        assert_eq!(v.hops, 0, "{w:?} is a witness");
+        assert_eq!(v.grade, Provenance::Witnessed);
+        assert_eq!(v.precision, Precision::FINEST);
+    }
 }
