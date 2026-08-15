@@ -140,6 +140,21 @@ if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF
     git -C "$wt" fetch --all --quiet
     git -C "$wt" checkout --force "$ref"
     git -C "$wt" reset --hard "$ref" --quiet
+    # UNTRACKED RESIDUE SURVIVES `reset --hard`, AND IT HAS BEEN FAILING
+    # `seam-guard` FIVE RUNS OUT OF SIX. This worktree is SHARED: the `gate`
+    # set's `defect-ledger.sh` writes an untracked
+    # `docs/timings/defects-lefford.tsv`, `artifacts` writes more, and
+    # `seam-guard` refuses to start on a dirty tree ("this rewrites source
+    # files in place"). A campaign gate runs `gate` before `seam-guard`, so
+    # the later job inherited the earlier one's mess almost every time — and
+    # its `rc=2` reads as "found survivors", so the breakage looked like a
+    # finding for a month. A check that is always red is ignored exactly as
+    # fast as one that is always green.
+    #
+    # `-fd`, NEVER `-fdx`: `target` is gitignored (.gitignore:4), and `-x`
+    # would delete this box's 15 GB warm build cache, turning every lane job
+    # into a cold build.
+    git -C "$wt" clean -fd --quiet
 else
     git -C "$repo_root" worktree add --force "$wt" "$ref"
 fi
