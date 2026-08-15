@@ -318,8 +318,10 @@ verdict off a transcript — behaviour, not assertion, which is the standard
 memory `measure-dont-narrate-the-mechanism` and `check-the-consumer-actually-
 acts-on-it` both push toward. It is refused here on two grounds: it costs far
 more than the rest of the campaign combined, and it **still cannot cover the
-renderer third**, which has no transcript to read. Captured as a follow-up
-against the chapters where it would actually discriminate.
+eight renderer items**, which have no transcript to read. Captured as a
+follow-up against the chapters where it would actually discriminate.
+(*Amended in Task 6 with §3: this read "the renderer third" on the same
+un-re-derived estimate.*)
 
 ## 10. Stages
 

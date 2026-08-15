@@ -51,6 +51,39 @@ made. What might have: a standing question asked of every match this resolver
 performs — *what is the cheapest string that satisfies this check while being
 the wrong thing?* — applied once per predicate rather than once per campaign.
 
+**The same shape then escaped the code and infected the campaign's own
+close**, which is why it is recorded here rather than filed under the
+resolver. A wrong figure — "roughly a third of the tutorial is renderer work",
+a pre-measurement estimate never re-derived after scoring — had been copied
+from the spec into a decision record, the chronicle and `CLAUDE.md`. Removing
+it took **three passes, each of which searched a smaller set than the claim it
+then made**:
+
+```
+  pass 1 (review)      named 3 sites          -> missed 2
+  pass 2 (my fix)      swept the files I had  -> missed 2 more, both inside
+                       edited; claimed it        the diff's own file set
+                       had grepped "the claim"
+  pass 3 (re-review)   found the last 2
+```
+
+Neither pass was careless. Each returned a *true answer to a narrower question
+than the one it asserted* — which is precisely the resolver's four
+false-cleans, one level up and in prose instead of code. My second pass is the
+worst of the three, because it was the one that explicitly claimed to have
+grepped the claim rather than the files, and had not.
+
+> A correction has a blast radius, and **the sweep for that blast radius has a
+> blast radius of its own.**
+
+The durable fix is mechanical and cheap: **grep the claim across the whole
+repository before declaring a correction complete, not across the files you
+happen to have edited** — and paste the full hit list with a disposition for
+each, including the hits that are correct and must stay, so that "I searched"
+is a readable artifact rather than an assertion. A quotation of the erroneous
+original inside an amendment note is a legitimate hit; it is indistinguishable
+from a survivor unless the sweep is written down.
+
 ## 3. The status defect was mine, and its shape is specific
 
 The dispatch that produced the exact-equality bug told the implementer to
