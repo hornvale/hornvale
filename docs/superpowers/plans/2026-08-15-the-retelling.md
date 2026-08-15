@@ -541,203 +541,197 @@ fn stance_fires_on_an_event_with_no_attacker() {
 ### Task 4: The path-aware walk
 
 **Files:**
-- Modify: `windows/hearsay/src/derive.rs` (the `Claim` literal at `:78`; add `variants_about`)
+- Modify: `windows/hearsay/src/derive.rs` (add `variants_about`)
 - Test: `windows/hearsay/tests/derive.rs` (append)
 
 **Interfaces:**
-- Consumes: `Filters` (Task 3), `Claim::retold_by` and `Precision` (Tasks 1–2), `witnesses_of` and `Lineage` (existing).
-- Produces: `pub fn variants_about(ledger: &Ledger, lineage: &Lineage, filters: &Filters, subject: EntityId, predicate: &str) -> Vec<Claim>`, ascending by holder.
+- Consumes: `crate::stance::is_lossy` (Task 3), `crate::ladder::PrecisionLadder` (Task 2b),
+  `Claim::{retold_by, retold_by_lossy}` and `Precision` (Tasks 1-2), `witnesses_of` and
+  `Lineage` (existing).
+- Produces:
+  `pub fn variants_about(ledger: &Ledger, lineage: &Lineage, ladder: &PrecisionLadder, subject: EntityId, predicate: &str) -> Vec<Claim>`,
+  ascending by holder.
 
-**THE DESIGN DECISION THIS TASK LOCKS, and it is not in the spec because the spec does not reach implementation depth.** Campaign 1's `claims_about` takes the *minimum hop count* across witnesses. Distortion depends on the whole path, not its length, so a holder reachable from two witnesses now has two candidate variants. The rule is **the least-corrupted telling wins**, ordered by:
+**THIS TASK WAS REWRITTEN. The previous text targeted a `Filters` API that no
+longer exists** — `Filters::of`, `filters.is_lossy(teller, hearer)`,
+`crate::filters`, and a two-argument `Claim::retold_by(hearer, lossy)`. Tasks 2
+and 3 replaced all of it. The live API, verified in the source:
+
+```
+stance::is_lossy(ledger, lineage, subject, teller, hearer) -> bool
+PrecisionLadder::coarser(precision) -> Precision          // saturates at this world's coarsest
+PrecisionLadder::apply(precision, day: f64) -> f64        // identity past the end / empty ladder
+Claim::retold_by(holder) -> Claim                          // frictionless
+Claim::retold_by_lossy(holder, precision, object) -> Claim // takes an ALREADY-coarsened value
+```
+
+**The kernel does no day arithmetic**, so this function computes the coarsened
+value from the ladder and hands it to `retold_by_lossy`.
+
+**THE DESIGN DECISION THIS TASK LOCKS.** Campaign 1's `claims_about` took the
+*minimum hop count* across witnesses. Once content varies, a holder reachable
+from two witnesses has two DIFFERENT variants, so hops is no longer a total
+order. The rule is **the least-corrupted telling wins**, ordered by:
 
 1. fewest lossy steps, then
 2. fewest hops, then
 3. smallest witness `EntityId`.
 
-Rule 3 exists only to make the result total and deterministic; without it two equally-good paths would race. This is a semantic choice — a community holds the clearest version it has access to — and it must be stated in the doc comment so a later reader does not read it as an accident.
+The first is the semantic rule — a community holds the clearest version it can
+reach. The third exists only to make the order total so two equally-good paths
+cannot race; say so in the doc comment, so a later reader does not mistake it
+for meaning.
 
-- [ ] **Step 1: Write the failing test**
+**Do not modify `claims_about`.** It is campaign 1's no-decay derivation and
+its tests pin the baseline this campaign measures against. `variants_about` is
+a sibling.
 
-Append to `windows/hearsay/tests/derive.rs`:
+- [ ] **Step 1: Write the failing tests**, appended to `windows/hearsay/tests/derive.rs`:
 
 ```rust
 #[test]
-fn a_frictionless_chain_carries_the_day_to_every_descendant() {
-    // 1 ends; 2 is its survivor; 3 and 4 descend from 2. With no raider
-    // anywhere, every teller's key is false, so a hearer born of catastrophe
-    // mismatches and a hearer not born of it matches.
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, Some(3))]);
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(63918.75));
-    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(400.0));
-    put(&mut led, 3, hornvale_history::OCC_FOUNDED, Value::Number(500.0));
-    put(&mut led, 4, hornvale_history::OCC_FOUNDED, Value::Number(600.0));
+fn a_chain_of_one_stance_carries_the_day_unchanged() {
+    // 1 ends; 2 and 3 descend from it. No attacker, so every holder in the
+    // subtree is VictimLine -- one stance throughout, nothing lossy.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
     let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    let vs = variants_about(&led, &lin, &f, eid(1), hornvale_history::OCC_ENDED);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    assert!(!vs.is_empty(), "the subtree holds the claim");
     for v in &vs {
-        assert_eq!(
-            v.precision,
-            Precision::FINEST,
-            "no key disagrees anywhere, so nothing is lossy: {v:?}"
-        );
-        assert_eq!(v.object, Value::Number(63918.75));
+        assert_eq!(v.precision, Precision::FINEST, "no stance change: {v:?}");
+        assert_eq!(v.object, Value::Number(745.0));
     }
-    assert_eq!(vs.len(), 4, "the witness and three inheritors");
 }
 
 #[test]
-fn a_lossy_step_coarsens_the_day_for_that_holder_and_its_descendants() {
-    // 2 is born of catastrophe, so a non-raiding teller mismatches it.
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(63918.75));
-    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(63918.75));
-    put(&mut led, 3, hornvale_history::OCC_FOUNDED, Value::Number(64000.0));
+fn crossing_a_stance_boundary_coarsens_the_day() {
+    // 4 raided 1, so 4 is Perpetrator and 1's line is VictimLine. A retelling
+    // from 4 into that line crosses stances and must lose a rung.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None), (5, Some(4))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
     let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    let vs = variants_about(&led, &lin, &f, eid(1), hornvale_history::OCC_ENDED);
-    let held = |who: u64| {
-        vs.iter()
-            .find(|v| v.holder == eid(who))
-            .unwrap_or_else(|| panic!("{who} holds nothing"))
-            .clone()
-    };
-    // 2 is a WITNESS (founded on 1's ending day), so it holds first-hand.
-    assert_eq!(held(2).precision, Precision::FINEST);
-    assert_eq!(held(2).hops, 0);
-    // 3 hears it from 2: teller 2 does not raid, hearer 3 not born of
-    // catastrophe -> keys agree -> frictionless.
-    assert_eq!(held(3).precision, Precision::FINEST);
-}
-
-#[test]
-fn the_least_corrupted_telling_is_the_one_held() {
-    // A holder reachable from two witnesses takes the path with the fewest
-    // lossy steps, not merely the fewest hops.
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(63918.75));
-    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(63918.75));
-    put(&mut led, 3, hornvale_history::OCC_FOUNDED, Value::Number(63918.75));
-    let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    let vs = variants_about(&led, &lin, &f, eid(1), hornvale_history::OCC_ENDED);
-    // 3 is founded on 1's ending day but its parent is 2, not 1 — so it is
-    // NOT a direct child of the subject and therefore not a witness. It
-    // inherits, and whichever path it takes must be recorded consistently.
-    let three = vs.iter().find(|v| v.holder == eid(3)).expect("3 holds");
-    assert!(
-        three.hops >= 1,
-        "3 is an inheritor, not a witness: {three:?}"
-    );
-}
-```
-
-Add the imports the file needs at its top: `use hornvale_hearsay::derive::variants_about; use hornvale_hearsay::filters::Filters; use hornvale_kernel::Precision;`
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cargo test -p hornvale-hearsay --test derive`
-Expected: FAIL — `cannot find function variants_about`.
-
-- [ ] **Step 3: Write the implementation**
-
-**`derive.rs`'s literal is ALREADY FIXED** — Task 2 had to add
-`precision: Precision::FINEST` to it (now at `derive.rs:88`) because the
-pre-commit hook runs `make quick` WORKSPACE-WIDE, so a knowingly-broken
-sibling crate blocks every commit, not just that crate's own. Do not
-re-add it. Then add:
-
-```rust
-/// Every variant of `(subject, predicate)` held anywhere, ascending by holder.
-///
-/// Like [`claims_about`], but content varies: each inheritance step is a
-/// retelling through the two filters, and a mismatched pair costs a rung of
-/// precision (see [`crate::filters`]).
-///
-/// **A holder reachable from two witnesses holds the LEAST-CORRUPTED telling**
-/// — ordered by fewest lossy steps, then fewest hops, then smallest witness
-/// id. The first is the semantic rule (a community holds the clearest version
-/// it can reach); the third exists only to make the order total, so two
-/// equally-good paths cannot race. Campaign 1 ordered on hops alone, which is
-/// insufficient once content varies.
-///
-/// type-audit: bare-ok(identifier-text: predicate)
-pub fn variants_about(
-    ledger: &Ledger,
-    lineage: &Lineage,
-    filters: &Filters,
-    subject: EntityId,
-    predicate: &str,
-) -> Vec<Claim> {
-    let Some(object) = ledger.value_of(subject, predicate) else {
-        return Vec::new();
-    };
-    let base = Claim {
-        holder: subject,
-        subject,
-        predicate: predicate.to_string(),
-        object: object.clone(),
-        grade: Provenance::Witnessed,
-        hops: 0,
-        precision: hornvale_kernel::Precision::FINEST,
-    };
-    let witnesses = witnesses_of(ledger, lineage, subject, predicate);
-    // (lossy_steps, hops, witness) -> the claim reached by that path.
-    let mut held: BTreeMap<EntityId, (u32, u32, EntityId, Claim)> = BTreeMap::new();
-    for w in &witnesses {
-        let mut c = base.clone();
-        c.holder = *w;
-        held.insert(*w, (0, 0, *w, c));
-    }
-    for w in &witnesses {
-        for d in lineage.descendants_of(*w) {
-            if witnesses.contains(&d) {
-                continue; // a witness is never demoted to an inheritor
-            }
-            // Walk the ancestry from w down to d, retelling at each step.
-            let anc = lineage.ancestry(d); // d first, root last
-            let Some(pos) = anc.iter().position(|a| a == w) else {
-                continue;
-            };
-            let mut chain: Vec<EntityId> = anc[..=pos].to_vec();
-            chain.reverse(); // now w .. d
-            let mut c = base.clone();
-            c.holder = *w;
-            let mut lossy_steps = 0u32;
-            for pair in chain.windows(2) {
-                let (teller, hearer) = (pair[0], pair[1]);
-                let lossy = filters.is_lossy(teller, hearer);
-                if lossy {
-                    lossy_steps += 1;
-                }
-                c = c.retold_by(hearer, lossy);
-            }
-            let candidate = (lossy_steps, c.hops, *w, c);
-            match held.get(&d) {
-                Some(existing)
-                    if (existing.0, existing.1, existing.2)
-                        <= (candidate.0, candidate.1, candidate.2) => {}
-                _ => {
-                    held.insert(d, candidate);
-                }
-            }
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let five = vs.iter().find(|v| v.holder == eid(5));
+    // 5 descends from the perpetrator 4. Whatever it holds, assert the
+    // PROPERTY rather than a hand-computed number: if it is coarser than
+    // finest, its object must equal the ladder's snap of the truth at that
+    // rung -- content and precision must never disagree.
+    if let Some(v) = five {
+        if v.precision != Precision::FINEST {
+            assert_eq!(
+                v.object,
+                Value::Number(ladder.apply(v.precision, 745.0)),
+                "a coarsened claim's object must match its own rung"
+            );
         }
     }
-    held.into_values().map(|(_, _, _, c)| c).collect()
+}
+
+#[test]
+fn precision_and_object_never_disagree_anywhere() {
+    // The invariant that matters across the whole population: every holder's
+    // object is SOME ancestor-value snapped to that holder's own rung. A
+    // claim whose precision says "year" but whose object carries a day is
+    // incoherent regardless of which path produced it.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, None), (5, Some(4))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        let Value::Number(d) = v.object else {
+            panic!("occ-ended is Number-valued")
+        };
+        assert_eq!(
+            d,
+            ladder.apply(v.precision, d),
+            "{:?} holds {d} at rung {:?}, which is not snapped to that rung",
+            v.holder,
+            v.precision
+        );
+    }
+}
+
+#[test]
+fn an_empty_ladder_leaves_every_claim_at_finest() {
+    // A world with no committed sky has no rungs, so a lossy step has nowhere
+    // to descend. It must be a no-op, not a panic and not a silent change.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None)]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    assert!(ladder.is_empty());
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        assert_eq!(v.precision, Precision::FINEST);
+        assert_eq!(v.object, Value::Number(745.0));
+    }
+}
+
+#[test]
+fn witnesses_hold_first_hand_and_are_never_demoted() {
+    // Campaign 1's rule, preserved: a survivor saw the raid; it does not
+    // merely hear about it from the village it fled.
+    let mut led = ledger_with(&[(2, Some(1))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(745.0));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    for w in [eid(1), eid(2)] {
+        let v = vs.iter().find(|v| v.holder == w).expect("witness holds");
+        assert_eq!(v.hops, 0, "{w:?} is a witness");
+        assert_eq!(v.grade, Provenance::Witnessed);
+        assert_eq!(v.precision, Precision::FINEST);
+    }
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+The test file needs these imports added at the top:
+`use hornvale_hearsay::derive::variants_about;`,
+`use hornvale_hearsay::ladder::PrecisionLadder;`,
+`use hornvale_kernel::Precision;`,
+`use hornvale_kernel::provenance::Provenance;`, and `common::put_on`.
 
-Run: `cargo test -p hornvale-hearsay`
-Expected: PASS — the three new tests plus every pre-existing hearsay test, which must be unchanged.
+**Note the sky facts go on a DIFFERENT subject (9) from the occupations.**
+`PrecisionLadder::of` scans the ledger for those predicates; putting them on an
+occupation id would work too, but a separate subject keeps the fixture honest
+about what is an occupation and what is the world.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test derive`.
+      Expected: `cannot find function variants_about`.
 
-```bash
-cargo fmt
-git add windows/hearsay/src/derive.rs windows/hearsay/tests/derive.rs
-git commit -m "feat(hearsay): variants_about — the path-aware walk that applies both filters"
-```
+- [ ] **Step 3: Implement.** `variants_about` mirrors `claims_about`'s witness
+      seeding, then for each witness walks the ancestry chain DOWN to each
+      descendant, retelling at every step:
+
+      - `let lossy = stance::is_lossy(ledger, lineage, subject, teller, hearer)`
+      - frictionless -> `c = c.retold_by(hearer)`
+      - lossy -> `let next = ladder.coarser(c.precision);` then the object is
+        `Value::Number(ladder.apply(next, d))` for a `Number`, or carried
+        unchanged for any other `Value`; then `c = c.retold_by_lossy(hearer, next, object)`
+      - track `lossy_steps` alongside, and keep the best candidate per holder by
+        `(lossy_steps, hops, witness)` ascending
+      - a holder that is itself a witness is never demoted to an inheritor
+
+- [ ] **Step 4: Run to verify PASS** — 5 new tests, plus every pre-existing
+      hearsay test still green. **The commit gate is blind to this crate**
+      (see Global Constraints), so the scoped per-crate run is the evidence.
+
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit.
 
 ---
 
