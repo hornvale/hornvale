@@ -110,21 +110,36 @@ against its committed copy:
 
 | verdict | count | share |
 |---|---|---|
-| present | 25 | 34% |
+| present | 24 | 32% |
 | refused | 5 | 7% |
 | deferred | 28 | 38% |
-| absent | 11 | 15% |
+| absent | 12 | 16% |
 | inapplicable | 5 | 7% |
 
-**The first page Hornvale cannot replicate is 2.6, and it reads `refused`.**
-The world climbs the tutorial's opening ladder without a gap — entities and
-components as ledger subjects and committed facts, a walked map that is a
-sculpted planet, symmetric shadowcasting for field of view, creatures derived
-from the world's own demography and drawn as marks on two of three renderers —
-and stops at a ratified decision rather than at a hole.
+**The first page Hornvale cannot replicate is 2.1 — the tutorial's first page —
+and it reads `absent`.**
 
-That sentence is the single most useful thing this catalogue produces, and it
-is only available because the tutorial declares itself **ordered**. Its items
+That page asks for entities carrying their own appearance: a `Renderable` of a
+glyph, a foreground colour and a background one, drawn to a screen. Hornvale
+has the entity half in depth — an entity is a ledger subject and its components
+are the facts committed about it, contradiction-checked against a concept
+registry that no ECS tutorial has an analogue for. It draws the entity, too:
+`@` for the possession in three separate renderers. **It cannot colour it.**
+There is no per-entity colour channel anywhere in the program — a mark on the
+wire carries a noun, a kind, a datum and a salience, and nothing else — so a
+creature is never tinted on any path, under any flag.
+
+The reading before this one said 2.6, *Dealing Damage*, and it was wrong for a
+reason worth more than the correction: see **The asymmetry** and **The colour
+question**, below. What survives is that the ladder's next four rungs are met —
+a walked map that is a sculpted planet, symmetric shadowcasting for field of
+view, creatures derived from the world's own demography and drawn as marks —
+and that the first *refusal* is still 2.6, still 0070, still on the record with
+a reason and a sequence.
+
+That sentence — *the first page this project cannot replicate is page one* —
+is the single most useful thing this catalogue produces, and it is only
+available because the tutorial declares itself **ordered**. Its items
 form a pedagogical ladder where each chapter assumes the one before it. A
 feature list has no such order, and *first unmet item* asked of one would be an
 artefact of sorting. So the corpus states its own ordering and the resolver
@@ -204,6 +219,38 @@ downgrade pass:
 
 The count of pages refused under 0022 went from eight to **zero**.
 
+## The colour question
+
+Fixing the asymmetry meant scoring the render half, and scoring the render half
+meant answering a question this campaign got wrong three times in one session:
+does Hornvale draw its world in colour?
+
+The answer that finally held is not one sentence, and every attempt to make it
+one was wrong. **There are two independent switches with opposite defaults.**
+`eyes` defaults to *own*, so the emitted scene document carries a colour per
+cell and the browser client renders it unasked. `lens` defaults to *off*, and
+the code documents that as returning the pre-lens output byte for byte — no
+tint, no escape sequence — so the playable terminal path prints no colour at
+all until a player types `eyes <species>`. All four committed possession
+transcripts contain zero escape bytes, by construction rather than by accident:
+it is how they stay unlensed without anyone remembering a flag. The terminal
+game client, a third renderer, is monochrome by design and ignores the wire's
+colour entirely.
+
+Each wrong answer came from reading truthfully at the wrong altitude — the
+truecolor code path exists, is reachable, and is off. The correction came from
+Nathan running the game and seeing no colour, which is a *different instrument*
+from five reviews reading the same source the claim was made from.
+
+The verdict consequence is the headline above, and it turns on the one part of
+the colour finding that is unconditional rather than default-off: surface
+colour is merely switched off, but **per-entity colour does not exist** — no
+flag reaches it, because no channel carries it. So page 2.1 fails outright
+where page 2.3 does not, and a map still reads perfectly in an uncoloured
+terminal, because every distinction it draws is carried by a **glyph**: five
+relief glyphs and three water glyphs outdoors, wall, floor and threshold
+indoors, and a faded twin for everything remembered rather than seen.
+
 ## The surplus, and what it does not say
 
 The trope matrix's most valuable table is its *demand* read — the catalogues
@@ -214,7 +261,7 @@ the catalogue never think to ask for?
 Enumerate the domains and the presenting windows; any subsystem no `present`
 verdict cites is **surplus**, and
 [`docs/audits/system-matrix.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/system-matrix.md)
-prints the list beside every corpus's tally. Nineteen of twenty-five. Astronomy, paleoclimate,
+prints the list beside every corpus's tally. Twenty of twenty-five. Astronomy, paleoclimate,
 language, religion, culture, history, demography, settlement — the tutorial has
 no vocabulary for any of it, and the five subsystems it does reach are the ones
 a walked, rendered game touches.
@@ -262,7 +309,8 @@ this campaign's work; the corpus format, the resolver and the matrix all take N
 columns from the first commit, because a format that could not accept a second
 catalogue is the thing this family would most regret shipping.
 
-Thirty-four per cent is therefore not a score. It is one reading through one
+Thirty-two per cent is therefore not a score. It is one reading through one
 declared bias, and the number that matters on this page is not the percentage
-but the identifier: the first page this project cannot replicate is 2.6, and
-the reason is written down.
+but the identifier: the first page this project cannot replicate is **2.1**,
+the reason is written down, and it took three wrong answers and a human
+playing the game to find it.

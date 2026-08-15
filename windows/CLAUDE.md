@@ -91,6 +91,26 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   through `hornvale_kernel::quantize` — the scene/ephemeris JSON and the lab's
   `render_csv` are the existing boundaries. Never quantize in the compute
   path.
+- **Colour has TWO independent switches, and finding the truecolor code is not
+  evidence that anything is drawn in colour.** `windows/scene/src/surrounds_ascii.rs`
+  carries a `\x1b[38;2;` 24-bit path, and it is genuinely reachable — but
+  `PossessOpts::default()` selects `Lens::Off`, which `windows/vessel/src/session.rs`
+  documents as returning the pre-lens output *byte for byte*: no tint, no escape
+  sequence, no caption. **The playable terminal path therefore prints no colour
+  until a player types `eyes <species>`**, which is why all four committed
+  `scripts/possession-*.txt` transcripts contain zero escape bytes, and it is
+  deliberate — it is how those transcripts stay unlensed by construction rather
+  than by remembering a flag. The *other* switch runs the other way: `eyes`
+  defaults to `Own`, so the emitted scene document does carry per-cell `color`
+  and the browser client renders it unasked, while `clients/game` is monochrome
+  by construction and ignores it. Before writing that Hornvale does or does not
+  show colour, say **which surface** and **whether the player opted in**. The
+  Compendium got this wrong three times in one session, each time a true answer
+  to a narrower question than the one it asserted; the code was never wrong,
+  every claim about it was. Separately and unconditionally: there is **no
+  per-entity colour channel** on any path — `Mark` carries
+  `noun`/`kind`/`datum`/`salience` — so a creature is never tinted, lens or no
+  lens.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff the paths `docs/generated-paths.txt` declares —
   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`. That

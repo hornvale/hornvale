@@ -81,7 +81,7 @@ reviews missed it because **every anchor resolved.** The anchors were real sim
 tests; the resolver cannot see that a verdict changed subject halfway through a
 corpus, and no check in this record catches an instrument that silently
 switches what it is measuring. Re-auditing all 74 items under the clause moved
-twelve verdicts in both directions — four demotions, six promotions out of
+thirteen verdicts in both directions — five demotions, six promotions out of
 `refused`, two re-anchorings — and left **no item refused under 0022 at all**.
 
 **The accepted cost: the idea registry becomes a gated interface.** Ratified by

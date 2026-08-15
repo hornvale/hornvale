@@ -11,7 +11,7 @@ mistake.
 
 | Corpus | present | refused | deferred | absent | inapplicable | Report |
 |---|---|---|---|---|---|---|
-| `wolverson-2021` | 25 | 5 | 28 | 11 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
+| `wolverson-2021` | 24 | 5 | 28 | 12 | 5 | [system-coverage-wolverson-2021.md](./system-coverage-wolverson-2021.md) |
 
 ## The surplus read
 
@@ -48,3 +48,4 @@ instrument's own bias in its own output; it does not correct for it.
 - `windows/historiography`
 - `windows/lab`
 - `windows/locale`
+- `windows/scene`

@@ -176,8 +176,13 @@ lives in `clients/` (outside the cargo workspace, so `test:` cannot reach it).
 > reviews had not**, because every anchor resolved: the anchors were real sim
 > tests, and the resolver has no way to notice that a verdict changed subject
 > halfway through a corpus. Re-auditing all 74 items under this rule moved
-> twelve verdicts in both directions and left **no item refused under 0022 at
-> all**; every surviving refusal is decision 0070.
+> thirteen verdicts in both directions and left **no item refused under 0022 at
+> all**; every surviving refusal is decision 0070. The thirteenth landed a round
+> later, once the *default-off* colour condition was verified rather than
+> inferred from a reachable code path: chapter 2.1 went to `absent`, because
+> surface colour is merely switched off by default while **per-entity colour
+> does not exist on any path**, and the corpus's first-unmet line became the
+> tutorial's own first page.
 
 ## 5. The anchor discipline
 

@@ -6,7 +6,10 @@ Process lessons, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-compendium.md): a second corpus
 family scoring the program rather than the world, five verdicts, an anchor
 per verdict that the resolver re-checks, and one reading whose headline is
-that the first unmet item is a *refusal* rather than a hole.
+that the first unmet item is the tutorial's own **first page** — 2.1, *Entities
+and Components*, `absent`, because no per-entity colour channel exists anywhere.
+That headline said 2.6 and *refused* until two review rounds moved it; sections
+6 and 7 are why.
 
 ## 1. This campaign built one resolver and produced four separate false-cleans in it
 
@@ -214,7 +217,66 @@ The cheap generalisation, worth carrying to the next corpus in this family:
 rule.** "Does Hornvale do this?" is not a question until you have said what
 Hornvale is.
 
-## 7. Two Minor findings were ruled into fix rounds, deliberately
+## 7. Colour: three wrong answers in one session, and the code was never wrong
+
+Section 6's defect has a sharper instance inside it, and it is the one worth
+carrying forward, because nothing in the process caught it and the thing that
+did was a human running the program.
+
+The question was whether Hornvale draws its world in colour. It was answered
+three times in one session, by the controller, and every answer was wrong:
+
+1. **A client-side deferral the sim was past** — colour framed as something the
+   renderers had not caught up to.
+2. **Absent, agreed without verifying** — the opposite conclusion, adopted
+   because the first was challenged rather than because anything was read.
+3. **Present** — after finding `windows/scene/src/surrounds_ascii.rs`'s
+   `\x1b[38;2;` truecolor path and asserting from its existence that Hornvale
+   puts colour onscreen.
+
+**Each was a true answer to a narrower question than the one asserted.** The
+truecolor path is real and reachable. What none of the three checked is the
+*default*: `PossessOpts::default()` selects `Lens::Off`, and `session.rs`
+documents that as returning the pre-lens output byte for byte — no tint, no
+escape sequence — which is why all four committed `scripts/possession-*.txt`
+transcripts contain **zero escape bytes**. A player sees no colour in the
+terminal until they type `eyes <species>`. Nathan found it by playing the game.
+
+The corrected picture is not "colour is off" either, and flattening it that way
+would be the same error facing the other direction: `eyes` defaults to `Own`,
+so the emitted scene document *does* carry per-cell colour and the browser
+client renders it unasked, while the terminal game client is monochrome by
+construction. Two independent switches, opposite defaults, three renderers
+disagreeing. Any single sentence about "colour" is wrong about at least one of
+them.
+
+Three things to carry:
+
+- **A code path is not a default.** Reading `\x1b[38;2;` and concluding the
+  screen is coloured is the same move as reading a feature flag's
+  implementation and concluding the feature is on. Grep found the capability;
+  nothing grepped the configuration. `measure-dont-narrate-the-mechanism` in
+  its sharpest form.
+- **Five agent reviews read the code and missed it; one human ran the
+  program and did not.** The reviews were not lazy — they verified anchors,
+  opened mechanisms, re-derived counts. They were reading the same artifact the
+  claim was made from. Running the thing is a *different instrument*, not a
+  more diligent application of the same one, and this campaign has no cheap
+  substitute for it.
+- **Say which surface and whether the player opted in.** That sentence is now
+  in `windows/CLAUDE.md` beside the rendering rules, because the next reader
+  will find `surrounds_ascii.rs:79` exactly as three readers already have. It
+  is also in the corpus's own provenance, where it is met before any tally.
+
+The verdict consequence was not cosmetic: chapter 2.1, *Entities and
+Components*, went to `absent` — on the stricter and unconditional half of the
+finding, that **no per-entity colour channel exists on any path** (`Mark`
+carries `noun`/`kind`/`datum`/`salience`) — and with it the corpus's headline
+became "the first page Hornvale cannot replicate is the tutorial's *first*
+page." Which is where Nathan's reading of the project had been before the
+campaign began.
+
+## 8. Two Minor findings were ruled into fix rounds, deliberately
 
 Minor findings do not normally reopen a round. Twice they did here, and both
 overrides used the same argument: this instrument's entire claim is that *the
@@ -228,7 +290,7 @@ The general form: **severity should be judged against what the artifact
 claims, not against what the code does.** A cosmetic defect in an instrument
 that publishes a number is not cosmetic.
 
-## 8. A spec claim about enforcement had to be amended mid-campaign, not inherited
+## 9. A spec claim about enforcement had to be amended mid-campaign, not inherited
 
 The spec said the ratchet "runs in the gate," written against a single gate
 that no longer exists. The first task absorbed sixty-six commits carrying the
@@ -243,7 +305,7 @@ when. Nothing in the design was damaged; the claim simply had to be corrected
 rather than left standing, and the amendment belongs in the spec because that
 is where the next reader will look for it.
 
-## 9. What held up
+## 10. What held up
 
 **Freezing the catalogue before authoring any verdict.** The corpus shipped
 with every verdict null and its item count asserted, one task before anything
