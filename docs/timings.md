@@ -1049,3 +1049,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-15T21:27:51Z | gate-commit | 180.009 | 246.152 | 97.336 | 1.91 | 0 | 7715d705 | campaign/the-retelling | MacBookPro | 10 |
 | 2026-08-15T21:28:16Z | gate-commit | 24.767 | 49.376 | 10.879 | 2.43 | 0 | 6a216e48 | campaign/the-retelling | MacBookPro | 10 |
 | 2026-08-15T21:30:08Z | preflight | 4.190 | 0.991 | 0.849 | 0.44 | 0 | 6a216e48 | campaign/the-retelling | MacBookPro | 10 |
+| 2026-08-15T22:29:21Z | preflight | 4.700 | 1.145 | 1.093 | 0.48 | 0 | 1b535648 | campaign/the-retelling | MacBookPro | 10 |

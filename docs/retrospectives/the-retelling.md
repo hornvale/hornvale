@@ -74,6 +74,24 @@ The one thing to watch: an agent once invoked a real repo guard ("run once,
 inspect many") as grounds for skipping verification its brief had asked for.
 A project rule cited as a reason to do less is worth a second look.
 
+## The registry nearly got a duplicate, and grep was not the check
+
+An ideonomy pass produced what felt like a new idea — a world's cycles never
+close, and the residual should drive ritual — and it was drafted as a fresh
+row. Scanning the *category* rather than grepping the phrasing found it
+substantially banked already: `LANG-50` owns the moon-versus-year (Metonic)
+case and even records the blocker, `LANG-48` has **shipped** ratio detection
+between two moons' periods, `LANG-51` and `MAP-63` design the
+falsification-and-revision ladder, and `PSY-4` states the goblin example more
+sharply than the conversation had — `threat_response` x `night_vision`
+flipping light-emitters hostile.
+
+The row survived, cut down to the one thing those five do not carry: the
+residual as a permanent per-world magnitude, and the eschatological story as
+an encoding of the teller's self-image. The lesson is the frontier guide's own
+and it earned itself again: a targeted grep is not a scan, because the same
+idea is routinely banked in an adjacent category under a different name.
+
 ## Measurement discipline held, and cost something
 
 `0.8848` was computed on seed 42 before any hypothesis was frozen, so it was
