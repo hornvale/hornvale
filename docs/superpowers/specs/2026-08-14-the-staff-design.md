@@ -149,6 +149,36 @@ enqueuing the census overnight, via the written-but-never-installed
 `scripts/scheduled/`) was offered and declined; the census stays a deliberate
 human act.
 
+**Two instruments drop from every-commit to stage-boundary frequency, and the
+spec did not say so until the close found it.** `gate-commit` runs only the
+sub-floor tier — tests measured under `BASELINE_FLOOR_SECS` (1.0 s). Two checks
+that previously rode inside the old `make gate` do not qualify:
+
+```
+  census sentinel   hornvale-lab::census_sentinel$the_first_three_census_worlds_match_the_committed_rows
+                    12.8-24.6 s across the committed host baselines — far above
+                    the floor, so it is absent from the sub-floor roster
+  duration alarm    lives in `gate-run`, reached only via `gate-suite-run`,
+                    which is the `gate` LANE set at the stage rung
+```
+
+Both now run at plan-stage boundaries rather than on every commit. This matters
+beyond cadence: The Sexton's Confidence Gradient score credited exactly these two
+instruments with moving the "checks that cannot fire" bet toward checkable, and
+its argument was explicitly a *frequency* one — `make ci` had run nine times
+against `make gate`'s 368. **That argument no longer holds at that number, and
+this campaign has not measured a replacement.**
+
+The pairing survives — a generator still has its verifier — but the cadence the
+score rested on does not. `book/src/open-questions.md` is re-scored honestly as
+*still paired, frequency currently unmeasured*, rather than claiming either a
+regression or a reconfirmation.
+
+This is the true shape of the trade §1.1 makes. Removing a merge-gate workload
+from per-commit frequency necessarily removes **everything inside it**, including
+instruments that were only ever there because they happened to share a target.
+That is the cost of the 91% reduction, and it is a cost, not a rounding error.
+
 **lefford unreachable means no stage or campaign gate anywhere.** The guard fails closed.
 There is deliberately no `HV_LANE_FORCE=1`: an override that exists is an
 override used under deadline, and one comparable result set is the whole point.
