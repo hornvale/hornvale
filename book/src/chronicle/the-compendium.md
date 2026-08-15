@@ -20,9 +20,11 @@ predicates, concepts, phenomena — the sim's ledger vocabulary. That substrate
 cannot carry this catalogue, and the failure would have been quiet rather than
 loud.
 
-Roughly a third of the tutorial is renderer work: colour, a sidebar, particle
-effects, bloodstains, console layers, a menu drawn from a paint-program asset.
-None of it has a concept-registry token and none of it ever will, because
+**Eight of the tutorial's seventy-four items are pure renderer work** — two
+user-interface passes, wall-glyph selection from a neighbour bitmask,
+bloodstains, particle effects, a camera and viewport, a coloured message log,
+console text layers. None of it has a concept-registry token and none of it
+ever will, because
 [decision 0022](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0022-sim-emits-data-clients-render.md)
 puts rendering outside the ledger deliberately. Resolved against the registry,
 every one of those pages would have read *blocked by a dangling requirement* —
@@ -80,11 +82,13 @@ ever be satisfied, so it rots, and the fix is a check that fails the moment
 somebody adds the missing thing. `NOVELTY` is the ratchet shape the trope
 audit, the type audit and the duration baseline all already use.
 
-What this buys is stated most concretely as a prediction about the future.
-When the action clock ships, the row it is deferred against flips to `shipped`
-and every page deferred against that row goes red until a human re-reads it.
-When decision 0070 is superseded by a combat decision, chapter 2.6's refusal
-goes red the same day. A hand-authored coverage table does not go stale so much
+What this buys is stated most concretely as a prediction about the future. The
+registry row admitting cellular automata, drunkard's walks, mazes and wave
+function collapse as *derivations* rather than as authored layout is planned
+and unbuilt; the day somebody builds them and flips it to `shipped`, all seven
+pages deferred against it go red until a human re-reads each one. When decision
+0070 is superseded by a combat decision, chapter 2.6's refusal goes red the
+same day. A hand-authored coverage table does not go stale so much
 as begin to **lie**; this one cannot, because each cell points at something
 checkable instead of asserting.
 
@@ -95,7 +99,10 @@ and status are load-bearing for a committed artifact.
 
 ## The reading
 
-Seventy-four numbered pages, four sections, one column:
+Seventy-four numbered pages, four sections, one column, rendered to
+[`docs/audits/system-coverage-wolverson-2021.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/system-coverage-wolverson-2021.md)
+by `hornvale systems report` and ratcheted by a whole-file byte comparison
+against its committed copy:
 
 | verdict | count | share |
 |---|---|---|
@@ -121,13 +128,13 @@ refuses ordinal claims for a catalogue that does not, rather than silently
 ranking by identifier.
 
 The rest of the reading is mostly a map of where the project's positions live.
-Twelve refusals resolve to just two decisions — 0022 for the renderer third,
-0070 for everything downstream of a damage counter. Twenty-one deferrals
-concentrate on four planned capabilities the registry already held: an object
-genus, admissible derived map builders, underground settlement, and knowledge-lit
-mapping. Not one new registry row had to be minted to explain a deferral, which
-is a stronger result than it sounds: it means the backlog already knew about
-every gap the catalogue found that anybody had planned for.
+Twelve refusals resolve to just two decisions — 0022 for the eight renderer
+items, 0070 for everything downstream of a damage counter. The twenty-one
+deferrals cite eight distinct registry rows, but **sixteen of the twenty-one
+concentrate on three**: admissible derived map builders, an object genus, and
+underground settlement. Not one new registry row had to be minted to explain a
+deferral, which is a stronger result than it sounds: it means the backlog
+already knew about every gap the catalogue found that anybody had planned for.
 
 ## The surplus, and what it does not say
 
@@ -137,7 +144,9 @@ cannot carry. With one column here, the analogue runs the other way: what does
 the catalogue never think to ask for?
 
 Enumerate the domains and the presenting windows; any subsystem no `present`
-verdict cites is **surplus**. Twenty of twenty-five. Astronomy, paleoclimate,
+verdict cites is **surplus**, and
+[`docs/audits/system-matrix.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/system-matrix.md)
+prints the list beside every corpus's tally. Twenty of twenty-five. Astronomy, paleoclimate,
 language, religion, culture, history, demography, settlement — the tutorial has
 no vocabulary for any of it, and the five subsystems it does reach are the ones
 a walked, rendered game touches.
@@ -164,14 +173,14 @@ checked — a path that exists is not a working feature, and a resolvable test
 name is not proof this page's capability is met. Preferring a test name over a
 path narrows the gap without closing it. So `present` is the verdict this
 instrument is least entitled to, printed as such immediately before the tally
-it most affects, and eight verdicts carry an explicit *arguable* qualification
+it most affects, and seven verdicts carry an explicit *arguable* qualification
 that travels into the rendered table rather than living only in the source.
 
 The strongest conceivable version of this instrument would run each chapter as
 a scenario against a live session and read the verdict off a transcript —
 behaviour rather than assertion. It is refused here on two grounds: it costs
-more than the rest of the campaign combined, and it still cannot cover the
-renderer third, which has no transcript to read. It is recorded as a follow-up
+more than the rest of the campaign combined, and it still cannot cover those
+eight renderer items, which have no transcript to read. It is recorded as a follow-up
 scoped to the pages where a transcript would actually discriminate, not as a
 vague ambition.
 

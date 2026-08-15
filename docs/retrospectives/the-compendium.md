@@ -18,7 +18,7 @@ a citation stops being true. In the order they were found:
 |---|---|---|
 | a mechanism anchor matched a symbol as a **bare substring**, so a citation of `fn foo` resolved clean against `fn foobar` | there were no `present` verdicts yet, so no fixture exercised the path at all | task review |
 | the novelty ratchet used `?` **inside a `for` loop**, so the always-present banner line propagated a `None` out of the whole function — the guard could never fire | the function returned a plausible type and its unit tests passed | the implementer, dogfooding its own command |
-| the stale-deferral check compared a status cell by **exact equality** to `shipped`, missing `shipped (C1)`, `**shipped**` and arrow transitions — about 19% of all shipped rows | the one fixture row used to derive the rule has the bare word as its status | the controller, preparing the next task |
+| the stale-deferral check compared a status cell by **exact equality** to `shipped`, missing `shipped (C1)`, `**shipped**` and arrow transitions — **36 of the 206 rows then reading `shipped`, 17.5%** | the one fixture row used to derive the rule has the bare word as its status | the controller, preparing the next task |
 | a mechanism anchor could cite an **`#[ignore]`d test** — one that never runs — and the raw-text resolver called it resolved | nothing in the design had ever named `#[ignore]` as a state | by accident, while hunting stronger evidence for an unrelated item |
 
 **None was found by a passing test suite, and no two were found by the same
@@ -193,3 +193,9 @@ Captured as registry rows rather than folded in:
 - **`TOOL-mechanism-anchor-matches-prose`** — the raw-text mechanism scan
   accepts a signature that appears in a comment or a string literal; a live
   instance already sits in the tree.
+- **`TOOL-worktree-take-branches-from-stale-origin`** — a recycled worktree
+  starts from `origin/main` with no warning when the local `main` is ahead. Bit
+  at this campaign's start. Banked as `raw` on a single observation, which is
+  what `raw` is for: the alternative on offer was leaving it uncaptured because
+  it could not be verified without running the command mid-campaign, and an
+  unverified row beats a lost one.

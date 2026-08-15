@@ -51,15 +51,30 @@ mere existence of an unmet item would go red on day one and train everyone to
 ignore it.
 
 **The accepted cost: the idea registry becomes a gated interface.** Ratified by
-Nathan at this campaign's G3 review, 2026-08-15. Before this record, a row's
-identifier and status cell were prose that humans read and nothing else
-consulted; nothing derived them and nothing depended on them. After it, a row
-flipping to `shipped` reddens a committed artifact, and renaming or retiring a
-row breaks a gate. That is the intended mechanism rather than a side effect —
-it is precisely what stops the matrix quietly becoming a lie — but it is a real
-constraint on every existing and future row, and it lands on sessions that have
-no reason to expect it and did not ask for it. Decision 0026's permanent-ID
-rule is now load-bearing for a second consumer.
+Nathan at this campaign's G3 review, 2026-08-15.
+
+The registry's IDs and statuses were **already** machine-consumed before this
+record, and stating otherwise would overstate the change. Three committed
+tests read them: `the_waiver_list_only_shrinks` (`docs_consistency.rs:489`),
+which fails by design when a waived row is renamed; `no_new_numbered_registry_ids`
+(`:536`), enforcing decision 0026 against a frozen list; and
+`every_refuted_row_cites_its_evidence` (`:432`), which reads a *normalized
+status* and arrives with decision 0131.
+
+**What is new is narrower and stronger: a row's status now reddens a committed
+artifact outside the registry's own drift check, authored by an instrument its
+editors have no reason to know exists.** Every prior consumer lives in
+`docs_consistency.rs` — the same file, the same run, guarding the registry on
+the registry's own behalf, so a row's editor meets it immediately and in
+context. A `deferred` verdict in `systems/` is a claim made *about* a row by a
+document in another directory, on a schedule the row's editor does not
+control: flipping a row to `shipped` now reddens `docs/audits/`, and renaming
+or retiring one breaks a check whose failure text is the only thing that will
+explain why. That is the intended mechanism rather than a side effect — it is
+precisely what stops the matrix quietly becoming a lie — but it is a real
+constraint on every existing and future row, and it lands on sessions that did
+not ask for it. Decision 0026's permanent-ID rule gains a consumer outside the
+file that has always enforced it.
 
 **So diagnosability is part of the decision, not a nicety.** A DANGLING or
 STALE-DEFERRED failure must name, in the failure text itself: the anchor that

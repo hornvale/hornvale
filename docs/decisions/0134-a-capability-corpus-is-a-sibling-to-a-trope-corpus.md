@@ -9,8 +9,10 @@
 In the context of scoring Hornvale against external catalogues, facing the
 question of whether an external catalogue of *game-system capability* — a
 tutorial, a feature list, a mechanics inventory — belongs in `tropes/`, we
-decided that **it opens a second corpus family at `systems/`, with its own
-resolver, its own verdict vocabulary and its own artifacts**, accepting the
+decided that **it opens a second corpus family at `systems/` — with its own
+resolver, its own verdict vocabulary and its own artifacts, and together with
+the two schema commitments stated below: a generalized item unit, and ordinal
+readings only for a corpus that declares its ordering**, accepting the
 duplication of a corpus loader, a report renderer and a byte-ratchet across
 two families that will never share code.
 
@@ -22,10 +24,11 @@ reading modes is the failure this record exists to prevent.
 
 **They also have incompatible resolution substrates, and the wrong one fails
 quietly.** The trope resolver scores requirement bundles against the concept
-registry — predicates, concepts, phenomena. Roughly a third of a roguelike
-tutorial is renderer work: colour, a sidebar, particle effects, bloodstains,
-console layers, menu art. None of it has a concept-registry token and none of
-it ever will, because decision 0022 puts rendering outside the ledger on
+registry — predicates, concepts, phenomena. **Eight of the first corpus's
+seventy-four items are pure renderer work** — two user-interface passes,
+wall-glyph selection, bloodstains, particle effects, a camera and viewport, a
+coloured message log, console text layers. None of it has a concept-registry
+token and none of it ever will, because decision 0022 puts rendering outside the ledger on
 purpose. Resolved against the registry, every one of those chapters would read
 *blocked by a dangling bundle* — a plausible number, near zero, and a category
 error. A capability item resolves against **repository facts** instead: the
