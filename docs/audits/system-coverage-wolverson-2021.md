@@ -33,10 +33,10 @@ above the tally it most affects.
 
 ## Tally
 
-- present: 27 (36%)
+- present: 26 (35%)
 - refused: 12 (16%)
 - deferred: 21 (28%)
-- absent: 9 (12%)
+- absent: 10 (14%)
 - inapplicable: 5 (7%)
 
 ## First unmet
@@ -69,7 +69,7 @@ above the tally it most affects.
 | 3.6 | REX Paint Menu | inapplicable | reason:REX Paint is a bracket-lib asset format and this is the tutorial's own main-menu art |
 | 3.7 | Simple Traps | absent |  |
 | 4.1 | Refactor Map Building | inapplicable | reason:a refactor of the tutorial's own code organisation into a builder interface |
-| 4.2 | Map Building Test Harness | present | test:hornvale-lab::depth_scoped_metrics_match_full_build |
+| 4.2 | Map Building Test Harness | present | test:hornvale-worldgen::full_depth_produces_both |
 | 4.3 | BSP Room Dungeons | present | test:hornvale-vessel::rule_1_the_realized_graph_is_exactly_the_specified_one |
 | 4.4 | BSP Interior Design | present | test:hornvale-vessel::every_anchor_is_placed_exactly_once |
 | 4.5 | Cellular Automata Maps | deferred | registry:CLIENT-derived-builders |
@@ -104,7 +104,7 @@ above the tally it most affects.
 | 5.14 | Better AI | present | test:hornvale-vessel::decide_plans_to_water_when_thirsty_and_home_when_not |
 | 5.15 | Spatial Indexing Revisited | present | test:hornvale-vessel::rule_5_a_cell_holds_at_most_one_creature |
 | 5.16 | Item Stats and Vendors | deferred | registry:MAT-object-genus |
-| 5.17 | Deep caverns | present | test:hornvale::every_cave_kind_has_exactly_one_cave_formation |
+| 5.17 | Deep caverns | present | test:hornvale-terrain::a_strong_process_reaches_one_band_deeper |
 | 5.18 | Cavern to Dwarf Fort | deferred | registry:MAP-69 |
 | 5.19 | Town Portals | absent |  |
 | 5.20 | Magic Items | deferred | registry:MEM-8 |
@@ -113,7 +113,7 @@ above the tally it most affects.
 | 5.23 | Even More Items | deferred | registry:MAT-object-genus |
 | 5.24 | Magic Spells | deferred | registry:MAP-thaumeme-layers |
 | 5.25 | Enter the Dragon | refused | decision:0070 |
-| 5.26 | Mushrooms | present | test:hornvale-species::the_dark_trait_combinations_are_named |
+| 5.26 | Mushrooms | absent |  |
 | 5.27 | More Shrooms | absent |  |
 | 5.28 | Ranged Combat | refused | decision:0070 |
 | 5.29 | Logging | refused | decision:0022 |
