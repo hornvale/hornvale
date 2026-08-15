@@ -67,8 +67,14 @@ fn committed_absent_count_is_none_without_a_tally_line() {
 /// count rising above the committed artifact's — with its own regression
 /// message, not just the generic drift message. Exercises the real CLI
 /// binary against a scratch corpus that adds one more `absent` item on top
-/// of the real, currently-clean 74-item corpus, so `live_absent` (75) rises
-/// above the committed artifact's 74.
+/// of the real corpus, so `live_absent` rises by exactly one above the
+/// committed artifact's count.
+///
+/// The expected pair is READ FROM the committed report rather than written
+/// here. Task 4 authored the verdicts and took the `absent` count from 74 to
+/// 9, which reddened this test on a hard-coded `"74 to 75"` while the guard
+/// itself was behaving perfectly — an assertion pinned to a tally it does not
+/// test is a false alarm waiting on the next verdict that moves.
 #[test]
 fn check_fails_on_novelty_when_the_absent_count_rises() {
     let root = workspace_root();
@@ -111,9 +117,15 @@ fn check_fails_on_novelty_when_the_absent_count_rises() {
         "check must fail on a rising absent count"
     );
     let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    let committed =
+        std::fs::read_to_string(root.join("docs/audits/system-coverage-wolverson-2021.md"))
+            .expect("the committed report is readable");
+    let baseline =
+        hornvale::systems::committed_absent_count(&committed).expect("the report carries a tally");
+    let expected = format!("{baseline} to {}", baseline + 1);
     assert!(
-        stderr.contains("regressed") && stderr.contains("74 to 75"),
-        "expected a novelty-specific regression message, got: {stderr}"
+        stderr.contains("regressed") && stderr.contains(&expected),
+        "expected a novelty-specific regression message naming `{expected}`, got: {stderr}"
     );
 }
 
