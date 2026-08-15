@@ -221,9 +221,11 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 34] = [
+const EXPECTED_UNTOKENISED: [&str; 36] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs; the 0.60 bar sits 0.19 SE below it and 0.75 SE above the prior 0.5667, so the battery separates neither)",
+    "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
+    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (two independent failures - The Radiation falsified the PRIMARY sign claim at the fifteen-people roster, separation 0.680 then 0.519 now against a > 1.0 bar, and The Glasshouse's climate correction then dropped drow to 14/60 = 0.233 under the 0.30 raider floor; the direction the file was written to test survives both, whole-roster rho 0.7637 here against 0.840 at The Radiation)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",

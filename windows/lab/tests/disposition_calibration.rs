@@ -401,7 +401,7 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (two independent failures - The Radiation falsified the PRIMARY sign claim at the fifteen-people roster, separation 0.680 then 0.519 now against a > 1.0 bar, and The Glasshouse's climate correction then dropped drow to 14/60 = 0.233 under the 0.30 raider floor; the direction the file was written to test survives both, whole-roster rho 0.7637 here against 0.840 at The Radiation)"]
 fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     // The partition, derived from the shipped psyche registry — never authored
@@ -563,6 +563,125 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         "flagship re-selection is no longer monotone in authored threat_response \
          (spearman {rho:.4}). The per-settlement draw predicts a positive sign; a \
          non-positive one means the gate stopped reading the authored mean."
+    );
+}
+
+/// **The witness that keeps this battery measured while
+/// [`non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders`]
+/// is `#[ignore]`d.**
+///
+/// It stays in the HEAVY tier rather than beside a cheap test, because the
+/// quantity it witnesses costs a 60-seed bake to obtain — the same reason the
+/// battery it replaces lived there. So the heavy tier still pays for this
+/// measurement and still reads it; what it no longer does is fail on two
+/// findings that are already recorded.
+///
+/// **This pins witnesses, not claims.** Neither number below is a bar the
+/// world must clear. They are what the fifteen-people roster produced against
+/// this census, recorded so that a change to the bake, the partition or the
+/// climate *forces a deliberate re-read* rather than passing as bookkeeping.
+///
+/// The two are pinned separately because they died separately, and conflating
+/// them is how a reader would lose one:
+///
+/// - **`separation`** is The Radiation's falsified PRIMARY sign claim
+///   (2026-08-10, C2d). It read 0.680 there against a `> 1.0` bar; it reads
+///   **0.519** here. It was never rescued and is not expected to be — the
+///   min-versus-max statistic over a two-set partition is comparing draws
+///   from an overlap, which this module's doc predicted before it happened.
+/// - **`drow`** is The Glasshouse's addition, and it is a different failure
+///   in the same battery. The raider floor is the half of the original
+///   preregistration that SURVIVED the dissolution, unchanged at 0.30; drow
+///   read 0.350 at The Radiation's measurement and reads **14/60 = 0.233**
+///   after the climate correction.
+///
+/// **The floor's stated mechanism is REFUTED, which is why it was deferred
+/// rather than lowered.** It exists to catch "the raid branch stopped running
+/// for it" — and 14 re-seats out of 60 is not a branch that stopped running,
+/// it is a rate that fell. The floor is measuring a post-epoch world at a
+/// pre-epoch scale, exactly as `water_reading.rs`'s discharge floors are.
+/// Moving it would reverse a surviving preregistration to fit a measurement;
+/// tracked instead as `BIO-raid-partition-order-statistic`.
+///
+/// **What the battery was written to test still holds.** Spearman's rho of
+/// authored `threat_response` against re-seating rate is pinned here too: the
+/// direction survives both failures, and a reader who saw only the two dead
+/// order statistics would conclude the opposite.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn the_falsified_partition_statistics_are_pinned_as_witnesses() {
+    let wc = WorldComponents::assemble().expect("assemble the shipped component set");
+    let (mut raiders, mut abstainers): (Vec<KindId>, Vec<KindId>) = (Vec::new(), Vec::new());
+    for (kind, psyche) in wc.psyche.iter() {
+        if !wc
+            .biosphere
+            .get(kind)
+            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled)
+        {
+            continue;
+        }
+        if psyche.threat_response >= RAID_DISPOSITION_MIN {
+            raiders.push(*kind);
+        } else {
+            abstainers.push(*kind);
+        }
+    }
+    let tally = reselection_rates(&wc);
+    let rate = |k: &KindId| -> f64 {
+        let (changed, worlds) = tally.get(k).copied().unwrap_or((0, 0));
+        f64::from(changed) / f64::from(worlds)
+    };
+
+    // The drow reading, as the integers rather than the rate: a ratio hides
+    // which of its terms moved, and "re-seated less often" and "was flagship-
+    // less more often" are different facts about the world.
+    let drow = KindId("drow");
+    let (drow_changed, drow_worlds) = tally.get(&drow).copied().unwrap_or((0, 0));
+    assert_eq!(
+        (drow_changed, drow_worlds),
+        (14, 60),
+        "drow's flagship re-seating moved from the pinned 14/60. This is NOT a number to \
+         update: re-read it, then re-state this witness, the #[ignore] reason on the battery \
+         above, its roster entry in cli/tests/heavy_tier.rs and the \
+         BIO-raid-partition-order-statistic registry row in the SAME commit."
+    );
+
+    let weakest_raider = raiders.iter().map(rate).fold(f64::INFINITY, f64::min);
+    let strongest_abstainer = abstainers.iter().map(rate).fold(0.0f64, f64::max);
+    let separation = weakest_raider / strongest_abstainer.max(f64::MIN_POSITIVE);
+    println!(
+        "witness: separation {separation:.4} (weakest raider {weakest_raider:.4}, strongest \
+         abstainer {strongest_abstainer:.4}); drow {drow_changed}/{drow_worlds}"
+    );
+    assert!(
+        (separation - 0.519).abs() <= 0.519 * 0.15,
+        "the falsified separation statistic moved to {separation:.4}, outside the pinned \
+         witness 0.519 +/- 15%. THIS PINS A FALSIFIED CLAIM AS A WITNESS: a move does NOT \
+         mean The Radiation's PRIMARY claim was rescued, and must never be read that way. \
+         Investigate what moved upstream before touching this pin."
+    );
+
+    // The direction the battery was actually written to test, pinned as a
+    // sign rather than a magnitude — the magnitude is a witness above, but
+    // rho's SIGN is the surviving substantive claim and deserves to fail loudly.
+    let pairs: Vec<(f64, f64)> = raiders
+        .iter()
+        .chain(abstainers.iter())
+        .map(|k| {
+            let disp = wc
+                .psyche
+                .get(k)
+                .expect("a partitioned people has a psyche row");
+            (disp.threat_response, rate(k))
+        })
+        .collect();
+    let rho = spearman(&pairs);
+    println!("witness: spearman(threat_response, re-selection rate) = {rho:.4}");
+    assert!(
+        rho > 0.0,
+        "flagship re-selection is no longer monotone in authored threat_response \
+         (spearman {rho:.4}). The two order statistics above are already falsified; THIS is \
+         the claim whose survival the file rests on, and it has now gone too."
     );
 }
 
