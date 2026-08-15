@@ -14195,236 +14195,319 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — five named worlds (42, 1, 2, 3, 4),
+    /// built once each, with the ranking required to hold for EVERY separated,
+    /// non-tied pair within each world. Not a rate and not a sanctioned-sweep:
+    /// the rule is `forall`, one inversion anywhere fails, and the seeds are
+    /// enumerated rather than searched. The quantifier is stated here because
+    /// widening this test from one seed to five is exactly the change decision
+    /// 0093 exists to make visible — a seed loop is a quantified claim, and
+    /// this one's quantifier is the thing currently under review (see the
+    /// failure message: the `forall` rule may be too strong for the sample
+    /// sizes it runs on).
     #[test]
     fn toponymic_shape_is_per_culture_not_one_world_wide_distribution() {
-        // Ledger #6: the shape distribution is PER CULTURE, drawn per
-        // settlement. That is the claim the bounds in the test above cannot
-        // reach — a single world-wide distribution would satisfy every one
-        // of them, since each people would then just be a sample from it.
+        // WIDENED FROM ONE SEED TO FIVE (The Glasshouse, `k` re-decided).
+        // At seed 42 alone this test went VACUOUS: only two peoples cleared
+        // `SHAPE_SAMPLE_FLOOR` (hobgoblin 116 names, drow 38, with bugbear
+        // missing by ONE at 19), and that pair's predicted shares differ by
+        // 0.063, under `SEPARATION`. The claim was untestable on that world —
+        // not false, untestable — which the `compared > 0` guard below
+        // correctly refused to let pass silently.
         //
-        // So: rank the peoples by the simplex share their OWN shipped
-        // weights predict, and require the world to reproduce that ranking.
-        // The predicted shares come from `morph_options` itself, so this
-        // cannot drift from the mapping; the observed ones come from the
-        // committed `name-gloss` facts, so it is not the draw checking
-        // itself.
-        let world = generated(42);
-        let wc = WorldComponents::assemble().expect("component assembly");
-        let shapes = settlement_shapes(&world);
+        // THE FIX IS MORE WORLDS, NOT A LOWER FLOOR. Dropping
+        // `SHAPE_SAMPLE_FLOOR` from 20 to 19 would have admitted bugbear and
+        // turned this green immediately; that is retuning a threshold to
+        // rescue a result, which is what preregistration exists to prevent.
+        // Neither `SHAPE_SAMPLE_FLOOR` nor `SEPARATION` is touched here —
+        // only how many worlds the same test looks at. That strictly
+        // increases the test's power and could equally have produced a
+        // FALSIFICATION, which is the property making it a widening rather
+        // than a rescue.
+        //
+        // Pairs are compared WITHIN a world, never across two: the claim is
+        // that one world's peoples differ from each other.
+        const SEEDS: [u64; 5] = [42, 1, 2, 3, 4];
+        const SEPARATION: f64 = 0.15;
+        let mut compared_total = 0usize;
+        let mut informative_worlds = 0usize;
+        let mut inversions: Vec<String> = Vec::new();
 
-        let mut peoples: Vec<(String, f64, f64)> = Vec::new();
-        for (species, counts) in &shapes {
-            if counts.len() < SHAPE_SAMPLE_FLOOR {
+        for seed in SEEDS {
+            // Ledger #6: the shape distribution is PER CULTURE, drawn per
+            // settlement. That is the claim the bounds in the test above cannot
+            // reach — a single world-wide distribution would satisfy every one
+            // of them, since each people would then just be a sample from it.
+            //
+            // So: rank the peoples by the simplex share their OWN shipped
+            // weights predict, and require the world to reproduce that ranking.
+            // The predicted shares come from `morph_options` itself, so this
+            // cannot drift from the mapping; the observed ones come from the
+            // committed `name-gloss` facts, so it is not the draw checking
+            // itself.
+            let world = generated(seed);
+            let wc = WorldComponents::assemble().expect("component assembly");
+            let shapes = settlement_shapes(&world);
+
+            let mut peoples: Vec<(String, f64, f64)> = Vec::new();
+            for (species, counts) in &shapes {
+                if counts.len() < SHAPE_SAMPLE_FLOOR {
+                    continue;
+                }
+                let observed = counts
+                    .iter()
+                    .filter(|n| **n == hornvale_language::NameShape::Simplex.morphemes())
+                    .count() as f64
+                    / counts.len() as f64;
+                peoples.push((
+                    species.clone(),
+                    predicted_simplex_share(&wc, species),
+                    observed,
+                ));
+            }
+            if peoples.len() < 2 {
+                println!("   seed {seed}: fewer than two peoples clear the floor — skipped");
                 continue;
             }
-            let observed = counts
-                .iter()
-                .filter(|n| **n == hornvale_language::NameShape::Simplex.morphemes())
-                .count() as f64
-                / counts.len() as f64;
-            peoples.push((
-                species.clone(),
-                predicted_simplex_share(&wc, species),
-                observed,
-            ));
-        }
-        assert!(
-            peoples.len() >= 2,
-            "need two peoples with {SHAPE_SAMPLE_FLOOR}+ names to compare distributions at all"
-        );
 
-        // Only pairs the mapping SEPARATES are checked: a 0.15 predicted
-        // gap is several sampling standard errors at these sample sizes,
-        // so an inverted observation means the weights are not in force,
-        // not that the dice were unkind. Pairs the mapping does not
-        // separate say nothing either way and are skipped.
-        const SEPARATION: f64 = 0.15;
-        let mut compared = 0usize;
-        for (i, a) in peoples.iter().enumerate() {
-            for b in peoples.iter().skip(i + 1) {
-                if (a.1 - b.1).abs() < SEPARATION {
-                    continue;
+            // Only pairs the mapping SEPARATES are checked: a 0.15 predicted
+            // gap is several sampling standard errors at these sample sizes,
+            // so an inverted observation means the weights are not in force,
+            // not that the dice were unkind. Pairs the mapping does not
+            // separate say nothing either way and are skipped.
+            let mut compared = 0usize;
+            for (i, a) in peoples.iter().enumerate() {
+                for b in peoples.iter().skip(i + 1) {
+                    if (a.1 - b.1).abs() < SEPARATION {
+                        continue;
+                    }
+                    let (heavier, lighter) = if a.1 > b.1 { (a, b) } else { (b, a) };
+                    // THE DELVERS (C2c, 2026-08-07): an exact OBSERVED tie is
+                    // skipped, and does not count toward `compared`.
+                    //
+                    // The strict `>` below could not tell a TIE from an
+                    // INVERSION, and this campaign produced the first tie: at
+                    // seed 42, hobgoblin and hill-dwarf each named exactly 13
+                    // simplex settlements out of exactly 23. Two peoples landing
+                    // on the same integer pair at the same sample size is a
+                    // sampling coincidence, and a coincidence is not evidence
+                    // either way — which is precisely the status this loop
+                    // already assigns to pairs the mapping does not separate.
+                    //
+                    // Skipped rather than admitted via `>=`, and the difference
+                    // is load-bearing: `>=` would let a tie COUNT as a
+                    // confirmation and prop up the `compared > 0` guard below, so
+                    // a world where every separated pair tied would pass while
+                    // demonstrating nothing. Skipping keeps the falsification
+                    // power exactly as it was — a genuine inversion still fails
+                    // on the strict `>` — while refusing to bank a tie as
+                    // evidence. The claim itself is NOT in question here: the
+                    // separated, non-tied pairs at seed 42 still reproduce the
+                    // predicted ranking (the numbers recorded when this comment
+                    // was written were duergar's .865 / .829, kobold's
+                    // .836 / .854 and gnoll's .398 / .455; duergar has since been
+                    // withdrawn with the rest of the depth roster, spec §11, and
+                    // the assertion below has held through that without being
+                    // touched).
+                    if heavier.2 == lighter.2 {
+                        continue;
+                    }
+                    compared += 1;
+                    if heavier.2 <= lighter.2 {
+                        println!(
+                            "   INVERSION seed {seed}: {} ({:.3} pred) vs {} ({:.3} pred) -> observed {:.3} vs {:.3}, margin {:.3}",
+                            heavier.0,
+                            heavier.1,
+                            lighter.0,
+                            lighter.1,
+                            heavier.2,
+                            lighter.2,
+                            lighter.2 - heavier.2
+                        );
+                    }
+                    // COLLECTED, NOT FAIL-FAST. The rule is unchanged — any
+                    // inversion is a failure — but a fail-fast assert reports
+                    // the FIRST inverted pair and hides how many pairs agreed,
+                    // which is the number a reader needs to judge it.
+                    if heavier.2 <= lighter.2 {
+                        inversions.push(format!(
+                            "seed {seed}: {} (predicted {:.3}) should name more simply than {} (predicted {:.3}), but observed {:.3} vs {:.3} — inverted by {:.3}",
+                            heavier.0, heavier.1, lighter.0, lighter.1,
+                            heavier.2, lighter.2, lighter.2 - heavier.2
+                        ));
+                    }
                 }
-                let (heavier, lighter) = if a.1 > b.1 { (a, b) } else { (b, a) };
-                // THE DELVERS (C2c, 2026-08-07): an exact OBSERVED tie is
-                // skipped, and does not count toward `compared`.
-                //
-                // The strict `>` below could not tell a TIE from an
-                // INVERSION, and this campaign produced the first tie: at
-                // seed 42, hobgoblin and hill-dwarf each named exactly 13
-                // simplex settlements out of exactly 23. Two peoples landing
-                // on the same integer pair at the same sample size is a
-                // sampling coincidence, and a coincidence is not evidence
-                // either way — which is precisely the status this loop
-                // already assigns to pairs the mapping does not separate.
-                //
-                // Skipped rather than admitted via `>=`, and the difference
-                // is load-bearing: `>=` would let a tie COUNT as a
-                // confirmation and prop up the `compared > 0` guard below, so
-                // a world where every separated pair tied would pass while
-                // demonstrating nothing. Skipping keeps the falsification
-                // power exactly as it was — a genuine inversion still fails
-                // on the strict `>` — while refusing to bank a tie as
-                // evidence. The claim itself is NOT in question here: the
-                // separated, non-tied pairs at seed 42 still reproduce the
-                // predicted ranking (the numbers recorded when this comment
-                // was written were duergar's .865 / .829, kobold's
-                // .836 / .854 and gnoll's .398 / .455; duergar has since been
-                // withdrawn with the rest of the depth roster, spec §11, and
-                // the assertion below has held through that without being
-                // touched).
-                if heavier.2 == lighter.2 {
-                    continue;
-                }
-                compared += 1;
-                assert!(
-                    heavier.2 > lighter.2,
-                    "{} is predicted to name more simply than {} ({:.3} vs {:.3}) but the \
-                     world says otherwise ({:.3} vs {:.3}) — the per-culture weights are not \
-                     reaching the draw",
-                    heavier.0,
-                    lighter.0,
-                    heavier.1,
-                    lighter.1,
-                    heavier.2,
-                    lighter.2
-                );
             }
-        }
-        // The guard below tells its reader to "print the pairs before
-        // concluding which one you have" — so print them, rather than asking
-        // each future reader to re-derive them by hand. This fired for real
-        // when The Glasshouse re-decided `k`, and the first thing the session
-        // had to do was reconstruct exactly this table.
-        println!("== per-culture shape distributions, seed 42 ==");
-        println!("   (predicted from shipped weights, observed from name-gloss facts)");
-        println!("   sample floor is {SHAPE_SAMPLE_FLOOR} named settlements");
-        let mut roster: Vec<(&String, usize)> = shapes.iter().map(|(s, c)| (s, c.len())).collect();
-        roster.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
-        for (species, n) in &roster {
-            let mark = if *n >= SHAPE_SAMPLE_FLOOR {
-                "clears"
-            } else {
-                "below floor"
-            };
-            println!("   {species:<14} {n:>4} names   {mark}");
-        }
-        for (name, predicted, observed) in &peoples {
-            println!("   {name:<14} predicted {predicted:.3}   observed {observed:.3}");
-        }
-        for (i, a) in peoples.iter().enumerate() {
-            for b in peoples.iter().skip(i + 1) {
-                let gap = (a.1 - b.1).abs();
-                let why = if gap < SEPARATION {
-                    "SKIPPED: mapping does not separate them"
-                } else if a.2 == b.2 {
-                    "SKIPPED: exact observed tie"
+            // The guard below tells its reader to "print the pairs before
+            // concluding which one you have" — so print them, rather than asking
+            // each future reader to re-derive them by hand. This fired for real
+            // when The Glasshouse re-decided `k`, and the first thing the session
+            // had to do was reconstruct exactly this table.
+            println!("== per-culture shape distributions, seed {seed} ==");
+            println!("   (predicted from shipped weights, observed from name-gloss facts)");
+            println!("   sample floor is {SHAPE_SAMPLE_FLOOR} named settlements");
+            let mut roster: Vec<(&String, usize)> =
+                shapes.iter().map(|(s, c)| (s, c.len())).collect();
+            roster.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+            for (species, n) in &roster {
+                let mark = if *n >= SHAPE_SAMPLE_FLOOR {
+                    "clears"
                 } else {
-                    "compared"
+                    "below floor"
                 };
-                println!(
-                    "   {:<14} vs {:<14} predicted gap {gap:.3}  observed {:.3} vs {:.3}  -> {why}",
-                    a.0, b.0, a.2, b.2
-                );
+                println!("   {species:<14} {n:>4} names   {mark}");
             }
+            for (name, predicted, observed) in &peoples {
+                println!("   {name:<14} predicted {predicted:.3}   observed {observed:.3}");
+            }
+            for (i, a) in peoples.iter().enumerate() {
+                for b in peoples.iter().skip(i + 1) {
+                    let gap = (a.1 - b.1).abs();
+                    let why = if gap < SEPARATION {
+                        "SKIPPED: mapping does not separate them"
+                    } else if a.2 == b.2 {
+                        "SKIPPED: exact observed tie"
+                    } else {
+                        "compared"
+                    };
+                    println!(
+                        "   {:<14} vs {:<14} predicted gap {gap:.3}  observed {:.3} vs {:.3}  -> {why}",
+                        a.0, b.0, a.2, b.2
+                    );
+                }
+            }
+
+            if compared == 0 {
+                println!("   seed {seed}: no separated, non-tied pair — visibility check skipped");
+                continue;
+            }
+            compared_total += compared;
+            informative_worlds += 1;
+
+            // And the separation has to be VISIBLE, not merely correctly
+            // ordered: the extremes must be far apart in the world, or a
+            // world-wide distribution with a lucky ordering would pass.
+            //
+            // THE RANGE: this used to be a constant (`> 0.2`), chosen when the
+            // extreme pair at seed 42 happened to predict a wide 0.2+ gap. Since
+            // then the roster narrowed to two peoples clearing
+            // `SHAPE_SAMPLE_FLOOR` — kobold and hobgoblin — whose OWN shipped
+            // weights predict a narrower gap: 0.836 vs 0.676, a spread of only
+            // 0.160. Their observed spread, 0.791 vs 0.659 (0.132), is 82.0% of
+            // that predicted spread — the world is tracking the model closely —
+            // but 0.132 is less than the fixed 0.2 floor demanded, so the test
+            // was failing peoples for reproducing their own model too faithfully,
+            // not for losing it. A constant floor has no relationship to what
+            // the current extremes predict; it happened to fit the pair that was
+            // extreme when it was written and stopped fitting when the roster
+            // moved.
+            //
+            // The fix ties the floor to the SAME prediction the ranking above
+            // already trusts: require the observed spread to be at least half of
+            // the predicted spread for the current extremes. Half is well below
+            // the 82.0% measured at seed 42 (comfortable headroom for the
+            // spread this floor is meant to pass), while still demanding that
+            // most of the model's predicted separation survive into the world —
+            // a mechanism that stopped reaching the draw collapses the observed
+            // spread toward zero (the world-wide-distribution null this whole
+            // test exists to rule out), which sits nowhere near half of any
+            // nonzero predicted spread. Proved by mutation (The Range,
+            // 2026-08-09): damping each people's morphology 65% toward a fixed
+            // reference — without reversing which extreme predicts more simplex
+            // names — shrank the observed spread to 0.041 against a 0.080 floor
+            // and this assertion caught it; damping further (80%) instead
+            // inverted the ranking and the assertion above caught that. Both
+            // paths are covered.
+            //
+            // WHAT KEEPS A RELATIVE FLOOR OFF ZERO. A fraction of a predicted
+            // spread has no absolute lower bound of its own: if `predicted_spread`
+            // ever went to zero this assertion would degrade to `observed > 0`,
+            // which is the very floors-erode-unseen case the rewrite above cites,
+            // reached by arithmetic instead of by an edit. It cannot today, and the
+            // reason is a COUPLING to code fifty lines up rather than anything
+            // visible here: `compared > 0` passed, so at least one pair survived the
+            // `< SEPARATION` skip, so two peoples' predicted shares differ by at
+            // least `SEPARATION` (0.15) — and `most`/`least` are the extremes of
+            // that same predicted profile, so `predicted_spread >= SEPARATION` and
+            // `floor >= 0.075`. Lowering `SEPARATION`, or admitting pairs the
+            // separation test currently skips, lowers this floor with it. Asserted
+            // rather than only stated, so that coupling breaks loudly.
+            const VISIBILITY_FRACTION: f64 = 0.5;
+            let most = peoples
+                .iter()
+                .max_by(|a, b| a.1.total_cmp(&b.1))
+                .expect("non-empty");
+            let least = peoples
+                .iter()
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .expect("non-empty");
+            let predicted_spread = most.1 - least.1;
+            let observed_spread = most.2 - least.2;
+            assert!(
+                predicted_spread >= SEPARATION,
+                "the extremes of the predicted profile ({} at {:.3}, {} at {:.3}) span only \
+                 {predicted_spread:.3}, below {SEPARATION} — yet {compared} pair(s) cleared the \
+                 separation test above, which is impossible unless that test and this floor have \
+                 come uncoupled. The relative floor below has no absolute lower bound of its own; \
+                 it is kept off zero ONLY by this inequality, so it must be checked and not assumed",
+                most.0,
+                most.1,
+                least.0,
+                least.1,
+            );
+            let floor = VISIBILITY_FRACTION * predicted_spread;
+            assert!(
+                observed_spread > floor,
+                "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}, a spread of \
+                 {predicted_spread:.3}) yet their observed simplex shares are {:.3} and {:.3} (a \
+                 spread of {observed_spread:.3}) — less than {VISIBILITY_FRACTION} of the predicted \
+                 spread ({floor:.3}) reached the world, too little to call these different naming \
+                 practices",
+                most.0,
+                least.0,
+                most.1,
+                least.1,
+                most.2,
+                least.2
+            );
         }
 
         assert!(
-            compared > 0,
-            "nothing was compared. TWO causes reach this line and the difference matters: \
-             either no two peoples' PREDICTED simplex shares differ by {SEPARATION} (the shape \
-             mapping carries no per-culture signal to test), or every separated pair landed on \
-             an exact OBSERVED tie and was skipped (the mapping separates them in principle but \
-             the world does not realize it). Both are failures, and both are failures of the \
-             MODEL rather than of this test — but they are different failures, so print the \
-             pairs before concluding which one you have."
+            compared_total > 0,
+            "nothing was compared across ANY of the {} worlds swept. THREE causes reach this \
+             line and the difference matters. (1) No two peoples' PREDICTED simplex shares \
+             differ by the separation on any world — the shape mapping carries no per-culture \
+             signal to test, a MODEL failure. (2) Every separated pair landed on an exact \
+             OBSERVED tie — the mapping separates them in principle but no world realizes it, \
+             a different MODEL failure. (3) Too few peoples clear the sample floor anywhere, so \
+             the claim is UNTESTABLE rather than false — a SAMPLING limit and NOT a model \
+             failure, which is the case this sweep was widened to escape. The per-world tables \
+             printed above distinguish the three; read them before concluding. Do NOT resolve \
+             a (3) by lowering SHAPE_SAMPLE_FLOOR — widen the seed set, as this test already \
+             was.",
+            SEEDS.len()
         );
-
-        // And the separation has to be VISIBLE, not merely correctly
-        // ordered: the extremes must be far apart in the world, or a
-        // world-wide distribution with a lucky ordering would pass.
-        //
-        // THE RANGE: this used to be a constant (`> 0.2`), chosen when the
-        // extreme pair at seed 42 happened to predict a wide 0.2+ gap. Since
-        // then the roster narrowed to two peoples clearing
-        // `SHAPE_SAMPLE_FLOOR` — kobold and hobgoblin — whose OWN shipped
-        // weights predict a narrower gap: 0.836 vs 0.676, a spread of only
-        // 0.160. Their observed spread, 0.791 vs 0.659 (0.132), is 82.0% of
-        // that predicted spread — the world is tracking the model closely —
-        // but 0.132 is less than the fixed 0.2 floor demanded, so the test
-        // was failing peoples for reproducing their own model too faithfully,
-        // not for losing it. A constant floor has no relationship to what
-        // the current extremes predict; it happened to fit the pair that was
-        // extreme when it was written and stopped fitting when the roster
-        // moved.
-        //
-        // The fix ties the floor to the SAME prediction the ranking above
-        // already trusts: require the observed spread to be at least half of
-        // the predicted spread for the current extremes. Half is well below
-        // the 82.0% measured at seed 42 (comfortable headroom for the
-        // spread this floor is meant to pass), while still demanding that
-        // most of the model's predicted separation survive into the world —
-        // a mechanism that stopped reaching the draw collapses the observed
-        // spread toward zero (the world-wide-distribution null this whole
-        // test exists to rule out), which sits nowhere near half of any
-        // nonzero predicted spread. Proved by mutation (The Range,
-        // 2026-08-09): damping each people's morphology 65% toward a fixed
-        // reference — without reversing which extreme predicts more simplex
-        // names — shrank the observed spread to 0.041 against a 0.080 floor
-        // and this assertion caught it; damping further (80%) instead
-        // inverted the ranking and the assertion above caught that. Both
-        // paths are covered.
-        //
-        // WHAT KEEPS A RELATIVE FLOOR OFF ZERO. A fraction of a predicted
-        // spread has no absolute lower bound of its own: if `predicted_spread`
-        // ever went to zero this assertion would degrade to `observed > 0`,
-        // which is the very floors-erode-unseen case the rewrite above cites,
-        // reached by arithmetic instead of by an edit. It cannot today, and the
-        // reason is a COUPLING to code fifty lines up rather than anything
-        // visible here: `compared > 0` passed, so at least one pair survived the
-        // `< SEPARATION` skip, so two peoples' predicted shares differ by at
-        // least `SEPARATION` (0.15) — and `most`/`least` are the extremes of
-        // that same predicted profile, so `predicted_spread >= SEPARATION` and
-        // `floor >= 0.075`. Lowering `SEPARATION`, or admitting pairs the
-        // separation test currently skips, lowers this floor with it. Asserted
-        // rather than only stated, so that coupling breaks loudly.
-        const VISIBILITY_FRACTION: f64 = 0.5;
-        let most = peoples
-            .iter()
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .expect("non-empty");
-        let least = peoples
-            .iter()
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .expect("non-empty");
-        let predicted_spread = most.1 - least.1;
-        let observed_spread = most.2 - least.2;
-        assert!(
-            predicted_spread >= SEPARATION,
-            "the extremes of the predicted profile ({} at {:.3}, {} at {:.3}) span only \
-             {predicted_spread:.3}, below {SEPARATION} — yet {compared} pair(s) cleared the \
-             separation test above, which is impossible unless that test and this floor have \
-             come uncoupled. The relative floor below has no absolute lower bound of its own; \
-             it is kept off zero ONLY by this inequality, so it must be checked and not assumed",
-            most.0,
-            most.1,
-            least.0,
-            least.1,
+        println!(
+            "== {compared_total} pair(s) compared across {informative_worlds} informative world(s) of {} swept, {} inverted ==",
+            SEEDS.len(),
+            inversions.len()
         );
-        let floor = VISIBILITY_FRACTION * predicted_spread;
         assert!(
-            observed_spread > floor,
-            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}, a spread of \
-             {predicted_spread:.3}) yet their observed simplex shares are {:.3} and {:.3} (a \
-             spread of {observed_spread:.3}) — less than {VISIBILITY_FRACTION} of the predicted \
-             spread ({floor:.3}) reached the world, too little to call these different naming \
-             practices",
-            most.0,
-            least.0,
-            most.1,
-            least.1,
-            most.2,
-            least.2
+            inversions.is_empty(),
+            "the per-culture ranking INVERTED on {} of {compared_total} compared pairs across \
+             {informative_worlds} worlds:\n  {}\n\nRead the MARGINS before concluding. This \
+             test's rule is `forall` — any inversion fails — and it justifies that by saying a \
+             {SEPARATION} predicted gap is several sampling standard errors at these sample \
+             sizes. Check that against the sample counts printed above: at ~25 names per people \
+             the standard error on a DIFFERENCE of two simplex shares is roughly 0.14, so a \
+             {SEPARATION} gap is about ONE such error, not several. A small inverted margin at \
+             these sizes is what sampling noise looks like, and the justification does not hold \
+             where it is most needed. If that is the situation, the fix is a decision rule \
+             matched to the statistics (P2 in `range_readout.rs` uses a rate criterion for \
+             exactly this reason) — chosen and FROZEN before the next measurement, never after \
+             seeing which pairs inverted.",
+            inversions.len(),
+            inversions.join("\n  ")
         );
     }
 

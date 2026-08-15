@@ -212,7 +212,58 @@
 //! numbers. It is also why `the_fauna_occupant_moves_no_settlement` exists: with
 //! two rows landing in one commit, attribution needs one of them proven inert.
 //!
-//! ## THE GLASSHOUSE, Stage B Task 4: P1″ is FALSIFIED at seed 42
+//! ## THE GLASSHOUSE, `k` re-decided: P1″ IS UN-FALSIFIED, AND THE STATUS IS
+//! ## THEREFORE **UNRESOLVED** — read this before the section below it
+//!
+//! Setting the thermostat's residual fraction to 0.3 warmed the population
+//! and re-placed every settlement a fourth time. Measured at seed 42:
+//!
+//! ```text
+//!   seed 42  arm                settlements   arid   arid share
+//!            affinity ABSENT              2      0     0.000000
+//!            affinity SHIPPED            11     11     1.000000
+//! ```
+//!
+//! Both halves of the Task 4 falsifier are gone: the count RISES (2 → 11)
+//! instead of falling, and the share rises 0.000000 → 1.000000 instead of
+//! staying flat. The mechanism is exactly what §3.4 of the spec argued and
+//! what the campaign was built to test — pre-Glasshouse the world was frozen,
+//! so arid land barely existed and an arid-affine people had nowhere to
+//! relocate TO; the affinity could only suppress it. Warm the world and the
+//! destination exists, so relocation replaces suppression.
+//!
+//! **AN EXACT 1.000000 IS THE SHAPE A DEFAULT WEARS, so it was checked
+//! against a control before being believed.** World-wide, across every
+//! attributed settlement at seed 42: the affinity-ABSENT arm is 0.026 arid
+//! (7 of 267) and the SHIPPED arm is 0.133 arid (32 of 241). Gnoll's 1.000
+//! is therefore ~7.5× the world-wide rate it sits inside, not a world where
+//! everything happens to be arid. Two independent corroborations came with
+//! it: desert-elf, the roster's OTHER arid-affine people, moved 0.000 → 0.714
+//! on the same change without being looked for; and declaring affinities at
+//! all raised the world-wide arid share 5× (0.026 → 0.133), so the mechanism
+//! moves peoples into arid land generally rather than gnoll specifically.
+//!
+//! **AND YET THE STATUS IS UNRESOLVED, NOT CONFIRMED.** This prediction has
+//! now read FALSIFIED (Task 4) and then UN-FALSIFIED (this change) inside a
+//! single campaign, on a single preregistered seed, with nothing between them
+//! but one constant that no part of the affinity mechanism reads. A result
+//! that inverts when an unrelated constant moves has not earned "confirmed" —
+//! it has demonstrated that one world is too thin a basis for the claim, which
+//! is the standing reading this file already applies to its own descriptive
+//! seeds. The honest next step is a wider sweep, not a stamp.
+//!
+//! **THE ASSERTION IS THEREFORE BACK TO THE PREREGISTERED ONE** — the
+//! DIRECTION (`after.share() > before.share()`), which is what P1″ actually
+//! predicted — rather than the exact four-integer tuple Task 4 pinned. That
+//! tuple was defensible when it recorded a falsification, but it has since
+//! interrupted this campaign twice for reasons that had nothing to do with the
+//! claim, because a directional prediction pinned to exact counts breaks on
+//! every physics change. The numbers stay in the printed readout, where they
+//! inform without gating.
+//!
+//! ## THE GLASSHOUSE, Stage B Task 4: P1″ is FALSIFIED at seed 42 (SUPERSEDED
+//! ## by the section above; preserved because a falsification that was later
+//! ## reversed is evidence about the claim's fragility, not a mistake to erase)
 //!
 //! The thermostat (a damped, greenhouse-forced insolation baseline replacing
 //! the fixed 288 K blackbody one, plus Task 5's area-mean-zero latitude
@@ -600,8 +651,13 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
 /// because the post-declaration denominator there is two settlements, and are
 /// reported so a reader can see whether the reading survives a second world.
 ///
-/// **THE GLASSHOUSE, Stage B Task 4 — FALSIFIED at seed 42 (module header has
-/// the full account).** `before` falls 10 → `after` 2 settlements while the
+/// **THE GLASSHOUSE, `k` re-decided — UN-FALSIFIED at seed 42, status
+/// UNRESOLVED (module header has the full account).** Superseding the Task 4
+/// note below: both halves of that falsifier are gone (count 2 -> 11, share
+/// 0.000000 -> 1.000000 against a world-wide 0.133), and the assertion is
+/// back to the PREREGISTERED direction rather than an exact tuple.
+///
+/// **THE GLASSHOUSE, Stage B Task 4 — FALSIFIED at seed 42 (superseded).** `before` falls 10 → `after` 2 settlements while the
 /// arid share stays flat at 0.000000 — suppression, not relocation, by this
 /// test's own definition. The assertion below is now PINNED AT THE
 /// FALSIFICATION rather than at the original prediction, so a further change
@@ -651,25 +707,43 @@ fn the_arid_share_of_gnoll_settlements_rises() {
         "the baseline arm must found some gnoll settlements, or this \
          measurement has no subject"
     );
-    // THE GLASSHOUSE, Stage B Task 4: pinned at the measured FALSIFICATION
-    // (10 -> 2 settlements, arid share flat at 0.000000), not at the original
-    // prediction (`after.share() > before.share()`, confirmed 20 -> 2 at
-    // 0.000 -> 0.500 pre-Glasshouse). See the module header's "P1″ is
-    // FALSIFIED" section for the full account and why this is a recorded
-    // finding, not a rescue. Post-unblinding re-measure, declared per
-    // decision 0016.
-    assert_eq!(
-        (before.total, before.arid, after.total, after.arid),
-        (10, 0, 2, 0),
-        "seed 42's gnoll settlement/arid tally moved again — re-measure and \
-         update the module header's falsification account rather than \
-         reverting to the original `after.share() > before.share()` assertion"
+    // A share over an empty denominator is not a measurement. Task 4's own
+    // depth-trap comment above makes the same point about `Settlements`
+    // depth; this is the arm-level version of it, and it is what stops the
+    // directional assertion below from passing on `0/0 > 0/0`.
+    assert!(
+        after.total > 0,
+        "the shipped arm founded no gnoll settlements at all, so its arid \
+         share is 0/0 dressed as a measurement — re-measure before reading \
+         anything from it"
     );
-    assert_eq!(
+
+    // BACK TO THE PREREGISTERED ASSERTION (`k` re-decided; module header's
+    // UN-FALSIFIED section carries the account). Task 4 pinned the exact
+    // tuple (10, 0, 2, 0) because it was recording a falsification, which was
+    // the right call then. But P1″ predicts a DIRECTION, and a directional
+    // prediction pinned to four exact integers breaks on every physics change
+    // — it has interrupted this campaign twice for reasons unrelated to the
+    // claim. The tuple's job (make a movement visible) is done by the printed
+    // readout above, which no reader can skip because this file's standing
+    // instruction is to read the numbers rather than the pass.
+    //
+    // Measured here: before 2 settlements / 0 arid / 0.000000, after 11 / 11 /
+    // 1.000000, against a world-wide arid share of 0.133 in the same arm. The
+    // status is UNRESOLVED, not confirmed — see the module header for why a
+    // prediction that read falsified and then un-falsified inside one campaign
+    // on one seed needs a wider sweep rather than a stamp.
+    assert!(
+        after.share() > before.share(),
+        "P1\u{2033} does not hold at seed 42: the arid share did not rise once \
+         the affinity was declared ({:.6} -> {:.6} over {} -> {} settlements). \
+         A FALLING count with a flat or falling share is the falsifier this \
+         test was written for — suppression rather than relocation. Record it \
+         in the module header as a finding; do NOT weaken this assertion",
         before.share(),
         after.share(),
-        "seed 42's arid share is no longer flat — re-measure: this may mean \
-         P1\u{2033} holds again"
+        before.total,
+        after.total
     );
 }
 
