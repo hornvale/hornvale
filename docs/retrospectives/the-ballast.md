@@ -109,6 +109,13 @@ absence.
 - **A decision-number collision can reverse direction.** Two campaigns held an
   unmerged 0134. The first board post assumed the other would close first; the
   ordering changed, and the post had to be corrected rather than left standing.
+- **One missed same-commit regeneration**, caught by the close's drift check:
+  the seam fix added a function to `history_emit.rs`, shifting every line number
+  below it, and `docs/audits/seam-guard-roster.md` records line numbers. The
+  roster should have been regenerated in the commit that moved it. It is a
+  cosmetic drift here — no verdict changed — but it is the same discipline that
+  matters for the type-audit report, and the close is the wrong place to notice
+  it. The regeneration is committed separately, labelled as the catch-up it is.
 
 ## 7. What this campaign deliberately did not do
 
