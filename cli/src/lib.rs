@@ -13,6 +13,7 @@ pub mod phonology;
 pub mod proto;
 pub mod repl;
 pub mod streams;
+pub mod systems;
 pub mod tropes;
 
 /// Read the value following `flag` in `args`, if present.
