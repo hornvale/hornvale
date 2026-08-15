@@ -191,7 +191,7 @@ a much larger mechanical diff and wants its own campaign."
 - Create: `systems/wolverson-2021.system.json`
 - Create: `cli/src/systems.rs`
 - Modify: `cli/src/lib.rs` (add `pub mod systems;`)
-- Modify: `cli/src/main.rs` (add `use hornvale::systems;`)
+- Modify: `cli/src/main.rs` — **only if something calls `systems::`**; a bare unused `use` fails clippy `-D warnings`, so Task 1 legitimately leaves it untouched
 - Test: `cli/tests/system_coverage.rs`
 
 **Interfaces:**
