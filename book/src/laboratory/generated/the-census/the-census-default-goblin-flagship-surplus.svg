@@ -10,17 +10,17 @@
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
 <text x="96.6" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 96.6 252.0)">&lt; 0</text>
-<rect x="143.2" y="232.8" width="69.0" height="3.2" fill="#5b8dd9" rx="2" />
-<text x="177.7" y="228.8" font-size="11" fill="currentColor" text-anchor="middle">16</text>
+<rect x="143.2" y="231.8" width="69.0" height="4.2" fill="#5b8dd9" rx="2" />
+<text x="177.7" y="227.8" font-size="11" fill="currentColor" text-anchor="middle">21</text>
 <text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 177.7 252.0)">[0, 0.2)</text>
-<rect x="224.4" y="227.4" width="69.0" height="8.6" fill="#5b8dd9" rx="2" />
-<text x="258.9" y="223.4" font-size="11" fill="currentColor" text-anchor="middle">43</text>
+<rect x="224.4" y="228.8" width="69.0" height="7.2" fill="#5b8dd9" rx="2" />
+<text x="258.9" y="224.8" font-size="11" fill="currentColor" text-anchor="middle">36</text>
 <text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 258.9 252.0)">[0.2, 0.4)</text>
-<rect x="305.5" y="62.2" width="69.0" height="173.8" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="58.2" font-size="11" fill="currentColor" text-anchor="middle">869</text>
+<rect x="305.5" y="58.4" width="69.0" height="177.6" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="54.4" font-size="11" fill="currentColor" text-anchor="middle">888</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">[0.4, 0.6)</text>
-<rect x="386.7" y="221.6" width="69.0" height="14.4" fill="#5b8dd9" rx="2" />
-<text x="421.1" y="217.6" font-size="11" fill="currentColor" text-anchor="middle">72</text>
+<rect x="386.7" y="225.0" width="69.0" height="11.0" fill="#5b8dd9" rx="2" />
+<text x="421.1" y="221.0" font-size="11" fill="currentColor" text-anchor="middle">55</text>
 <text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 421.1 252.0)">[0.6, 0.8)</text>
 <text x="502.3" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 502.3 252.0)">[0.8, 1)</text>
