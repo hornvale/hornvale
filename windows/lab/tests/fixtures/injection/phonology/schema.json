@@ -332,6 +332,22 @@
     },
     {
       "buckets": [
+        -1.0,
+        -0.6,
+        -0.2,
+        0.2,
+        0.6,
+        1.0
+      ],
+      "doc": "Dimensionless atmospheric greenhouse residual at the anchor, -1..1, mean 0 (The Glasshouse) — the spread the carbonate-silicate thermostat alone would not give it. Nothing consumes this metric yet.",
+      "domain": "astronomy",
+      "kind": "numeric",
+      "name": "greenhouse-forcing-k",
+      "role": "descriptor",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
         0.0,
         0.2,
         0.4,
@@ -3147,7 +3163,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0x0f7fb747bfe48240"
+    "fnv1a64": "0xe1b1a0841aff4edd"
   },
   "schema_version": 1,
   "study": {
