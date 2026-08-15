@@ -62,7 +62,9 @@ per job across the six campaign-rung sets ranges 903–1823 s.
 
 Two corollaries the design must protect:
 
-- **Tested SHA == pushed SHA.** No commit is created after the last green.
+- **Tested SHA == pushed SHA.** No commit is created after the last green. The
+  merge commit is constructed *first*, gated as itself, and pushed unchanged —
+  so the object that carries the guarantee is the object that lands.
 - **`main` advances only through the queue.** The guarantee is *inductive* —
   each merge builds on an already-proven `main`, which is what lets the queue
   prove only the delta. Anything landing out of band breaks the induction
@@ -174,16 +176,44 @@ the way `worktree-take` pays it.
 
 Sequence inside the claim:
 
-1. Fetch; check out the candidate branch; `git merge origin/main`.
+1. Fetch; check out `origin/main` **detached**; `git merge --no-ff <branch>`.
 2. On conflict → **hold** and escalate (§6). The queue does not guess.
 3. Run the phases (§5.4), `git clean -fd` between each.
-4. After each authoring phase, commit any artifact drift onto the branch as a
-   single `chore(artifacts)` commit.
+4. After each authoring phase, commit any artifact drift as a single
+   `chore(artifacts)` commit (§5.3.2 decides where it lands).
 5. Assert `git status --porcelain` is empty and the declared drift check is
    clean: `git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt |
    grep -v '^$')`.
-6. Fast-forward `main` to the branch tip; push `origin main`; push the branch.
+6. `git push origin HEAD:main`; then push the branch.
 7. Record the outcome; post a `notice` to the board; release the claim.
+
+#### 5.3.1 Why detached, and why it is not a workaround
+
+`scripts/hooks/pre-commit` refuses a commit to `main` from a **linked**
+worktree — the queue's chamber is exactly that, and step 4 commits. Verified by
+reading the guard rather than inferring it: it keys on
+`git_dir != git_common_dir && branch == "main"`, where
+`branch="$(git symbolic-ref --short -q HEAD || echo DETACHED)"`. A detached
+HEAD reports `DETACHED` and is exempt by construction.
+
+So detachment is not evasion of the guard; it is the honest description of what
+the chamber is doing. The chamber does not *own* `main` — it constructs a
+candidate for `main` and offers it. `main` moves only when the push in step 6
+succeeds, which is also the only moment at which the queue's guarantee attaches.
+
+#### 5.3.2 Where a fix goes
+
+The `--no-ff` topology splits this, and the split is the rule:
+
+- **Conflict resolution lives in the merge commit.** That is what a merge
+  commit is for, and it is where git will look for it later.
+- **A behavioural fix is committed to the campaign branch, and the merge is
+  redone.** Never amended into the merge commit. Otherwise the fix exists only
+  on `main`, invisible to the author on the branch it belongs to, and a
+  re-queue of that branch would silently drop it.
+
+This preserves §6's rule that the lock-keeper does not become the crew: a fix
+the queue makes is visible on the branch, in the author's own history.
 
 ### 5.4 Phase order
 
@@ -248,10 +278,17 @@ default":
    default.
 
 **The operator does not become the crew.** A fix belongs on the campaign
-branch, and the topology already puts it there: the queue merges `main` *into*
-the branch, so anything committed in the chamber lands on the branch and
-survives. Where the defect needs the author's knowledge, the request is bounced
-back with the evidence rather than fixed in the chamber.
+branch. Under the `--no-ff` topology the chamber sits on a detached HEAD, so
+this is a **rule the queue must enforce** rather than something the topology
+gives for free (§5.3.2): a behavioural fix is committed to the branch and the
+merge redone, never amended into the merge commit. Where the defect needs the
+author's knowledge, the request is bounced back with the evidence rather than
+fixed in the chamber at all.
+
+This is the one place the adopted topology is *weaker* than the discarded one,
+and it is worth naming plainly: merging `main` into the branch would have made
+"the fix lands on the branch" true by construction. It was traded for a
+first-parent history that reads 104 commits a month instead of 993.
 
 ### 6.4 Out-of-band landings
 
@@ -302,14 +339,22 @@ census dispatch are all unchanged.
 
 ## 9. Prerequisites and risks
 
-**P1 — lefford cannot push today. Hard blocker.** Verified:
-`git config --get-all credential.helper` is empty, `origin` is HTTPS, and
-`ssh -T git@github.com` returns `Permission denied (publickey)`. A push would
-prompt for a password and hang in a non-interactive session. `gh auth status`
-shows an authenticated `ndouglas` token carrying `repo` scope, so the
-capability exists and is merely unwired: `gh auth setup-git` is the fix. It is
-a task in the plan, not an assumption, and it changes a machine's git config —
-so it is called out here for G3 rather than done quietly.
+**P1 — lefford could not push. RESOLVED 2026-08-15, verified by a real push.**
+Diagnosis: `git config --get-all credential.helper` was empty, `origin` is
+HTTPS, and `ssh -T git@github.com` returned `Permission denied (publickey)`, so
+a push would have prompted for a password and hung in a non-interactive
+session. `gh auth status` showed an authenticated `ndouglas` token carrying
+`repo` scope — the capability existed and was merely unwired. Fixed with
+`gh auth setup-git`, which wrote to `~/.gitconfig`:
+
+```
+credential.https://github.com.helper=!/usr/bin/gh auth git-credential
+```
+
+Confirmed by pushing `campaign/the-sluice` for real, not by a `--dry-run`: a
+dry run only needs read access to compute a fast-forward verdict, so it cannot
+distinguish "authenticated" from "not". That distinction matters here and the
+weaker check would have reported success.
 
 **P2 — the heavy tier's state on `main` is unverified.** A board post from The
 Repose reports the heavy tier red on `main` with one of two failures
@@ -358,12 +403,20 @@ is the tip of a tree gated as itself; that the merge product, not the branch
 tip, is the gated object; and that an out-of-band landing is a detected fault
 rather than a silent weakening.
 
-## 12. Open, flagged for G3
+## 12. G3 outcome
 
-1. **Merge topology.** Adopted: merge `main` into the branch, fast-forward.
-   The discarded alternative (`--no-ff` onto `main`) yields one first-parent
-   entry per campaign — 104/month instead of the measured 993 — and history
-   topology is the least reversible choice here.
-2. **P1**, wiring push credentials on lefford (§9).
-3. **P2**, the heavy tier's baseline, and whether it gates or reports.
-4. The census remains outside the guarantee (§7).
+Reviewed 2026-08-15. Two items decided by Nathan, two still open.
+
+1. **Merge topology — DECIDED: `--no-ff` onto `main`.** Reversing the spec's
+   first draft. `git log --first-parent main` becomes one entry per campaign —
+   **104 a month instead of the measured 993** — which is the unit the project
+   already thinks in. The mechanics this forces are in §5.3.1 (detached HEAD,
+   because the pre-commit hook refuses `main` from a linked worktree) and
+   §5.3.2 (conflict resolution lives in the merge commit; a behavioural fix
+   goes on the campaign branch and the merge is redone).
+2. **P1 — DECIDED and DONE.** Push credentials wired and verified (§9).
+3. **P2 — still open.** The heavy tier's baseline on `main`, and whether it
+   gates or merely reports if it proves flaky rather than red. Task one of the
+   plan; not decided here.
+4. **The census remains outside the guarantee** (§7). Unchanged, and stated
+   rather than implied.
