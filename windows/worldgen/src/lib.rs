@@ -124,8 +124,8 @@ pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
     collapse_events, emit_history, emit_now, goblinoid_overlap, goblinoid_region_overlap,
     ledger_day_of_bake_year, migration_events, occupation_records, occupations_at,
-    occupations_by_cell, present_year, ruins_of_people, stratigraphy, sundered_landmasses,
-    territories,
+    occupations_by_cell, present_frame, present_year, ruins_of_people, stratigraphy,
+    sundered_landmasses, territories,
 };
 /// The demography fit's result, re-exported so a caller that only depends on
 /// the composition root can NAME what [`demography_report_from`] hands back

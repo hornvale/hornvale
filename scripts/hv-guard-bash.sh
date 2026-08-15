@@ -29,7 +29,7 @@
 #
 # The interlock is a string in the command, not an inherited environment
 # variable: this hook sees the command text, never a nested process's env. That
-# is also why `make gate` needs no special case — it does not contain
+# is also why `make gate-commit` needs no special case — it does not contain
 # `cargo test`, so it is never matched.
 #
 # Self-test: `bash scripts/hv-guard-bash.sh --self-test`. Every pattern has both
@@ -85,15 +85,18 @@ verdict() {
         return 1
     fi
 
-    # Rule 2 — a whole-workspace test run. `make gate` is the wrapper: it adds
-    # nextest's parallel binaries and the doctests, and it is what CI runs, so a
-    # raw invocation is both slower and a weaker signal. A run scoped with -p is
-    # left alone (see design constraint 2).
+    # Rule 2 — a whole-workspace test run. There is no local command that
+    # answers this the way `cargo test --workspace` was asking to be answered:
+    # `gate-commit` is local and fast but covers only the sub-floor tier, not
+    # the whole workspace; the actual whole-workspace suite is the `gate` set,
+    # which `gate-stage` dispatches to the lane on the canonical box (decision
+    # 0132, The Staff). A run scoped with -p is left alone (see design
+    # constraint 2).
     if grep -q -E 'cargo (test|nextest run)' <<<"$cmd" 2>/dev/null; then
         if grep -q -E -- '--workspace|--all([^-]|$)' <<<"$cmd" 2>/dev/null ||
             ! grep -q -E -- '(-p|--package|--manifest-path) ' <<<"$cmd" 2>/dev/null; then
             # shellcheck disable=SC2016  # the $? and backticks are literal advice text
-            printf '%b' 'Whole-workspace cargo test. Use the project'"'"'s own targets instead:\n\n  make gate        the commit gate (fmt + clippy + type-audit + nextest + doctests)\n  make quick       the cheap half (fmt + clippy + type-audit), no tests\n  make gate-full   the gate plus the heavy tier\n  make gate-fast   ITERATION ONLY, scoped to changed crates\n\n`make gate` runs nextest'"'"'s parallel binaries AND the doctests and is what CI runs, so a raw cargo test is slower and a weaker signal. To test ONE crate, scope it: cargo test -p hornvale-vessel --lib lattice::\n\nOverride with HV_TEST_OK=1.'
+            printf '%b' 'Whole-workspace cargo test. `make gate`, `make gate-full` and `make gate-fast` no longer exist (decision 0132, The Staff) — each now refuses. What actually exists:\n\n  make gate-commit                   LOCAL, seconds — lints + the sub-floor test tier ONLY, not the whole workspace\n  make gate-stage    REF=<full-sha>  dispatched to the lane on the canonical box — the actual whole-workspace suite (fmt + clippy + type-audit + nextest + doctests)\n  make quick                         the cheap half (fmt + clippy + type-audit), no tests\n\nIf you want what `cargo test --workspace` was asking for, that'"'"'s `gate-stage` — it costs a push and a lane dispatch, not a local command; `gate-commit` will NOT run it for you. The set roster is scripts/lane-sets.tsv.\n\nFor most cases the cheapest correct answer is still to scope it: cargo test -p hornvale-vessel --lib lattice::\n\nOverride with HV_TEST_OK=1.'
             return 1
         fi
     fi
@@ -161,8 +164,8 @@ self_test() {
     check allow 'cargo test -p hornvale-vessel'
     check allow 'cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -12'
     check allow 'cargo run --manifest-path tools/type-audit/Cargo.toml -- check'
-    check allow 'make gate'
-    check allow 'make gate-full 2>&1 | tail -30'
+    check allow 'make gate-commit'
+    check allow 'make gate-stage REF=deadbeef 2>&1 | tail -30'
     check allow 'cargo clippy --workspace --all-targets -- -D warnings'
     check allow 'cargo build --release'
 

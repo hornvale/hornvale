@@ -19,8 +19,14 @@ RUN_JSON="${1:?usage: defect-ledger.sh <run.json>}"
 
 [ -f "$RUN_JSON" ] || { echo "defect-ledger: no $RUN_JSON; nothing to record" >&2; exit 0; }
 
-# The crates a human touched, by the same directory->crate mapping gate-fast
-# uses. Overapproximation is fine here; this is a correlate, not a gate.
+# The crates a human touched, by the same directory->crate mapping
+# scripts/gate-fast.sh used to use before it was deleted (The Ballast,
+# Nathan-authorised: it was a working undocumented back door left behind when
+# `make gate-fast` was retired into a refusing signpost — see decision 0132).
+# That deletion took `cli/tests/gate_fast_closure.rs` with it, which was the
+# only *tested* copy of this directory->crate closure; this script's copy was
+# always a separate, untested reimplementation, not a call into that one.
+# Overapproximation is fine here; this is a correlate, not a gate.
 #
 # BOTH COMMANDS ARE REQUIRED. `git diff --name-only HEAD` lists tracked
 # modifications only — it never sees an untracked file, and a newly added

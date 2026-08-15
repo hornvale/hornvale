@@ -26,16 +26,51 @@
 # this run was told to check for", not "every artifact is fresh".
 #
 # The defect: `make worktree-take` renames a pool member and keeps target/.
-# CARGO_MANIFEST_DIR and CARGO_TARGET_TMPDIR are baked at compile time, cargo
-# considers the tree fresh, and 31 files under kernel/ domains/ windows/ cli/
-# read one of those two macros. Six tests fail with a panic naming the OLD path.
+# CARGO_MANIFEST_DIR, CARGO_TARGET_TMPDIR, and CARGO_BIN_EXE_* are all baked
+# at compile time, cargo considers the tree fresh, and dozens of files under
+# kernel/ domains/ windows/ cli/ tools/ read one of the three. Six tests fail
+# with a panic naming the OLD path — that was CARGO_MANIFEST_DIR/
+# CARGO_TARGET_TMPDIR; The Ballast (2026-08-15) found the CARGO_BIN_EXE_
+# shape live, separately, in `tools/board`: a stale `resilience-*` test
+# binary spawned `env!("CARGO_BIN_EXE_board")` and failed 7 tests with
+# `spawn board: NotFound`, naming a sibling worktree's path this check could
+# not see for two reasons at once (below).
 set -euo pipefail
 old_path="${1:-}"
 root="$(git rev-parse --show-toplevel)"
-deps="$root/target/debug/deps"
 
-if [ ! -d "$deps" ]; then
-    echo "worktree-freshness: no $deps yet — nothing compiled, trivially clean."
+# Every deps/ directory this check must scan: the workspace's own, PLUS one
+# per out-of-workspace tool crate (tools/board, tools/digest,
+# tools/type-audit, tools/seam-guard today). Each of those carries an empty
+# `[workspace]` table in its own Cargo.toml, which stops cargo's ancestor
+# search (see tools/board/Cargo.toml's own comment) and gives it a SEPARATE
+# target/ that $root/target cannot see — the second, independent way The
+# Ballast's finding escaped this check (the first was CARGO_BIN_EXE_ not
+# being one of the two macros grepped for at all; see worktree-take.sh).
+# Derived by grep over `tools/*/Cargo.toml`, not hand-listed, so a new
+# standalone tool is covered the day it is added rather than the day someone
+# remembers to add it here — the same "closes the gap by construction"
+# argument `scripts/CLAUDE.md` already makes for other checks in this file's
+# neighborhood.
+dep_dirs="$root/target/debug/deps"
+for manifest in "$root"/tools/*/Cargo.toml; do
+    [ -f "$manifest" ] || continue
+    grep -q '^\[workspace\]' "$manifest" || continue
+    dep_dirs="$dep_dirs $(dirname "$manifest")/target/debug/deps"
+done
+
+# Keep only directories that actually exist — an out-of-workspace tool that
+# has never been built (e.g. tools/earth-mask, as of this writing) has no
+# target/ at all yet, and that is trivially clean, not an error. Plain
+# word-splitting, matching how `$others` is walked below: none of these
+# paths can contain a space, since every one is `<this repo>/.../target/...`.
+existing_dep_dirs=""
+for d in $dep_dirs; do
+    [ -d "$d" ] && existing_dep_dirs="$existing_dep_dirs $d"
+done
+
+if [ -z "$existing_dep_dirs" ]; then
+    echo "worktree-freshness: nothing compiled anywhere yet, trivially clean."
     exit 0
 fi
 
@@ -87,26 +122,29 @@ if [ -z "$others" ]; then
 fi
 
 found=0
-for other in $others; do
-    # Executables only. `.rlib`/`.rmeta`/`.d` are most of the 24,544 entries
-    # in deps/ and are not what a test runs; scanning them costs ~1 s per
-    # sibling worktree and buys nothing.
-    hits="$(find "$deps" -maxdepth 1 -type f -perm -u+x -print0 2>/dev/null \
-        | xargs -0 grep -lF "$other" 2>/dev/null || true)"
-    if [ -n "$hits" ]; then
-        found=1
-        echo "worktree-freshness: artifacts bake the FOREIGN path $other:" >&2
-        echo "$hits" | sed 's/^/  /' | head -10 >&2
-    fi
+for deps in $existing_dep_dirs; do
+    for other in $others; do
+        # Executables only. `.rlib`/`.rmeta`/`.d` are most of the 24,544
+        # entries in deps/ and are not what a test runs; scanning them costs
+        # ~1 s per sibling worktree per deps/ directory and buys nothing.
+        hits="$(find "$deps" -maxdepth 1 -type f -perm -u+x -print0 2>/dev/null \
+            | xargs -0 grep -lF "$other" 2>/dev/null || true)"
+        if [ -n "$hits" ]; then
+            found=1
+            echo "worktree-freshness: artifacts in $deps bake the FOREIGN path $other:" >&2
+            echo "$hits" | sed 's/^/  /' | head -10 >&2
+        fi
+    done
 done
 
 if [ "$found" -ne 0 ]; then
     cat >&2 <<'EOF'
 
 These binaries were compiled while this directory had a different name, so
-env!("CARGO_MANIFEST_DIR") and CARGO_TARGET_TMPDIR point somewhere that no
-longer exists. Tests reading them fail with a panic naming the old path, which
-reads exactly like a red main and is not one.
+env!("CARGO_MANIFEST_DIR"), CARGO_TARGET_TMPDIR, or env!("CARGO_BIN_EXE_*")
+point somewhere that no longer exists. Tests reading them fail with a panic
+naming the old path (the first two) or a "file not found" spawn error (the
+third), both of which read exactly like a red main and are not one.
 
 Fix: re-run `make worktree-take`, which now invalidates them, or force a
 rebuild of the affected crates.

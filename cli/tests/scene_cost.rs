@@ -321,6 +321,16 @@ const BASIS_HOST: &str = "x86_64-40";
 
 /// The cost gate. Prints every measured number (`--nocapture`) so a future
 /// re-baselining does not need to re-derive the harness.
+///
+/// nextest: co-schedule-sensitive — pinned to `threads-required = "num-cpus"`
+/// in `.config/nextest.toml`'s `# class: wall-clock-budget` table (The
+/// Ballast), pre-emptively: this file's own module doc is the discriminator
+/// `session_cost.rs` reuses after THAT test reddened under tier contention,
+/// and `cli/tests/heavy_tier.rs`'s scatter-sweep guard already names this
+/// exact test as the historical symptom of an oversubscribed tier ("the
+/// FIRST SYMPTOM is a spurious `hornvale::scene_cost` failure"). See
+/// `cli/tests/heavy_tier.rs`'s `co_schedule_sensitive_heavy_tests` guard,
+/// which fails if this marker and that table's filter ever fall out of step.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn scene_api_cost_is_bounded_on_seed_42() {

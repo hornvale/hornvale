@@ -999,10 +999,18 @@ fn exposure_rows_masked(
         // in this repo measures from. Not `WorldTime::GENESIS` and not an
         // arbitrary epoch — a stock evaluated at genesis would report what a
         // people knew before it existed.
-        let now = hornvale_kernel::WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(
-            hornvale_worldgen::present_year(&world),
-        ))
-        .expect("the present frame is a finite day");
+        //
+        // `present_frame` (not a hand-written
+        // `WorldTime::new(ledger_day_of_bake_year(present_year(&world)))`
+        // here): that hand-written composition used to live at this exact
+        // line and reported `tools/seam-guard`'s `ledger_day_of_bake_year`
+        // seam UNGUARDED — the call was reachable only from this file's
+        // `heavy:`-ignored batteries, so no non-ignored test could ever see a
+        // year substituted for a day here. See `present_frame`'s doc for the
+        // fix and `history_emit.rs`'s
+        // `present_frame_crosses_the_bake_year_by_days_per_year` for the
+        // cheap non-ignored test that now guards the crossing instead.
+        let now = hornvale_worldgen::present_frame(&world);
 
         let report = demography_report_from_masked(&world, &wc, &terrain, &climate, mask)
             .expect("demography report reconstructs");

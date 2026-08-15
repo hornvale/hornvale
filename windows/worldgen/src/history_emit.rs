@@ -38,10 +38,26 @@ use std::collections::{BTreeMap, BTreeSet};
 ///
 /// `identity(0)` is exactly "drop the conversion" — the mutation The Ell ran
 /// by hand at every crossing, now standing. Scoped narrowly on purpose: a
-/// too-narrow scope can only manufacture a false SURVIVOR, never a false
+/// too-narrow scope can still manufacture a false SURVIVOR, never a false
 /// GUARDED, so a GUARDED verdict here is true whatever a wider run would say.
-/// If this ever reports UNGUARDED, widen the scope before declaring it — that
-/// is the failure `conquest_victim`'s declaration made for two campaigns.
+/// If this ever reports UNGUARDED, do not reflexively reach for
+/// `expect(survives: …)` — that is the failure `conquest_victim`'s
+/// declaration made for two campaigns.
+///
+/// **Widening the scope is not the first thing to try — check the ignore
+/// tier first.** The Ballast found the call this seam actually guarded
+/// (`windows/worldgen/tests/repose_exposure.rs:1002`) reachable only from
+/// that file's `heavy:`-ignored batteries. `run_scope` executes `cargo
+/// nextest run -p <scope> --no-fail-fast`, which runs non-ignored tests
+/// only — so a mutation whose only witnesses live behind `#[ignore]` reports
+/// UNGUARDED at *every* `scope()`, including the widest available one
+/// (verified empirically against `scope(hornvale)`; see commit `2fbcc4d7`).
+/// Widening scope only helps a mutation some crate's non-ignored tests
+/// already reach; it cannot make a heavy-only call site reachable. The fix
+/// that actually worked was moving the vulnerable composition into a named
+/// production function (`present_frame`) with its own cheap, non-ignored
+/// unit test — the general remedy is relocating the call out of
+/// `#[ignore]`d code, not widening `scope()`.
 /// type-audit: bare-ok(count: year), bare-ok(count: return)
 pub fn ledger_day_of_bake_year(year: f64) -> f64 {
     year * hornvale_kernel::Years::DAYS_PER_YEAR
@@ -410,6 +426,29 @@ pub fn present_year(world: &World) -> f64 {
         // which fact wins does not depend on the unit) and crossed once, here.
         .map(bake_year_of_ledger_day)
         .unwrap_or(0.0)
+}
+
+/// [`present_year`], crossed forward into the standard **day** every
+/// [`WorldTime`] consumer needs — the composition a caller wanting "now" as a
+/// day would otherwise hand-write as
+/// `WorldTime::new(ledger_day_of_bake_year(present_year(world)))`.
+///
+/// That hand-written composition is exactly what sat at
+/// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, and it reported
+/// `tools/seam-guard`'s `ledger_day_of_bake_year` seam UNGUARDED: the call
+/// lived only inside a `heavy:`-ignored battery (`exposure_rows_masked`,
+/// reachable from no non-`#[ignore]`d test), so no scoped probe could ever
+/// observe a year substituted for a day there — and, contrary to this
+/// module's usual advice, **widening `scope(...)` could not have fixed it**.
+/// A scope only helps a mutation some crate's *non-ignored* tests can reach;
+/// this one only ever ran inside `#[ignore]`d code, at every scope. Naming the
+/// crossing here instead moves the one call site somewhere a cheap,
+/// non-ignored test can reach it —
+/// `present_frame_crosses_the_bake_year_by_days_per_year` in this crate's
+/// `tests/history_emit.rs`.
+pub fn present_frame(world: &World) -> WorldTime {
+    WorldTime::new(ledger_day_of_bake_year(present_year(world)))
+        .expect("a derived present-day crossing is finite")
 }
 
 /// Reconstruct every committed occupation from the ledger, in commit order —
