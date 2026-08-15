@@ -5,7 +5,12 @@
 # Mechanizes the checkable half of the parallel-campaign integration ritual
 # (parallel sessions have triple-collided on artifacts in two days — see
 # decisions 0026/0043); prints the judgment half it cannot score as reminders.
-# Read-only: never mutates anything.
+# Touches no working tree and no local branch. It DOES do network I/O:
+# the Beacon section pushes and fetches the board's refs, and the
+# ancestry section below fetches origin's branches. An earlier header
+# claimed "read-only: never mutates anything", which was already false
+# when board-sync landed -- worth stating precisely, because the false
+# claim is probably why nobody added the fetch this check needs.
 #
 # Run it from the campaign branch (worktree or checkout) you intend to merge
 # — at every plan-stage boundary, not only at close: small absorptions of
@@ -65,19 +70,43 @@ if [[ "$branch" == "main" ]]; then
     exit 0
 fi
 
-section "Ancestry (main must be an ancestor: merge main INTO the branch first)"
-if git merge-base --is-ancestor main HEAD; then
-    ok "main ($(git rev-parse --short main)) is an ancestor of HEAD"
+# THE FETCH THIS CHECK CANNOT WORK WITHOUT. Every comparison below resolves
+# `main` as a LOCAL ref. A local main that is behind origin yields a cheerful
+# GO against a ref nobody else is looking at — the failure this campaign hit,
+# and the reason preflight is worth running at all. Best-effort, exactly like
+# the Beacon: a fetch failure degrades to the old local-only behaviour with a
+# warning, and never changes the verdict on its own.
+section "Fetching origin (best-effort; a stale main is the failure this check exists to prevent)"
+if git fetch --quiet origin 2>/dev/null; then
+    ok "fetched origin"
 else
-    behind="$(git rev-list --count "$(git merge-base main HEAD)"..main)"
-    fail "main has moved ($behind commit(s) unabsorbed) — merge main into this branch, re-run the full gate there, then re-run this preflight"
+    warn "could not fetch origin — the comparisons below use whatever refs are local, which may be stale"
+fi
+
+# Compare against the NEWER of local main and origin/main. Absorbing local
+# main is not enough when origin/main has moved past it: the branch would
+# merge cleanly here and be behind the moment it lands.
+integration_ref=main
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+    if ! git merge-base --is-ancestor origin/main main; then
+        integration_ref=origin/main
+        warn "local main is behind origin/main by $(git rev-list --count main..origin/main) commit(s) — comparing against origin/main"
+    fi
+fi
+
+section "Ancestry ($integration_ref must be an ancestor: merge it INTO the branch first)"
+if git merge-base --is-ancestor "$integration_ref" HEAD; then
+    ok "$integration_ref ($(git rev-parse --short "$integration_ref")) is an ancestor of HEAD"
+else
+    behind="$(git rev-list --count "$(git merge-base "$integration_ref" HEAD)".."$integration_ref")"
+    fail "$integration_ref has moved ($behind commit(s) unabsorbed) — merge it into this branch, re-run the full gate there, then re-run this preflight"
 fi
 
 section "Both-sides-added slug collisions since the merge base (decisions 0026/0043 — decision records are numbered again: confirm the next free number too)"
-merge_base="$(git merge-base main HEAD)"
+merge_base="$(git merge-base "$integration_ref" HEAD)"
 slug_dirs=(docs/decisions book/src/chronicle docs/retrospectives studies)
 branch_added="$(git diff --name-only --diff-filter=A "$merge_base"..HEAD -- "${slug_dirs[@]}" | sort)"
-main_added="$(git diff --name-only --diff-filter=A "$merge_base"..main -- "${slug_dirs[@]}" | sort)"
+main_added="$(git diff --name-only --diff-filter=A "$merge_base".."$integration_ref" -- "${slug_dirs[@]}" | sort)"
 file_collisions="$(comm -12 <(printf '%s\n' "$branch_added") <(printf '%s\n' "$main_added") | sed '/^$/d')"
 if [[ -n "$file_collisions" ]]; then
     fail "both sides added the same artifact file(s) — same slug usually means the same idea: resolve as a content merge, not a rename"
@@ -91,7 +120,7 @@ new_row_ids() { # row IDs added in the given range's registry diff
     git diff -U0 "$1" -- "$registry" \
         | sed -nE 's/^\+\| ([A-Z]+-[A-Za-z0-9-]+) \|.*/\1/p' | sort -u
 }
-id_collisions="$(comm -12 <(new_row_ids "$merge_base..HEAD") <(new_row_ids "$merge_base..main") | sed '/^$/d')"
+id_collisions="$(comm -12 <(new_row_ids "$merge_base..HEAD") <(new_row_ids "$merge_base..$integration_ref") | sed '/^$/d')"
 if [[ -n "$id_collisions" ]]; then
     fail "registry row ID(s) minted on both sides — merge the rows' content under one ID"
     printf '%s\n' "$id_collisions" | sed 's/^/    /'
