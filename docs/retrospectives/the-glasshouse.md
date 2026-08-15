@@ -372,7 +372,33 @@ liveness pins where the world moved out from under a named NPC or concept,
 2 deliberate reds, and — hiding among them — one witness whose re-read
 overturned another campaign's published finding.
 
-### The two that are staying red, deliberately
+### The two that were staying red — and what they became at the merge
+
+**Superseded at the close (2026-08-15).** What follows is the reasoning as it
+stood, and it is still the reasoning; only the mechanism changed. Nathan's
+merge call was that a gate left red trains every later reader to skip it,
+which costs more than these two rows do — so both were deferred under the
+`"PREREGISTERED, not met"` convention rather than left firing.
+
+That is not the nudge this section argues against, and the distinction is the
+whole point: **no floor moved and no assertion was weakened.** Both still fail,
+with the same numbers and the same messages, when run with `--run-ignored`.
+What changed is which tier runs them, and each now carries an always-running
+**witness** pinning the integers the world actually produces — (35 riparian,
+1 dry) and (16 loud cells, 2 strong crossings) — so the deferred figures stay
+measured instead of decaying into prose. §17's lesson is why: an ignored
+measurement stops being measured, and the roster's own doc asks a reviewer to
+insist on the witness.
+
+One further refinement came out of doing it. `water_reading` was **split**
+rather than ignored whole: only the two world-side floors were mis-scaled, while
+the ordering claim, its straddle anti-vacuity and the universal "every crossing
+above the threshold is Impassable" are claims about the world's own discharge
+ordering, are unaffected, and still run. Ignoring the test whole would have
+silenced the half of §8's named deliverable that still works. **When an
+`#[ignore]` would take live assertions down with the stale one, split first.**
+
+The original reasoning follows.
 
 `water_reading`'s discharge floors and `wetness_reading`'s R-8 are **not**
 witnesses and were not re-pinned. Both are instruments that noticed something
@@ -445,8 +471,107 @@ settles that.
   make `k` identifiable from Earth (§6), and is still unbuilt.
 
 ---
+## 18. What the close found, and why a handoff's split is a hypothesis
+
+**Superseding the HANDOFF below, which is kept because its traps are still
+true and its attribution is instructively wrong.**
+
+The handoff recorded eleven open failures and split the eight heavy ones three
+ways: two owning committed artifacts, three preregistered calibration
+readouts, and "the rest are ordinary witnesses". It also said all eight were
+"census-refresh witnesses, none caused by this session's commits". Re-read
+individually, the eight are **four** things, and two of them were never this
+campaign's:
+
+| what | which |
+|---|---|
+| artifact drift, re-authored on the canonical box | `repose_exposure`, `occupancy_readout` |
+| falsification SURVIVES, witness re-pinned | `the_fare` F1 (0.003698 → 0.008553), `the_mire` H1 (0.0095 → 0.0264) |
+| an instrument that lost its power | `generalist_distinctness` (both) |
+| already deliberately red since The Radiation, plus a new failure | `disposition_calibration` |
+| not a witness, not ours, not the census | `session_cost` |
+
+**A count of failures is not a diagnosis, and grouping them by where they live
+reproduces the §9 error at a larger scale.** Section 9 records reading nine
+golden mismatches as if they partitioned twenty-five failures; §16 records the
+same lesson again. The handoff's three-way split was made from test *paths* —
+which crate, which tier — and every one of the four real classes cuts across
+those paths. The distinguishing evidence in each case cost one command, and
+none of it was visible from the roster.
+
+**The single most useful discriminator was running the failing set on BOTH
+boxes.** Seven of the eight produce byte-identical figures on aarch64-10 and
+x86_64-40 — F1 0.008553, H1 0.0264, cv_ratio 0.9945, n=424308, drow 14/60.
+`session_cost` is the one that differs, and *that is what it is measuring*: its
+millisecond ceilings are `BASIS_HOST` figures and decision 0133 moved the heavy
+tier to a box no basis was ever taken on. A test that passes on one host and
+fails on another is either the finding or the artifact, and nothing short of
+running it on both tells you which. **The cross-host agreement is also what
+made a local re-read canonical-grade** for the other seven — the guard on the
+heavy tier is on its *authoring* path, so reading is free while writing is not,
+and the two fixtures were still re-authored on lefford.
+
+**Two campaigns' findings moved together, which is what made it a mechanism.**
+`the_fare`'s F1 and `the_mire`'s H1 are independent statistics sharing no code
+path beyond the climate they both sample, and they rose 2.3x and 2.8x under
+one temperature correction. Either alone was an anecdote. Both falsifications
+survive — the original floors were 0.05 and the new readings are 0.0086 and
+0.0264 — so a moved witness was a re-measurement and not a rescue, which is
+exactly the reading §17 warns a later reader not to get wrong. The direction is
+worth carrying forward: the mire's equatorial band alone now reads **0.0524,
+above its floor**, so a further warming correction could put H1 genuinely back
+in play rather than merely moving its pin.
+
+**An instrument can stop being able to answer its question without anyone
+touching it.** `generalist_distinctness` did not drift — it collapsed. All
+three arms converged (real 0.9945, goblin-substituted 0.9964, width-only
+0.9964 against 0.9747 when authored), leaving 0.0019 between the real and
+mutated arms against a 0.007 floor. Neither niche changed. This is The
+Gnomon's §17 shape again, arriving from the opposite direction: there an
+underpowered battery could not adjudicate a bar it was always too small for;
+here a battery that *could* adjudicate stopped being able to. **Both are
+answered by pinning the arms rather than the verdict** — a single-arm pin
+would have hidden the collapse, because it is the spread between arms, and no
+one number, that carries the finding.
+
+**A deliberate red decays into an anonymous one.** `disposition_calibration`
+was left red on purpose by The Radiation on 2026-08-10, and says so in its own
+module doc — but nothing outside that file recorded it, so five days later it
+arrived in a handoff as one of eight indistinguishable census witnesses. A red
+that is deliberate needs to be deliberate somewhere a roster can see, or the
+next reader pays full diagnostic price to rediscover it. That is the argument
+for the `"PREREGISTERED, not met"` roster in `cli/tests/heavy_tier.rs` over a
+comment in a module doc, and this campaign moved all four of its own deferrals
+there.
+
+**When an `#[ignore]` would take live assertions down with the stale one,
+split.** `water_reading` and `session_cost` both had exactly one stale piece
+inside a test whose other claims still held. Ignoring either whole would have
+silenced working coverage to defer a broken constant.
+
+## 19. The close's own numbers
+
+- **11 open at handoff → 0 open at merge**, resolved as: 2 fixtures
+  re-authored, 2 witnesses re-pinned, 5 tests deferred with witnesses, 1 test
+  scoped to its basis host, 1 golden re-derived.
+- **6 deferrals, 6 witnesses.** Every `#[ignore]` added here carries an
+  always-running test pinning what the world now produces. That is the roster
+  doc's own standing request and it is not optional: an ignored measurement
+  stops being measured, and the figure in the reason string becomes fiction on
+  the next change.
+- **Every deferred test was re-run under `--run-ignored` and still fails**,
+  with the same numbers and messages. No floor was moved, and no assert macro
+  was removed by any diff in this close.
+- **2 bugs filed, neither this branch's**: `TOOL-lane-residue-blocks-seam-guard`
+  and `TOOL-session-cost-has-no-canonical-basis`.
 
 ## HANDOFF — state at 2026-08-15, second close session
+
+> **SUPERSEDED by §18 and §19 — all eleven failures below are closed and the
+> branch merged.** Kept verbatim rather than deleted: its lane-waiting traps
+> and its host-pinned-refresh warnings are still true and still worth reading,
+> and its three-way split of the eight heavy failures is the worked example
+> §18 is about. Read it as the state a close *found*, not as work outstanding.
 
 **Branch** `campaign/the-glasshouse` at `c8f9c6a6`, worktree
 `.claude/worktrees/the-glasshouse`. `gate-commit` green at **2745/2745**.
