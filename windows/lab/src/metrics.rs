@@ -10636,9 +10636,21 @@ mod tests {
         // second time this campaign, so goblin names a different set of
         // sites again. Still inside the 2-3 target. Not yet corroborated
         // against a canonical census.
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30): 2.193548387096774
+        // -> 2.3225806451612905 (72/31). Same mechanism a third time — `k`
+        // moved after the Task 4 re-pin above, re-placing settlements once
+        // more. Still inside the 2-3 target.
+        //
+        // **AND NOW CORROBORATED**, which the two re-pins above could not be.
+        // The canonical census has since been refreshed on lefford
+        // (`c0211b18`) and its seed-42 row reads `name-syllables-goblin =
+        // 2.3225806` — the same value, quantized to 8 significant digits at
+        // the emit boundary. So this is no longer a single live computation
+        // on one machine: it agrees with the canonical host's own reading.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.193548387096774)
+            MetricValue::Number(2.3225806451612905)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -10787,9 +10799,25 @@ mod tests {
         // move together for the second consecutive re-pin — again not
         // evidence about the naming machinery, which nothing in this
         // campaign touches.
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30): 2.36 ->
+        // 2.347826086956522, and the joint-movement note above finally
+        // BREAKS. Goblin RISES this time (2.193548387096774 ->
+        // 2.3225806451612905) while kobold is essentially flat (-0.012), so
+        // the two no longer move together — which restores the historical
+        // signature of a placement reshuffle rather than a machinery change,
+        // and retires the two-consecutive-passes coincidence the paragraph
+        // above was right to flag but not to resolve. Kobold now sits 0.652
+        // below the ceiling.
+        //
+        // **AND NOW CORROBORATED**: the refreshed canonical census
+        // (`c0211b18`) reads `name-syllables-kobold = 2.3478261` at seed 42,
+        // and `name-syllables-goblin = 2.3225806` — both this file's values at
+        // the 8-significant-digit emit boundary. Every pin in this test is
+        // now a canonical-host reading rather than a single local one.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.36)
+            MetricValue::Number(2.347826086956522)
         );
     }
 
@@ -10965,7 +10993,20 @@ mod tests {
         // thermostat re-places settlements a second time this campaign and
         // the denominator moves with them again. Still strictly between 0
         // and 1. Not corroborated against a canonical census.
-        assert_eq!(share, 0.6213592233009708, "seed 42 transparency drifted");
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30):
+        // 0.6213592233009708 (64/103) -> 0.6556016597510373 (158/241). A
+        // FOURTH distinct placement, and the denominator more than doubled
+        // (103 -> 241) because the warmed world settles far more sites. That
+        // is the strongest evidence yet for the reading this comment has been
+        // arguing across three re-pins: 0.6 was never a fixed point, it was a
+        // small denominator. At n = 241 the value has moved off it and stayed
+        // off it.
+        //
+        // **AND NOW CORROBORATED.** The refreshed canonical census
+        // (`c0211b18`) reads `name-transparency = 0.65560166` at seed 42 —
+        // this exact value at the 8-significant-digit emit boundary.
+        assert_eq!(share, 0.6556016597510373, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -11552,7 +11593,19 @@ mod tests {
             // not swap the seed, per the precedent above. Coverage improves
             // further: the river, elevation and karst/wetland gate classes
             // are all exercised now.
-            vec!["river", "ford", "valley", "marsh"],
+            //
+            // THE GLASSHOUSE close re-pin (`k` settled at 0.30): still FOUR,
+            // but not the same four — "valley" leaves and "spring" returns,
+            // giving "river", "ford", "marsh", "spring". `k` moved after the
+            // Task 4 re-pin above, re-placing seed 7's settlements a third
+            // time this campaign. Re-pin the set, do not swap the seed, per
+            // the precedent this comment has followed through seven
+            // oscillations now. Coverage: the river and karst/wetland gate
+            // classes are exercised; the elevation class leaves with
+            // "valley", so this reading is narrower than the last despite
+            // being the same size — which is the reason the set is pinned
+            // rather than its cardinality.
+            vec!["river", "ford", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -13596,6 +13649,76 @@ mod tests {
     /// same world.
     const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
 
+    /// The sweep that re-witnesses [`the_independent_reading_covers_every_staple_worldgen_can_steep`]
+    /// when the ground moves under it, which has now happened **ten times**.
+    ///
+    /// Every one of those passes re-swept `0..150` "by the identical method"
+    /// and every one did it by hand, off-repo, leaving only a prose list of
+    /// qualifying pairs behind. That is a procedure described but never
+    /// shipped, and it is why the witness "spent a whole campaign reporting
+    /// the wrong one" (see that test's own comment). This is the method, as
+    /// code, so the eleventh pass reads a number off a run instead of
+    /// reconstructing the rule from a paragraph.
+    ///
+    /// The rule, unchanged and deliberately selection-free: a pair
+    /// `(seed, species)` qualifies when the species roots **and** independently
+    /// steeps every one of [`STAPLE_CONCEPTS`]; the witness is the EARLIEST
+    /// qualifying pair in seed order, then species order within a seed. Taking
+    /// any other pair would be a choice, and this test does not make choices.
+    ///
+    /// Prints the full qualifying list, not just the winner, because the
+    /// count is what tells the next reader whether the witness is
+    /// load-bearing alone or corroborated.
+    #[test]
+    #[ignore = "re-witness sweep: builds up to 150 FullView worlds (several minutes); \
+                run by hand only when the witness assertion below has gone red"]
+    fn sweep_for_the_independent_reading_witness() {
+        let mut qualifying: Vec<(u64, &'static str)> = Vec::new();
+        for seed in 0..150u64 {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let mut daughters = all_daughters(&view);
+            daughters.sort_unstable();
+            for species in daughters {
+                let (Ok(lexicon), Some(steeped)) = (
+                    lex(&view, species),
+                    independently_steeped_concepts(&view, species),
+                ) else {
+                    continue;
+                };
+                let all_six = STAPLE_CONCEPTS.iter().all(|staple| {
+                    matches!(lexicon.entry(staple), Some(LexEntry::Root { .. }))
+                        && steeped.contains(*staple)
+                });
+                if all_six {
+                    qualifying.push((seed, species));
+                }
+            }
+        }
+        println!("== qualifying (seed, species) pairs over 0..150 ==");
+        for (seed, species) in &qualifying {
+            println!("   ({seed}, {species})");
+        }
+        println!("   count = {}", qualifying.len());
+        match qualifying.first() {
+            Some((seed, species)) => println!(
+                "\n   WITNESS = ({seed}, {species}) — the earliest qualifying pair.\n   \
+                 Same-seed corroborator: {}",
+                if qualifying.iter().filter(|(s, _)| s == seed).count() > 1 {
+                    "yes"
+                } else {
+                    "none — this witness is load-bearing alone"
+                }
+            ),
+            None => println!(
+                "\n   NO QUALIFYING PAIR IN 0..150. Widen the range before \
+                 weakening the criterion: a staple no world steeps is a finding \
+                 about worldgen, not a reason to drop it from STAPLE_CONCEPTS."
+            ),
+        }
+    }
+
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
         // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
@@ -13857,10 +13980,35 @@ mod tests {
         // **THE SUBJECT MOVED, NOT A VALUE.** Seed 3 -> 23 and kobold ->
         // bugbear: a different world AND a different people. Nothing below
         // is comparable line-for-line with the previous commit.
-        let view = FullView::build(Seed(23), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "bugbear").expect("seed 23 bugbears hold a lexicon");
-        let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 23");
+        //
+        // TENTH PASS (The Glasshouse close, `k` settled at 0.30). `k` moved
+        // after the ninth pass above, re-placing every world a third time
+        // this campaign, and seed 23's bugbear lost its barley band. Re-swept
+        // 0..150 by the identical method — and this time the sweep IS the
+        // method: `sweep_for_the_independent_reading_witness` above, run with
+        // `--ignored`, rather than a ninth hand-rolled off-repo pass.
+        //
+        // **TWO qualifying pairs — (26, hobgoblin) and (117, kobold) — so the
+        // count reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 -> 2.**
+        // That is the lowest this count has ever been and the sharpest fall
+        // in its history, and it is worth reading as a finding rather than
+        // bookkeeping: a people must span all six farmable bands to qualify,
+        // and the warmed population has far fewer peoples doing so. The
+        // campaign's own latitude correction is the plausible mechanism —
+        // a zero-mean profile steepens the equator-to-pole gradient that the
+        // old uniform +10 K offset had flattened, so a single people's
+        // territory covers a narrower slice of the staple range. NOT chased
+        // here; recorded, because at n = 2 this test is one world away from
+        // having no witness at all.
+        //
+        // (26, hobgoblin) SURVIVES from the previous pass's list of ten,
+        // which is the first time any witness generation has had a survivor.
+        // It is still selected by the same earliest-pair rule, not because it
+        // survived.
+        let view = FullView::build(Seed(26), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "hobgoblin").expect("seed 26 hobgoblins hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "hobgoblin")
+            .expect("hobgoblin is placed at seed 26");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -13870,7 +14018,7 @@ mod tests {
             // wrong one.
             assert!(
                 matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                "seed 23 bugbears must root {staple} for this test to bite"
+                "seed 26 hobgoblins must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),

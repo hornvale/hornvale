@@ -102,15 +102,35 @@ fn regenerate(ctx: &LocaleContext) -> String {
 /// profile move the climate field the water column reads from — a two-line
 /// diff in the fixture. Still just a drift tripwire, not evidence about any
 /// refactor.
+///
+/// **Regenerated a third time at The Glasshouse's close, and given a
+/// mechanism.** `k` settled at 0.30 after the Stage B regeneration above, so
+/// the climate field moved once more. Until now this test told its reader to
+/// "regenerate the fixture" and shipped **no way to do it** — the fixture is
+/// 81 cells x 11 strata and hand-editing it is not a procedure. It now honours
+/// `REBASELINE=1` exactly as `hornvale_kernel::golden` does, and is listed in
+/// `make rebaseline-goldens`, so the instruction in the failure message is one
+/// a reader can actually follow. Setting the variable is deliberate
+/// non-determinism confined to the accept path; the comparison itself is
+/// unchanged.
 #[test]
 fn the_sampled_column_is_byte_stable() {
     let world = world();
     let ctx = LocaleContext::build(&world).unwrap();
     let after = regenerate(&ctx);
+    let rebaseline = std::env::var_os("REBASELINE").is_some_and(|v| !v.is_empty() && v != "0");
+    if rebaseline && after != BEFORE_ARM {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/column_before.txt");
+        std::fs::write(&path, &after).expect("rewriting the column fixture");
+        println!("REBASELINE: rewrote {}", path.display());
+        return;
+    }
     assert_eq!(
         after, BEFORE_ARM,
         "water_column_at/expr_at_stratum moved against the committed sample — \
-         if a change to the WORLD caused it, regenerate the fixture and say so; \
+         if a change to the WORLD caused it, re-run with REBASELINE=1 (or \
+         `make rebaseline-goldens`), review the diff and say so in the commit; \
          if nothing about the world moved, this is a real regression"
     );
 }

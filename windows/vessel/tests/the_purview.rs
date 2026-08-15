@@ -260,7 +260,7 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         // mesh's limited exit alphabet, not evidence the two rungs merged;
         // see the coarse re-measure below for the divergence check that
         // rules that out directly.
-        vec!["E", "NW", "SW"],
+        vec!["NE", "W", "SE"],
         "pin: the fine room's own exits at this point of the seed-42 walk \
          (if world-gen ever changes this, re-measure and update the pin)"
     );
@@ -287,12 +287,23 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
     // triad neither rung has shown before. The two rungs are still genuinely
     // different sets, which is the only thing this test asserts.
     let coarse = out(session.handle("map out 1"));
+    // The Glasshouse close (`k` settled at 0.30) re-measured both rungs a
+    // third time this campaign. The fine room exits `{NE, W, SE}` and the
+    // coarse cell `{E, NW, SW}` — which is the Stage-B-Task-2 pair with the
+    // two rungs EXCHANGED. Read that as the mesh's small exit alphabet
+    // recurring, exactly as the note above warns, and not as an alternation
+    // rule: three passes have now produced three different rung-to-triad
+    // assignments from the same handful of triads.
+    //
+    // The check that matters is unchanged and still passes in the strong
+    // form: the two triads are DISJOINT here, so a footer that reported the
+    // walk-depth room's exits would fail on every one of the three points.
     assert!(
-        coarse.contains("ways on: SE, NE, W"),
+        coarse.contains("ways on: E, NW, SW"),
         "the footer must report the DRAWN cell's own exits: {coarse}"
     );
     assert!(
-        !coarse.contains("ways on: E, NW, SW"),
+        !coarse.contains("ways on: NE, W, SE"),
         "the footer must not leak the walk-depth room's exits onto a coarser chart: {coarse}"
     );
 }

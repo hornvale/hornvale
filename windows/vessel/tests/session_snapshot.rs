@@ -35,7 +35,7 @@ mod common;
 /// it — the alarm fired again, exactly as designed, and
 /// `common::world_that_draws_a_creature` reports 1 as the new lowest
 /// qualifying seed. Renamed to match for the same reason as before.
-const OCCUPIED_SEED: u64 = 1;
+const OCCUPIED_SEED: u64 = 0;
 
 fn world() -> World {
     hornvale_worldgen::build_world(

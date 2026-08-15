@@ -5361,6 +5361,20 @@ mod tests {
         // is the expected shape of a terrain epoch: new coastlines redistribute
         // where peoples settle and how large a congregation each gathers, which
         // pushes some flagships over the organized rung and others under it.
+        // THE GLASSHOUSE close (`k` settled at 0.30): still FIFTEEN placed and
+        // still TEN organized, and the placed roster is byte-identical — but
+        // the organized set EXCHANGES one member: Kxoqboq out, Kopnop in.
+        // Both witnessed counts (81 and 49) and the taught day (36337) are
+        // unchanged for the fourth consecutive re-pin, so the reckoning
+        // arithmetic is once again untouched and only the caste threshold
+        // moved.
+        //
+        // An exchange rather than a net gain or loss is a shape worth naming.
+        // The previous three re-pins all moved the COUNT, which made "the
+        // threshold moved" easy to see; here the count is stable at ten and a
+        // cardinality check would have reported no change at all, while two
+        // peoples' religious lives in fact swapped. That is the argument for
+        // pinning the LINES rather than the tallies.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5372,9 +5386,6 @@ mod tests {
                 "Among the Wazwo, the sky has darkened, now and again.".to_string(),
                 "Among the Feqboq, the sky has darkened, now and again.".to_string(),
                 "Among the Kxoqboq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kxoqboq numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Loshjo, the sky has darkened, now and again.".to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
@@ -5406,6 +5417,9 @@ mod tests {
                 "The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Xeqmu, the sky has darkened, now and again.".to_string(),
                 "Among the Kopnop, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kopnop numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Kopnop's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Keqnguq, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Keqnguq numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -5416,7 +5430,6 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
@@ -5424,6 +5437,7 @@ mod tests {
                 "In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Kopnop's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Keqnguq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
             ]
@@ -5489,6 +5503,16 @@ mod tests {
         // threshold is crossed in both directions by a placement change, and
         // it is not monotone in roster size. Both counts (53/32) and the
         // taught day are unchanged again.
+        // THE GLASSHOUSE close (`k` settled at 0.30): seed 3 gains a net ONE
+        // organized people — Pnaaknoo drops its priesthood run while Pmaaxmoe
+        // and Zhooqsha gain theirs. Both counts (53/32) and the taught day
+        // (36125) are unchanged, the same as at seeds 1 and 2, so all three
+        // seeds agree that this campaign moved the caste threshold and left
+        // the reckoning arithmetic alone.
+        //
+        // Seed 2 exchanging with no net change while seed 3 nets +1 is the
+        // "moves both ways, and not monotone in roster size" reading this
+        // file has carried since The Tense, now observed a further time.
         let seed3 = render_volume(&generated(3));
         // The Glasshouse (decision 0134, the terrain epoch): SEVEN organized,
         // the largest move of the three seeds. Drow, hobgoblin and wood-elf
@@ -5530,11 +5554,17 @@ mod tests {
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Daoboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Pmaaxmoe, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Pmaaxmoe numbers the darkenings: 53.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Pmaaxmoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Zozha, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Zozha numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zhooqsha numbers the darkenings: 32.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
@@ -5545,9 +5575,6 @@ mod tests {
                 "The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Fzaakzue, the sky has darkened, now and again.".to_string(),
                 "Among the Pnaaknoo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Pnaaknoo numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Pnaaknoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Daaxdue, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Daaxdue numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
@@ -5564,10 +5591,11 @@ mod tests {
                 "In truth, the Fnaaxnoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Pnaaknoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Daaxdue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
             ]

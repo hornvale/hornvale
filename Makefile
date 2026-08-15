@@ -516,6 +516,8 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale --test architecture
 	REBASELINE=1 cargo test -q -p hornvale-vessel --test session_snapshot
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test solitary_tongue
+	REBASELINE=1 cargo test -q -p hornvale-locale --test column_delegation
+	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
 	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
 	REBASELINE=1 cargo test -q -p hornvale-terrain --test channel_golden
 

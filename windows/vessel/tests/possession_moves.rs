@@ -603,7 +603,7 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// blackbody one) re-places seed 42's settlements a second time this
 /// campaign, and the flagship's name goes `Goodo` -> **`Doadaga`**. Re-read
 /// from `book/src/gallery/possession-seed-42.md` as the note above insists.
-const GRIEVANCE_NPC: &str = "bugbear of Doadaga";
+const GRIEVANCE_NPC: &str = "bugbear of Dooga";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
