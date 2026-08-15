@@ -523,7 +523,7 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// versus the plain-area match, since only a fraction of each nominal cap is
 /// actually continental.
 ///
-/// **How that equation is solved changed in The Glasshouse (decision 0134).**
+/// **How that equation is solved changed in The Glasshouse (decision 0137).**
 /// Iterations 1–3' carried iteration 1's closed form `s = sqrt(target /
 /// current)`, which is exact only if area scaled as `r²`; cap area is
 /// `2π(1 − cos r)`, sub-quadratic at these radii, so the closed form
@@ -1977,7 +1977,7 @@ mod tests {
         // sphere times the best-case (young, peak 45 km) continental fraction
         // ~0.415 ~= 6.29%. The ceiling moved with the clamp: at 0.6 rad the
         // same arithmetic gave (1 - cos 0.6)/2 ~= 8.73% x 0.415 ~= 3.63%, and
-        // this bound read 0.037 (decision 0134 raised the clamp to 0.8).
+        // this bound read 0.037 (decision 0137 raised the clamp to 0.8).
         for seed in 1..=8u64 {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);

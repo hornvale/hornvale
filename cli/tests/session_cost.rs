@@ -411,6 +411,17 @@ const CONTROL_TOLERANCE: f64 = 1.5;
 /// type-audit: bare-ok(identifier-text)
 const BASIS_HOST: &str = "aarch64-10";
 
+/// nextest: co-schedule-sensitive — pinned to `threads-required = "num-cpus"`
+/// in `.config/nextest.toml`'s `# class: wall-clock-budget` table (The
+/// Ballast). This test is not itself internally parallel, but the whole
+/// heavy tier reddened it: `handle+snapshot+json` measured 14.324 ms against
+/// its 8 ms `TURN_BUDGET_MS` ceiling under tier contention, then passed at
+/// 15.897 s run alone on the same, otherwise-quiet, canonical box. Even the
+/// "control" metrics this file's own module doc expects to hold steady moved
+/// — under ~40-way oversubscription the scheduler starves CPU-light work
+/// too, so "cheap" is not "immune". See `cli/tests/heavy_tier.rs`'s
+/// `co_schedule_sensitive_heavy_tests` guard, which fails if this marker and
+/// that table's filter ever fall out of step.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn a_possessed_turn_stays_within_its_ceilings() {

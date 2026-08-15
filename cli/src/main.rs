@@ -1,15 +1,9 @@
 //! The hornvale CLI: create worlds, render almanacs, interrogate via REPL.
 #![warn(missing_docs)]
 
-mod audio;
-mod concepts;
-mod dictionary;
-mod phonology;
-mod proto;
-mod repl;
-mod streams;
-mod tropes;
-
+use hornvale::{
+    audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
+};
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
@@ -106,6 +100,16 @@ usage:
   hornvale tropes matrix   render every corpus side by side: what each catalogue demands,
                           ordered by where they disagree (ignores --corpus — the columns
                           are the declared list, not the caller's choice)
+  hornvale systems [report|check] [--corpus <PATH>]
+                          score the frozen game-system capability corpus against Hornvale's
+                          own declared state — no world is built (report: render to stdout;
+                          check: diff against the artifact committed for that corpus's id,
+                          also failing on any anchor finding or a rising `absent` count;
+                          default corpus: systems/wolverson-2021.system.json)
+  hornvale systems matrix  render every corpus side by side, plus the surplus read: which
+                          domains/*|windows/* subsystems no corpus's `present` verdicts cite
+                          at all (ignores --corpus — the columns are the declared list, not
+                          the caller's choice)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -171,6 +175,7 @@ fn main() -> ExitCode {
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
         Some("tropes") => cmd_tropes(&args),
+        Some("systems") => cmd_systems(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -192,14 +197,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-/// Value of `--flag` in args, if present.
-fn flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
-    args.iter()
-        .position(|a| a == flag)
-        .and_then(|i| args.get(i + 1))
-        .map(String::as_str)
 }
 
 /// Parse the sky-related flags shared by `new` and `scout` into pins plus a
@@ -1079,6 +1076,128 @@ fn cmd_tropes_matrix() -> Result<(), String> {
         .collect();
     let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
     print!("{}", tropes::render_matrix(&columns, &world.registry));
+    Ok(())
+}
+
+/// The Compendium: score the frozen game-system capability corpus against
+/// Hornvale's own declared state. Unlike `cmd_tropes`, this resolver builds
+/// **no world** — every anchor resolves against the digest, the idea
+/// registry, and the filesystem (`systems::RepoFacts`), so the ratchet costs
+/// a few file reads rather than a genesis.
+fn cmd_systems(args: &[String]) -> Result<(), String> {
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`. Copied
+    // verbatim from `cmd_tropes`'s scan for the same reason it exists there.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `systems` has no valueless flags. It is not a property of
+    // `flag_value`: if `systems` ever gains a valueless flag, this loop must
+    // learn which flags take values.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    // Parsed BEFORE the corpus is read, mirroring `cmd_tropes`: the matrix is
+    // over every corpus in `systems::CORPORA` and must not fail because the
+    // caller happened to pass a `--corpus` that does not exist.
+    if mode == Some("matrix") {
+        return cmd_systems_matrix();
+    }
+    let path = flag_value(args, "--corpus").unwrap_or(systems::CORPORA[0]);
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = systems::load(&json)?;
+    match mode {
+        Some("report") | None => {
+            print!("{}", systems::render(&corpus, path));
+            Ok(())
+        }
+        Some("check") => {
+            let facts = systems::RepoFacts::gather(std::path::Path::new("."))?;
+
+            let findings = systems::audit(&corpus, &facts);
+            if !findings.is_empty() {
+                let listed: Vec<String> = findings
+                    .iter()
+                    .map(|f| match f {
+                        systems::Finding::Unjustified { why, .. } => why.clone(),
+                        systems::Finding::Dangling { why, .. } => why.clone(),
+                        systems::Finding::StaleDeferred { why, .. } => why.clone(),
+                    })
+                    .collect();
+                return Err(format!(
+                    "system coverage audit found {} finding(s) for `{}`:\n\n{}",
+                    findings.len(),
+                    corpus.corpus,
+                    listed.join("\n\n")
+                ));
+            }
+
+            // NOVELTY: the `absent` count rising above the committed
+            // artifact's, checked against the LIVE corpus's own count
+            // (never the freshly rendered text) so this still fires even in
+            // the (currently impossible, since any verdict change also
+            // changes the rendered bytes) case where the byte comparison
+            // below somehow did not.
+            let artifact = systems::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
+            let live_absent = corpus
+                .items
+                .iter()
+                .filter(|i| i.verdict == systems::Verdict::Absent)
+                .count();
+            if let Some(committed_absent) = systems::committed_absent_count(&committed)
+                && live_absent > committed_absent
+            {
+                return Err(format!(
+                    "system coverage regressed for `{}`: the `absent` count rose from {} to \
+                     {}. Something that used to carry a verdict lost it — that is a finding, \
+                     not a formality, and `make rebaseline` must not paper over it without \
+                     saying why.",
+                    corpus.corpus, committed_absent, live_absent
+                ));
+            }
+
+            let live = systems::render(&corpus, path);
+            if live == committed {
+                Ok(())
+            } else {
+                Err(format!(
+                    "system coverage drifted for `{}`; run `make rebaseline` and review the diff",
+                    corpus.corpus
+                ))
+            }
+        }
+        Some(other) => Err(format!(
+            "systems: unknown mode '{other}' (report|check|matrix)"
+        )),
+    }
+}
+
+/// The matrix over every corpus in `systems::CORPORA`.
+///
+/// Deliberately takes no arguments, exactly as `cmd_tropes_matrix` does and
+/// for the same reason: the set of columns is a declared list, not a
+/// caller's choice, so there is no `--corpus` to honour. `RepoFacts` is
+/// gathered once and shared across every corpus, so two columns cannot
+/// silently disagree about what the live repo looked like when they were
+/// scored.
+fn cmd_systems_matrix() -> Result<(), String> {
+    let facts = systems::RepoFacts::gather(std::path::Path::new("."))?;
+    let mut corpora = Vec::new();
+    for path in systems::CORPORA {
+        let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        corpora.push(systems::load(&json)?);
+    }
+    let columns: Vec<&systems::Corpus> = corpora.iter().collect();
+    print!("{}", systems::render_matrix(&columns, &facts));
     Ok(())
 }
 

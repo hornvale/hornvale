@@ -568,6 +568,82 @@ fn every_registry_row_carries_a_pointer() {
     );
 }
 
+/// No two decision records share a leading number.
+///
+/// **What this defends.** A decision number is the project's citation handle:
+/// prose, chronicles, registry rows, `#[ignore]` reasons and `CLAUDE.md` all
+/// refer to decisions as bare four-digit numbers. Decisions are append-only, so
+/// a number is supposed to name exactly one ratified choice forever. Two
+/// records sharing one makes every such citation ambiguous, and the log stops
+/// being the durable, grep-able home `docs/decisions/README.md` promises.
+///
+/// **Why the defect is invisible without this check.** It is minted by two
+/// campaigns running in parallel, each claiming the next free number against
+/// the `main` it branched from, and it survives every mechanism that would
+/// normally catch a collision:
+///
+/// - **git raises no conflict.** The two records are *different files* —
+///   `0134-a-partition-statistic-….md` and `0134-a-capability-corpus-….md` —
+///   so a merge keeps both, silently, with no marker to resolve.
+/// - **the digest renders one line per file**, so a duplicate number appears
+///   in `docs/digest/decisions-in-force.md` as an ordinary extra bullet. It
+///   reads as a normal index, sorted and plausible, and nothing about it looks
+///   wrong to a human skimming for drift.
+/// - **the link checks above pass**, because both filenames exist and every
+///   cross-link resolves. Reference integrity is not the property at issue.
+///
+/// This fired for real: The Ballast and The Compendium both authored an 0134
+/// (2026-08-15). Nothing in the repository objected; it was caught by a human
+/// reading the two branches side by side at a merge gate. The later campaign
+/// renumbered — append-only means the earlier claim wins — and added this test
+/// so the next collision is caught by the suite instead.
+#[test]
+fn decision_numbers_are_unique() {
+    let mut seen: BTreeSet<u32> = BTreeSet::new();
+    let mut dupes = Vec::new();
+    for (number, name) in decision_records() {
+        if !seen.insert(number) {
+            dupes.push(format!("{number:04} claimed again by {name}"));
+        }
+    }
+    assert!(
+        dupes.is_empty(),
+        "duplicate decision numbers (a decision number is a permanent, unique \
+         citation handle; two records sharing one makes every bare-number \
+         citation ambiguous). Renumber the record that was ratified LATER — \
+         decisions are append-only, so the earlier claim keeps the number — and \
+         sweep every citation of it:\n  {}",
+        dupes.join("\n  ")
+    );
+}
+
+/// A decision record's `# NNNN.` title matches the number in its filename.
+///
+/// The renumber this file's sibling check exists for is a two-part edit: the
+/// filename and the title inside it. Moving one without the other leaves a
+/// record whose own first line disagrees with how everything cites it, which
+/// no link check can see — the file resolves either way.
+#[test]
+fn a_decision_records_title_matches_its_filename() {
+    let dir = repo_root().join("docs/decisions");
+    let mut offenders = Vec::new();
+    for (number, name) in decision_records() {
+        let text = read(&dir.join(&name));
+        let first = text.lines().next().unwrap_or_default();
+        let expected = format!("# {number:04}.");
+        if !first.starts_with(&expected) {
+            offenders.push(format!(
+                "{name}: title reads {first:?}, expected {expected:?}"
+            ));
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "decision records whose title number disagrees with their filename:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
 #[test]
 fn registry_ids_are_unique() {
     let mut seen = BTreeSet::new();
@@ -1094,14 +1170,21 @@ fn the_history_page_prose_names_the_cell_it_renders() {
     }
 }
 
-/// The numbered decision records in `docs/decisions/`, ascending.
+/// Every numbered decision record in `docs/decisions/`, as `(number,
+/// filename)`, ascending.
 ///
 /// Filenames are `NNNN-slug.md`; `README.md` and any other unnumbered file is
 /// skipped, using the same "numbered stem" shape as
 /// `decision_cites_in_sources_resolve`.
-fn decision_numbers() -> Vec<u32> {
+///
+/// This keeps the filename alongside the number because the duplicate check
+/// has to be able to *name* the colliding record — "0134 is claimed twice" is
+/// not actionable, "0134 claimed again by `0134-a-capability-corpus-….md`" is.
+/// It is the one parse of this directory; `decision_numbers` is a view over it,
+/// so the two checks can never disagree about what counts as a record.
+fn decision_records() -> Vec<(u32, String)> {
     let dir = repo_root().join("docs/decisions");
-    let mut numbers: Vec<u32> = fs::read_dir(&dir)
+    let mut records: Vec<(u32, String)> = fs::read_dir(&dir)
         .unwrap_or_else(|e| panic!("reading {}: {e}", dir.display()))
         .map(|e| e.expect("dir entry").file_name())
         .filter_map(|name| {
@@ -1109,14 +1192,19 @@ fn decision_numbers() -> Vec<u32> {
             let stem = name.strip_suffix(".md")?;
             // `NNNN-slug`: four digits, a hyphen, then a non-empty slug.
             if stem.len() > 5 && stem.as_bytes()[4] == b'-' {
-                stem[..4].parse::<u32>().ok()
+                Some((stem[..4].parse::<u32>().ok()?, name.into_owned()))
             } else {
                 None
             }
         })
         .collect();
-    numbers.sort_unstable();
-    numbers
+    records.sort();
+    records
+}
+
+/// The numbered decision records in `docs/decisions/`, ascending.
+fn decision_numbers() -> Vec<u32> {
+    decision_records().into_iter().map(|(n, _)| n).collect()
 }
 
 /// The decision log's numbers form a **contiguous run starting at 0001** — no

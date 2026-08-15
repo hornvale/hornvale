@@ -20,7 +20,6 @@ CLIENT-alive-map
 CLIENT-as-instrument
 CLIENT-choreographer
 CLIENT-cold-start
-CLIENT-coverage-matrix
 CLIENT-derived-builders
 CLIENT-epoch-granularity
 CLIENT-four-clocks

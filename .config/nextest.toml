@@ -91,7 +91,45 @@
 # This changes nothing for `make gate` or `make ci`: neither passes
 # `--run-ignored`, so neither has ever run these three.
 [[profile.default.overrides]]
+# class: scatter-sweep
 filter = 'test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/)'
+threads-required = "num-cpus"
+
+# A SECOND CLASS (The Ballast): WALL-CLOCK BUDGET TESTS PINNED AS VICTIMS,
+# NOT SOURCES. The block above protects everything ELSE from three batteries
+# that saturate the box; this one protects two tests FROM the tier's own
+# saturation, because they measure wall clock and cannot tell contention
+# from a real regression on their own.
+#
+# `session_cost.rs::a_possessed_turn_stays_within_its_ceilings` reddened in
+# the heavy tier on the canonical box: `handle+snapshot+json` measured
+# 14.324 ms against its 8 ms `TURN_BUDGET_MS` ceiling. Run ALONE on the same
+# quiet canonical box (load average 0.16-0.44) it passed at 15.897 s wall
+# clock. Same signature the section above already establishes — a uniform
+# inflation with no code change — except this time it moved a metric the
+# test's own module doc calls a CONTROL, expected to hold steady under
+# contention because it runs against a `World` already resident in memory.
+# It moved anyway: under ~40-way oversubscription, even CPU-light work waits
+# on the scheduler, not the CPU, so "cheap" is not the same as "immune".
+#
+# `scene_cost.rs::scene_api_cost_is_bounded_on_seed_42` is pinned alongside
+# it PRE-EMPTIVELY — it did not fail in the run that motivated this change,
+# but it is the exact test the section above's own comment already names as
+# this class's symptom ("the FIRST SYMPTOM is a spurious
+# `hornvale::scene_cost` failure"), and its module doc is the corrected
+# discriminator `session_cost.rs` explicitly reuses. Leaving the test this
+# file already documents as the canary unprotected, while fixing the one
+# that happened to fail first, would be inconsistent; pinning it costs
+# little, since it already runs ALONE in ~10.2 s per the measurement above.
+#
+# A SEPARATE override block, not a merged filter: neither test calls
+# `seed_sweep::map_seeds(`, so folding them into the scatter-sweep class's
+# filter would blur two different reasons for the same `threads-required`
+# setting. `cli/tests/heavy_tier.rs` checks each block's roster
+# independently, in both directions, against its own class marker.
+[[profile.default.overrides]]
+# class: wall-clock-budget
+filter = 'test(/a_possessed_turn_stays_within_its_ceilings$/) | test(/scene_api_cost_is_bounded_on_seed_42$/)'
 threads-required = "num-cpus"
 
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the

@@ -10,9 +10,12 @@
 #                     # kernel/-layer edit — cost is the edit's blast radius in
 #                     # the kernel -> domains/* -> windows/* -> cli layering;
 #                     # see spec 2026-08-14-the-staff-design.md §4.2b)
-#   make gate         # the full workspace gate: fmt + clippy + type-audit + nextest --workspace + doctests (heavy tier skipped)
-#   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
-#   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
+#   make gate-stage    REF=<full-sha> # THE STAGE GATE: dispatch gate + artifacts + outboard + clients to the lane
+#   make gate-campaign REF=<full-sha> # THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard
+#   make lane-status  # who holds the staff on the canonical box, and who is queued
+#   make lane-log     # read a lane job back (JOB=<id>, or omit for the most recent)
+#   # `make gate`, `ci`, `gate-fast` and `gate-full` are RETIRED (decision 0132)
+#   # and now refuse with exit 2, naming the three gates above.
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
@@ -29,7 +32,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-fast-run gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -261,9 +264,6 @@ gate-run:
 	bash scripts/census-advisory.sh || true; \
 	exit $$alarm_status
 
-gate-fast-run:
-	@bash scripts/gate-fast.sh
-
 # SIGNPOSTS, NOT ALIASES. Aliasing `gate` to the commit gate would silently
 # change what 417 runs a month mean: a caller expecting the full suite would
 # get lints plus the sub-floor tier and no warning. Refusing is the same shape
@@ -365,6 +365,21 @@ lane-log: ## Read a lane job back (JOB=<id>, or omit for the most recent)
 	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; else f=$$(ls -t "$$d"/*.log 2>/dev/null | head -1); fi; \
 	    if [ -n "$$f" ] && [ -f "$$f" ]; then echo "-- $$f"; tail -60 "$$f"; \
 	    else echo "  (no such job)"; fi'
+
+lane-roster: ## Fetch a green lane job's copied-out sub-floor roster into the tree and show the diff, left UNCOMMITTED (JOB=<id>, or omit for the most recent)
+	@tmp=$$(mktemp); \
+	if ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).subfloor-roster.tsv"; else f=$$(ls -t "$$d"/*.subfloor-roster.tsv 2>/dev/null | head -1); fi; \
+	    if [ -n "$$f" ] && [ -f "$$f" ]; then cat "$$f"; else exit 1; fi' > "$$tmp"; then \
+	    mv "$$tmp" docs/timings/subfloor-roster.tsv; \
+	    echo "lane-roster: fetched into docs/timings/subfloor-roster.tsv -- left UNCOMMITTED, review the diff below and commit it by hand (goldens are a deliberate human act):"; \
+	    echo ""; \
+	    git --no-pager diff -- docs/timings/subfloor-roster.tsv; \
+	else \
+	    rm -f "$$tmp"; \
+	    echo "lane-roster: no roster copy-out found (JOB=$(JOB)) on the canonical box -- only the 'gate' set's ci-record writes one, and only on a GREEN run; see scripts/lane-run.sh" >&2; \
+	    exit 1; \
+	fi
 
 lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the default
 	@test -n "$(JOB)" || { echo "usage: make lane-wait JOB=<id>"; exit 2; }
@@ -499,16 +514,15 @@ timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
 
 # EVERY BYTE-GOLDEN IN THE TREE MUST HAVE A LINE HERE. This recipe is a hand-
 # maintained list of scoped invocations, not a sweep, so a golden added later
-# is accepted by nothing: `REBASELINE=1` is read by the golden helper, and
-# `cargo test` never runs a test binary this list does not name. The failure
-# mode is quiet and expensive — the fixture's own message says to run
-# `REBASELINE=1 ... or make rebaseline-goldens`, which reads as though either
-# works, so an omitted target sends you round the loop believing the golden is
-# broken rather than unlisted.
+# is accepted by nothing: `REBASELINE=1` is read by the golden helper, and no
+# test binary this list does not name is ever run. The failure mode is quiet
+# and expensive - the fixture's own message names this target as if it works,
+# so an omitted golden sends you round the loop believing it is broken rather
+# than unlisted.
 #
 # `hornvale-terrain --test channel_golden` was missing for exactly that reason
-# and cost The Glasshouse a debugging cycle (decision 0131). When you add a
-# golden, add its line here in the same commit.
+# and cost The Glasshouse a debugging cycle. When you add a golden, add its
+# line here in the same commit.
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
 	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
@@ -516,8 +530,6 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale --test architecture
 	REBASELINE=1 cargo test -q -p hornvale-vessel --test session_snapshot
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test solitary_tongue
-	REBASELINE=1 cargo test -q -p hornvale-locale --test column_delegation
-	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
 	REBASELINE=1 cargo test -q -p hornvale-lab --test affect_trace_golden
 	REBASELINE=1 cargo test -q -p hornvale-terrain --test channel_golden
 

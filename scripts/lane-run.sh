@@ -140,11 +140,50 @@ if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF
     git -C "$wt" fetch --all --quiet
     git -C "$wt" checkout --force "$ref"
     git -C "$wt" reset --hard "$ref" --quiet
+    # UNTRACKED RESIDUE SURVIVES `reset --hard`, AND IT HAS BEEN FAILING
+    # `seam-guard` FIVE RUNS OUT OF SIX. This worktree is SHARED: the `gate`
+    # set's `defect-ledger.sh` writes an untracked
+    # `docs/timings/defects-lefford.tsv`, `artifacts` writes more, and
+    # `seam-guard` refuses to start on a dirty tree ("this rewrites source
+    # files in place"). A campaign gate runs `gate` before `seam-guard`, so
+    # the later job inherited the earlier one's mess almost every time — and
+    # its `rc=2` reads as "found survivors", so the breakage looked like a
+    # finding for a month. A check that is always red is ignored exactly as
+    # fast as one that is always green.
+    #
+    # `-fd`, NEVER `-fdx`: `target` is gitignored (.gitignore:4), and `-x`
+    # would delete this box's 15 GB warm build cache, turning every lane job
+    # into a cold build.
+    git -C "$wt" clean -fd --quiet
 else
     git -C "$repo_root" worktree add --force "$wt" "$ref"
 fi
 echo "lane-run: HEAD in $wt is $(git -C "$wt" rev-parse --short HEAD)"
-bash "$repo_root/scripts/test-worktree-freshness.sh" || true
+
+# NO FRESHNESS CHECK HERE, and its removal (The Ballast) is the same argument
+# the Makefile already makes for `gate-commit` — The Staff wrote that argument
+# and then failed to apply it one file over.
+#
+# `test-worktree-freshness.sh` catches ONE defect: `worktree-take` renames a
+# pool member and keeps its `target/`, so artifacts stay baked with the old
+# CARGO_MANIFEST_DIR. That rename cannot happen to the lane worktree. `$wt` is
+# a FIXED path; every job `checkout --force`s and `reset --hard`s the same
+# directory. There is no rename, so there is nothing to detect.
+#
+# The call here was vacuous three times over, and any one of the three is
+# fatal on its own:
+#   1. It passed NO `old-path`. That script's own header states a bare call is
+#      "architecturally blind to the exact self-rename staleness this task
+#      exists to catch" — only `worktree-take.sh` knows `$recycled` and it is
+#      the one caller that passes it.
+#   2. It ran against `$repo_root`, scanning all SEVEN sibling worktrees'
+#      `target/debug/deps` — not the lane worktree this job actually uses.
+#   3. It ended in `|| true`, so even a true finding was discarded unread.
+#
+# Cost, measured live: a single such scan was still running after 3 minutes
+# WHILE HOLDING THE LANE LOCK, with 17 jobs queued behind it across four
+# campaigns. A check that cannot fire, cannot report, and cannot apply is not
+# worth one second of a strictly serial queue, let alone minutes of it.
 
 cd "$wt"
 
@@ -187,4 +226,50 @@ read -r _lane_wall_s job_user_s job_sys_s < "$_lane_time_tmp"
 rm -f "$_lane_time_tmp"
 job_cpu_ratio="$(awk -v u="$job_user_s" -v s="$job_sys_s" -v r="$_lane_wall_s" \
     'BEGIN{ if (r+0>0) printf "%.2f", (u+s)/r; else print "?" }')"
+
+# Copy the sub-floor roster out to durable storage — the exact fix this
+# script's own header (above) already describes for timed.sh's
+# docs/timings.md row, applied to the OTHER artifact that had no equivalent.
+# `cargo run -p hornvale -- ci-record` (called from gate-run, inside the
+# `gate` set's `gate-suite-run`) rewrites `docs/timings/subfloor-roster.tsv`
+# in $wt on every GREEN full-workspace run, but $wt is the SAME shared
+# scratch worktree the NEXT dispatch's `checkout --force` + `reset --hard`
+# (above) destroys before anyone can review or commit it — which is why the
+# documented remedy ("it enters on the next green stage gate, which measures
+# it and rewrites the roster") had never once actually landed a byte.
+#
+# GREEN-ONLY, deliberately, not stylistically: `cli/src/main.rs`'s
+# `cmd_ci_record` doc notes a red run's `run.json` is truncated, so a roster
+# derived from one would silently DROP tests from the commit gate — the
+# opposite of what a copy-out is for. `job_rc` is this script's own exit
+# code, which is 0 only when the whole dispatched command line succeeded
+# (gate-run's own `exit $$alarm_status` included), so it is the right gate
+# for "was this a green run" without re-deriving that from nextest's own
+# files.
+#
+# Named beside `$run_log` ($HV_LANE_DIR/$job_id.log), not beside the roster's
+# repo path, because $HV_LANE_DIR — outside the worktree — is the whole
+# reason either file survives the next dispatch.
+#
+# COPY ONLY IF THE RUN ACTUALLY REWROTE IT, which is a stricter test than
+# "the file exists" and the difference is not academic. The roster is a
+# COMMITTED file, so `checkout --force` + `reset --hard` leaves it present in
+# $wt for EVERY set, not just `gate` — a bare `[ -f ]` would copy a
+# byte-unchanged roster out of every green `artifacts`, `clients`, `heavy`,
+# `census` or `seam-guard` job. `make lane-roster` takes the most RECENT
+# copy-out, so it would then hand back a no-op diff from whichever set
+# happened to finish last while the real `gate` roster sat unconsulted — an
+# empty diff reading as "nothing changed" when nothing was ever rebuilt, the
+# same shape as running a digest `render` without its redirect.
+#
+# `git diff --quiet` against the checked-out ref answers the actual question
+# ("did this run modify it?") without hardcoding which set runs ci-record,
+# so a future set that gains one is covered without editing this.
+_subfloor_src="$wt/docs/timings/subfloor-roster.tsv"
+if [ "$job_rc" -eq 0 ] && [ -f "$_subfloor_src" ] \
+   && ! git -C "$wt" diff --quiet -- docs/timings/subfloor-roster.tsv 2>/dev/null; then
+    cp "$_subfloor_src" "$HV_LANE_DIR/$job_id.subfloor-roster.tsv"
+    echo "lane-run: copied the sub-floor roster to $HV_LANE_DIR/$job_id.subfloor-roster.tsv (make lane-roster brings it back)"
+fi
+
 exit "$job_rc"

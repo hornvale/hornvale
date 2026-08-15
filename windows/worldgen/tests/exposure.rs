@@ -446,7 +446,7 @@ fn river_exposure_tracks_real_proximity() {
 /// That is the accession discipline's additivity claim, measured on the
 /// rendered product rather than argued from the cohort rule.
 ///
-/// **THE GLASSHOUSE re-measure (Stage B, decision 0134) — the first cause on
+/// **THE GLASSHOUSE re-measure (Stage B, decision 0137) — the first cause on
 /// this list that is not a roster change.** The craton rescale delivers its
 /// budget, so seed 42's coastline rose to the shelf break and mean land
 /// elevation fell 2257 -> 1783 m. The roster is untouched at fifteen peoples;

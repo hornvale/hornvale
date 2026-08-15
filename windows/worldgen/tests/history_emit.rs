@@ -329,6 +329,62 @@ fn the_present_fallback_reads_back_in_years_too() {
     );
 }
 
+/// `present_frame` = `present_year` crossed forward into a standard day
+/// (`WorldTime::new(ledger_day_of_bake_year(present_year(world)))`) — the
+/// composition that used to be hand-written at
+/// `windows/worldgen/tests/repose_exposure.rs`'s TASK 7 call, reachable only
+/// from that file's `heavy:`-ignored batteries. `tools/seam-guard` reported
+/// the `ledger_day_of_bake_year` seam UNGUARDED there: the mutated call never
+/// ran under a non-ignored test at ANY `scope(...)`, because no non-ignored
+/// test reached it at all, not because the scope was too narrow (widening
+/// scope only helps a mutation some crate's non-ignored tests already
+/// reach). Naming the crossing as its own function moves the call site here,
+/// where it costs nothing to test — no bake, just the same hand-built
+/// fixture `the_present_fallback_reads_back_in_years_too` already uses.
+///
+/// The property this pins: **`present_frame` must return the bake year
+/// SCALED by `Years::DAYS_PER_YEAR`, not the bare year reinterpreted as a
+/// day.** Dropping the crossing (`identity(0)` on `ledger_day_of_bake_year`
+/// — exactly the mutation `tools/seam-guard` applies) makes `present_frame`
+/// return `WorldTime::new(900.0)` instead of `WorldTime::new(900.0 *
+/// 365.25)`, which both assertions below catch.
+#[test]
+fn present_frame_crosses_the_bake_year_by_days_per_year() {
+    let mut w = test_world();
+    let mut ruin = base_record(1, "goblin", 0, 100.0);
+    ruin.core.ended = Some(900.0);
+    let h = History::new(vec![ruin], 1000.0);
+    emit_history(&mut w, &h).unwrap();
+
+    let year = hornvale_worldgen::present_year(&w);
+    assert_eq!(
+        year, 900.0,
+        "sanity: this fixture's present is bake year 900 via the fallback arm \
+         (asserted directly by the_present_fallback_reads_back_in_years_too)"
+    );
+
+    let frame = hornvale_worldgen::present_frame(&w);
+    let expected = WorldTime::new(hornvale_worldgen::ledger_day_of_bake_year(900.0))
+        .expect("a bake year crosses to a finite day");
+    assert_eq!(
+        frame, expected,
+        "present_frame must cross present_year's bake YEAR into a standard \
+         DAY (year * Years::DAYS_PER_YEAR) — a year read back out where a day \
+         belongs must fail this assertion"
+    );
+    // A float-tolerant, unit-legible restatement of the same claim: the day
+    // is the year scaled by ~365, not equal to it — a `total_cmp`-adjacent
+    // check that does not depend on `WorldTime`'s `PartialEq` alone to carry
+    // the finding.
+    assert!(
+        frame.day() > year * 300.0,
+        "the day ({}) must be the bake year ({year}) scaled by \
+         Years::DAYS_PER_YEAR (365.25), not the bare year reinterpreted as a \
+         day",
+        frame.day()
+    );
+}
+
 #[test]
 fn occupation_records_round_trip_every_committed_field() {
     // Task 1 (The Vestige): `occupation_records`/`occupations_at` are the

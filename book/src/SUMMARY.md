@@ -366,6 +366,8 @@
 - [The Hearsay](./chronicle/the-hearsay.md)
 - [The Staff](./chronicle/the-staff.md)
 - [The Glasshouse](./chronicle/the-glasshouse.md)
+- [The Ballast](./chronicle/the-ballast.md)
+- [The Compendium](./chronicle/the-compendium.md)
 
 # Appendix: The Frontier
 

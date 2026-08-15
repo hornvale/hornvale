@@ -39,7 +39,7 @@ The corrected H4 was written, shipped green, and looked right. A mutation test �
 while the *original* H4 would have caught it. The repair had traded a false
 positive for a false negative, and nothing in the green run said so.
 
-This is now decision 0135's durable half. Two sub-lessons that cost real time:
+This is now decision 0138's durable half. Two sub-lessons that cost real time:
 
 - **A mutation must be shown to have taken effect before its verdict means
   anything.** Here: 48,316 → 55,080 caves. A no-op mutation produces exactly the
@@ -578,7 +578,7 @@ silenced working coverage to defer a broken constant.
 Absorbed `main` through The Staff (`152f278c`).
 
 **The campaign's own work is COMPLETE.** Tasks 1–7, Risk 4, the classifier
-gate, the six-criteria readout, both decisions (0134/0135), the chronicle, the
+gate, the six-criteria readout, both decisions (0137/0138), the chronicle, the
 Confidence Gradient re-score, the registry updates and this retrospective are
 all done and committed. What remains is **not campaign work** — it is the
 post-refresh witness sweep that nothing had run.

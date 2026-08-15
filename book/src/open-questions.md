@@ -124,6 +124,34 @@ property of **plans written as literal code listings**, which get reviewed for
 faithful transcription and not for whether the predicate they contain is the
 one the spec asked for.
 
+The Ballast (2026-08-15) adds a fourth shape, and it is the one this practice
+does not reach. Every instance above is a check whose *predicate* was wrong —
+a grep matching nothing, a branch returning satisfied, a guard wired
+backwards. Mutation finds all of them, because mutation asks whether a check
+can fire. The commit gate's test roster failed differently: its predicate was
+correct and it fired reliably, for every test on its list. The list had simply
+gone short. One crate had no entry at all, so none of its tests ran anywhere,
+and the gate reported green about everything it was looking at while looking
+at less than it claimed to.
+
+Making that check fail on command would never have found it. Corrupt the
+roster and the gate reddens exactly as designed; the check is not broken.
+**Mutation proves a check can fire; it says nothing about whether the check is
+pointed at everything.** An allow-list has the additional property that it
+gets *faster* as it goes blinder, so the symptom of its decay is
+indistinguishable from the improvement it was built to deliver — and the
+mechanism documented to keep it current, which wrote its updates to scratch
+that the next job erased, had never once run to completion in the file's
+entire two-commit history.
+
+**Score: the bet holds, and the practice gains a second half.** Making a check
+fail on command remains necessary and remains the cheapest thing that works.
+It is not sufficient, because it verifies the check against itself. A check
+also needs an *enumeration* it is answerable to — a list of what ought to be
+covered, with an absence from that list treated as a failure rather than as
+silence. The first practice catches a check that lies. Only the second catches
+a check that was never asked.
+
 A fourth campaign puts the sharpening where the *repair* is. The Collation
 (2026-08-06) produced the same shape from its own plan text — a spec promising
 one test asserting a generated matrix's per-column figures equal the per-corpus
@@ -375,6 +403,48 @@ to self-scorable, and leaves every score in this chapter where it stood. Recorde
 explicitly, because a campaign that changes the save format and every founder's
 name looks from the outside like it should have moved something, and decision
 0030's sweep is answered by a statement either way rather than by silence.
+
+A twelfth campaign contributes the family's densest single instance and, with
+it, the first useful statistic about *detection*.
+[The Compendium](./chronicle/the-compendium.md) (2026-08-15) built one
+resolver — the anchor parser and audit in `cli/src/systems.rs`, most of it
+resolution logic rather than rendering or its own inline tests — whose
+entire purpose is noticing when a citation stops being true, and produced
+**four separate false-cleans inside it**: a symbol match that accepted any
+name it was a prefix of; a fallible
+operator inside a loop, so the guard's count propagated an empty result and
+could never fire; an exact string comparison against a status vocabulary whose
+real cells carry qualifiers, emphasis and transition arrows, leaving roughly a
+fifth of the rows it guards permanently unfalsifiable; and a citation of a test
+that is compiled but never run, which the resolver called resolved. Three are
+the same category error wearing different faces — treating a syntactic
+coincidence as a semantic fact — and each was made after the previous one had
+been found and fixed.
+
+The statistic is in *who found them*. One by review, one by the implementer
+using the tool rather than testing it, one by the controller reading a task
+ahead, and one by accident while hunting better evidence for an unrelated
+verdict. **Four detection mechanisms, each of which found exactly one.** Every
+prior entry in this thread argues that a particular check could not fire; this
+one argues something narrower and more actionable about the searching:
+redundant detection is not redundant when each detector has a different blind
+spot, and dropping any one of these four as duplicative would have shipped a
+false-clean in an instrument whose whole claim is that the citation is the
+evidence. The third defect was also, on inspection, the controller's own — a
+rule generalized from a single real row whose status happened to be the one
+unqualified form — which is this chapter's standing lesson that a correct
+observation and a false generalization are routinely the same sentence.
+
+**No bet in the map below moved.** The Compendium ships an instrument and one
+reading of it; it resolves no open question about the world and re-scores
+nothing here. Its one finding *about* the world is a render gap rather than a
+sim one: the first capability in an external catalogue this project cannot
+replicate is that catalogue's own first page — entities carrying their own
+appearance — and it reads **absent**, because the shipped character-grid
+client draws one glyph for the possession and one for everything else in view,
+terrain and marks alike. The catalogue's *refusals* are a separate and smaller
+set, each tracing to a ratified decision rather than to a deficiency; they
+confirm existing positions rather than moving a bet.
 
 ## What the world can already check itself on (high confidence)
 

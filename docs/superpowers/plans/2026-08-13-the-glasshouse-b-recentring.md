@@ -205,7 +205,7 @@ git commit -m "probe(terrain): measure the grid, the retained set, and what repu
 **Files:**
 - Modify: `domains/terrain/src/crust.rs:634-640`
 - Modify: `domains/terrain/tests/tectonic_properties.rs`
-- Create: `docs/decisions/0134-the-craton-clamp-is-a-budget-not-a-limit.md`
+- Create: `docs/decisions/0137-the-craton-clamp-is-a-budget-not-a-limit.md`
 
 **Interfaces:**
 - Consumes: Task 1's readout as the before-arm.
@@ -415,9 +415,9 @@ Decision rule — this is the task's real deliverable:
 | radius CV **< 0.10** | **STOP** — variety collapsed anyway. The clamp is still binding; report before proceeding. |
 | min pair separation collapses vs Task 1's baseline | repulsion is saturating at the new radii. Report the numbers; do not "fix" `REPEL_SEPARATION_FACTOR` inside this task. |
 
-- [ ] **Step 6: Write decision 0134**
+- [ ] **Step 6: Write decision 0137**
 
-`docs/decisions/0134-the-craton-clamp-is-a-budget-not-a-limit.md`, in the form
+`docs/decisions/0137-the-craton-clamp-is-a-budget-not-a-limit.md`, in the form
 `docs/decisions/README.md` prescribes. It supersedes nothing (0053 is about
 where sea level may land, not how big a craton may be) but must cite 0053 and
 0057, and must record: the 97.1% infeasibility, the CV-0.001 collapse the

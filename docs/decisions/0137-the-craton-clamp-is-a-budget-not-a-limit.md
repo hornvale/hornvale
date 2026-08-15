@@ -1,4 +1,4 @@
-# 0134. The craton clamp is a budget, not a limit
+# 0137. The craton clamp is a budget, not a limit
 
 **Status:** Accepted (2026-08-14) · **Decider:** Nathan · **Relates:**
 [0053](0053-ocean-fraction-is-a-target-under-supply-limited-crust.md),

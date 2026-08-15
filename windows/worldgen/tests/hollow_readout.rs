@@ -455,7 +455,7 @@ fn cave_substrate_meets_preregistered_criteria() {
 
     // H4 — realized hit rate tracks nominal probability.
     //
-    // Restated by The Glasshouse (decision 0135, the same record as H1's), on Nathan's
+    // Restated by The Glasshouse (decision 0138, the same record as H1's), on Nathan's
     // explicit authorisation, from a bare 0.25 relative bound to that SAME
     // bound conjoined with a CLUSTER-ROBUST significance test. Recording why
     // in full, because changing a preregistered criterion after seeing a

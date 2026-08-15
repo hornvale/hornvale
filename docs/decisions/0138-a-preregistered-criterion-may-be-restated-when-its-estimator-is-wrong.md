@@ -1,8 +1,8 @@
-# 0135. A preregistered criterion may be restated when its estimator is wrong, never when its result is inconvenient
+# 0138. A preregistered criterion may be restated when its estimator is wrong, never when its result is inconvenient
 
 **Status:** Accepted (2026-08-14) · **Decider:** Nathan · **Relates:**
 [0016](0016-studies-preregister-hypotheses.md),
-[0134](0134-the-craton-clamp-is-a-budget-not-a-limit.md)
+[0137](0137-the-craton-clamp-is-a-budget-not-a-limit.md)
 
 In the context of two of The Hollow's preregistered cave criteria (H1 and H4)
 failing after The Glasshouse's terrain epoch, where in both cases the *property*
