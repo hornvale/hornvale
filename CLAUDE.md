@@ -39,6 +39,22 @@ editing:
   **code** (the studies-are-data rule, decision 0011); a corpus is frozen
   before measurement and its situation count is asserted, so changing it is a
   deliberate act.
+- `systems/` — the **sibling** family to `tropes/`, and the distinction is
+  constitutional to both (decision 0134). `tropes/` measures whether a
+  **world** can represent a situation, resolved against the concept registry.
+  `systems/` measures whether a **program** implements a capability, resolved
+  against repository facts — the in-force decision index, the idea registry,
+  the source tree. **They must not be merged**: a third of a game-system
+  catalogue is renderer work that decision 0022 puts outside the ledger on
+  purpose, so resolving it against the concept registry would score every such
+  item as a dangling requirement — a plausible number that is a category
+  error. Same data/code split as `tropes/` (decision 0011), same freeze before
+  measurement (0016). Verdicts are five-valued and each cites an anchor the
+  resolver re-checks (decision 0135), which makes a registry row's ID and
+  status load-bearing for a committed artifact. **A published spell list
+  belongs to neither family** — `MAP-spell-corpus` is *parameter calibration*
+  ("how many named units a satisfying space carries"), explicitly not coverage
+  audit: same 0095 discipline, different job, different output type.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact

@@ -376,6 +376,42 @@ explicitly, because a campaign that changes the save format and every founder's
 name looks from the outside like it should have moved something, and decision
 0030's sweep is answered by a statement either way rather than by silence.
 
+A twelfth campaign contributes the family's densest single instance and, with
+it, the first useful statistic about *detection*.
+[The Compendium](./chronicle/the-compendium.md) (2026-08-15) built one
+resolver — roughly nine hundred lines whose entire purpose is noticing when a
+citation stops being true — and produced **four separate false-cleans inside
+it**: a symbol match that accepted any name it was a prefix of; a fallible
+operator inside a loop, so the guard's count propagated an empty result and
+could never fire; an exact string comparison against a status vocabulary whose
+real cells carry qualifiers, emphasis and transition arrows, leaving roughly a
+fifth of the rows it guards permanently unfalsifiable; and a citation of a test
+that is compiled but never run, which the resolver called resolved. Three are
+the same category error wearing different faces — treating a syntactic
+coincidence as a semantic fact — and each was made after the previous one had
+been found and fixed.
+
+The statistic is in *who found them*. One by review, one by the implementer
+using the tool rather than testing it, one by the controller reading a task
+ahead, and one by accident while hunting better evidence for an unrelated
+verdict. **Four detection mechanisms, each of which found exactly one.** Every
+prior entry in this thread argues that a particular check could not fire; this
+one argues something narrower and more actionable about the searching:
+redundant detection is not redundant when each detector has a different blind
+spot, and dropping any one of these four as duplicative would have shipped a
+false-clean in an instrument whose whole claim is that the citation is the
+evidence. The third defect was also, on inspection, the controller's own — a
+rule generalized from a single real row whose status happened to be the one
+unqualified form — which is this chapter's standing lesson that a correct
+observation and a false generalization are routinely the same sentence.
+
+**No bet in the map below moved.** The Compendium ships an instrument and one
+reading of it; it resolves no open question about the world and re-scores
+nothing here. Its one finding *about* the world is that the first capability in
+an external catalogue this project cannot replicate is refused by a ratified
+decision rather than absent — which confirms an existing position rather than
+moving a bet.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
