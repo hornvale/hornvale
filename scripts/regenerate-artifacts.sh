@@ -421,7 +421,41 @@ gen_possession_overtime() {
 # 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 across seven roster/terrain/climate
 # changes; that is a reported number and this script asserts NO mechanism
 # for it.
-history_site=7738
+#
+# THE GLASSHOUSE, k re-decided (0.4 -> 0.3): 7738 -> 757, the THIRD repoint of
+# this one page inside a single campaign. 7738 fell from fifteen hobgoblin
+# layers to TWO (a high-elf steading and the human one that took it), and this
+# time the guard caught it on its OTHER arm — not the empty-column check but
+# the people cross-check, because the prose still said "hobgoblin" while the
+# rendered column no longer contained one.
+#
+# THE PATTERN IS NOW THE FINDING, and it should be read before the fourth
+# repoint rather than after. A showcase keyed on a HAND-PICKED CELL with
+# hand-written narrative about that cell's specific contents is invalidated by
+# every physics change, and this campaign has invalidated it three times
+# (Task 4 emptied 35120, Task 5 plus the absorption emptied 2738, k emptied
+# 7738). Each repoint costs a scan, a re-read and a rewritten paragraph. The
+# guard is not the problem — it is the only reason the page has never shipped
+# a lie — but the page's SHAPE is: prose asserting counts the tool could
+# derive. Options a later campaign should weigh: derive the framing sentences
+# from the rendered column, pin the showcase to a committed world rather than
+# regenerating from the live seed, or keep the prose but strip it of specific
+# counts. Not decided here; recorded so the fourth repoint is a choice.
+#
+# Read off the live block for 757: fifteen layers from the year 375, fourteen
+# completed, and this column tells a DIFFERENT story from its predecessors.
+# At 2738 and 7738 the endings were mostly flight; here EIGHT of the fourteen
+# ended because the occupants took a neighbour's ground and carried the
+# settlement onto it, against six put to flight — an expansionist column
+# rather than a harried one, and the first time this page has shown that. Only
+# one layer lasted under a year. All fifteen still arrived fleeing ice, from
+# five distinct clearings (11930 x5, 11939 x4, 13032 x3, 13022 x2, 11941 x1),
+# and none ends in ice, which is the one shape every cell this page has
+# pointed at has shared. Tech runs bronze -> iron -> classical with no
+# neolithic base. The standing fifteenth was founded in 1925 and holds 55
+# souls. Depth across eight changes:
+# 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 -> 15.
+history_site=757
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -433,26 +467,24 @@ gen_history() {
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
     printf 'fifteen hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 25 down to the present. Every one of the\n'
-    printf 'fourteen completed layers ended at the hands of other hobgoblins: twelve\n'
-    printf 'fell to a rival band, and two were not evictions at all — the occupants\n'
-    printf 'had just taken better ground from a neighbour and carried the settlement\n'
-    printf 'there, so the layer closes on a departure rather than a defeat. This\n'
-    printf 'is a people with only itself to fight, contesting one rise in a\n'
-    printf 'neighbourhood it had already filled.\n\n'
+    printf 'the last, from the year 375 down to the present. Every one of the\n'
+    printf 'fourteen completed layers ended at the hands of other hobgoblins — but\n'
+    printf 'mostly not as defeats. Eight of the fourteen were not evictions at all:\n'
+    printf 'the occupants had taken better ground from a neighbour and carried the\n'
+    printf 'settlement onto it, so the layer closes on a departure. Only six fell to\n'
+    printf 'a rival band. This is a people with only itself to fight, and on this\n'
+    printf 'rise it is more often the one doing the taking.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
     printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
     printf 'fifteen, the deepest included, driven off one of five distinct\n'
     printf 'neighbouring clearings. No one ever broke this soil by choice: the\n'
-    printf 'ground has been a refuge from its first layer to its last. Five of\n'
-    printf 'the fifteen did not last a single year — founded and put to flight in\n'
-    printf 'the same year they began, which is what the record looks like when\n'
-    printf 'refuge and contest are the same ground. Read bottom to top, the\n'
-    printf 'column also carries its own technological arc: a neolithic steading at\n'
-    printf 'the base, bronze-working through the long middle, then iron, then\n'
-    printf 'classical at the top. The fifteenth was founded in the year 1525 and\n'
-    printf 'stands yet, 475 years on: some 75 souls, two huts and a granary,\n'
-    printf 'and no ruin yet to read.\n\n'
+    printf 'ground has been a refuge from its first layer to its last, and a\n'
+    printf 'staging ground for the next advance as often as a last resort. Only\n'
+    printf 'one of the fifteen failed to last a single year. Read bottom to top,\n'
+    printf 'the column carries its own technological arc: bronze-working at the\n'
+    printf 'base, iron above it, classical at the top. The fifteenth was founded\n'
+    printf 'in the year 1925 and stands yet, 75 years on: some 55 souls, two huts\n'
+    printf 'and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

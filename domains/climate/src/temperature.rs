@@ -22,7 +22,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomal
 /// 1976, troposphere lapse rate.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 
-/// The carbonate–silicate thermostat's compensation fraction, `k`: how much
+/// The carbonate–silicate thermostat's **residual** fraction, `k`: how much
 /// of a world's insolation deviation from Earth's (`S = 1`) the thermostat
 /// FAILS to compensate before the ordinary blackbody `S^(1/4)` response is
 /// applied (`Spinning` regime only; `Locked` keeps its own, unrelated `0.25`
@@ -49,24 +49,64 @@ const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
 /// and the feedback saturates near the zone edges), so `k` is a partial
 /// compensation, not `0.0`.
 ///
-/// Evaluated at `k ∈ {0.4, 0.5, 0.6, 0.7}` against the population's actual
-/// insolation-rel draw (p5/p25/median/p75/p95 over 300 generated skies:
-/// 0.549/0.630/0.742/0.887/1.053 — well below `S = 1` at the median, so MORE
-/// compensation, i.e. a SMALLER `k`, is what actually warms this population)
-/// and post-craton-rescale hypsometry (20 generated terrains, 314,609 land
-/// cells), holding the candidate Task 5 latitude profile fixed (this
-/// campaign's task report carries the full table). At the population median
-/// insolation, land mean ran from −5.4 °C (`k = 0.4`) to −11.6 °C (`k =
-/// 0.7`) — coincidentally near the pre-Glasshouse baseline's own −11.99 °C
-/// median at `k = 0.7`, confirming `k` near `1.0` reproduces the untherm-
-/// ostatted defect. **`0.4` was chosen**: it is the most-compensating value
-/// in the evaluated range, moving the population furthest from the ice-
-/// dominated baseline while remaining inside the range this campaign swept
-/// (a smaller, unswept `k` was not evaluated and is not asserted to be
-/// better). See also
-/// [`crate::provider::ClimateInputs::greenhouse_forcing_k`], the ADDITIVE
-/// residual this thermostat's own spread draws around.
-const THERMOSTAT_COMPENSATION_FRACTION: f64 = 0.4;
+/// **READ THE NAME CAREFULLY: this is the fraction that SURVIVES, not the
+/// fraction that is compensated.** `0.3` means the thermostat removes 70% of
+/// the insolation anomaly and 30% reaches equilibrium temperature. The
+/// constant was called `THERMOSTAT_COMPENSATION_FRACTION` until this value
+/// was re-decided, under which name every reader would infer the opposite;
+/// the rename is the fix, and re-inverting it later would reintroduce the
+/// confusion rather than resolve it.
+///
+/// **Its provenance is a claim about EARTH, deliberately, because no claim
+/// about the census could ever pin it.** The plan asked for `k` to be fixed
+/// from Earth rather than from the population, and that turned out to be
+/// impossible as literally written: the model is `effective_S = 1 + k(S − 1)`,
+/// so at `S = 1` the `k` term **vanishes identically** — and `S = 1` is
+/// exactly where Earth's anchor sits. A single anchor point can pin a
+/// LOCATION ([`THERMOSTAT_ANCHOR_K`] is pinned that way, correctly) but never
+/// a SLOPE. `k` is a slope, so it needs a second point at `S ≠ 1`.
+///
+/// The second point is the faint young Sun, inverted. At `S = 0.75` (≈4 Gyr
+/// ago) this model's area-weighted mean is `287.15·(1 − 0.25k)^0.25 − 273.15`,
+/// so **choosing `k` IS choosing an Archean global mean temperature**:
+///
+/// ```text
+///   k      Archean mean at S = 0.75      r(S, T) over the population
+///   0.10           +12.19 °C                  −0.000   <- insolation stops mattering
+///   0.20           +10.34 °C                  +0.129
+///   0.30            +8.46 °C                  +0.257   <- chosen
+///   0.40            +6.54 °C                  +0.376
+///   0.725            0.00 °C                           <- surface water freezes: hard ceiling
+/// ```
+///
+/// **`0.3` asserts that Earth's Archean global mean was ≈ +8.5 °C** — a
+/// temperate early Earth, inside the (genuinely contested) literature range
+/// and comfortably clear of both the frozen-Archean ceiling and a boiling
+/// one. That claim is citable and falsifiable *about Earth*, which is the
+/// property a swept preference never had; anyone who disputes this constant
+/// should argue paleoclimate, not Hornvale's census median.
+///
+/// The lower bound is not physics but this project's own thesis. `r(S, T)`
+/// reaches **zero at `k ≈ 0.10`**: drive `k` low enough and a world's orbit
+/// stops influencing its climate at all, which is the very pathology
+/// (spec §2.3, `r(L,T) = +0.013`) this campaign exists to remove, merely
+/// relocated from the star to the orbit. Low `k` does not buy free warmth; it
+/// buys warmth by severing climate from sky.
+///
+/// **`k` IS NOT THE DOMINANT LEVER, and the next person to reach for it
+/// should know that first.** Measured over 191 spinning worlds: across `k`'s
+/// entire range, 0.4 → 0.0 (perfect compensation), the spinning median land
+/// temperature moves 7.2 K and the share of worlds with sub-freezing land
+/// falls only 64% → **41%**. Two-fifths stay cold under a *perfect*
+/// thermostat, because the population sits at a median `S` of 0.748 by
+/// construction: the zone is `[0.95, 1.37]·√L`, the orbit is drawn uniform in
+/// RADIUS across it, and `S = L/a²`, so `L` cancels exactly and
+/// `S = 1/(0.95 + 0.42t)²` for a uniform `t`. The cold is a property of that
+/// draw's MEASURE, not of this constant.
+///
+/// See also [`crate::provider::ClimateInputs::greenhouse_forcing_k`], the
+/// ADDITIVE residual this thermostat's own spread draws around.
+const THERMOSTAT_RESIDUAL_FRACTION: f64 = 0.3;
 
 /// The thermostat's anchor temperature, kelvin: the `Spinning`-regime
 /// equilibrium base at `S = 1` (before the latitude profile and lapse
@@ -157,7 +197,7 @@ pub fn mean_temperature(
     // The Locked branch keeps the plain blackbody exponent applied to raw
     // `S` — its own, unthermostatted formula (`locked_cell_temperature`),
     // untouched by The Glasshouse. `Spinning` computes its own scale below,
-    // through `THERMOSTAT_COMPENSATION_FRACTION`'s damped `effective_s`.
+    // through `THERMOSTAT_RESIDUAL_FRACTION`'s damped `effective_s`.
     let locked_scale = math::powf(insolation.max(0.0), 0.25);
     CellMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
@@ -167,15 +207,14 @@ pub fn mean_temperature(
                 let lat = geo.coord(cell).latitude.to_radians();
                 // The carbonate-silicate thermostat: insolation's deviation
                 // from Earth's (`S = 1`) is damped by
-                // `THERMOSTAT_COMPENSATION_FRACTION` before the ordinary
+                // `THERMOSTAT_RESIDUAL_FRACTION` before the ordinary
                 // blackbody `S^(1/4)` response is applied to the result, then
                 // this world's drawn greenhouse residual — already converted
                 // to kelvin by the composition root (see
                 // `ClimateInputs::greenhouse_forcing_k`) — is added.
                 // Additive, not insolation-scaled: it is the spread AROUND
                 // the thermostat, not a second insolation response.
-                let effective_s =
-                    1.0 + THERMOSTAT_COMPENSATION_FRACTION * (insolation.max(0.0) - 1.0);
+                let effective_s = 1.0 + THERMOSTAT_RESIDUAL_FRACTION * (insolation.max(0.0) - 1.0);
                 let spinning_scale = math::powf(effective_s.max(0.0), 0.25);
                 let base_k = THERMOSTAT_ANCHOR_K * spinning_scale + greenhouse_forcing_k;
                 let sin_lat = math::sin(lat);

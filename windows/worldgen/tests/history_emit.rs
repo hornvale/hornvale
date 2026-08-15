@@ -961,9 +961,29 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // sweep rather than read three worlds, and 1 is no more a property than 3
     // was. Measured on the tree that has absorbed main (50 commits, The
     // Repose), identical to the pre-absorption figure.
+    //
+    // THE GLASSHOUSE re-pin, Stage B, k re-decided: [1, 0, 0] -> [1, 2, 1],
+    // total 1 -> 4. Setting the thermostat's residual fraction to 0.3 warmed
+    // the population and re-placed settlements a FOURTH time this campaign.
+    //
+    // AND THE PARAGRAPH DIRECTLY ABOVE IS WHY THIS ONE IS WRITTEN DIFFERENTLY.
+    // It called the previous reading "better supported than at any reading
+    // since The Delvers" because the total had fallen to 1. Two hours later
+    // the same quantity read 4. Nothing about the key changed in between —
+    // only a constant this test does not measure. That is the file's own
+    // standing reading (a coincidence of particular occupation chains, not a
+    // property) demonstrating itself against the very comment that had just
+    // restated it, and the lesson is narrower and more useful than "re-pin
+    // carefully": DO NOT NARRATE A WITNESS'S VALUE. Record what it is, record
+    // what moved it, and leave the claim's health to the claim's own evidence.
+    // A total of 4 is no more "worse" for `barely moves` than 1 was "better".
+    // Both are small against ~19k land cells per world, and three seeds cannot
+    // distinguish 1 from 4 in any case (decision 0097's existence-claim-near-
+    // a-threshold reading, which is what the sweep-widening advice above is
+    // for). Post-unblinding re-measure, declared per decision 0016.
     assert_eq!(
         measured,
-        vec![(42u64, 1usize), (7, 0), (1000, 0)],
+        vec![(42u64, 1usize), (7, 2), (1000, 1)],
         "the per-seed order-change counts moved"
     );
 }

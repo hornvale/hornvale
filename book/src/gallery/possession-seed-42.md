@@ -122,14 +122,14 @@ No way ne from here.
 > back
 You have not walked anywhere yet.
 > wait 90
-Time passes. You sense movement nearby (194 stirred).
+Time passes. You sense movement nearby (183 stirred).
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows
 3 things seen:
   room/896860167 = {"schema":"locale/room/v2","id":896860167,"face":7,"path"…
   settlement/10760661430244474881/name = Dooga
-  settlement/10760661430244474881/population = 66
+  settlement/10760661430244474881/population = 68
 > release
 You let go.
 ```
