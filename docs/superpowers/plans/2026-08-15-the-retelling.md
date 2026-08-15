@@ -19,6 +19,11 @@
 - **`type-audit:` tag on every primitive at a `pub` boundary**, and regenerate `docs/audits/type-audit-report.md` **in the same commit** that moves a pub boundary.
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the single most common review finding.
 - **`Claim` is derived and never serialized.** It must not gain `Serialize`/`Deserialize`. This is what keeps the campaign off the save-format surface.
+- **The pre-commit hook runs `make quick` WORKSPACE-WIDE**, not on the crate
+  you touched. A task may therefore never leave a sibling crate
+  uncompilable "for the next task to fix" — nothing can be committed
+  until the whole workspace builds, and bypassing the hook is forbidden
+  without exception.
 - **HOMONYM WARNING:** `hornvale_lab::census_claim::Claim` and `windows/book`'s `ChorusLine::RevealedClaim` are **different types**. This plan never touches them. The `Claim` this plan changes is `kernel/src/claim.rs:18` only.
 
 ---
@@ -640,7 +645,11 @@ Expected: FAIL — `cannot find function variants_about`.
 
 - [ ] **Step 3: Write the implementation**
 
-First fix the existing literal at `derive.rs:78` by adding `precision: hornvale_kernel::Precision::FINEST,` to it. Then add:
+**`derive.rs`'s literal is ALREADY FIXED** — Task 2 had to add
+`precision: Precision::FINEST` to it (now at `derive.rs:88`) because the
+pre-commit hook runs `make quick` WORKSPACE-WIDE, so a knowingly-broken
+sibling crate blocks every commit, not just that crate's own. Do not
+re-add it. Then add:
 
 ```rust
 /// Every variant of `(subject, predicate)` held anywhere, ascending by holder.
