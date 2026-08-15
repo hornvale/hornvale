@@ -1,15 +1,7 @@
 //! The hornvale CLI: create worlds, render almanacs, interrogate via REPL.
 #![warn(missing_docs)]
 
-mod audio;
-mod concepts;
-mod dictionary;
-mod phonology;
-mod proto;
-mod repl;
-mod streams;
-mod tropes;
-
+use hornvale::{audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, tropes};
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
@@ -192,14 +184,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-/// Value of `--flag` in args, if present.
-fn flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
-    args.iter()
-        .position(|a| a == flag)
-        .and_then(|i| args.get(i + 1))
-        .map(String::as_str)
 }
 
 /// Parse the sky-related flags shared by `new` and `scout` into pins plus a

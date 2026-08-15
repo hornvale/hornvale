@@ -981,3 +981,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-14T22:36:43Z | rebaseline | 145.989 | 201.048 | 11.483 | 1.46 | 0 | 5919375d | main | MacBookPro | 10 |
 | 2026-08-15T00:18:34Z | gate | 878.425 | 3212.096 | 529.032 | 4.26 | 0 | c9fb7701 | main | MacBookPro | 10 |
 | 2026-08-15T14:36:45Z | prewarm | 159.339 | 1137.387 | 58.180 | 7.50 | 0 | f9dd35f6 | campaign/the-compendium | MacBookPro | 10 |
+| 2026-08-15T15:08:32Z | quick | 11.498 | 31.865 | 7.594 | 3.43 | 0 | 07565bc0 | campaign/the-compendium | MacBookPro | 10 |
