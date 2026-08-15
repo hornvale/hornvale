@@ -62,3 +62,25 @@ pub fn put(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
     )
     .expect("commit");
 }
+
+/// Commit one extra fact onto an existing ledger, registering its predicate
+/// as NON-FUNCTIONAL — unlike [`put`], which registers functional. Several
+/// facts (e.g. one `moon-period-std` per moon) can then land on one subject
+/// without the registry rejecting the second as a contradiction.
+pub fn put_on(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(predicate, false, "test predicate")
+        .expect("register");
+    led.commit(
+        Fact {
+            subject: eid(subject),
+            predicate: predicate.to_string(),
+            object,
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        },
+        &reg,
+    )
+    .expect("commit");
+}

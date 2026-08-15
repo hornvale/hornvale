@@ -7,6 +7,7 @@
 #![warn(missing_docs)]
 
 pub mod derive;
+pub mod ladder;
 pub mod lineage;
 
 /// The hop count of every holder of a claim about `(subject, predicate)`.
