@@ -212,10 +212,23 @@ job_cpu_ratio="$(awk -v u="$job_user_s" -v s="$job_sys_s" -v r="$_lane_wall_s" \
 # repo path, because $HV_LANE_DIR — outside the worktree — is the whole
 # reason either file survives the next dispatch.
 #
-# Absent for every set but `gate` (the only one that runs ci-record at all),
-# and that is not an error: `[ -f ... ]` below just has nothing to copy.
+# COPY ONLY IF THE RUN ACTUALLY REWROTE IT, which is a stricter test than
+# "the file exists" and the difference is not academic. The roster is a
+# COMMITTED file, so `checkout --force` + `reset --hard` leaves it present in
+# $wt for EVERY set, not just `gate` — a bare `[ -f ]` would copy a
+# byte-unchanged roster out of every green `artifacts`, `clients`, `heavy`,
+# `census` or `seam-guard` job. `make lane-roster` takes the most RECENT
+# copy-out, so it would then hand back a no-op diff from whichever set
+# happened to finish last while the real `gate` roster sat unconsulted — an
+# empty diff reading as "nothing changed" when nothing was ever rebuilt, the
+# same shape as running a digest `render` without its redirect.
+#
+# `git diff --quiet` against the checked-out ref answers the actual question
+# ("did this run modify it?") without hardcoding which set runs ci-record,
+# so a future set that gains one is covered without editing this.
 _subfloor_src="$wt/docs/timings/subfloor-roster.tsv"
-if [ "$job_rc" -eq 0 ] && [ -f "$_subfloor_src" ]; then
+if [ "$job_rc" -eq 0 ] && [ -f "$_subfloor_src" ] \
+   && ! git -C "$wt" diff --quiet -- docs/timings/subfloor-roster.tsv 2>/dev/null; then
     cp "$_subfloor_src" "$HV_LANE_DIR/$job_id.subfloor-roster.tsv"
     echo "lane-run: copied the sub-floor roster to $HV_LANE_DIR/$job_id.subfloor-roster.tsv (make lane-roster brings it back)"
 fi
