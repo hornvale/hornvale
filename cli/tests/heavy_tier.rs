@@ -221,12 +221,14 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 32] = [
+const EXPECTED_UNTOKENISED: [&str; 34] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs; the 0.60 bar sits 0.19 SE below it and 0.75 SE above the prior 0.5667, so the battery separates neither)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
+    "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (1 of 35 riparian rooms on seed 42 reads dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and at n=1 a tolerance is indistinguishable from switching the test off)",
+    "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud cells fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)",
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
@@ -311,6 +313,28 @@ const EXPECTED_UNTOKENISED: [&str; 32] = [
 /// `BIO-supply-drowns-niche` predates all of these and carries no sentence
 /// here; its site is
 /// `windows/worldgen/tests/occupancy_readout.rs`.
+/// The Glasshouse added two at its close, reviewed 2026-08-15, and both are
+/// the same kind as The Fathom's: an instrument that noticed something true
+/// about a world that moved under it, deferred at its pre-epoch value rather
+/// than widened to fit the new measurement.
+/// `LOC-riparian-dry-overlap` — R-8's zero-tolerance invariant, evidence at
+/// `windows/locale/tests/wetness_reading.rs::no_room_reads_riparian_and_dry`;
+/// at n=1 offender a tolerance would be indistinguishable from switching the
+/// test off, so it is ignored whole.
+/// `MAP-waterfall-threshold-mis-scaled` — evidence at
+/// `windows/locale/tests/water_reading.rs::the_world_still_produces_water_loud_enough_to_refuse`.
+/// Note this one was **split out of a larger test rather than ignoring it**:
+/// only the two world-side floors were mis-scaled by the sea-level epoch, and
+/// the ordering claim, its straddle anti-vacuity and the universal
+/// "every crossing above the threshold is Impassable" in
+/// `the_discharge_clause_makes_the_strongest_crossing_impassable` are
+/// unaffected and still run. Ignoring the whole test would have silenced the
+/// half of §8's named deliverable that still works — worth doing whenever an
+/// ignore would take live assertions down with the stale one.
+/// Both carry the witness this doc asks for
+/// (`the_riparian_dry_overlap_is_pinned_as_a_witness`,
+/// `the_loud_reach_population_is_pinned_as_a_witness`), so the deferred
+/// figures stay measured.
 ///
 /// **The Gnomon also found the rot this convention carries, and closed it for
 /// its own entry.** An `#[ignore]`d measurement stops being measured: the

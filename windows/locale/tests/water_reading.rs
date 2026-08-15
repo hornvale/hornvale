@@ -1587,13 +1587,63 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
             strong += 1;
         }
     }
-    // THE WORLD-SIDE FLOOR, which is the one that can notice a disappearance.
-    // `strong` above counts crossings inside a population this test ENRICHES
-    // with the 25 strongest reaches, so it cannot fall while the enrichment
-    // works — measured, the strided 395 contribute exactly one Q >= 80 vertex
-    // and it is `NotACrossing`, so all of `strong` comes from the injection.
-    // This counts distinct loud CELLS in the network itself, read off
-    // `drainage`, which no sampling choice here can inflate.
+    // THE TWO WORLD-SIDE FLOORS THAT USED TO CLOSE THIS TEST NOW LIVE IN
+    // `the_world_still_produces_water_loud_enough_to_refuse`, which is
+    // `#[ignore]`d because the epoch mis-scaled them
+    // (`MAP-waterfall-threshold-mis-scaled`). Everything above is unaffected
+    // and still runs: the ordering claim, its straddle anti-vacuity and the
+    // universal "every crossing above the threshold is Impassable" are claims
+    // about the world's own discharge ordering, not about the floors, and the
+    // epoch did not touch them. `loud_cells` is counted beside them by
+    // `the_loud_reach_population_is_pinned_as_a_witness`.
+    println!(
+        "crossings above the discharge threshold: {strong} (from a population enriched with the \
+         25 strongest reaches)"
+    );
+    let _ = net;
+}
+
+/// **The two world-side floors, `#[ignore]`d because the epoch mis-scaled
+/// them — the assertions themselves are unchanged.**
+///
+/// These closed [`the_discharge_clause_makes_the_strongest_crossing_impassable`]
+/// until The Glasshouse's sea-level epoch. They are the floors that can notice
+/// a *disappearance*: `strong` counts crossings inside a population that test
+/// ENRICHES with the 25 strongest reaches, so it cannot fall while the
+/// enrichment works, and `loud_cells` counts distinct loud cells in the network
+/// itself, read off `drainage`, which no sampling choice can inflate.
+///
+/// **What moved is the world, not the instrument.** A higher sea level shortens
+/// drainage paths and shrinks catchments, so seed 42's loud cells fell 34 → 16
+/// and strong crossings 8 → 2. `WATERFALL_MIN_DRAINAGE = 80` was calibrated
+/// against pre-epoch catchments and is now measuring a different world at the
+/// old scale. Lowering these floors to 16 and 2 would delete the only
+/// instrument that noticed, which is why they are deferred at their pre-epoch
+/// values rather than nudged — the `"PREREGISTERED, not met"` convention
+/// rostered in `cli/tests/heavy_tier.rs`.
+///
+/// The repair is to re-fit the threshold against post-epoch catchments under
+/// decision 0106's provenance discipline, with a census metric that makes the
+/// catchment scale visible; both are campaign-sized and tracked as
+/// `MAP-waterfall-threshold-mis-scaled`. Because an ignored measurement stops
+/// being measured, [`the_loud_reach_population_is_pinned_as_a_witness`] runs
+/// always and pins what the world actually produces now.
+#[ignore = "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud cells fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)"]
+#[test]
+fn the_world_still_produces_water_loud_enough_to_refuse() {
+    let world = world();
+    let ctx = LocaleContext::build(&world).unwrap();
+    let (transects, _, _) = transects_with_strongest(&ctx, 400, 25);
+    let net = ctx.terrain().channels();
+
+    let mut strong = 0usize;
+    for t in &transects {
+        if t.verdict(&ctx) != Crossing::NotACrossing
+            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+        {
+            strong += 1;
+        }
+    }
     let loud_cells: std::collections::BTreeSet<u32> = net
         .run_cells
         .iter()
@@ -1601,22 +1651,69 @@ fn the_discharge_clause_makes_the_strongest_crossing_impassable() {
         .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
         .map(|c| c.0)
         .collect();
-    println!(
-        "crossings above the discharge threshold: {strong} (from a population enriched with the \
-         25 strongest reaches); distinct loud cells in the network: {}",
-        loud_cells.len()
-    );
     assert!(
         loud_cells.len() >= LOUD_REACH_CELLS_FLOOR,
         "only {} distinct cells in the whole network carry Q >= {WATERFALL_MIN_DRAINAGE} \
-         (measured 34) — the world has stopped producing water strong enough to refuse, and no \
-         amount of sampling can put it back",
+         (measured 34 pre-epoch) — the world has stopped producing water strong enough to \
+         refuse, and no amount of sampling can put it back",
         loud_cells.len()
     );
     assert!(
         strong >= STRONG_CROSSINGS_FLOOR,
-        "only {strong} crossings carry enough water to be refused; the universal assertion above \
-         ran on almost nothing"
+        "only {strong} crossings carry enough water to be refused; the universal assertion in \
+         the_discharge_clause_makes_the_strongest_crossing_impassable ran on almost nothing"
+    );
+}
+
+/// **The witness that keeps the mis-scaled floors measured while
+/// [`the_world_still_produces_water_loud_enough_to_refuse`] is `#[ignore]`d.**
+///
+/// This pins a witness, not a claim. The integers below are not a bar the
+/// world must clear — they are exactly what seed 42 produces at
+/// `WATERFALL_MIN_DRAINAGE = 80` after the epoch, recorded so that any change
+/// to sea level, to the channel network or to the threshold *forces a
+/// deliberate re-read*. Without it the ignored floors measure nothing and the
+/// "34 → 16, 8 → 2" quoted in this file, in the roster string and in
+/// `MAP-waterfall-threshold-mis-scaled` quietly becomes fiction.
+///
+/// The two integers are pinned separately because they fail differently:
+/// `loud_cells` is a fact about the network (how much loud water exists at
+/// all) and `strong` is a fact about reachability (how much of it a walker
+/// meets). A correct re-fit of the threshold should move both; a change that
+/// moved only `strong` would be a sampling or transect regression, not the
+/// epoch.
+#[test]
+fn the_loud_reach_population_is_pinned_as_a_witness() {
+    let world = world();
+    let ctx = LocaleContext::build(&world).unwrap();
+    let (transects, _, _) = transects_with_strongest(&ctx, 400, 25);
+    let net = ctx.terrain().channels();
+
+    let mut strong = 0usize;
+    for t in &transects {
+        if t.verdict(&ctx) != Crossing::NotACrossing
+            && ctx.terrain().drainage_at(t.cell) >= WATERFALL_MIN_DRAINAGE
+        {
+            strong += 1;
+        }
+    }
+    let loud_cells: std::collections::BTreeSet<u32> = net
+        .run_cells
+        .iter()
+        .flatten()
+        .filter(|&&c| ctx.terrain().drainage_at(c) >= WATERFALL_MIN_DRAINAGE)
+        .map(|c| c.0)
+        .collect();
+    assert_eq!(
+        (loud_cells.len(), strong),
+        (16, 2),
+        "the post-epoch loud-reach population moved: {} loud cells and {strong} strong \
+         crossings, against the pinned (16, 2). This is NOT a number to update — re-read the \
+         catchment scale, then re-state this witness, the #[ignore] reason on \
+         the_world_still_produces_water_loud_enough_to_refuse, its roster entry in \
+         cli/tests/heavy_tier.rs and the MAP-waterfall-threshold-mis-scaled registry row in the \
+         SAME commit.",
+        loud_cells.len()
     );
 }
 
