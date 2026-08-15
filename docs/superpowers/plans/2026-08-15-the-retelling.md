@@ -24,6 +24,12 @@
   uncompilable "for the next task to fix" — nothing can be committed
   until the whole workspace builds, and bypassing the hook is forbidden
   without exception.
+- **A dependency change drifts a generated artifact.** Adding or moving a
+  crate dependency rewrites `book/src/reference/layering-generated.md`,
+  which `cli/tests/architecture.rs::the_layering_page_matches_the_enforced_graph`
+  asserts as a golden. Regenerate it with `REBASELINE=1` scoped to that
+  test and commit it alongside the code change. Task 2b found this the
+  hard way; it is not in `docs/generated-paths.txt`'s usual sweep.
 - **HOMONYM WARNING:** `hornvale_lab::census_claim::Claim` and `windows/book`'s `ChorusLine::RevealedClaim` are **different types**. This plan never touches them. The `Claim` this plan changes is `kernel/src/claim.rs:18` only.
 
 ---
