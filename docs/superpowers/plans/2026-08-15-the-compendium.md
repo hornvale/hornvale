@@ -203,20 +203,37 @@ a much larger mechanical diff and wants its own campaign."
 the honest one: we claim nothing until we can cite an anchor. Task 4 is the
 measurement that moves them.
 
-- [ ] **Step 1: Establish the chapter count from the source.**
+- [ ] **Step 1: Establish the item count from the source.**
 
-Fetch `https://bfnightly.bracketproductions.com/rustbook/` and enumerate the
-table of contents. The spec's §12 records **4 numbered sections, 73 chapters**
-(13 + 7 + 20 + 33) from one fetch on 2026-08-15, plus two front-matter pages
-(*Introduction*, *Building for the Web*).
+**The membership rule, ruled by the controller before dispatch: the corpus is
+every NUMBERED page of the tutorial.** Two independent fetches (2026-08-15)
+agree on mdbook's numbering:
 
-**This is a decision rule, not a prediction.** Branch on what you actually
+```
+   1     Building for the Web        1 item
+   2.1 - 2.13  Section 1, Hello Rust      13
+   3.1 - 3.7   Section 2, Stretch Goals    7
+   4.1 - 4.20  Section 3, Generating Maps 20
+   5.1 - 5.33  Section 4, Making A Game   33
+                                    total 74
+```
+
+*Introduction*, *Contributors* and *Licensing* are **unnumbered and excluded**:
+they carry no capability claim, and padding the denominator with credits and a
+licence would understate every ratio the report prints. *Building for the Web*
+**is** numbered and **is** included — it is a genuine toolchain claim, and it
+takes `inapplicable` with a reason rather than being silently dropped, because
+an excluded item is invisible while an `inapplicable` one carries its reason.
+
+**This is a decision rule, not a prediction.** Fetch
+`https://bfnightly.bracketproductions.com/rustbook/` and branch on what you
 find:
-- *Count matches 73 chapters + 2 front-matter items (75 total):* proceed.
-- *Count differs:* the source moved since the spec was written. Use **what you
-  find**, record the discrepancy and the fetch date in the corpus's
-  `provenance` string, and note it in your task report. Do not "correct" the
-  source to match the spec.
+- *Numbering matches the table above (74 numbered pages):* proceed; the test
+  asserts `74`.
+- *It differs:* the source moved. Use **what you find**, change the test
+  literal to match, record the discrepancy and the fetch date in the corpus's
+  `provenance`, and say so in your task report. The freeze asserts what is
+  true of the catalogue, never what this plan guessed.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -246,7 +263,7 @@ fn load_wolverson() -> hornvale::systems::Corpus {
 #[test]
 fn the_wolverson_corpus_is_frozen_at_its_declared_size() {
     let c = load_wolverson();
-    assert_eq!(c.items.len(), 75, "the frozen corpus changed size");
+    assert_eq!(c.items.len(), 74, "the frozen corpus changed size");
     assert!(c.ordered, "Wolverson's chapters are a pedagogical ladder");
     assert_eq!(c.unit, "chapter");
 }
