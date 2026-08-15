@@ -221,13 +221,14 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 32] = [
+const EXPECTED_UNTOKENISED: [&str; 33] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
     "PREREGISTERED, not met: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5667 over 120 pairs, below the preregistered 0.60 bar)",
+    "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
     "compiles the workspace in release; CI runs it with -- --ignored",
@@ -311,6 +312,12 @@ const EXPECTED_UNTOKENISED: [&str; 32] = [
 /// `BIO-supply-drowns-niche` predates all of these and carries no sentence
 /// here; its site is
 /// `windows/worldgen/tests/occupancy_readout.rs`.
+/// The Ballast's is `TOOL-min-vs-max-separation-compares-an-overlap`, reviewed
+/// 2026-08-15 — the retirement, under [decision
+/// 0134](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0134-a-partition-statistic-refuted-by-its-own-mechanism-is-retired-not-rescued.md),
+/// of a PRIMARY sign claim The Radiation had diagnosed but deliberately left
+/// standing; evidence at
+/// `windows/lab/tests/disposition_calibration.rs::the_weakest_raider_beats_the_strongest_abstainer_primary_claim`.
 ///
 /// **The Gnomon also found the rot this convention carries, and closed it for
 /// its own entry.** An `#[ignore]`d measurement stops being measured: the
