@@ -89,12 +89,17 @@ editing the registry is editing this instrument's inputs without knowing it.
 to — a path that exists is not a working feature, and a resolvable test name is
 not proof a capability is met — and the report prints that above its own tally
 rather than in a footnote. `refused` and `deferred` are strongly checked;
-`absent` is unfalsifiable by construction and is the only verdict a reader must
-take on the author's word, which is why `NOVELTY` ratchets its count and
-nothing else. An item whose real position is a refusal recorded only in a
-registry row, not a ratified decision, must read `absent`: the anchor kinds are
-not interchangeable, and widening `refused` to accept a registry anchor would
-let an unratified opinion masquerade as a project position.
+`absent` and `inapplicable` are BOTH unfalsifiable by construction and are the
+two verdicts a reader must take on the author's word — `absent` cites nothing,
+and `inapplicable`'s `reason:` anchor is confirmed *present* (empty prose is a
+parse error, UNJUSTIFIED) but its *content* is never checked against anything,
+the same way a registry or decision anchor's content is. `NOVELTY` ratchets
+only the `absent` count, not `inapplicable`'s, so this instrument's one
+falsification-by-count guard still watches a single number. An item whose real
+position is a refusal recorded only in a registry row, not a ratified decision,
+must read `absent`: the anchor kinds are not interchangeable, and widening
+`refused` to accept a registry anchor would let an unratified opinion
+masquerade as a project position.
 
 **See also.** `cli/src/systems.rs` (the resolver); `cli/tests/system_coverage.rs`
 (the ratchet and the anchor audit); `docs/audits/system-coverage-wolverson-2021.md`;

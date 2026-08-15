@@ -11,8 +11,10 @@ that the first unmet item is a *refusal* rather than a hole.
 ## 1. This campaign built one resolver and produced four separate false-cleans in it
 
 A false-clean is a guard reporting safety it does not have. Four of them, in
-about nine hundred lines of new code whose *entire purpose* is to notice when
-a citation stops being true. In the order they were found:
+about nine hundred lines of new *resolution* code (the anchor parser and
+audit — `cli/src/systems.rs` minus its rendering functions and inline unit
+tests, ~861 of the file's 1,278 lines) whose *entire purpose* is to notice
+when a citation stops being true. In the order they were found:
 
 | the defect | why it read as safe | found by |
 |---|---|---|

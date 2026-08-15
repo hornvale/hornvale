@@ -23,11 +23,11 @@ domains land (spec §6).
 
 **Declared limitation:** subsystem granularity is coarse, and a domain cited
 by a single chapter reads as fully covered here. `windows/vessel` is the
-most-cited subsystem below, at 13 anchor(s) — it does not appear in the
-surplus list, and reads as fully covered. It is not: 13 anchors are not 13
-anchors' worth of the crate's actual surface, and this instrument does not
-measure that surface at all. This read shows the instrument's own bias in
-its own output; it does not correct for it.
+most-cited subsystem across every corpus above, at 13 anchor(s) — it does
+NOT appear in the surplus list below, and reads as fully covered. It is not:
+13 anchors are not 13 anchors' worth of the crate's actual surface, and this
+instrument does not measure that surface at all. This read shows the
+instrument's own bias in its own output; it does not correct for it.
 
 - `domains/alchemy`
 - `domains/astronomy`

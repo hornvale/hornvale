@@ -411,8 +411,7 @@ fn the_decisions_stamp_changes_when_the_decisions_file_changes() {
         let frontier_dir = root.join("book/src/frontier");
         std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
         std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
-        std::fs::create_dir_all(root.join("domains")).expect("make scratch domains dir");
-        std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+        write_minimal_subsystem(root);
         std::fs::write(
             digest_dir.join("decisions-in-force.md"),
             format!("{decision_line}\n"),
@@ -450,6 +449,25 @@ fn the_decisions_stamp_changes_when_the_decisions_file_changes() {
 /// up. `tag` keeps concurrent calls (e.g. from different tests in this file)
 /// from colliding on the same temp path. Follows the same synthetic-root
 /// pattern as `gather_refuses_a_*` and `the_decisions_stamp_changes_*` above.
+/// Create `domains/dummy/Cargo.toml` under `root` so `gather_subsystem_
+/// directories` (and `gather_crate_directories`) see at least one real
+/// subsystem — required since M3's empty-subsystems floor: a synthetic root
+/// with `domains/`/`windows/` present but containing no crate would
+/// otherwise fail `RepoFacts::gather` outright, which is correct for the
+/// dedicated `gather_refuses_a_tree_with_zero_subsystem_directories` test
+/// but wrong for every OTHER synthetic-root fixture, which only cares about
+/// the decisions/registry content it is actually varying.
+fn write_minimal_subsystem(root: &std::path::Path) {
+    let dir = root.join("domains/dummy");
+    std::fs::create_dir_all(&dir).expect("make scratch subsystem dir");
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[package]\nname = \"hornvale-dummy\"\n",
+    )
+    .expect("writes a scratch Cargo.toml");
+    std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+}
+
 fn facts_with_registry_status(tag: &str, status: &str) -> RepoFacts {
     let root = std::env::temp_dir().join(format!(
         "hv-compendium-registry-status-{tag}-{}",
@@ -459,8 +477,7 @@ fn facts_with_registry_status(tag: &str, status: &str) -> RepoFacts {
     let frontier_dir = root.join("book/src/frontier");
     std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
     std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
-    std::fs::create_dir_all(root.join("domains")).expect("make scratch domains dir");
-    std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+    write_minimal_subsystem(&root);
     std::fs::write(
         digest_dir.join("decisions-in-force.md"),
         "- **0001** A real decision\n",
@@ -479,11 +496,16 @@ fn facts_with_registry_status(tag: &str, status: &str) -> RepoFacts {
 
 /// STALE-DEFERRED must fire on a QUALIFIED shipped status, not just the bare
 /// word. Measured against the real registry (1269 status cells): 167 read
-/// exactly `shipped`, but 23 read `shipped (…)` and 16 more are
-/// markdown-bolded — the original `status == "shipped"` exact match could
-/// never see any of those 39. `CLIENT-action-clock` (the existing fixture's
-/// row) happens to be one of the 167 bare ones, so nothing caught this until
-/// it was measured on purpose.
+/// exactly `shipped`, 23 read `shipped (…)`, and 16 more are
+/// markdown-bolded — but 23+16=39 DOUBLE-COUNTS a 3-row overlap (a status
+/// like `**shipped (C1)**` is both bolded and parenthetical-qualified), so
+/// the DISTINCT count of shipped-family rows the original exact match could
+/// not see is **36 of 206** (`docs/retrospectives/the-compendium.md` §1;
+/// 206 is every row that reads *some* shipped-adjacent status, 1269 is
+/// every status cell in the registry — different denominators, not a second
+/// disagreement). `CLIENT-action-clock` (the existing fixture's row)
+/// happens to be one of the 167 bare ones, so nothing caught this until it
+/// was measured on purpose.
 #[test]
 fn a_deferral_against_a_parenthetically_qualified_shipped_status_is_stale() {
     let facts = facts_with_registry_status("qualified", "shipped (C1)");
@@ -533,6 +555,212 @@ fn a_deferral_against_a_shipped_then_superseded_status_is_stale() {
     assert!(
         matches!(f.as_slice(), [Finding::StaleDeferred { .. }]),
         "expected STALE-DEFERRED for a shipped-then-superseded status, got {f:?}"
+    );
+}
+
+// --- The fifth false-clean: STALE-DEFERRED fired on `shipped` alone, but a
+// `deferred` verdict's claim ("planned, not built") is just as false against
+// `rejected` or `refuted` — worse for `refuted`, since decision 0131 mints
+// that status for an idea a MEASUREMENT disproved, so a `deferred` verdict
+// against one is permanently a lie. `ratified` is included too (see
+// `DEFERRAL_FALSIFYING_STATUSES`'s doc comment for the reasoning); `raw`,
+// `elaborated`, and `spec'd` are the three in-flight pipeline stages that
+// stay excluded, because "planned, not built" is still accurate for them.
+
+/// STALE-DEFERRED must fire on `ratified` — a settled decision is not
+/// "planned, not built" even when (as here) it is a policy constraint
+/// rather than a shipped capability.
+#[test]
+fn a_deferral_against_a_ratified_status_is_stale() {
+    let facts = facts_with_registry_status("ratified", "ratified (0009)");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    let [Finding::StaleDeferred { why, .. }] = f.as_slice() else {
+        panic!("expected STALE-DEFERRED for `ratified (0009)`, got {f:?}");
+    };
+    assert!(
+        why.contains("ratified"),
+        "expected the message to name the actual status, got: {why}"
+    );
+}
+
+/// STALE-DEFERRED must fire on `rejected` — the idea was considered and set
+/// aside, so "planned, not built" is false; the honest repair is `absent`.
+#[test]
+fn a_deferral_against_a_rejected_status_is_stale() {
+    let facts = facts_with_registry_status("rejected", "rejected");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    let [Finding::StaleDeferred { why, .. }] = f.as_slice() else {
+        panic!("expected STALE-DEFERRED for `rejected`, got {f:?}");
+    };
+    assert!(
+        why.contains("rejected") && why.contains("absent"),
+        "expected the message to name the status and the `absent` repair, got: {why}"
+    );
+}
+
+/// STALE-DEFERRED must fire on `refuted` — decision 0131 mints this status
+/// for an idea a MEASUREMENT disproved, with no artifact shipped from it;
+/// deferring against one is permanently a lie, and the honest verdict is
+/// `absent`.
+#[test]
+fn a_deferral_against_a_refuted_status_is_stale() {
+    let facts = facts_with_registry_status("refuted", "refuted (The Echo)");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    let [Finding::StaleDeferred { why, .. }] = f.as_slice() else {
+        panic!("expected STALE-DEFERRED for `refuted (The Echo)`, got {f:?}");
+    };
+    assert!(
+        why.contains("refuted") && why.contains("absent"),
+        "expected the message to name the status and the `absent` repair, got: {why}"
+    );
+}
+
+/// Negative control on the IN-FLIGHT end of the pipeline: `raw` must stay
+/// clean. Complements the existing `elaborated`-mentioning-"shipped-in-
+/// prose" control — together they cover both non-falsifying pipeline
+/// stages a naive widening (e.g. "anything that isn't raw/elaborated/
+/// spec'd" typo'd the wrong way) could get backwards.
+#[test]
+fn a_deferral_against_a_raw_status_is_clean() {
+    let facts = facts_with_registry_status("raw", "raw");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        f.is_empty(),
+        "`raw` is still accurately \"planned, not built\"; expected no findings, got {f:?}"
+    );
+}
+
+/// Same, for `spec'd` — the pipeline stage immediately before a decision.
+#[test]
+fn a_deferral_against_a_specd_status_is_clean() {
+    let facts = facts_with_registry_status("specd", "spec'd");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        f.is_empty(),
+        "`spec'd` is still accurately \"planned, not built\"; expected no findings, got {f:?}"
+    );
+}
+
+// --- I4: the `path:` anchor arm had no resolution test at all — the only
+// existing `path:` fixture asserts wrong-kind rejection, never that the arm
+// actually resolves anything. Three malformed shapes read clean by accident
+// of `Path::join`'s semantics before the `path_anchor_is_well_formed` guard:
+// empty, absolute (discards the repo root), and a `..`-escaping relative
+// path.
+
+/// The positive case this arm never had: a `present` verdict anchored to a
+/// path that genuinely exists in the repo must resolve clean.
+#[test]
+fn a_present_verdict_anchored_to_a_real_path_is_clean() {
+    let f = audit(
+        &corpus_with("present", Some("path:cli/src/main.rs")),
+        &facts(),
+    );
+    assert!(
+        f.is_empty(),
+        "cli/src/main.rs exists in the repo; expected no findings, got {f:?}"
+    );
+}
+
+/// An empty `path:` anchor joins to the repo root itself, which always
+/// exists — a false-CLEAN without the guard.
+#[test]
+fn a_path_anchor_that_is_empty_is_dangling() {
+    let f = audit(&corpus_with("present", Some("path:")), &facts());
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for an empty path anchor, got {f:?}"
+    );
+}
+
+/// An absolute `path:` anchor makes `Path::join` discard the repo root
+/// entirely and test the absolute path outright — `/etc/passwd` exists on
+/// any real machine, so this was a false-CLEAN without the guard.
+#[test]
+fn a_path_anchor_that_is_absolute_is_dangling() {
+    let f = audit(&corpus_with("present", Some("path:/etc/passwd")), &facts());
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for an absolute path anchor, got {f:?}"
+    );
+}
+
+/// A `..`-escaping `path:` anchor walks out of the repo entirely.
+#[test]
+fn a_path_anchor_that_escapes_the_repo_root_is_dangling() {
+    let f = audit(&corpus_with("present", Some("path:../")), &facts());
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for a `..`-escaping path anchor, got {f:?}"
+    );
+}
+
+// --- M1: an `inapplicable` verdict with an EMPTY `reason:` anchor resolved
+// clean, contradicting spec §5's reasonless-`inapplicable` rule that
+// UNJUSTIFIED already generalizes for every other verdict.
+
+/// An empty reason must be UNJUSTIFIED, not clean.
+#[test]
+fn an_inapplicable_verdict_with_an_empty_reason_is_unjustified() {
+    let f = audit(&corpus_with("inapplicable", Some("reason:")), &facts());
+    assert!(
+        matches!(f.as_slice(), [Finding::Unjustified { .. }]),
+        "expected UNJUSTIFIED for an empty reason, got {f:?}"
+    );
+}
+
+/// The positive control: a non-empty reason is clean, so the fix above is
+/// not rejecting every `reason:` anchor.
+#[test]
+fn an_inapplicable_verdict_with_a_real_reason_is_clean() {
+    let f = audit(
+        &corpus_with("inapplicable", Some("reason:not a world capability")),
+        &facts(),
+    );
+    assert!(
+        f.is_empty(),
+        "a non-empty reason must resolve clean, got {f:?}"
+    );
+}
+
+// --- M3: an empty `subsystems` list must fail `RepoFacts::gather`, the same
+// floor `in_force` and `registry` already carry, so `render_matrix` can
+// never print its two contradictory sentences about whether anything is
+// cited.
+
+/// `gather` must refuse a repo tree with no subsystem directories at all.
+#[test]
+fn gather_refuses_a_tree_with_zero_subsystem_directories() {
+    let root = std::env::temp_dir().join(format!(
+        "hv-compendium-empty-subsystems-{}",
+        std::process::id()
+    ));
+    let digest_dir = root.join("docs/digest");
+    let frontier_dir = root.join("book/src/frontier");
+    std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
+    std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
+    // `domains/` and `windows/` exist but are EMPTY — no crate directories
+    // under either, so `gather_subsystem_directories` returns `Vec::new()`.
+    std::fs::create_dir_all(root.join("domains")).expect("make scratch domains dir");
+    std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+    std::fs::write(
+        digest_dir.join("decisions-in-force.md"),
+        "- **0001** A real decision\n",
+    )
+    .expect("writes a decisions file");
+    std::fs::write(
+        frontier_dir.join("idea-registry.md"),
+        "| ID-1 | idea | raw | high | nowhere |\n",
+    )
+    .expect("writes a registry file");
+
+    let result = RepoFacts::gather(&root);
+    let _ = std::fs::remove_dir_all(&root);
+
+    let err = result.expect_err("zero subsystem directories must be an error, not Ok(vec![])");
+    assert!(
+        err.contains("zero subsystem directories"),
+        "expected the empty-parse error to name what happened, got: {err}"
     );
 }
 

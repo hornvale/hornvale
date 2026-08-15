@@ -374,6 +374,9 @@ report "no drift" forever.
 | registry IDs are machine-parseable | read `cli/tests/docs_consistency.rs` | `looks_like_registry_id`, `parse_registry` |
 | `docs/audits/` is already drift-checked | read `docs/generated-paths.txt` | present — **no edit needed there** |
 | the tropes ratchet runs in the gate | read `cli/tests/trope_coverage.rs` | a nextest byte-comparison test — but see §12a, the ladder moved under this campaign |
+| Hornvale has no attack verb / no HP | read `session.rs` HELP + grep workspace | confirmed; wounds exist only in history-baking |
+| NPCs move only on `wait` | grep `step_with_occupancy` | exactly one call site, in `fn wait` |
+| the game client is monochrome | read `cell.rs` | `enum Ink { Plain }`; colour is on the wire, unread |
 
 ## 12a. Which gate the ratchet actually runs in — amended mid-campaign
 
@@ -404,9 +407,6 @@ edits that go through a stage or campaign gate before merging. But it does mean
 **a local `gate-commit` immediately after writing these tests will not run
 them**, which would otherwise read as a passing gate. Do not take a green
 `gate-commit` as evidence the ratchet works; take the stage gate.
-| Hornvale has no attack verb / no HP | read `session.rs` HELP + grep workspace | confirmed; wounds exist only in history-baking |
-| NPCs move only on `wait` | grep `step_with_occupancy` | exactly one call site, in `fn wait` |
-| the game client is monochrome | read `cell.rs` | `enum Ink { Plain }`; colour is on the wire, unread |
 
 ## 13. Open questions and follow-ups
 

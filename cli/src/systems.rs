@@ -189,11 +189,23 @@ impl RepoFacts {
             ));
         }
 
+        let subsystems = gather_subsystem_directories(root)?;
+        if subsystems.is_empty() {
+            return Err(format!(
+                "domains/* and windows/* under {} produced zero subsystem directories. \
+                 Treating this as a parse failure, not a (false) claim that no subsystem \
+                 exists: check both directories still exist and still contain crates. Left \
+                 unguarded, an empty `subsystems` list makes `render_matrix` print two \
+                 contradictory sentences about whether anything is cited.",
+                root.display()
+            ));
+        }
+
         Ok(RepoFacts {
             in_force,
             registry,
             crates: gather_crate_directories(root)?,
-            subsystems: gather_subsystem_directories(root)?,
+            subsystems,
             decisions_stamp,
             root: root.to_path_buf(),
         })
@@ -673,7 +685,8 @@ pub enum Finding {
         /// What would have caused this, and the two legitimate repairs.
         why: String,
     },
-    /// A `deferred` verdict whose registry row now reads `shipped`.
+    /// A `deferred` verdict whose registry row now reads a status that
+    /// falsifies "planned, not built" (see [`DEFERRAL_FALSIFYING_STATUSES`]).
     StaleDeferred {
         /// The item's corpus-local id.
         id: String,
@@ -793,7 +806,101 @@ fn audit_item(item: &Item, facts: &RepoFacts) -> Option<Finding> {
         });
     }
 
+    // A `reason:` anchor's prose is never checked against anything (see
+    // `Anchor::Reason(_) => None` in `resolve_anchor`) — it cannot be, the
+    // same way `absent` cites nothing to check. But an EMPTY reason is not
+    // a weaker version of that unfalsifiability; it is the reasonless-
+    // `inapplicable` failure spec §5 names, and UNJUSTIFIED already
+    // generalizes it for every other verdict (a `refused` with no decision
+    // text, a `deferred` with no registry row). Catching it here, before
+    // `resolve_anchor` ever sees it, keeps that generalization total.
+    if let Anchor::Reason(reason) = &anchor
+        && reason.trim().is_empty()
+    {
+        return Some(Finding::Unjustified {
+            id: item.id.clone(),
+            why: format!(
+                "{} has verdict `inapplicable` but its `reason:` anchor carries no prose. \
+                 An empty reason is the same failure spec §5's reasonless-`inapplicable` \
+                 rule already refuses for every other verdict, generalized: state why this \
+                 item does not apply.",
+                item.id
+            ),
+        });
+    }
+
     resolve_anchor(item, anchor_str, &anchor, facts)
+}
+
+/// The registry statuses that falsify a `deferred` verdict's claim
+/// ("planned, not built") — the four TERMINAL outcomes of
+/// `idea-registry.md`'s "How to read a row" pipeline (`raw` → `elaborated` →
+/// `spec'd` → one of these four), where the idea's question has been
+/// resolved one way or another. `raw`/`elaborated`/`spec'd` are the three
+/// IN-FLIGHT stages that precede a decision — "planned, not built" is still
+/// an accurate reading of those, so they are excluded.
+///
+/// `shipped`, `rejected`, and `refuted` are the unambiguous cases: built,
+/// deliberately set aside, or measured false — none is "planned, not built"
+/// anymore. `ratified` took a deliberate call, not an obvious read: unlike
+/// the other three, a ratified row does not always name a shipped
+/// capability by itself — some are pure policy constraints (`SOC-6`: "No
+/// alignment axis"). It is included anyway, for two reasons. First, every
+/// ratified row IS a settled decision by construction —
+/// `docs/digest/decisions-in-force.md` treats every non-superseded decision
+/// as a CURRENTLY binding fact, never a future plan, so "planned, not
+/// built" is exactly as false against a settled decision as against a
+/// shipped feature, even when the settled fact is a constraint rather than
+/// a capability. Second, every `ratified` row actually surveyed in the real
+/// registry already names an enforced or tested capability, not an
+/// aspiration (`SOC-dense-settlement`: "`Bake::vacant_habitable` enforces
+/// it"; `CLIENT-two-tier-position`: "Now tested, not argued").
+const DEFERRAL_FALSIFYING_STATUSES: [&str; 4] = ["shipped", "ratified", "rejected", "refuted"];
+
+/// The repair a `StaleDeferred` finding should suggest, keyed by the
+/// registry row's actual (normalized) status — the repairs genuinely
+/// differ, so the message must name the status rather than assuming
+/// `shipped`.
+fn deferral_repair_advice(status: &str) -> &'static str {
+    match status {
+        "shipped" => {
+            "promote this item to `present` (citing the shipping mechanism) or to \
+             `refused` if what shipped does not actually satisfy it"
+        }
+        "ratified" => {
+            "promote this item to `present` (citing the decision, or the mechanism it \
+             enforces, if Hornvale now has the capability) or to `refused` (citing \
+             `decision:NNNN`) if the ratified decision settled the question by forbidding it"
+        }
+        "rejected" => {
+            "re-verdict this item to `absent` (the idea was considered and set aside, with \
+             no plan behind it now) or to `refused` if a specific decision now forbids it"
+        }
+        "refuted" => {
+            "re-verdict this item to `absent` — a `refuted` row's central claim was tested \
+             and found false, with no artifact shipped from it, so there is nothing built \
+             to promote"
+        }
+        _ => "re-verdict this item to whatever the registry's current status actually settled",
+    }
+}
+
+/// True when `p` (a `path:` anchor's payload) is a well-formed repo-relative
+/// path: non-empty, not absolute, and containing no `..` component. Without
+/// this guard `facts.root.join(p).exists()` resolves three malformed shapes
+/// as clean by accident of `Path::join`'s own semantics: an empty `p` joins
+/// to the root directory itself (which always exists); an absolute `p`
+/// (`/etc/passwd`) makes `join` DISCARD the root entirely and test the
+/// absolute path outright; and a leading `../` escapes the repo into
+/// whatever sits beside it on disk. None of those is a location inside this
+/// repo, which is the only thing a `path:` anchor can mean.
+fn path_anchor_is_well_formed(p: &str) -> bool {
+    if p.is_empty() || p.starts_with('/') {
+        return false;
+    }
+    !Path::new(p)
+        .components()
+        .any(|c| c == std::path::Component::ParentDir)
 }
 
 /// Verify `anchor` still resolves against `facts`. `None` means clean.
@@ -836,24 +943,40 @@ fn resolve_anchor(
                     item.id
                 ),
             }),
-            Some(status) if status == "shipped" => Some(Finding::StaleDeferred {
-                id: item.id.clone(),
-                row: r.clone(),
-                why: format!(
-                    "{} defers to registry:{r}, which now reads `shipped` in\n\
-                     book/src/frontier/idea-registry.md. A deferral is a promise that has not\n\
-                     yet been kept; once the registry says it shipped, promote this item to\n\
-                     `present` (citing the shipping mechanism) or to `refused` if what shipped\n\
-                     does not actually satisfy it. The idea registry is hand-authored, not\n\
-                     digest-generated, so there is no stamp to print here — check that file's\n\
-                     own history for when the row shipped.",
-                    item.id
-                ),
-            }),
+            Some(status) if DEFERRAL_FALSIFYING_STATUSES.contains(&status.as_str()) => {
+                Some(Finding::StaleDeferred {
+                    id: item.id.clone(),
+                    row: r.clone(),
+                    why: format!(
+                        "{} defers to registry:{r}, which now reads `{status}` in\n\
+                         book/src/frontier/idea-registry.md. A `deferred` verdict claims\n\
+                         \"planned, not built\"; that claim stopped being true once this row's\n\
+                         question was settled — {}. The idea registry is hand-authored, not\n\
+                         digest-generated, so there is no stamp to print here — check that\n\
+                         file's own history for when the row's status last changed.",
+                        item.id,
+                        deferral_repair_advice(status)
+                    ),
+                })
+            }
             Some(_) => None,
         },
         Anchor::Path(p) => {
-            if facts.root.join(p).exists() {
+            if !path_anchor_is_well_formed(p) {
+                Some(Finding::Dangling {
+                    id: item.id.clone(),
+                    anchor: anchor_str.to_string(),
+                    why: format!(
+                        "{} cites path:{p}, which is not a well-formed repo-relative path —\n\
+                         empty, absolute (starts with `/`, discarding the repo root when\n\
+                         joined to it), or containing a `..` component (escaping the repo\n\
+                         entirely). None of those can be what a path anchor means. Fix the\n\
+                         anchor to a real path relative to the repo root, e.g.\n\
+                         `path:cli/src/main.rs`.",
+                        item.id
+                    ),
+                })
+            } else if facts.root.join(p).exists() {
                 None
             } else {
                 Some(Finding::Dangling {
@@ -1151,17 +1274,22 @@ pub fn render(corpus: &Corpus, path: &str) -> String {
     // corpus records. Without it, those rows printed exactly as flat as a
     // strongly-anchored one, which is the same "scorecard, not an
     // instrument" failure the caveat above this table already exists to
-    // avoid for the tally. `|` is escaped defensively: today no note
-    // contains one, but a table cell silently breaks the moment one does,
-    // and nothing else in this rendering pipeline checks for that.
+    // avoid for the tally. `|` is escaped defensively in EVERY free-text
+    // column — `title`, `anchor`, and `note` — not just `note`: `anchor`
+    // carries free prose too (`reason:<sentence>` for every `inapplicable`
+    // item), and is if anything the likelier source of a dropped table
+    // cell, the same defect The Shelf-Mark found in the idea registry
+    // guarding only one column of several. Today no corpus cell contains a
+    // `|`, but a table cell silently breaks the moment one does, and
+    // nothing else in this rendering pipeline checks for that.
     s.push_str("\n## Items\n\n| id | title | verdict | anchor | note |\n|---|---|---|---|---|\n");
     for item in &corpus.items {
         s.push_str(&format!(
             "| {} | {} | {} | {} | {} |\n",
             item.id,
-            item.title,
+            item.title.replace('|', "\\|"),
             verdict_name(item.verdict),
-            item.anchor.as_deref().unwrap_or(""),
+            item.anchor.as_deref().unwrap_or("").replace('|', "\\|"),
             item.note.replace('|', "\\|")
         ));
     }
@@ -1251,11 +1379,11 @@ pub fn render_matrix(corpora: &[&Corpus], facts: &RepoFacts) -> String {
         Some((dir, n)) => s.push_str(&wrap(&format!(
             "**Declared limitation:** subsystem granularity is coarse, and a domain cited by \
              a single chapter reads as fully covered here. `{dir}` is the most-cited \
-             subsystem below, at {n} anchor(s) — it does not appear in the surplus list, and \
-             reads as fully covered. It is not: {n} anchors are not {n} anchors' worth of the \
-             crate's actual surface, and this instrument does not measure that surface at \
-             all. This read shows the instrument's own bias in its own output; it does not \
-             correct for it.",
+             subsystem across every corpus above, at {n} anchor(s) — it does NOT appear in \
+             the surplus list below, and reads as fully covered. It is not: {n} anchors are \
+             not {n} anchors' worth of the crate's actual surface, and this instrument does \
+             not measure that surface at all. This read shows the instrument's own bias in \
+             its own output; it does not correct for it.",
         ))),
         None => s.push_str(&wrap(
             "**Declared limitation:** subsystem granularity is coarse, and a domain cited by \
