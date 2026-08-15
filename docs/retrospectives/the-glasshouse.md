@@ -541,6 +541,27 @@ other refs too. Not this campaign's.
 - **`k = 0.30`**, settled. Criterion 1 missing Earth by 12.25 K is the
   published finding, not a thing to fix.
 
+### Two lane-waiting traps, both cost this session time
+
+**`pgrep -f "<pattern>"` MATCHES ITS OWN WRAPPER.** A poll loop built as
+`while ssh lefford 'pgrep -f "lane-run.sh .* $REF"'; do sleep 120; done` never
+exits: the remote `bash -c` wrapper's command line contains the pattern
+string, so `pgrep` finds itself and the condition is permanently true. The
+same self-match is visible in a bare `pgrep -af "lane-run.sh census"`, which
+lists its own `bash -c pgrep …` row. Match on something the wrapper cannot
+contain, or use the tool built for this: **`make lane-wait JOB=<id>`**, which
+is opt-in blocking and is the sanctioned way to wait on a lane job. This
+session's watcher looped for hours and the lane results were obtained by
+polling `make lane-status` by hand instead — no conclusion depended on it, but
+the wait was wasted.
+
+**The lane is SHARED and strictly serial across campaigns.** At this handoff it
+was occupied by two other refs (`a386b784` artifacts; `ed8a717b` seam-guard and
+heavy). A dispatch does not start when you make it — it takes a queue position,
+and `heavy` alone runs ~30 min while a census runs ~16. Read `make lane-status`
+before assuming a dispatch is running, and budget queue time, not just run time.
+That is an accepted cost of decision 0133, not a fault.
+
 ### The tension to resolve before merging
 
 A **fully green** stage/campaign gate is incompatible with §16's two
