@@ -4,8 +4,13 @@
 # stops being tribal knowledge re-derived each session. `just` is not a repo
 # dependency; this uses `make`, already present everywhere.
 #
-#   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
-#   make gate         # the commit gate: fmt + clippy + nextest + doctests (heavy tier skipped)
+#   make quick        # cheap half: fmt --check + clippy + type-audit
+#   make gate-commit  # THE PRE-COMMIT GATE: lints, tripwires, and the sub-floor test tier
+#                     # (local; ~10-16 s on a clean tree, up to ~470 s after a
+#                     # kernel/-layer edit — cost is the edit's blast radius in
+#                     # the kernel -> domains/* -> windows/* -> cli layering;
+#                     # see spec 2026-08-14-the-staff-design.md §4.2b)
+#   make gate         # the full workspace gate: fmt + clippy + type-audit + nextest --workspace + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
@@ -24,7 +29,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate gate-run gate-fast gate-fast-run gate-full seam-guard seam-guard-list ci heavy-remote heavy-status heavy-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-fast-run gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -36,8 +41,97 @@ quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-r
 
 quick-run: fmt-check clippy type-audit type-audit-report
 
-gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
-	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
+gate-commit: ## THE COMMIT GATE: lints, tripwires and the sub-floor test tier (local; ~10-16 s clean, up to ~470 s after a kernel/-layer edit — see spec §4.2b)
+	@bash scripts/timed.sh gate-commit -- make --no-print-directory gate-commit-run
+
+gate-commit-run: style-run subfloor-run
+
+# NO FRESHNESS CHECK HERE. An earlier draft called
+# scripts/test-worktree-freshness.sh from this recipe. Ruled out on
+# measurement (R5): target/debug/deps holds 24,544 files and the scan costs
+# ~1 s per sibling worktree, so with six worktrees it is ~5 s on EVERY commit
+# gate — a third of the whole budget, paid continuously, for a condition that
+# arises exactly once, at worktree-take's `mv`. Task 1 placed the call in
+# scripts/worktree-take.sh instead, which is where the condition is created.
+style-run: fmt-check clippy type-audit type-audit-report
+
+# THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
+# roster is not run here, and enters on the next green `make gate-stage`.
+# That inverts this repo's default-deny instinct deliberately — the commit gate
+# is a SPEED tier and coverage is the stage gate's job. Defaulting the other
+# way was measured at 178.6 s against a ~14 s estimate.
+#
+# Exit 3 from the roster script means NO ROSTER for this host, which is a
+# different thing from an empty roster and must not read as a green gate.
+#
+# WHY THE ROSTER'S LINE COUNT DOES NOT MATCH THIS TARGET'S TEST COUNT, AND WHY
+# THAT IS EXPECTED. docs/timings/subfloor-roster.tsv carries 2748 non-comment
+# lines but only 2730 DISTINCT trailing test names: 12 names are each
+# duplicated across crates, which is what makes those two counts differ
+# (2748 - 2730 = 18 excess LINE-occurrences of an already-seen name — a
+# property of the roster FILE). A Mac's
+# `cargo nextest run --workspace -E "$$filter"` then selects 2746 tests, not
+# 2730 — a different number counting a different thing (excess SELECTED
+# TESTS at run time, not excess lines; see the +19 bullet below). Two
+# effects, opposite in direction, explain the run-time number:
+#   -3  three roster names match ZERO tests in this host's compiled binary:
+#       `census_claim::tests::a_claim_naming_a_dead_pid_is_stale`,
+#       `a_live_ancestor_holding_the_lock_makes_a_claim_a_no_op` and
+#       `a_live_claim_is_reported_with_its_context`
+#       (windows/lab/src/census_claim.rs) are `#[cfg(target_os = "linux")]`-
+#       gated, so they never exist in the test binary on Darwin at all. The
+#       roster is authored on the canonical (Linux) gating host and read on
+#       every host, by design (`subfloor-roster.sh`'s own header) — the cost
+#       this buys is not host SPEED shifting membership at the margin, it is
+#       PLATFORM GATING, which is categorical: a whole class of test can be
+#       structurally absent from every Mac's commit gate while still reading
+#       as present in the roster. Benign here — those three still run in the
+#       stage gate on the canonical box — but worth knowing before treating a
+#       roster/run count mismatch as a bug.
+#  +19  twelve names collide across 2-7 crates each (nextest's `test(=NAME)`
+#       matches by test NAME, not by binary — see subfloor-roster.sh's own
+#       comment on why), so each such roster line over-selects every crate
+#       sharing that name. Over-selection is safe: it costs a little time and
+#       never hides a failure.
+#   2730 - 3 + 19 = 2746, which is exactly what this target runs.
+subfloor-run: nextest-check
+	@filter="$$(bash scripts/subfloor-roster.sh)"; \
+	status=$$?; \
+	if [ $$status -eq 3 ]; then \
+	    echo "gate-commit: no sub-floor roster for this host — the test tier is UNAVAILABLE, not empty." >&2; \
+	    echo "gate-commit: run a green 'make gate-stage REF=<sha>' to author one." >&2; \
+	    exit 1; \
+	elif [ $$status -ne 0 ]; then \
+	    echo "gate-commit: scripts/subfloor-roster.sh failed with an unrecognised exit status ($$status), not the empty-filter case." >&2; \
+	    echo "gate-commit: read its stderr above; this is a script fault, not a policy verdict." >&2; \
+	    exit 1; \
+	fi; \
+	if [ -z "$$filter" ]; then \
+	    echo "gate-commit: the roster is EMPTY. That is never correct — it would make this gate vacuous." >&2; \
+	    exit 1; \
+	fi; \
+	cargo nextest run --workspace -E "$$filter"
+
+gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the lane (REF=<full-sha>)
+	@bash scripts/lane-dispatch.sh gate "$(REF)"
+	@bash scripts/lane-dispatch.sh artifacts "$(REF)"
+	@bash scripts/lane-dispatch.sh outboard "$(REF)"
+	@bash scripts/lane-dispatch.sh clients "$(REF)"
+
+gate-campaign: ## THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard (REF=<full-sha>)
+	@$(MAKE) --no-print-directory gate-stage REF="$(REF)"
+	@bash scripts/lane-dispatch.sh heavy "$(REF)"
+	@bash scripts/lane-dispatch.sh census "$(REF)"
+	@bash scripts/lane-dispatch.sh seam-guard "$(REF)"
+
+# The former `make gate` body, now a set that runs ON the lane
+# (scripts/lane-sets.tsv's `gate` row: `make --no-print-directory
+# gate-suite-run`). `lane-run.sh` supplies the `timed.sh`/dispatch wrapping
+# that the old top-level `gate` target used to do itself; this target's own
+# job is unchanged from before The Staff — run the cheap checks, then the
+# nextest+doctest body below (gate-run), unchanged.
+gate-suite-run: fmt-check clippy type-audit type-audit-report nextest-check
+	@$(MAKE) --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it. Until this split,
 # docs/timings.md carried ZERO rows labelled `gate` (0086's amendment): the
@@ -103,7 +197,7 @@ gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy 
 # Mac and fail there, silently reporting `tee`'s exit status (always 0) as the
 # gate's verdict — a gate that can never go red. Writing the status inside the
 # brace group is POSIX and reads the same everywhere.
-gate-run: fmt-check clippy type-audit type-audit-report nextest-check
+gate-run:
 	@mkdir -p target/nextest/ci docs/timings
 # THE STATUS FILE IS DELETED FIRST AND VALIDATED AFTER, and both halves are
 # load-bearing. nextest's status reaches us through a file because the brace
@@ -167,33 +261,58 @@ gate-run: fmt-check clippy type-audit type-audit-report nextest-check
 	bash scripts/census-advisory.sh || true; \
 	exit $$alarm_status
 
-gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
-	@bash scripts/timed.sh gate-fast -- make --no-print-directory gate-fast-run
-
 gate-fast-run:
 	@bash scripts/gate-fast.sh
 
-gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
-	@bash scripts/gate-full-heavy.sh
-	@$(MAKE) --no-print-directory seam-guard
-	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+# SIGNPOSTS, NOT ALIASES. Aliasing `gate` to the commit gate would silently
+# change what 417 runs a month mean: a caller expecting the full suite would
+# get lints plus the sub-floor tier and no warning. Refusing is the same shape
+# scripts/hv-guard-bash.sh uses when it intercepts a raw whole-workspace
+# `cargo test` and names the project's own targets instead.
+# `gate-full` IS IN THIS LIST AND THE REASON IS NOT COSMETIC. It was declared
+# `gate-full: gate` — a prerequisite — so the moment `gate` becomes a refusing
+# signpost, `gate-full` would inherit the refusal and stop doing its job. It is
+# also genuinely superseded: `gate-full` was `gate` + the heavy tier, and
+# `gate-campaign` is `gate-stage` + heavy + census, which strictly contains it.
+# Leaving it as a live target pointing at a dead prerequisite would be the
+# worst of both. Verified before this task: `gate-full` and `ci` were the only
+# two targets that took `gate` as a prerequisite.
+# `gate-fast` IS ALSO RETIRED (n=4 measurement: it only bought ~10% over the
+# full gate) rather than pointed at a set — see docs/decisions/0132.
+gate ci gate-fast gate-full:
+	@echo "make $@ no longer exists. Since The Staff there are three gates," >&2
+	@echo "named for the campaign moment each one gates:" >&2
+	@echo "" >&2
+	@echo "  make gate-commit                    local, seconds, every commit" >&2
+	@echo "  make gate-stage    REF=<full-sha>   the lane, each plan-stage boundary" >&2
+	@echo "  make gate-campaign REF=<full-sha>   the lane, before merging" >&2
+	@echo "" >&2
+	@echo "gate-full is superseded by gate-campaign, which contains it." >&2
+	@echo "" >&2
+	@echo "One set on demand:  make lane SET=<set> REF=<full-sha>" >&2
+	@echo "The roster:         scripts/lane-sets.tsv" >&2
+	@exit 2
 
 # Deliberately NOT in the commit gate: each registered call site costs a full
-# scoped test run, so cost scales with the roster. gate-full is the evidence
-# tier, which is where a check this expensive belongs (the same argument that
-# put the heavy batteries there).
+# scoped test run, so cost scales with the roster. It is its own `campaign`
+# rung set in scripts/lane-sets.tsv (The Staff, Task 8's fix round) --
+# briefly folded into the `outboard` stage set, then split back out once
+# measurement showed its 7 sites were 97% of that set's 855.222 s wall time.
+# What a seam guards (which functions no test pins) moves only when seams or
+# tests change: slow-moving and campaign-shaped, not a per-plan-stage-boundary
+# cadence, and the same place it lived pre-Staff (the old gate-full evidence
+# tier) for the same cost reason.
+#
+# REFUSES ON AN UNCLEAN WORKING TREE, AND THAT IS CORRECT, NOT A BUG. The run
+# rewrites real source files in place and restores them; on the lane this
+# always operates on a fresh checkout of a committed ref, so it never sees a
+# dirty tree. If a local dev loop hits the refusal, that is the guard
+# working -- commit or stash first, do not "fix" the check.
 seam-guard: ## Neutralise each registered seam and report the ones no test notices
 	cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- run
 
 seam-guard-list: ## Print the registered seams and their call sites (cheap, no build)
 	@cargo run --quiet --manifest-path tools/seam-guard/Cargo.toml -- list
-
-# `ci` is now an alias for `gate` (The Sexton, Task 3): the libtest-json
-# stream, the duration alarm and `ci-record` moved into `gate-run` itself, so
-# there is no separate suite left to run here. Retained so existing muscle
-# memory and documentation keep working.
-ci: gate ## Alias for `make gate`, which now carries the timing alarm (The Sexton)
-	@echo "make ci: \`make gate\` now records the baseline and runs the alarm; this is an alias." >&2
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is
@@ -224,6 +343,34 @@ heavy-remote: ## Run the heavy tier on the canonical box (The Siding); REF=<full
 		echo "  and may only run on the canonical box (decisions 0063/0079)."; \
 		exit 1; }
 	ssh lefford 'cd ~/Projects/hornvale && HV_HEAVY_REF=$(REF) scripts/heavy-run.sh'
+
+# The Staff's lane: one strictly serial queue on the canonical box for every
+# set above the commit gate. lane-dispatch.sh validates and ssh's, then
+# RETURNS — it never waits (flock -w pins its caller otherwise, and a job can
+# sit tens of minutes behind a heavy tier or a census). Read the job back with
+# `make lane-status` or `make lane-log`.
+lane: ## Dispatch one set to the lane (SET=<set> REF=<full-sha>)
+	@test -n "$(SET)" || { echo "usage: make lane SET=<set> REF=<full-sha>"; exit 2; }
+	@bash scripts/lane-dispatch.sh "$(SET)" "$(REF)"
+
+lane-status: ## Who holds the staff on the canonical box, and who is queued
+	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
+	    scripts/heavy-run.sh status; \
+	    d=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    echo; echo "== recent jobs (utc, id, set, why, rc, wall_s, ref, waited_s, user_s, sys_s, cpu_ratio) =="; \
+	    tail -10 "$$d/jobs.tsv" 2>/dev/null || echo "  (no jobs recorded yet)"'
+
+lane-log: ## Read a lane job back (JOB=<id>, or omit for the most recent)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; else f=$$(ls -t "$$d"/*.log 2>/dev/null | head -1); fi; \
+	    if [ -n "$$f" ] && [ -f "$$f" ]; then echo "-- $$f"; tail -60 "$$f"; \
+	    else echo "  (no such job)"; fi'
+
+lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the default
+	@test -n "$(JOB)" || { echo "usage: make lane-wait JOB=<id>"; exit 2; }
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
+	    until grep -q "	$(JOB)	" "$$d/jobs.tsv" 2>/dev/null; do sleep 20; done; \
+	    grep "	$(JOB)	" "$$d/jobs.tsv"'
 
 fmt: ## Format the workspace in place
 	cargo fmt
@@ -517,3 +664,24 @@ game-check-run:
 	cargo test --manifest-path clients/game/core/Cargo.toml
 	cargo test --manifest-path clients/game/bin/Cargo.toml
 	@bash scripts/game-no-vessel-dep.sh
+
+# ATLAS: `deno task build` is what makes book/src/gallery/atlas.js a real
+# generated artifact. Before The Staff it was committed, declared in
+# docs/generated-paths.txt, and regenerated by nothing — so `make rebaseline`
+# never wrote it and the drift check that follows always reported clean,
+# whatever clients/atlas/src/ had done.
+#
+# THIS CHECK IS BLIND TO COMMENT-ONLY EDITS: `deno task build` runs
+# `deno bundle --minify`, which strips comments, so a source change confined
+# to comments produces a byte-identical bundle and no diff. If you are
+# probing whether this check can still go RED, appending a `//` comment is
+# NOT a valid mutation — it will pass silently and look like the check is
+# vacuous when it is only the probe that was. Use a change with real runtime
+# effect (a new statement, an altered literal) instead.
+atlas-check:
+	cd clients/atlas && deno fmt --check && deno lint && deno task check && deno task test
+	cd clients/atlas && deno task build
+	@git diff --exit-code -- book/src/gallery/atlas.js || { \
+	    echo "atlas: book/src/gallery/atlas.js is stale — commit the rebuilt bundle." >&2; exit 1; }
+
+clients-check-run: vessel-check-run world-check-run game-check-run atlas-check

@@ -44,10 +44,10 @@ surface. Two consequences when editing it:
   so assume the tag rather than the vigilance.
 - **The pure functions are the contract.** `fold_below_floor`,
   `apply_hysteresis`, `suite_shift`, `per_test_shifts` and the enforcement
-  polarity are unit-tested directly, not only through `make ci`. The contention
-  gate was shipped *inverted* once and passed spec-compliance review; the fix
-  was to make its polarity a pure function with a test that fails on
-  re-inversion. Keep new decisions in that shape.
+  polarity are unit-tested directly, not only through the stage gate's full
+  run. The contention gate was shipped *inverted* once and passed
+  spec-compliance review; the fix was to make its polarity a pure function
+  with a test that fails on re-inversion. Keep new decisions in that shape.
 
 ## Censuses regenerate on the canonical box, not on AWS (0063, supersedes 0046; host enforced by 0079)
 
@@ -122,7 +122,7 @@ and staled The Gnomon's injection fixtures under
 `docs/generated-paths.txt`** (see that directory's README and
 `scripts/gnomon-injection.sh`'s header) and therefore covered by no drift check
 and untouched by `make rebaseline`. Nothing caught it except their reader test
-going red in a full `make gate` — after the census refresh had already run.
+going red in a full `gate-stage` run — after the census refresh had already run.
 
 So the check before you register: `grep -rl 'rows.csv\|schema.json'
 windows/lab/tests/fixtures/` and ask which of those have their own host-pinned

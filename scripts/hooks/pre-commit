@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
-# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus five
+# scripts/hooks/pre-commit — the commit gate (TOOL-14, The Staff), plus five
 # guards (see below).
 #
-# Runs `make quick` (fmt --check + clippy + type-audit + type-audit-report)
-# before every commit that could change its outcome. These are the cheapest
-# checks and the most common review finding per CLAUDE.md, so catching them
-# here reserves the expensive `--workspace` test gate for pre-push/CI.
+# Runs `make gate-commit` (fmt --check + clippy + type-audit + type-audit-report,
+# plus the sub-floor nextest tier) before every commit that could change its
+# outcome. The lints are the cheapest checks and the most common review
+# finding per CLAUDE.md; the sub-floor tier adds a seconds-scale slice of the
+# workspace test suite (`docs/timings/subfloor-roster.tsv`) so a local commit
+# also gets test coverage without paying for the full `--workspace` run,
+# which stays reserved for the stage gate (`make gate-stage`).
 #
 # Opt-in: enable with `make install-hooks` (sets core.hooksPath). Bypass a
 # single commit with `git commit --no-verify` only when you have a reason —
 # never to skip the fmt gate (CLAUDE.md forbids --no-verify for that).
 #
-# ORDER MATTERS: the guards below run BEFORE `make quick` — a commit that a
-# guard will refuse should not first pay a build. The pure-git/pure-text ones
+# ORDER MATTERS: the guards below run BEFORE `make gate-commit` — a commit that
+# a guard will refuse should not first pay a build. The pure-git/pure-text ones
 # (worktree branch, .superpowers scratch, conflict markers) come first and are
 # effectively free; the two that shell out to a build (the golden-pins
 # tripwire, the stream-manifest tripwire) fire only on the rare commit that
-# stages their trigger files. `make quick` is last because it is the only step
-# that costs anything in the common case.
+# stages their trigger files. `make gate-commit` is last because it is the
+# only step that costs anything in the common case.
 #
 # NOTE — NONE OF THIS RUNS ON A MERGE COMMIT. Git does not invoke `pre-commit`
 # for `git merge`, so every guard here is blind to exactly the commit most
@@ -229,13 +232,14 @@ if [[ -n "$board_staged" ]] && ! grep -qvE '^tools/board/' <<<"$board_staged"; t
     exit 0
 fi
 
-# `make quick`, and the docs-only fast path.
+# `make gate-commit`, and the docs-only fast path.
 #
 # The repo commits a great many docs-only changes — chronicles, retrospectives,
 # specs, decision records, the book — and none of them can change what
-# fmt-check, clippy, or the type audit say. Paying a workspace `cargo clippy` on
-# a chronicle edit is pure latency (~16 s warm on this box, minutes cold), so
-# skip it when nothing staged can affect the verdict.
+# fmt-check, clippy, the type audit, or the sub-floor test tier say. Paying a
+# workspace `cargo clippy` (and a nextest run) on a chronicle edit is pure
+# latency (~16 s warm on this box, minutes cold), so skip it when nothing
+# staged can affect the verdict.
 #
 # The predicate is deliberately WIDER than the `*.rs` test the orphaned root
 # hook used: fmt is configured by nothing here (no rustfmt.toml), but clippy
@@ -247,29 +251,29 @@ fi
 # staged no `.rs` file at all.
 #
 # `docs/audits/type-audit-report.md` is in the list for the same reason: it
-# is the ONE non-`.rs` file `make quick` itself directly verifies (the
+# is the ONE non-`.rs` file `make gate-commit` itself directly verifies (the
 # `type-audit-report` target, added in The Mire task 1b, diffs a fresh
 # regen against this committed copy). A commit staging only a hand-edit or a
 # bad merge resolution of that file — no `.rs`, no `Cargo.*` — used to match
-# none of the alternatives above and skip `make quick` entirely, so the very
-# check that exists to catch a stale report never ran on the commit most
-# likely to make it stale. Verified empirically before this fix: staging
-# only a dirtied copy of the file made this predicate fall through and
-# `make quick` never ran, even though `make type-audit-report` alone failed
-# on the same tree.
+# none of the alternatives above and skip `make quick` (this hook's check at
+# the time) entirely, so the very check that exists to catch a stale report
+# never ran on the commit most likely to make it stale. Verified empirically
+# before this fix: staging only a dirtied copy of the file made this
+# predicate fall through and the check never ran, even though
+# `make type-audit-report` alone failed on the same tree.
 #
-# NOTE — this fast path gates ONLY `make quick`. The three guards above run
-# unconditionally, and that is load-bearing: `.superpowers/` scratch is markdown
-# and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust staged"
-# (as the root hook's early `exit 0` did) would have disabled both guards on
-# precisely the commits that trip them.
+# NOTE — this fast path gates ONLY `make gate-commit`. The three guards above
+# run unconditionally, and that is load-bearing: `.superpowers/` scratch is
+# markdown and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust
+# staged" (as the root hook's early `exit 0` did) would have disabled both
+# guards on precisely the commits that trip them.
 rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/|(^|/)docs/audits/type-audit-report\.md$'
 if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
-    echo "pre-commit: no Rust-relevant paths staged — skipping 'make quick'." >&2
+    echo "pre-commit: no Rust-relevant paths staged — skipping 'make gate-commit'." >&2
     exit 0
 fi
 
-if ! make quick; then
-    echo "pre-commit: 'make quick' failed — fix fmt/clippy/type-audit before committing." >&2
+if ! make gate-commit; then
+    echo "pre-commit: 'make gate-commit' failed — fix fmt/clippy/type-audit/tests before committing." >&2
     exit 1
 fi

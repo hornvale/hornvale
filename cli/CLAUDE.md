@@ -28,12 +28,13 @@ Read the root `CLAUDE.md` first; this file is about the second half.
   `book/src/frontier/`. Red = the docs drifted; fix the doc, not the test.
   See `docs/CLAUDE.md` and `book/src/frontier/CLAUDE.md`.
 - **`heavy_tier.rs`** — asserts every `#[ignore]`d live-worldgen battery
-  carries the one canonical reason string verbatim, so `make gate` (skips)
-  and `make gate-full` (runs) can never fall out of sync. Red = someone
-  `#[ignore]`d a heavy test with an ad-hoc reason, which would make it
-  invisible to *both* tiers. Ignore reasons that are deliberately **not**
-  `heavy:` (the census/calibration batteries) are excluded from even
-  `gate-full` — that is the intent, not an oversight.
+  carries the one canonical reason string verbatim, so every gate short of
+  `gate-campaign` skips it and `gate-campaign` (via `scripts/gate-full-heavy.sh`)
+  runs it — the two can never fall out of sync. Red = someone `#[ignore]`d a
+  heavy test with an ad-hoc reason, which would make it invisible to *every*
+  tier. Ignore reasons that are deliberately **not** `heavy:` (the
+  census/calibration batteries) are excluded even from `gate-campaign` —
+  that is the intent, not an oversight.
 - **`lens_purity.rs`** — the **world-identity guard**: the seed-42 world's
   JSON is a committed fixture. Red = world identity drifted. That is either
   a genuine epoch (terrain/sky) or an accidental one — including the
@@ -54,7 +55,8 @@ Read the root `CLAUDE.md` first; this file is about the second half.
 ## A crate-scoped green is not a branch-green
 
 The root `CLAUDE.md` tells you to iterate cost-ordered — `cargo test -p <crate>`
-while working, `--workspace` at the commit gate — and that advice is right. But
+while working, full `--workspace` coverage at the stage gate's lane dispatch —
+and that advice is right. But
 it has one consequence worth stating where the tests actually live: **every
 invariant listed above is asserted from `cli/`, and none of them is about the
 crate you edited.** A `cargo test -p hornvale-terrain` cannot see layering, the
@@ -72,11 +74,11 @@ So: a task may *iterate* crate-scoped, but the evidence it reports as "green"
 must be workspace-wide, or it is reporting on a different question than the one
 being asked.
 
-## The heavy tier is invisible to `make gate`, including on `main`
+## The heavy tier is invisible to every gate but `gate-campaign`, including on `main`
 
-`make gate` skips the `heavy:` tier by design, so anything only that tier can
-see is unobserved on every ordinary commit — and `main` is no exception. Two
-shapes this has actually taken:
+`gate-commit` and the stage gate's own suite both skip the `heavy:` tier by
+design, so anything only that tier can see is unobserved on every ordinary
+commit — and `main` is no exception. Two shapes this has actually taken:
 
 - **A heavy cost gate sat RED on `main` and nothing reported it.** The Tithe's
   close found `connection_graph_cost_is_bounded_on_seed_42` failing at 31.1 s
@@ -99,6 +101,13 @@ A bespoke reason naming its own cost — which is what
 The canonical string satisfies both guards, so use it unchanged on every
 `heavy:`-tagged battery. Guessing cost The Fare a full gate cycle across four
 batteries that each had a sensible, descriptive, rejected reason.
+
+The string still says "make gate-full" even though that target is retired
+(decision 0132) — it predates the rename and is compared byte-for-byte across
+every `#[ignore]`d heavy test in the tree, so fixing the wording would mean
+touching every one of them for a cosmetic change. Read "make gate-full" in
+this one string as "the tier that now runs under `make gate-campaign`", not
+as evidence the target still exists.
 
 ## Adding a command
 

@@ -88,7 +88,8 @@ pure function of immutable dense-indexed data is precomputed into a `Vec` once
 
 ## Before you touch this crate
 
-Run the full `make gate` before pushing — a kernel change ripples through
+Run `make gate-commit` before pushing, then dispatch `make gate-stage
+REF=<full-sha>` for full workspace coverage — a kernel change ripples through
 every domain, and a byte-identity regression only shows up in the artifact
 drift check and censuses, not in a unit test. See the memory note on
 boundary changes.
