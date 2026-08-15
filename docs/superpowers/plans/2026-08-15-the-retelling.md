@@ -19,6 +19,13 @@
 - **`type-audit:` tag on every primitive at a `pub` boundary**, and regenerate `docs/audits/type-audit-report.md` **in the same commit** that moves a pub boundary.
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the single most common review finding.
 - **`Claim` is derived and never serialized.** It must not gain `Serialize`/`Deserialize`. This is what keeps the campaign off the save-format surface.
+- **The gate ladder changed under this campaign (decisions 0132/0133, The
+  Staff).** `make gate`, `make ci`, `make gate-fast` and `make gate-full` are
+  now REFUSING SIGNPOSTS that exit non-zero. Use `make gate-commit` locally
+  (seconds; its cost tracks the edit's blast radius — a kernel-layer edit is
+  ~470 s, a windows-layer one seconds), and dispatch `make gate-stage
+  REF=<full-sha>` or `make gate-campaign REF=<full-sha>` to lefford's serial
+  lane. The pre-commit hook now calls `gate-commit`.
 - **The pre-commit hook runs `make quick` WORKSPACE-WIDE**, not on the crate
   you touched. A task may therefore never leave a sibling crate
   uncompilable "for the next task to fix" — nothing can be committed
@@ -369,183 +376,157 @@ with `true` and would reject the second moon.
 
 ---
 
-### Task 3: The two filters
+### Task 3: Stance, and the ancestry memo that makes it cheap
 
 **Files:**
-- Create: `windows/hearsay/src/filters.rs`
-- Modify: `windows/hearsay/src/lib.rs` (add `pub mod filters;`)
-- Test: `windows/hearsay/tests/filters.rs`
+- Modify: `windows/hearsay/src/lineage.rs` (precomputed ancestor sets + `is_ancestor`)
+- Create: `windows/hearsay/src/stance.rs`
+- Modify: `windows/hearsay/src/lib.rs` (`pub mod stance;`)
+- Test: `windows/hearsay/tests/stance.rs`, plus additions to `tests/lineage.rs`
 
 **Interfaces:**
-- Consumes: `Lineage` from `windows/hearsay/src/lineage.rs`.
-- Produces: `pub struct Filters` with `Filters::of(ledger: &Ledger, lineage: &Lineage) -> Filters`, `Filters::raids(&self, occ: EntityId) -> bool`, `Filters::born_of_catastrophe(&self, occ: EntityId) -> bool`, `Filters::is_lossy(&self, teller: EntityId, hearer: EntityId) -> bool`.
+- Consumes: `Lineage`, `hornvale_history::{OCC_ENDED_BY}`.
+- Produces:
+  `Lineage::is_ancestor(&self, ancestor: EntityId, descendant: EntityId) -> bool` (O(log n));
+  `pub enum Stance { Perpetrator, VictimLine, Bystander }`;
+  `pub fn stance_of(ledger: &Ledger, lineage: &Lineage, subject: EntityId, who: EntityId) -> Stance`;
+  `pub fn is_lossy(ledger: &Ledger, lineage: &Lineage, subject: EntityId, teller: EntityId, hearer: EntityId) -> bool`.
 
-**The lossy predicate:** a retelling is lossy when the teller's incentive key and the hearer's formation key **disagree** — `raids(teller) != born_of_catastrophe(hearer)`. Matched frames carry content; mismatched frames lose a rung.
+**Why an ancestor MEMO and not just a faster loop.** Measured in node visits on
+seed 42: walking `ancestry` per (holder, event) pair costs 2,946,813 visits;
+building each node's ancestor set once costs **6,221**, a 473.7x reduction.
+Building it once per EVENT — the obvious middle option — is only 8.8x, because
+`descendants_of` itself walks `ancestry` for every candidate. Build it in
+`lineage_of`, once, at construction.
 
-- [ ] **Step 1: Write the failing test**
+**Keep `ancestry` as it is.** It returns an ORDERED `Vec` (self first, root
+last) and `derive.rs` uses that order to compute hop counts. The memo is a
+`BTreeSet` for membership only; it does not replace `ancestry`.
+
+- [ ] **Step 1: Write the failing tests**
+
+`windows/hearsay/tests/lineage.rs` (append):
 
 ```rust
-//! The two filter keys, over hand-built ledgers.
+#[test]
+fn is_ancestor_agrees_with_walking_the_ancestry() {
+    // The memo must not drift from the walk it replaces. Cross-checked over
+    // every ordered pair rather than a sampled one.
+    let led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, Some(1)), (5, None)]);
+    let lin = lineage_of(&led);
+    for a in lin.all() {
+        for d in lin.all() {
+            let walked = a != d && lin.ancestry(d).contains(&a);
+            assert_eq!(
+                lin.is_ancestor(a, d),
+                walked,
+                "is_ancestor({a:?}, {d:?}) disagrees with the ancestry walk"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_node_is_not_its_own_ancestor() {
+    let led = ledger_with(&[(2, Some(1))]);
+    let lin = lineage_of(&led);
+    assert!(!lin.is_ancestor(eid(1), eid(1)));
+    assert!(lin.is_ancestor(eid(1), eid(2)));
+    assert!(!lin.is_ancestor(eid(2), eid(1)), "ancestry is antisymmetric");
+}
+```
+
+`windows/hearsay/tests/stance.rs` (new):
+
+```rust
+//! Stance: where a community stands relative to one event.
 
 mod common;
 
 use common::{eid, ledger_with, put};
-use hornvale_hearsay::filters::Filters;
 use hornvale_hearsay::lineage::lineage_of;
+use hornvale_hearsay::stance::{Stance, is_lossy, stance_of};
 use hornvale_kernel::ledger::Value;
 
-#[test]
-fn a_community_that_appears_as_an_ender_is_a_raider() {
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(1))]);
+/// 1 is raided by 4; 2 and 3 descend from 1; 5 is unrelated.
+fn raid() -> hornvale_kernel::ledger::Ledger {
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, None), (5, None)]);
     put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
-    put(
-        &mut led,
-        1,
-        hornvale_history::OCC_ENDED_BY,
-        Value::Entity(eid(3)),
-    );
-    let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    assert!(f.raids(eid(3)), "3 ended 1, so 3 raids");
-    assert!(!f.raids(eid(1)), "1 was the victim, not the raider");
-    assert!(!f.raids(eid(2)), "2 did nothing");
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    led
 }
 
 #[test]
-fn a_child_founded_on_its_parents_ending_day_was_born_of_catastrophe() {
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(1))]);
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
-    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(500.0));
-    put(&mut led, 3, hornvale_history::OCC_FOUNDED, Value::Number(400.0));
+fn the_attacker_is_the_perpetrator() {
+    let led = raid();
     let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    assert!(f.born_of_catastrophe(eid(2)), "2 fled 1's ending");
-    assert!(
-        !f.born_of_catastrophe(eid(3)),
-        "3 budded off before the ending and was elsewhere"
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(4)), Stance::Perpetrator);
+}
+
+#[test]
+fn the_subject_and_its_descendants_are_the_victim_line() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(1)), Stance::VictimLine);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(2)), Stance::VictimLine);
+    assert_eq!(
+        stance_of(&led, &lin, eid(1), eid(3)),
+        Stance::VictimLine,
+        "a grandchild is still the victim's line"
     );
 }
 
 #[test]
-fn a_retelling_is_lossy_exactly_when_the_two_keys_disagree() {
-    let mut led = ledger_with(&[(2, Some(1)), (3, Some(1))]);
-    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
-    put(
-        &mut led,
-        1,
-        hornvale_history::OCC_ENDED_BY,
-        Value::Entity(eid(3)),
-    );
-    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(500.0));
-    put(&mut led, 3, hornvale_history::OCC_FOUNDED, Value::Number(400.0));
+fn an_unrelated_community_is_a_bystander() {
+    let led = raid();
     let lin = lineage_of(&led);
-    let f = Filters::of(&led, &lin);
-    // teller 3 raids (true); hearer 2 born of catastrophe (true) -> matched.
-    assert!(!f.is_lossy(eid(3), eid(2)));
-    // teller 1 does not raid (false); hearer 2 born of catastrophe (true).
-    assert!(f.is_lossy(eid(1), eid(2)));
-    // teller 1 does not raid (false); hearer 3 not born of it (false).
-    assert!(!f.is_lossy(eid(1), eid(3)));
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(5)), Stance::Bystander);
+}
+
+#[test]
+fn a_retelling_is_lossy_exactly_when_the_two_stances_differ() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    // victim -> its own descendant: same stance, frictionless.
+    assert!(!is_lossy(&led, &lin, eid(1), eid(1), eid(2)));
+    // perpetrator -> the victim's line: different stances, lossy.
+    assert!(is_lossy(&led, &lin, eid(1), eid(4), eid(2)));
+    // bystander -> perpetrator: different, lossy.
+    assert!(is_lossy(&led, &lin, eid(1), eid(5), eid(4)));
+    // bystander -> bystander: same, frictionless.
+    assert!(!is_lossy(&led, &lin, eid(1), eid(5), eid(5)));
+}
+
+#[test]
+fn stance_fires_on_an_event_with_no_attacker() {
+    // The peaceful case: no occ-ended-by, so nobody is a perpetrator, but the
+    // victim line and everyone else STILL differ. A predicate that went inert
+    // here could never distort a world without raids.
+    let mut led = ledger_with(&[(2, Some(1)), (5, None)]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(2)), Stance::VictimLine);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(5)), Stance::Bystander);
+    assert!(is_lossy(&led, &lin, eid(1), eid(5), eid(2)));
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test stance`
+      and `--test lineage`. Expected: `unresolved import hornvale_hearsay::stance`,
+      `no method named is_ancestor`.
 
-Run: `cargo test -p hornvale-hearsay --test filters`
-Expected: FAIL — `unresolved import hornvale_hearsay::filters`.
+- [ ] **Step 3: Implement.** In `lineage.rs`, add a
+      `BTreeMap<EntityId, BTreeSet<EntityId>>` of ancestor sets populated inside
+      `lineage_of` (one `ancestry` walk per node), and `is_ancestor` reading it.
+      A node is NOT its own ancestor. In `stance.rs`, `stance_of` checks
+      `occ-ended-by` for `Perpetrator`, then `who == subject || is_ancestor(subject, who)`
+      for `VictimLine`, else `Bystander`; `is_lossy` compares two `stance_of`
+      calls with `!=`.
 
-- [ ] **Step 3: Write the implementation**
+- [ ] **Step 4: Run to verify PASS** — 5 stance tests, 2 new lineage tests, and
+      every pre-existing hearsay test still green.
 
-```rust
-//! The two filters of the transmission chain.
-//!
-//! `producer -> productive filter -> receptive filter -> receiver`. What a
-//! teller encodes is keyed on its INCENTIVE (has this community ever raided?);
-//! what a hearer decodes is keyed on its FORMATION (was it born of a
-//! catastrophe?). Both are read from committed facts, so nothing here draws.
-//!
-//! Keying on `occ-people` was tried and falsified before this shipped: 0 of
-//! 658 inheritance edges on seed 42 cross a people boundary, so a
-//! species-keyed filter is inert (spec §3.2).
-
-use crate::lineage::Lineage;
-use hornvale_kernel::ledger::{EntityId, Ledger, Value};
-use std::collections::BTreeSet;
-
-/// The two filter keys for every occupation in a world.
-#[derive(Clone, Debug, Default)]
-pub struct Filters {
-    raiders: BTreeSet<EntityId>,
-    catastrophe_born: BTreeSet<EntityId>,
-}
-
-impl Filters {
-    /// Read both keys out of a ledger. O(facts + edges); build once, ask many.
-    pub fn of(ledger: &Ledger, lineage: &Lineage) -> Filters {
-        let mut raiders = BTreeSet::new();
-        for fact in ledger.find(hornvale_history::OCC_ENDED_BY) {
-            if let Value::Entity(attacker) = &fact.object {
-                raiders.insert(*attacker);
-            }
-        }
-        let mut catastrophe_born = BTreeSet::new();
-        for child in lineage.all() {
-            let Some(parent) = lineage.parent(child) else {
-                continue;
-            };
-            let (
-                Some(Value::Number(ended)),
-                Some(Value::Number(founded)),
-            ) = (
-                ledger.value_of(parent, hornvale_history::OCC_ENDED),
-                ledger.value_of(child, hornvale_history::OCC_FOUNDED),
-            ) else {
-                continue;
-            };
-            if ended == founded {
-                catastrophe_born.insert(child);
-            }
-        }
-        Filters {
-            raiders,
-            catastrophe_born,
-        }
-    }
-
-    /// The productive key: has this community ever ended another?
-    pub fn raids(&self, occ: EntityId) -> bool {
-        self.raiders.contains(&occ)
-    }
-
-    /// The receptive key: was this community founded on exactly its parent's
-    /// ending day — the survivors who fled and refounded?
-    pub fn born_of_catastrophe(&self, occ: EntityId) -> bool {
-        self.catastrophe_born.contains(&occ)
-    }
-
-    /// Whether a retelling from `teller` to `hearer` loses a rung of precision.
-    /// Lossy exactly when the two keys disagree: a shared frame carries
-    /// content, a mismatched one costs precision.
-    pub fn is_lossy(&self, teller: EntityId, hearer: EntityId) -> bool {
-        self.raids(teller) != self.born_of_catastrophe(hearer)
-    }
-}
-```
-
-Add `pub mod filters;` to `windows/hearsay/src/lib.rs`.
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `cargo test -p hornvale-hearsay --test filters`
-Expected: PASS, 3 tests.
-
-- [ ] **Step 5: Commit**
-
-```bash
-cargo fmt
-git add windows/hearsay/src/filters.rs windows/hearsay/src/lib.rs windows/hearsay/tests/filters.rs
-git commit -m "feat(hearsay): the productive and receptive filters, keyed on role and history"
-```
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit.
 
 ---
 
@@ -1186,12 +1167,14 @@ Expected: FAIL — the string still contains "minutes".
 
 - [ ] **Step 4: Apply the change**
 
-Set the canonical reason to `"heavy: live-worldgen battery; deferred from the commit gate to make gate-full"` and update every heavy-tier ignore attribute to match verbatim. Apply Step 1's branch to the four hearsay batteries. Delete the "is minutes" sentence from `windows/hearsay/tests/common/mod.rs` and the explanatory comment added above `probe_filter_variation`'s ignore attribute, which exists only to describe the defect this task removes.
+Set the canonical reason to `"heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign"` and update every heavy-tier ignore attribute to match verbatim. Apply Step 1's branch to the four hearsay batteries. Delete the "is minutes" sentence from `windows/hearsay/tests/common/mod.rs` and the explanatory comment added above `probe_filter_variation`'s ignore attribute, which exists only to describe the defect this task removes.
 
-- [ ] **Step 5: Run the full gate**
+- [ ] **Step 5: Run the gates**
 
-Run: `make gate`
-Expected: PASS. This is the first full-workspace run of the campaign; scoped runs to here have been deliberate.
+Run `make gate-commit` locally, then dispatch `make gate-stage REF=<full-sha>` to the
+lane. `make gate` no longer exists — since The Staff (decisions 0132/0133) it is
+a refusing signpost that exits non-zero, and the stage gate runs on lefford
+behind one strictly serial queue.
 
 - [ ] **Step 6: Commit**
 
@@ -1257,4 +1240,8 @@ Then **stop**. G6 is a hard stop: present the post-G3 ledger digest to Nathan be
 
 **Type consistency.** `Precision` (Task 1) is used by name in Tasks 2, 4, 6. `Filters::is_lossy` (Task 3) is called in Task 4 only. `variants_about` (Task 4) is consumed by `variant_count` and `finest_precision_hops` (Task 6). `maximum_antichain` (Task 5) is consumed by Task 6. `Claim.precision` is added in Task 2 and read in Tasks 4 and 6.
 
-**Known plan risk, stated rather than hidden.** Task 4's `variants_about` walks `lineage.ancestry(d)` inside a loop over `descendants_of(w)`, which is `O(n²)`-ish on a 704-node tree and fine there, but it is the function a census metric would call. If Task 6's battery exceeds Task 7's 20 s branch, the cause is most likely here, and the fix is to memoise ancestry once per world rather than to weaken the measurement.
+**The perf risk this section used to carry is RETIRED.** It warned that
+`variants_about` walks `lineage.ancestry(d)` inside a loop over
+`descendants_of(w)`. Task 3 memoises ancestor sets at construction —
+measured 6,221 node visits for a whole world against 2,946,813 naive,
+a 473.7x reduction — so the shape is gone rather than managed.

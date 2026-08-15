@@ -130,6 +130,15 @@ probe went red for saying something true, and is committed carrying the false
 clause with a comment saying so. A ratchet that freezes a measurement is
 working exactly as designed and pointed at the wrong thing.
 
+**And the merge of The Staff made it worse rather than fixing it.** Decisions
+0132/0133 turned `make gate-full` into a refusing signpost that exits non-zero,
+but did not sweep `cli/tests/heavy_tier.rs:64`. So the canonical reason string
+every heavy test must match *verbatim* now carries TWO falsehoods: a cost claim
+wrong by two orders of magnitude, and a make target that refuses to run. The
+enforcement test is still green, because every heavy test repeats the same
+wrong string consistently — which is precisely what a verbatim ratchet
+guarantees and precisely why it cannot notice. §8 fixes both clauses at once.
+
 ## 4. Where the code lives
 
 **`windows/hearsay`, entirely.** The filters read committed facts and draw
@@ -146,20 +155,88 @@ and an epoch. Architecture decides this before realism does.
 
 ## 5. The derivation
 
-### 5.1 The two filters
+### 5.1 The two filters, and what they key on
 
-For a retelling from teller `t` to hearer `h`:
+A retelling passes `producer -> productive filter -> receptive filter ->
+receiver`. What a teller encodes and what a hearer decodes are separate
+functions — but they must be **two values of ONE axis**, not two unlike
+booleans, and getting that wrong is the error this section records.
+
+**The axis is stance: where a community stands relative to the event the
+claim is about.**
 
 ```
-  productive key (t)  = t has appeared as the Entity value of some occ-ended-by
-                        ("this community raids") — an INCENTIVE
-  receptive  key (h)  = h was founded on exactly its parent's occ-ended day
-                        ("born of a catastrophe") — a FORMATION
+stance(who, claim):
+    PERPETRATOR   who is the claim subject's occ-ended-by
+    VICTIM-LINE   who IS the subject, or descends from it
+    BYSTANDER     neither
+
+is_lossy(teller, hearer, claim) = stance(teller, claim) != stance(hearer, claim)
 ```
 
-A retelling is **frictionless** when the pair is matched and **lossy** when it
-is not. Matched transmission carries content unchanged; that is what makes the
-distortion rate a property of the *path*, not a constant.
+**The rejected draft, and why it was wrong.** An earlier version keyed the
+productive filter on *"has this community ever raided"* and the receptive
+filter on *"was this community born of a catastrophe"*, then compared them with
+`!=`. Two defects, one structural and one measured:
+
+1. **It compared incommensurable predicates.** Those are not two readings of a
+   single axis, so `!=` between them means nothing — the same species of type
+   error as campaign 1's, where a *symmetric* concept (corroboration) was
+   pushed through an *antisymmetric* relation (ancestry).
+2. **It ignored the claim entirely.** Being a raider was a standing property of
+   a community, so a raider distorted *every* account he ever passed on —
+   foundings, weather, anything — not merely accounts of raids he committed.
+
+Measured on seed 42 over all 658 inheritance edges, that predicate marked the
+largest quadrant in the world **frictionless**: teller-raids x
+hearer-born-of-catastrophe is 254 edges (38.6%), the perpetrator telling the
+community that fled him, and `!=` excluded exactly it.
+
+**Stance fixes both.** It is one axis, so the comparison is meaningful; it
+takes the claim, so a community's stance is relative to *this* event; and it
+fires on a peaceful world, because a founding still separates the founders from
+everyone else.
+
+**Measured distribution**, over the population the predicate actually applies
+to — edges that carry the claim, i.e. inside the witness's subtree:
+
+```
+5,650 carrying (edge x event) pairs; lossy = 698 (12.4%)
+  Perpetrator -> VictimLine  :    46
+  VictimLine  -> Perpetrator :    12
+  VictimLine  -> VictimLine  : 4,952   (matched: the overwhelming case)
+  Bystander   -> Perpetrator :   211
+  Bystander   -> VictimLine  :   429
+```
+
+**A denominator warning, because the first run of this probe got it wrong.**
+Counting every edge against every event gives 0.3% lossy and reads as a dead
+metric. That population is wrong: an edge outside the witness subtree carries
+nothing, so 305,974 of those pairs are transmissions that never happen. The
+correct denominator is carrying pairs, and the same mistake in a different
+costume killed the species-keyed draft.
+
+**Consequence to expect, stated before the readout.** 12.4% is well below the
+rejected rule's 38.6%, so claims coarsen more slowly and H1's bend will be
+gentler than campaign 1's baseline might suggest. That is not a weakness of
+stance — the higher rate came partly from firing on edges with no relation to
+the event — but it is said here so a shallow curve is not later mistaken for a
+null.
+
+**Cost, measured in node visits rather than seconds** (`Instant` is banned by
+the wall-clock rule, and a step count is deterministic where a duration is
+not):
+
+```
+naive ancestry per (holder, event) : 2,946,813 visits  (8.8 per pair)
+memoised per EVENT                 :   333,696         (  8.8x)
+memoised per NODE                  :     6,221         (473.7x)
+```
+
+Per-node memoisation is what ships: each occupation's ancestor set built once
+in `Lineage`, after which a stance read is an `O(log n)` membership test. At
+6,221 visits for a whole world the cost is not worth managing — it is worth
+removing.
 
 ### 5.2 What distortion does to content
 
