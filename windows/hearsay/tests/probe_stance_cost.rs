@@ -65,7 +65,7 @@ fn stance_memo(
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loops bind
 /// occupation ids, not seeds.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn what_does_stance_cost_and_how_are_stance_pairs_distributed_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

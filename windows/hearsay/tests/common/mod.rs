@@ -1,5 +1,5 @@
-//! Hand-built ledgers for the hearsay tests. A world build at Settlements
-//! depth is minutes; these are milliseconds and pin the shape exactly.
+//! Hand-built ledgers for the hearsay tests: these are milliseconds and pin
+//! the shape exactly.
 //!
 //! Shared by all three test files (Tasks 4 and 5 declare `mod common;` rather
 //! than copying it); not every helper is used by every consuming test

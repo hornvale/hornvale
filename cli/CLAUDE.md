@@ -93,7 +93,7 @@ commit — and `main` is no exception. Two shapes this has actually taken:
 asserts the string is exactly:
 
 ```
-heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full
+heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)
 ```
 
 A bespoke reason naming its own cost — which is what
@@ -102,12 +102,30 @@ The canonical string satisfies both guards, so use it unchanged on every
 `heavy:`-tagged battery. Guessing cost The Fare a full gate cycle across four
 batteries that each had a sensible, descriptive, rejected reason.
 
-The string still says "make gate-full" even though that target is retired
-(decision 0132) — it predates the rename and is compared byte-for-byte across
-every `#[ignore]`d heavy test in the tree, so fixing the wording would mean
-touching every one of them for a cosmetic change. Read "make gate-full" in
-this one string as "the tier that now runs under `make gate-campaign`", not
-as evidence the target still exists.
+The string used to say "(minutes)" and "make gate-full" — both wrong, since
+the retired-target name predated decision 0132's rename and the duration was
+never re-measured after it was written. The Retelling (Task 7) measured a
+sample of the actual heavy batteries at 1.96-6.40 s, two orders of magnitude
+under "minutes", and retired the duration claim outright rather than
+replacing it with a fresher one: a duration baked into a verbatim-compared
+ratchet goes stale the moment the batteries' cost changes again, so
+`heavy_tier.rs` now also asserts the string states no duration at all
+(`the_canonical_heavy_reason_states_no_duration`). Updating every
+`#[ignore]`d heavy test in the tree to match was the change, not a follow-up
+avoided for being cosmetic.
+
+**Dropping the duration broke the OTHER guard, silently, until `gate-commit`
+said so.** `preregistration_guard.rs`'s `reason_is_sanctioned` treats any
+reason containing "minutes" as naming a cost — that is how the old string
+satisfied it. The new string names no cost, so every `heavy:`-tagged
+`#[ignore]` inside a `tests/*calibration*.rs` file (seven sites, across
+`disposition_calibration.rs`, `health_calibration.rs`,
+`the_fare_calibration.rs` and `the_mire_calibration.rs`) started failing that
+guard the moment the duration left. The `(decision 0132)` suffix is not
+decorative: `reason_is_sanctioned` also accepts any reason that names a
+decision, so citing the decision that renamed the target this string refers
+to satisfies both guards again, honestly. If either guard's matching logic
+changes, re-derive the canonical string against both rather than one.
 
 ## Adding a command
 

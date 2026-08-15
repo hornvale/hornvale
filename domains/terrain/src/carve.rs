@@ -2506,7 +2506,7 @@ mod tests {
     /// claim: reachability(seed: union across seeds 1..=8 at GLOBE_LEVEL) —
     /// off-gate (heavy:); an existence probe, not a per-world assertion
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
     fn waterfalls_exist_across_a_seed_sweep() {
         // Existence probe (spec §8), not a per-world assertion: waterfall
         // sites are sparse — a single seed can easily land with none — so

@@ -383,7 +383,7 @@ fn mean(xs: &[usize]) -> f64 {
 ///
 /// claim: invariant(forall-seed) — over the [42, 7, 1234] panel
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn monophyly_elf_holds_over_the_seed_panel() {
     for &seed in SEEDS {
         let lw = LanguageWorld::build(seed);
@@ -432,7 +432,7 @@ fn monophyly_elf_holds_over_the_seed_panel() {
 ///
 /// claim: invariant(forall-seed) — over the [42, 7, 1234] panel
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn divergence_is_real_across_all_six_elf_daughters() {
     for &seed in SEEDS {
         let lw = LanguageWorld::build(seed);
@@ -496,7 +496,7 @@ fn divergence_is_real_across_all_six_elf_daughters() {
 /// claim: readout(P5 clause 3; panel-pooled magnitude and sign over the
 /// [42, 7, 1234] panel, per-seed table printed)
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn homophony_does_not_leak_the_sibling_count() {
     /// The three counts' labels, in tuple order.
     const LABELS: [&str; 3] = ["colliding pairs", "core pairs", "confusable pairs"];

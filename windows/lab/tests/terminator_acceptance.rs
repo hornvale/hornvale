@@ -132,7 +132,7 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
 /// off-gate (heavy:); a reachability scan (locked.len() >= MIN_LOCKED) feeds
 /// the pinned-count readout
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let locked: Vec<u64> = (1..=SCAN_MAX).filter(|&s| is_locked(s, &wc)).collect();

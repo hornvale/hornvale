@@ -38,11 +38,7 @@ fn number(ledger: &Ledger, occ: EntityId, predicate: &str) -> Option<f64> {
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loops bind
 /// occupation ids, not seeds. One fixed world, reported as substrate.
 #[test]
-// The "(minutes)" is measurably false — this probe runs in 6.40 s — but
-// `cli/tests/heavy_tier.rs:123` requires the reason string VERBATIM, so a new
-// heavy test cannot tell the truth without changing the canonical string
-// first. Spec §8 changes it; this stays canonical until then.
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn do_the_filter_keys_vary_between_witnesses_of_one_event_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),

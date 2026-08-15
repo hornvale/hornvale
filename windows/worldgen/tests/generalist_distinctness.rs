@@ -418,7 +418,7 @@ fn cv_ratios(variants: &[Option<ConditionNiche>]) -> Vec<f64> {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn human_is_not_goblin_recentred() {
     let cv_ratio = cv_ratios(&[None])[0];
     let gap = (cv_ratio - 1.0).abs();
@@ -432,7 +432,7 @@ fn human_is_not_goblin_recentred() {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn substituting_goblins_niche_for_humans_is_detected() {
     // All three variants in ONE seed sweep — see `cv_ratios`. The width-only
     // reading below comes out of the same pass rather than a third rebuild.

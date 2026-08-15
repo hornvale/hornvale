@@ -414,7 +414,7 @@ const ZERO_DISPERSION: Dispersion = Dispersion {
 /// claim: rate(forall-seed, variance in (HUMAN_VARIANCE_FLOOR,
 /// HUMAN_VARIANCE_CEILING)) — over SEEDS, off-gate (heavy:)
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn zero_dispersion_collapses_between_settlement_variance() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let (locations, spreads) = authored(&wc);

@@ -211,7 +211,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn occupancy_readout_is_current() {
     let rendered = render_occupancy_readout(1..=30);
     let committed = include_str!("fixtures/occupancy.csv");

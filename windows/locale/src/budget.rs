@@ -333,7 +333,7 @@ mod tests {
     /// claim: invariant(forall-seed) — off-gate (heavy:); budget-minority and
     /// determinism per seed over 0..25
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
     fn census_budget_and_spacing_hold_across_seeds() {
         // Founder-floor cells intentionally bypass the repulsion radius (each
         // candidate reserves its single best-unclaimed cell before the

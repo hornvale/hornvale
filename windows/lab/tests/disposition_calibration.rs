@@ -401,7 +401,7 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     // The partition, derived from the shipped psyche registry — never authored

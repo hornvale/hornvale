@@ -137,7 +137,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
 /// claim: readout(off-gate, heavy:) — prints per-seed mean niche fit,
 /// with a finite/non-negative sanity assertion per seed
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn report_the_xorn_before_and_after() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

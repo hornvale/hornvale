@@ -322,7 +322,7 @@ const BASIS_HOST: &str = "x86_64-40";
 /// The cost gate. Prints every measured number (`--nocapture`) so a future
 /// re-baselining does not need to re-derive the harness.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn scene_api_cost_is_bounded_on_seed_42() {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let start = Instant::now();

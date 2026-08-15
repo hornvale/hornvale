@@ -105,7 +105,7 @@ fn flagged_share(worlds: &[anomaly::WorldAnomaly]) -> f64 {
 ///
 /// Read the module doc before citing a green here for anything.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn h2_holdout_flag_share_is_within_a_factor_of_two_of_the_in_census_share() {
     let c = census();
     let in_census = flagged_share(&anomaly::rank(&c));

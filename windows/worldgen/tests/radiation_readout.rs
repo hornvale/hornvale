@@ -1070,7 +1070,7 @@ fn the_two_p2_rosters_partition_the_family_exactly_once() {
 /// quantifier the prediction was frozen with. Not `forall-seed`: a kind may
 /// honestly place nothing on one globe and still be a live competitor.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn each_elf_changes_the_committed_ledger() {
     let shipped: Vec<WorldRead> = SEEDS.iter().map(|&s| read_world(s, Arm::Shipped)).collect();
 
@@ -1273,7 +1273,7 @@ const P2_FALSIFICATION_DIAGNOSIS: &str = "the stronghold share was flat or \
 /// failure mode on a majority of seeds) — a per-elf majority over seeds, frozen
 /// at that quantifier in the spec before any row was authored.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn each_elf_concentrates_in_its_authored_stronghold_biomes() {
     let falsified = p2_falsified_among(&P2_ON_AXIS);
     assert!(
@@ -1374,7 +1374,7 @@ fn desert_elf_concentrates_in_its_authored_stronghold_biomes() {
 /// same value, so a single disagreeing seed is a real result and the quantifier
 /// is universal.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn wood_and_high_do_not_separate_in_field_or_placement() {
     println!("== P3(a): wood vs high capacity fields over land ==");
     println!(
@@ -1459,7 +1459,7 @@ fn wood_and_high_do_not_separate_in_field_or_placement() {
 /// bit-identity) — the cave gate is a hard zero, which is a structural claim,
 /// so a single disagreeing seed is a real result.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn drow_separates_from_wood_and_the_five_arms_say_what_does_it() {
     println!("== P4 clause 1: every drow settlement sits on a cave cell ==");
     let mut off_cave: Vec<(u64, usize, usize)> = Vec::new();
@@ -1570,7 +1570,7 @@ fn drow_separates_from_wood_and_the_five_arms_say_what_does_it() {
 /// perturbed drow insolation devotion) — a structural claim about a discarded
 /// axis, so any seed disagreeing is a real result.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn drows_dark_adaptation_moves_nothing_in_the_committed_world() {
     println!("== the companion null: drow's insolation devotion 0.55 -> 0.05 ==");
     let mut moved: Vec<u64> = Vec::new();

@@ -412,7 +412,7 @@ const CONTROL_TOLERANCE: f64 = 1.5;
 const BASIS_HOST: &str = "aarch64-10";
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn a_possessed_turn_stays_within_its_ceilings() {
     let world = build_world(
         Seed(42),

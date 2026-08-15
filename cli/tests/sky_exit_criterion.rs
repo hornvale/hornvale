@@ -315,7 +315,7 @@ fn worlds_survive_reload_byte_identically() {
 /// spawning the CLI as a subprocess, which this lint's module doc names as
 /// a blind spot it happens to still flag by loop-variable naming
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn graded_pins_never_fail_above_min() {
     let dir = temp_dir("pins");
 

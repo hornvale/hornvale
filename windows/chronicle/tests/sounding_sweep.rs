@@ -11,7 +11,7 @@ fn exponent_fit_recovers_a_known_power_law() {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn run_the_sounding_and_write_the_report() {
     use hornvale_chronicle::sweep::{SweepRow, render_report, sweep_axis, sweep_scan_vs_index};
     use hornvale_chronicle::{SoundingConfig, biography_digest, census, run};

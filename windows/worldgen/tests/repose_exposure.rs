@@ -1236,7 +1236,7 @@ fn render_repose_exposure(seeds: impl IntoIterator<Item = u64>) -> String {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn repose_exposure_readout_matches_the_committed_fixture() {
     let committed = include_str!("fixtures/repose-exposure.csv");
     let rendered = render_repose_exposure(1..=30);
@@ -1291,7 +1291,7 @@ fn repose_exposure_readout_matches_the_committed_fixture() {
 /// trip it, while still failing if the field ever went genuinely flat. Test
 /// name and the verbatim `heavy:` ignore string are unchanged.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn unrest_deciles_differ_in_andosol_share() {
     let rows = exposure_rows(1..=30);
     let pooled: Vec<&ExposureRow> = rows.iter().filter(|r| r.people == "pooled").collect();
@@ -1341,7 +1341,7 @@ fn unrest_deciles_differ_in_andosol_share() {
 /// name and the verbatim `heavy:` ignore string are unchanged; the `20.0`/
 /// `is_finite()` thresholds are unchanged, only the population they run over.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn exposure_ratios_are_within_absurdity_bounds() {
     for r in exposure_rows(1..=30)
         .iter()
@@ -1402,7 +1402,7 @@ fn exposure_ratios_are_within_absurdity_bounds() {
 /// (`cargo test -p hornvale-worldgen`) cannot see this lint, because the
 /// enforcement tests live in `cli/`.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut settleable_only_total: u64 = 0;
@@ -1497,7 +1497,7 @@ fn no_settlement_in_the_readout_sits_outside_the_settleable_land_population() {
 /// a fourth would be a different defect (a seed-dependent code path) than
 /// anything this seam can express.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn channel_mask_none_is_bit_identical_to_the_unmasked_path() {
     let wc = WorldComponents::assemble().expect("components assemble");
     for seed in [1u64, 42, 30] {
@@ -1630,7 +1630,7 @@ fn attractor_cells_of(
 /// threshold on the counts is claimed, precisely because none was
 /// preregistered and inventing one after unblinding would be a rescue.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn the_counterfactual_arms_separate_a_true_null_from_a_wiring_gap() {
     // ARM C, FIRST because it is free and because a stale null makes the
     // expensive half unreadable. The clauses themselves now live in
@@ -2137,7 +2137,7 @@ fn body_of(src: &str, signature: &str) -> String {
 /// here by choice. It is the readout carrying the most interpretive load in
 /// the file, which is exactly the kind that should declare its quantifier.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn which_channel_carries_the_exposure_gradient() {
     let arm_a_mask = ChannelMask {
         hostility: true,
@@ -2264,7 +2264,7 @@ fn which_channel_carries_the_exposure_gradient() {
 /// a rate: no threshold on any value is claimed, because none was
 /// preregistered and inventing one after unblinding would be a rescue.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn the_readout_can_see_a_people_remember_and_a_people_forget() {
     let rows = exposure_rows(1..=30);
 

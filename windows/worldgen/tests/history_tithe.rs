@@ -693,7 +693,7 @@ fn no_emitted_tribute_fact_predates_either_party() {
 /// claim: readout(off-gate, heavy:) — cascade-size distribution over
 /// SHAPE_SAMPLE, adjudicated
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn the_cascade_distribution_is_adjudicated() {
     let mut agg = [0u64; 12];
     let mut raided = 0u64;
@@ -795,7 +795,7 @@ fn the_cascade_distribution_is_adjudicated() {
 /// claim: readout(off-gate, heavy:) — standing-relation-age readout by
 /// patron people over SHAPE_SAMPLE
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
 fn the_strategy_family_is_various() {
     let wc = WorldComponents::assemble().expect("registries");
     // Standing-relation ages, in standard days, grouped by the patron's people.
