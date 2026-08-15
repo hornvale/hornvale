@@ -355,20 +355,33 @@ fn crossing_a_stance_boundary_coarsens_the_day() {
     let lin = lineage_of(&led);
     let ladder = PrecisionLadder::of(&led);
     let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
-    let five = vs.iter().find(|v| v.holder == eid(5));
-    // 5 descends from the perpetrator 4. Whatever it holds, assert the
-    // PROPERTY rather than a hand-computed number: if it is coarser than
-    // finest, its object must equal the ladder's snap of the truth at that
-    // rung -- content and precision must never disagree.
-    if let Some(v) = five
-        && v.precision != Precision::FINEST
-    {
-        assert_eq!(
-            v.object,
-            Value::Number(ladder.apply(v.precision, 745.0)),
-            "a coarsened claim's object must match its own rung"
-        );
-    }
+    // 5 descends from the perpetrator 4, so its telling crossed a stance
+    // boundary and MUST have lost a rung. Asserted unconditionally: an
+    // earlier draft guarded this behind `if let Some(v) = five && v.precision
+    // != FINEST`, which passes silently if 5 stops holding the claim at all
+    // or stops being coarsened -- exactly the two regressions this test is
+    // named to catch.
+    let v = vs
+        .iter()
+        .find(|v| v.holder == eid(5))
+        .expect("5 descends from the perpetrator and must hold the claim");
+    assert_ne!(
+        v.precision,
+        Precision::FINEST,
+        "crossing a stance boundary must coarsen: {v:?}"
+    );
+    // And content must agree with the rung it claims -- not a hand-computed
+    // number, which would pin the ladder's arithmetic rather than the walk's.
+    assert_eq!(
+        v.object,
+        Value::Number(ladder.apply(v.precision, 745.0)),
+        "a coarsened claim's object must match its own rung"
+    );
+    assert_ne!(
+        v.object,
+        Value::Number(745.0),
+        "and it must actually differ from the truth it descends from"
+    );
 }
 
 #[test]
