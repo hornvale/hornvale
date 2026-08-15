@@ -67,8 +67,11 @@ set -euo pipefail
 #   internal builds), `tropes report`/`report --corpus …`/`matrix` (each
 #   builds its own `Seed(0)` world via `world_builder::build_world`,
 #   independent of Group A), and the seam-guard roster (a source-tree scan,
-#   no world at all). All of these are safe to co-schedule with B: distinct
-#   write targets, and no read dependency on B's or A's outputs.
+#   no world at all). `systems report` (The Compendium) joined this group
+#   later still, and builds no world at all — not even its own — because its
+#   anchors resolve against the digest, the idea registry, and the
+#   filesystem, never a genesis. All of these are safe to co-schedule with B:
+#   distinct write targets, and no read dependency on B's or A's outputs.
 #
 #   GROUP D — the lab studies (`lab run`, traced: internally parallel across
 #   seeds via `std::thread::available_parallelism`, per
@@ -519,6 +522,7 @@ spawn run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.m
 spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
   > docs/audits/trope-coverage-tvtropes-2012.md
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
+spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
   > docs/digest/decisions-in-force.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \

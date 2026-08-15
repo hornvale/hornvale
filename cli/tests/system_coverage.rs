@@ -1,6 +1,121 @@
 //! The Compendium's ratchet and anchor discipline.
 
 use std::path::PathBuf;
+use std::process::Command;
+
+/// The ratchet: `systems report`'s live output must match the committed
+/// artifact byte-for-byte. A moved item means an anchor moved — a decision
+/// was superseded, or a registry row shipped — which is a finding, not a
+/// formality. Regenerate deliberately with `make rebaseline` and read the
+/// diff.
+#[test]
+fn committed_system_coverage_matches_the_live_report() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args([
+            "systems",
+            "--corpus",
+            "systems/wolverson-2021.system.json",
+            "report",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "systems report failed: {out:?}");
+    let live = String::from_utf8(out.stdout).expect("utf-8");
+    hornvale_kernel::golden::assert_golden(
+        &root.join("docs/audits/system-coverage-wolverson-2021.md"),
+        &live,
+        "the system-coverage report drifted from the committed artifact. An item that \
+         changed verdict means an anchor moved — a decision was superseded, or a \
+         registry row shipped — which is a finding, not a formality. Regenerate \
+         deliberately with `make rebaseline` and read the diff.",
+    );
+}
+
+/// Regression for a `?`-inside-a-loop bug: `line.strip_prefix(..)?` on a
+/// non-matching line propagates that line's `None` out of the WHOLE
+/// function, not just past that line, so a naive first draft returned
+/// `None` unconditionally — line 1 of every real report is the generated-file
+/// banner, which never matches — and `check`'s novelty guard silently never
+/// fired. Caught by hand against a scratch corpus before this test existed;
+/// this pins the fix.
+#[test]
+fn committed_absent_count_reads_past_the_banner_line_to_the_tally() {
+    let report = "<!-- GENERATED FILE — do not edit. -->\n\n\
+                  # System coverage\n\n\
+                  ## Tally\n\n\
+                  - present: 3 (4%)\n\
+                  - refused: 0 (0%)\n\
+                  - deferred: 0 (0%)\n\
+                  - absent: 71 (96%)\n\
+                  - inapplicable: 0 (0%)\n";
+    assert_eq!(hornvale::systems::committed_absent_count(report), Some(71));
+}
+
+/// `None` — not `Some(0)` — for text with no tally at all, so a caller can
+/// tell "nothing to compare against" from "zero absent items".
+#[test]
+fn committed_absent_count_is_none_without_a_tally_line() {
+    assert_eq!(
+        hornvale::systems::committed_absent_count("not a report\njust some text\n"),
+        None
+    );
+}
+
+/// `check` must fail specifically on NOVELTY — the live corpus's `absent`
+/// count rising above the committed artifact's — with its own regression
+/// message, not just the generic drift message. Exercises the real CLI
+/// binary against a scratch corpus that adds one more `absent` item on top
+/// of the real, currently-clean 74-item corpus, so `live_absent` (75) rises
+/// above the committed artifact's 74.
+#[test]
+fn check_fails_on_novelty_when_the_absent_count_rises() {
+    let root = workspace_root();
+    let json = std::fs::read_to_string(root.join("systems/wolverson-2021.system.json"))
+        .expect("reads the real corpus");
+    let mut corpus: serde_json::Value = serde_json::from_str(&json).expect("parses as JSON");
+    corpus["items"]
+        .as_array_mut()
+        .expect("items is an array")
+        .push(serde_json::json!({
+            "id": "99.9",
+            "kind": "chapter",
+            "title": "A newly absent item",
+            "verdict": "absent"
+        }));
+    let scratch = std::env::temp_dir().join(format!(
+        "hv-compendium-novelty-{}.system.json",
+        std::process::id()
+    ));
+    std::fs::write(
+        &scratch,
+        serde_json::to_string(&corpus).expect("serializes"),
+    )
+    .expect("writes the scratch corpus");
+
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args([
+            "systems",
+            "--corpus",
+            scratch.to_str().expect("scratch path is utf-8"),
+            "check",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    let _ = std::fs::remove_file(&scratch);
+
+    assert!(
+        !out.status.success(),
+        "check must fail on a rising absent count"
+    );
+    let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    assert!(
+        stderr.contains("regressed") && stderr.contains("74 to 75"),
+        "expected a novelty-specific regression message, got: {stderr}"
+    );
+}
 
 fn workspace_root() -> PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

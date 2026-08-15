@@ -669,3 +669,197 @@ fn resolve_anchor(
         Anchor::Reason(_) => None,
     }
 }
+
+// --- Rendering ---------------------------------------------------------
+//
+// `tropes::wrap` and `tropes::percent` are private (`cli/src/tropes.rs:144`
+// and `:458`) and this family is a deliberate sibling, never a member (spec
+// §3) — so the two are reimplemented here rather than widened to `pub` for a
+// sibling's convenience. Same shape, same reasoning, on purpose.
+
+/// Hard-wrap a prose paragraph at 76 columns on word boundaries. See
+/// `tropes::wrap` for the full rationale (a byte-ratcheted artifact needs
+/// wrapped prose so a single word edit stays a single-line diff); duplicated
+/// here rather than imported because `tropes::wrap` is private by design.
+/// type-audit: bare-ok(prose: text), bare-ok(prose: return)
+fn wrap(text: &str) -> String {
+    let mut out = String::new();
+    let mut col = 0;
+    for word in text.split_whitespace() {
+        let w = word.chars().count();
+        if col > 0 && col + 1 + w > 76 && !word.starts_with('-') {
+            out.push('\n');
+            col = 0;
+        } else if col > 0 {
+            out.push(' ');
+            col += 1;
+        }
+        out.push_str(word);
+        col += w;
+    }
+    out
+}
+
+/// `n` of `total` as a whole percent, rounded half up. Integer arithmetic on
+/// purpose — this figure lands in a byte-ratcheted artifact, and decision
+/// 0033 keeps floats away from serialization boundaries. Duplicated from
+/// `tropes::percent` for the same reason as [`wrap`].
+fn percent(n: usize, total: usize) -> usize {
+    if total == 0 {
+        0
+    } else {
+        (n * 200 + total) / (total * 2)
+    }
+}
+
+/// Where a corpus's committed report lives, derived from the corpus's own
+/// identifier so a caller cannot pair the wrong corpus with the wrong
+/// artifact.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn artifact_path(corpus: &Corpus) -> String {
+    format!("docs/audits/system-coverage-{}.md", corpus.corpus)
+}
+
+/// The command that regenerates a report, for the header. Takes the path the
+/// caller actually used rather than deriving one from the corpus id, exactly
+/// as `tropes::regenerate_command` does and for the same reason: a derived
+/// stem could print a command naming a file that does not exist.
+/// type-audit: bare-ok(identifier-text: path), bare-ok(identifier-text: return)
+pub fn regenerate_command(path: &str) -> String {
+    format!("hornvale systems --corpus {path} report")
+}
+
+/// Verdict counts across `corpus`, in decision 0095's five-verdict order —
+/// the order the report's tally prints them in.
+fn tally(corpus: &Corpus) -> [(Verdict, usize); 5] {
+    let mut present = 0usize;
+    let mut refused = 0usize;
+    let mut deferred = 0usize;
+    let mut absent = 0usize;
+    let mut inapplicable = 0usize;
+    for item in &corpus.items {
+        match item.verdict {
+            Verdict::Present => present += 1,
+            Verdict::Refused => refused += 1,
+            Verdict::Deferred => deferred += 1,
+            Verdict::Absent => absent += 1,
+            Verdict::Inapplicable => inapplicable += 1,
+        }
+    }
+    [
+        (Verdict::Present, present),
+        (Verdict::Refused, refused),
+        (Verdict::Deferred, deferred),
+        (Verdict::Absent, absent),
+        (Verdict::Inapplicable, inapplicable),
+    ]
+}
+
+/// The first item in corpus order whose capability is not met — not
+/// `present` (the capability exists) and not `inapplicable` (the row makes
+/// no capability claim, e.g. the tutorial's own toolchain front-matter). For
+/// an `ordered` corpus this is a pedagogical ladder, so this is "the first
+/// chapter Hornvale cannot replicate" (spec §8) — the corpus's single most
+/// useful reading. Callers must gate this on `corpus.ordered` themselves
+/// (spec §14): ranking an unordered catalogue by `id` would manufacture a
+/// ladder its source never had.
+fn first_unmet(corpus: &Corpus) -> Option<&Item> {
+    corpus
+        .items
+        .iter()
+        .find(|item| !matches!(item.verdict, Verdict::Present | Verdict::Inapplicable))
+}
+
+/// Extract the `absent` count from a previously rendered report's tally —
+/// used only to compare a live corpus's absent count against what the last
+/// committed artifact recorded, never to reconstruct the whole corpus.
+/// `None` when `report` does not look like one of this family's reports (no
+/// tally line found), which a caller should treat as "nothing to compare
+/// against," not as zero.
+/// type-audit: bare-ok(prose: report), bare-ok(count: return)
+pub fn committed_absent_count(report: &str) -> Option<usize> {
+    for line in report.lines() {
+        // NOT `strip_prefix(..)?`: that `?` would propagate a non-matching
+        // line's `None` out of the whole function on the very first line
+        // that fails to match — almost always line 1, the generated-file
+        // banner — so the loop would never reach the tally at all. A `let
+        // else { continue }` skips only this line.
+        let Some(rest) = line.strip_prefix("- absent: ") else {
+            continue;
+        };
+        let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if digits.is_empty() {
+            return None;
+        }
+        return digits.parse().ok();
+    }
+    None
+}
+
+/// Render the coverage report. Order is fixed by decision 0095 — provenance
+/// before any number — with one addition this corpus's bias demands (spec
+/// §7): the `present`-is-weakly-checked caveat prints above the tally too, so
+/// a reader cannot reach the score without passing the statement that
+/// `present` is the verdict this instrument is least entitled to.
+///
+/// `path` is the corpus source path the caller actually resolved (mirroring
+/// `tropes::render`), so the regenerate command in the banner names a file
+/// that really exists rather than a stem derived from `corpus.corpus`.
+/// type-audit: bare-ok(identifier-text: path), bare-ok(prose: return)
+pub fn render(corpus: &Corpus, path: &str) -> String {
+    let mut s = String::new();
+    s.push_str(&format!(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `{}`. -->\n\n",
+        regenerate_command(path)
+    ));
+    s.push_str("# System coverage\n\n## Provenance\n\n");
+    s.push_str(&format!("- **Corpus:** `{}`\n", corpus.corpus));
+    s.push_str(&format!("- **Source:** {}\n", wrap(&corpus.provenance)));
+    s.push_str(&format!("- **Frozen:** {}\n", wrap(&corpus.frozen)));
+
+    s.push_str("\n## Reading this report\n\n");
+    s.push_str(&wrap(
+        "`refused` and `deferred` are strongly checked: a decision must be in force, and a \
+         registry row must exist and must not read `shipped`. `present` is only weakly \
+         checked — a path that exists is not a working feature, and a resolvable test name \
+         is not proof that the capability is met. `present` is the verdict this instrument \
+         is least entitled to, and that is printed here, above the tally it most affects.",
+    ));
+    s.push_str("\n\n");
+
+    let counts = tally(corpus);
+    let total = corpus.items.len();
+    s.push_str("## Tally\n\n");
+    for (v, n) in counts {
+        s.push_str(&format!(
+            "- {}: {n} ({}%)\n",
+            verdict_name(v),
+            percent(n, total)
+        ));
+    }
+
+    if corpus.ordered {
+        s.push_str("\n## First unmet\n\n");
+        match first_unmet(corpus) {
+            Some(item) => s.push_str(&format!(
+                "{} — **{}** ({}).\n",
+                item.id,
+                item.title,
+                verdict_name(item.verdict)
+            )),
+            None => s.push_str("Every item is `present` or `inapplicable`.\n"),
+        }
+    }
+
+    s.push_str("\n## Items\n\n| id | title | verdict | anchor |\n|---|---|---|---|\n");
+    for item in &corpus.items {
+        s.push_str(&format!(
+            "| {} | {} | {} | {} |\n",
+            item.id,
+            item.title,
+            verdict_name(item.verdict),
+            item.anchor.as_deref().unwrap_or("")
+        ));
+    }
+    s
+}

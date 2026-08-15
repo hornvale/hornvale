@@ -1,7 +1,9 @@
 //! The hornvale CLI: create worlds, render almanacs, interrogate via REPL.
 #![warn(missing_docs)]
 
-use hornvale::{audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, tropes};
+use hornvale::{
+    audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems, tropes,
+};
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
@@ -98,6 +100,12 @@ usage:
   hornvale tropes matrix   render every corpus side by side: what each catalogue demands,
                           ordered by where they disagree (ignores --corpus — the columns
                           are the declared list, not the caller's choice)
+  hornvale systems [report|check] [--corpus <PATH>]
+                          score the frozen game-system capability corpus against Hornvale's
+                          own declared state — no world is built (report: render to stdout;
+                          check: diff against the artifact committed for that corpus's id,
+                          also failing on any anchor finding or a rising `absent` count;
+                          default corpus: systems/wolverson-2021.system.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -163,6 +171,7 @@ fn main() -> ExitCode {
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
         Some("tropes") => cmd_tropes(&args),
+        Some("systems") => cmd_systems(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -1064,6 +1073,100 @@ fn cmd_tropes_matrix() -> Result<(), String> {
     let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
     print!("{}", tropes::render_matrix(&columns, &world.registry));
     Ok(())
+}
+
+/// The Compendium: score the frozen game-system capability corpus against
+/// Hornvale's own declared state. Unlike `cmd_tropes`, this resolver builds
+/// **no world** — every anchor resolves against the digest, the idea
+/// registry, and the filesystem (`systems::RepoFacts`), so the ratchet costs
+/// a few file reads rather than a genesis.
+fn cmd_systems(args: &[String]) -> Result<(), String> {
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`. Copied
+    // verbatim from `cmd_tropes`'s scan for the same reason it exists there.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `systems` has no valueless flags. It is not a property of
+    // `flag_value`: if `systems` ever gains a valueless flag, this loop must
+    // learn which flags take values.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    let path = flag_value(args, "--corpus").unwrap_or(systems::CORPORA[0]);
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = systems::load(&json)?;
+    match mode {
+        Some("report") | None => {
+            print!("{}", systems::render(&corpus, path));
+            Ok(())
+        }
+        Some("check") => {
+            let facts = systems::RepoFacts::gather(std::path::Path::new("."))?;
+
+            let findings = systems::audit(&corpus, &facts);
+            if !findings.is_empty() {
+                let listed: Vec<String> = findings
+                    .iter()
+                    .map(|f| match f {
+                        systems::Finding::Unjustified { why, .. } => why.clone(),
+                        systems::Finding::Dangling { why, .. } => why.clone(),
+                        systems::Finding::StaleDeferred { why, .. } => why.clone(),
+                    })
+                    .collect();
+                return Err(format!(
+                    "system coverage audit found {} finding(s) for `{}`:\n\n{}",
+                    findings.len(),
+                    corpus.corpus,
+                    listed.join("\n\n")
+                ));
+            }
+
+            // NOVELTY: the `absent` count rising above the committed
+            // artifact's, checked against the LIVE corpus's own count
+            // (never the freshly rendered text) so this still fires even in
+            // the (currently impossible, since any verdict change also
+            // changes the rendered bytes) case where the byte comparison
+            // below somehow did not.
+            let artifact = systems::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
+            let live_absent = corpus
+                .items
+                .iter()
+                .filter(|i| i.verdict == systems::Verdict::Absent)
+                .count();
+            if let Some(committed_absent) = systems::committed_absent_count(&committed)
+                && live_absent > committed_absent
+            {
+                return Err(format!(
+                    "system coverage regressed for `{}`: the `absent` count rose from {} to \
+                     {}. Something that used to carry a verdict lost it — that is a finding, \
+                     not a formality, and `make rebaseline` must not paper over it without \
+                     saying why.",
+                    corpus.corpus, committed_absent, live_absent
+                ));
+            }
+
+            let live = systems::render(&corpus, path);
+            if live == committed {
+                Ok(())
+            } else {
+                Err(format!(
+                    "system coverage drifted for `{}`; run `make rebaseline` and review the diff",
+                    corpus.corpus
+                ))
+            }
+        }
+        Some(other) => Err(format!("systems: unknown mode '{other}' (report|check)")),
+    }
 }
 
 fn cmd_streams() -> Result<(), String> {
