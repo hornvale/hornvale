@@ -173,6 +173,23 @@ Four RED conditions:
   baseline all use. A gate that failed on the mere existence of an unmet chapter
   would go red on day one and train everyone to ignore it.
 
+**The accepted cost, ratified at G3: the idea registry becomes a gated
+interface.** Today a row's `status` cell is prose that humans read. After this
+campaign, a row flipping to `shipped` reddens a committed artifact, and
+renaming or retiring a row breaks a gate. That is the intended mechanism, not a
+side effect — but it is a real constraint on 76 existing `CLIENT-*` rows and
+every future one, and it lands on a session that has no reason to expect it.
+
+**So diagnosability is a requirement of this campaign, not a nicety.** A
+DANGLING or STALE-DEFERRED failure must name, in the failure text itself: the
+anchor that stopped resolving, the corpus item that cited it, what change
+would have caused it (a supersession, a rename, a status flip), and the two
+legitimate repairs — re-verdict the item, or restore the anchor. A red whose
+message is "the report moved" is what the trope ratchet gives up by being a
+byte comparison, and it is affordable there because a trope corpus has no
+external editors. This one does: anybody editing the registry is editing this
+instrument's inputs without knowing it.
+
 **The payoff, stated concretely.** When the action clock ships,
 `CLIENT-action-clock` flips to `shipped` and every chapter deferred against it
 goes red until a human re-reads it. When 0070 is superseded by a combat
@@ -246,21 +263,40 @@ bracket-lib toolchain chapter), and saying so in the corpus is better than
 silently excluding it — an excluded chapter is invisible, an `inapplicable` one
 carries its reason.
 
-Corpus JSON mirrors the trope schema's header so the two families read alike:
+Corpus JSON mirrors the trope schema's header so the two families read alike.
+**The item unit is generalized from the first commit** (ratified at G3): a
+tutorial's items are chapters, but NetHack has no chapters and its items are
+features and mechanics. Keying the schema on `chapters` would force a format
+migration on the first corpus that is not a tutorial — the exact corpus this
+family exists to admit.
 
 ```json
 {
   "corpus": "wolverson-2021",
+  "unit": "chapter",
+  "ordered": true,
   "provenance": "Herbert Wolverson, Roguelike Tutorial - In Rust ...
                  An instrument with known bias, not a standard ...",
   "frozen": "before first measurement, The Compendium",
-  "chapters": [
-    { "id": "2.6", "title": "Dealing Damage",
+  "items": [
+    { "id": "2.6", "kind": "chapter", "title": "Dealing Damage",
       "verdict": "refused", "anchor": "decision:0070",
       "note": "vitality is a fold over committed wounds; no stored HP" }
   ]
 }
 ```
+
+**`ordered` is the field generalizing early actually bought**, and it is not
+cosmetic. Wolverson's items form a *pedagogical ladder*: each chapter assumes
+the one before it, which is what makes "the first chapter Hornvale cannot
+replicate" a meaningful sentence and the single most useful reading this corpus
+produces. NetHack's feature list has no such order, and the same sentence about
+it would be meaningless. So the resolver may make **ordinal claims — first
+unmet item, longest satisfied prefix — only for a corpus that declares
+`ordered: true`**, and must refuse them otherwise rather than silently ranking
+by `id`. A corpus-level `unit` labels the items; a per-item `kind` lets a mixed
+corpus (features *and* mechanics *and* dungeon fixtures) stay honest about what
+each row is.
 
 ## 9. What this campaign refuses to build, and why
 
@@ -333,8 +369,6 @@ report "no drift" forever.
 - Executable per-chapter probes (§9), scoped to chapters where a transcript
   would discriminate.
 - The surplus read's coarse granularity (§6).
-- Whether a future corpus that is *not* a tutorial (NetHack has no chapters)
-  needs a different unit than "chapter" — the schema should not assume one.
 - `make worktree-take` branches from `origin/main` and does not warn when local
   `main` is ahead; it bit at this campaign's start.
 
@@ -345,3 +379,11 @@ report "no drift" forever.
 - **A coverage verdict must cite a machine-checked anchor, and an unmet item
   must distinguish refused / deferred / absent.** The generalisation of 0095's
   third verdict, and the rule that makes the artifact unable to rot silently.
+  Its accepted cost — ratified at G3 — is that the idea registry becomes a
+  gated interface: a row's ID and status are load-bearing for a committed
+  artifact, and the failure text must be diagnosable by a session that does not
+  know this instrument exists.
+- **An ordinal reading requires a declared ordering.** A corpus states
+  `ordered`, and the resolver refuses first-unmet / longest-prefix claims for a
+  corpus that does not — an unordered catalogue ranked by `id` would
+  manufacture a ladder its source never had.
