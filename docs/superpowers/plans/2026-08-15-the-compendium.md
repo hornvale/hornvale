@@ -978,16 +978,56 @@ spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 Run: `make rebaseline && cargo test -p hornvale --test system_coverage 2>&1 | tail -20`
 Expected: PASS.
 
-- [ ] **Step 5: Format and commit**
+- [ ] **Step 5: Two items carried into this task from Task 4's review**
+
+Both are about the instrument telling the truth about its own coverage, which
+is this task's subject.
+
+**5a. Render the qualification, not just the verdict.** `render` currently
+prints id/title/verdict/anchor only, so all eight items the author marked
+ARGUABLE in the corpus `note` field print exactly as flat as the
+well-evidenced ones. Spec §7's header does declare `present` weakly-checked
+above the tally, but the item table still reads as a scorecard. Surface the
+`note` — or at minimum an ARGUABLE column — so a reader sees which rows the
+author themself flagged. This moves the committed artifact; regenerate and
+commit it in the same commit.
+
+**5b. A `test:` anchor must not resolve to an `#[ignore]`d test.** This is the
+**fourth** false-clean found in this resolver, and the campaign discovered it
+by accident: Task 4's author went looking for stronger evidence for item 4.2,
+found it in `windows/lab`'s end-to-end run tests, and had to decline them
+because they are `#[ignore]`d `heavy:` batteries that the gate never runs. A
+raw-text search for `fn <symbol>` cannot see that.
+
+So an anchor can cite a test that never executes, and the resolver calls it
+resolved. Two reviewers and one implementer have now each applied this check
+**by hand**; codify it. In `resolve_anchor`'s `Anchor::Test` arm, treat a
+symbol whose definition is preceded by `#[ignore]` as DANGLING, with a message
+saying the test exists but does not run and naming the two repairs (cite a
+gate-run test, or weaken the verdict).
+
+**Observe it red before green**, and add a negative control: a normal
+`#[test]` must still resolve clean, or the fix has become "reject everything".
+
+Then re-verify the whole corpus — all 26 `test:` anchors — still resolves
+clean. If one does not, that is a real finding about a verdict, not a problem
+with this check: report it rather than re-anchoring it yourself.
+
+- [ ] **Step 6: Format and commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale --all-targets -- -D warnings
+make rebaseline    # 5a moves the coverage artifact; 5b should not
 git add cli/src/ cli/tests/ scripts/regenerate-artifacts.sh docs/audits/
-git commit -m "feat(systems): the matrix and the derived surplus read
+git commit -m "feat(systems): the matrix, the derived surplus read, and two
+honesty fixes
 
 The surplus is what the catalogue never thinks to ask for, derived from
-uncited subsystems rather than authored. Its coarse granularity is printed
-next to it."
+uncited subsystems rather than authored; its coarse granularity is printed
+next to it. Plus: the item table now carries the author's own qualification,
+and a test: anchor citing an #[ignore]d test is DANGLING rather than clean —
+the fourth false-clean found in this resolver, and the third that a passing
+test suite did not notice."
 ```
 
 ---
