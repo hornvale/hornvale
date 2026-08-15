@@ -128,6 +128,7 @@ under review. This file is.
 - [Compound Word](the-compound-word.md) — PROC-19 The Compound Word…
 - [Standing Offer](the-standing-offer.md) — PROC-12 The Standing Offer…
 - [The Staff](the-staff.md) — 0132/0133; 15 plan/spec defects, 0 in implementer code; found 5 checks reporting green on nothing then wrote a 6th verifying the fix for one; a scope boundary stated as a prohibition is not enforcement
+- [The Glasshouse](the-glasshouse.md) — 0134/0135; the census warmed −11.99 → −3.65 °C and ice-dominant worlds 651 → 187/1000, meeting 4 of 6 frozen criteria; an inherited "8.6σ" was 1.09σ; "fix this constant from Earth" was provably impossible (the term vanishes at the anchor); a column that moved by ZERO was a scope error, not a null; how to freeze a decision rule you already know the answer to
 
 ### The Walk (game-layer liveness arc — M2)
 

@@ -1,14 +1,14 @@
-# The Glasshouse — retrospective (IN PROGRESS)
+# The Glasshouse — retrospective
 
-**Status: written mid-campaign, extended at a second handoff.** Sections 1-7
-were written at the machine handoff of 2026-08-14; sections 8-11 and the
-HANDOFF block were added at the close of the resumed session on 2026-08-15,
-which absorbed The Staff, settled `k`, and ran both owed refreshes. Decision 0020 asks for
-this at close; it is being started early because `.superpowers/sdd/` is
-git-ignored and dies with its worktree, and this campaign's Stage B reasoning
-(ledger entries #10–#28) would otherwise not survive the move. The product
-state lives in the plan's checkboxes and in `HANDOFF` below; what follows is
-process, per 0020.
+**Status: complete.** Written in three sittings across two machines — sections
+1–7 at the machine handoff of 2026-08-14, sections 8–11 at the resumed
+session's close on 2026-08-15, and sections 12–14 plus the readout at the
+campaign close the same day. Decision 0020 asks for this at close; it was
+*started* early because `.superpowers/sdd/` is git-ignored and dies with its
+worktree, and that decision is the reason sections 1–11 exist at all: two of
+the three sittings ran in worktrees that no longer hold their scratch.
+
+**The product readout is section 12.** Everything else is process, per 0020.
 
 ## 1. The premise in the brief was the defect
 
@@ -230,69 +230,124 @@ Two things made the recovery cheap, and both are worth copying:
 
 ---
 
-## HANDOFF — state at 2026-08-15
+## 12. The readout — six preregistered criteria, four met
 
-**Branch:** `campaign/the-glasshouse` at `f8014156`, pushed, tree clean,
-`gate-commit` green at 2745/2745. **Absorbed:** `main` through The Staff
-(152f278c).
+Measured on the refreshed 1000-world census (`c0211b18`, canonical box) against
+Stage A's frozen baselines. **The before-arm was recomputed from the
+pre-refresh CSV as a positive control and reproduced all five frozen figures
+exactly** — median −11.9886, spread 44.5907 K, ice 65.10%, r = +0.9227, and
+the spinning subset's +0.9814 against the spec's stated +0.980. The instrument
+is verified against the preregistration, not merely consistent with it.
 
-| item | state |
-|---|---|
-| Tasks 1–5 | complete |
-| `k` | **settled at 0.30**, `THERMOSTAT_RESIDUAL_FRACTION` (decision: Nathan) |
-| census refresh | **done** — `c0211b18`, canonical box, 979.5 s |
-| gnomon-injection refresh | **done** — `c252f9a8`, canonical box |
-| Risk 4 | open |
-| Tasks 6, 7 | not started |
-| `toponymic_shape` | **deliberately red**, see below |
+| # | criterion | baseline | after | verdict |
+|---|---|---|---|---|
+| 1 | median `mean-land-temperature-c` within 5 K of +8.6 °C | −11.99 | **−3.649** | **FAIL** — 12.25 K short |
+| 2 | spread p95−p5 ≥ 31.2 K (70% of baseline) | 44.5907 | **34.9175** | **PASS** (78.3% retained) |
+| 3 | no biome class > 50% | ice 65.10% | **taiga 25.00%** | **PASS** |
+| 4 | `dominant-soil-order` no longer frozen | leptosol 100% | **leptosol 100%** | **FAIL** |
+| 5 | Earth's `S=1` lands in the 25th–75th pct of temperature | 88.1th | **58.9th** | **PASS** |
+| 6 | r(`insolation-rel`, T) < 0.75 | +0.9227 / +0.9814 spinning | **+0.3267 / +0.3642** | **PASS** |
 
-**Both host-pinned refreshes are complete.** Verify that nothing
-physics-moving has landed since `c0211b18` before relying on that — the check
-is whether anything under `kernel/`, `domains/`, `windows/worldgen/src` or
-`windows/lab/src/metrics.rs` has changed — and if nothing has, **do not re-run
-either**. A census is once per campaign and costs ~16 min of the canonical box.
+**The spec's named falsification did not occur.** §4.1 said that if (2) and (3)
+proved incompatible — if every parameterization that spread temperature kept a
+class dominant — that was the finding and the biome specials were an
+independent defect. Both passed simultaneously. The specials were a symptom.
 
-**Next actions, in order:**
+**No constant moved after unblinding.** `k` was settled at 0.30 before the
+refresh; nothing was retuned to rescue criterion 1.
 
-1. **Risk 4** — which of `FREEZE_C` / `HABITABLE_MIN_C` / `ICE_C` /
-   `TEMPERATE_BASELINE_C` actually moved behaviour. Cheaper than planned: the
-   refreshed census carries the after-arm directly. The structural half is
-   already established — `TEMPERATE_BASELINE_C` is a baseline for a *deviation*
-   and cannot switch; the other three are gates, and `FREEZE_C` at −10.0 sat on
-   the pre-campaign median of −10.49.
-2. **Task 6, the classifier gate.** Two independent lines already favour "no
-   code change" — P1″ un-falsified, and settlement rising 620 → 826
-   occupations — but the gate *is* the re-measurement, so run it.
-3. **Task 7** — all six criteria against Stage A's frozen baselines, then close.
-4. **`toponymic_shape`.** 27 of 29 pairs confirm; 2 invert by 0.033 and 0.111,
-   both inside one sampling standard error (~0.14 at n≈25, against a 0.15
-   separation). Its `forall` rule does not match its own sample sizes. **Freeze
-   a decision rule before measuring again** — choosing one after seeing which
-   pairs inverted is the same error as lowering `SHAPE_SAMPLE_FLOOR`, which was
-   already refused once. It is *not* in the sub-floor roster, so `gate-commit`
-   will not show it; it surfaces at `gate-stage`.
-5. **Definition of Done** — chronicle entry, this retrospective, a Confidence
-   Gradient re-score, and spec §10's registry updates (correct `SKY-19` and
-   `CLIM-cold-attractor`, resolve `CLIM-astronomy-unmeasured`, move
-   `CLIM-greenhouse` and `CLIM-biome-classifier-mixing` to in-progress, add a
-   hypsometry row, note this campaign as `CLIM-ice-albedo`'s unblocker).
+### Risk 4 — which threshold constants actually moved behaviour
 
-**The headline, for the chronicle:** median land temperature **−11.99 →
-−3.649 °C**; ice-dominant worlds **651/1000 → 187/1000**; settlement at seed 42
-**620 occupations across 217 sites → 826 across 302**. Twenty-nine sky columns
-are byte-unchanged across a refresh that added a new seeded draw, which is the
-stream-isolation contract holding over 1000 worlds.
+Per-world proxy (`mean-land-temperature-c`; the constants are per-*cell*
+thresholds, so these counts bound the behaviour change rather than measuring it
+directly, and are labelled as such deliberately):
 
-**On a fresh session:**
+| constant | value | worlds below, before | after |
+|---|---|---|---|
+| `ICE_C` | −20.0 | 305 | **67** |
+| `FREEZE_C` | −10.0 | 529 | **278** |
+| `HABITABLE_MIN_C` | −5.0 | 623 | **456** |
+| `TEMPERATE_BASELINE_C` | 14.0 | 951 | **954** |
 
-- **The gate ladder is not what this campaign started with.** `make gate`,
-  `ci`, `gate-fast`, `gate-full` refuse. Use `gate-commit` locally;
-  `gate-stage`/`gate-campaign` dispatch to one strictly serial lane on the
-  canonical box and **fail closed** if it is unreachable.
-- **This campaign's decisions are 0134 and 0135**, not 0132/0133 — The Staff
-  took those. Any prose citing the old numbers for the craton clamp or the
-  criterion restatement is stale.
-- Two stashes (`a04ffb26`, `a9e470f9`) are **superseded and already landed**.
-  Do not re-apply them; the stash stack is shared with other sessions.
-- `docs/timings/test-baseline-<host>.tsv` is keyed on `hostname -s`. This
-  session ran on `MacBookPro`; the earlier half ran on `ambrose`.
+Three moved hard; the fourth did not, and **the inherited explanation for why
+was wrong in a way worth recording.** The handoff said `TEMPERATE_BASELINE_C`
+"is a baseline for a deviation and cannot switch". It *can*: felt weather emits
+heat or cold once the deviation passes ±2 °C, and deification crosses at ~15 °C.
+The true reason is quantitative, not structural — the population is still ~9.6 °C
+below the emission margin at the median, so an 8.3 K warming moved only 3 of
+1000 worlds across it (941 → 946 emitting; 699 → 576 crossing the pantheon
+floor, which *is* a real behavioural change the structural story would have
+missed entirely). An inherited diagnosis is a hypothesis, and this one was
+right by accident.
+
+## 13. The soil column: a scope error wearing a null's clothes
+
+Criterion 4 returned zero movement under the largest intervention available.
+Read as a measurement that is an emphatic null; it was not one.
+
+`classify_soil` opens with `depth < 0.25 || slope > 300.0 → Leptosol`, and every
+branch below it reads temperature or moisture. Measured over 20 worlds and
+307,588 land cells: **72.1% of land never reaches the climate ladder** —
+61.09% by depth, 11.04% by slope — and where the ladder does run it is healthy
+(8 orders, max 30.19%).
+
+Three things generalise, and the third is the one that cost time:
+
+- **Spec §2.3's premise was falsified, not merely unmet.** It said "`leptosol`
+  follows the same elevation" and therefore would move when elevation did. It is
+  overwhelmingly the *depth* arm, and depth is not elevation.
+- **The plan's gate table was not exhaustive.** Its two rows were "no class >50%
+  AND soil unfrozen → nothing needed" and "a class still >50% → independent
+  defect". The actual result — biome half clean, soil half frozen — matched
+  neither, and a table with an `AND` in one row and a different predicate in the
+  other cannot be exhaustive by construction. **When a branch table's rows are
+  not negations of each other, it has a hole.**
+- **A statistic that refuses to move is indistinguishable from a weak effect by
+  inspection.** The only thing that separated them was attributing the deciding
+  branch instead of inferring it — the same lesson as §4 (*shape is not
+  ownership*), one layer down: *magnitude is not mechanism*.
+
+## 14. The one rule that had to be frozen blind, and how to make that checkable
+
+`toponymic_shape` failed on 2 of 29 pairs and its `forall` rule justified itself
+by claiming a 0.15 predicted gap was "several sampling standard errors". At the
+smallest sample the test admits (20 names apiece), the SE on a difference of two
+proportions is 0.158. The gap is **0.95 SE**. The justification was wrong by
+3–5×, and the test had been failing on sampling noise.
+
+The rule had to be replaced *before* re-measuring (0016), and the session
+already knew both inverted margins — which is exactly the situation where
+"frozen before measuring" degrades into a promise. The move that makes it
+checkable instead of trusted:
+
+> **Choose a rule whose verdict is invariant across every conventional value of
+> its free parameter, then say so.** The two inversions sit at 0.28 SE and
+> 0.79 SE — both under a *single* standard error — so `k` = 1, 2 or 3 all
+> forgive them. A threshold that cannot have been fitted, because no admissible
+> choice would have changed the outcome, needs no trust.
+
+Two supporting notes:
+
+- **A significance filter beats a rate criterion here, and the reason is
+  directional.** `range_readout`'s P2 precedent (a frozen majority rate) would
+  also have passed, but a rate stays equally lax forever. A threshold denominated
+  in the sample's own error *tightens automatically* as worlds gain names: the
+  same rule that forgives 0.11 at n=21 refuses it at n=200. A correction should
+  get stricter with better data; a loosening does not.
+- **The negative control was run and mattered.** Setting `k` to 0.5 turned the
+  0.79 SE pair red with a *behavioural* failure, proving the assertion path is
+  live rather than vacuous. §2 of this retrospective is the same lesson, and it
+  needed applying twice in one campaign.
+
+## 15. Follow-ups promoted out of scratch
+
+- `MAP-soil-depth-freeze` (new registry row) — 61% of land under 25 cm of soil.
+  Needs its own preregistration and census refresh; deliberately not fixed here.
+- `CLIM-insolation-draw-measure` (new registry row) — the residual 12 K to Earth
+  is in the orbital draw's measure, not the climate model. This is the successor
+  campaign's target, not another thermostat constant.
+- `tree_line_m`'s 40 m/degree slope is not Earth's (~57 needed; the function
+  reaches 0 m only at 100° latitude). Provenance recorded in the doc comment,
+  re-fit deferred as census-moving.
+- The faint-young-Sun constraint at `S ≈ 0.75` remains the identified way to
+  make `k` identifiable from Earth (§6), and is still unbuilt.
