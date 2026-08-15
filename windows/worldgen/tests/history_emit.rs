@@ -702,8 +702,28 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // occupation chains, not a property, and it should not be cited as
     // evidence about `layer_key`. Post-unblinding re-measure, declared per
     // decision 0016.
+    //
+    // THE GLASSHOUSE, Stage B Task 5: 1 -> 2, over 4353 pairs compared (down
+    // again from 5229 — the latitude profile redistributed the population a
+    // third time this campaign, onto fewer restacked sites). The re-read this
+    // comment block demands, done rather than skipped: the count assertion
+    // below is the LAST statement in this test, so the per-tie assertions in
+    // the loop above RAN AND PASSED on both tying pairs. Their own (founded,
+    // ended, peak) and their predecessors' founding coordinates are equal, so
+    // the key is tying exactly where its definition says it should and the
+    // tie conditions did NOT change — only which occupation chains exist did.
+    // At 2 ties the per-tie assertions are load-bearing rather than vacuous,
+    // which is the better of the two states this witness alternates between.
+    // The sequence is now 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 across eight
+    // changes, and eight readings on a quantity that has never held a value
+    // twice running is the strongest evidence yet for the standing reading:
+    // this is a coincidence of particular occupation chains, not a property,
+    // and it should not be cited as evidence about `layer_key`. Measured on
+    // the tree that has absorbed main (50 commits, The Repose); the identical
+    // figure pre-absorption is one of the corroborations that the absorption
+    // moved no physics. Post-unblinding re-measure, declared per decision 0016.
     assert_eq!(
-        ties, 1,
+        ties, 2,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -927,9 +947,23 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // the same existence-claim-near-a-threshold reading the paragraphs above
     // already give; the claim this test is frozen for is unmoved.
     // Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE GLASSHOUSE re-pin, Stage B Task 5: [3, 0, 0] -> [1, 0, 0]. The
+    // latitude profile re-placed settlements a third time this campaign. The
+    // TOTAL falls from 3 to 1, so the claim this test is frozen for — that
+    // the material fourth key BARELY moves the stratigraphy — is not merely
+    // intact but better supported than at any reading since The Delvers: one
+    // restacking site in three worlds, against ~19k land cells each. A re-pin
+    // that STRENGTHENS its own claim deserves the same scepticism as one that
+    // weakens it, so note what has not changed: this is still a three-seed
+    // existence claim near a threshold (decision 0097), the doc comment above
+    // still says a campaign needing this quantity as evidence should widen the
+    // sweep rather than read three worlds, and 1 is no more a property than 3
+    // was. Measured on the tree that has absorbed main (50 commits, The
+    // Repose), identical to the pre-absorption figure.
     assert_eq!(
         measured,
-        vec![(42u64, 3usize), (7, 0), (1000, 0)],
+        vec![(42u64, 1usize), (7, 0), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }
