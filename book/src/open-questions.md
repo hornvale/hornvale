@@ -124,6 +124,34 @@ property of **plans written as literal code listings**, which get reviewed for
 faithful transcription and not for whether the predicate they contain is the
 one the spec asked for.
 
+The Ballast (2026-08-15) adds a fourth shape, and it is the one this practice
+does not reach. Every instance above is a check whose *predicate* was wrong —
+a grep matching nothing, a branch returning satisfied, a guard wired
+backwards. Mutation finds all of them, because mutation asks whether a check
+can fire. The commit gate's test roster failed differently: its predicate was
+correct and it fired reliably, for every test on its list. The list had simply
+gone short. One crate had no entry at all, so none of its tests ran anywhere,
+and the gate reported green about everything it was looking at while looking
+at less than it claimed to.
+
+Making that check fail on command would never have found it. Corrupt the
+roster and the gate reddens exactly as designed; the check is not broken.
+**Mutation proves a check can fire; it says nothing about whether the check is
+pointed at everything.** An allow-list has the additional property that it
+gets *faster* as it goes blinder, so the symptom of its decay is
+indistinguishable from the improvement it was built to deliver — and the
+mechanism documented to keep it current, which wrote its updates to scratch
+that the next job erased, had never once run to completion in the file's
+entire two-commit history.
+
+**Score: the bet holds, and the practice gains a second half.** Making a check
+fail on command remains necessary and remains the cheapest thing that works.
+It is not sufficient, because it verifies the check against itself. A check
+also needs an *enumeration* it is answerable to — a list of what ought to be
+covered, with an absence from that list treated as a failure rather than as
+silence. The first practice catches a check that lies. Only the second catches
+a check that was never asked.
+
 A fourth campaign puts the sharpening where the *repair* is. The Collation
 (2026-08-06) produced the same shape from its own plan text — a spec promising
 one test asserting a generated matrix's per-column figures equal the per-corpus

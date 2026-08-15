@@ -131,21 +131,34 @@ if [ -n "$recycled" ]; then
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
     # THE RENAME INVALIDATES COMPILED PATHS AND CARGO DOES NOT KNOW IT.
-    # `env!("CARGO_MANIFEST_DIR")` and `CARGO_TARGET_TMPDIR` are baked at compile
-    # time; `cargo build --workspace --all-targets` reports the tree fresh after a
-    # rename, so every cached test binary still points at the previous campaign's
-    # directory. Measured taking the-axes -> the-staff: six failures whose panics
-    # named the old path, which read exactly like a red main.
+    # `env!("CARGO_MANIFEST_DIR")`, `CARGO_TARGET_TMPDIR`, and
+    # `env!("CARGO_BIN_EXE_*")` are all baked at compile time;
+    # `cargo build --workspace --all-targets` reports the tree fresh after a
+    # rename, so every cached test binary still points at the previous
+    # campaign's directory. Measured taking the-axes -> the-staff: six
+    # failures whose panics named the old path, which read exactly like a red
+    # main -- that was the first two macros. CARGO_BIN_EXE_* was a THIRD,
+    # separate baked-path macro this line did not grep for at all until The
+    # Ballast (2026-08-15) found it live: taking the-staff -> the-ballast left
+    # `tools/board/tests/resilience.rs`'s compiled binary spawning
+    # `env!("CARGO_BIN_EXE_board")` pointed at the-staff's target/, and all 7
+    # of its tests failed with `spawn board: NotFound` -- a worktree-take of
+    # tools/board itself was never rebuilt because CARGO_BIN_EXE_ never
+    # matched this grep.
     #
-    # Touch the sources that read either macro, derived by grep rather than
-    # hand-listed, so a new call site is covered the day it lands. 29 of the 31 are
-    # under tests/ and recompile only their own test binary; 2 are under src/ and
-    # rebuild their crate. That is far cheaper than the 771 s cold build this pool
-    # exists to avoid.
+    # Touch the sources that read any of the three, derived by grep rather
+    # than hand-listed, so a new call site is covered the day it lands. 42 of
+    # the 46 are under tests/ and recompile only their own test binary; 4 are
+    # under src/ and rebuild their crate. That is far cheaper than the 771 s
+    # cold build this pool exists to avoid. Scoped to `$DEST` (the whole
+    # worktree, not just workspace crates), so this already reaches
+    # tools/board, tools/digest, tools/type-audit, and tools/seam-guard --
+    # those out-of-workspace crates just need their OWN target/ scanned by
+    # test-worktree-freshness.sh too (fixed separately, same finding).
     #
     # `|| true`: a worktree with no matching file is fine, and `worktree-take` must
     # not fail on a convenience step.
-    grep -rl 'env!("CARGO_MANIFEST_DIR")\|CARGO_TARGET_TMPDIR' \
+    grep -rl 'env!("CARGO_MANIFEST_DIR")\|CARGO_TARGET_TMPDIR\|CARGO_BIN_EXE_' \
         --include='*.rs' "$DEST" 2>/dev/null | xargs -r touch || true
     # `mv` leaves the MAIN REPO's back-pointer stale. Verified, and the naive
     # assumption is wrong in an important way: the moved worktree's own

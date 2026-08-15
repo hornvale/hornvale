@@ -299,15 +299,47 @@
 //! comparing draws from an overlap. Its survival at nine peoples was luck, not
 //! a reason: 1.045 is what luck looks like just before it runs out.
 //!
-//! **RECOMMENDED, NOT TAKEN HERE:** retire the PRIMARY assertion the way this
-//! file already retired `NONRAIDER_MAX` and `SEPARATION_FACTOR` — deleted, not
-//! moved, with the falsification recorded — and let the whole-roster rho carry
-//! the direction it was always a proxy for. That is a preregistered claim's
-//! disposition and belongs to review, not to a task closing out red tests, so
-//! the assertion is left standing and firing. Whoever takes it: the honest
-//! reading is that a two-set partition of a continuum stopped being a
-//! partition at The Tolerance and this is the delayed consequence, not that
-//! the disposition stopped ordering anything.
+//! The Radiation recommended, but deliberately did not take, retiring the
+//! PRIMARY assertion the way this file already retired `NONRAIDER_MAX` and
+//! `SEPARATION_FACTOR` — deleted, not moved, with the falsification
+//! recorded — and letting the whole-roster rho carry the direction it was
+//! always a proxy for. That was a preregistered claim's disposition and
+//! belonged to review, not to a task closing out red tests, so the
+//! assertion was left standing and firing. The honest reading: a
+//! two-set partition of a continuum stopped being a partition at The
+//! Tolerance, and this was the delayed consequence, not evidence that the
+//! disposition stopped ordering anything.
+//!
+//! ## THE PRIMARY CLAIM, RETIRED (decision 0134, 2026-08-15)
+//!
+//! **Review has now taken it.** [Decision
+//! 0134](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0134-a-partition-statistic-refuted-by-its-own-mechanism-is-retired-not-rescued.md)
+//! adjudicates the falsification above: the min-versus-max order statistic is
+//! dead, the mechanism it was written to test survives and strengthened (rho
+//! 0.840, up from 0.831), and nothing was retuned to reach that ruling — not
+//! the thresholds, not the seed panel, not the partition.
+//!
+//! `non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders`
+//! (below) no longer asserts `separation > 1.0`; it still computes and
+//! prints it as a witness. The two claims that survived stay exactly as they
+//! were: the `RAIDER_MIN` floor and the SECONDARY whole-roster
+//! `spearman(threat_response, rate) > 0.0`, which is what the PRIMARY claim
+//! was always a proxy for and which does not need the partition to hold.
+//!
+//! The retired claim is not deleted — it is preserved as a standing,
+//! re-runnable falsification record in its own test,
+//! `the_weakest_raider_beats_the_strongest_abstainer_primary_claim`,
+//! `#[ignore]`d under this repo's `PREREGISTERED, not met:` idiom. Its
+//! `#[ignore]` reason cites decision 0134 directly rather than only a
+//! registry slug: `preregistration_guard.rs` scans every
+//! `tests/*calibration*.rs` file (this one included) and demands a
+//! sanctioned reason — a cost or a decision cite — for any `#[ignore]` it
+//! finds, and this repo's five earlier `PREREGISTERED, not met:` pins all
+//! live outside that glob, so none of them had to satisfy it. The registry
+//! carries the finding at `TOOL-min-vs-max-separation-compares-an-overlap`,
+//! status `refuted (0134)` per decision 0131's admission rule — the claim
+//! was tested and found false, and nothing shipped from it, because its
+//! successor (the SECONDARY rho) already existed and was already asserted.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
@@ -400,13 +432,13 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
     tally
 }
 
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
-    let wc = WorldComponents::assemble().expect("assemble the shipped component set");
-    // The partition, derived from the shipped psyche registry — never authored
-    // in this file. `bake_history_from` fills `BakeConfig::disposition` from
-    // exactly this map.
+/// Partition the shipped psyche registry's SETTLING peoples into raiders
+/// (`threat_response >= RAID_DISPOSITION_MIN`) and abstainers. Never authored
+/// in this file — `bake_history_from` fills `BakeConfig::disposition` from
+/// exactly this map. Shared by the always-run battery below and the retired
+/// PRIMARY claim's own standing pin (decision 0134), so the two can never
+/// silently partition the roster two different ways.
+fn raiders_and_abstainers(wc: &WorldComponents) -> (Vec<KindId>, Vec<KindId>) {
     let (mut raiders, mut abstainers): (Vec<KindId>, Vec<KindId>) = (Vec::new(), Vec::new());
     for (kind, psyche) in wc.psyche.iter() {
         if !wc
@@ -422,6 +454,14 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
             abstainers.push(*kind);
         }
     }
+    (raiders, abstainers)
+}
+
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
+    let wc = WorldComponents::assemble().expect("assemble the shipped component set");
+    let (raiders, abstainers) = raiders_and_abstainers(&wc);
     assert!(
         !raiders.is_empty() && !abstainers.is_empty(),
         "vacuous: the roster must contain at least one settling people on each \
@@ -475,10 +515,12 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         "separation {separation:.3} against the RETIRED preregistered factor \
          {SEPARATION_FACTOR} — reported, not asserted. Measured 2.55 at the pre-Tolerance \
          roster (0.426 / 0.167), 1.30 at the nine-people roster (0.433 / 0.333), and 0.680 \
-         at the fifteen-people roster (0.317 / 0.466) — where the PRIMARY claim below is \
-         FALSIFIED. See this module's doc, 'The Radiation's falsification of the PRIMARY \
-         claim': the whole-roster rho is 0.840 and the direction survives; the min-vs-max \
-         statistic is what died, and it was at 1.045 on the pre-Radiation nine."
+         at the fifteen-people roster (0.317 / 0.466) — where the PRIMARY claim was \
+         FALSIFIED and, per decision 0134, is no longer asserted here. See this module's \
+         doc, 'THE PRIMARY CLAIM, RETIRED': the whole-roster rho is 0.840 and the direction \
+         survives; the min-vs-max statistic is what died, and it was at 1.045 on the \
+         pre-Radiation nine. The retired claim is still asserted, by hand, in \
+         `the_weakest_raider_beats_the_strongest_abstainer_primary_claim`."
     );
 
     // Every raider clears the floor. This half of the original preregistration
@@ -524,16 +566,23 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         all[all.len() - 1]
     );
 
-    // PRIMARY: the weakest raider re-seats more often than the strongest
-    // abstainer. This is the campaign's ORIGINAL preregistered claim with the
-    // fitted magnitude stripped off and the direction kept — a sign claim, so
-    // a thin margin is the correct condition and NOT a reason to raise it.
-    assert!(
-        separation > 1.0,
-        "the raid disposition no longer orders flagship re-selection at all: weakest raider \
-         {weakest_raider:.3} <= strongest abstainer {strongest_abstainer:.3} (separation \
-         {separation:.3}). Full table above."
-    );
+    // PRIMARY, RETIRED (decision 0134): the weakest raider re-seats more
+    // often than the strongest abstainer was the campaign's ORIGINAL
+    // preregistered claim with the fitted magnitude stripped off and the
+    // direction kept — a sign claim over a min-vs-max order statistic. The
+    // Radiation falsified it at the fifteen-people roster (separation
+    // 0.680) and found the cause structural: once `takes_the_initiative`
+    // compares a per-settlement DRAW around the authored mean rather than
+    // the mean itself, two peoples close in mean overlap by construction,
+    // so the two innermost order statistics are comparing draws from an
+    // overlap. `weakest_raider`/`strongest_abstainer`/`separation` above are
+    // still computed and printed as a witness; the claim itself is no longer
+    // asserted here — it is retired to its own standing, `#[ignore]`d pin
+    // (`the_weakest_raider_beats_the_strongest_abstainer_primary_claim`,
+    // below), re-runnable by hand. Nothing was retuned: the SECONDARY
+    // whole-roster rho immediately below is what the PRIMARY claim was
+    // always a proxy for, and it still fires. See this module's doc, "THE
+    // PRIMARY CLAIM, RETIRED".
 
     // SECONDARY: monotone across the WHOLE roster, which a min-versus-max
     // comparison can miss. Sign only — see this module's doc for why the
@@ -563,6 +612,57 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         "flagship re-selection is no longer monotone in authored threat_response \
          (spearman {rho:.4}). The per-settlement draw predicts a positive sign; a \
          non-positive one means the gate stopped reading the authored mean."
+    );
+}
+
+/// **THE PRIMARY CLAIM, RETIRED (decision 0134).** The battery above no
+/// longer asserts `separation > 1.0` — see its "PRIMARY, RETIRED" comment and
+/// this module's doc, "THE RADIATION'S FALSIFICATION OF THE PRIMARY CLAIM".
+/// This test is the claim's standing record: it still computes and still
+/// asserts the falsified sign claim, `#[ignore]`d so it never runs in any
+/// gate, kept re-runnable by hand so a future silent reversal (the ordering
+/// recovering separation on its own) is discoverable rather than assumed.
+///
+/// Nothing here is retuned from the assertion this replaces. The partition
+/// is the same `raiders_and_abstainers` the always-run battery uses, the
+/// rates are the same `reselection_rates`, and the bound is the same `1.0`.
+/// The only change is that a failure here no longer fails the gate — it was
+/// already failing every heavy-tier run since 2026-08-10, deliberately, and
+/// decision 0134 is the review that stopped asking it to.
+///
+/// claim: sign(weakest-raider re-seating rate > strongest-abstainer
+/// re-seating rate) — measured FALSIFIED at the fifteen-people roster
+/// (separation 0.680, 2026-08-10); the whole-roster Spearman rho (asserted
+/// in the battery above) carries the direction this claim was always a
+/// proxy for.
+#[test]
+#[ignore = "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)"]
+fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
+    let wc = WorldComponents::assemble().expect("assemble the shipped component set");
+    let (raiders, abstainers) = raiders_and_abstainers(&wc);
+    let tally = reselection_rates(&wc);
+    let rate = |k: &KindId| -> f64 {
+        let (changed, worlds) = tally.get(k).copied().unwrap_or((0, 0));
+        f64::from(changed) / f64::from(worlds.max(1))
+    };
+    let weakest_raider = raiders.iter().map(rate).fold(f64::INFINITY, f64::min);
+    let strongest_abstainer = abstainers.iter().map(rate).fold(0.0f64, f64::max);
+    let separation = weakest_raider / strongest_abstainer.max(f64::MIN_POSITIVE);
+    println!(
+        "weakest raider {weakest_raider:.3}, strongest abstainer {strongest_abstainer:.3}, \
+         separation {separation:.3} — measured 0.680 (0.317 / 0.466) at 2026-08-10; a \
+         different reading here means the falsification decision 0134 records has moved."
+    );
+    assert!(
+        separation > 1.0,
+        "PREREGISTERED, NOT MET (decision 0134): the raid disposition no longer orders \
+         flagship re-selection by a min-vs-max comparison: weakest raider \
+         {weakest_raider:.3} <= strongest abstainer {strongest_abstainer:.3} (separation \
+         {separation:.3}). This is the retired PRIMARY claim from \
+         non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders, kept here \
+         as a re-runnable record — see this module's doc, 'THE PRIMARY CLAIM, RETIRED', and \
+         decision 0134. The SECONDARY whole-roster Spearman rho carries the direction this \
+         claim was always a proxy for and is unaffected by this failure."
     );
 }
 

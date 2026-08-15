@@ -152,9 +152,41 @@ make doctor        # the repo self-map — run this first in a fresh session
 # cannot avoid regardless of which tests it selects — this is also why
 # `gate-fast`'s test-scoping approach only ever bought ~10%. A test with no
 # recorded baseline duration is EXCLUDED from gate-commit by design (coverage
-# is the stage gate's job, not the commit gate's — see spec §4.3); it enters
-# on the next green stage gate, which measures it and rewrites the roster at
-# `docs/timings/subfloor-roster.tsv`, one file per canonical host.
+# is the stage gate's job, not the commit gate's — see spec §4.3).
+#
+# THE "NEXT GREEN STAGE GATE REWRITES THE ROSTER" REMEDY DID NOT WORK UNTIL
+# THE BALLAST (2026-08-15), AND IS STILL A HUMAN STEP, NOT AN AUTOMATIC ONE.
+# A green `gate` set (`cargo run -p hornvale -- ci-record`, called from
+# `gate-run`) does measure every test and rewrite
+# `docs/timings/subfloor-roster.tsv` — but it writes that file inside the
+# LANE'S SHARED SCRATCH WORKTREE, which the very next dispatch's
+# `checkout --force` + `reset --hard` (`scripts/lane-run.sh`) destroys before
+# anyone can commit it. `lane-run.sh` never `git add`s, `commit`s, or `push`es
+# anything, so nothing reached the committed file this way — verified by its
+# own two-commit history, both authored by hand. `hornvale-hearsay` sat at
+# zero roster entries for exactly this reason: `gate-commit` compiled the
+# crate and ran none of its tests, every commit, printing a green number that
+# meant nothing for it.
+#
+# The fix mirrors `timed.sh`'s own `docs/timings.md` row a few lines up in
+# this same script: `scripts/lane-run.sh` now copies a GREEN run's roster to
+# `$HV_LANE_DIR` (outside the worktree, so it survives the next dispatch)
+# beside that job's log. `make lane-roster [JOB=<id>]` pulls the most recent
+# (or a named) copy-out into the tree and prints the diff, left
+# **uncommitted** — a human still reviews and commits it, on the canonical
+# box's own authority, the same deliberate act every other lane-authored
+# artifact gets. GREEN-only is load-bearing, not stylistic: `cmd_ci_record`
+# (`cli/src/main.rs`) notes a red run's `run.json` is truncated, so a roster
+# copied from one would silently DROP tests from the commit gate.
+#
+# NOT "one file per canonical host" — that was never true. `subfloor_path`
+# (`windows/lab/src/timings.rs`) returns a single unkeyed path, unlike the
+# duration baseline beside it (`docs/timings/test-baseline-<host>.tsv`, which
+# IS host-keyed): a test's IDENTITY — whether it belongs in the commit gate
+# at all — does not vary by machine, even though the DURATION that decides
+# membership does. `cli/tests/subfloor_roster_coverage.rs` guards every
+# workspace crate having at least one entry here, three-valued the same way
+# `tropes check` and type-audit's `waiver(...)` are.
 #
 # GATE-STAGE AND GATE-CAMPAIGN DISPATCH TO ONE STRICTLY SERIAL LANE on the
 # canonical box (decision 0133, amending 0086's placement table and
