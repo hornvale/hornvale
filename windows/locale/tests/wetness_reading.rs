@@ -856,6 +856,46 @@ fn damp_below_the_median_is_always_inside_a_valley() {
 /// a `dry` clause is close to true by construction; this test exists to catch a
 /// regression that reintroduces two independent sources, which is what the
 /// unmodified code had.
+///
+/// # THIS TEST IS CURRENTLY FIRING, AND IT IS LEFT FIRING ON PURPOSE
+///
+/// Under The Glasshouse's climate correction, **1 of 35** riparian rooms in
+/// the seed-42 sample reads dry:
+///
+/// ```text
+/// RoomAddr { face: 0, path: [1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3] }:
+///   "a mossy hollow, dry, on a rise"  (moisture 0.2, wetness -0.5909623)
+/// ```
+///
+/// **Nothing here was moved to make it pass**, on the same reasoning
+/// `water_reading.rs`'s discharge floors are left firing: this test's entire
+/// job is to notice that the noun and the clause have come apart, and it is
+/// doing exactly that job. Adding an `offenders.len() <= 1` tolerance would
+/// delete the only instrument that noticed, and at n=1 a tolerance is
+/// indistinguishable from switching the test off.
+///
+/// **What it means.** The doc above says the contradiction is "close to true
+/// by construction" — and *close to* is the load-bearing phrase. The noun
+/// comes from the variety pool and the clause from `micro.wetness`; both are
+/// downstream of moisture, but not of the SAME function of it. At moisture 0.2
+/// with `wetness = -0.59` the pool still admits `a mossy hollow` while the
+/// clause has already tipped to `dry`. The campaign did not introduce that
+/// overlap; it moved one room into it, which is what an invariant asserted at
+/// zero tolerance is for.
+///
+/// **What should happen instead of a nudge**, recorded so the next session
+/// does not re-derive it:
+///
+/// 1. The two derivations should be made downstream of one threshold, not two
+///    — the pool's riparian admission and `reads_dry` should consult the same
+///    predicate rather than two independently-calibrated ones. That is the
+///    repair the "by construction" claim already assumes and does not have.
+/// 2. Failing that, the claim should be restated as a RATE over a seed sweep
+///    rather than an exact zero on one world, in decision 0093's sense — the
+///    same correction The Glasshouse applied to `toponymic_shape`'s `forall`
+///    when its threshold turned out to sit inside its own sampling noise.
+///
+/// Tracked as `LOC-riparian-dry-overlap`.
 #[test]
 fn no_room_reads_riparian_and_dry() {
     let world = world();

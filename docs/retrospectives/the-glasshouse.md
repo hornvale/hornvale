@@ -339,6 +339,98 @@ Two supporting notes:
   live rather than vacuous. §2 of this retrospective is the same lesson, and it
   needed applying twice in one campaign.
 
+## 16. Nineteen reds nothing was watching, and two the campaign chose to keep
+
+**`gate-commit` was green at 2745/2745 for this entire campaign while the
+branch carried nineteen full-workspace failures.** Both facts are true and
+neither is a bug: the commit gate runs only the sub-floor tier, and not one of
+the nineteen is in it. Nothing above `gate-commit` had been run since the
+census refresh, so the physics landed and its downstream witnesses were never
+re-read.
+
+Three lessons, in increasing order of how much they cost.
+
+**A handoff that reports a gate must name which gate.** "gate-commit green at
+2745/2745" was accurate and read as "the branch is clean". After decision
+0132 split one gate into three, a green from the cheapest is evidence about a
+tier, not about a branch — and the tier it covers is *by design* the one that
+excludes anything slow enough to be interesting.
+
+**`--no-fail-fast` on the FIRST run, and this campaign paid for that twice.**
+Section 7 already records a fail-fast run reporting 2 failures where there
+were 3. At the close a fail-fast lane gate reported **2 where there were 19** —
+it cancelled with 39 tests still running — and the number was carried into a
+status report before a local `--no-fail-fast` pass corrected it. The lesson did
+not fail to be learned; it failed to be applied to a *dispatched* run, where
+the fail-fast default lives in someone else's script.
+
+**Attribute individually; the shape histogram lies in both directions.**
+Section 9 records reading 9 golden mismatches as if they partitioned 25
+failures. Parsing all nineteen panics individually gave four classes that no
+count of shapes would have separated: 3 byte goldens, 4 numeric pins, 8
+liveness pins where the world moved out from under a named NPC or concept,
+2 deliberate reds, and — hiding among them — one witness whose re-read
+overturned another campaign's published finding.
+
+### The two that are staying red, deliberately
+
+`water_reading`'s discharge floors and `wetness_reading`'s R-8 are **not**
+witnesses and were not re-pinned. Both are instruments that noticed something
+true:
+
+- seed 42's loud-reach cells fell 34 → 16 and strong crossings 8 → 2, because
+  a higher sea level shortens drainage paths and shrinks catchments. The
+  threshold they are measured against was calibrated on pre-epoch catchments.
+- one riparian room in thirty-five now reads `dry`, because the riparian noun
+  and the dry clause are downstream of two different functions of moisture,
+  which the invariant's "by construction" wording assumed away.
+
+Nudging either floor would have deleted the only instrument that noticed, so
+both are left firing with their diagnosis, their mechanism and their two
+candidate repairs written at the failing constant, and both are filed as
+registry rows (`MAP-waterfall-threshold-mis-scaled`,
+`LOC-riparian-dry-overlap`). **A campaign that merges with named, explained
+reds is more honest than one that merges green because it moved two numbers.**
+The cost is real and should be stated: the stage and campaign gates are red on
+this branch, and will stay red until those rows are picked up.
+
+## 17. A published finding was overturned by a campaign that never touched it
+
+The Gnomon measured its anomaly report at recall@10 = 0.5667 over 120
+injection pairs against a preregistered 0.60 bar, published the shortfall as
+its headline, and marked its registry row `refuted`. It also did something
+better than that: it pinned the tally as an explicit **witness**, with a
+comment demanding that any move be re-read rather than updated, in the same
+commit, across the chronicle, the registry row and the heavy-tier roster.
+
+This campaign moved it — to **73/120 = 0.6083**, above the bar — without
+touching `REPORT_SIZE`, `TAIL_DEPTH_BAR`, the scorer or the evaluable surface.
+Only the worlds changed.
+
+**The pin did its job and caught a mover it was not watching for.** It was
+written to defend against a change to the *report*; what arrived was a change
+to the *world*, from a campaign six weeks later with an unrelated subject. That
+is the transferable part: a witness guards a number against everything
+upstream of it, and the set of things upstream of a number is larger than the
+set its author was thinking about.
+
+The re-read did not confirm the report either. The crossing is one hit out of
+120; at the bar the standard error is 0.0447, so the old figure sat 0.75 SE
+below and the new one sits 0.19 SE above, and the distance between them is
+0.66 SE. **A 120-pair battery was never able to adjudicate a 0.60 line**, and
+the original refutation looked clean only because it landed on the low side of
+a distribution wide enough to reach both sides of the bar. Recorded as "cannot
+tell" — not refuted, not confirmed — with the row returned to open.
+
+That makes three separate places this campaign found a preregistered threshold
+sitting inside its own sampling noise: `toponymic_shape`'s `forall` (0.15 =
+0.95 SE), H4's inherited 8.6σ (really 1.09σ, section 1), and this. The pattern
+is worth naming as a check rather than three anecdotes: **a preregistered bar
+needs a power calculation, not just a number frozen early.** Freezing is the
+right discipline and all three did it. A threshold is only a decision rule if
+the instrument can resolve it, and one line of arithmetic at freeze time
+settles that.
+
 ## 15. Follow-ups promoted out of scratch
 
 - `MAP-soil-depth-freeze` (new registry row) — 61% of land under 25 cm of soil.
