@@ -45,8 +45,22 @@ The commit gate keeps only what a single change can honestly verify in
 seconds: formatting, lints, the type audit, and a *sub-floor* slice of the
 test suite — every test whose last recorded duration sits under one second.
 A test that has never been timed is excluded rather than guessed at; it
-enters the sub-floor slice automatically the next time the stage gate runs
-and re-measures it, so coverage grows by measurement, not by hope. Everything
+enters the sub-floor slice when the stage gate next measures it.
+
+That last sentence was false when this chapter first carried it, and the
+correction belongs here rather than in a footnote. The returning half of the
+loop did not exist. The stage gate did re-measure every test and did rewrite
+the roster — into scratch space that the next job erases before anyone can
+commit it. Nothing ever reached the committed file; the roster's whole
+history was two commits, both written by hand. One crate's tests consequently
+sat outside the commit gate from the day it merged, while every run reported
+green. [The Ballast](./the-ballast.md) built the missing half: a green run's
+roster is copied somewhere durable, and a human brings it back
+deliberately. Coverage does grow by
+measurement rather than hope — but only once someone carries the measurement
+home, and an allow-list cannot notice that its own list has gone short.
+
+Everything
 costing minutes or more — the full suite, the artifact regeneration checks,
 the tests nobody had wired up, and the two verification tiers reserved for
 whole-world evidence — moved to the other two gates, which run on the one

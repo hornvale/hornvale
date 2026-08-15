@@ -365,6 +365,7 @@
 - [The Axes](./chronicle/the-axes.md)
 - [The Hearsay](./chronicle/the-hearsay.md)
 - [The Staff](./chronicle/the-staff.md)
+- [The Ballast](./chronicle/the-ballast.md)
 
 # Appendix: The Frontier
 
