@@ -92,6 +92,24 @@ the practice by one clause: **make it fail on command, and run the positive
 control, because a negative result from an instrument nobody has seen fire is
 not evidence.**
 
+**A note from The Staff (2026-08-14), since this score is read against an
+instrument this passage names by a label that no longer exists.** Both
+halves of Sexton's pairing — the census sentinel and the duration alarm —
+lived inside the single gate this chapter calls `make gate`, which decision
+0132 has since split by purpose into `gate-commit` (local, every commit) and
+`gate-stage` (the lane, each plan-stage boundary). The sentinel costs 12–25
+CPU-seconds depending on host, above the one-second floor that defines
+`gate-commit`'s test tier, so it no longer runs at every commit; the
+duration alarm moved with it, because both live inside the same `cargo
+nextest run --workspace` invocation, which is now `gate-stage`'s body rather
+than `gate-commit`'s. The pairing itself survives — generator and verifier
+still run together, just inside the slower gate — but the **frequency** this
+passage's score leans on does not automatically survive with it: nobody has
+yet counted how often `gate-stage` runs in a month, so "368" is not the
+number to read off this passage anymore, and no replacement has been
+measured. Score this bet as still paired, at a currently unmeasured
+frequency — not as reconfirmed at the old one.
+
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
 draws no seed and commits no fact — and produced the same family anyway, from

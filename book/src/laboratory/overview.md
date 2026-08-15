@@ -108,22 +108,30 @@ window whose position derives from the committed fixture's own bytes, so
 successive regenerations sweep different slices of the seed range — and
 compares them against the committed rows. It was authored as an always-on,
 few-seconds check on every `cargo test`, but as the worldgen pipeline
-deepened its cost grew to minutes, so it now runs in the heavy tier
-(`make gate-full`) rather than in the commit gate.
+deepened its cost grew to minutes, so it now runs in the heavy tier (the
+`heavy` lane set — `make gate-campaign`, or `make heavy-remote REF=<sha>`
+directly) rather than in the commit gate.
 
-That left a real gap, and [The Sexton](../chronicle/the-sexton.md) has since
-narrowed it. A three-world, all-metric **sentinel** now runs *inside* the
-commit gate, comparing the first three census rows against the committed
-`rows.csv` for about fifteen CPU-seconds — so a change that moves those worlds
-reddens on the developer's next local gate rather than at a campaign close
-hours later. It is a sample, not the census: it sees three worlds of a
+That left a real gap, and [The Sexton](../chronicle/the-sexton.md) narrowed
+it with a three-world, all-metric **sentinel** comparing the first three
+census rows against the committed `rows.csv` for roughly fifteen
+CPU-seconds. [The Staff](../chronicle/the-staff.md) then split the single
+gate that check lived in into three by purpose (decision 0132), sorted by
+cost rather than by hand: `gate-commit`'s local, every-commit tier runs only
+tests measured under one second, and the sentinel's own cost sits well above
+that floor. So it no longer runs at every commit — it runs inside
+`gate-stage`, the full `cargo nextest run --workspace` dispatched to the
+canonical box's lane at each plan-stage boundary, still well before a
+campaign close. It is a sample, not the census: it sees three worlds of a
 thousand, and a drift confined to the other 997 still waits for the full
-refresh. Its value showed immediately — within hours of shipping it had
-verified three separate campaigns' byte-identity claims on the census path,
-which is exactly the path a worldgen campaign cannot cheaply check for itself.
-Note also that the older sentence here promised the gap was covered by "CI's
-regenerate-and-diff": there has been no CI since decision 0125, and the local
-gate is the only gate. The full census fixtures themselves are
+refresh. Its value showed immediately under the old topology — within hours
+of shipping it had verified three separate campaigns' byte-identity claims on
+the census path, which is exactly the path a worldgen campaign cannot cheaply
+check for itself; the same pairing holds under the new one, just at the
+stage gate's cadence rather than the commit gate's. Note also that the older
+sentence here promised the gap was covered by "CI's regenerate-and-diff":
+there has been no CI since decision 0125, and the local gates are the only
+gate. The full census fixtures themselves are
 refreshed once per campaign — locally (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
