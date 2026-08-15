@@ -44,13 +44,32 @@
 //! file are witnesses that the residual exists and is small, and they will
 //! not survive the next epoch either.
 //!
+//! **The Glasshouse's `k` re-decision (0.4 → 0.3)** re-placed every
+//! settlement a FOURTH time; a fourth fresh full sweep (692.89 s, ten
+//! threads) found `[238, 1439, 1892, 2031, 2465, 2871]`, one drop each.
+//! 1892 survives all four epochs and is now the only seed that ever has;
+//! 1741 and 1866 cleared after a single epoch, exactly as the paragraph
+//! above predicted they would.
+//!
+//! **AND THIS TIME THE RATE MOVED, WHICH IS THE THING THIS HEADER TELLS YOU
+//! TO READ: 3 in 3000 → 6 in 3000.** It has now run 2 → 6 → 2 → 3 → 6 across
+//! five placements, so a doubling is inside its observed range and is not by
+//! itself alarming. What makes this one legible rather than noise is that an
+//! independent quantity moved with it and in the same direction: warming the
+//! population raised seed 42 from 620 occupations across 217 sites to 826
+//! across 302. More occupations mean more chances that two of them agree on
+//! every material fact `founder_handle` reads, so a rising collision count
+//! is the expected shadow of a rising settlement count, not evidence about
+//! the key. The key is unchanged; the ground under it is not.
+//!
 //! What this battery pins:
 //!
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
 //!    the depth the panic used to fire at;
 //! 2. **the size of the cut** — how many founders each seed loses, so a later
-//!    change that silently alters promotion coverage reddens here. Nine of the
-//!    twelve rows now read **zero**, and they are the campaign's headline: they
+//!    change that silently alters promotion coverage reddens here. Twelve of
+//!    the eighteen rows now read **zero**, and they are the campaign's
+//!    headline: they
 //!    are seeds that used to lose a founder and no longer do, so a regression
 //!    that reintroduces the collisions is visible rather than silent;
 //! 3. **no backfill** — the losing people ends one short of `MEMORY_DEPTH`
@@ -61,7 +80,7 @@
 //! before the widening. It is here so that a future absorption that re-exposes
 //! it is visible rather than surprising.
 //!
-//! Cost: twelve `BuildDepth::Settlements` builds and three `Full` builds, ~2 s
+//! Cost: eighteen `BuildDepth::Settlements` builds and three `Full` builds, ~2 s
 //! each on an optimized dev profile — cheap enough for the commit gate, which
 //! is where a liveness guard belongs.
 //!
@@ -95,27 +114,28 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// the depth `promote` runs at, so this is the end-to-end liveness claim rather
 /// than a claim about `select_founders` alone.
 ///
-/// **These are 1892, 1741 and 1866, not 1892 and 2078 (The Glasshouse, Stage
-/// B Task 5).** The area-mean-zero latitude profile re-placed every
-/// settlement in every world a third time this campaign, clearing 2078 along
-/// with the rest of the post-thermostat positive set. Building a cleared
-/// seed would prove only that a world without a collision survives, which is
-/// the vacuous form of this test, and the assertion below is what made the
-/// clearing visible instead of letting it hollow the test out silently.
+/// **These are 238, 1439 and 1892 (The Glasshouse, `k` re-decided 0.4 →
+/// 0.3).** The previous set — 1741, 1866, 1892 — lasted exactly one
+/// placement: 1741 and 1866 both cleared, and the assertion below is what
+/// made that visible rather than letting the test hollow out into "an
+/// uncontested world builds". It has now caught a cleared seed on two
+/// consecutive re-pins, which is the whole reason it is phrased as a
+/// liveness claim with a self-check rather than as three builds.
 ///
 /// The seeds come from a **re-run of the full 0–2999 sweep** on the
-/// post-latitude-profile tree (798.87 s, ten threads), so the positive-set
-/// claim below is a fresh measurement and not an inherited one: `[1741, 1866,
-/// 1892]`, one drop each. 1892 is the one seed that survives every epoch so
-/// far; 1741 and 1866 are new. The rate held at three worlds in three
-/// thousand.
+/// post-`k` tree (692.89 s, ten threads, run outside this test), so the
+/// positive-set claim is a fresh measurement and not an inherited one:
+/// `[238, 1439, 1892, 2031, 2465, 2871]`, one drop each. Three of the six
+/// are built here; 1892 is the one seed that has survived all four epochs.
+/// The rate DOUBLED to six in three thousand — see the module header for why
+/// that tracks settlement volume rather than the key.
 ///
-/// claim: structural(seed: [1741, 1866, 1892]) — three named worlds, built
+/// claim: structural(seed: [238, 1439, 1892]) — three named worlds, built
 /// once each. No search: the seeds come from a completed 0–2999 sweep, not
 /// from this test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [1741u64, 1866, 1892] {
+    for seed in [238u64, 1439, 1892] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -149,14 +169,23 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// test) found `[1741, 1866, 1892]`, one drop each. 2078 is kept as a zero
 /// row, the same convention as every prior cleared positive.
 ///
+/// **The set turns over again, and the rate doubles (The Glasshouse, `k`
+/// re-decided 0.4 → 0.3).** A fourth fresh 0–2999 sweep (692.89 s, ten
+/// threads, run outside this test) found `[238, 1439, 1892, 2031, 2465,
+/// 2871]`, one drop each. 1741 and 1866 clear after one placement; five new
+/// positives join 1892. Both cleared seeds are kept as zero rows, the same
+/// convention as every prior cleared positive, which is why this table grows
+/// rather than turning over — it is now eighteen rows, of which six are the
+/// live positive set and twelve are the record of what four epochs cleared.
+///
 /// The old seeds are KEPT as zero rows rather than deleted. They are the
 /// cheapest possible statement of what an epoch did — a collision set does not
 /// survive a re-placement — and they redden if a future change resurrects one,
 /// which is a thing worth knowing.
 ///
-/// claim: structural(seed: [20, 42, 514, 1412, 1505, 1738, 1741, 1866, 1892,
-/// 2078, 2634, 2793, 2898]) — thirteen named worlds with pinned per-seed
-/// values. Not a sweep and not a search: the enumeration is the whole of a
+/// claim: structural(seed: [20, 42, 238, 514, 1412, 1439, 1505, 1738, 1741,
+/// 1866, 1892, 2031, 2078, 2465, 2634, 2793, 2871, 2898]) — eighteen named
+/// worlds with pinned per-seed values. Not a sweep and not a search: the enumeration is the whole of a
 /// completed 0–2999 sweep's positive set plus two controls and every
 /// superseded row, so nothing here scans for an instance.
 #[test]
@@ -165,19 +194,24 @@ fn the_dropped_founders_are_pinned_per_seed() {
     // current positive set over seeds 0-2999; 42 and 2793 are the
     // long-standing controls; the rest are prior positives, kept to record
     // that they cleared. Values measured on this tree.
-    let expected: [(u64, usize); 13] = [
+    let expected: [(u64, usize); 18] = [
         (20, 0),
         (42, 0),
+        (238, 1),
         (514, 0),
         (1412, 0),
+        (1439, 1),
         (1505, 0),
         (1738, 0),
-        (1741, 1),
-        (1866, 1),
+        (1741, 0),
+        (1866, 0),
         (1892, 1),
+        (2031, 1),
         (2078, 0),
+        (2465, 1),
         (2634, 0),
         (2793, 0),
+        (2871, 1),
         (2898, 0),
     ];
     for (seed, drops) in expected {

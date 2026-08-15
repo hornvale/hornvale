@@ -926,9 +926,27 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // less, 0.476504 -> 0.435333, so the ratio widens again. Still off
     // `POLE_FLOOR` (`pole floored: false`), so still a genuine ratio.
     // Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE GLASSHOUSE re-pin (Stage B, `k` re-decided 0.4 -> 0.3): 12.2953 ->
+    // 10.1472, and this is the first movement in this line's history where
+    // the ratio NARROWS because both ends rose. A smaller residual fraction
+    // compensates more of seed 42's insolation shortfall, so the whole world
+    // warms — but the two ends do not warm equally in effect:
+    //   trop_mean     0.435333 -> 0.450636   (+3.5%, 68565 cells)
+    //   raw_pole_mean 0.035406 -> 0.044410  (+25.4%,  7920 cells)
+    // Warming a near-unproductive pole buys far more proportional
+    // productivity than warming an already-productive tropics, which is
+    // ordinary saturation and not a latitudinal mechanism moving. The
+    // assertion's own message tells its reader to check the decomposition
+    // before assuming anything latitudinal moved; the decomposition is why
+    // this re-pin is a narrowing rather than a defect. `pole floored: false`
+    // still holds, so this remains a genuine tropics/poles ratio and not
+    // `100 * trop_mean` in disguise — which is the failure mode this line
+    // has to keep proving it is not. Post-unblinding re-measure, declared
+    // per decision 0016.
     assert!(
-        (ratio - 12.2953).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~12.2953). Check the \
+        (ratio - 10.1472).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1472). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

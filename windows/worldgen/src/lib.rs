@@ -9632,7 +9632,19 @@ mod tests {
         // (seed 42's actual settlements differ; see `history-seed-42.md`'s
         // own re-point in this same task). Post-unblinding re-measure,
         // declared per decision 0016.
-        assert_eq!(count("name-gloss"), 305);
+        //
+        // THE GLASSHOUSE (Stage B, `k` re-decided 0.4 -> 0.3): 305 -> 366,
+        // and the three counts above are UNCHANGED at 145. This is the
+        // cleanest instance of the split this file keeps on two lines that
+        // its history contains: the pantheon is a function of the peopled
+        // ROSTER, which did not move, and the gloss count is a function of
+        // settlement VOLUME, which did — a warmer world supports more
+        // settlement (826 occupations across 302 sites at k = 0.3, against
+        // 620 across 217 at k = 0.4), and `name-gloss` is emitted per
+        // generated name. +61 glosses against +85 occupations is the right
+        // order of magnitude for that cause and no other. Post-unblinding
+        // re-measure, declared per decision 0016.
+        assert_eq!(count("name-gloss"), 366);
     }
 
     #[test]
@@ -10895,8 +10907,26 @@ mod tests {
         // reads +26 C there), lowering the carrying-capacity ceiling the
         // flagship's millennia of growth compound against. Post-unblinding
         // re-measure, declared per decision 0016.
+        //
+        // THE GLASSHOUSE re-pin (Stage B, `k` re-decided 0.4 -> 0.3): 66 -> 68.
+        // A smaller residual fraction means the thermostat compensates MORE of
+        // seed 42's insolation shortfall, so the world warms, carrying capacity
+        // rises with land temperature, and the ceiling the bake grows the
+        // flagship against rises with it — the same mechanism as the Task 4
+        // re-pin above, in the same direction, at a different magnitude.
+        //
+        // FOUR MOVES IN ONE CAMPAIGN (68 -> 66 -> 70 -> 66 -> 68), which is
+        // worth stating plainly rather than leaving as an archaeology exercise:
+        // this pin is a world-identity witness, and every deliberate change to
+        // terrain, carrying capacity or climate moves it BY DESIGN. Its value
+        // carries no claim about whether the flagship is correctly sized; the
+        // surrounding assertions (a scatter of settlements, no Vale, a
+        // flagship that exists at all) are what this test actually defends.
+        // Do not read a movement here as a defect, and do not read a return to
+        // a previous value as a fix — 66 has now been visited twice by
+        // unrelated causes. Post-unblinding re-measure, declared per 0016.
         assert_eq!(
-            village.population, 66,
+            village.population, 68,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -14261,6 +14291,44 @@ mod tests {
                 );
             }
         }
+        // The guard below tells its reader to "print the pairs before
+        // concluding which one you have" — so print them, rather than asking
+        // each future reader to re-derive them by hand. This fired for real
+        // when The Glasshouse re-decided `k`, and the first thing the session
+        // had to do was reconstruct exactly this table.
+        println!("== per-culture shape distributions, seed 42 ==");
+        println!("   (predicted from shipped weights, observed from name-gloss facts)");
+        println!("   sample floor is {SHAPE_SAMPLE_FLOOR} named settlements");
+        let mut roster: Vec<(&String, usize)> = shapes.iter().map(|(s, c)| (s, c.len())).collect();
+        roster.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        for (species, n) in &roster {
+            let mark = if *n >= SHAPE_SAMPLE_FLOOR {
+                "clears"
+            } else {
+                "below floor"
+            };
+            println!("   {species:<14} {n:>4} names   {mark}");
+        }
+        for (name, predicted, observed) in &peoples {
+            println!("   {name:<14} predicted {predicted:.3}   observed {observed:.3}");
+        }
+        for (i, a) in peoples.iter().enumerate() {
+            for b in peoples.iter().skip(i + 1) {
+                let gap = (a.1 - b.1).abs();
+                let why = if gap < SEPARATION {
+                    "SKIPPED: mapping does not separate them"
+                } else if a.2 == b.2 {
+                    "SKIPPED: exact observed tie"
+                } else {
+                    "compared"
+                };
+                println!(
+                    "   {:<14} vs {:<14} predicted gap {gap:.3}  observed {:.3} vs {:.3}  -> {why}",
+                    a.0, b.0, a.2, b.2
+                );
+            }
+        }
+
         assert!(
             compared > 0,
             "nothing was compared. TWO causes reach this line and the difference matters: \
