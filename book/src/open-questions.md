@@ -2533,6 +2533,48 @@ than about this instrument:
   a campaign's hypotheses is allowed to count as support, before either is
   measured, is what kept this pair honest.**
 
+### An effect can be self-scorable, confirmed, and unattributable (2026-08-14)
+
+The entry above sharpened this chapter's axis by showing that a self-scorable
+bet can be scored *against itself*. *The Repose* sharpens it again from a
+direction that is neither a pass nor a failure, and the chapter had no bin for
+it: **the instrument confirmed the effect and could not find its cause.**
+
+The question was as self-scorable as they come, and was frozen before any
+geohazard code existed: do settlements over-occupy high-unrest ground relative
+to the land base rate, stratified by elevation, pooled over thirty seeds? Every
+input is generated, every comparison is arithmetic on committed counts, and the
+readout ships as a drift-checked artifact. It answered cleanly: flat in the
+lowest elevation band, and rising with unrest above it — ×1.572, ×2.578, ×5.395
+from the calmest decile to the most violent.
+
+Then the design's own disambiguating arm — added precisely because a bare
+reading cannot separate *a true null* from *the mechanism was never wired* —
+severed both channels through which unrest is known to reach settlement siting,
+and the gradient did not flatten. It held at or above baseline in every band:
+152.6%, 105.2% and 101.5% of the baseline's excess survived. **Neither modelled
+channel carries the effect the instrument measured.** One of them, the hostility
+penalty, actively opposes it.
+
+**What this adds to the axis.** Self-scorability was being carried as a property
+of a *claim*; this campaign shows it is really a property of a **statistic**.
+The statistic here was scorable and was scored. The attribution — *which part of
+the model produces it* — is a different question with a different instrument, and
+that instrument returned "none of the ones we named". A world that can grade
+itself on an outcome cannot thereby grade itself on a mechanism, and a campaign
+that conflates the two will report a confirmed effect as though it were a
+confirmed explanation.
+
+The honest scope clause is short enough to carry: *unattributed by this
+instrument on this roster*. Both halves of it do work. The mineral channel could
+not have been refuted here whatever the data said — only two kinds in the roster
+read it at all, and they hold 0.398% of the settled population, so severing it
+tests the roster and not the channel. **An ablation on a channel almost nobody
+reads is a null with no power, and saying so is the difference between a finding
+and a claim.** The chapter's standing hope is that the self-scorable half of a
+bet closes by instrument; this is a case where it closed, and left a strictly
+larger open question behind it than it started with.
+
 ### A third category, between self-scorable and taste-gated (2026-08-14)
 
 This chapter splits a bet into a **self-scorable half** the Laboratory can close

@@ -822,6 +822,25 @@ fn channel_seed_is_the_derived_leaf_and_matches_the_old_internal_derivation() {
     );
 }
 
+/// KNOWN GAP, recorded where a reader of the two tests above will meet it:
+/// `TectonicGlobe` carries five hash-noise leaf seeds — `lithology_seed`,
+/// `features_seed`, `channel_seed`, `rill_seed` and `arc_gate_seed` — and
+/// **`arc_gate_seed` has no leaf-seed property test of its own.**
+///
+/// What the two tests above pin, for the leaves they do cover, is the shape
+/// worth copying: the leaf is *derived* (same seed in, same seed out), it is
+/// *distinct* from its siblings, and deriving it *perturbs no existing draw*.
+/// `arc_gate_seed` gets none of those. It is also the only one of the five
+/// with no `*_noise_seed()` accessor, so `has_edifice` reads the field
+/// directly; the two facts share a cause (The Repose, Task 4 added the leaf
+/// and followed neither convention).
+///
+/// Why this is a gap and not a hole: the arc gate IS covered end-to-end, by
+/// `provider.rs`'s `has_edifice_names_the_cells_the_shipped_elevation_raised`,
+/// which re-runs `assemble_elevation` under a deliberately different gate
+/// seed. That test would catch a gate seed that stopped being derived from
+/// the terrain root. It would NOT catch the leaf colliding with a sibling
+/// leaf, which is precisely what the two tests above exist to rule out.
 #[test]
 fn features_are_a_pure_pin_invariant_projection() {
     let geo = Geosphere::new(4);

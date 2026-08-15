@@ -101,6 +101,13 @@ pub enum NameKind {
     /// drawn like a settlement's but off its own seed path so that adding
     /// personal naming to a world reseeds nothing that already exists.
     Person,
+    /// A landform: a bare stem, drawn like a settlement's but off its own
+    /// seed path so that adding landform naming to a world reseeds nothing
+    /// that already exists. A landform has ONE identity and MANY names — one
+    /// per people that has a word for it — so the name is keyed on
+    /// `(seed, cell, species)` at the composition root, never folded into the
+    /// landform's own identity.
+    Landform,
 }
 
 impl NameKind {
@@ -113,6 +120,7 @@ impl NameKind {
             NameKind::Deity => "deity",
             NameKind::Epithet => "epithet",
             NameKind::Person => "person",
+            NameKind::Landform => "landform",
         }
     }
 
@@ -122,6 +130,39 @@ impl NameKind {
     #[doc(hidden)]
     pub fn label_for_test(self) -> &'static str {
         self.label()
+    }
+
+    /// Every variant, for exhaustively-covered test enumeration —
+    /// `tests/anthroponym.rs`'s save-format-contract label test iterates this
+    /// instead of a hand-listed array, so a future variant cannot silently
+    /// under-cover that test the way a hand-listed four-element array would
+    /// have under-covered `Landform`. Kept honest by
+    /// [`NameKind::assert_all_covers_every_variant`] just below: that
+    /// function's match has no wildcard arm, so it fails to COMPILE the
+    /// moment a variant exists that this list (and that match) do not both
+    /// name.
+    #[doc(hidden)]
+    pub const ALL: [NameKind; 5] = [
+        NameKind::Settlement,
+        NameKind::Deity,
+        NameKind::Epithet,
+        NameKind::Person,
+        NameKind::Landform,
+    ];
+
+    /// Exhaustiveness sentinel for [`NameKind::ALL`]: never called, and its
+    /// only job is to fail to compile if a variant is added to `NameKind`
+    /// without an arm here (and, by the doc comment above, without an entry
+    /// in `ALL`).
+    #[allow(dead_code)]
+    fn assert_all_covers_every_variant(k: NameKind) {
+        match k {
+            NameKind::Settlement
+            | NameKind::Deity
+            | NameKind::Epithet
+            | NameKind::Person
+            | NameKind::Landform => {}
+        }
     }
 }
 
@@ -1143,6 +1184,14 @@ impl<'a> Namer<'a> {
         let syllables = match kind {
             NameKind::Settlement => self.draw_syllables(stream, 2, 3, false),
             NameKind::Person => self.draw_syllables(stream, 2, 3, false),
+            // A landform's v1 draw is a bare stem exactly like a
+            // settlement's or a person's: 2-3 light syllables, no bias
+            // toward closed ("weighty") codas. Nothing about a mountain or
+            // a river argues for Deity's weighty bias — that bias models a
+            // god's name sounding "heavier", which has no landform analogue
+            // — so this copies Settlement/Person's draw rather than
+            // inventing a third shape.
+            NameKind::Landform => self.draw_syllables(stream, 2, 3, false),
             NameKind::Deity => self.draw_syllables(stream, 2, 3, true),
             NameKind::Epithet => {
                 let mut syllables = self.draw_syllables(stream, 1, 2, false);
@@ -2264,6 +2313,87 @@ mod tests {
             &NameCorpus { frequencies: &f2 },
         );
         assert_eq!(c, d, "the name must depend on the corpus's VALUE alone");
+    }
+
+    /// A landform name draws off its OWN seed leg (`kind.label()` folds
+    /// into the derive path — see the module docs' `derive` chain), so
+    /// adding `NameKind::Landform` to a world must move no existing kind's
+    /// v1 draw for any `(seed, species, salt)`, and a landform's own draw
+    /// must not be a silent copy of another kind's.
+    ///
+    /// **Two properties, because the first alone is vacuous.** `Namer::name`
+    /// is documented as a pure function of `(seed, species, kind, salt)`
+    /// with "no re-draw, no dependence on any other name" — `Namer` holds no
+    /// interior mutability, so a before/after comparison around an
+    /// intervening `Landform` draw can *never* fail while that purity holds,
+    /// regardless of what `Landform` itself does. Confirmed directly: this
+    /// test originally asserted only `before == after` (this file's
+    /// `#[cfg(test)]` idiom, matching the brief's sketch) and **stayed
+    /// green** even under the mutation described below — it was measuring a
+    /// property the architecture already guarantees elsewhere, not anything
+    /// about `Landform`. So the before/after check stays (as a sanity check
+    /// against a FUTURE purity regression), but the property that actually
+    /// pins `Landform` to its own path is the second block: its drawn name
+    /// must differ from every other kind's drawn name at the identical
+    /// `(seed, species, salt)`.
+    ///
+    /// Mutation-proved: changing `NameKind::Landform`'s arm in `label()` to
+    /// return `"person"` (aliasing `Person`'s seed path, so `Landform` and
+    /// `Person` derive the identical stream) leaves the before/after block
+    /// green but turns the second block RED — `landform`'s drawn
+    /// `GeneratedName` becomes byte-identical to `person`'s at every salt
+    /// tried, since both arms of `build_name`'s match draw
+    /// `draw_syllables(stream, 2, 3, false)`. See the campaign report for
+    /// the pasted red from both this test and
+    /// `tests/anthroponym.rs::person_is_a_distinct_name_kind_with_its_own_seed_label`,
+    /// which independently catches the same mutation via the label string.
+    #[test]
+    fn landform_naming_does_not_disturb_the_other_kinds() {
+        let ph = wordy_ph();
+        let seed = Seed(42);
+        let namer = Namer::new(&seed, "goblin", &ph);
+        let morph = morph(false);
+        let other_kinds = [
+            NameKind::Settlement,
+            NameKind::Deity,
+            NameKind::Epithet,
+            NameKind::Person,
+        ];
+
+        // Property 1 (sanity check, not the load-bearing assertion — see
+        // doc comment above): an intervening Landform draw moves nothing
+        // else, for every salt tried.
+        for salt in [0u64, 7, 12345] {
+            let before: Vec<GeneratedName> = other_kinds
+                .iter()
+                .map(|k| namer.name(*k, salt, &morph))
+                .collect();
+            let _ = namer.name(NameKind::Landform, salt, &morph);
+            let after: Vec<GeneratedName> = other_kinds
+                .iter()
+                .map(|k| namer.name(*k, salt, &morph))
+                .collect();
+            assert_eq!(
+                before, after,
+                "landform naming disturbed another kind's draws at salt {salt}"
+            );
+        }
+
+        // Property 2 (the load-bearing assertion): a landform's OWN name,
+        // at the same salt, must not equal any other kind's — the failure
+        // mode a shared/aliased label produces, and the one Property 1
+        // cannot see.
+        for salt in [0u64, 7, 12345] {
+            let landform = namer.name(NameKind::Landform, salt, &morph);
+            for k in other_kinds {
+                let other = namer.name(k, salt, &morph);
+                assert_ne!(
+                    landform, other,
+                    "landform's name at salt {salt} matched {k:?}'s — \
+                     Landform's label is not on its own seed path"
+                );
+            }
+        }
     }
 
     #[test]

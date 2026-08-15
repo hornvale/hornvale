@@ -165,6 +165,15 @@ pub struct TectonicGlobe {
     /// no draw-order/save-format contract, and (being a leaf, not the root)
     /// it cannot be used to derive any other terrain stream.
     pub channel_seed: Seed,
+    /// Hash-noise seed for the along-strike arc gate (Sculpting, spec §3):
+    /// `terrain_seed.derive(streams::ARC_GATE)`, the already-derived leg,
+    /// a leaf exactly like `lithology_seed`/`features_seed`/`channel_seed`.
+    /// Retained (The Repose, Task 4) so the edifice read can resample the
+    /// gate field `assemble_elevation` shaped the arcs with, instead of
+    /// forming a second opinion about where edifices are. Hash-noise only —
+    /// never consumed as a `Stream`, so the read costs no draw and carries
+    /// no draw-order/save-format contract.
+    pub arc_gate_seed: Seed,
     /// Hash-noise seed for the sub-cell catchment partition (The Rill, Tier 2):
     /// `terrain_seed.derive(streams::RILL_PARTITION)`, already the derived leg
     /// — a leaf exactly like `channel_seed`, for exactly the same reason.
@@ -506,6 +515,12 @@ pub fn generate(
     // derive any other terrain stream. Hash-noise only, no new draw-order
     // contract.
     let channel_seed = terrain_seed.derive(streams::CHANNEL_MEANDER);
+    // The along-strike arc gate (The Repose, Task 4): the SAME derivation
+    // `generate_elevation` used above, taken from the one function that
+    // spells it, and retained so the edifice read resamples that field
+    // rather than reconstructing it. Hash-noise only, no draw-order
+    // contract, and a leaf like the three seeds above.
+    let arc_gate_seed = elevation::arc_gate_seed(terrain_seed);
     // A NEW labeled leg. `derive` is a pure hash and consumes no `Stream`, so
     // adding it perturbs no existing draw and no existing world.
     let rill_seed = terrain_seed.derive(streams::RILL_PARTITION);
@@ -556,6 +571,7 @@ pub fn generate(
         lithology_seed,
         features_seed,
         channel_seed,
+        arc_gate_seed,
         rill_seed,
         rift,
     };

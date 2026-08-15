@@ -995,6 +995,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "(The Particular, Task 2) per-founder name: a bare stem, like the settlement v1 draw above. Not an epoch of `name/settlement` — a fourth, disjoint `NameKind`, so it consumes nothing from any existing stream",
         ),
         (
+            "language/<species>/name/landform",
+            "(The Repose, Task 3) per-landform name, keyed at the composition root by (seed, cell, species) rather than by the landform's own identity — one landform has many names, one per people with a word for it: a bare 2-3 syllable stem, like the settlement/person v1 draw above. A fifth, disjoint `NameKind` — no epoch suffix, since this label is new rather than a regeneration (decision 0084)",
+        ),
+        (
             "language/<species>/name/settlement/v2",
             "(retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires",
         ),
