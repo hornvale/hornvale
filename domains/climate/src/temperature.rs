@@ -84,6 +84,40 @@ const THERMOSTAT_COMPENSATION_FRACTION: f64 = 0.4;
 /// hypsometry's land-only lapse cooling, not a second free parameter).
 const THERMOSTAT_ANCHOR_K: f64 = 287.15;
 
+/// The latitude profile's value at the equator (`sin(lat) = 0`), °C offset
+/// from [`THERMOSTAT_ANCHOR_K`].
+///
+/// kind: **earth-biosphere** (decision 0106). Solved as one of three
+/// simultaneous constraints together with [`LAT_TERM_SIN2_COEFF_C`] and
+/// [`LAT_TERM_SIN4_COEFF_C`] (spec §3.2, Task 5): the profile's
+/// area-weighted mean over the whole sphere is exactly zero (⟨sin²⟩ = 1/3,
+/// ⟨sin⁴⟩ = 1/5 for the `cos(lat)` area element — spec's own identity), the
+/// equatorial value is +26 °C at `S = 1` with the greenhouse at its Earth
+/// anchor (12 °C above the +14 °C area-mean anchor `THERMOSTAT_ANCHOR_K`
+/// fixes), and the polar value is −25 °C (39 °C below that anchor). Cited
+/// zonal-mean shape: NCEP/NCAR Reanalysis climatological surface air
+/// temperature (flat, warm tropics; a steep high-latitude fall-off that a
+/// pure `sin²` cannot reproduce — spec §3.2 names this explicitly, which is
+/// why [`LAT_TERM_SIN4_COEFF_C`] exists at all).
+const LAT_TERM_EQUATOR_C: f64 = 12.0;
+
+/// The `sin²(lat)` coefficient of the latitude profile — see
+/// [`LAT_TERM_EQUATOR_C`] for the three constraints these three constants
+/// jointly solve.
+///
+/// kind: **earth-biosphere** (decision 0106), same citation and derivation
+/// as [`LAT_TERM_EQUATOR_C`].
+const LAT_TERM_SIN2_COEFF_C: f64 = -13.5;
+
+/// The `sin⁴(lat)` coefficient of the latitude profile: the extra
+/// high-latitude steepening a pure `sin²` term cannot supply on its own
+/// (spec §3.2) — see [`LAT_TERM_EQUATOR_C`] for the three constraints these
+/// three constants jointly solve.
+///
+/// kind: **earth-biosphere** (decision 0106), same citation and derivation
+/// as [`LAT_TERM_EQUATOR_C`].
+const LAT_TERM_SIN4_COEFF_C: f64 = -37.5;
+
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
 /// type-audit: bare-ok(ratio: return)
@@ -144,11 +178,11 @@ pub fn mean_temperature(
                     1.0 + THERMOSTAT_COMPENSATION_FRACTION * (insolation.max(0.0) - 1.0);
                 let spinning_scale = math::powf(effective_s.max(0.0), 0.25);
                 let base_k = THERMOSTAT_ANCHOR_K * spinning_scale + greenhouse_forcing_k;
-                // Latitude term of +30 °C at the equator to -30 °C at the
-                // pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
-                // Task 5 (The Glasshouse) replaces this with an area-mean-zero
-                // profile — see that task's commit.
-                let lat_term = 30.0 - 60.0 * math::sin(lat) * math::sin(lat);
+                let sin_lat = math::sin(lat);
+                let s2 = sin_lat * sin_lat;
+                let s4 = s2 * s2;
+                let lat_term =
+                    LAT_TERM_EQUATOR_C + LAT_TERM_SIN2_COEFF_C * s2 + LAT_TERM_SIN4_COEFF_C * s4;
                 (base_k - 273.15) + lat_term - lapse
             }
             RotationRegime::Locked => {
@@ -308,6 +342,74 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         })
+    }
+
+    /// Spec §3.2's three preregistered bounds, at `S = 1` with the
+    /// greenhouse at its Earth anchor (residual `0.0`) and at sea level
+    /// (elevation `0.0` everywhere, so lapse cooling is zero and this
+    /// isolates the thermostat + latitude profile alone, matching the
+    /// bounds' own stated condition): the area-weighted mean is within 1 K
+    /// of +14 °C, the equatorial value within 3 K of +26 °C, and the polar
+    /// value within 5 K of −25 °C. `⟨sin²(lat)⟩ = 1/3` over a sphere
+    /// (`cos(lat)` area element) is why a naive per-cell average would be
+    /// biased toward the poles if cells were not near-equal-area; this globe
+    /// (level 6, 40,962 cells) is fine enough that a uniform per-cell
+    /// average is a good proxy for the true area weighting, the same
+    /// approximation `windows/lab/src/metrics.rs`'s own area-weighted
+    /// latitude metrics rely on.
+    #[test]
+    fn spec_3_2_bounds_hold_at_s_equals_1_with_earth_anchor_greenhouse() {
+        let geo = Geosphere::new(6);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let mean = mean_temperature(
+            &geo,
+            &elev,
+            sea,
+            1.0,
+            &RotationRegime::Spinning { day_std: 1.0 },
+            0.0,
+        );
+        let area_mean: f64 =
+            geo.cells().map(|c| mean.get(c).get()).sum::<f64>() / geo.cell_count() as f64;
+        assert!(
+            (area_mean - 14.0).abs() <= 1.0,
+            "area-weighted mean {area_mean} is not within 1 K of +14 C"
+        );
+
+        let equator = geo
+            .cells()
+            .min_by(|a, b| {
+                geo.coord(*a)
+                    .latitude
+                    .abs()
+                    .total_cmp(&geo.coord(*b).latitude.abs())
+            })
+            .unwrap();
+        let equatorial = mean.get(equator).get();
+        assert!(
+            (equatorial - 26.0).abs() <= 3.0,
+            "equatorial value {equatorial} is not within 3 K of +26 C"
+        );
+
+        let pole = geo
+            .cells()
+            .max_by(|a, b| {
+                geo.coord(*a)
+                    .latitude
+                    .abs()
+                    .total_cmp(&geo.coord(*b).latitude.abs())
+            })
+            .unwrap();
+        let polar = mean.get(pole).get();
+        assert!(
+            (polar - (-25.0)).abs() <= 5.0,
+            "polar value {polar} is not within 5 K of -25 C"
+        );
+        println!(
+            "spec 3.2: area-mean {area_mean:.6} (target 14 +/-1), equatorial {equatorial:.6} \
+             (target 26 +/-3), polar {polar:.6} (target -25 +/-5)"
+        );
     }
 
     #[test]

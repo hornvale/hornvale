@@ -909,17 +909,26 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     //
     // THE GLASSHOUSE re-pin (Stage B Task 4): 36.2088 -> 7.7803. The
     // thermostat (a damped, greenhouse-forced insolation baseline replacing
-    // the fixed 288 K blackbody one, plus Task 5's area-mean-zero latitude
-    // profile) warms polar land far more than tropical land moves:
-    // `raw_pole_mean` rises 0.011362 -> 0.061245 while `trop_mean` moves only
-    // 0.411404 -> 0.476504, so the tropics/poles ratio compresses sharply. The
-    // pole term is still off `POLE_FLOOR` (`pole floored: false`), so this
-    // remains a genuine ratio, not the constant-denominator degeneracy the
-    // paragraphs above retire. Post-unblinding re-measure, declared per
-    // decision 0016.
+    // the fixed 288 K blackbody one) warms polar land far more than
+    // tropical land moves: `raw_pole_mean` rises 0.011362 -> 0.061245 while
+    // `trop_mean` moves only 0.411404 -> 0.476504, so the tropics/poles
+    // ratio compresses sharply. The pole term is still off `POLE_FLOOR`
+    // (`pole floored: false`), so this remains a genuine ratio, not the
+    // constant-denominator degeneracy the paragraphs above retire. Measured
+    // against the OLD +30/-30 latitude profile (Task 5 had not yet landed).
+    //
+    // THE GLASSHOUSE re-pin (Stage B Task 5): 7.7803 -> 12.2953. The
+    // area-mean-zero latitude profile corrects the old profile's
+    // unrealistically hot equator (+44 C at the Earth anchor -> +26 C, spec
+    // §3.2) and its milder pole (-15 C -> -25 C at the anchor), cooling BOTH
+    // ends but the pole harder in absolute terms on this land distribution:
+    // `raw_pole_mean` falls 0.061245 -> 0.035406 while `trop_mean` falls
+    // less, 0.476504 -> 0.435333, so the ratio widens again. Still off
+    // `POLE_FLOOR` (`pole floored: false`), so still a genuine ratio.
+    // Post-unblinding re-measure, declared per decision 0016.
     assert!(
-        (ratio - 7.7803).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~7.7803). Check the \
+        (ratio - 12.2953).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~12.2953). Check the \
          printed decomposition above before assuming anything latitudinal moved — and \
          note that since The Glasshouse the polar term is OFF its floor, so this is a \
          real tropics/poles ratio and no longer 100 * trop_mean."

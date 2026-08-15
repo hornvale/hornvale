@@ -9353,13 +9353,27 @@ mod tests {
     /// 16 is eight beliefs per withdrawn kind, not one.) `name-gloss` moved
     /// for the same reason its own history already documents (a roster
     /// change redecides settlement survival and naming).
+    ///
+    /// **THE GLASSHOUSE, Stage B Task 5: the pantheon SHRINKS, 155 -> 145 —
+    /// the first shrink this test's history records.** Read against Task 4's
+    /// own re-pin (145 -> 155, this same file) rather than in isolation: Task
+    /// 4 alone ran against the OLD +30/-30 latitude profile, which had an
+    /// unrealistically hot equator (+44 C at the Earth anchor) and over-
+    /// warmed the population; Task 5's area-mean-zero profile corrects that
+    /// (+26 C at the anchor, spec §3.2), so the COMBINED Task 4+5 model lands
+    /// back at exactly the pre-Task-4 value. This is not the roster
+    /// shrinking (unchanged) — it is one people losing its peopled pantheon
+    /// again once the over-warming Task 4 alone introduced is corrected, the
+    /// same "moves both ways" shape this file's own history already
+    /// documents for the gloss count. Post-unblinding re-measure, declared
+    /// per decision 0016.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 155, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 155);
-        assert_eq!(count("deity-name"), 155);
+        assert_eq!(count("is-belief"), 145, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 145);
+        assert_eq!(count("deity-name"), 145);
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -9441,9 +9455,20 @@ mod tests {
         // world enough to change which peoples settle where, so both the
         // peopled roster (more peoples now find somewhere to settle, growing
         // the pantheon) and settlement volume (more/different settlements,
-        // moving the gloss count) shift together. Post-unblinding re-measure,
+        // moving the gloss count) shift together.
+        //
+        // THE GLASSHOUSE (Stage B Task 5): 341 -> 305, and the three counts
+        // above move 155 -> 145 back TOGETHER, landing on exactly the
+        // pre-Task-4 values for all four. The area-mean-zero latitude
+        // profile corrects Task 4's still-old, unrealistically hot equator
+        // (+44 C at the Earth anchor under the old +30/-30 profile, +26 C
+        // under the corrected one, spec §3.2), so the combined Task 4+5
+        // model settles back where the pre-thermostat world stood — this
+        // metric's own value, not a claim that nothing changed underneath it
+        // (seed 42's actual settlements differ; see `history-seed-42.md`'s
+        // own re-point in this same task). Post-unblinding re-measure,
         // declared per decision 0016.
-        assert_eq!(count("name-gloss"), 341);
+        assert_eq!(count("name-gloss"), 305);
     }
 
     #[test]
@@ -10697,10 +10722,17 @@ mod tests {
         // sensitivity, plus a drawn greenhouse residual) replaces the fixed
         // 288 K blackbody baseline: seed 42's carrying capacity warms with
         // its land temperature, raising the ceiling the flagship's millennia
-        // of growth compound against. Post-unblinding re-measure, declared
-        // per decision 0016.
+        // of growth compound against.
+        //
+        // THE GLASSHOUSE re-pin (Stage B Task 5): 70 -> 66. The area-mean-
+        // zero latitude profile cools seed 42's flagship latitude relative
+        // to Task 4's still-old +30/-30 profile (that profile's equator ran
+        // unrealistically hot, +44 C at the Earth anchor; the corrected one
+        // reads +26 C there), lowering the carrying-capacity ceiling the
+        // flagship's millennia of growth compound against. Post-unblinding
+        // re-measure, declared per decision 0016.
         assert_eq!(
-            village.population, 70,
+            village.population, 66,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -10822,9 +10854,17 @@ mod tests {
         // The Tense re-pin (2026-08-05): 1 -> 2. The flagship is reseated
         // again and its vantage observes two salient phenomena. Same
         // "incidental count, the cascade running is what matters" basis.
+        //
+        // THE GLASSHOUSE re-pin (Stage B Task 5): 2 -> 1. Constant-sky
+        // worlds still read climate through the latitude profile (only
+        // insolation is fixed at `S = 1`; the profile's SHAPE still moved),
+        // so the area-mean-zero profile reseats even this world's flagship.
+        // Same "incidental count, the cascade running is what matters"
+        // basis this test's own comment has stated every time. Post-
+        // unblinding re-measure, declared per decision 0016.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            2
+            1
         );
     }
 
@@ -11861,9 +11901,19 @@ mod tests {
         );
     }
 
+    /// **THE GLASSHOUSE, Stage B Task 5 re-point: seed 42 -> seed 1.** The
+    /// area-mean-zero latitude profile (replacing the old +30/-30 profile,
+    /// whose equator ran unrealistically hot) cools seed 42's equator from
+    /// ~44 °C to ~26 °C at the Earth anchor, and this seed's own drawn
+    /// insolation sits below `S = 1`; its warmest land cell now reads only
+    /// 20.77 °C, below this test's 22 °C `hot` threshold, so no witness for
+    /// the laterite-overlay branch survives there. Seed 1 has 585 qualifying
+    /// hot+wet land cells (measured), comfortably clearing both branches this
+    /// test needs. Nothing about `deposit_of` changed; only which seed's
+    /// climate still exhibits a hot, wet coastline.
     #[test]
     fn deposit_of_overlays_laterite_and_passes_through_primary_deposits() {
-        let world = generated(42);
+        let world = generated(1);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
         let geo = terrain.geosphere();

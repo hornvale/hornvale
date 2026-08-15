@@ -379,9 +379,8 @@ type Row = (
 //
 // **THE GLASSHOUSE re-measure (Stage B Task 4).** The thermostat (a damped,
 // greenhouse-forced insolation baseline replacing the fixed 288 K blackbody
-// one, plus Task 5's area-mean-zero latitude profile) re-placed every
-// settlement again. Re-measured wholesale by the same scaffold, not
-// hand-edited. Nine of the seventy-five rows move rung:
+// one) re-placed every settlement again. Re-measured wholesale by the same
+// scaffold, not hand-edited. Nine of the seventy-five rows move rung:
 //
 //   seed 1 high-elf      Counted    -> Predictive (6472 witnessed, unchanged)
 //   seed 3 drow          Counted    -> Predictive (53)
@@ -400,8 +399,27 @@ type Row = (
 // the same threshold shape every prior re-measure has shown, and again the
 // GROUND (a climate epoch, not a roster change) is the whole cause: no
 // observation count and no predicted day moved, only which flagships clear
-// the shaman-caste threshold. Post-unblinding re-measure, declared per
-// decision 0016.
+// the shaman-caste threshold.
+//
+// **THE GLASSHOUSE re-measure (Stage B Task 5, the area-mean-zero latitude
+// profile).** Re-placed every settlement a further time. Nine more rows move
+// rung:
+//
+//   seed 3 desert-dwarf  Counted    -> Predictive (53)
+//   seed 3 high-elf      Counted    -> Predictive (53)
+//   seed 3 hobgoblin     Counted    -> Predictive (32)
+//   seed 3 drow          Predictive -> Counted    (53)
+//   seed 3 gully-dwarf   Predictive -> Counted    (32)
+//   seed 4 high-elf      Counted    -> Predictive (3785)
+//   seed 5 kobold        Counted    -> Predictive (500)
+//   seed 5 high-elf      Predictive -> Counted    (500)
+//   seed 5 snow-elf      Predictive -> Counted    (500)
+//
+// The roster is unchanged, all 75 pairs are the same pairs, every epoch-1
+// rung is still `Unknown`, and every witnessed count and prediction day is
+// byte-identical to the previous table. Five gains, four losses (net +1
+// predictive) — moves both ways again, and the GROUND is again the whole
+// cause. Post-unblinding re-measure, declared per decision 0016.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -655,9 +673,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "desert-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         53,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -671,9 +689,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -695,17 +713,17 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "gully-dwarf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         32,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         53,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -719,9 +737,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         32,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -823,9 +841,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         3785,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -943,9 +961,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "high-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
@@ -975,9 +993,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         500,
-        None,
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -991,9 +1009,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "snow-elf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,
