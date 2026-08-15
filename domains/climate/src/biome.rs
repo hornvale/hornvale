@@ -102,12 +102,47 @@ pub const ALL: &[Biome] = &[
 
 /// The tree line in meters at a latitude: 4000 m at the equator, falling
 /// 40 m per degree, floored at 0.
+///
+/// kind: **earth-biosphere**, partially (decision 0106; provenance supplied by
+/// The Glasshouse, spec §3.4's unconditional half). The **equatorial 4000 m**
+/// is Earth's: tropical Andean and East African treelines run ≈ 3900–4100 m,
+/// so the intercept is a real datum. The **40 m/degree slope is NOT**, and
+/// saying so is the point of this comment — Earth's treeline reaches sea level
+/// near **70°**, which requires ≈ 57 m/degree from a 4000 m intercept. At
+/// 40 m/degree this function reaches 0 m only at **100° latitude**, i.e.
+/// nowhere: the `.max(0.0)` floor is unreachable on a sphere and the polar
+/// treeline is over-generous by ≈ 1200 m at 70°.
+///
+/// **Left unchanged deliberately, and this is a scope call, not an oversight.**
+/// Spec §3.4 asked for provenance on this constant, not a re-fit; re-fitting
+/// the slope to 57 m/degree moves `classify_land`'s `Alpine` branch on every
+/// high-latitude cell of every world, which is a census-moving physics change
+/// and would need its own preregistration and its own refresh. The defect is
+/// therefore RECORDED here and carried as a registry row rather than fixed at
+/// a campaign close. What makes that safe to defer: the error is one-directional
+/// (too *few* `Alpine` cells at high latitude, never too many) and it is
+/// smallest exactly where this campaign's population now lives.
 /// type-audit: pending(wave-2)
 pub fn tree_line_m(latitude_deg: f64) -> f64 {
     (4000.0 - 40.0 * latitude_deg.abs()).max(0.0)
 }
 
 /// Ice threshold: annual-mean below this is permanent ice.
+///
+/// kind: **earth-biosphere** (decision 0106; provenance supplied by The
+/// Glasshouse). Earth's permanent-ice margin sits near a **−20 °C** mean
+/// annual air temperature: the interior of the Greenland and Antarctic ice
+/// sheets, and the cold limit of continuous permafrost with permanent
+/// snowfields, fall around that isotherm. It is a biosphere/cryosphere
+/// boundary read off Earth, not a physical constant — nothing freezes at
+/// −20 °C — so it is `earth-biosphere` rather than `physics`.
+///
+/// **Distinct from `hornvale_worldgen::FREEZE_C` (−10 °C), which it is easy to
+/// confuse with.** That one is a *glaciation snowline* used by the
+/// paleoclimate ice mask; this one is the *biome* classifier's permanent-ice
+/// branch. They answer different questions at different thresholds, and both
+/// moved a large share of the population in this campaign (worlds below
+/// −20 °C mean land temperature: 305 → 67; below −10 °C: 529 → 278).
 const ICE_C: f64 = -20.0;
 
 impl Biome {
