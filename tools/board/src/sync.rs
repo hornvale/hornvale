@@ -328,6 +328,42 @@ mod tests {
     use crate::post::Post;
     use serde_json::json;
 
+    /// A host name that is guaranteed not to be this host's own.
+    ///
+    /// Not a hardcoded `"lefford"`: this suite runs on lefford too, where
+    /// that literal names THIS host's own mirror, is correctly excluded by
+    /// `peer_ages`/`list_peer_hosts` (exactly what
+    /// `a_self_recorded_sync_time_is_never_reported_as_a_peer` pins), and so
+    /// fails a test asserting the literal is *present* for a reason that has
+    /// nothing to do with what the test checks — the failure The Ballast
+    /// chased for ~150 runs on a Mac that could never reproduce it, because
+    /// the bug only exists on the one host the literal happens to name.
+    /// Derived from the real host, matching the precedent already used for
+    /// this exact hazard in `store.rs`, `digest.rs`, `relevance.rs`, and
+    /// `tests/merge_properties.rs`, so the two can never collide however
+    /// either machine is renamed.
+    fn foreign_host() -> String {
+        format!("{}-peer", crate::live::current_host())
+    }
+
+    #[test]
+    fn foreign_host_can_never_collide_with_the_real_host() {
+        // The property the fix actually rests on, pinned directly rather
+        // than left as an argument in a doc comment: appending "-peer" to a
+        // string can never reproduce that same string, for ANY value
+        // `current_host()` returns -- including "lefford" itself, the one
+        // host where a hardcoded literal used to collide (see
+        // `foreign_host`'s doc). This is what makes the fix verifiable from
+        // a Mac at all: the guarantee holds BY CONSTRUCTION, for whichever
+        // host runs this test, not by observing one machine's hostname.
+        let host = current_host();
+        let peer = foreign_host();
+        assert_ne!(
+            peer, host,
+            "a derived peer name must never equal the real host, whatever it is named"
+        );
+    }
+
     #[test]
     fn a_push_is_never_forced() {
         // The one operation in this design that could violate 0118 part 3
@@ -438,17 +474,16 @@ mod tests {
         // has never been synced must not read as "nothing is happening over
         // there".
         let (_dir, repo) = crate::git::test_support::temp_repo();
+        let peer = foreign_host();
         let ages = peer_ages(&repo, 1_000_000);
         assert!(
             ages.iter().all(|(_, age)| age.is_none()),
             "no sync recorded yet"
         );
-        record_sync(&repo, "lefford", 999_000).expect("record");
+        record_sync(&repo, &peer, 999_000).expect("record");
         let ages = peer_ages(&repo, 1_000_000);
         assert_eq!(
-            ages.iter()
-                .find(|(h, _)| h == "lefford")
-                .and_then(|(_, a)| *a),
+            ages.iter().find(|(h, _)| h == &peer).and_then(|(_, a)| *a),
             Some(1_000)
         );
     }
@@ -486,13 +521,12 @@ mod tests {
         // exactly what `--git-common-dir` guarantees and `--git-path` does
         // not (see `Repo::git_common_path`'s doc comment).
         let (dir, repo) = crate::git::test_support::temp_repo();
-        record_sync(&repo, "lefford", 500).expect("record");
+        let peer = foreign_host();
+        record_sync(&repo, &peer, 500).expect("record");
         let second = crate::git::Repo::new(&dir);
         let ages = peer_ages(&second, 1_500);
         assert_eq!(
-            ages.iter()
-                .find(|(h, _)| h == "lefford")
-                .and_then(|(_, a)| *a),
+            ages.iter().find(|(h, _)| h == &peer).and_then(|(_, a)| *a),
             Some(1_000),
             "a second Repo handle on the same root must see the same recorded sync"
         );
@@ -506,15 +540,14 @@ mod tests {
         // on it) -- that peer must still be reported, as never-synced, not
         // silently dropped for lacking a timestamp.
         let (_dir, repo) = crate::git::test_support::temp_repo();
-        let board = Board::with_ref(repo.clone(), &format!("{}lefford", Board::PEERS_PREFIX));
+        let peer = foreign_host();
+        let board = Board::with_ref(repo.clone(), &format!("{}{peer}", Board::PEERS_PREFIX));
         board
             .append(&Post::new("technique", "campaign/x"))
             .expect("seed a peer mirror ref");
         let ages = peer_ages(&repo, 1_000);
         assert_eq!(
-            ages.iter()
-                .find(|(h, _)| h == "lefford")
-                .and_then(|(_, a)| *a),
+            ages.iter().find(|(h, _)| h == &peer).and_then(|(_, a)| *a),
             None,
             "a mirror ref with no recorded sync time must read as never-synced, not be dropped"
         );
@@ -528,7 +561,8 @@ mod tests {
         // already does -- the test is then exact (age == 500), not a
         // "should be small" approximation.
         let (_dir, repo) = crate::git::test_support::temp_repo();
-        let board = Board::with_ref(repo.clone(), &format!("{}lefford", Board::PEERS_PREFIX));
+        let peer = foreign_host();
+        let board = Board::with_ref(repo.clone(), &format!("{}{peer}", Board::PEERS_PREFIX));
         board
             .append(&Post::new("technique", "campaign/x"))
             .expect("seed a peer mirror");
@@ -540,9 +574,7 @@ mod tests {
             .expect("timestamp");
         let ages = peer_content_ages(&repo, posted_at + 500);
         assert_eq!(
-            ages.iter()
-                .find(|(h, _)| h == "lefford")
-                .and_then(|(_, a)| *a),
+            ages.iter().find(|(h, _)| h == &peer).and_then(|(_, a)| *a),
             Some(500)
         );
     }
