@@ -55,6 +55,24 @@
 //! `TOOL-seed-sweep-reach` is an open row to widen its reach, and an unguarded
 //! hand-rolled sweep is the status quo the guard inherited rather than
 //! anything it introduces. Worth knowing before adding the fourth battery.
+//!
+//! ## A second serialization class (The Ballast, 2026-08-15)
+//!
+//! The scatter-sweep guard above protects the tier from three batteries that
+//! saturate the box. `.config/nextest.toml` now carries a SECOND
+//! `threads-required` override, protecting two wall-clock BUDGET tests FROM
+//! that saturation instead: `session_cost.rs::a_possessed_turn_stays_within_
+//! its_ceilings` reddened under tier contention on the canonical box even
+//! though the code was unchanged, because a wall-clock ceiling cannot
+//! distinguish a slow machine from slow code. `scene_cost.rs`'s heavy test is
+//! pinned alongside it — this file's own comment two classes up already names
+//! it as the historical symptom of exactly this failure mode.
+//!
+//! This class is recognised the same way the scatter-sweep one is: by a
+//! literal marker (`CO_SCHEDULE_SENSITIVE_MARKER`) rather than by guessing
+//! which tests measure wall clock, so a test opts in explicitly and the same
+//! two-directional guard applies. See `pinned_filter_names_for_class` and
+//! `co_schedule_sensitive_heavy_tests` below.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -346,59 +364,121 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 }
 
 // ============================================================================
-// The serialized-battery filter (The Scatter). `.config/nextest.toml` pins
-// three heavy batteries to `threads-required = "num-cpus"` so each runs ALONE
-// on the canonical box: since The Scatter they parallelise their own 200-seed
-// sweeps across every core, and `gate-full-heavy.sh` sets no `test-threads`
-// limit, so without the pin the box runs up to 40 heavy processes each
-// wanting 40 worker threads.
+// The serialized-battery filters. `.config/nextest.toml` pins two DIFFERENT
+// classes of heavy test to `threads-required = "num-cpus"`, each in its own
+// override table, so each runs ALONE on the canonical box:
 //
-// That filter is a HAND-MAINTAINED LIST OF THREE NAMES, and its failure mode
-// is silent and expensive. Rename a battery, or add a fourth that sweeps
-// seeds, and the filter simply matches fewer tests: nothing reddens, the box
+//   scatter-sweep      three batteries that parallelise their own 200-seed
+//                      sweeps across every core (The Scatter) — pinned so
+//                      they do not saturate everything ELSE.
+//   wall-clock-budget  two cost-ceiling tests that cannot tell contention
+//                      from a regression on their own (The Ballast) — pinned
+//                      so the tier's OWN saturation does not redden them.
+//
+// `gate-full-heavy.sh` (now run by `make gate-campaign`) sets no
+// `test-threads` limit, so without either pin the box runs up to 40 heavy
+// processes at once, each wanting 40 worker threads.
+//
+// Both filters are HAND-MAINTAINED LISTS, and their failure mode is silent
+// and expensive. Rename a battery, or add a fourth that sweeps seeds, and the
+// scatter-sweep filter simply matches fewer tests: nothing reddens, the box
 // is oversubscribed again, and the FIRST SYMPTOM is a spurious
 // `hornvale::scene_cost` failure that reads like a performance regression —
-// which is exactly the 341 s of wall clock the pin was bought with.
+// which is exactly the 341 s of wall clock the pin was bought with, and
+// exactly the class of failure the wall-clock-budget pin now exists to
+// prevent even when the scatter-sweep roster itself is correct (a fully
+// loaded tier, with every battery correctly serialized, still runs many
+// OTHER heavy tests concurrently, and that alone was enough to redden
+// `session_cost.rs`'s ceiling — see `.config/nextest.toml`'s comment).
 //
 // The precedent is two files away: `scripts/gate-full-heavy.sh` already
 // asserts `tag_count == name_count` so a heavy tag that drifts off its `fn`
 // cannot silently vanish from `make gate-full`. This is the same guard for
-// the same class of drift, one directory over.
+// the same class of drift, one directory over — now applied to two classes
+// rather than one, each still checked in both directions.
 // ============================================================================
 
-/// Where the serialized-battery pin lives.
+/// Where the serialized-battery pins live.
 const NEXTEST_CONFIG: &str = ".config/nextest.toml";
 
 /// The marker that makes an override a serialization pin.
 const THREADS_REQUIRED: &str = "threads-required = \"num-cpus\"";
 
-/// The call that makes a battery internally parallel — the property the pin
-/// exists for. Matching the CALL (not the module) is deliberate: a test that
-/// merely mentions the helper in prose is not the thing that saturates a box.
+/// The call that makes a battery internally parallel — the property the
+/// scatter-sweep pin exists for. Matching the CALL (not the module) is
+/// deliberate: a test that merely mentions the helper in prose is not the
+/// thing that saturates a box.
 const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
 
-/// The test names `.config/nextest.toml`'s serialization override selects,
-/// parsed out of its `test(/<name>$/)` filterset. Std-only string scanning —
+/// The doc-comment marker that opts a wall-clock budget test INTO serialized
+/// scheduling — the mirror of [`SWEEP_CALL`] for tests that are VICTIMS of
+/// tier contention rather than a SOURCE of it (The Ballast). Matching this
+/// literal line, not the whole doc comment it sits in, is deliberate for the
+/// same reason [`SWEEP_CALL`] matches a call and not a module: a test that
+/// merely discusses co-scheduling in prose elsewhere is not the thing that
+/// needs isolating.
+const CO_SCHEDULE_SENSITIVE_MARKER: &str = "nextest: co-schedule-sensitive";
+
+/// Extracts the sorted, deduped test names from the `filter = 'test(/…/) |
+/// …'` line inside the `.config/nextest.toml` override table tagged
+/// `# class: <marker>` — an INLINE marker line living INSIDE the
+/// `[[profile.default.overrides]]` table it identifies, not the banner
+/// comment above it, so the two `threads-required` tables The Ballast leaves
+/// behind cannot be confused with each other. Std-only string scanning —
 /// this workspace admits no TOML parser (decision 0004).
-fn serialized_filter_names() -> Vec<String> {
+fn pinned_filter_names_for_class(marker: &str) -> Vec<String> {
     let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
         .expect(".config/nextest.toml is readable");
+    let class_line = format!("# class: {marker}");
+
+    let lines: Vec<&str> = text.lines().collect();
+    let block_starts: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.trim() == "[[profile.default.overrides]]")
+        .map(|(i, _)| i)
+        .collect();
+    assert!(
+        !block_starts.is_empty(),
+        "{NEXTEST_CONFIG} has no `[[profile.default.overrides]]` table at all"
+    );
+
+    let mut target: Option<&[&str]> = None;
+    for (bi, &start) in block_starts.iter().enumerate() {
+        let end = block_starts.get(bi + 1).copied().unwrap_or(lines.len());
+        let block = &lines[start..end];
+        if block.iter().any(|l| l.trim() == class_line) {
+            assert!(
+                target.is_none(),
+                "more than one override table in {NEXTEST_CONFIG} is tagged \
+                 {class_line:?} — the marker must be unique per class"
+            );
+            target = Some(block);
+        }
+    }
+    let block = target.unwrap_or_else(|| {
+        panic!(
+            "no override table in {NEXTEST_CONFIG} is tagged {class_line:?}. The \
+             `{class_line}` marker line lives INSIDE the `[[profile.default.overrides]]` \
+             table it identifies (see this file's section comment)."
+        )
+    });
 
     // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
     // deleting the real `threads-required` line left the check GREEN, because
     // the section comment above the override quotes the setting verbatim while
     // explaining it. A guard that a comment can satisfy is not a guard.
-    let settings: Vec<&str> = text
-        .lines()
-        .map(str::trim)
+    let settings: Vec<&str> = block
+        .iter()
+        .map(|l| l.trim())
         .filter(|l| !l.starts_with('#') && !l.is_empty())
         .collect();
     assert!(
         settings.contains(&THREADS_REQUIRED),
-        "{NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} SETTING (a comment \
-         mentioning it does not count). The serialization pin for the \
-         internally-parallel heavy batteries is GONE, which silently \
-         re-oversubscribes the canonical box — see this file's section comment."
+        "the {class_line:?} table in {NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} \
+         SETTING (a comment mentioning it does not count). The serialization pin for \
+         this class is GONE, which silently re-exposes it to canonical-box contention \
+         — see this file's section comment."
     );
     let filter_lines: Vec<&str> = settings
         .iter()
@@ -408,9 +488,8 @@ fn serialized_filter_names() -> Vec<String> {
     assert_eq!(
         filter_lines.len(),
         1,
-        "expected exactly one `filter = ` line naming tests in {NEXTEST_CONFIG}; \
-         found {}. This guard reads a single override block; teach it about the \
-         others before adding one.",
+        "expected exactly one `filter = ` line naming tests in the {class_line:?} \
+         table of {NEXTEST_CONFIG}; found {}.",
         filter_lines.len()
     );
 
@@ -425,6 +504,16 @@ fn serialized_filter_names() -> Vec<String> {
     }
     names.sort();
     names
+}
+
+/// The scatter-sweep class's pinned roster (The Scatter).
+fn serialized_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("scatter-sweep")
+}
+
+/// The wall-clock-budget class's pinned roster (The Ballast).
+fn budget_filter_names() -> Vec<String> {
+    pinned_filter_names_for_class("wall-clock-budget")
 }
 
 /// Every heavy-tagged test whose body calls [`SWEEP_CALL`] — i.e. every heavy
@@ -473,9 +562,53 @@ fn internally_parallel_heavy_tests() -> Vec<String> {
     found
 }
 
-/// The pin's roster is exactly the set of heavy batteries that actually
-/// scatter their own seed sweeps — checked in BOTH directions, because both
-/// failure modes are silent.
+/// Every heavy-tagged test whose doc comment carries
+/// [`CO_SCHEDULE_SENSITIVE_MARKER`] somewhere above its `fn` line — i.e.
+/// every wall-clock budget test that opted itself into serialized scheduling
+/// because it cannot tell contention from a regression on its own.
+///
+/// Same line-oriented scan as [`internally_parallel_heavy_tests`], with the
+/// marker line taking the place of the [`SWEEP_CALL`] line: it is consumed
+/// (reset) at every `fn` boundary, so a module-level mention of the marker
+/// text can never leak onto an unrelated test below it.
+fn co_schedule_sensitive_heavy_tests() -> Vec<String> {
+    let mut sources = Vec::new();
+    collect_rs(&repo_root(), &mut sources);
+    sources.sort();
+
+    let mut found = Vec::new();
+    for path in sources {
+        let text = fs::read_to_string(&path).expect("source file is utf8");
+        let mut marker_seen = false;
+        let mut next_fn_is_heavy = false;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if trimmed.contains(CO_SCHEDULE_SENSITIVE_MARKER) {
+                marker_seen = true;
+            }
+            if trimmed.starts_with("#[ignore = \"") {
+                next_fn_is_heavy = trimmed.contains("heavy:");
+                continue;
+            }
+            if let Some(rest) = trimmed.strip_prefix("fn ")
+                && let Some((name, _)) = rest.split_once('(')
+            {
+                if marker_seen && next_fn_is_heavy && !found.contains(&name.to_string()) {
+                    found.push(name.to_string());
+                }
+                marker_seen = false;
+                next_fn_is_heavy = false;
+                continue;
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// The scatter-sweep pin's roster is exactly the set of heavy batteries that
+/// actually scatter their own seed sweeps — checked in BOTH directions,
+/// because both failure modes are silent.
 ///
 /// A renamed battery drops out of the filter; a newly-added sweeping battery
 /// never enters it. Either way nextest resumes scheduling forty heavy
@@ -495,13 +628,52 @@ fn the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps()
     );
     assert_eq!(
         pinned, parallel,
-        "\n{NEXTEST_CONFIG}'s serialization filter and the set of heavy batteries \
+        "\n{NEXTEST_CONFIG}'s scatter-sweep filter and the set of heavy batteries \
          that scatter their own seed sweeps have diverged.\n  pinned in config: \
          {pinned:?}\n  actually parallel: {parallel:?}\nAdd the missing name(s) to \
-         the `filter = ` line, or drop the stale one. Left alone this does NOT \
-         redden on its own: nextest schedules the unpinned battery alongside \
-         everything else, the canonical box is oversubscribed, and the symptom \
-         is a spurious hornvale::scene_cost failure that looks like a real \
-         performance regression."
+         the `filter = ` line in the `# class: scatter-sweep` table, or drop the \
+         stale one. Left alone this does NOT redden on its own: nextest schedules \
+         the unpinned battery alongside everything else, the canonical box is \
+         oversubscribed, and the historical symptom was a spurious \
+         hornvale::scene_cost failure that looked like a real performance \
+         regression — that specific test is now independently guarded by the \
+         wall-clock-budget class below, but any OTHER budget test would still be \
+         exposed the same way."
+    );
+}
+
+/// The wall-clock-budget pin's mirror of the guard above (The Ballast): its
+/// roster is exactly the set of heavy tests that marked themselves
+/// co-schedule-sensitive — checked in BOTH directions, for the same reason.
+///
+/// A renamed budget test drops out of the filter silently; a newly-marked one
+/// never enters it. Either way the tier resumes scheduling it alongside
+/// everything else, and it can redden for reasons that have nothing to do
+/// with the code it measures — exactly what happened to
+/// `session_cost.rs::a_possessed_turn_stays_within_its_ceilings` before this
+/// pin existed: 14.324 ms against an 8 ms ceiling under tier contention,
+/// 15.897 s and PASS run alone on the same, otherwise-quiet, canonical box.
+#[test]
+fn the_serialization_pin_names_exactly_the_wall_clock_budget_tests_marked_co_schedule_sensitive() {
+    let pinned = budget_filter_names();
+    let sensitive = co_schedule_sensitive_heavy_tests();
+
+    assert!(
+        !sensitive.is_empty(),
+        "found no heavy test carrying {CO_SCHEDULE_SENSITIVE_MARKER:?}. Either the \
+         marker was renamed (update CO_SCHEDULE_SENSITIVE_MARKER) or this guard is \
+         now asserting nothing — which is the one outcome it must never quietly \
+         reach."
+    );
+    assert_eq!(
+        pinned, sensitive,
+        "\n{NEXTEST_CONFIG}'s wall-clock-budget filter and the set of heavy tests \
+         marked {CO_SCHEDULE_SENSITIVE_MARKER:?} have diverged.\n  pinned in \
+         config: {pinned:?}\n  marked in source: {sensitive:?}\nAdd the missing \
+         name(s) to the `filter = ` line in the `# class: wall-clock-budget` table, \
+         or drop the stale one. Left alone this does NOT redden on its own: nextest \
+         schedules the unpinned budget test alongside the rest of the tier, and it \
+         may fail under contention for reasons that have nothing to do with the code \
+         it measures."
     );
 }
