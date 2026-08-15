@@ -187,4 +187,37 @@ read -r _lane_wall_s job_user_s job_sys_s < "$_lane_time_tmp"
 rm -f "$_lane_time_tmp"
 job_cpu_ratio="$(awk -v u="$job_user_s" -v s="$job_sys_s" -v r="$_lane_wall_s" \
     'BEGIN{ if (r+0>0) printf "%.2f", (u+s)/r; else print "?" }')"
+
+# Copy the sub-floor roster out to durable storage — the exact fix this
+# script's own header (above) already describes for timed.sh's
+# docs/timings.md row, applied to the OTHER artifact that had no equivalent.
+# `cargo run -p hornvale -- ci-record` (called from gate-run, inside the
+# `gate` set's `gate-suite-run`) rewrites `docs/timings/subfloor-roster.tsv`
+# in $wt on every GREEN full-workspace run, but $wt is the SAME shared
+# scratch worktree the NEXT dispatch's `checkout --force` + `reset --hard`
+# (above) destroys before anyone can review or commit it — which is why the
+# documented remedy ("it enters on the next green stage gate, which measures
+# it and rewrites the roster") had never once actually landed a byte.
+#
+# GREEN-ONLY, deliberately, not stylistically: `cli/src/main.rs`'s
+# `cmd_ci_record` doc notes a red run's `run.json` is truncated, so a roster
+# derived from one would silently DROP tests from the commit gate — the
+# opposite of what a copy-out is for. `job_rc` is this script's own exit
+# code, which is 0 only when the whole dispatched command line succeeded
+# (gate-run's own `exit $$alarm_status` included), so it is the right gate
+# for "was this a green run" without re-deriving that from nextest's own
+# files.
+#
+# Named beside `$run_log` ($HV_LANE_DIR/$job_id.log), not beside the roster's
+# repo path, because $HV_LANE_DIR — outside the worktree — is the whole
+# reason either file survives the next dispatch.
+#
+# Absent for every set but `gate` (the only one that runs ci-record at all),
+# and that is not an error: `[ -f ... ]` below just has nothing to copy.
+_subfloor_src="$wt/docs/timings/subfloor-roster.tsv"
+if [ "$job_rc" -eq 0 ] && [ -f "$_subfloor_src" ]; then
+    cp "$_subfloor_src" "$HV_LANE_DIR/$job_id.subfloor-roster.tsv"
+    echo "lane-run: copied the sub-floor roster to $HV_LANE_DIR/$job_id.subfloor-roster.tsv (make lane-roster brings it back)"
+fi
+
 exit "$job_rc"
