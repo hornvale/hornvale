@@ -364,6 +364,7 @@
 - [The Repose](./chronicle/the-repose.md)
 - [The Axes](./chronicle/the-axes.md)
 - [The Hearsay](./chronicle/the-hearsay.md)
+- [The Retelling](./chronicle/the-retelling.md)
 - [The Staff](./chronicle/the-staff.md)
 
 # Appendix: The Frontier
