@@ -122,9 +122,23 @@ pub struct RepoFacts {
     /// Repo root, for path and test-symbol resolution.
     root: PathBuf,
     /// Crate name → its directory, e.g. `hornvale-vessel` → `windows/vessel`.
+    /// Also carries `kernel/` and `cli/` (`hornvale-kernel`, `hornvale`), so
+    /// a `test:` anchor may cite mechanism living there. Task 5's surplus
+    /// read enumerates `domains/*`/`windows/*` directories directly, not
+    /// this map's keys, so the two extra entries never change what counts
+    /// as a "subsystem" there — they only extend which crates a `test:`
+    /// anchor may resolve against.
     crates: BTreeMap<String, String>,
-    /// The digest's blob hash, printed so a confusing red is traceable.
-    digest_stamp: String,
+    /// A stamp of `docs/digest/decisions-in-force.md`'s current content —
+    /// its byte length and a rolling checksum, never a shell-out to `git`.
+    /// Printed only in `Decision`-anchor `Dangling` findings: that file is
+    /// the only one of the two anchor sources the digest actually
+    /// generates (`tools/digest/src/main.rs`'s `all_decisions()` scans
+    /// `docs/decisions/*.md` directly and renders this file); the idea
+    /// registry is hand-authored and carries no digest relationship at
+    /// all, so registry-related findings say that instead of printing a
+    /// stamp that would misleadingly imply one.
+    decisions_stamp: String,
 }
 
 impl RepoFacts {
@@ -132,18 +146,48 @@ impl RepoFacts {
     /// only from `root` — never shelling out to `cargo` or `git`.
     /// type-audit: bare-ok(prose: return)
     pub fn gather(root: &Path) -> Result<RepoFacts, String> {
+        let decisions_path = root.join("docs/digest/decisions-in-force.md");
+        let decisions_text = std::fs::read_to_string(&decisions_path)
+            .map_err(|e| format!("reading {}: {e}", decisions_path.display()))?;
+        let in_force = parse_decisions_in_force(&decisions_text);
+        if in_force.is_empty() {
+            return Err(format!(
+                "{} parsed to zero in-force decisions. Treating this as a \
+                 parse failure, not a (false) claim that no decision is in \
+                 force: check the file still exists and its lines still \
+                 match `- **NNNN** …` (the `digest render decisions` output \
+                 format).",
+                decisions_path.display()
+            ));
+        }
+        let decisions_stamp = stamp_text(&decisions_text);
+
+        let registry_path = root.join("book/src/frontier/idea-registry.md");
+        let registry_text = std::fs::read_to_string(&registry_path)
+            .map_err(|e| format!("reading {}: {e}", registry_path.display()))?;
+        let registry = parse_registry_statuses(&registry_text);
+        if registry.is_empty() {
+            return Err(format!(
+                "{} parsed to zero registry rows. Treating this as a parse \
+                 failure, not a (false) claim that the registry is empty: \
+                 check the file still exists and its rows still look like \
+                 `| ID | … |`.",
+                registry_path.display()
+            ));
+        }
+
         Ok(RepoFacts {
-            in_force: parse_decisions_in_force(root)?,
-            registry: parse_registry_statuses(root)?,
+            in_force,
+            registry,
             crates: gather_crate_directories(root)?,
-            digest_stamp: digest_stamp(root)?,
+            decisions_stamp,
             root: root.to_path_buf(),
         })
     }
 
     /// Whether `spec` (`<crate>::<fn>`) resolves to a known crate whose
-    /// source contains a matching `fn` definition. A cheap text search, not
-    /// a compile — the resolver never shells out to `cargo`.
+    /// source defines `fn <symbol>` at a word boundary. A cheap text
+    /// search, not a compile — the resolver never shells out to `cargo`.
     fn test_resolves(&self, spec: &str) -> bool {
         let Some((crate_name, symbol)) = spec.rsplit_once("::") else {
             return false;
@@ -151,19 +195,16 @@ impl RepoFacts {
         let Some(dir) = self.crates.get(crate_name) else {
             return false;
         };
-        let needle = format!("fn {symbol}");
-        directory_contains_text(&self.root.join(dir), &needle)
+        directory_defines_symbol(&self.root.join(dir), symbol)
     }
 }
 
-/// Read `docs/digest/decisions-in-force.md` and collect every in-force
-/// decision number. Lines have the form `- **NNNN** …`; a wholly superseded
-/// decision is absent by construction (the file's own generation rule), so
-/// its number simply never enters the set.
-fn parse_decisions_in_force(root: &Path) -> Result<BTreeSet<String>, String> {
-    let path = root.join("docs/digest/decisions-in-force.md");
-    let text =
-        std::fs::read_to_string(&path).map_err(|e| format!("reading {}: {e}", path.display()))?;
+/// Parse `text` (the content of `docs/digest/decisions-in-force.md`) and
+/// collect every in-force decision number. Lines have the form
+/// `- **NNNN** …`; a wholly superseded decision is absent by construction
+/// (the file's own generation rule), so its number simply never enters the
+/// set.
+fn parse_decisions_in_force(text: &str) -> BTreeSet<String> {
     let mut in_force = BTreeSet::new();
     for line in text.lines() {
         let Some(rest) = line.strip_prefix("- **") else {
@@ -177,7 +218,17 @@ fn parse_decisions_in_force(root: &Path) -> Result<BTreeSet<String>, String> {
             in_force.insert(code.to_string());
         }
     }
-    Ok(in_force)
+    in_force
+}
+
+/// A cheap, traceable stamp of `text`'s content — its byte length and a
+/// rolling checksum, never a shell-out to `git`.
+fn stamp_text(text: &str) -> String {
+    let mut checksum: u64 = 0;
+    for b in text.bytes() {
+        checksum = checksum.wrapping_mul(31).wrapping_add(u64::from(b));
+    }
+    format!("{}b/{checksum:016x}", text.len())
 }
 
 /// True when `cell` is a registry ID. Mirrors the shape of
@@ -203,13 +254,10 @@ fn looks_like_registry_id(cell: &str) -> bool {
     })
 }
 
-/// Read `book/src/frontier/idea-registry.md` and collect every registry
-/// row's ID → `status` cell (`id | description | status | confidence |
-/// where`).
-fn parse_registry_statuses(root: &Path) -> Result<BTreeMap<String, String>, String> {
-    let path = root.join("book/src/frontier/idea-registry.md");
-    let text =
-        std::fs::read_to_string(&path).map_err(|e| format!("reading {}: {e}", path.display()))?;
+/// Parse `text` (the content of `book/src/frontier/idea-registry.md`) and
+/// collect every registry row's ID → `status` cell (`id | description |
+/// status | confidence | where`).
+fn parse_registry_statuses(text: &str) -> BTreeMap<String, String> {
     let mut registry = BTreeMap::new();
     for line in text.lines() {
         if !line.starts_with("| ") {
@@ -229,12 +277,29 @@ fn parse_registry_statuses(root: &Path) -> Result<BTreeMap<String, String>, Stri
         let status = pieces.get(3).cloned().unwrap_or_default();
         registry.insert(id.clone(), status);
     }
-    Ok(registry)
+    registry
+}
+
+/// Read one crate's `name = "…"` from its `Cargo.toml`, if it has one.
+fn crate_name_at(dir: &Path) -> Option<String> {
+    let manifest_text = std::fs::read_to_string(dir.join("Cargo.toml")).ok()?;
+    manifest_text.lines().find_map(|l| {
+        l.trim()
+            .strip_prefix("name = \"")
+            .and_then(|rest| rest.strip_suffix('"'))
+            .map(|s| s.to_string())
+    })
 }
 
 /// Walk `domains/*/Cargo.toml` and `windows/*/Cargo.toml`, mapping each
 /// crate's `name = "…"` to its directory (`hornvale-terrain` →
-/// `domains/terrain`).
+/// `domains/terrain`) — the 25 subsystem directories Task 5's surplus read
+/// enumerates directly. Also adds `kernel/` and `cli/` themselves
+/// (`hornvale-kernel`, `hornvale`): neither is a "subsystem" in that sense,
+/// but `test:` anchors legitimately cite mechanism living there
+/// (determinism/`WorldTime`/`quantize` in `kernel/`, the CLI surface in
+/// `cli/`), and without them any such anchor would DANGLE unconditionally
+/// regardless of correctness.
 fn gather_crate_directories(root: &Path) -> Result<BTreeMap<String, String>, String> {
     let mut crates = BTreeMap::new();
     for parent in ["domains", "windows"] {
@@ -247,16 +312,7 @@ fn gather_crate_directories(root: &Path) -> Result<BTreeMap<String, String>, Str
             if !path.is_dir() {
                 continue;
             }
-            let manifest = path.join("Cargo.toml");
-            let Ok(manifest_text) = std::fs::read_to_string(&manifest) else {
-                continue;
-            };
-            let Some(name) = manifest_text.lines().find_map(|l| {
-                l.trim()
-                    .strip_prefix("name = \"")
-                    .and_then(|rest| rest.strip_suffix('"'))
-                    .map(|s| s.to_string())
-            }) else {
+            let Some(name) = crate_name_at(&path) else {
                 continue;
             };
             let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) else {
@@ -265,27 +321,50 @@ fn gather_crate_directories(root: &Path) -> Result<BTreeMap<String, String>, Str
             crates.insert(name, format!("{parent}/{dir_name}"));
         }
     }
+    for dir_name in ["kernel", "cli"] {
+        let path = root.join(dir_name);
+        if let Some(name) = crate_name_at(&path) {
+            crates.insert(name, dir_name.to_string());
+        }
+    }
     Ok(crates)
 }
 
-/// A cheap, traceable stamp of the digest's current content — its byte
-/// length and a rolling checksum, never a shell-out to `git`. Printed in
-/// `Dangling`/`StaleDeferred` findings so a confusing red is traceable to
-/// the repo state that produced it.
-fn digest_stamp(root: &Path) -> Result<String, String> {
-    let path = root.join("docs/digest/facts.jsonl");
-    let text =
-        std::fs::read_to_string(&path).map_err(|e| format!("reading {}: {e}", path.display()))?;
-    let mut checksum: u64 = 0;
-    for b in text.bytes() {
-        checksum = checksum.wrapping_mul(31).wrapping_add(u64::from(b));
+/// True when the character `c` cannot continue a Rust identifier — i.e. it
+/// is a valid boundary after a matched symbol name.
+fn is_identifier_boundary(c: char) -> bool {
+    !(c.is_alphanumeric() || c == '_')
+}
+
+/// True when `text` defines a function named exactly `symbol` — `fn
+/// {symbol}` found at a word boundary, so the character immediately after
+/// `symbol` (if any) cannot continue an identifier. A plain substring
+/// search on `fn {symbol}` would read a short symbol as already "defining"
+/// any longer function name it happens to prefix — the wrong direction of
+/// error for an instrument whose job is to notice when an anchor stops
+/// resolving.
+fn text_defines_symbol(text: &str, symbol: &str) -> bool {
+    let needle = format!("fn {symbol}");
+    let mut search_from = 0;
+    while let Some(offset) = text[search_from..].find(needle.as_str()) {
+        let match_start = search_from + offset;
+        let after = match_start + needle.len();
+        let boundary_ok = text[after..]
+            .chars()
+            .next()
+            .map(is_identifier_boundary)
+            .unwrap_or(true);
+        if boundary_ok {
+            return true;
+        }
+        search_from = match_start + 1;
     }
-    Ok(format!("{}b/{checksum:016x}", text.len()))
+    false
 }
 
 /// True when any `.rs` file under `dir` (recursively, skipping `target`)
-/// contains `needle` as a literal substring.
-fn directory_contains_text(dir: &Path, needle: &str) -> bool {
+/// defines `fn <symbol>` at a word boundary.
+fn directory_defines_symbol(dir: &Path, symbol: &str) -> bool {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return false;
     };
@@ -295,17 +374,61 @@ fn directory_contains_text(dir: &Path, needle: &str) -> bool {
             if path.file_name().and_then(|n| n.to_str()) == Some("target") {
                 continue;
             }
-            if directory_contains_text(&path, needle) {
+            if directory_defines_symbol(&path, symbol) {
                 return true;
             }
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs")
             && let Ok(text) = std::fs::read_to_string(&path)
-            && text.contains(needle)
+            && text_defines_symbol(&text, symbol)
         {
             return true;
         }
     }
     false
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::text_defines_symbol;
+
+    /// The bug this function exists to fix: `verdict` must NOT read as
+    /// defining `verdict_name`.
+    #[test]
+    fn a_strict_prefix_does_not_count_as_a_definition() {
+        assert!(!text_defines_symbol(
+            "fn verdict_name(v: Verdict) {}",
+            "verdict"
+        ));
+    }
+
+    #[test]
+    fn an_exact_match_counts() {
+        assert!(text_defines_symbol(
+            "fn verdict_name(v: Verdict) {}",
+            "verdict_name"
+        ));
+    }
+
+    #[test]
+    fn a_match_at_end_of_file_counts() {
+        assert!(text_defines_symbol("pub fn resolve", "resolve"));
+    }
+
+    #[test]
+    fn a_match_followed_by_punctuation_counts() {
+        assert!(text_defines_symbol(
+            "pub fn resolve<T>(x: T) -> T { x }",
+            "resolve"
+        ));
+        assert!(text_defines_symbol(
+            "pub fn resolve(x: T) -> T { x }",
+            "resolve"
+        ));
+        assert!(text_defines_symbol(
+            "pub fn resolve\n(x: T) -> T { x }",
+            "resolve"
+        ));
+    }
 }
 
 /// One thing wrong with a verdict's evidence. Every variant carries enough
@@ -473,8 +596,8 @@ fn resolve_anchor(
                         "{} cites decision:{d}, which is not in docs/digest/decisions-in-force.md.\n\
                          A decision leaves that file when it is wholly superseded. Either re-verdict\n\
                          this item against the superseding decision, or restore the anchor if the\n\
-                         supersession was partial. (digest stamp: {})",
-                        item.id, facts.digest_stamp
+                         supersession was partial. (decisions-in-force stamp: {})",
+                        item.id, facts.decisions_stamp
                     ),
                 })
             }
@@ -487,8 +610,11 @@ fn resolve_anchor(
                     "{} cites registry:{r}, which does not appear in\n\
                      book/src/frontier/idea-registry.md. Either the row ID changed (fix the\n\
                      anchor to match) or the row was removed (re-verdict this item against\n\
-                     whatever replaced it). (digest stamp: {})",
-                    item.id, facts.digest_stamp
+                     whatever replaced it). The idea registry is hand-authored, not\n\
+                     digest-generated, so there is no stamp to print here — check that file's\n\
+                     own history (`git log -p -- book/src/frontier/idea-registry.md`) for when\n\
+                     the row changed.",
+                    item.id
                 ),
             }),
             Some(status) if status == "shipped" => Some(Finding::StaleDeferred {
@@ -499,8 +625,10 @@ fn resolve_anchor(
                      book/src/frontier/idea-registry.md. A deferral is a promise that has not\n\
                      yet been kept; once the registry says it shipped, promote this item to\n\
                      `present` (citing the shipping mechanism) or to `refused` if what shipped\n\
-                     does not actually satisfy it. (digest stamp: {})",
-                    item.id, facts.digest_stamp
+                     does not actually satisfy it. The idea registry is hand-authored, not\n\
+                     digest-generated, so there is no stamp to print here — check that file's\n\
+                     own history for when the row shipped.",
+                    item.id
                 ),
             }),
             Some(_) => None,
@@ -515,8 +643,8 @@ fn resolve_anchor(
                     why: format!(
                         "{} cites path:{p}, which does not exist in the repo. Either the file\n\
                          moved (fix the anchor to its new location) or it was deleted\n\
-                         (re-verdict this item). (digest stamp: {})",
-                        item.id, facts.digest_stamp
+                         (re-verdict this item).",
+                        item.id
                     ),
                 })
             }
@@ -529,10 +657,11 @@ fn resolve_anchor(
                     id: item.id.clone(),
                     anchor: anchor_str.to_string(),
                     why: format!(
-                        "{} cites test:{t}, which does not resolve to a known crate and\n\
-                         function. Either the test moved or was renamed (fix the anchor) or it\n\
-                         was removed (re-verdict this item). (digest stamp: {})",
-                        item.id, facts.digest_stamp
+                        "{} cites test:{t}, which does not resolve to a known crate and a\n\
+                         `fn` definition of that name at a word boundary. Either the function\n\
+                         moved or was renamed (fix the anchor) or it was removed (re-verdict\n\
+                         this item).",
+                        item.id
                     ),
                 })
             }

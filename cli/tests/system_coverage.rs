@@ -134,6 +134,26 @@ fn a_deferral_against_a_shipped_registry_row_is_stale() {
     );
 }
 
+/// DANGLING for a `test:` anchor naming a symbol that is a strict PREFIX of
+/// a real one, never the real one itself. The bare word `verdict` names no
+/// function anywhere in `cli/`, but `verdict_name` does
+/// (`cli/src/systems.rs`); a naive substring search for `fn` immediately
+/// followed by the symbol would find a match inside that longer definition
+/// and wrongly read the anchor as resolved. This is the false-CLEAN a
+/// review found: the instrument exists to notice when an anchor stops
+/// resolving, and a false-clean means it silently stops noticing.
+#[test]
+fn a_test_anchor_naming_a_strict_prefix_of_a_real_symbol_is_dangling() {
+    let f = audit(
+        &corpus_with("present", Some("test:hornvale::verdict")),
+        &facts(),
+    );
+    assert!(
+        matches!(f.as_slice(), [Finding::Dangling { .. }]),
+        "expected DANGLING for a prefix-only symbol match, got {f:?}"
+    );
+}
+
 /// An `absent` verdict must carry NO anchor — it is the one verdict that
 /// claims nothing, and an anchored `absent` is a miscategorised row.
 #[test]
@@ -150,4 +170,117 @@ fn an_absent_verdict_carrying_an_anchor_is_unjustified() {
 fn the_wolverson_corpus_has_no_anchor_findings() {
     let f = audit(&load_wolverson(), &facts());
     assert!(f.is_empty(), "the corpus has anchor findings:\n{f:#?}");
+}
+
+/// The empty-file floor: a `decisions-in-force.md` that exists but parses
+/// to zero in-force decisions must be a parse failure, not `Ok(empty set)` —
+/// the same failure class as the mechanism-anchor prefix bug above, a
+/// silent wrong answer from the resolver. Mirrors the corpus's own
+/// frozen-count assertion in spirit.
+#[test]
+fn gather_refuses_a_decisions_file_that_parses_to_zero_entries() {
+    let root = std::env::temp_dir().join(format!(
+        "hv-compendium-empty-decisions-{}",
+        std::process::id()
+    ));
+    let digest_dir = root.join("docs/digest");
+    std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
+    std::fs::write(
+        digest_dir.join("decisions-in-force.md"),
+        "# Decisions in force\n\nGENERATED — none matched today.\n",
+    )
+    .expect("writes an empty decisions file");
+
+    let result = RepoFacts::gather(&root);
+    let _ = std::fs::remove_dir_all(&root);
+
+    let err = result.expect_err("an empty in-force set must be an error, not Ok(empty set)");
+    assert!(
+        err.contains("zero in-force decisions"),
+        "expected the empty-parse error to name what happened, got: {err}"
+    );
+}
+
+/// Same floor, for the registry.
+#[test]
+fn gather_refuses_a_registry_file_that_parses_to_zero_rows() {
+    let root = std::env::temp_dir().join(format!(
+        "hv-compendium-empty-registry-{}",
+        std::process::id()
+    ));
+    let digest_dir = root.join("docs/digest");
+    let frontier_dir = root.join("book/src/frontier");
+    std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
+    std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
+    std::fs::write(
+        digest_dir.join("decisions-in-force.md"),
+        "- **0001** A real decision\n",
+    )
+    .expect("writes a valid decisions file");
+    std::fs::write(
+        frontier_dir.join("idea-registry.md"),
+        "# Idea registry\n\nNo rows today.\n",
+    )
+    .expect("writes an empty registry file");
+
+    let result = RepoFacts::gather(&root);
+    let _ = std::fs::remove_dir_all(&root);
+
+    let err = result.expect_err("an empty registry must be an error, not Ok(empty map)");
+    assert!(
+        err.contains("zero registry rows"),
+        "expected the empty-parse error to name what happened, got: {err}"
+    );
+}
+
+/// The stamp printed in a `Decision`-anchor `Dangling` finding must move
+/// when `decisions-in-force.md`'s content moves — otherwise a "confusing
+/// red" (spec §5) stays exactly as confusing across two different decision
+/// states. Regression coverage for deriving the stamp from
+/// `docs/digest/facts.jsonl` (unrelated to either anchor source) instead of
+/// the file the finding actually cites.
+#[test]
+fn the_decisions_stamp_changes_when_the_decisions_file_changes() {
+    let root_a = std::env::temp_dir().join(format!("hv-compendium-stamp-a-{}", std::process::id()));
+    let root_b = std::env::temp_dir().join(format!("hv-compendium-stamp-b-{}", std::process::id()));
+    for (root, decision_line) in [
+        (&root_a, "- **0001** First"),
+        (&root_b, "- **0002** Second"),
+    ] {
+        let digest_dir = root.join("docs/digest");
+        let frontier_dir = root.join("book/src/frontier");
+        std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
+        std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
+        std::fs::create_dir_all(root.join("domains")).expect("make scratch domains dir");
+        std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+        std::fs::write(
+            digest_dir.join("decisions-in-force.md"),
+            format!("{decision_line}\n"),
+        )
+        .expect("writes a decisions file");
+        std::fs::write(
+            frontier_dir.join("idea-registry.md"),
+            "| ID-1 | idea | raw | high | nowhere |\n",
+        )
+        .expect("writes a registry file");
+    }
+
+    let facts_a = RepoFacts::gather(&root_a).expect("gather A");
+    let facts_b = RepoFacts::gather(&root_b).expect("gather B");
+    let dangling_a = audit(&corpus_with("refused", Some("decision:0099")), &facts_a);
+    let dangling_b = audit(&corpus_with("refused", Some("decision:0099")), &facts_b);
+
+    let _ = std::fs::remove_dir_all(&root_a);
+    let _ = std::fs::remove_dir_all(&root_b);
+
+    let [Finding::Dangling { why: why_a, .. }] = dangling_a.as_slice() else {
+        panic!("expected a single DANGLING finding for A, got {dangling_a:?}");
+    };
+    let [Finding::Dangling { why: why_b, .. }] = dangling_b.as_slice() else {
+        panic!("expected a single DANGLING finding for B, got {dangling_b:?}");
+    };
+    assert_ne!(
+        why_a, why_b,
+        "the decisions-in-force stamp did not move when the decisions file changed"
+    );
 }
