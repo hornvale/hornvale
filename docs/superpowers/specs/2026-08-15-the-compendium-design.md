@@ -65,21 +65,22 @@ substrate cannot carry this corpus.
 A substantial share of the tutorial is renderer work: colour, user interface,
 particle effects, bloodstains, text layers, a REX Paint menu. None of it has a
 concept-registry token and none of it ever will, because **decision 0022 puts
-rendering outside the ledger on purpose.**
-
-> **Amended after scoring (Task 6).** This paragraph originally read "roughly a
-> third", a pre-measurement estimate that was never re-derived once verdicts
-> existed. The measured figure is **8 of 74 items refused under 0022 (11%)**;
-> 11 items (15%) mention 0022 at all. The argument is unaffected — eight
-> chapters that can never carry a registry token is decisive on its own — but
-> the fraction was wrong and had been copied into a decision record, the
-> chronicle and `CLAUDE.md` before anyone re-derived it. Corrected in all four
-> places; recorded here rather than silently overwritten, since this is the
-> source the copies came from. Resolved against the registry, every
+rendering outside the ledger on purpose.** Resolved against the registry, every
 one of those chapters would read *blocked by a dangling bundle* — the matrix's
 own † mark, meaning "a catalogue asked for something no catalogue declares".
 The number produced would be plausible, would be near zero, and would be a
 category error.
+
+> **Amended after scoring (Task 6).** The paragraph above originally opened
+> "roughly a third of the tutorial is renderer work" — a pre-measurement
+> estimate that was never re-derived once verdicts existed. The measured
+> figure is **8 of 74 items refused under 0022 (11%)**; 11 items (15%) mention
+> 0022 at all. The argument is unaffected — eight chapters that can never
+> carry a registry token is decisive on its own — but the fraction was wrong
+> and had been copied into a decision record, the chronicle and `CLAUDE.md`
+> before anyone re-derived it. Corrected in all four places; recorded here
+> rather than silently overwritten, since this is the source the copies came
+> from.
 
 The two families also measure different subjects. `tropes/` asks whether a
 **world** can represent a situation. `systems/` asks whether a **program**
