@@ -344,6 +344,20 @@ mod tests {
                 // entity in every world renumbers. See
                 // `kernel/src/streams.rs`'s `ENTITY_IDENTITY`.
                 "entity/identity v1",
+                // The Repose: the per-cell hazard-event draw. Additive at
+                // v1 — a NEW label, perturbing no existing stream, and C0
+                // commits nothing (spec §3.3: an event is recomputed on
+                // demand and never stored, like the volcano below).
+                // Versioned from birth because its KEY is a contract the
+                // moment anything narrates an event: the cell, the process,
+                // and the index of a fixed 1,000-year block of world time —
+                // NOT the window a caller asked about. Keying on the window
+                // would make a narrower query draw an unrelated set rather
+                // than a subset of a wider one, which is the defect
+                // `windows/worldgen/tests/repose_laws.rs`'s sub-window
+                // property exists to hold shut. See
+                // `windows/worldgen/src/hazard.rs`'s `event_key`.
+                "hazard/event v1",
                 "history/bake v2",
                 // The Salt re-keys the flesh seed from the occupation's
                 // entity id onto its material core, so residue and
@@ -405,6 +419,19 @@ mod tests {
                 // settlement's mind. See
                 // `windows/worldgen/src/disposition.rs`.
                 "settlement/disposition v1",
+                // The Repose: the volcano-identity derivation. Additive at
+                // v1 — a NEW label, so it perturbs no existing stream, and
+                // C0 commits nothing at all (spec §3.2 puts the whole object
+                // in the phenomenon register: a volcano is recomputed on
+                // demand and never stored). Versioned from birth for the
+                // same reason `chamber v1` and `settlement/disposition v1`
+                // above are: its KEY is a contract the moment anything
+                // narrates or commits a volcano — the edifice's SOURCE
+                // CONTACT cell, never the query cell (an edifice spans 1-2
+                // cells, so keying on the query cell would give the two
+                // halves of one mountain two identities and two names). See
+                // `windows/worldgen/src/volcano.rs`'s `volcano_key`.
+                "volcano v1",
             ]
         );
     }

@@ -221,7 +221,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 31] = [
+const EXPECTED_UNTOKENISED: [&str; 32] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
@@ -247,6 +247,7 @@ const EXPECTED_UNTOKENISED: [&str; 31] = [
     "probe: walks every branch of 60 coarse cells per seed at an eighth of a room (21.8 s measured); run by hand",
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
+    "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",

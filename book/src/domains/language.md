@@ -171,10 +171,15 @@ inert after the fact; their words still change only through the epoch's
 reseed, and the mechanism waits for the first tone-capable people the world
 admits.
 
-**Naming grammars, and the status-basis keying.** Three kinds of name this
-substrate generates — settlement names, deity names, deity epithets, place
-names excluded because no terrain feature carries a meaningful, generated
-name yet. Every name starts from a **stem**, a sequence of syllables built
+**Naming grammars, and the status-basis keying.** Five kinds of name this
+substrate generates — settlement names, deity names, deity epithets, personal
+names, and landform names. The last of those is the newest and the odd one
+out: a landform has **one identity and many names**, one per people that has a
+word for it, so where a settlement's name belongs to the settlement, a
+mountain's name belongs to the pairing of the mountain with whoever is looking
+at it. It is drawn as a bare stem on its own seed path, like a settlement's,
+because nothing about a mountain argues for the weightier shape a god's name
+takes. Every name starts from a **stem**, a sequence of syllables built
 from the drawn phonotactic templates over the drawn inventory, its length
 drawn per name-kind so a settlement's name and a god's name are not built to
 the same scale. A fixed set of morphological operations then shapes the
