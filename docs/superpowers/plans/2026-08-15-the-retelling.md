@@ -879,7 +879,9 @@ git commit -m "feat(hearsay): divergent structure as a maximum antichain, not mi
 
 **Interfaces:**
 - Consumes: everything from Tasks 1–5.
-- Produces: `pub fn variant_count(ledger, lineage, filters, subject, predicate) -> Option<usize>`; `pub fn finest_precision_hops(ledger, lineage, filters, subject, predicate) -> Vec<u32>`; `pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64>`.
+- Produces: `pub fn variant_count(ledger, lineage, ladder, subject, predicate) -> Option<usize>`; `pub fn finest_precision_hops(ledger, lineage, ladder, subject, predicate) -> Vec<u32>`; `pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64>`.
+
+**The `Filters` type does not exist.** Task 3 replaced it with stance, and Task 4's `variants_about` takes a `&PrecisionLadder` instead. Any `filters` parameter below is stale — report it if you find one in a step.
 
 **This task reports numbers against §6's decision tables. It does NOT retune anything to make a prediction come true.** A falsified prediction is the finding; several campaigns have shipped the null as the headline.
 
@@ -977,11 +979,11 @@ pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
 pub fn variant_count(
     ledger: &Ledger,
     lineage: &Lineage,
-    filters: &Filters,
+    ladder: &PrecisionLadder,
     subject: EntityId,
     predicate: &str,
 ) -> Option<usize> {
-    let vs = crate::derive::variants_about(ledger, lineage, filters, subject, predicate);
+    let vs = crate::derive::variants_about(ledger, lineage, ladder, subject, predicate);
     if vs.len() < 3 {
         return None;
     }
@@ -996,11 +998,11 @@ pub fn variant_count(
 pub fn finest_precision_hops(
     ledger: &Ledger,
     lineage: &Lineage,
-    filters: &Filters,
+    ladder: &PrecisionLadder,
     subject: EntityId,
     predicate: &str,
 ) -> Vec<u32> {
-    crate::derive::variants_about(ledger, lineage, filters, subject, predicate)
+    crate::derive::variants_about(ledger, lineage, ladder, subject, predicate)
         .into_iter()
         .filter(|c| c.precision == hornvale_kernel::Precision::FINEST)
         .map(|c| c.hops)
@@ -1025,7 +1027,6 @@ Expected: PASS.
 
 use hornvale_hearsay::derive::witnesses_of;
 use hornvale_hearsay::divergence::maximum_antichain;
-use hornvale_hearsay::filters::Filters;
 use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
 
@@ -1044,14 +1045,14 @@ fn the_retelling_readout_on_seed_42() {
     .expect("seed 42 builds");
     let led = &world.ledger;
     let lin = lineage_of(led);
-    let f = Filters::of(led, &lin);
+    let ladder = PrecisionLadder::of(led);
     let ladder = PrecisionLadder::of(led);
 
     // --- H1: per-hop counts of claims still at the finest precision ---
     let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
     let mut finest_total = 0usize;
     for s in lin.all() {
-        for h in finest_precision_hops(led, &lin, &f, s, hornvale_history::OCC_ENDED) {
+        for h in finest_precision_hops(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) {
             *by_hop.entry(h).or_default() += 1;
             finest_total += 1;
         }
@@ -1078,7 +1079,7 @@ fn the_retelling_readout_on_seed_42() {
     let mut counts: Vec<f64> = Vec::new();
     let mut widths: Vec<f64> = Vec::new();
     for s in lin.all() {
-        let Some(n) = variant_count(led, &lin, &f, s, hornvale_history::OCC_ENDED) else {
+        let Some(n) = variant_count(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) else {
             continue;
         };
         let ws = witnesses_of(led, &lin, s, hornvale_history::OCC_ENDED);
