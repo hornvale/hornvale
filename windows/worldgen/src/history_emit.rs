@@ -38,10 +38,26 @@ use std::collections::{BTreeMap, BTreeSet};
 ///
 /// `identity(0)` is exactly "drop the conversion" — the mutation The Ell ran
 /// by hand at every crossing, now standing. Scoped narrowly on purpose: a
-/// too-narrow scope can only manufacture a false SURVIVOR, never a false
+/// too-narrow scope can still manufacture a false SURVIVOR, never a false
 /// GUARDED, so a GUARDED verdict here is true whatever a wider run would say.
-/// If this ever reports UNGUARDED, widen the scope before declaring it — that
-/// is the failure `conquest_victim`'s declaration made for two campaigns.
+/// If this ever reports UNGUARDED, do not reflexively reach for
+/// `expect(survives: …)` — that is the failure `conquest_victim`'s
+/// declaration made for two campaigns.
+///
+/// **Widening the scope is not the first thing to try — check the ignore
+/// tier first.** The Ballast found the call this seam actually guarded
+/// (`windows/worldgen/tests/repose_exposure.rs:1002`) reachable only from
+/// that file's `heavy:`-ignored batteries. `run_scope` executes `cargo
+/// nextest run -p <scope> --no-fail-fast`, which runs non-ignored tests
+/// only — so a mutation whose only witnesses live behind `#[ignore]` reports
+/// UNGUARDED at *every* `scope()`, including the widest available one
+/// (verified empirically against `scope(hornvale)`; see commit `2fbcc4d7`).
+/// Widening scope only helps a mutation some crate's non-ignored tests
+/// already reach; it cannot make a heavy-only call site reachable. The fix
+/// that actually worked was moving the vulnerable composition into a named
+/// production function (`present_frame`) with its own cheap, non-ignored
+/// unit test — the general remedy is relocating the call out of
+/// `#[ignore]`d code, not widening `scope()`.
 /// type-audit: bare-ok(count: year), bare-ok(count: return)
 pub fn ledger_day_of_bake_year(year: f64) -> f64 {
     year * hornvale_kernel::Years::DAYS_PER_YEAR
