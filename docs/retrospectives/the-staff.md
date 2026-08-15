@@ -185,6 +185,17 @@ the runs expensive enough to be killed. Same shape as the baseline finding,
 one layer up: an instrument that only speaks when things go well cannot be
 trusted to say when they do not.
 
+A third instance landed inside this campaign's own planning text, not just
+in the file the campaign set out to fix. The plan's acceptance criteria for
+the roster rename included a branch table anchored on "within a few hundred
+of 2,073" — a count read off the very baseline this section describes,
+already 1,670 commits stale by the time the table was written. The roster
+landed at 2,748 lines against a live suite of 3,561 tests, correctly. Had
+the table been trusted as written, a correct measurement would have been
+flagged as suspicious. The stale baseline was not only a defect to go find
+and fix; by the time anyone got there, it had already leaked into the plan
+that scoped the fix.
+
 ## 7. A documented rule and its enforcement can quietly disagree about scope
 
 A drift check enforcing this project's separation between speculative ideas
@@ -227,6 +238,27 @@ session. Running them in the planned order would have gated a state of the
 project that a later step then changed out from under the gate's own
 verdict. Reordering them cost nothing and is the entire fix — a close
 describes what actually merges, or it describes nothing.
+
+## 9. Why this close skipped the census
+
+`CLAUDE.md`'s standing rule is that the census is refreshed once per
+campaign, at the pre-merge close, on lefford. This close did not — deliberately,
+and with Nathan's authorization, not by default or by oversight. The
+standing rule is a default, not an unconditional obligation, so the
+question actually worth answering is whether *this* campaign's changes
+could move a census value at all, rather than running or skipping
+reflexively either way.
+
+The Staff's only change to any simulation-tree `src/` is
+`windows/lab/src/timings.rs` (+116 lines: `subfloor_roster`,
+`subfloor_path`). That file is unreferenced from the census/metric/runner
+path, and both new functions have exactly one consumer —
+`cli/src/main.rs`'s `ci-record`. Nothing this campaign touched can reach a
+census metric, so a refresh would have cost lefford's serial lane real time
+to reproduce goldens byte-identical to the ones already committed. Skipping
+it is not a precedent for skipping by default at future closes — it holds
+only because the blast-radius check came back empty; a campaign that
+touches anything upstream of a metric owes the refresh regardless.
 
 ## Follow-ups
 

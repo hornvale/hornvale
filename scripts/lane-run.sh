@@ -74,6 +74,13 @@ trap 'record $?' EXIT
 
 # shellcheck source=scripts/census-canonical-host.sh
 . "$repo_root/scripts/census-canonical-host.sh"
+# WRONG-HOST REFUSAL HAPPENS BEFORE THE LOG REDIRECT BELOW, so its message
+# goes to this process's own stderr, which lane-dispatch.sh's detached
+# `setsid` launch sends to /dev/null — the caller never sees it. `jobs.tsv`
+# still gets an `rc=1` row (the EXIT trap fires either way), so the job is
+# not silently lost, but `<job-id>.log` is EMPTY for it. Debugging an empty
+# lane log: check jobs.tsv's `rc` column before assuming the job never
+# started at all.
 require_canonical_host "$set_name" || exit 1
 
 exec >>"$run_log" 2>&1
@@ -85,6 +92,14 @@ echo "lane-run: $job_id started $(date -Is) on $(hostname -s) as pid $$"
 # be relying on.
 row="$(grep -v '^#' "$repo_root/scripts/lane-sets.tsv" | awk -v s="$set_name" -F'\t' '$1==s')"
 [ -n "$row" ] || { echo "lane-run: no such set '$set_name' in scripts/lane-sets.tsv" >&2; exit 2; }
+# `$repo_root` HERE IS THE DISPATCHING checkout, NOT `$ref`'s. The command
+# this job runs comes from the roster row in the checkout that happened to
+# invoke lane-run.sh — read above, before the checkout/reset below ever
+# touches the shared scratch worktree — not from `scripts/lane-sets.tsv` as
+# it exists at the dispatched ref. A campaign editing the roster (a new set,
+# a changed command) has its own edit ignored by every lane job dispatched
+# against it until the branch merges and becomes reachable from whatever
+# checkout is doing the dispatching.
 command_line="$(printf '%s' "$row" | cut -f5)"
 
 LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"

@@ -99,6 +99,17 @@ wasm build from silently becoming a second, drifting implementation of the
 physics. Never rebaseline one to make it pass — a diff there means the two
 paths genuinely disagree, which is the bug.
 
+**The size gate's trigger point is host-dependent, because binaryen isn't
+pinned.** Measured on lefford during The Staff: this Mac carries binaryen
+131, lefford carries binaryen **108**. `world-check` still PASSES there —
+gzipped wasm came in at 382,089 bytes against the 524,288-byte ceiling — but
+that ceiling was calibrated against 131's ~337 KiB output, and 108 emits
+about 11% larger, cutting headroom from ~34% to ~27%. Not wrong (the gate
+exists to catch unbounded growth, and a smaller margin is more
+conservative, not less safe), but a future flap right at the ceiling on one
+host and not the other is this, not a regression — check `binaryen
+--version` on both machines before chasing a phantom size regression.
+
 ## Bundles are build output that happens to be committed
 
 `book/src/gallery/atlas.js`, `vessel.js`, `vessel-worker.js` are committed
