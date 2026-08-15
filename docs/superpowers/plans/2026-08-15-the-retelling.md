@@ -19,6 +19,14 @@
 - **`type-audit:` tag on every primitive at a `pub` boundary**, and regenerate `docs/audits/type-audit-report.md` **in the same commit** that moves a pub boundary.
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the single most common review finding.
 - **`Claim` is derived and never serialized.** It must not gain `Serialize`/`Deserialize`. This is what keeps the campaign off the save-format surface.
+- **The commit gate RUNS ZERO `hornvale-hearsay` TESTS.** Measured: the crate
+  is the only one in the workspace absent from
+  `docs/timings/subfloor-roster.tsv`, because that roster is authored by a
+  green stage gate on the canonical host and none has run since The Hearsay
+  merged. The commit gate COMPILES the crate and runs none of its tests, so a
+  green commit gate says nothing about this campaign's code. **Every task must
+  run its own scoped per-crate test invocation** and treat that, not the gate,
+  as its evidence. The gap closes on the next green stage gate.
 - **The gate ladder changed under this campaign (decisions 0132/0133, The
   Staff).** `make gate`, `make ci`, `make gate-fast` and `make gate-full` are
   now REFUSING SIGNPOSTS that exit non-zero. Use `make gate-commit` locally
