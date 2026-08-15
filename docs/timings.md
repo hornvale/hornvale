@@ -1012,3 +1012,7 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-15T15:08:32Z | quick | 11.498 | 31.865 | 7.594 | 3.43 | 0 | 07565bc0 | campaign/the-compendium | MacBookPro | 10 |
 | 2026-08-15T15:12:13Z | quick | 10.498 | 9.792 | 0.264 | 0.96 | 0 | 07565bc0 | campaign/the-compendium | MacBookPro | 10 |
 | 2026-08-15T15:21:02Z | gate-commit | 16.309 | 39.219 | 9.909 | 3.01 | 0 | 9095e27f | campaign/the-staff | MacBookPro | 10 |
+| 2026-08-15T15:26:49Z | preflight | 6.391 | 0.878 | 0.715 | 0.25 | 0 | 0bb7a6ce | campaign/the-compendium | MacBookPro | 10 |
+| 2026-08-15T15:32:20Z | gate-commit | 66.769 | 76.296 | 17.417 | 1.40 | 0 | 61a73c35 | campaign/the-compendium | MacBookPro | 10 |
+| 2026-08-15T15:32:27Z | preflight | 3.553 | 0.855 | 0.670 | 0.43 | 0 | cb754783 | campaign/the-compendium | MacBookPro | 10 |
+| 2026-08-15T15:35:19Z | rebaseline | 48.322 | 192.674 | 10.457 | 4.20 | 0 | cb754783 | campaign/the-compendium | MacBookPro | 10 |

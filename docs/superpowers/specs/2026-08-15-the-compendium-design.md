@@ -26,7 +26,8 @@ list that is mostly false.
 3. `docs/audits/system-coverage-wolverson-2021.md` and
    `docs/audits/system-matrix.md` — committed, drift-checked artifacts.
 4. `cli/tests/system_coverage.rs` — the byte-ratchet, running in nextest and so
-   inside `make gate` with no Makefile change.
+   in the gate ladder with no Makefile change — see the note below on *which*
+   gate.
 5. A chronicle entry (decision 0013) carrying the reading, and idea-registry
    rows for every hole the matrix surfaces.
 
@@ -359,7 +360,37 @@ report "no drift" forever.
 | superseded decisions are absent from the digest | read `decisions-in-force.md` | 0006 and 0014 absent; header states it |
 | registry IDs are machine-parseable | read `cli/tests/docs_consistency.rs` | `looks_like_registry_id`, `parse_registry` |
 | `docs/audits/` is already drift-checked | read `docs/generated-paths.txt` | present — **no edit needed there** |
-| the tropes ratchet runs in `make gate` | read `cli/tests/trope_coverage.rs` | a nextest byte-comparison test |
+| the tropes ratchet runs in the gate | read `cli/tests/trope_coverage.rs` | a nextest byte-comparison test — but see §12a, the ladder moved under this campaign |
+
+## 12a. Which gate the ratchet actually runs in — amended mid-campaign
+
+This spec was written against a single `make gate`. Task 1 absorbed 66 commits
+of main carrying the gate-ladder rewrite (decisions 0132/0133), and the claim
+above needs correcting rather than quietly inheriting.
+
+There are now three gates: `gate-commit` (local, seconds, every commit),
+`gate-stage` and `gate-campaign` (both dispatched to one strictly serial lane
+on the canonical box). **`gate-commit` runs only the *sub-floor tier* — tests
+with a recorded baseline duration in `docs/timings/subfloor-roster.tsv`.** A
+newly written test has no such baseline and is therefore **excluded from
+`gate-commit` by design**; it enters the roster on the next green *stage* gate,
+which measures it.
+
+So the honest statement of this instrument's enforcement, replacing "it runs in
+the gate":
+
+- **From the first stage gate onward**, the ratchet and the anchor audit run
+  in `gate-stage` and `gate-campaign` — every plan-stage boundary and every
+  merge.
+- **In `gate-commit`, they run only after** a green stage gate has measured
+  them into the roster.
+
+This weakens nothing the design depends on: the anchor discipline's job is to
+redden when a decision is superseded or a registry row ships, and both are
+edits that go through a stage or campaign gate before merging. But it does mean
+**a local `gate-commit` immediately after writing these tests will not run
+them**, which would otherwise read as a passing gate. Do not take a green
+`gate-commit` as evidence the ratchet works; take the stage gate.
 | Hornvale has no attack verb / no HP | read `session.rs` HELP + grep workspace | confirmed; wounds exist only in history-baking |
 | NPCs move only on `wait` | grep `step_with_occupancy` | exactly one call site, in `fn wait` |
 | the game client is monochrome | read `cell.rs` | `enum Ink { Plain }`; colour is on the wire, unread |

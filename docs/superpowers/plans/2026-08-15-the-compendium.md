@@ -1028,16 +1028,34 @@ worktree**. Promote its process notes into `docs/retrospectives/the-compendium.m
 *before* teardown, including the `worktree-take`-branched-from-stale-`origin/main`
 finding.
 
-- [ ] **Step 5: The full gate**
+- [ ] **Step 5: The campaign gate**
+
+**`make gate` no longer exists.** Task 1 absorbed 66 commits of main including
+the gate-ladder rewrite (decisions 0132/0133): `gate`, `ci`, `gate-fast` and
+`gate-full` are now *refusing signposts* that print the replacements and exit
+non-zero. The three gates are `gate-commit` (local, seconds), `gate-stage` and
+`gate-campaign` (both dispatched to one strictly serial lane on lefford).
+
+This is a merge-time gate, so it is `gate-campaign`, and it takes a **full
+SHA, never a branch name**:
 
 ```bash
-make gate 2>&1 | tee /tmp/hv-compendium-gate.txt
+git push -u origin campaign/the-compendium          # the lane resets --hard to REF
+make gate-campaign REF=$(git rev-parse HEAD)
+make lane-status                                     # who holds the lane, who is queued
+make lane-wait JOB=<id>                              # opt-in blocking
+make lane-log  JOB=<id>                              # read the result back
+```
+
+Locally, the drift check still runs here:
+
+```bash
 make rebaseline && git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
 ```
 
-Expected: green, and an empty drift diff. Run on a **quiet box** — the duration
-alarm cannot see ordinary load, and a red alarm from a busy machine is not
-evidence (CLAUDE.md, blind spot 1).
+Expected: a green lane job and an empty drift diff. Dispatch is asynchronous —
+queuing behind an hour of heavy or census work is an accepted cost, not a
+fault, so read `lane-status` before assuming a job is stuck.
 
 - [ ] **Step 6: Commit and hand back for G6**
 
