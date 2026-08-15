@@ -432,3 +432,94 @@ fn the_decisions_stamp_changes_when_the_decisions_file_changes() {
         "the decisions-in-force stamp did not move when the decisions file changed"
     );
 }
+
+/// Build a synthetic repo root with a single registry row (`ID-1`) whose
+/// Status cell reads exactly `status`, gather `RepoFacts` from it, and clean
+/// up. `tag` keeps concurrent calls (e.g. from different tests in this file)
+/// from colliding on the same temp path. Follows the same synthetic-root
+/// pattern as `gather_refuses_a_*` and `the_decisions_stamp_changes_*` above.
+fn facts_with_registry_status(tag: &str, status: &str) -> RepoFacts {
+    let root = std::env::temp_dir().join(format!(
+        "hv-compendium-registry-status-{tag}-{}",
+        std::process::id()
+    ));
+    let digest_dir = root.join("docs/digest");
+    let frontier_dir = root.join("book/src/frontier");
+    std::fs::create_dir_all(&digest_dir).expect("make scratch digest dir");
+    std::fs::create_dir_all(&frontier_dir).expect("make scratch frontier dir");
+    std::fs::create_dir_all(root.join("domains")).expect("make scratch domains dir");
+    std::fs::create_dir_all(root.join("windows")).expect("make scratch windows dir");
+    std::fs::write(
+        digest_dir.join("decisions-in-force.md"),
+        "- **0001** A real decision\n",
+    )
+    .expect("writes a decisions file");
+    std::fs::write(
+        frontier_dir.join("idea-registry.md"),
+        format!("| ID-1 | idea | {status} | high | nowhere |\n"),
+    )
+    .expect("writes a registry file");
+
+    let facts = RepoFacts::gather(&root).expect("gather synthetic facts");
+    let _ = std::fs::remove_dir_all(&root);
+    facts
+}
+
+/// STALE-DEFERRED must fire on a QUALIFIED shipped status, not just the bare
+/// word. Measured against the real registry (1269 status cells): 167 read
+/// exactly `shipped`, but 23 read `shipped (…)` and 16 more are
+/// markdown-bolded — the original `status == "shipped"` exact match could
+/// never see any of those 39. `CLIENT-action-clock` (the existing fixture's
+/// row) happens to be one of the 167 bare ones, so nothing caught this until
+/// it was measured on purpose.
+#[test]
+fn a_deferral_against_a_parenthetically_qualified_shipped_status_is_stale() {
+    let facts = facts_with_registry_status("qualified", "shipped (C1)");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        matches!(f.as_slice(), [Finding::StaleDeferred { .. }]),
+        "expected STALE-DEFERRED for `shipped (C1)`, got {f:?}"
+    );
+}
+
+/// Same defect, the markdown-bolded shape (16 real rows read `**shipped**`
+/// or `**shipped (…)**`).
+#[test]
+fn a_deferral_against_a_bolded_shipped_status_is_stale() {
+    let facts = facts_with_registry_status("bolded", "**shipped**");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        matches!(f.as_slice(), [Finding::StaleDeferred { .. }]),
+        "expected STALE-DEFERRED for `**shipped**`, got {f:?}"
+    );
+}
+
+/// The NEGATIVE control the fix must not break: `elaborated (slice-2
+/// shipped)` merely MENTIONS "shipped" inside its parenthetical — the row
+/// itself is `elaborated`, not shipped, and must read clean. This is what
+/// stops the fix for the two tests above from degenerating into a substring
+/// search for "shipped" anywhere in the cell.
+#[test]
+fn a_deferral_against_an_elaborated_status_mentioning_shipped_in_prose_is_clean() {
+    let facts = facts_with_registry_status("prose-mention", "elaborated (slice-2 shipped)");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        f.is_empty(),
+        "elaborated (with 'shipped' merely mentioned in its parenthetical) must not \
+         read as STALE-DEFERRED, got {f:?}"
+    );
+}
+
+/// A row that shipped and was later superseded is still not something to
+/// defer against — `normalize_status` strips the trailing `→ <status>`
+/// transition, so `shipped → superseded (Goldengrove)` normalizes to
+/// `shipped` and SHOULD fire, same as the bare word.
+#[test]
+fn a_deferral_against_a_shipped_then_superseded_status_is_stale() {
+    let facts = facts_with_registry_status("transitioned", "shipped → superseded (Goldengrove)");
+    let f = audit(&corpus_with("deferred", Some("registry:ID-1")), &facts);
+    assert!(
+        matches!(f.as_slice(), [Finding::StaleDeferred { .. }]),
+        "expected STALE-DEFERRED for a shipped-then-superseded status, got {f:?}"
+    );
+}

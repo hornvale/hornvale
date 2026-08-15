@@ -117,7 +117,11 @@ impl Anchor {
 pub struct RepoFacts {
     /// Decision numbers present in `docs/digest/decisions-in-force.md`.
     in_force: BTreeSet<String>,
-    /// Idea-registry row ID → its `status` cell.
+    /// Idea-registry row ID → its `status` cell, NORMALIZED (see
+    /// `normalize_status`) at gather time: `**shipped (C1)**` and `shipped`
+    /// both store as `shipped`, and `elaborated (slice-2 shipped)` stores as
+    /// `elaborated`, never `shipped`. Storing normalized rather than raw
+    /// means any future consumer gets the same answer this one does.
     registry: BTreeMap<String, String>,
     /// Repo root, for path and test-symbol resolution.
     root: PathBuf,
@@ -255,8 +259,8 @@ fn looks_like_registry_id(cell: &str) -> bool {
 }
 
 /// Parse `text` (the content of `book/src/frontier/idea-registry.md`) and
-/// collect every registry row's ID → `status` cell (`id | description |
-/// status | confidence | where`).
+/// collect every registry row's ID → NORMALIZED `status` cell (`id |
+/// description | status | confidence | where`; see `normalize_status`).
 fn parse_registry_statuses(text: &str) -> BTreeMap<String, String> {
     let mut registry = BTreeMap::new();
     for line in text.lines() {
@@ -274,10 +278,35 @@ fn parse_registry_statuses(text: &str) -> BTreeMap<String, String> {
         if !looks_like_registry_id(id) {
             continue;
         }
-        let status = pieces.get(3).cloned().unwrap_or_default();
+        let status = pieces
+            .get(3)
+            .map(|s| normalize_status(s))
+            .unwrap_or_default();
         registry.insert(id.clone(), status);
     }
     registry
+}
+
+/// Reduce a Status cell to its bare token: strip `**` emphasis, a trailing
+/// `→ <status>` transition, and any trailing parenthetical (`ratified
+/// (0009)`, `shipped (field half)`). Mirrors `normalize_status` in
+/// `cli/tests/docs_consistency.rs` — the same rule, deliberately not a
+/// second one, for the same reason `looks_like_registry_id` above is
+/// mirrored rather than reinvented: a naive exact match on the bare word
+/// `shipped` misses `shipped (C1)`, `**shipped**`, and `shipped →
+/// superseded (Goldengrove)` (which DOES normalize to `shipped` — a row
+/// that shipped and was later superseded is still not something to defer
+/// against), while a naive substring search on `"shipped"` wrongly fires on
+/// `elaborated (slice-2 shipped)`, which never shipped itself.
+fn normalize_status(cell: &str) -> String {
+    let mut s = cell.replace('*', "");
+    if let Some((head, _)) = s.split_once('→') {
+        s = head.to_string();
+    }
+    if let Some((head, _)) = s.split_once('(') {
+        s = head.to_string();
+    }
+    s.trim().to_string()
 }
 
 /// Read one crate's `name = "…"` from its `Cargo.toml`, if it has one.
