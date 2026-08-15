@@ -50,6 +50,40 @@ the type audit and the duration baseline already use. A gate that failed on the
 mere existence of an unmet item would go red on day one and train everyone to
 ignore it.
 
+**Clause 2: the subject is the whole program, and a spanning item takes its
+weakest half.** The corpus scores Hornvale-the-program, `clients/` included —
+they are in this repository, so they are in the subject. An item whose
+capability has a **sim** half and a **client** half takes **the weaker of the
+two**, and its anchor cites the half that decided the verdict (a `path:` anchor
+when that half lives in `clients/`, which is outside the cargo workspace and so
+beyond a `test:` anchor's reach). Each half is scored against the item's
+capability as a whole, not against every element the item happens to add: a
+single missing widget inside an otherwise-delivered half is a note, not a
+demotion.
+
+This clause exists because **decision 0022 is an assignment of responsibility,
+not a refusal.** The sim emits data and clients render; nothing in it says
+rendering does not count. A `refused decision:0022` verdict says exactly that,
+converting *built elsewhere, or not built* into *deliberately will not* — the
+strongest claim this vocabulary has, awarded to items nobody ever decided
+against. What 0022 does forbid is narrow: **the sim carrying a picture.** The
+tutorial's `Renderable { glyph, fg, bg }` component has no counterpart here and
+never will. Pictures existing is not forbidden at all, and three in-repo
+renderers draw them.
+
+**Ratified by Nathan at G6, 2026-08-15, on a defect this record's own first
+version made possible.** Without the clause, the corpus applied 0022
+asymmetrically: an item that was mostly sim had its sim half scored `present`
+and its render half waved away as 0022's, while an item that was mostly render
+had the *whole* item scored `refused` under the same decision — and which
+treatment an item got tracked which produced the more favourable verdict. Five
+reviews missed it because **every anchor resolved.** The anchors were real sim
+tests; the resolver cannot see that a verdict changed subject halfway through a
+corpus, and no check in this record catches an instrument that silently
+switches what it is measuring. Re-auditing all 74 items under the clause moved
+twelve verdicts in both directions — four demotions, six promotions out of
+`refused`, two re-anchorings — and left **no item refused under 0022 at all**.
+
 **The accepted cost: the idea registry becomes a gated interface.** Ratified by
 Nathan at this campaign's G3 review, 2026-08-15.
 

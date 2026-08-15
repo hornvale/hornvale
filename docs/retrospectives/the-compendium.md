@@ -146,6 +146,10 @@ one guard in the campaign that was observed failing against a *genuine* change
 rather than a synthetic fixture, and it happened because the campaign corrected
 itself rather than because anyone arranged a demonstration.
 
+It has since fired a second time, on a much larger correction: the
+weakest-half re-verdict of section 6 took `absent` from 10 to 11 and the guard
+went red again, before the rebaseline, exactly as designed.
+
 Two things follow. The guard's first real firing being self-inflicted is the
 best available evidence that it is pointed the right way — the deliberate
 rebaseline that followed is exactly the human act it exists to force. And the
@@ -157,7 +161,60 @@ An instrument that authors verdicts about itself will produce self-flattery;
 the useful question is not whether it happens but whether the artifact carries
 enough internal structure for a reader to catch it.
 
-## 6. Two Minor findings were ruled into fix rounds, deliberately
+## 6. The instrument silently changed subject, and every anchor resolved
+
+The largest defect of the campaign was not in the resolver. It was in the
+corpus, it survived five reviews, and Nathan found it at G6 by doing the one
+thing none of the reviews did: reading the client.
+
+**Decision 0022 was applied in two opposite directions, and which direction a
+chapter got tracked which produced the more favourable verdict.** A chapter
+that was mostly simulation had its sim half scored `present` and its render
+half waved away as 0022's business — chapter 2.1's own note said exactly that,
+in the artifact, published: "the chapter's other half — drawing an `@` — is
+decision 0022's, not the sim's". A chapter that was mostly rendering had the
+*whole* chapter scored `refused` under that same decision. Eight of them.
+
+Three things make this worth a section rather than a line.
+
+**The anchor discipline is structurally blind to it.** Every one of those
+anchors resolved, on every run, because every one was a real test over a real
+sim mechanism. The resolver checks that a citation still points at something.
+It cannot check that the citation is evidence for *the question the row is
+answering*, and a verdict that quietly narrows its subject to the half it can
+evidence will be green forever. This family's entire safeguard — the thing
+decision 0135 exists to install — does not see the failure mode that actually
+bit. `an-empty-diff-needs-a-positive-control` has a sibling: **an anchor that
+resolves needs a check that it answers the right question**, and nothing
+mechanical can supply one.
+
+**The missing thing was a rule nobody had written.** There was no policy for
+scoring a chapter that spans the sim and the client, so each chapter got
+whichever half the author found easiest to evidence, and the bias was
+invisible per-chapter and obvious in aggregate. The fix is one sentence
+(0135's clause 2: the corpus scores the whole program, and a spanning item
+takes its **weakest half**), and it could have been written before any verdict
+existed. `imperative-mood-hides-assertions` again: "score each chapter" is an
+instruction; "a spanning chapter takes its weakest half" is a decision rule,
+and only the second one can be violated visibly.
+
+**And the correction ran in both directions, which is the test of whether a
+correction is honest.** Re-auditing all 74 items moved twelve verdicts: four
+demotions where the render half is genuinely missing (you can `delve` into the
+caves and no renderer can draw them — the underground band folds into the walk
+band, so the pane and the verb agree on a chart of the country *overhead*), and
+six promotions out of `refused` where the clients do the work (a journal-spread
+UI, a pan-and-zoom viewport in the atlas, text composited independently of the
+map in the Casement). A pass that had only demoted would have been a different
+kind of wrong. The count of items refused under 0022 went from eight to zero,
+and every surviving refusal in the corpus is decision 0070.
+
+The cheap generalisation, worth carrying to the next corpus in this family:
+**name the subject boundary before authoring any verdict, and write it as a
+rule.** "Does Hornvale do this?" is not a question until you have said what
+Hornvale is.
+
+## 7. Two Minor findings were ruled into fix rounds, deliberately
 
 Minor findings do not normally reopen a round. Twice they did here, and both
 overrides used the same argument: this instrument's entire claim is that *the
@@ -171,7 +228,7 @@ The general form: **severity should be judged against what the artifact
 claims, not against what the code does.** A cosmetic defect in an instrument
 that publishes a number is not cosmetic.
 
-## 7. A spec claim about enforcement had to be amended mid-campaign, not inherited
+## 8. A spec claim about enforcement had to be amended mid-campaign, not inherited
 
 The spec said the ratchet "runs in the gate," written against a single gate
 that no longer exists. The first task absorbed sixty-six commits carrying the
@@ -186,7 +243,7 @@ when. Nothing in the design was damaged; the claim simply had to be corrected
 rather than left standing, and the amendment belongs in the spec because that
 is where the next reader will look for it.
 
-## 8. What held up
+## 9. What held up
 
 **Freezing the catalogue before authoring any verdict.** The corpus shipped
 with every verdict null and its item count asserted, one task before anything

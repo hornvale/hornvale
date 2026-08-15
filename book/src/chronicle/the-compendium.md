@@ -30,6 +30,10 @@ puts rendering outside the ledger deliberately. Resolved against the registry,
 every one of those pages would have read *blocked by a dangling requirement* —
 a number that would have been plausible, near zero, and a category error.
 
+That count is about the *substrate*, and this campaign spent one whole review
+round learning that it is not about the *verdict*. Having no registry token is
+not a reason to call a capability refused — see **The asymmetry**, below.
+
 So the two families are siblings, never members of one another, and
 [decision 0134](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0134-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md)
 settles it: different subject, different resolution substrate, one resolver
@@ -106,18 +110,18 @@ against its committed copy:
 
 | verdict | count | share |
 |---|---|---|
-| present | 26 | 35% |
-| refused | 12 | 16% |
-| deferred | 21 | 28% |
-| absent | 10 | 14% |
+| present | 25 | 34% |
+| refused | 5 | 7% |
+| deferred | 28 | 38% |
+| absent | 11 | 15% |
 | inapplicable | 5 | 7% |
 
 **The first page Hornvale cannot replicate is 2.6, and it reads `refused`.**
 The world climbs the tutorial's opening ladder without a gap — entities and
 components as ledger subjects and committed facts, a walked map that is a
 sculpted planet, symmetric shadowcasting for field of view, creatures derived
-from the world's own demography — and stops at a ratified decision rather than
-at a hole.
+from the world's own demography and drawn as marks on two of three renderers —
+and stops at a ratified decision rather than at a hole.
 
 That sentence is the single most useful thing this catalogue produces, and it
 is only available because the tutorial declares itself **ordered**. Its items
@@ -127,14 +131,78 @@ artefact of sorting. So the corpus states its own ordering and the resolver
 refuses ordinal claims for a catalogue that does not, rather than silently
 ranking by identifier.
 
+**Every remaining refusal is decision 0070.** Five pages — dealing damage,
+ranged scrolls, bloodstains, a boss fight, ranged combat — and all five are
+downstream of the same sentence: no stored, mutable health value may exist
+anywhere. Against a catalogue of seventy-four things a roguelike is expected to
+do, this project has exactly one ratified refusal, applied five times. That is
+a sharper statement of where Hornvale actually stands than any percentage on
+this page, and it only became visible once the asymmetry below was fixed.
+
 The rest of the reading is mostly a map of where the project's positions live.
-Twelve refusals resolve to just two decisions — 0022 for the eight renderer
-items, 0070 for everything downstream of a damage counter. The twenty-one
-deferrals cite eight distinct registry rows, but **sixteen of the twenty-one
-concentrate on three**: admissible derived map builders, an object genus, and
-underground settlement. Not one new registry row had to be minted to explain a
-deferral, which is a stronger result than it sounds: it means the backlog
-already knew about every gap the catalogue found that anybody had planned for.
+Twenty-eight deferrals cite thirteen distinct registry rows, and they
+concentrate hard: admissible derived map builders, an object genus, underground
+settlement, and the fact that **the underworld has no chart of its own** carry
+most of them between them. Not one new registry row had to be minted to explain
+a deferral, across two scorings — a stronger result than it sounds, because it
+means the backlog already knew about every gap the catalogue found that anybody
+had planned for.
+
+## The asymmetry
+
+The reading above is the second one. The first was wrong, and the way it was
+wrong is the most useful thing this campaign produced.
+
+**A verdict has to measure one subject, and this instrument silently changed
+subject halfway through the corpus.** Pages that were mostly simulation had
+their sim half scored `present` and their render half waved away as decision
+0022's business — page 2.1's own note said so in as many words, that drawing an
+`@` "is decision 0022's, not the sim's". Pages that were mostly rendering had
+the *whole* page scored `refused` under that same decision. Same decision,
+opposite treatments, and which one a page received tracked which produced the
+more favourable verdict.
+
+**Five reviews did not catch it, because every anchor resolved.** They were
+real tests over real sim mechanisms. The resolver checks that a citation still
+points at something; it has no way to notice that the citation is evidence for
+a different question than the one the row is answering. An instrument can be
+fully anchored, fully green, and measuring the wrong thing — and the anchor
+discipline, which is this family's whole safeguard, is blind to exactly that
+failure. Nathan caught it by reading the client.
+
+The rule that closes it is one sentence, now
+[decision 0135](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0135-a-coverage-verdict-cites-a-checked-anchor.md)'s
+second clause: **the corpus scores the whole program, clients included, and a
+page spanning the sim and the client takes its weakest half.** Decision 0022 is
+an *assignment of responsibility, not a refusal* — it says the sim emits data
+and clients render, and never that rendering does not count. What it genuinely
+forbids is narrow enough to state in one line: the sim carrying a picture. The
+tutorial's `Renderable { glyph, fg, bg }` has no counterpart here and never
+will. Pictures existing was never forbidden at all.
+
+Re-auditing all seventy-four pages under the rule moved twelve verdicts **in
+both directions**, which is the part worth insisting on — it was not a
+downgrade pass:
+
+- Six pages left `refused` for something honest. A user interface exists (a
+  two-page journal spread: a plate, an entry, an endpaper identity strip);
+  particle effects are *planned* rather than refused, licensed by name in the
+  registry; a viewport that decouples map size from screen size ships in the
+  atlas viewer, pan, zoom and all; text composited independently of the map
+  ships in the Casement.
+- Four pages left `present` for something honest. You can descend into the
+  caves and **no renderer can draw them** — the underground band folds into the
+  walk band, so the pane and the verb agree on a chart of the country
+  *overhead*. Three pages about going underground rest on that one gap. And the
+  hunger clock, richer than the tutorial's counter as a fold over committed
+  meals, applies only to derived creatures: the possession never gets hungry
+  and no channel carries the number.
+- One page went from `refused` to `absent`, which is the least comfortable
+  move and the most honest one. Wall glyphs selected from a neighbour bitmask
+  are not refused by anything. Every wall in every renderer simply draws `#`,
+  and nobody has planned otherwise.
+
+The count of pages refused under 0022 went from eight to **zero**.
 
 ## The surplus, and what it does not say
 
@@ -146,7 +214,7 @@ the catalogue never think to ask for?
 Enumerate the domains and the presenting windows; any subsystem no `present`
 verdict cites is **surplus**, and
 [`docs/audits/system-matrix.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/system-matrix.md)
-prints the list beside every corpus's tally. Twenty of twenty-five. Astronomy, paleoclimate,
+prints the list beside every corpus's tally. Nineteen of twenty-five. Astronomy, paleoclimate,
 language, religion, culture, history, demography, settlement — the tutorial has
 no vocabulary for any of it, and the five subsystems it does reach are the ones
 a walked, rendered game touches.
@@ -154,9 +222,9 @@ a walked, rendered game touches.
 The read is derived on every run from the corpora and the live directory tree,
 never authored, so it moves on its own as domains land. It is also coarse, and
 the artifact prints that limitation directly above the list rather than
-below it: the most-cited subsystem carries thirteen anchors and therefore does
+below it: the most-cited subsystem carries ten anchors and therefore does
 not appear as surplus, which reads as full coverage and is nothing of the kind.
-Thirteen anchors are not thirteen anchors' worth of a crate's surface, and this
+Ten anchors are not ten anchors' worth of a crate's surface, and this
 instrument does not measure that surface at all.
 
 ## What the instrument is least entitled to
@@ -194,7 +262,7 @@ this campaign's work; the corpus format, the resolver and the matrix all take N
 columns from the first commit, because a format that could not accept a second
 catalogue is the thing this family would most regret shipping.
 
-Thirty-five per cent is therefore not a score. It is one reading through one
+Thirty-four per cent is therefore not a score. It is one reading through one
 declared bias, and the number that matters on this page is not the percentage
 but the identifier: the first page this project cannot replicate is 2.6, and
 the reason is written down.

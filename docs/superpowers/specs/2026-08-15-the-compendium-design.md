@@ -74,13 +74,22 @@ category error.
 > **Amended after scoring (Task 6).** The paragraph above originally opened
 > "roughly a third of the tutorial is renderer work" — a pre-measurement
 > estimate that was never re-derived once verdicts existed. The measured
-> figure is **8 of 74 items refused under 0022 (11%)**; 11 items (15%) mention
-> 0022 at all. The argument is unaffected — eight chapters that can never
-> carry a registry token is decisive on its own — but the fraction was wrong
-> and had been copied into a decision record, the chronicle and `CLAUDE.md`
-> before anyone re-derived it. Corrected in all four places; recorded here
-> rather than silently overwritten, since this is the source the copies came
-> from.
+> figure was then **8 of 74 items refused under 0022 (11%)**. The fraction was
+> wrong and had been copied into a decision record, the chronicle and
+> `CLAUDE.md` before anyone re-derived it. Corrected in all four places;
+> recorded here rather than silently overwritten, since this is the source the
+> copies came from.
+>
+> **Amended again at G6, and this time the count went to zero.** Those same
+> eight items were refused under 0022 *because* §4a's weakest-half rule did not
+> yet exist; re-scoring them on what the clients actually do left **no item
+> refused under 0022**. The argument of this section is untouched and is in
+> fact strengthened — those eight pages still have no concept-registry token
+> and never will, which is the whole reason this family needed its own
+> resolver. What changed is that "has no registry token" was never a reason to
+> call a capability *refused*. **Do not re-derive a renderer fraction from this
+> paragraph**; read the tally off the committed artifact, which is the lesson
+> the first amendment already taught and this one repeats.
 
 The two families also measure different subjects. `tropes/` asks whether a
 **world** can represent a situation. `systems/` asks whether a **program**
@@ -128,6 +137,47 @@ finding: a table that listed seven capabilities the world already had under a
 heading reading *missing*. Decision 0095 cites it as the argument for why the
 artifact misrepresenting the backlog is a distinct risk from the measurement
 being wrong.
+
+### 4a. A chapter spanning the sim and the client takes its weakest half
+
+The corpus measures **Hornvale-the-program, client included** — `clients/` is
+in this repository, so it is in the subject. Many chapters have two halves: a
+sim half (state, derivation, mechanism) and a client half (what a player can
+see or do). **The chapter's verdict is the weaker of the two.**
+
+The halves are *sim* and *client*, and each is scored against the chapter's
+capability as a whole — not against every widget the chapter happens to add. A
+single missing element inside an otherwise-delivered half is a note, not a
+demotion; a half that does not deliver the capability at all is the verdict.
+
+The rule exists because **decision 0022 is an assignment of responsibility, not
+a refusal.** It says the sim emits data and clients render. It does not say
+rendering does not count, and a `refused decision:0022` verdict says exactly
+that — it converts "we built this elsewhere, or have not built it" into "we
+deliberately will not", which is the strongest claim the vocabulary has and the
+one least available to a chapter nobody ever decided against. What 0022
+genuinely forbids is narrow and worth stating in its own sentence: **the sim
+carrying a picture** — the tutorial's `Renderable { glyph, fg, bg }` component
+has no counterpart here, and `windows/vessel/src/plan.rs`'s palette says so in
+its own doc ("the `CellKind` discriminant, never a glyph. The client chooses
+`#`/`.`/`+`"). Pictures existing is not forbidden at all.
+
+So a render-touching chapter is scored on what the renderers do, and the anchor
+cites **the half that decided the verdict** — a `path:` anchor when that half
+lives in `clients/` (outside the cargo workspace, so `test:` cannot reach it).
+
+> **Amendment, 2026-08-15 (G6). This rule was missing, and its absence produced
+> an asymmetric application of 0022 across the corpus.** Chapters that were
+> mostly sim had their sim half scored `present` and their render half waved
+> away as "0022's" — chapter 2.1's own note said so in as many words — while
+> chapters that were mostly render had the *whole* chapter scored `refused`
+> under the same decision. Which treatment a chapter received tracked which
+> produced the more favourable verdict. **Nathan caught it at G6, after five
+> reviews had not**, because every anchor resolved: the anchors were real sim
+> tests, and the resolver has no way to notice that a verdict changed subject
+> halfway through a corpus. Re-auditing all 74 items under this rule moved
+> twelve verdicts in both directions and left **no item refused under 0022 at
+> all**; every surviving refusal is decision 0070.
 
 ## 5. The anchor discipline
 

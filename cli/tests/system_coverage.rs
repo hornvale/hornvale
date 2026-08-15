@@ -122,7 +122,20 @@ fn check_fails_on_novelty_when_the_absent_count_rises() {
             .expect("the committed report is readable");
     let baseline =
         hornvale::systems::committed_absent_count(&committed).expect("the report carries a tally");
-    let expected = format!("{baseline} to {}", baseline + 1);
+    // BOTH ends are read, not just the baseline. `check` reports
+    // `<committed baseline> to <live count>`, and the two are independent:
+    // the scratch corpus is the LIVE corpus plus one absent item, so the
+    // right-hand number tracks the live tally, which need not be the
+    // committed one. Deriving it as `baseline + 1` was correct only while
+    // the live corpus and the committed report agreed — it broke the moment
+    // the G6 re-verdict moved `absent` 10 -> 11 against a report still
+    // recording 10, reporting `10 to 12` against an expected `10 to 11`.
+    let live_absent = load_wolverson()
+        .items
+        .iter()
+        .filter(|i| i.verdict == hornvale::systems::Verdict::Absent)
+        .count();
+    let expected = format!("{baseline} to {}", live_absent + 1);
     assert!(
         stderr.contains("regressed") && stderr.contains(&expected),
         "expected a novelty-specific regression message naming `{expected}`, got: {stderr}"
@@ -867,9 +880,18 @@ fn a_test_anchor_citing_an_ordinary_running_test_is_clean() {
 /// 5b's closing requirement: re-verify every real `test:` anchor in the
 /// shipped corpus still resolves clean under the new ignore-aware check —
 /// not just the wolverson-corpus-has-no-anchor-findings test above (which
-/// already covers this), but naming it explicitly as the 26-anchor
-/// regression 5b's brief asks for, with a message that would name which
-/// anchor broke if one ever does.
+/// already covers this), but naming it explicitly, with a message that
+/// would name which anchor broke if one ever does.
+///
+/// **The count is asserted NON-EMPTY, not exact.** It was a literal `26`,
+/// which is the roster size 5b happened to measure; the weakest-half
+/// re-verdict (G6) moved five items off `test:` anchors onto `registry:`
+/// and `path:` ones and reddened this test while nothing it exists to
+/// check had moved. The literal's only real job is anti-vacuity — a corpus
+/// with no `test:` anchors at all would pass the resolve-clean assertion
+/// trivially — and non-empty does that job without pinning a number this
+/// test does not test. Anchor CHANGES are already caught, byte for byte,
+/// by the report and matrix goldens.
 #[test]
 fn every_real_test_anchor_in_the_corpus_still_resolves_clean() {
     let corpus = load_wolverson();
@@ -878,11 +900,10 @@ fn every_real_test_anchor_in_the_corpus_still_resolves_clean() {
         .iter()
         .filter(|i| i.anchor.as_deref().is_some_and(|a| a.starts_with("test:")))
         .collect();
-    assert_eq!(
-        test_anchor_items.len(),
-        26,
-        "expected 26 test: anchors in the frozen corpus, got {}",
-        test_anchor_items.len()
+    assert!(
+        !test_anchor_items.is_empty(),
+        "the frozen corpus carries no `test:` anchors at all, so the \
+         resolve-clean assertion below would pass vacuously"
     );
     let f = audit(&corpus, &facts());
     assert!(

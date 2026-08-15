@@ -34,6 +34,15 @@ purpose. Resolved against the registry, every one of those chapters would read
 error. A capability item resolves against **repository facts** instead: the
 in-force decision index, the idea registry, and the source tree.
 
+**Read that count as "has no registry token", never as "refused".** All eight
+carried `refused decision:0022` in this corpus's first scoring and **none does
+now**: 0022 assigns rendering to the client, and the client is in this
+repository, so those items are scored on what the renderers do (decision 0135,
+clause 2, ratified at G6 on exactly this defect). The argument above is
+unaffected — it is about which *substrate* can resolve them — but the two
+questions were being run together, and the confusion produced eight wrong
+verdicts.
+
 **Two schema commitments are ratified with the family**, because both are
 cheap now and are format migrations later.
 

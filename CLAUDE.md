@@ -48,7 +48,12 @@ editing:
   game-system catalogue carries renderer work that decision 0022 puts
   outside the ledger on purpose — eight of the first corpus's 74 items — so
   resolving it against the concept registry would score every one of them as
-  a dangling requirement, a plausible number that is a category error. Same
+  a dangling requirement, a plausible number that is a category error. That
+  count means "has no registry token", **never "refused"**: 0022 assigns
+  rendering to the client and the clients are in this repo, so a corpus
+  scores the whole program and a sim/client-spanning item takes its
+  **weakest half** (0135 clause 2). Reading it the other way is what put
+  `refused decision:0022` on all eight; none carries it now. Same
   data/code split as `tropes/` (decision 0011), same freeze before
   measurement (0016). Verdicts are five-valued and each cites an anchor the
   resolver re-checks (decision 0135), which makes a registry row's ID and
