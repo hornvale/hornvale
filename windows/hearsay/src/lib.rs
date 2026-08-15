@@ -7,6 +7,7 @@
 #![warn(missing_docs)]
 
 pub mod derive;
+pub mod divergence;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
