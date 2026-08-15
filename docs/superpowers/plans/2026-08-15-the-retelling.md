@@ -1046,7 +1046,6 @@ fn the_retelling_readout_on_seed_42() {
     let led = &world.ledger;
     let lin = lineage_of(led);
     let ladder = PrecisionLadder::of(led);
-    let ladder = PrecisionLadder::of(led);
 
     // --- H1: per-hop counts of claims still at the finest precision ---
     let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
