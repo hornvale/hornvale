@@ -369,10 +369,11 @@ a guard's comment names a hazard, check that the predicate it computes is that
 hazard and not its more convenient neighbour** — a numbering collision can
 produce either a gap or a duplicate, and only one of those is a hole.
 
-## 13. The gate verdict, including the red nobody has ever cleared
+## 13. The gate verdict — green on all six sets, and a count published before checking back
 
-This branch was gated at `bfd21abc`, and nothing in the repository recorded
-that. It does now:
+This branch was first gated at `bfd21abc`, and nothing in the repository
+recorded that. It does now, carried forward to `72185029` — this campaign's
+own final SHA:
 
 | set | rc | note |
 |---|---|---|
@@ -381,21 +382,54 @@ that. It does now:
 | outboard | 0 | |
 | clients | 0 | |
 | heavy | 0 | 2,503 s |
-| seam-guard | **2** | `refusing to run on a dirty working tree` |
+| seam-guard | 0 | 1,478 s |
 
-**`seam-guard` has never returned a verdict inside a campaign gate.** Five of
-this campaign's six lane runs of it exited 2 with that same message: earlier
-sets in the same dispatch dirty the lane's shared worktree, and seam-guard
-refuses to mutate a tree it cannot restore. The Ballast's `git clean -fd` fix
-does not close it, because the residue is a **tracked modification**, not
-untracked debris.
+**The campaign gate is fully green, seam-guard included.** This section
+originally read "`seam-guard` has never returned a verdict inside a campaign
+gate," on the evidence of five of this campaign's six lane runs exiting 2
+with `refusing to run on a dirty working tree`. That claim is false. Reading
+lefford's `~/.local/state/hornvale/lane/jobs.tsv` end to end: an earlier run
+at `a2e5050d` was green, then `bfd21abc` read `rc=2 wall=2533` — the run this
+section was originally written against, and the last one anyone had looked
+at — but The Ballast's untracked-residue fix landed right after
+(`62243c1e`, `fix(lane): clean untracked residue…`) and ran green at
+`wall=769`, and `72185029` ran green at `wall=1478`. Five of six lane runs
+*did* exit 2 with that message, all before the fix, all from the same cause:
+earlier sets in the same dispatch left behind a **tracked modification** in
+the lane's shared worktree (not untracked debris — a plain `git clean -fd`
+already swept that), and seam-guard refuses to mutate a tree it cannot
+restore. The Ballast's fix closes exactly that.
 
-Two rules. **A gate set that has never produced a verdict is an unmeasured
-set, not a passing one**, and an `rc=2` repeating identically across runs is a
-configuration finding rather than a flake. And **write the gate verdict
-somewhere durable**: a lane job's log dies with its lane directory, so a
-campaign that gated cleanly and recorded nothing is indistinguishable from one
-that never gated at all.
+**How the false claim got published is the more durable finding than the
+number it got wrong.** It was built by dispatching seam-guard at this
+branch's own final SHA, watching the job report `queued`, reading the
+historical `rc` column, generalising "five reds so far" into "never" — and
+publishing that generalisation without checking back on the very run just
+started to answer the question. A peer session caught it before it could
+compound further. The rule this adds, alongside the two below: **a count
+taken at one moment is not a property of the system, and a job you dispatched
+yourself is the cheapest one to check back on before generalising about it.**
+
+**What survives the correction, and must not be overcorrected into "it's
+fine": both post-fix green runs (`62243c1e`, `72185029`) were solo
+dispatches** — seam-guard run alone, not trailing a full six-set campaign
+dispatch through the same shared worktree, which is the configuration every
+one of the five reds came from. The failure mode is fixed for untracked
+residue and untested for a full campaign set sharing the worktree end to end;
+the next full-set dispatch is the evidence for that case, not this
+paragraph.
+
+Two rules survive from the original telling, essentially unchanged. **A gate
+set that has never produced a verdict is an unmeasured set, not a passing
+one** — true of `bfd21abc`'s reading in the moment, and true of any future
+gate still in flight. **An `rc=2` repeating identically across runs is a
+configuration finding rather than a flake** — also still true; it stopped
+repeating once the configuration was fixed, not because the pattern was ever
+a flake. And **write the gate verdict somewhere durable**: a lane job's log
+dies with its lane directory, so a campaign that gated cleanly and recorded
+nothing is indistinguishable from one that never gated at all — which is
+exactly what let a five-red snapshot outlive the two green runs that
+followed it.
 
 ## 14. What held up
 
@@ -446,8 +480,11 @@ Captured as registry rows rather than folded in:
   instance already sits in the tree.
 - **`TOOL-lane-has-no-cancel`** — section 10's two kill traps, and the
   `make lane-cancel` that would make them unnecessary.
-- **`TOOL-seam-guard-cannot-run-in-a-campaign-gate`** — section 13's red:
-  5 of 6 lane runs `rc=2`, tracked residue rather than untracked debris.
+- **`TOOL-seam-guard-untested-in-a-full-lane-dispatch`** — section 13's
+  history: 5 of 6 pre-fix lane runs `rc=2` on tracked residue (not untracked
+  debris), The Ballast's fix, and the still-open case — every post-fix green
+  run was a solo dispatch, never a full six-set campaign dispatch sharing the
+  worktree end to end.
 - **`TOOL-worktree-take-branches-from-stale-origin`** — a recycled worktree
   starts from `origin/main` with no warning when the local `main` is ahead. Bit
   at this campaign's start. Banked as `raw` on a single observation, which is
