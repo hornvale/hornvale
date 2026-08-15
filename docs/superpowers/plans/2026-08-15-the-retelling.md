@@ -4,7 +4,7 @@
 
 **Goal:** Make myth content vary in transmission, so that divergence becomes measurable, by shipping a two-filter communication chain and a correct maximum-antichain measure of divergent structure.
 
-**Architecture:** A retelling passes through two deterministic filters — the teller's *incentive* (has this community ever raided?) and the hearer's *formation* (was it born of a catastrophe?). A retelling whose filter pair is **matched** is frictionless and carries content unchanged; a **mismatched** pair is lossy and coarsens the claim's day one step along a fixed precision ladder. Everything is derived from committed facts, so `windows/hearsay` stays a window: no seeded draw, no `streams.rs` label, no epoch.
+**Architecture:** A retelling passes through two deterministic filters — the teller's *incentive* (has this community ever raided?) and the hearer's *formation* (was it born of a catastrophe?). A retelling whose filter pair is **matched** is frictionless and carries content unchanged; a **mismatched** pair is lossy and coarsens the claim's day one rung down a ladder built from that world's own cycles. Everything is derived from committed facts, so `windows/hearsay` stays a window: no seeded draw, no `streams.rs` label, no epoch.
 
 **Tech Stack:** Rust 2024, `hornvale-kernel` + `hornvale-history` only at runtime (`hornvale-worldgen`/`astronomy`/`terrain` are dev-dependencies for the live batteries). Std-only; the workspace dependency allowlist is `serde`, `serde_json`, `libm`.
 
@@ -27,8 +27,9 @@
 
 | File | Responsibility |
 |---|---|
-| `kernel/src/precision.rs` (create) | `Precision` — the five-rung coarsening ladder and its application to a day. |
-| `kernel/src/claim.rs` (modify) | `Claim` gains a `precision` field and a `retold_by` sibling to `inherited_by`. |
+| `kernel/src/precision.rs` (create) | `Precision` — the rung INDEX only. No spans, no day arithmetic (see Task 1). |
+| `windows/hearsay/src/ladder.rs` (create) | `PrecisionLadder` — the per-world rungs, read from committed sky facts. |
+| `kernel/src/claim.rs` (modify) | `Claim` gains a `precision` field and two retelling constructors. |
 | `windows/hearsay/src/filters.rs` (create) | The two filter keys and the matched/lossy predicate. |
 | `windows/hearsay/src/divergence.rs` (create) | Maximum antichain over a witness set. |
 | `windows/hearsay/src/derive.rs` (modify) | `variants_about` — the path-aware walk that applies filters. |
@@ -40,255 +41,155 @@
 
 ---
 
-### Task 1: The precision ladder
+### Task 1: `Precision`, the rung index — LANDED, AS REVISED
 
-**Files:**
-- Create: `kernel/src/precision.rs`
-- Modify: `kernel/src/lib.rs` (add `pub mod precision;` and re-export)
-- Test: in-module `#[cfg(test)]` in `kernel/src/precision.rs`
+**Status: complete.** Kept here because a plan section describing something
+other than what shipped is a trap for the next reader.
 
-**Interfaces:**
-- Consumes: nothing.
-- Produces: `pub enum Precision { Day, Season, Year, Decade, Generation }`; `Precision::coarser(self) -> Precision` (saturating at `Generation`); `Precision::apply(self, day: f64) -> f64`; `Precision::rungs() -> usize` returning `5`.
+**What shipped** (`kernel/src/precision.rs`, commits `a161568b` then
+`1b7da3ba`, `46e8613b`): a bare newtype `Precision(pub u8)` with `FINEST`,
+`rung()` and an unbounded `coarser()`. No spans, no calendar units, no day
+arithmetic. Three tests: precision rank only ever rises, coarsening saturates
+rather than wrapping (a `u8` wrap would silently return a claim to first-hand
+precision, the one transition the model forbids), and `FINEST` orders below
+every other rung.
 
-- [ ] **Step 1: Write the failing tests**
+**What the original Task 1 got wrong, in three layers.** It specified a
+five-variant enum `{Day, Season, Year, Decade, Generation}` carrying spans of
+`1 / 91 / 365 / 3650 / 10950`.
 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
+1. **Those are Earth's calendar.** Every Hornvale world draws its own
+   `year-length-std`, `day-length-std` and `moon-period-std`. A world with no
+   moons, or no seasons (`Calendar::season_phase` returns `Option`), or a
+   tidally-locked day, does not have those rungs at all.
+2. **The nesting requirement was the wrong invariant.** The original test
+   asserted that coarsening never reduces error, and it was FALSE against its
+   own implementation (91 does not divide 365; at day 3661.75 the Year rung is
+   more accurate than the Season rung). The first fix nudged Season to 91.25 to
+   force nesting — fitting a physical constant to an arithmetic property. The
+   real invariant is **precision-rank monotonicity**: a coarsened claim is an
+   interval that widened, not a point that moved.
+3. **The kernel cannot hold spans at all.** A duration at a `pub` boundary
+   wants `StdDays` (design principle 5); `StdDays` lives in
+   `domains/astronomy`; the kernel may not depend on a domain. `type-audit`
+   refused the bare `f64` and was pointing at a layering fault, not a missing
+   annotation.
 
-    #[test]
-    fn coarser_walks_the_ladder_and_saturates_at_the_top() {
-        assert_eq!(Precision::Day.coarser(), Precision::Season);
-        assert_eq!(Precision::Season.coarser(), Precision::Year);
-        assert_eq!(Precision::Year.coarser(), Precision::Decade);
-        assert_eq!(Precision::Decade.coarser(), Precision::Generation);
-        assert_eq!(Precision::Generation.coarser(), Precision::Generation);
-    }
-
-    #[test]
-    fn applying_a_precision_snaps_a_day_down_to_its_rung() {
-        // 3661.75 days: within year 10 (365-day rungs), decade 10.
-        assert_eq!(Precision::Day.apply(3661.75), 3661.75);
-        assert_eq!(Precision::Year.apply(3661.75), 3650.0);
-        assert_eq!(Precision::Decade.apply(3661.75), 3650.0);
-    }
-
-    #[test]
-    fn a_coarser_precision_is_never_more_precise_than_a_finer_one() {
-        // The anti-symmetry that makes distortion monotone: coarsening twice
-        // can only move the value further from, never back toward, the truth.
-        let truth = 3661.75;
-        let once = Precision::Day.coarser().apply(truth);
-        let twice = Precision::Day.coarser().coarser().apply(truth);
-        assert!((twice - truth).abs() >= (once - truth).abs());
-    }
-}
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `cargo test -p hornvale-kernel --lib precision`
-Expected: FAIL — `cannot find type Precision`.
-
-- [ ] **Step 3: Write the implementation**
-
-```rust
-//! The coarsening ladder a retold claim's day descends.
-
-/// How precisely a claim's day is remembered. Distortion moves one rung
-/// coarser per lossy retelling and never back — the anti-symmetry that makes
-/// a rumour decay rather than sharpen.
-/// type-audit: bare-ok(count: rungs)
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Precision {
-    /// The exact day.
-    Day,
-    /// Snapped to a 91-day season.
-    Season,
-    /// Snapped to a 365-day year.
-    Year,
-    /// Snapped to a 3650-day decade.
-    Decade,
-    /// Snapped to a 10950-day generation; the coarsest rung.
-    Generation,
-}
-
-impl Precision {
-    /// The next rung coarser, saturating at [`Precision::Generation`].
-    pub fn coarser(self) -> Precision {
-        match self {
-            Precision::Day => Precision::Season,
-            Precision::Season => Precision::Year,
-            Precision::Year => Precision::Decade,
-            Precision::Decade | Precision::Generation => Precision::Generation,
-        }
-    }
-
-    /// The span of one rung, in standard days. `Day` is 1.0.
-    fn span(self) -> f64 {
-        match self {
-            Precision::Day => 1.0,
-            Precision::Season => 91.0,
-            Precision::Year => 365.0,
-            Precision::Decade => 3650.0,
-            Precision::Generation => 10950.0,
-        }
-    }
-
-    /// `day` snapped down to this rung. `Day` is the identity.
-    pub fn apply(self, day: f64) -> f64 {
-        if self == Precision::Day {
-            return day;
-        }
-        let s = self.span();
-        (day / s).floor() * s
-    }
-
-    /// How many rungs the ladder has. The ceiling on distinct variants of one
-    /// event, and therefore on what H2 can report.
-    /// type-audit: bare-ok(count: return)
-    pub fn rungs() -> usize {
-        5
-    }
-}
-```
-
-**Why `Precision` and not `Grain`.** `Grain` would be the workspace's fourth
-homonym pair: `domains/alchemy`'s `Sign::Grain` is a **cereal trade good** and
-`domains/history/src/flesh.rs:561` documents "Grain storage — an agrarian
-occupation's surplus". The board already records three homonym pairs producing
-a wrong number someone nearly acted on; minting a fourth deliberately, in the
-kernel, would be a self-inflicted version of that. Verified free:
-`grep -rn 'enum Precision\|struct Precision' kernel/ domains/ windows/ cli/`
-returns nothing.
-
-Add to `kernel/src/lib.rs`. **The module list is alphabetical** — `precision`
-goes between `polyline` (line 24) and `provenance` (line 25), and the
-`pub use` between `png`'s and `provenance`'s:
-
-```rust
-pub mod precision;
-```
-
-and beside the existing `pub use` lines:
-
-```rust
-pub use precision::Precision;
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `cargo test -p hornvale-kernel --lib precision`
-Expected: PASS, 3 tests.
-
-- [ ] **Step 5: Commit**
-
-```bash
-cargo fmt
-git add kernel/src/precision.rs kernel/src/lib.rs
-git commit -m "feat(kernel): the precision ladder a retold claim descends"
-```
+Rungs, spans, saturation and snapping all live in Task 2b instead.
 
 ---
 
 ### Task 2: `Claim` learns to be retold
 
 **Files:**
-- Modify: `kernel/src/claim.rs` (the struct at `:18`, `inherited_by` at `:37`, the test helper at `:58`)
+- Modify: `kernel/src/claim.rs` (struct at `:18`, `inherited_by` at `:37`, test helper at `:58`)
 - Test: in-module `#[cfg(test)]` in `kernel/src/claim.rs`
 
 **Interfaces:**
-- Consumes: `hornvale_kernel::Precision` from Task 1.
-- Produces: `Claim.precision: Precision` (new public field); `Claim::retold_by(&self, holder: EntityId, lossy: bool) -> Claim`. `Claim::inherited_by` keeps its exact existing behaviour and signature.
+- Consumes: `hornvale_kernel::Precision` (Task 1, landed).
+- Produces: `Claim.precision: Precision` (new public field);
+  `Claim::retold_by(&self, holder: EntityId) -> Claim` (frictionless);
+  `Claim::retold_by_lossy(&self, holder: EntityId, precision: Precision, object: Value) -> Claim`.
+  `Claim::inherited_by` keeps its exact existing behaviour and signature.
 
-**Why `inherited_by` is not replaced:** campaign 1's three tests assert on it and their meaning must not shift. `retold_by(h, false)` is behaviourally identical to `inherited_by(h)`; a test in this task pins that equivalence so the duplication cannot silently diverge.
+**The kernel performs NO day arithmetic.** The lossy constructor is handed an
+already-coarsened `(precision, object)` by the window that owns the ladder. A
+day span at a `pub` boundary wants `StdDays`; `StdDays` lives in
+`domains/astronomy`; the kernel may not depend on a domain. `type-audit`
+refuses the bare `f64` alternative, which is how this was found.
 
-- [ ] **Step 1: Write the failing tests**
+**`inherited_by` is kept, not replaced** — campaign 1's three tests assert on
+it and their meaning must not shift. A test pins
+`retold_by(h) == inherited_by(h)`.
 
-Add to the existing `mod tests` in `kernel/src/claim.rs`:
+- [ ] **Step 1: Write the failing tests**, added to the existing `mod tests`:
 
 ```rust
     #[test]
     fn a_frictionless_retelling_carries_content_and_precision_unchanged() {
-        let heir = witnessed().retold_by(eid(2), false);
+        let heir = witnessed().retold_by(eid(2));
         assert_eq!(heir.object, witnessed().object);
-        assert_eq!(heir.precision, Precision::Day);
+        assert_eq!(heir.precision, Precision::FINEST);
         assert_eq!(heir.hops, 1);
         assert_eq!(heir.grade, Provenance::Taught);
     }
 
     #[test]
-    fn a_lossy_retelling_coarsens_the_precision_and_the_object_together() {
-        let heir = witnessed().retold_by(eid(2), true);
-        assert_eq!(heir.precision, Precision::Season);
-        assert_eq!(heir.object, Value::Number(Precision::Season.apply(63918.75)));
-        assert_ne!(heir.object, witnessed().object);
+    fn retold_by_agrees_with_inherited_by() {
+        assert_eq!(witnessed().inherited_by(eid(2)), witnessed().retold_by(eid(2)));
     }
 
     #[test]
-    fn retold_by_frictionless_agrees_with_inherited_by() {
-        // The two constructions must not drift apart. Campaign 1's tests
-        // assert on inherited_by; this pins the sibling to it.
-        let a = witnessed().inherited_by(eid(2));
-        let b = witnessed().retold_by(eid(2), false);
-        assert_eq!(a, b);
+    fn a_lossy_retelling_takes_the_coarsened_value_it_is_given() {
+        let heir = witnessed().retold_by_lossy(eid(2), Precision(1), Value::Number(63875.0));
+        assert_eq!(heir.precision, Precision(1));
+        assert_eq!(heir.object, Value::Number(63875.0));
+        assert_eq!(heir.grade, Provenance::Taught);
     }
 
     #[test]
-    fn lossiness_accumulates_across_retellings() {
+    fn hops_and_grade_advance_identically_on_both_paths() {
+        // The constructors differ ONLY in content and precision. If an edit
+        // makes one skip a hop or a downgrade, this fails.
+        let a = witnessed().retold_by(eid(2));
+        let b = witnessed().retold_by_lossy(eid(2), Precision(1), Value::Number(0.0));
+        assert_eq!((a.hops, a.grade, a.holder), (b.hops, b.grade, b.holder));
+        assert_eq!((a.subject, a.predicate.clone()), (b.subject, b.predicate.clone()));
+    }
+
+    #[test]
+    fn a_frictionless_retelling_never_sharpens_a_coarsened_claim() {
+        // The one transition the model forbids.
         let c = witnessed()
-            .retold_by(eid(2), true)
-            .retold_by(eid(3), false)
-            .retold_by(eid(4), true);
-        assert_eq!(c.precision, Precision::Year);
-        assert_eq!(c.hops, 3);
-    }
-
-    #[test]
-    fn a_non_numeric_object_is_carried_unchanged_by_a_lossy_retelling() {
-        // The ladder coarsens days. A Text or Entity object has no precision to
-        // descend, so it must pass through untouched rather than panic.
-        let mut c = witnessed();
-        c.object = Value::Text("razed".to_string());
-        let heir = c.retold_by(eid(2), true);
-        assert_eq!(heir.object, Value::Text("razed".to_string()));
-        assert_eq!(heir.precision, Precision::Season);
+            .retold_by_lossy(eid(2), Precision(2), Value::Number(0.0))
+            .retold_by(eid(3));
+        assert_eq!(c.precision, Precision(2));
+        assert!(c.precision > Precision::FINEST);
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [ ] **Step 2: Run to verify they FAIL.** Scope to `-p hornvale-kernel --lib claim`.
+      Expected: `no method named retold_by`, `no field precision`.
 
-Run: `cargo test -p hornvale-kernel --lib claim`
-Expected: FAIL — `no method named retold_by`, `no field precision`.
-
-- [ ] **Step 3: Write the implementation**
-
-Add the field to the struct (after `hops`), updating the type-audit tag on the struct to keep every primitive covered:
+- [ ] **Step 3: Implement.** Add the field after `hops`:
 
 ```rust
-    /// How precisely this holder remembers the claim's day. Witnesses hold
-    /// [`Precision::Day`]; each lossy retelling descends one rung.
+    /// Which rung of the world's ladder this holder remembers the day at.
+    /// Witnesses hold [`Precision::FINEST`]; each lossy retelling descends.
     pub precision: Precision,
 ```
 
-Add the method beside `inherited_by`:
+and both methods beside `inherited_by`:
 
 ```rust
-    /// The claim as a new holder receives it through a retelling.
+    /// The claim as a new holder receives it through a FRICTIONLESS retelling:
+    /// teller and hearer share a frame, so content and precision pass
+    /// unchanged. Behaviourally identical to [`Claim::inherited_by`], pinned
+    /// by test.
+    pub fn retold_by(&self, holder: EntityId) -> Claim {
+        Claim {
+            holder,
+            subject: self.subject,
+            predicate: self.predicate.clone(),
+            object: self.object.clone(),
+            grade: self.grade.on_transmission(),
+            hops: self.hops.saturating_add(1),
+            precision: self.precision,
+        }
+    }
+
+    /// The claim as a new holder receives it through a LOSSY retelling.
     ///
-    /// `lossy` is the two-filter verdict: `false` when teller and hearer share
-    /// a frame (content and precision pass unchanged, identical to
-    /// [`Claim::inherited_by`]), `true` when they do not (the precision descends
-    /// one rung and a numeric object is snapped to it). A non-numeric object
-    /// has no precision to descend and is carried unchanged.
-    pub fn retold_by(&self, holder: EntityId, lossy: bool) -> Claim {
-        let precision = if lossy { self.precision.coarser() } else { self.precision };
-        let object = match (&self.object, lossy) {
-            (Value::Number(d), true) => Value::Number(precision.apply(*d)),
-            (other, _) => other.clone(),
-        };
+    /// `precision` and `object` arrive already coarsened from the window that
+    /// owns the world's ladder — the kernel performs no day arithmetic,
+    /// because a duration at a `pub` boundary wants `StdDays` and that type
+    /// lives in a domain the kernel may not depend on.
+    pub fn retold_by_lossy(
+        &self,
+        holder: EntityId,
+        precision: Precision,
+        object: Value,
+    ) -> Claim {
         Claim {
             holder,
             subject: self.subject,
@@ -301,24 +202,159 @@ Add the method beside `inherited_by`:
     }
 ```
 
-Then fix the three construction sites: add `precision: self.precision` to `inherited_by`'s literal at `:38`, and `precision: Precision::Day` to the test helper at `:59`. `windows/hearsay/src/derive.rs:78` is fixed in Task 4.
+Then fix the construction sites: `precision: self.precision` in
+`inherited_by`'s literal at `:38`, `precision: Precision::FINEST` in the test
+helper at `:59`. `windows/hearsay/src/derive.rs:78` is Task 4's.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [ ] **Step 4: Run to verify PASS** — 3 pre-existing plus 5 new.
 
-Run: `cargo test -p hornvale-kernel --lib claim`
-Expected: PASS, 8 tests (3 pre-existing + 5 new).
+- [ ] **Step 5: Regenerate the type-audit report and commit.** `Claim` gained a
+      public field, so the report drifts and must move in the same commit.
+      Run `type-audit check`, then `type-audit report` redirected over
+      `docs/audits/type-audit-report.md`, then `cargo fmt`, then commit both
+      files.
 
-- [ ] **Step 5: Regenerate the type-audit report and commit**
+---
 
-`Claim` gained a public field, which moves a pub boundary.
+### Task 2b: The world's precision ladder
 
-```bash
-cargo run --manifest-path tools/type-audit/Cargo.toml -- check
-cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
-cargo fmt
-git add kernel/src/claim.rs docs/audits/type-audit-report.md
-git commit -m "feat(kernel): a claim can be retold, losing precision when filters mismatch"
+**Files:**
+- Create: `windows/hearsay/src/ladder.rs`
+- Modify: `windows/hearsay/src/lib.rs` (`pub mod ladder;`), `windows/hearsay/Cargo.toml` (add `hornvale-astronomy` to `[dependencies]`), `windows/hearsay/tests/common/mod.rs` (add `put_on`)
+- Test: `windows/hearsay/tests/ladder.rs`
+
+**Interfaces:**
+- Consumes: `hornvale_kernel::Precision`, `hornvale_astronomy::facts::{YEAR_LENGTH_STD, DAY_LENGTH_STD, MOON_PERIOD_STD}`, `hornvale_astronomy::units::StdDays`.
+- Produces: `pub struct PrecisionLadder`; `PrecisionLadder::of(ledger: &Ledger) -> PrecisionLadder`;
+  `len`, `is_empty`, `label(Precision) -> Option<&str>`, `span(Precision) -> Option<StdDays>`,
+  `coarser(&self, Precision) -> Precision` (saturating at this world's coarsest),
+  `apply(&self, Precision, day: f64) -> f64`;
+  `labels(&self) -> Vec<&str>` (finest first, for the readout's report line).
+
+**THE TRAP THIS TASK EXISTS TO AVOID — verified in the code, not inferred.**
+`MOON_PERIOD_STD` is registered **non-functional** (`domains/astronomy/src/lib.rs:138`,
+flag `false`) and committed **once per moon on the same subject**
+(`facts.rs:417-421`). `Ledger::value_of` returns only *the first fact in commit
+order* (`kernel/src/ledger.rs:361-369`). So `value_of(subject, MOON_PERIOD_STD)`
+silently yields **one moon on a two-mooned world**, every test still passes, and
+Nathan's explicit "both moons" decision is violated invisibly. Use the idiom
+astronomy's own test uses at `facts.rs:719`:
+
+```rust
+ledger.facts_about(subject).filter(|f| f.predicate == MOON_PERIOD_STD)
 ```
+
+`YEAR_LENGTH_STD` and `DAY_LENGTH_STD` **are** functional, so `value_of` is
+correct for those two.
+
+**Do not snap or nest the rungs.** Real cycles are incommensurable and that is
+the modelled phenomenon (spec §5.2). A test below asserts that re-rounding can
+carry a claim off the event entirely; if it fails, the fix is never to make the
+spans divide each other.
+
+- [ ] **Step 1: Write the failing tests** in `windows/hearsay/tests/ladder.rs`:
+
+```rust
+//! The per-world ladder, over hand-built ledgers.
+
+mod common;
+
+use common::put_on;
+use hornvale_hearsay::ladder::PrecisionLadder;
+use hornvale_kernel::Precision;
+use hornvale_kernel::ledger::{Ledger, Value};
+
+fn sky(day: Option<f64>, moons: &[f64], year: Option<f64>) -> Ledger {
+    let mut led = Ledger::default();
+    if let Some(d) = day {
+        put_on(&mut led, 1, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(d));
+    }
+    for m in moons {
+        put_on(&mut led, 1, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(*m));
+    }
+    if let Some(y) = year {
+        put_on(&mut led, 1, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(y));
+    }
+    led
+}
+
+#[test]
+fn both_moons_of_a_two_mooned_world_become_rungs() {
+    // If this reports 3, someone reached for value_of and lost a moon.
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[29.3, 41.7], Some(372.4)));
+    assert_eq!(l.len(), 4, "day, two moons, year: {l:?}");
+}
+
+#[test]
+fn rungs_sort_by_actual_span_so_the_order_is_world_derived() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[41.7], Some(372.4)));
+    assert_eq!(l.label(Precision(0)), Some("day"));
+    assert_eq!(l.label(Precision(2)), Some("year"));
+}
+
+#[test]
+fn a_moonless_world_simply_has_no_lunar_rung() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[], Some(300.0)));
+    assert_eq!(l.len(), 2);
+    assert_eq!(l.coarser(Precision(1)), Precision(1), "saturates at the year");
+}
+
+#[test]
+fn an_empty_ladder_loses_no_precision() {
+    let l = PrecisionLadder::of(&Ledger::default());
+    assert!(l.is_empty());
+    assert_eq!(l.apply(Precision::FINEST, 3661.75), 3661.75);
+}
+
+#[test]
+fn two_moons_of_equal_period_contribute_one_rung() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[30.0, 30.0], Some(300.0)));
+    assert_eq!(l.len(), 3);
+}
+
+#[test]
+fn re_rounding_an_already_rounded_day_can_exclude_the_event() {
+    // The consequence of NOT nesting. Do not repair a failure here by
+    // snapping the rungs -- see spec section 5.2.
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[41.7], Some(372.4)));
+    let year = Precision(2);
+    let truth = 745.0;
+    let width = l.span(year).expect("year rung").get();
+    let twice = l.apply(year, l.apply(Precision(1), truth));
+    assert!(
+        truth < twice || truth >= twice + width,
+        "re-rounding must be able to exclude the event: {truth} still in [{twice}, {})",
+        twice + width
+    );
+    let direct = l.apply(year, truth);
+    assert!(
+        truth >= direct && truth < direct + width,
+        "control: rounding the truth once must still contain it"
+    );
+}
+```
+
+`common/mod.rs` gains `put_on(led, subject, predicate, value)` — like the
+existing `put`, but registering the predicate **non-functional** so several
+`moon-period-std` facts can land on one subject. The existing `put` registers
+with `true` and would reject the second moon.
+
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test ladder`.
+      Expected: `unresolved import hornvale_hearsay::ladder`.
+
+- [ ] **Step 3: Implement.** For each subject carrying them, collect rungs:
+      `day-length-std` (label `"day"`, `value_of`); every `moon-period-std` on
+      that subject (labels `"moon 1"`, `"moon 2"`, ... in commit order, via
+      `facts_about().filter()`); `year-length-std` (label `"year"`, `value_of`).
+      Drop non-finite and non-positive spans. Sort ascending by span with a
+      label tie-break; de-duplicate on equal spans. Store spans as `StdDays`.
+      `apply` takes and returns a bare `f64` day because that is what
+      `Value::Number` holds; tag it. `coarser` saturates at `len() - 1`, and on
+      an empty ladder returns its argument unchanged.
+
+- [ ] **Step 4: Run to verify PASS** — 6 tests.
+
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit `windows/hearsay/`.
 
 ---
 
@@ -541,7 +577,7 @@ fn a_frictionless_chain_carries_the_day_to_every_descendant() {
     for v in &vs {
         assert_eq!(
             v.precision,
-            Precision::Day,
+            Precision::FINEST,
             "no key disagrees anywhere, so nothing is lossy: {v:?}"
         );
         assert_eq!(v.object, Value::Number(63918.75));
@@ -566,11 +602,11 @@ fn a_lossy_step_coarsens_the_day_for_that_holder_and_its_descendants() {
             .clone()
     };
     // 2 is a WITNESS (founded on 1's ending day), so it holds first-hand.
-    assert_eq!(held(2).precision, Precision::Day);
+    assert_eq!(held(2).precision, Precision::FINEST);
     assert_eq!(held(2).hops, 0);
     // 3 hears it from 2: teller 2 does not raid, hearer 3 not born of
     // catastrophe -> keys agree -> frictionless.
-    assert_eq!(held(3).precision, Precision::Day);
+    assert_eq!(held(3).precision, Precision::FINEST);
 }
 
 #[test]
@@ -604,7 +640,7 @@ Expected: FAIL — `cannot find function variants_about`.
 
 - [ ] **Step 3: Write the implementation**
 
-First fix the existing literal at `derive.rs:78` by adding `precision: hornvale_kernel::Precision::Day,` to it. Then add:
+First fix the existing literal at `derive.rs:78` by adding `precision: hornvale_kernel::Precision::FINEST,` to it. Then add:
 
 ```rust
 /// Every variant of `(subject, predicate)` held anywhere, ascending by holder.
@@ -638,7 +674,7 @@ pub fn variants_about(
         object: object.clone(),
         grade: Provenance::Witnessed,
         hops: 0,
-        precision: hornvale_kernel::Precision::Day,
+        precision: hornvale_kernel::Precision::FINEST,
     };
     let witnesses = witnesses_of(ledger, lineage, subject, predicate);
     // (lossy_steps, hops, witness) -> the claim reached by that path.
@@ -959,7 +995,7 @@ pub fn finest_precision_hops(
 ) -> Vec<u32> {
     crate::derive::variants_about(ledger, lineage, filters, subject, predicate)
         .into_iter()
-        .filter(|c| c.precision == hornvale_kernel::Precision::Day)
+        .filter(|c| c.precision == hornvale_kernel::Precision::FINEST)
         .map(|c| c.hops)
         .collect()
 }
@@ -983,6 +1019,7 @@ Expected: PASS.
 use hornvale_hearsay::derive::witnesses_of;
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::filters::Filters;
+use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
 
 /// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
@@ -1001,6 +1038,7 @@ fn the_retelling_readout_on_seed_42() {
     let led = &world.ledger;
     let lin = lineage_of(led);
     let f = Filters::of(led, &lin);
+    let ladder = PrecisionLadder::of(led);
 
     // --- H1: per-hop counts of claims still at the finest precision ---
     let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
@@ -1058,13 +1096,18 @@ fn the_retelling_readout_on_seed_42() {
         finest_total >= 500 || qualifying < 100,
         "H1 NO VERDICT floor: {finest_total} finest-precision pairs"
     );
+    // The ceiling is THIS WORLD'S ladder length, not a constant -- a
+    // two-mooned world offers rungs a moonless one does not, which is why H2
+    // reports the ladder alongside its distribution rather than comparing raw
+    // variant counts across worlds.
+    let ceiling = ladder.len() as f64;
     for n in &counts {
         assert!(
-            *n <= hornvale_kernel::Precision::rungs() as f64,
-            "a variant count above the ladder's {} rungs is impossible: {n}",
-            hornvale_kernel::Precision::rungs()
+            *n <= ceiling,
+            "a variant count above this world's {ceiling} rungs is impossible: {n}"
         );
     }
+    println!("LADDER len={} rungs={:?}", ladder.len(), ladder.labels());
 }
 ```
 

@@ -164,19 +164,61 @@ distortion rate a property of the *path*, not a constant.
 ### 5.2 What distortion does to content
 
 `Claim.object` on the measured predicate `occ-ended` is a `Value::Number` — a
-day. Distortion coarsens it along a fixed precision ladder (day, season, year,
-decade, generation), one step per lossy retelling, never reversing. This is
-`lectio difficilior` in its numeric form: copyists regularise, and a round
-number is the easier reading.
+day. Distortion coarsens it one rung per lossy retelling, never reversing.
 
-`Claim::inherited_by` gains a sibling, `Claim::retold_by(holder, lossy)`,
-leaving the existing method untouched so campaign 1's tests keep their
-meaning.
+**The rungs are the world's own cycles, not a calendar.** They are read from
+committed astronomy facts — `day-length-std`, `moon-period-std` (once per
+moon), `year-length-std` — and sorted by their actual spans, so the ORDER is
+world-derived: whether a moon sits coarser or finer than a season depends on
+that world's sky. A moonless world has no lunar rung; a tidally-locked world
+has no day rung; a ladder is allowed to be short, and an empty one loses no
+precision at all. **Both moons of a two-mooned world are rungs**, because two
+irreconcilable lunar reckonings are the phenomenon rather than noise to be
+averaged away.
 
-**The ladder is authored and the keys are derived, and that split is the
+**The rungs deliberately do not nest, and this is the campaign's sharpest
+choice.** Real cycles are incommensurable — a synodic month does not divide a
+year, which is why intercalation exists — and forcing them to nest would erase
+exactly the thing worth simulating: a sky that disregards the best-laid
+theories of its inhabitants. Two consequences follow, both wanted:
+
+1. Each teller re-rounds an **already-rounded** day, so error compounds and a
+   claim can name an interval that no longer contains the event it describes.
+   Traced and pinned in `kernel/src/precision.rs`'s tests: a witness to day 745
+   tells it at the greater-moon rung (708.9); the hearer re-rounds *that* to
+   the year rung (372.4), an interval `[372.4, 744.8)` excluding day 745, where
+   rounding the truth directly would have given `[744.8, 1117.2)`. **A rumour
+   becomes false**, not merely vague — which is what makes the harder-reading
+   question worth asking at all.
+2. The invariant is therefore **precision-rank monotonicity** — the rung index
+   only ever rises — and *not* any statement about error. An earlier draft
+   demanded that coarsening never reduce error, which treats a claim as a point
+   that moves. It is an **interval that widens**: "sometime that year" is
+   strictly less informative than "on that day" even when its representative
+   value lands nearer the truth.
+
+**Where the code lives, and why the split is not cosmetic.** `Precision` is a
+bare rung *index* in the kernel; the ladder, its spans and all day arithmetic
+live in `windows/hearsay`. A duration at a `pub` boundary wants the typed
+quantity `StdDays` (design principle 5), `StdDays` lives in
+`domains/astronomy`, and the kernel may not depend on a domain — so the kernel
+cannot hold spans without either lying about units or breaking layering.
+`type-audit` is what surfaced this, by refusing a bare `f64` day.
+
+`Claim::inherited_by` is left untouched so campaign 1's tests keep their
+meaning, and gains two siblings: a frictionless retelling (pinned equal to it
+by test) and a lossy one taking an already-coarsened value, so the kernel never
+performs day arithmetic.
+
+**The rung set is derived and the lossy RULE is authored, and that split is the
 point.** A model's functional form is always authored; what decision 0021's
 discipline governs is its *inputs*. Nothing here reads a parameter the world
-was handed — both keys are consequences of what a community did.
+was handed — the rungs are that world's astronomy and both filter keys are
+consequences of what a community did.
+
+**Deliberately not built here:** the residual itself — how badly a world's
+cycles fail to close — as a driver of ritual and eschatology. Recorded as
+`SOC-incommensurable-sky`, and see §7.
 
 ### 5.3 Divergent structure is a maximum antichain
 
