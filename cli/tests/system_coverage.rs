@@ -153,19 +153,52 @@ fn the_corpus_declares_its_provenance_and_freeze() {
 
 use hornvale::systems::{Finding, RepoFacts, audit, load};
 
-/// Build a one-item corpus with the given verdict and anchor.
+/// Build a one-item, `ordered: true` corpus with the given verdict and
+/// anchor. All 8 existing call sites in this file want exactly that shape,
+/// so it keeps the bare two-argument signature; `corpus_with_ordered` below
+/// is the narrow sibling for the one test that needs `ordered: false`,
+/// rather than threading a bare `true`/`false` through every call here.
 fn corpus_with(verdict: &str, anchor: Option<&str>) -> hornvale::systems::Corpus {
+    corpus_with_ordered(verdict, anchor, true)
+}
+
+/// Same fixture shape as `corpus_with`, with `ordered` as a caller-chosen
+/// third argument.
+fn corpus_with_ordered(
+    verdict: &str,
+    anchor: Option<&str>,
+    ordered: bool,
+) -> hornvale::systems::Corpus {
     let anchor_json = match anchor {
         Some(a) => format!(r#", "anchor": "{a}""#),
         None => String::new(),
     };
     let json = format!(
-        r#"{{ "corpus": "fixture", "unit": "chapter", "ordered": true,
+        r#"{{ "corpus": "fixture", "unit": "chapter", "ordered": {ordered},
               "provenance": "fixture", "frozen": "fixture",
               "items": [ {{ "id": "1.1", "kind": "chapter", "title": "T",
                             "verdict": "{verdict}"{anchor_json} }} ] }}"#
     );
     load(&json).expect("fixture parses")
+}
+
+/// Spec §14 (ratified as a decision): an ordinal reading requires a declared
+/// ordering, and an unordered catalogue ranked by `id` would manufacture a
+/// ladder its source never had. So for `ordered: false`, `render` must omit
+/// the `## First unmet` section ENTIRELY — not render it empty, not fall
+/// back to id order. Asserts on the header's absence, not just the absence
+/// of an item id, so a partially-rendered section still fails this. NetHack,
+/// the intended second corpus in `systems::CORPORA`, is exactly this case,
+/// and nothing exercised it before this test: `corpus_with` (and the shipped
+/// Wolverson corpus) are both `ordered: true`.
+#[test]
+fn render_omits_first_unmet_entirely_when_the_corpus_is_unordered() {
+    let corpus = corpus_with_ordered("absent", None, false);
+    let rendered = hornvale::systems::render(&corpus, "fixture.json");
+    assert!(
+        !rendered.contains("## First unmet"),
+        "an unordered corpus must not render a First unmet section at all:\n{rendered}"
+    );
 }
 
 fn facts() -> RepoFacts {
