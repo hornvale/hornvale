@@ -885,8 +885,8 @@ fn a_test_anchor_citing_an_ordinary_running_test_is_clean() {
 ///
 /// **The count is asserted NON-EMPTY, not exact.** It was a literal `26`,
 /// which is the roster size 5b happened to measure; the weakest-half
-/// re-verdict (G6) moved five items off `test:` anchors onto `registry:`
-/// and `path:` ones and reddened this test while nothing it exists to
+/// re-verdict (G6) moved six items off `test:` anchors onto `registry:`
+/// and `path:` ones (26 -> 20) and reddened this test while nothing it exists to
 /// check had moved. The literal's only real job is anti-vacuity — a corpus
 /// with no `test:` anchors at all would pass the resolve-clean assertion
 /// trivially — and non-empty does that job without pinning a number this

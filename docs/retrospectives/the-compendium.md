@@ -149,9 +149,12 @@ one guard in the campaign that was observed failing against a *genuine* change
 rather than a synthetic fixture, and it happened because the campaign corrected
 itself rather than because anyone arranged a demonstration.
 
-It has since fired a second time, on a much larger correction: the
-weakest-half re-verdict of section 6 took `absent` from 10 to 11 and the guard
-went red again, before the rebaseline, exactly as designed.
+It has since fired twice more — three times in all. The weakest-half
+re-verdict of section 6 took `absent` from 10 to 11, and the colour ruling of
+section 7 took it from 11 to 12; both went red before their rebaseline, exactly
+as designed. A fourth round that changed only notes and provenance produced the
+*generic* drift message instead, which is the guard drawing the distinction it
+exists to draw.
 
 Two things follow. The guard's first real firing being self-inflicted is the
 best available evidence that it is pointed the right way — the deliberate
@@ -202,13 +205,17 @@ instruction; "a spanning chapter takes its weakest half" is a decision rule,
 and only the second one can be violated visibly.
 
 **And the correction ran in both directions, which is the test of whether a
-correction is honest.** Re-auditing all 74 items moved twelve verdicts: four
-demotions where the render half is genuinely missing (you can `delve` into the
-caves and no renderer can draw them — the underground band folds into the walk
-band, so the pane and the verb agree on a chart of the country *overhead*), and
-six promotions out of `refused` where the clients do the work (a journal-spread
+correction is honest.** Re-auditing all 74 items touched fourteen — **twelve verdict
+changes and two re-anchorings** — and the twelve break down as five demotions
+from `present`, six promotions out of `refused`, and one `refused` → `absent`.
+The demotions are where the render half is genuinely missing (you can `delve`
+into the caves and no renderer can draw them — the underground band folds into
+the walk band, so the pane and the verb agree on a chart of the country
+*overhead*); the promotions are where the clients do the work (a journal-spread
 UI, a pan-and-zoom viewport in the atlas, text composited independently of the
-map in the Casement). A pass that had only demoted would have been a different
+map in the Casement). Every figure in this paragraph is derived from the corpus
+by script rather than counted by hand, which is section 7's fourth lesson
+applied to section 6's own prose. A pass that had only demoted would have been a different
 kind of wrong. The count of items refused under 0022 went from eight to zero,
 and every surviving refusal in the corpus is decision 0070.
 
@@ -217,64 +224,75 @@ The cheap generalisation, worth carrying to the next corpus in this family:
 rule.** "Does Hornvale do this?" is not a question until you have said what
 Hornvale is.
 
-## 7. Colour: three wrong answers in one session, and the code was never wrong
+## 7. Colour: four wrong answers, and the fourth was the correction of the third
 
-Section 6's defect has a sharper instance inside it, and it is the one worth
-carrying forward, because nothing in the process caught it and the thing that
-did was a human running the program.
+Section 6's defect has a sharper instance inside it. Nothing in the process
+caught it; a human running the program did, twice.
 
 The question was whether Hornvale draws its world in colour. It was answered
-three times in one session, by the controller, and every answer was wrong:
+four times, and every answer was wrong:
 
 1. **A client-side deferral the sim was past** — colour framed as something the
    renderers had not caught up to.
 2. **Absent, agreed without verifying** — the opposite conclusion, adopted
    because the first was challenged rather than because anything was read.
-3. **Present** — after finding `windows/scene/src/surrounds_ascii.rs`'s
-   `\x1b[38;2;` truecolor path and asserting from its existence that Hornvale
-   puts colour onscreen.
+3. **Present**, inferred from finding `windows/scene/src/surrounds_ascii.rs`'s
+   `\x1b[38;2;` truecolor path and asserting from its *existence* that colour
+   reaches a screen.
+4. **Off by default**, inferred from finding `PossessOpts::default()`'s
+   `Lens::Off` — and never opening the interactive arm, which takes
+   `Lens::Lantern` (`cli/src/main.rs:586`). Only `--script` runs unlensed, so
+   committed transcripts stay byte-stable.
 
 **Each was a true answer to a narrower question than the one asserted.** The
-truecolor path is real and reachable. What none of the three checked is the
-*default*: `PossessOpts::default()` selects `Lens::Off`, and `session.rs`
-documents that as returning the pre-lens output byte for byte — no tint, no
-escape sequence — which is why all four committed `scripts/possession-*.txt`
-transcripts contain **zero escape bytes**. A player sees no colour in the
-terminal until they type `eyes <species>`. Nathan found it by playing the game.
+measured position: `possess --seed 42` then `enter; map` emits **414 escape
+bytes**; the same session outdoors emits **0**, and the chart's own disclosure
+line says why — `0 tinted, 31 withheld (water, a mark, or you)` — because seed
+42's flagship stands on water and a tint describes bedrock. Seed 13 outdoors
+reports `30 tinted, 1 withheld`. Colour is on; seed 42's walk band has nothing
+to tint.
 
-The corrected picture is not "colour is off" either, and flattening it that way
-would be the same error facing the other direction: `eyes` defaults to `Own`,
-so the emitted scene document *does* carry per-cell colour and the browser
-client renders it unasked, while the terminal game client is monochrome by
-construction. Two independent switches, opposite defaults, three renderers
-disagreeing. Any single sentence about "colour" is wrong about at least one of
-them.
+**The fourth answer is the one to keep, because of how it was evidenced.** It
+came with proof: the committed `scripts/possession-*.txt` contain zero escape
+bytes. They do. They are **input command scripts** — `look`, `map`,
+`examine sky` — and a file of typed commands could not have contained an escape
+byte whatever the renderer did. *A campaign whose subject is guards that report
+safety they do not have produced, as the proof of a correction, a control that
+could not have failed*, and two agents accepted it. The vacuous-positive-control
+lesson was already written down, in this repository, in this campaign's own
+retrospective, one section up.
 
-Three things to carry:
+Five things to carry:
 
-- **A code path is not a default.** Reading `\x1b[38;2;` and concluding the
-  screen is coloured is the same move as reading a feature flag's
-  implementation and concluding the feature is on. Grep found the capability;
-  nothing grepped the configuration. `measure-dont-narrate-the-mechanism` in
-  its sharpest form.
-- **Five agent reviews read the code and missed it; one human ran the
-  program and did not.** The reviews were not lazy — they verified anchors,
-  opened mechanisms, re-derived counts. They were reading the same artifact the
-  claim was made from. Running the thing is a *different instrument*, not a
-  more diligent application of the same one, and this campaign has no cheap
-  substitute for it.
-- **Say which surface and whether the player opted in.** That sentence is now
-  in `windows/CLAUDE.md` beside the rendering rules, because the next reader
-  will find `surrounds_ascii.rs:79` exactly as three readers already have. It
-  is also in the corpus's own provenance, where it is met before any tally.
+- **A code path is not a default; a default is not a screen; a screen at one
+  seed is not the program.** Answers 3 and 4 are the first two rungs of that
+  ladder, and answer 4 fell off the third. Say which surface, which seed, and
+  whether the player opted in.
+- **Check the direction a control could fail in before citing it.** "Zero
+  escape bytes in these files" is unfalsifiable if the files are inputs. The
+  question is never "does the evidence agree" but "what would this evidence
+  look like if the claim were false".
+- **Running the program is a different instrument, not a more diligent
+  application of the same one.** Five agent reviews verified anchors, opened
+  mechanisms and re-derived counts, all against the source the claim was made
+  from. Two corrections came from a human playing the game.
+- **Derive counts, never re-count them.** Four rounds in a row, self-authored
+  derived figures went stale — an anchor-roster literal, a novelty pair, a
+  surplus count and a percentage, then five separate arithmetic errors in the
+  correction of the correction. The figures in sections 5 and 6 above are now
+  produced by a script over the corpus and the git history.
+- **A wrong correction is likelier than a wrong original**, because it is
+  written under the pressure of having just been shown wrong and reviewed as a
+  fix rather than as a claim. Answers 2 and 4 were both corrections. Both were
+  worse than what they replaced.
 
-The verdict consequence was not cosmetic: chapter 2.1, *Entities and
-Components*, went to `absent` — on the stricter and unconditional half of the
-finding, that **no per-entity colour channel exists on any path** (`Mark`
-carries `noun`/`kind`/`datum`/`salience`) — and with it the corpus's headline
-became "the first page Hornvale cannot replicate is the tutorial's *first*
-page." Which is where Nathan's reading of the project had been before the
-campaign began.
+The verdict consequence stands but changed its ground twice. Chapter 2.1,
+*Entities and Components*, is `absent` — **not** because colour defaults off,
+which is false, but because in the shipped character-grid client's walk band
+`chart.rs` draws `@` for the possession and `+` for everything else, "terrain
+and marks alike" in its own words. An entity is not distinguishable from the
+ground on any seed. Nathan's sentence for it was *everything in the wilderness
+is a `+`*, and he had reached it before this campaign started.
 
 ## 8. Two Minor findings were ruled into fix rounds, deliberately
 

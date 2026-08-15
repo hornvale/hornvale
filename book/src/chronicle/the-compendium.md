@@ -123,11 +123,13 @@ That page asks for entities carrying their own appearance: a `Renderable` of a
 glyph, a foreground colour and a background one, drawn to a screen. Hornvale
 has the entity half in depth — an entity is a ledger subject and its components
 are the facts committed about it, contradiction-checked against a concept
-registry that no ECS tutorial has an analogue for. It draws the entity, too:
-`@` for the possession in three separate renderers. **It cannot colour it.**
-There is no per-entity colour channel anywhere in the program — a mark on the
-wire carries a noun, a kind, a datum and a salience, and nothing else — so a
-creature is never tinted on any path, under any flag.
+registry that no ECS tutorial has an analogue for. **What it cannot do is tell
+one entity from the ground.** In the shipped character-grid client's walk band
+there is one glyph for *here* and one for everything else in view, terrain and
+marks alike, so a creature and a boulder draw the same character on every seed.
+Colour is the second half of the same failure and not the first: no per-entity
+colour channel exists either — a mark on the wire carries a noun, a kind, a
+datum and a salience, and nothing else.
 
 The reading before this one said 2.6, *Dealing Damage*, and it was wrong for a
 reason worth more than the correction: see **The asymmetry** and **The colour
@@ -155,7 +157,7 @@ a sharper statement of where Hornvale actually stands than any percentage on
 this page, and it only became visible once the asymmetry below was fixed.
 
 The rest of the reading is mostly a map of where the project's positions live.
-Twenty-eight deferrals cite thirteen distinct registry rows, and they
+Twenty-eight deferrals cite twelve distinct registry rows, and they
 concentrate hard: admissible derived map builders, an object genus, underground
 settlement, and the fact that **the underworld has no chart of its own** carry
 most of them between them. Not one new registry row had to be minted to explain
@@ -196,8 +198,8 @@ tutorial's `Renderable { glyph, fg, bg }` has no counterpart here and never
 will. Pictures existing was never forbidden at all.
 
 Re-auditing all seventy-four pages under the rule moved twelve verdicts **in
-both directions**, which is the part worth insisting on — it was not a
-downgrade pass:
+both directions** and re-anchored two more, which is the part worth insisting
+on — it was not a downgrade pass:
 
 - Six pages left `refused` for something honest. A user interface exists (a
   two-page journal spread: a plate, an entry, an endpaper identity strip);
@@ -205,13 +207,14 @@ downgrade pass:
   registry; a viewport that decouples map size from screen size ships in the
   atlas viewer, pan, zoom and all; text composited independently of the map
   ships in the Casement.
-- Four pages left `present` for something honest. You can descend into the
+- Five pages left `present` for something honest. You can descend into the
   caves and **no renderer can draw them** — the underground band folds into the
   walk band, so the pane and the verb agree on a chart of the country
-  *overhead*. Three pages about going underground rest on that one gap. And the
+  *overhead*. Three pages about going underground rest on that one gap. The
   hunger clock, richer than the tutorial's counter as a fold over committed
   meals, applies only to derived creatures: the possession never gets hungry
-  and no channel carries the number.
+  and no channel carries the number. And page 2.1, a round later and for the
+  reason the next section is about.
 - One page went from `refused` to `absent`, which is the least comfortable
   move and the most honest one. Wall glyphs selected from a neighbour bitmask
   are not refused by anything. Every wall in every renderer simply draws `#`,
@@ -225,31 +228,42 @@ Fixing the asymmetry meant scoring the render half, and scoring the render half
 meant answering a question this campaign got wrong three times in one session:
 does Hornvale draw its world in colour?
 
-The answer that finally held is not one sentence, and every attempt to make it
-one was wrong. **There are two independent switches with opposite defaults.**
-`eyes` defaults to *own*, so the emitted scene document carries a colour per
-cell and the browser client renders it unasked. `lens` defaults to *off*, and
-the code documents that as returning the pre-lens output byte for byte — no
-tint, no escape sequence — so the playable terminal path prints no colour at
-all until a player types `eyes <species>`. All four committed possession
-transcripts contain zero escape bytes, by construction rather than by accident:
-it is how they stay unlensed without anyone remembering a flag. The terminal
-game client, a third renderer, is monochrome by design and ignores the wire's
-colour entirely.
+**Colour is on.** The interactive session takes the lantern lens; only
+`--script` runs unlensed, deliberately, so committed transcripts stay
+byte-stable. Enter a building at seed 42 and the map emits four hundred and
+fourteen escape bytes. Stand outside at that same seed and it emits none — and
+the chart's own disclosure line says why, in the program's voice: *nought
+tinted, thirty-one withheld — water, a mark, or you*. Seed 42's flagship stands
+on water, and the lens withholds tint from water, from marks, and from the
+observer, because a tint describes bedrock and none of those three is bedrock.
+Move to a land seed and thirty of thirty-one cells tint.
 
-Each wrong answer came from reading truthfully at the wrong altitude — the
-truecolor code path exists, is reachable, and is off. The correction came from
-Nathan running the game and seeing no colour, which is a *different instrument*
-from five reviews reading the same source the claim was made from.
+So the wrong answers, in order, were: colour is a client-side deferral; colour
+is absent; colour is on, *inferred from finding the truecolor code*; colour is
+off by default, *inferred from finding the unlensed default and never opening
+the interactive arm*. **Each was true about something narrower than what it
+claimed.** The fourth arrived as the correction of the third and was evidenced
+by counting escape bytes in the committed possession scripts — which are files
+of typed commands, `look` and `map` and `examine sky`, and could not have
+contained an escape byte whatever the renderer did. A campaign about guards
+that report safety they do not have produced, as the proof of a correction, a
+control that could not have failed.
 
-The verdict consequence is the headline above, and it turns on the one part of
-the colour finding that is unconditional rather than default-off: surface
-colour is merely switched off, but **per-entity colour does not exist** — no
-flag reaches it, because no channel carries it. So page 2.1 fails outright
-where page 2.3 does not, and a map still reads perfectly in an uncoloured
-terminal, because every distinction it draws is carried by a **glyph**: five
-relief glyphs and three water glyphs outdoors, wall, floor and threshold
-indoors, and a faded twin for everything remembered rather than seen.
+What the headline actually turns on is not colour at all, and it is
+unconditional. Nathan's sentence was *everything in the wilderness is a `+`*,
+and the shipped character-grid client says it verbatim: one glyph for here, one
+for everything else in view, **terrain and marks alike**. A creature and a
+boulder draw the same character, on every seed, under every flag. The render
+half of page 2.1 does not fail on a missing colour attribute — it fails one
+step earlier, on whether an entity is distinguishable from the ground at all.
+Colour is only the second finding: no per-entity colour channel exists either,
+so both halves of `Renderable { glyph, fg, bg }` are unanswered.
+
+Page 2.3 survives all of this because every distinction its map draws is
+carried by a **glyph** — five relief glyphs and three water glyphs outdoors,
+wall, floor and threshold indoors, a faded twin for everything remembered
+rather than seen — and a glyph is not lens-gated and does not depend on the
+seed.
 
 ## The surplus, and what it does not say
 

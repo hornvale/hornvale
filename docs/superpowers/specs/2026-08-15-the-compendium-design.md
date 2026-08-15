@@ -175,14 +175,18 @@ lives in `clients/` (outside the cargo workspace, so `test:` cannot reach it).
 > produced the more favourable verdict. **Nathan caught it at G6, after five
 > reviews had not**, because every anchor resolved: the anchors were real sim
 > tests, and the resolver has no way to notice that a verdict changed subject
-> halfway through a corpus. Re-auditing all 74 items under this rule moved
-> thirteen verdicts in both directions and left **no item refused under 0022 at
-> all**; every surviving refusal is decision 0070. The thirteenth landed a round
-> later, once the *default-off* colour condition was verified rather than
-> inferred from a reachable code path: chapter 2.1 went to `absent`, because
-> surface colour is merely switched off by default while **per-entity colour
-> does not exist on any path**, and the corpus's first-unmet line became the
-> tutorial's own first page.
+> halfway through a corpus. Re-auditing all 74 items under this rule touched
+> **fourteen — twelve verdict changes and two re-anchorings** — in both
+> directions, and left **no item refused under 0022 at all**; every surviving
+> refusal is decision 0070. The twelve are five demotions from `present`, six
+> promotions out of `refused`, and one `refused` → `absent`. (Derived from the
+> corpus by script, not counted: an earlier draft of this sentence said
+> "thirteen" and was one of five arithmetic errors a later review found in this
+> campaign's own derived figures.) One of the five demotions landed a round
+> later: chapter 2.1 went to `absent` because in the shipped character-grid
+> client's walk band an entity is not distinguishable from terrain — one glyph
+> for *here*, one for everything else — so the corpus's first-unmet line became
+> the tutorial's own first page.
 
 ## 5. The anchor discipline
 
