@@ -174,5 +174,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0132](0132-three-gates-named-for-the-campaign-moment.md) | Three gates, named for the campaign moment | Accepted |
 | [0133](0133-nontrivial-checks-run-in-one-serial-lane.md) | Nontrivial checks run in one serial lane | Accepted |
 | [0134](0134-a-partition-statistic-refuted-by-its-own-mechanism-is-retired-not-rescued.md) | A partition statistic refuted by its own mechanism is retired, not rescued | Accepted |
-| [0134](0134-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md) | A capability corpus is a sibling to a trope corpus, never a member | Accepted |
-| [0135](0135-a-coverage-verdict-cites-a-checked-anchor.md) | A coverage verdict cites a machine-checked anchor | Accepted |
+| [0135](0135-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md) | A capability corpus is a sibling to a trope corpus, never a member | Accepted |
+| [0136](0136-a-coverage-verdict-cites-a-checked-anchor.md) | A coverage verdict cites a machine-checked anchor | Accepted |

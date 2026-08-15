@@ -189,7 +189,7 @@ sim mechanism. The resolver checks that a citation still points at something.
 It cannot check that the citation is evidence for *the question the row is
 answering*, and a verdict that quietly narrows its subject to the half it can
 evidence will be green forever. This family's entire safeguard — the thing
-decision 0135 exists to install — does not see the failure mode that actually
+decision 0136 exists to install — does not see the failure mode that actually
 bit. `an-empty-diff-needs-a-positive-control` has a sibling: **an anchor that
 resolves needs a check that it answers the right question**, and nothing
 mechanical can supply one.
@@ -198,7 +198,7 @@ mechanical can supply one.
 scoring a chapter that spans the sim and the client, so each chapter got
 whichever half the author found easiest to evidence, and the bias was
 invisible per-chapter and obvious in aggregate. The fix is one sentence
-(0135's clause 2: the corpus scores the whole program, and a spanning item
+(0136's clause 2: the corpus scores the whole program, and a spanning item
 takes its **weakest half**), and it could have been written before any verdict
 existed. `imperative-mood-hides-assertions` again: "score each chapter" is an
 instruction; "a spanning chapter takes its weakest half" is a decision rule,

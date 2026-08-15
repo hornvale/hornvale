@@ -1,11 +1,11 @@
-# 0135. A coverage verdict cites a machine-checked anchor
+# 0136. A coverage verdict cites a machine-checked anchor
 
 **Status:** Accepted (2026-08-15) · **Decider:** Nathan · **Relates to:**
 [0026](0026-slugs-not-numbers.md),
 [0031](0031-the-frontier-is-published-in-the-book.md),
 [0095](0095-a-corpus-is-an-instrument-never-a-standard.md),
 [0131](0131-refuted-is-a-seventh-registry-status.md),
-[0134](0134-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md)
+[0135](0135-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md)
 
 In the context of a coverage matrix that scores this project against an
 external catalogue, facing the fact that a hand-maintained control matrix does

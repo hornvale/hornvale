@@ -1,4 +1,4 @@
-# 0134. A capability corpus is a sibling to a trope corpus, never a member
+# 0135. A capability corpus is a sibling to a trope corpus, never a member
 
 **Status:** Accepted (2026-08-15) · **Decider:** Nathan · **Relates to:**
 [0011](0011-studies-are-data-metrics-are-code.md),
@@ -37,7 +37,7 @@ in-force decision index, the idea registry, and the source tree.
 **Read that count as "has no registry token", never as "refused".** All eight
 carried `refused decision:0022` in this corpus's first scoring and **none does
 now**: 0022 assigns rendering to the client, and the client is in this
-repository, so those items are scored on what the renderers do (decision 0135,
+repository, so those items are scored on what the renderers do (decision 0136,
 clause 2, ratified at G6 on exactly this defect). The argument above is
 unaffected — it is about which *substrate* can resolve them — but the two
 questions were being run together, and the confusion produced eight wrong
@@ -79,6 +79,6 @@ renderers, two ratchets, and a standing obligation on any future reader not to
 **See also.** `docs/audits/system-coverage-wolverson-2021.md` (the first
 column); [The Compendium
 chronicle](../../book/src/chronicle/the-compendium.md); [decision
-0135](0135-a-coverage-verdict-cites-a-checked-anchor.md) (the verdict and
+0136](0136-a-coverage-verdict-cites-a-checked-anchor.md) (the verdict and
 anchor rules this family resolves under); `CLAUDE.md`'s `systems/` directory
 guide.

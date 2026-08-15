@@ -129,7 +129,7 @@ under review. This file is.
 - [Standing Offer](the-standing-offer.md) — PROC-12 The Standing Offer…
 - [The Staff](the-staff.md) — 0132/0133; 15 plan/spec defects, 0 in implementer code; found 5 checks reporting green on nothing then wrote a 6th verifying the fix for one; a scope boundary stated as a prohibition is not enforcement
 - [The Ballast](the-ballast.md) — 0134; all five first diagnoses overturned by the cheapest measurement; an allow-list gate cannot see its own list go short (one crate had zero commit-gate coverage since it merged); existence is not evidence of rewrite
-- [The Compendium](the-compendium.md) — 0134/0135; a capability corpus scoring the PROGRAM, sibling to the trope family; FOUR false-cleans in one resolver, each found by a different mechanism and none by a passing suite; a rule derived from one real row is still an anecdote; two controller figures corrected by implementers who re-derived them
+- [The Compendium](the-compendium.md) — 0135/0136; a capability corpus scoring the PROGRAM, sibling to the trope family; FOUR false-cleans in one resolver, each found by a different mechanism and none by a passing suite; a rule derived from one real row is still an anecdote; two controller figures corrected by implementers who re-derived them
 
 ### The Walk (game-layer liveness arc — M2)
 

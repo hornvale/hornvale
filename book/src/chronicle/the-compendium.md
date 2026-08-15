@@ -35,7 +35,7 @@ round learning that it is not about the *verdict*. Having no registry token is
 not a reason to call a capability refused — see **The asymmetry**, below.
 
 So the two families are siblings, never members of one another, and
-[decision 0134](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0134-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md)
+[decision 0135](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0135-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md)
 settles it: different subject, different resolution substrate, one resolver
 each.
 
@@ -96,7 +96,7 @@ same day. A hand-authored coverage table does not go stale so much
 as begin to **lie**; this one cannot, because each cell points at something
 checkable instead of asserting.
 
-[Decision 0135](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0135-a-coverage-verdict-cites-a-checked-anchor.md)
+[Decision 0136](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0136-a-coverage-verdict-cites-a-checked-anchor.md)
 ratifies that rule and states its price plainly: the idea registry stops being
 prose that humans read and becomes a gated interface, where a row's identifier
 and status are load-bearing for a committed artifact.
@@ -188,7 +188,7 @@ discipline, which is this family's whole safeguard, is blind to exactly that
 failure. Nathan caught it by reading the client.
 
 The rule that closes it is one sentence, now
-[decision 0135](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0135-a-coverage-verdict-cites-a-checked-anchor.md)'s
+[decision 0136](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0136-a-coverage-verdict-cites-a-checked-anchor.md)'s
 second clause: **the corpus scores the whole program, clients included, and a
 page spanning the sim and the client takes its weakest half.** Decision 0022 is
 an *assignment of responsibility, not a refusal* — it says the sim emits data

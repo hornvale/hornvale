@@ -40,7 +40,7 @@ editing:
   before measurement and its situation count is asserted, so changing it is a
   deliberate act.
 - `systems/` — the **sibling** family to `tropes/`, and the distinction is
-  constitutional to both (decision 0134). `tropes/` measures whether a
+  constitutional to both (decision 0135). `tropes/` measures whether a
   **world** can represent a situation, resolved against the concept
   registry. `systems/` measures whether a **program** implements a
   capability, resolved against repository facts — the in-force decision
@@ -52,11 +52,11 @@ editing:
   count means "has no registry token", **never "refused"**: 0022 assigns
   rendering to the client and the clients are in this repo, so a corpus
   scores the whole program and a sim/client-spanning item takes its
-  **weakest half** (0135 clause 2). Reading it the other way is what put
+  **weakest half** (0136 clause 2). Reading it the other way is what put
   `refused decision:0022` on all eight; none carries it now. Same
   data/code split as `tropes/` (decision 0011), same freeze before
   measurement (0016). Verdicts are five-valued and each cites an anchor the
-  resolver re-checks (decision 0135), which makes a registry row's ID and
+  resolver re-checks (decision 0136), which makes a registry row's ID and
   status load-bearing for a committed artifact. **A published spell list
   belongs to neither family** — `MAP-spell-corpus` is *parameter
   calibration* ("how many named units a satisfying space carries"),
