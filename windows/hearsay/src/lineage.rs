@@ -1,13 +1,17 @@
 //! The community tree, read from `occ-founded-from`.
 
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The founding tree: who was founded from whom.
 #[derive(Clone, Debug, Default)]
 pub struct Lineage {
     parent: BTreeMap<EntityId, EntityId>,
     roots: Vec<EntityId>,
+    /// Every node's ancestor set, memoised once at construction. Membership
+    /// only — `EntityId` is not its own ancestor — never a replacement for
+    /// `ancestry`'s ordered walk, which callers rely on for hop counts.
+    ancestors: BTreeMap<EntityId, BTreeSet<EntityId>>,
 }
 
 impl Lineage {
@@ -67,6 +71,16 @@ impl Lineage {
         out.dedup();
         out
     }
+
+    /// Whether `ancestor` is a strict ancestor of `descendant` — O(log n)
+    /// against the memo built once in [`lineage_of`]. A node is never its
+    /// own ancestor, so `is_ancestor(x, x)` is always `false`.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_ancestor(&self, ancestor: EntityId, descendant: EntityId) -> bool {
+        self.ancestors
+            .get(&descendant)
+            .is_some_and(|anc| anc.contains(&ancestor))
+    }
 }
 
 /// Read the founding tree out of a ledger.
@@ -87,5 +101,13 @@ pub fn lineage_of(ledger: &Ledger) -> Lineage {
     }
     out.roots.sort();
     out.roots.dedup();
+    // Build the ancestor memo once, here, rather than per lookup: one
+    // `ancestry` walk per node (self excluded) beats walking to the root on
+    // every `is_ancestor` call. See the plan's node-visit measurement.
+    for node in out.all() {
+        let mut anc = out.ancestry(node);
+        anc.retain(|a| *a != node);
+        out.ancestors.insert(node, anc.into_iter().collect());
+    }
     out
 }

@@ -9,6 +9,7 @@
 pub mod derive;
 pub mod ladder;
 pub mod lineage;
+pub mod stance;
 
 /// The hop count of every holder of a claim about `(subject, predicate)`.
 /// Empty when the subject holds no such committed fact.

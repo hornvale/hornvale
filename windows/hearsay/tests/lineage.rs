@@ -38,3 +38,33 @@ fn two_roots_stay_two_lineages() {
     roots.sort();
     assert_eq!(roots, vec![eid(1), eid(10)]);
 }
+
+#[test]
+fn is_ancestor_agrees_with_walking_the_ancestry() {
+    // The memo must not drift from the walk it replaces. Cross-checked over
+    // every ordered pair rather than a sampled one.
+    let led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, Some(1)), (5, None)]);
+    let lin = lineage_of(&led);
+    for a in lin.all() {
+        for d in lin.all() {
+            let walked = a != d && lin.ancestry(d).contains(&a);
+            assert_eq!(
+                lin.is_ancestor(a, d),
+                walked,
+                "is_ancestor({a:?}, {d:?}) disagrees with the ancestry walk"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_node_is_not_its_own_ancestor() {
+    let led = ledger_with(&[(2, Some(1))]);
+    let lin = lineage_of(&led);
+    assert!(!lin.is_ancestor(eid(1), eid(1)));
+    assert!(lin.is_ancestor(eid(1), eid(2)));
+    assert!(
+        !lin.is_ancestor(eid(2), eid(1)),
+        "ancestry is antisymmetric"
+    );
+}
