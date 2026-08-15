@@ -379,9 +379,9 @@ name looks from the outside like it should have moved something, and decision
 A twelfth campaign contributes the family's densest single instance and, with
 it, the first useful statistic about *detection*.
 [The Compendium](./chronicle/the-compendium.md) (2026-08-15) built one
-resolver — roughly nine hundred lines of resolution code (the anchor parser
-and audit, excluding its rendering functions and inline unit tests) whose
-entire purpose is noticing when a citation stops being true — and produced
+resolver — the anchor parser and audit in `cli/src/systems.rs`, most of it
+resolution logic rather than rendering or its own inline tests — whose
+entire purpose is noticing when a citation stops being true, and produced
 **four separate false-cleans inside it**: a symbol match that accepted any
 name it was a prefix of; a fallible
 operator inside a loop, so the guard's count propagated an empty result and
