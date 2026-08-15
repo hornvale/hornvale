@@ -79,15 +79,46 @@ require_canonical_host "$set_name" || exit 1
 exec >>"$run_log" 2>&1
 echo "lane-run: $job_id started $(date -Is) on $(hostname -s) as pid $$"
 
-# Look the set up in the ONE roster.
+# Look the set up in the ONE roster. Read-only against repo_root (the
+# PRIMARY checkout, never the shared scratch worktree below), so this is safe
+# to do before the lock — nothing here touches state a concurrent job could
+# be relying on.
 row="$(grep -v '^#' "$repo_root/scripts/lane-sets.tsv" | awk -v s="$set_name" -F'\t' '$1==s')"
 [ -n "$row" ] || { echo "lane-run: no such set '$set_name' in scripts/lane-sets.tsv" >&2; exit 2; }
 command_line="$(printf '%s' "$row" | cut -f5)"
 
-# A warm per-branch worktree. Task 1's fix is what makes this safe: a renamed
-# or recycled worktree otherwise serves binaries with the previous path baked
-# in, and on the lane a spurious red is far more expensive than locally,
-# because the lane's verdict is the one everybody trusts.
+LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
+claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
+exec 9>"$LOCK"
+timeout_s="${HV_LANE_WAIT_TIMEOUT:-7200}"
+echo "lane-run: queued for the staff ($LOCK; up to ${timeout_s}s) …"
+wait_began=$SECONDS
+if ! flock -w "$timeout_s" 9; then
+    echo "lane-run: TIMED OUT after ${timeout_s}s waiting for the staff." >&2
+    exit 75
+fi
+# `waited_s` stops HERE, at the moment the lock is actually acquired — before
+# anything below touches the shared worktree. A future routing policy
+# thresholds work on this number (root CLAUDE.md), so it must measure the
+# QUEUE alone; git time folded in would make that threshold measure the
+# wrong thing.
+waited_s=$((SECONDS - wait_began))
+echo "lane-run: holds the staff at $(date -Is) after ${waited_s}s queued"
+
+# A warm per-branch worktree — MOVED HERE, behind the lock, deliberately.
+# Doing this checkout BEFORE the lock (its original position) meant every
+# queued job reset the shared tree the moment it started, including while an
+# EARLIER job was still running inside it — the lock serialized the WORK, not
+# the TREE the work runs in, which is precisely backwards for a lane whose
+# entire point is serialization. A live campaign-gate dispatch (six sets at
+# once) proved it: five jobs stomped the tree under the one holding the
+# staff, `seam-guard` refused on a dirty working tree carrying `heavy`'s
+# half-written `the-history`/`the-sounding` artifacts, and `heavy` itself
+# reported two failures with unknowable provenance because its own worktree
+# was reset out from under it mid-run. Task 1's fix (which invalidates a
+# renamed/recycled worktree's stale compiled artifacts) is what makes this
+# checkout safe at all; it says nothing about two checkouts racing each
+# other, which is the failure mode this move closes.
 wt="${HV_LANE_WORKTREE:-$repo_root/../hornvale-lane-wt}"
 git -C "$repo_root" fetch --all --quiet
 if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
@@ -102,18 +133,6 @@ bash "$repo_root/scripts/test-worktree-freshness.sh" || true
 
 cd "$wt"
 
-LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
-claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
-exec 9>"$LOCK"
-timeout_s="${HV_LANE_WAIT_TIMEOUT:-7200}"
-echo "lane-run: queued for the staff ($LOCK; up to ${timeout_s}s) …"
-wait_began=$SECONDS
-if ! flock -w "$timeout_s" 9; then
-    echo "lane-run: TIMED OUT after ${timeout_s}s waiting for the staff." >&2
-    exit 75
-fi
-waited_s=$((SECONDS - wait_began))
-echo "lane-run: holds the staff at $(date -Is) after ${waited_s}s queued"
 export HV_CENSUS_LOCK_HELD=$$
 
 {

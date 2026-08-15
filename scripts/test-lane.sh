@@ -257,6 +257,115 @@ else
     skip "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
 fi
 
+# --- a queued job's checkout waits for the staff, not just its own work ----
+# Direction enforced: `the shared scratch worktree is not touched until the
+# lock is held`. The campaign gate found the opposite: lane-run.sh used to
+# checkout+reset the SHARED worktree BEFORE acquiring the lock, so every
+# queued job reset the tree while an EARLIER job was still running inside
+# it. Six sets dispatched at once, five jobs stomped the tree under the one
+# holding the staff — `seam-guard` refused on a dirty working tree carrying
+# `heavy`'s half-written `the-history`/`the-sounding` artifacts, and `heavy`
+# itself reported two failures with unknowable provenance because its own
+# worktree was reset out from under it mid-run. The lock is what makes the
+# lane serial; anything done before it is done concurrently by definition —
+# which is exactly what a queued checkout running early was doing.
+#
+# Meaningful only where real flock contention is possible, same as the two
+# cases above — skipped on macOS.
+#
+# The REAL tail of lane-run.sh runs verbatim (extracted the same way as
+# census-run.sh's prelude earlier in this file: everything from the `LOCK=`
+# line onward, via a stable textual anchor), against an ISOLATED LOCAL CLONE
+# of this repo standing in for the canonical box's primary checkout — not
+# the real `$root`. Two reasons: it keeps this a genuinely SHORT-timeout
+# scratch case (the tail's own `test-worktree-freshness.sh` call scans every
+# OTHER registered sibling worktree, ~31s measured against this checkout's
+# real worktree registry with several campaign worktrees in it, vs.
+# effectively instant against a clone with none registered) and it leaves
+# the real repo's own worktree registry untouched by a test.
+echo "== a queued job's checkout waits for the staff, not just its own work =="
+if ! command -v flock >/dev/null 2>&1; then
+    skip "no flock on $(uname -s) — skipping (this case is meaningful on the canonical box)"
+else
+    race_repo="$tmp/race-repo"
+    git clone --quiet "$root" "$race_repo"
+    ref_a="$(git -C "$race_repo" rev-parse HEAD)"
+    ref_b="$(git -C "$race_repo" rev-parse HEAD~1)"
+    race_lock="$tmp/race.lock"
+    race_wt="$tmp/race-wt"
+    poll_log="$tmp/race-poll.log"; : > "$poll_log"
+
+    # The extracted tail, written to a real script FILE and run via `env
+    # VAR=val … bash script` rather than a local-variable-assignment +
+    # `eval` — the latter is what an earlier draft of this case did, and the
+    # linter cannot see into `eval`'s dynamic content, so every variable
+    # this passes to it read as "unused" (SC2034) even though the tail
+    # genuinely reads them all. `env` marks them as passed to an external
+    # command instead, which the linter already understands. `record` is a
+    # no-op here: this case cares about the CHECKED-OUT REF, not jobs.tsv.
+    tail_block="$(awk '/^LOCK="\$\{HV_CENSUS_LOCK/{f=1} f{print}' "$root/scripts/lane-run.sh")"
+    race_tail_script="$tmp/race-lane-run-tail.sh"
+    {
+        echo '#!/usr/bin/env bash'
+        echo 'set -euo pipefail'
+        echo 'record() { :; }'
+        printf '%s\n' "$tail_block"
+    } > "$race_tail_script"
+
+    run_race_job() {
+        # $1=ref to check out  $2=command_line to run once holding the staff  $3=label
+        (
+            cd "$race_repo" && env \
+                repo_root="$race_repo" \
+                ref="$1" \
+                command_line="$2" \
+                set_name="racetest" \
+                job_id="race-$3" \
+                HV_LANE_WORKTREE="$race_wt" \
+                HV_CENSUS_LOCK="$race_lock" \
+                HV_LANE_WAIT_TIMEOUT=30 \
+                bash "$race_tail_script"
+        ) >"$tmp/race-$3.log" 2>&1
+    }
+
+    # Job A holds the staff and polls its OWN checked-out ref every 0.2s for
+    # ~1.6s — long enough for a concurrent job B's checkout to land in
+    # between polls, if the bug were still present.
+    run_race_job "$ref_a" \
+        "i=0; while [ \$i -lt 8 ]; do git rev-parse HEAD >> '$poll_log'; sleep 0.2; i=\$((i+1)); done" \
+        a &
+    job_a_pid=$!
+    sleep 0.3   # same head start the FIFO case above already relies on
+
+    # Job B queues behind job A for the SAME lock and, once it eventually
+    # acquires it, checks out a DIFFERENT ref into the SAME shared worktree.
+    # If the fix holds, that checkout cannot happen until job A has released
+    # the staff — i.e., only after job A's poll loop has already finished.
+    run_race_job "$ref_b" "echo job-b-ran" b &
+    job_b_pid=$!
+
+    wait "$job_a_pid" || true
+    wait "$job_b_pid" || true
+
+    seen="$(sort -u "$poll_log" | tr '\n' ' ')"
+    if [ "$seen" = "${ref_a} " ]; then
+        ok "job A's checked-out ref never changed mid-run — job B's checkout waited for the staff"
+    else
+        bad "job A's tree changed mid-run (saw: $seen) — a second job's checkout raced the first"
+    fi
+
+    # Not vacuous: confirm job B's checkout DID eventually land, after A
+    # released the staff — otherwise the case above would pass trivially by
+    # job B never having run at all.
+    if [ "$(git -C "$race_wt" rev-parse HEAD 2>/dev/null)" = "$ref_b" ]; then
+        ok "job B's checkout DID eventually run, after job A released the staff"
+    else
+        bad "job B's checkout never landed on its ref — the race case proved nothing"
+    fi
+
+    git -C "$race_repo" worktree remove --force "$race_wt" >/dev/null 2>&1 || true
+fi
+
 if [ "$fails" -ne 0 ]; then
     echo "test-lane: $fails failure(s), $passed passed, $skips skipped" >&2
     exit 1

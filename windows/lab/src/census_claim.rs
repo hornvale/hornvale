@@ -611,6 +611,20 @@ mod tests {
         // Reported as absent, so acquisition proceeds instead of waiting on a
         // holder that will never release.
         assert!(live_holder_at(&path).is_none());
+        // SAFETY-of-intent: this test owns the env var for its own process
+        // (nextest runs each test in its own process — windows/lab/CLAUDE.md).
+        // Not hermetic without this: `acquire_at`'s ancestor short-circuit
+        // reads `LOCK_HELD_ENV` from the AMBIENT environment regardless of
+        // the explicit `path` above, and `lane-run.sh` legitimately exports
+        // it for the duration of every job it runs (decision 0081's
+        // deadlock guard, so a nested census-run.sh does not block against
+        // its own ancestor). Running THIS test on the lane therefore always
+        // sees a live ancestor and short-circuits to `Ok(None)` no matter
+        // what `path` says — poisoning this test permanently on the only
+        // host that runs it. Cleared here, in the test, not by weakening
+        // the guard: the ancestor check is the actual point of this env
+        // var for a real caller.
+        unsafe { std::env::remove_var(LOCK_HELD_ENV) };
         let claim = acquire_at(
             &path,
             Duration::from_secs(5),
@@ -683,6 +697,11 @@ mod tests {
             render_claim(&sample(std::process::id(), "the-census")),
         )
         .unwrap();
+        // SAFETY-of-intent: see the identical comment in
+        // `a_stale_claim_is_taken_over_rather_than_waited_on` above — same
+        // hazard (this test is not hermetic against a real ancestor claim
+        // without it), same fix.
+        unsafe { std::env::remove_var(LOCK_HELD_ENV) };
         let err = acquire_at(
             &path,
             Duration::from_secs(1),
