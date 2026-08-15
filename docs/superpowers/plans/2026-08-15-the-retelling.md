@@ -1136,32 +1136,57 @@ git commit -m "feat(hearsay): the preregistered H1/H2/H3 readout"
 ### Task 7: Retier the batteries on measured cost
 
 **Files:**
-- Modify: `cli/tests/heavy_tier.rs:123` (the canonical reason string)
-- Modify: `windows/hearsay/tests/hop_depth_seed42.rs`, `probe_filter_mismatch.rs`, `probe_filter_variation.rs`, `retelling_readout_seed42.rs` (ignore attributes)
-- Modify: `windows/hearsay/tests/common/mod.rs:1-3` (the stale "is minutes" comment)
+- Modify: `cli/tests/heavy_tier.rs` (the canonical reason string)
+- Modify: `windows/hearsay/tests/hop_depth_seed42.rs`, `retelling_readout_seed42.rs` (drop `#[ignore]`)
+- Modify: `windows/hearsay/tests/common/mod.rs` (the stale "is minutes" comment)
 
-**Interfaces:** none; this task changes test tiering only.
+**Measured, on the real subjects:**
 
-**Measured facts this task acts on (spec §3.4):** `hop_depth_seed42` runs in **4.31 s**, `probe_filter_mismatch` in **1.96 s**, `probe_filter_variation` in **6.40 s**. The canonical ignore reason hard-codes "(minutes)", so a truthful new heavy test currently cannot exist.
+```
+hop_depth_seed42          4.31 s      asserts spec section 6's floors
+retelling_readout_seed42  5.91 s      asserts the NO VERDICT floors and ceilings
+probe_filter_mismatch     1.96 s      prints only
+probe_filter_variation    6.40 s      prints only
+probe_lossy_quadrants     ~2 s        prints only
+probe_stance_cost         ~6 s        prints only
+```
 
-- [ ] **Step 1: Measure the readout battery before deciding its tier**
+**THE DECISION RULE THIS TASK USED TO CARRY WAS WRONG.** It said "under 20 s
+-> un-ignore it and every hearsay battery; they belong in the commit gate."
+That conflates two mechanisms The Staff deliberately separated:
 
-Run: `/usr/bin/time -p cargo test -p hornvale-hearsay --test retelling_readout_seed42 -- --ignored --nocapture`
+- `#[ignore]` decides whether a test runs in the **stage/campaign** gate's full
+  workspace suite.
+- `docs/timings/subfloor-roster.tsv` decides what runs in **`gate-commit`**,
+  and it holds only tests measured strictly below `BASELINE_FLOOR_SECS = 1.0`
+  (`windows/lab/src/timings.rs:110`).
 
-**Decision rule** (do not predict the number — branch on it):
-- **under 20 s** → un-ignore it and every hearsay battery; they belong in the commit gate.
-- **20–60 s** → un-ignore the three cheap ones, keep the readout heavy, and say so in the reason.
-- **over 60 s** → keep the readout heavy; still un-ignore the two probes and `hop_depth_seed42`.
+Every hearsay battery is 1.96-6.40 s, i.e. **above the floor**, so un-ignoring
+them can never place them in the commit gate. The right destination is the
+**stage gate**, which is still a real improvement over campaign-gate-only.
 
-- [ ] **Step 2: Write the failing test for the canonical string**
+**And only the batteries that ASSERT are un-ignored.** `hop_depth_seed42` and
+`retelling_readout_seed42` carry assertions worth defending. The four probes
+only print substrate counts; running them every stage gate spends ~16 s to
+produce output nobody reads. They stay ignored and are run on demand.
 
-In `cli/tests/heavy_tier.rs`, change the canonical constant to drop the false cost claim, and add:
+- [ ] **Step 1: Fix the canonical reason string, which now carries TWO
+      falsehoods.** `cli/tests/heavy_tier.rs:64` still reads
+      `"heavy: live-worldgen battery (minutes); deferred from the commit gate
+      to make gate-full"`. The duration is wrong by two orders of magnitude,
+      and `make gate-full` is a refusing signpost since decisions 0132/0133.
+      Set it to
+      `"heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign"`
+      and update every heavy-tier ignore attribute in the workspace to match
+      VERBATIM — the test asserts exact equality.
+
+- [ ] **Step 2: Add a guard that the string states no duration.**
 
 ```rust
 #[test]
 fn the_canonical_heavy_reason_states_no_duration() {
-    // A duration baked into a ratchet freezes a measurement. The Retelling
-    // measured the claim this string used to carry ("minutes") at 4.31 s.
+    // A duration baked into a ratchet freezes a measurement. This campaign
+    // measured the claim the string used to carry ("minutes") at 4.31 s.
     assert!(
         !CANONICAL_REASON.contains("minute")
             && !CANONICAL_REASON.contains("second")
@@ -1171,29 +1196,17 @@ fn the_canonical_heavy_reason_states_no_duration() {
 }
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [ ] **Step 3: Drop `#[ignore]` from the two asserting batteries** and delete
+      the "is minutes" sentence from `windows/hearsay/tests/common/mod.rs`,
+      plus the explanatory comment above `probe_filter_variation`'s ignore
+      attribute, which exists only to describe the defect Step 1 removes.
 
-Run: `cargo test -p hornvale --test heavy_tier`
-Expected: FAIL — the string still contains "minutes".
+- [ ] **Step 4: Verify.** The scoped crate run, then `make gate-commit`. Expect
+      gate-commit's selection to be UNCHANGED — the un-ignored tests are above
+      the roster floor and must not appear there. That expectation is the point
+      of the step: if they do appear, the floor is not what this task measured.
 
-- [ ] **Step 4: Apply the change**
-
-Set the canonical reason to `"heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign"` and update every heavy-tier ignore attribute to match verbatim. Apply Step 1's branch to the four hearsay batteries. Delete the "is minutes" sentence from `windows/hearsay/tests/common/mod.rs` and the explanatory comment added above `probe_filter_variation`'s ignore attribute, which exists only to describe the defect this task removes.
-
-- [ ] **Step 5: Run the gates**
-
-Run `make gate-commit` locally, then dispatch `make gate-stage REF=<full-sha>` to the
-lane. `make gate` no longer exists — since The Staff (decisions 0132/0133) it is
-a refusing signpost that exits non-zero, and the stage gate runs on lefford
-behind one strictly serial queue.
-
-- [ ] **Step 6: Commit**
-
-```bash
-cargo fmt
-git add cli/tests/heavy_tier.rs windows/hearsay/tests/
-git commit -m "fix(gate): the heavy-tier reason no longer asserts a duration it cannot know"
-```
+- [ ] **Step 5:** `cargo fmt`, commit.
 
 ---
 
