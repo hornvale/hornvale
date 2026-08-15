@@ -10,9 +10,12 @@
 #                     # kernel/-layer edit — cost is the edit's blast radius in
 #                     # the kernel -> domains/* -> windows/* -> cli layering;
 #                     # see spec 2026-08-14-the-staff-design.md §4.2b)
-#   make gate         # the full workspace gate: fmt + clippy + type-audit + nextest --workspace + doctests (heavy tier skipped)
-#   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
-#   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
+#   make gate-stage    REF=<full-sha> # THE STAGE GATE: dispatch gate + artifacts + outboard + clients to the lane
+#   make gate-campaign REF=<full-sha> # THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard
+#   make lane-status  # who holds the staff on the canonical box, and who is queued
+#   make lane-log     # read a lane job back (JOB=<id>, or omit for the most recent)
+#   # `make gate`, `ci`, `gate-fast` and `gate-full` are RETIRED (decision 0132)
+#   # and now refuse with exit 2, naming the three gates above.
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
