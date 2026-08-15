@@ -1,62 +1,57 @@
-//! The coarsening ladder a retold claim's day descends.
+//! How precisely a retold claim's day is remembered.
+//!
+//! **This module is an index and nothing else.** The rungs a world offers —
+//! its day, each of its moons, its seasons, its year — are that world's own
+//! astronomy, and the arithmetic of snapping a day to one of them needs
+//! `StdDays`, which lives in `domains/astronomy` and is therefore below no
+//! part of the kernel. So the ladder itself lives in `windows/hearsay`, which
+//! may depend on a domain, and the kernel carries only the rung index a
+//! [`crate::Claim`] is remembered at.
+//!
+//! Two drafts got this wrong before it landed. The first hard-coded
+//! 365/3650/10950 — Earth's calendar wearing a Hornvale type. The second kept
+//! the spans here as bare `f64` days, which `type-audit` refused for want of a
+//! class, correctly: a day at a `pub` boundary wants the typed quantity, and
+//! the kernel cannot have it.
+//!
+//! **The rungs deliberately do not nest.** Real cycles are incommensurable — a
+//! synodic month does not divide a year, which is why intercalation exists —
+//! so a teller re-rounds an already-rounded day and error compounds until a
+//! claim can name an interval that no longer contains the event. That is a
+//! rumour becoming false, not a rounding bug.
+//!
+//! The invariant is consequently **precision-rank monotonicity** — the rung
+//! index only ever rises — and *not* any statement about error. A coarsened
+//! claim is an interval that widened, not a point that moved: "sometime that
+//! year" is strictly less informative than "on that day" even when its
+//! representative value happens to land nearer the truth.
 
-/// How precisely a claim's day is remembered. Distortion moves one rung
-/// coarser per lossy retelling and never back — the anti-symmetry that makes
-/// a rumour decay rather than sharpen.
-/// type-audit: bare-ok(count: rungs)
+/// Which rung of a world's ladder a claim is remembered at, finest first.
+///
+/// An INDEX, not a named calendar unit, because rung count is per-world: a
+/// two-mooned world offers reckonings a moonless one does not, and their
+/// order depends on the actual lengths of that world's cycles rather than on
+/// any choice made here.
+/// type-audit: bare-ok(index)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Precision {
-    /// The exact day.
-    Day,
-    /// Snapped to a 91-day season.
-    Season,
-    /// Snapped to a 365-day year.
-    Year,
-    /// Snapped to a 3650-day decade.
-    Decade,
-    /// Snapped to a 10950-day generation; the coarsest rung.
-    Generation,
-}
+pub struct Precision(pub u8);
 
 impl Precision {
-    /// The next rung coarser, saturating at [`Precision::Generation`].
+    /// The finest rung any ladder offers.
+    pub const FINEST: Precision = Precision(0);
+
+    /// The rung index.
+    /// type-audit: bare-ok(index: return)
+    pub fn rung(self) -> u8 {
+        self.0
+    }
+
+    /// The next rung coarser, unbounded.
+    ///
+    /// Saturation against a world's coarsest rung is the ladder's job, not
+    /// this type's — only the world knows where its ladder ends.
     pub fn coarser(self) -> Precision {
-        match self {
-            Precision::Day => Precision::Season,
-            Precision::Season => Precision::Year,
-            Precision::Year => Precision::Decade,
-            Precision::Decade | Precision::Generation => Precision::Generation,
-        }
-    }
-
-    /// The span of one rung, in standard days. `Day` is 1.0.
-    fn span(self) -> f64 {
-        match self {
-            Precision::Day => 1.0,
-            // 365 / 4 exactly, and exactly representable in binary (0.25 is
-            // 2^-2). The rungs MUST nest — see `the_ladder_nests`.
-            Precision::Season => 91.25,
-            Precision::Year => 365.0,
-            Precision::Decade => 3650.0,
-            Precision::Generation => 10950.0,
-        }
-    }
-
-    /// `day` snapped down to this rung. `Day` is the identity.
-    /// type-audit: pending(wave-1: day), pending(wave-1: return)
-    pub fn apply(self, day: f64) -> f64 {
-        if self == Precision::Day {
-            return day;
-        }
-        let s = self.span();
-        (day / s).floor() * s
-    }
-
-    /// How many rungs the ladder has. The ceiling on distinct variants of one
-    /// event, and therefore on what H2 can report.
-    /// type-audit: bare-ok(count: return)
-    pub fn rungs() -> usize {
-        5
+        Precision(self.0.saturating_add(1))
     }
 }
 
@@ -65,77 +60,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn coarser_walks_the_ladder_and_saturates_at_the_top() {
-        assert_eq!(Precision::Day.coarser(), Precision::Season);
-        assert_eq!(Precision::Season.coarser(), Precision::Year);
-        assert_eq!(Precision::Year.coarser(), Precision::Decade);
-        assert_eq!(Precision::Decade.coarser(), Precision::Generation);
-        assert_eq!(Precision::Generation.coarser(), Precision::Generation);
-    }
-
-    #[test]
-    fn applying_a_precision_snaps_a_day_down_to_its_rung() {
-        // 3661.75 days: within year 10 (365-day rungs), decade 10.
-        assert_eq!(Precision::Day.apply(3661.75), 3661.75);
-        assert_eq!(Precision::Year.apply(3661.75), 3650.0);
-        assert_eq!(Precision::Decade.apply(3661.75), 3650.0);
-    }
-
-    /// The ladder's rungs must NEST — each coarser span an exact multiple of
-    /// the one below — and this is the invariant, not a sampled value.
-    ///
-    /// It is load-bearing rather than tidy. Floor-snapping onto a coarser grid
-    /// is only guaranteed non-improving when the coarse grid is a subset of the
-    /// fine one; otherwise coarsening can land a claim CLOSER to the truth,
-    /// which would mean a rumour sharpens with retelling. An earlier draft used
-    /// 91 for Season, which does not divide 365 (365/91 = 4.011), and at
-    /// day 3661.75 it made the Year rung more accurate than the Season rung —
-    /// 11.75 against 21.75. The fix belongs here, in the ladder, not in a test
-    /// fixture chosen to avoid the misalignment.
-    #[test]
-    fn the_ladder_nests() {
-        let rungs = [
-            Precision::Season,
-            Precision::Year,
-            Precision::Decade,
-            Precision::Generation,
-        ];
-        for pair in rungs.windows(2) {
-            let (fine, coarse) = (pair[0].span(), pair[1].span());
-            let k = coarse / fine;
-            assert_eq!(
-                k,
-                k.floor(),
-                "{:?} ({fine}) must divide {:?} ({coarse}) exactly; got {k}",
-                pair[0],
-                pair[1]
-            );
+    fn precision_rank_only_ever_rises() {
+        // The surviving invariant, and it is structural: no arithmetic, no
+        // spans, nothing a world's cycles can falsify.
+        let mut p = Precision::FINEST;
+        for _ in 0..16 {
+            let next = p.coarser();
+            assert!(next >= p, "precision rank fell: {next:?} < {p:?}");
+            p = next;
         }
     }
 
     #[test]
-    fn a_coarser_precision_is_never_more_precise_than_a_finer_one() {
-        // The anti-symmetry that makes distortion monotone: coarsening can
-        // only move a remembered day further from, never back toward, the
-        // truth. Asserted over a swept population rather than one fixture,
-        // because a single value cannot distinguish a real invariant from a
-        // lucky alignment — which is exactly how the 91-day Season survived
-        // its first test.
-        let mut day = 0.0;
-        while day < 40_000.0 {
-            let mut p = Precision::Day;
-            let mut prev_err = 0.0;
-            for _ in 0..Precision::rungs() {
-                p = p.coarser();
-                let err = (p.apply(day) - day).abs();
-                assert!(
-                    err >= prev_err,
-                    "coarsening to {p:?} improved accuracy at day {day}: \
-                     {err} < {prev_err}"
-                );
-                prev_err = err;
-            }
-            day += 7.25;
-        }
+    fn coarsening_saturates_rather_than_wrapping() {
+        // u8 wrap-around would silently return a claim to first-hand
+        // precision, which is the one transition the model forbids.
+        let p = Precision(u8::MAX).coarser();
+        assert_eq!(p, Precision(u8::MAX));
+    }
+
+    #[test]
+    fn the_finest_rung_is_zero_and_orders_below_every_other() {
+        assert_eq!(Precision::FINEST.rung(), 0);
+        assert!(Precision::FINEST < Precision(1));
     }
 }
