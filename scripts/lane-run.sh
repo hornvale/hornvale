@@ -144,7 +144,31 @@ else
     git -C "$repo_root" worktree add --force "$wt" "$ref"
 fi
 echo "lane-run: HEAD in $wt is $(git -C "$wt" rev-parse --short HEAD)"
-bash "$repo_root/scripts/test-worktree-freshness.sh" || true
+
+# NO FRESHNESS CHECK HERE, and its removal (The Ballast) is the same argument
+# the Makefile already makes for `gate-commit` — The Staff wrote that argument
+# and then failed to apply it one file over.
+#
+# `test-worktree-freshness.sh` catches ONE defect: `worktree-take` renames a
+# pool member and keeps its `target/`, so artifacts stay baked with the old
+# CARGO_MANIFEST_DIR. That rename cannot happen to the lane worktree. `$wt` is
+# a FIXED path; every job `checkout --force`s and `reset --hard`s the same
+# directory. There is no rename, so there is nothing to detect.
+#
+# The call here was vacuous three times over, and any one of the three is
+# fatal on its own:
+#   1. It passed NO `old-path`. That script's own header states a bare call is
+#      "architecturally blind to the exact self-rename staleness this task
+#      exists to catch" — only `worktree-take.sh` knows `$recycled` and it is
+#      the one caller that passes it.
+#   2. It ran against `$repo_root`, scanning all SEVEN sibling worktrees'
+#      `target/debug/deps` — not the lane worktree this job actually uses.
+#   3. It ended in `|| true`, so even a true finding was discarded unread.
+#
+# Cost, measured live: a single such scan was still running after 3 minutes
+# WHILE HOLDING THE LANE LOCK, with 17 jobs queued behind it across four
+# campaigns. A check that cannot fire, cannot report, and cannot apply is not
+# worth one second of a strictly serial queue, let alone minutes of it.
 
 cd "$wt"
 
