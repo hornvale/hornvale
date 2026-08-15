@@ -5,7 +5,7 @@
 //! REPORTED, because a falsified prediction is a finding and this file must
 //! not be edited to rescue one.
 
-use hornvale_hearsay::derive::witnesses_of;
+use hornvale_hearsay::derive::{variants_about, witnesses_of};
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
@@ -95,4 +95,22 @@ fn the_retelling_readout_on_seed_42() {
         );
     }
     println!("LADDER len={} rungs={:?}", ladder.len(), ladder.labels());
+
+    // WHICH RUNGS ARE ACTUALLY REACHED. H2 asserts a ceiling of ladder.len(),
+    // and a ceiling is only informative next to the floor it bounds: if the
+    // deepest rung any claim reaches is far below the ladder's end, the ladder
+    // is over-provisioned and H2's ceiling was never in play. Measured rather
+    // than inferred from H2's distribution -- variants <= 2 PER EVENT does not
+    // imply a rung is unused GLOBALLY, since different events could use
+    // different rungs.
+    let mut rungs: std::collections::BTreeMap<u8, usize> = std::collections::BTreeMap::new();
+    for s in lin.all() {
+        for v in variants_about(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) {
+            *rungs.entry(v.precision.rung()).or_default() += 1;
+        }
+    }
+    println!(
+        "RUNGS REACHED {rungs:?} (ladder has {} rungs)",
+        ladder.len()
+    );
 }
