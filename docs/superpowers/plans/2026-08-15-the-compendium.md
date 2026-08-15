@@ -759,8 +759,12 @@ emits, in order:
 
 1. A generated-file banner naming the regeneration command.
 2. The corpus id, `provenance` and `frozen` strings, hard-wrapped at 76
-   columns (reuse `tropes::wrap`'s approach — an unwrapped paragraph makes
-   every edit a whole-line diff).
+   columns. An unwrapped paragraph makes every later edit a whole-line diff in
+   a byte-ratcheted artifact. **`tropes::wrap` is private (`fn wrap`, not
+   `pub fn`, at `cli/src/tropes.rs:144`) — you cannot import it.** Write the
+   equivalent in `systems.rs`; this is one of the few places duplication is
+   correct, because making it `pub` would widen `tropes`'s surface for a
+   sibling's convenience. Same for `percent` (`cli/src/tropes.rs:458`).
 3. **The `present`-is-weakly-checked caveat**, verbatim from spec §7, *above*
    the tally. This is a requirement, not a nicety.
 4. The tally: counts per verdict.
@@ -788,8 +792,11 @@ NOVELTY — the `absent` count rising above the committed artifact's.
 - [ ] **Step 5: Generate the artifact and wire regeneration**
 
 Add to `scripts/regenerate-artifacts.sh`, beside the `tropes` redirects
-(around line 506) — **the `>` redirect is what writes the file**, never the
-command alone:
+(**lines 518-521 after Task 1's absorption of main** — they moved; find them by
+content, not by number) — **the `>` redirect is what writes the file**, never
+the command alone. A bare `hornvale systems report` regenerates nothing, so the
+drift check that follows reports an empty diff and reads as "no drift" when in
+fact nothing was rebuilt:
 
 ```bash
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
