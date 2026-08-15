@@ -28,7 +28,7 @@
 //! instead of shipping it.
 //!
 //! **WHICH seeds those are is a property of the placement, not of the key, and
-//! decision 0132 proved it — three times now.** The Ell's residual over
+//! decision 0134 proved it — three times now.** The Ell's residual over
 //! 0–2999 was 2634 and 2898. The craton-rescale terrain epoch re-placed every
 //! settlement and cleared both; a fresh full sweep found `[20, 514, 1412,
 //! 1505, 1738, 1892]`, one drop each. **The Glasshouse's thermostat (Stage B
@@ -157,7 +157,7 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// change that moves them is a change in promotion coverage and must be read,
 /// not re-pinned reflexively.
 ///
-/// **All ten of these read zero after decision 0132, except 1892 — and
+/// **All ten of these read zero after decision 0134, except 1892 — and
 /// 2078 joined it (The Glasshouse, Stage B Task 4).** The thermostat
 /// re-placed every settlement in every world a second time this campaign; a
 /// **fresh 0–2999 sweep** (768.72 s, ten threads) found `[1892, 2078]`, one

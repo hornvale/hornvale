@@ -1534,7 +1534,7 @@ fn cmd_ci_record() -> Result<(), String> {
     use hornvale_lab::census_claim::current_holder;
     use hornvale_lab::timings::{
         BASELINE_FLOOR_SECS, apply_hysteresis, baseline_path, fold_below_floor, parse_baseline,
-        parse_run, render_baseline,
+        parse_run, render_baseline, subfloor_path, subfloor_roster,
     };
 
     if let Some(holder) = current_holder() {
@@ -1587,6 +1587,40 @@ fn cmd_ci_record() -> Result<(), String> {
         BASELINE_FLOOR_SECS,
         path.display()
     );
+
+    // The sub-floor ROSTER, written beside the baseline and under exactly the
+    // same guards. A red run's `run.json` is truncated, so a roster derived
+    // from one would silently DROP tests from the commit gate — the failure
+    // mode is a quieter gate, which is the one thing a gate must never become.
+    //
+    // NOT host-keyed, unlike the baseline above (`subfloor_path`'s doc has
+    // the full reasoning): the commit gate runs on the Macs, which by this
+    // campaign's design never run a full workspace suite and so can never
+    // author a roster of their own. Whatever host this run happens to be on,
+    // it writes the one committed path every gating machine reads.
+    let roster = subfloor_roster(&rows, BASELINE_FLOOR_SECS);
+    let roster_path = subfloor_path(&root);
+    let mut roster_body = String::from(
+        "# Hornvale sub-floor roster (The Staff). One test id per line.\n\
+         # Every test measured strictly below BASELINE_FLOOR_SECS on the\n\
+         # canonical gating host's last full-workspace run. NOT host-keyed:\n\
+         # a test's identity does not vary by machine even though its\n\
+         # duration does, and the commit gate runs on machines (the Macs)\n\
+         # that never author a roster of their own -- see `subfloor_path`'s\n\
+         # doc in windows/lab/src/timings.rs for the full reasoning.\n\
+         # The commit gate (`make gate-commit`) runs exactly these.\n\
+         # Rewritten by every GREEN `make gate-stage`; a red run leaves it alone.\n\
+         # A test absent from this file is NOT in the commit gate — see the\n\
+         # spec's exclude-unknown rule. It enters on the next green stage gate.\n",
+    );
+    for id in &roster {
+        roster_body.push_str(id);
+        roster_body.push('\n');
+    }
+    std::fs::write(&roster_path, roster_body)
+        .map_err(|e| format!("ci-record: writing {}: {e}", roster_path.display()))?;
+    println!("wrote {} ({} tests)", roster_path.display(), roster.len());
+
     Ok(())
 }
 

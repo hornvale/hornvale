@@ -678,7 +678,7 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // coincidence of particular occupation chains, not a property. This count
     // should not be cited as evidence of anything about `layer_key`.
     //
-    // THE GLASSHOUSE, Stage B Task 2 (decision 0132): 1 -> 0, back to the
+    // THE GLASSHOUSE, Stage B Task 2 (decision 0134): 1 -> 0, back to the
     // FLOOR for the third time. The craton rescale delivers its budget, so the
     // coastline rose to the shelf break and deep-history settlement survival
     // was redecided by the GROUND rather than by the roster — the first cause
@@ -927,7 +927,7 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
             .count();
         measured.push((seed, changed));
     }
-    // THE GLASSHOUSE re-pin, Stage B Task 2 (decision 0132): [1, 0, 1] ->
+    // THE GLASSHOUSE re-pin, Stage B Task 2 (decision 0134): [1, 0, 1] ->
     // [0, 1, 1]. The craton rescale moved every world's coastline, redeciding
     // deep-history settlement survival and so which sites restack at all. The
     // TOTAL is unchanged at 2 and it simply moved seed: 42 lost its one order

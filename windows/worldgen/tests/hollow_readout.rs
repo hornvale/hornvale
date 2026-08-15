@@ -375,7 +375,7 @@ fn cave_substrate_meets_preregistered_criteria() {
     report(&r);
 
     // H1 — every kind is REACHABLE. Restated by The Glasshouse (decision
-    // 0133), on Nathan's explicit authorisation, from a pooled share floor to
+    // 0135), on Nathan's explicit authorisation, from a pooled share floor to
     // a per-world reachability claim. Recording why, because changing a
     // preregistered criterion after seeing a result is exactly what decision
     // 0016 forbids when it is done to rescue one:
@@ -455,7 +455,7 @@ fn cave_substrate_meets_preregistered_criteria() {
 
     // H4 — realized hit rate tracks nominal probability.
     //
-    // Restated by The Glasshouse (decision 0133, the same record as H1's), on Nathan's
+    // Restated by The Glasshouse (decision 0135, the same record as H1's), on Nathan's
     // explicit authorisation, from a bare 0.25 relative bound to that SAME
     // bound conjoined with a CLUSTER-ROBUST significance test. Recording why
     // in full, because changing a preregistered criterion after seeing a

@@ -36,7 +36,7 @@ The corrected H4 was written, shipped green, and looked right. A mutation test �
 while the *original* H4 would have caught it. The repair had traded a false
 positive for a false negative, and nothing in the green run said so.
 
-This is now decision 0133's durable half. Two sub-lessons that cost real time:
+This is now decision 0135's durable half. Two sub-lessons that cost real time:
 
 - **A mutation must be shown to have taken effect before its verdict means
   anything.** Here: 48,316 → 55,080 caves. A no-op mutation produces exactly the
@@ -89,7 +89,7 @@ Two branches independently minted `0131`. `make preflight` and
 `docs_consistency` are both blind to it; it surfaced only as a merge conflict in
 the *generated* digest. Renumbering cost 57 references across 29 files, and the
 renumber itself nearly created a second collision — `hollow_readout.rs` had
-already reserved `0132` for a decision not yet written. **A forward reference to
+already reserved `0134` for a decision not yet written. **A forward reference to
 an unwritten decision is invisible to every check and to the person renumbering.**
 
 ## 6. "Pick the constant from Earth" was impossible as written
@@ -144,8 +144,8 @@ one, and is population-independent, which is the property that matters.
 
 | item | state |
 |---|---|
-| Task 1, 2 | complete (decision 0132, terrain epoch) |
-| H4 | diagnosed and restated; decision 0133; green |
+| Task 1, 2 | complete (decision 0134, terrain epoch) |
+| H4 | diagnosed and restated; decision 0135; green |
 | Task 3 | complete — `91f19f2f` |
 | Task 4 | **committed** — `4c806ece`, but see below |
 | Task 5 | **WIP, UNVERIFIED** — `a5f1a373`, 4 known reds |

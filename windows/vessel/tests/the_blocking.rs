@@ -121,7 +121,7 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     //   19x19 rather than 19x10. Only the size moved — the 1:1 claim is exactly
     //   as testable at 19x19, since the doubling this guards against would
     //   render 39x39.
-    //   Re-measured again under The Glasshouse (decision 0132, 2026-08-14):
+    //   Re-measured again under The Glasshouse (decision 0134, 2026-08-14):
     //   the terrain epoch re-places the walk, so it enters a structure of TWO
     //   chambers whose first is 10 rows by 19 columns. Back to a non-square
     //   extent, which is the more useful shape for this pin — a `(2w+1)`

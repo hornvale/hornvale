@@ -492,6 +492,70 @@ pub fn top_contributors(
     shifts
 }
 
+/// The sub-floor roster: every test id strictly below `floor`, sorted and
+/// deduped.
+///
+/// # Why a roster exists at all
+///
+/// [`fold_below_floor`] collapses these tests into one `<below-floor>` row
+/// carrying a sum and a count — deliberately, since per-test rows were the
+/// entire source of the baseline's churn. That makes the baseline unable to
+/// answer "which tests are fast?", which is exactly what the commit gate needs
+/// to select. So the roster is a SEPARATE artifact carrying names and no
+/// durations: it moves only when a test is added, removed, or crosses the
+/// floor, not on every millisecond of run-to-run variance.
+///
+/// # Why its output is host-independent (see [`subfloor_path`])
+///
+/// A test's IDENTITY — whether it belongs in the commit gate at all — does
+/// not vary by machine, even though the DURATION that decides membership
+/// does. That asymmetry is why this function's output is a plain list of
+/// names with nowhere for a host to enter, unlike the baseline it is built
+/// alongside.
+///
+/// # DIRECTION THIS ENFORCES
+///
+/// Strictly below, not at-or-below. A test measured at exactly the floor is
+/// stored individually by the baseline and must not ALSO appear here, or the
+/// two artifacts disagree about which tier owns it.
+/// type-audit: bare-ok(diagnostic-value: floor), bare-ok(identifier-text: return)
+pub fn subfloor_roster(rows: &[TestDuration], floor: f64) -> Vec<String> {
+    let mut out: Vec<String> = rows
+        .iter()
+        .filter(|r| r.seconds < floor)
+        .map(|r| r.id.clone())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Where the sub-floor roster lives — **not** host-keyed, unlike
+/// [`baseline_path`].
+///
+/// # Why this deliberately does not mirror `baseline_path`'s shape
+///
+/// A test's IDENTITY (whether it belongs in the commit gate) is the same on
+/// every machine; a test's DURATION is not, which is exactly why the
+/// baseline stays host-keyed. Giving this path a `host` parameter to match
+/// was tried and was wrong: the commit gate runs on the Macs, which by this
+/// campaign's whole design never run a full workspace suite and therefore
+/// can never author a roster of their own — a host-keyed path made
+/// `make gate-commit` fail on every Mac, forever (caught by running this on
+/// a Mac against a roster authored only under a different host's name: exit
+/// 3, always). And after The Staff there is exactly one host that DOES
+/// author it (the canonical gating host), so a key that can only ever take
+/// one value is not a key at all.
+///
+/// Host speed still moves *which* tests land just above or below the floor
+/// at the margin — a 0.9s test on the canonical host may cross 1.0s on a
+/// slower machine — but that shifts `gate-commit`'s COST, never its
+/// correctness, and always in the direction of running MORE tests on a
+/// slower box, never fewer.
+pub fn subfloor_path(repo_root: &Path) -> PathBuf {
+    repo_root.join("docs/timings/subfloor-roster.tsv")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1069,6 +1133,58 @@ mod tests {
     }
 
     // --- per_test_shifts and the aggregate row ---------------------------------
+
+    // --- subfloor_roster --------------------------------------------------
+
+    #[test]
+    fn the_roster_holds_exactly_the_tests_below_the_floor() {
+        let row = |id: &str, seconds: f64| TestDuration {
+            id: id.to_string(),
+            seconds,
+            folded_count: None,
+        };
+        let rows = vec![
+            row("crate::bin$fast_one", 0.004),
+            row("crate::bin$exactly_at_floor", 1.0),
+            row("crate::bin$slow_one", 12.5),
+            row("crate::bin$another_fast", 0.999),
+        ];
+        let roster = subfloor_roster(&rows, BASELINE_FLOOR_SECS);
+        assert_eq!(
+            roster,
+            vec![
+                "crate::bin$another_fast".to_string(),
+                "crate::bin$fast_one".to_string(),
+            ],
+            "the roster is STRICTLY below the floor and sorted; a test exactly at \
+             the floor is tracked individually by the baseline and must not also \
+             be in the commit gate"
+        );
+    }
+
+    #[test]
+    fn the_roster_is_sorted_so_its_diff_shows_membership_not_ordering() {
+        let row = |id: &str| TestDuration {
+            id: id.to_string(),
+            seconds: 0.01,
+            folded_count: None,
+        };
+        let roster = subfloor_roster(&[row("z::bin$a"), row("a::bin$z")], BASELINE_FLOOR_SECS);
+        assert_eq!(roster, vec!["a::bin$z".to_string(), "z::bin$a".to_string()]);
+    }
+
+    #[test]
+    fn the_roster_path_is_not_host_keyed() {
+        // Unlike `baseline_path` (`the_baseline_path_is_per_host`), the roster
+        // has one committed name — no `host` parameter exists to vary it. A
+        // Mac, which never authors a full-suite run, must still be able to
+        // resolve the same path a canonical-host run wrote.
+        let p = subfloor_path(std::path::Path::new("/repo"));
+        assert_eq!(
+            p,
+            std::path::Path::new("/repo/docs/timings/subfloor-roster.tsv")
+        );
+    }
 
     #[test]
     fn per_test_shifts_never_alarms_on_the_below_floor_aggregate_row() {

@@ -177,8 +177,8 @@ predict.
 
 `windows/worldgen/tests/insolation_probe.rs`,
 `dominant_k_peak_under_corrected_locked_insolation`, `#[ignore]`d (a
-live-worldgen instrument, not part of the commit gate or `make gate-full`'s
-heavy tier). Run by hand:
+live-worldgen instrument, not part of `gate-commit`, `gate-stage`, or the
+`heavy` lane set's tier). Run by hand:
 
 ```bash
 cargo test -p hornvale-worldgen --release --test insolation_probe -- --ignored --nocapture

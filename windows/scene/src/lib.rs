@@ -1568,7 +1568,7 @@ mod tests {
     fn water_fields_are_sized_legend_matches_and_ocean_has_no_drainage() {
         // The seed is SEARCHED FOR, not pinned. Waterfall sites are sparse
         // (`waterfalls_exist_across_a_seed_sweep`, domains/terrain/src/carve.rs)
-        // and the population moved under the terrain epoch of decision 0132:
+        // and the population moved under the terrain epoch of decision 0134:
         // seed 44 carried 4 sites and now carries 0, because a coastline at
         // the shelf break drains land over a shorter distance, shrinking
         // catchments and with them the drainage that clears

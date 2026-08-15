@@ -1625,7 +1625,7 @@ mod tests {
         // half, rather than taken from the module's `observer()` fixture (the
         // flagship settlement's room). That fixture reached this branch only
         // because the flagship happened to stand on a cave-free cell, and the
-        // terrain epoch of decision 0132 put a cave under it — the assertion
+        // terrain epoch of decision 0134 put a cave under it — the assertion
         // guarding against exactly that vacuity is what went red. A sweep
         // reaches the negative branch directly, so no re-pin can silently
         // restore a lucky sample: the branch is now selected for, not

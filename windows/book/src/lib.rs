@@ -4283,7 +4283,7 @@ mod tests {
         // desert-elf at `Counted` instead of `Predictive`. Four independent
         // surfaces, one fact.
         //
-        // The Glasshouse re-pin (decision 0132, the terrain epoch): NINE
+        // The Glasshouse re-pin (decision 0134, the terrain epoch): NINE
         // organized of the same fifteen placed. `high-elf` and `snow-elf` join
         // the folk-only set, making it six. This is a WORLD change, not a
         // placement-rule change — the craton rescale's exact solve and raised
@@ -5353,7 +5353,7 @@ mod tests {
         // reckoning arithmetic moved — only which flagships cleared the caste
         // threshold. Re-measured wholesale from the live volume.
         //
-        // The Glasshouse (decision 0132, the terrain epoch): TEN organized —
+        // The Glasshouse (decision 0134, the terrain epoch): TEN organized —
         // the Xeqmoq (high-elf) GAIN a priesthood run, and nothing else at
         // this seed moves; the folk-only set drops to five. Both witnessed counts (81 and 49) and the taught day are
         // again unchanged, so once more only the caste threshold moved and not
@@ -5490,7 +5490,7 @@ mod tests {
         // it is not monotone in roster size. Both counts (53/32) and the
         // taught day are unchanged again.
         let seed3 = render_volume(&generated(3));
-        // The Glasshouse (decision 0132, the terrain epoch): SEVEN organized,
+        // The Glasshouse (decision 0134, the terrain epoch): SEVEN organized,
         // the largest move of the three seeds. Drow, hobgoblin and wood-elf
         // drop to folk-only while snow-elf gains a priesthood, so the
         // folk-only set goes six -> eight. The witnessed counts (53 lunar,

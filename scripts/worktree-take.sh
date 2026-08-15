@@ -130,6 +130,23 @@ if [ -n "$recycled" ]; then
     git -C "$recycled" switch -c "campaign/$NAME" "origin/$BASE"
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
+    # THE RENAME INVALIDATES COMPILED PATHS AND CARGO DOES NOT KNOW IT.
+    # `env!("CARGO_MANIFEST_DIR")` and `CARGO_TARGET_TMPDIR` are baked at compile
+    # time; `cargo build --workspace --all-targets` reports the tree fresh after a
+    # rename, so every cached test binary still points at the previous campaign's
+    # directory. Measured taking the-axes -> the-staff: six failures whose panics
+    # named the old path, which read exactly like a red main.
+    #
+    # Touch the sources that read either macro, derived by grep rather than
+    # hand-listed, so a new call site is covered the day it lands. 29 of the 31 are
+    # under tests/ and recompile only their own test binary; 2 are under src/ and
+    # rebuild their crate. That is far cheaper than the 771 s cold build this pool
+    # exists to avoid.
+    #
+    # `|| true`: a worktree with no matching file is fine, and `worktree-take` must
+    # not fail on a convenience step.
+    grep -rl 'env!("CARGO_MANIFEST_DIR")\|CARGO_TARGET_TMPDIR' \
+        --include='*.rs' "$DEST" 2>/dev/null | xargs -r touch || true
     # `mv` leaves the MAIN REPO's back-pointer stale. Verified, and the naive
     # assumption is wrong in an important way: the moved worktree's own
     # commands keep working (its `.git` file is an absolute path to an
@@ -155,6 +172,43 @@ if [ -n "$recycled" ]; then
         exit 1
     fi
     echo "worktree-take: $DEST is warm — no prewarm needed" >&2
+
+    # REPORT THE INVALIDATION AT THE MOMENT IT MATTERS. Measured cost: ~1 s per
+    # sibling worktree scanning ONLY executables (target/debug/deps holds 24,544
+    # entries; unrestricted this would cost ~5 s across a six-member pool), cheap
+    # enough to run on every take.
+    #
+    # THIS IS A DIAGNOSTIC, NOT A GATE, AND NOT A GREEN CHECK. An earlier
+    # version of this comment claimed this call "verifies the fix" and "gives
+    # the taker an immediate green" — that was wrong, caught in review. Nothing
+    # in this script rebuilds anything: the touch above only bumps mtimes so
+    # cargo recompiles the affected crates on the NEXT build, which happens
+    # whenever the taker next runs one. So the honest reading, called right
+    # here, is that this executable-scan is expected to be RED immediately
+    # after almost every recycle — the old binaries are still sitting in
+    # target/debug/deps, genuinely unrebuilt, and that is correct information,
+    # not a bug in the check. Forcing it to read green at this point would mean
+    # papering over real state, which is worse than reporting it honestly.
+    #
+    # WHAT THIS CALL ACTUALLY VERIFIES: that $recycled (the pool member's name
+    # a moment ago, still held in this shell variable, untouched by the
+    # `worktree repair` call above) is passed explicitly as the check's
+    # optional old-path argument. This closes a gap found in review: `git
+    # worktree repair` rewrites the registry to $DEST's new path, so by this
+    # point $recycled is ALREADY gone from `git worktree list` entirely — a
+    # call with no argument would be architecturally blind to the very rename
+    # this task exists to catch. (Verified directly with a scratch worktree:
+    # renamed WITHOUT repair, the check is correctly flagged red for its own
+    # stale self-reference from `git worktree list`; the SAME worktree,
+    # repaired, goes green via that path alone while the identical stale
+    # binary sits there untouched — passing $recycled here is what keeps this
+    # call able to see it even after repair.) So this line reports EXACTLY
+    # which cached executables still bake $recycled right now; they will
+    # recompile the next time something builds or tests the crate that owns
+    # them, per the touch above. `|| true`: a hit here is expected, common,
+    # and not something this take can fix synchronously — the take must not
+    # abort over information it is merely surfacing.
+    ( cd "$DEST" && bash "$ROOT/scripts/test-worktree-freshness.sh" "$recycled" ) || true
 else
     echo "worktree-take: no recyclable member; creating a cold worktree" >&2
     git -C "$ROOT" worktree add "$DEST" -b "campaign/$NAME" "origin/$BASE"

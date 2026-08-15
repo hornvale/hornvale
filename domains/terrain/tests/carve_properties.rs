@@ -537,7 +537,7 @@ fn trim_recaps_hold_after_the_final_solve() {
             // 34 by 3e-13 m, which is 3e-10 mm, while the two asserts
             // bracketing it would have passed the identical geometry.
             // Bare `>=` here was an asymmetry, not a stricter standard
-            // (decision 0132).
+            // (decision 0134).
             assert!(
                 g.elevation.get(c).get() >= sea_final.get() - 1e-6,
                 "seed {seed} L{level}: barrier cell {} at {} sank below the final sea level {}",

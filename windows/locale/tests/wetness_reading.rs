@@ -106,7 +106,7 @@ const R7_FLOOR: f64 = 0.80;
 ///
 /// **Four captured fields are gone from this struct, and their absence is the
 /// point.** `descriptor`, `height_asl_m` and `biome` recorded what the pre-Rill
-/// world said about a room, and decision 0132's terrain epoch made all three
+/// world said about a room, and decision 0134's terrain epoch made all three
 /// false; nothing reads them any more, so carrying them would leave stale
 /// world-state in a fixture reader that no longer claims anything about it (and
 /// clippy's `dead_code` says so). What remains is either address data — `kind`,
@@ -451,7 +451,7 @@ fn descending_walks_of_the_required_length_exist() {
 ///
 /// The three PINNED WITNESSES are gone (all-steps 215/420, in-scope 177/345,
 /// grounded in-scope 214/345) and so is the pinned reversal count (34). They
-/// were exact counts over the fixture's captured walks, and decision 0132's
+/// were exact counts over the fixture's captured walks, and decision 0134's
 /// terrain epoch destroyed the world those walks were drawn from — the walks
 /// stopped descending, which is what
 /// [`descending_walks_of_the_required_length_exist`] reports. Re-pinning them on

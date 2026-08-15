@@ -340,7 +340,7 @@ gen_possession_overtime() {
 # layer ends in ice -- every founding party instead ARRIVED fleeing it, the
 # shape this page has carried at every cell it has ever pointed at.
 #
-# THE CAMERA MOVED AGAIN, 4604 -> 35120, for decision 0132's terrain epoch (The
+# THE CAMERA MOVED AGAIN, 4604 -> 35120, for decision 0134's terrain epoch (The
 # Glasshouse). New coastlines put cell 4604 under a different sea and emptied
 # it; `the_history_page_prose_names_the_cell_it_renders` caught it by name
 # rather than letting the showcase for stratigraphy quietly render "Nothing
@@ -563,6 +563,21 @@ gen_strange_sites() {
     run -p hornvale -- locale --world "$wsky" --strange
 }
 
+# The atlas bundle. Without this line book/src/gallery/ is in the drift-check
+# list but atlas.js is never rebuilt, so `git diff --exit-code` compares the
+# committed file against itself and reports clean forever (The Staff, Task
+# 9). World-free and outside cargo entirely (clients/atlas is a Deno
+# workspace, decision 0055's determinism boundary), so it belongs beside the
+# other Group C dumps below, not Group A/B.
+build_atlas() {
+    if command -v deno >/dev/null 2>&1; then
+        (cd "$repo_root/clients/atlas" && deno task build)
+    else
+        echo "regenerate-artifacts: deno not found — SKIPPING the atlas bundle." >&2
+        echo "  book/src/gallery/atlas.js will not be refreshed by this run." >&2
+    fi
+}
+
 # The Purview's legibility surface (The Margin): the same scene/surrounds/v1
 # chart the JSON export above carries, rendered through --render ascii at
 # three genuinely different seed-42 observers -- the flagship settlement
@@ -624,6 +639,7 @@ spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
   > docs/digest/decisions-in-force.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
+spawn build_atlas
 
 # Group B: readers of $w42/$wsky/$wlocked.
 spawn run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md

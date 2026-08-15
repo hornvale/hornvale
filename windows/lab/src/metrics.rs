@@ -9766,7 +9766,7 @@ mod tests {
         // while absorbing ordinary terrain drift, which moves the network's
         // geometry far less than it moves any single reach.
         //
-        // RE-MEASURED, not widened, for decision 0132 (The Glasshouse): the
+        // RE-MEASURED, not widened, for decision 0134 (The Glasshouse): the
         // terrain epoch densified seed 42's network (3887 -> 3909 vertices)
         // and own-line/analytic fell 0.8306 -> 0.7377, outside the old window.
         // That is exactly the response the paragraph above predicted and asked
@@ -10622,7 +10622,7 @@ mod tests {
         // land on the same value, which is stronger provenance than a green
         // local re-run. Still inside the 2-3 target, the row's claim.
         //
-        // The Glasshouse re-pin (decision 0132, 2026-08-14): 2.375 -> 2.24.
+        // The Glasshouse re-pin (decision 0134, 2026-08-14): 2.375 -> 2.24.
         // The terrain epoch re-places settlements, so goblin names a
         // different set of sites and the mean syllable count moves with the
         // sample. Still inside the 2-3 target, which is the row's actual
@@ -10772,7 +10772,7 @@ mod tests {
         // it above 3 falsifies the target and is a finding to report, not a
         // bound to widen.
         //
-        // The Glasshouse (decision 0132, 2026-08-14): 2.9285714 -> 2.8, and
+        // The Glasshouse (decision 0134, 2026-08-14): 2.9285714 -> 2.8, and
         // the margin the paragraph above flagged has WIDENED rather than
         // closed — kobold now sits 0.2 below the ceiling instead of 0.071.
         // Goblin falls too (2.375 -> 2.24), so the two move together this
@@ -10949,7 +10949,7 @@ mod tests {
         // row (and 0.63636364 on the census this replaces, matching The
         // Range's pin above). Two independent computations agree.
         //
-        // The Glasshouse re-pin (decision 0132, 2026-08-14): 0.6 ->
+        // The Glasshouse re-pin (decision 0134, 2026-08-14): 0.6 ->
         // 0.5918367346938775, i.e. 29/49. The terrain epoch re-places
         // settlements and the denominator moves with them. Note what this
         // costs the paragraph above: 0.6 recurred at two very different
@@ -11529,7 +11529,7 @@ mod tests {
             // untouched. The coverage cost returns with it: the river gate
             // class only.
             //
-            // The Glasshouse re-pin (decision 0132, 2026-08-14): back to
+            // The Glasshouse re-pin (decision 0134, 2026-08-14): back to
             // three — "marsh" returns, a FIFTH oscillation between exactly
             // these two readings. Cause is the terrain epoch itself: the
             // craton rescale's exact solve and raised clamp move every
@@ -12215,7 +12215,7 @@ mod tests {
         // world-byte tripwire, not a claim about goblins**, and it should not
         // be cited as one.
         //
-        // Sixth pass (The Glasshouse, decision 0132, 2026-08-14): taiga ->
+        // Sixth pass (The Glasshouse, decision 0134, 2026-08-14): taiga ->
         // temperate-forest, a SEVENTH oscillation between the same two
         // biomes. Cause: the craton rescale's exact solve and raised clamp
         // move every coastline, so the flagship reseats. `flagship-subsistence`
@@ -13801,7 +13801,7 @@ mod tests {
         // seven roster changes: still not monotone in anything, and still a
         // re-sweep rather than an extrapolation every time.
         //
-        // EIGHTH PASS (The Glasshouse, decision 0132, 2026-08-14). The
+        // EIGHTH PASS (The Glasshouse, decision 0134, 2026-08-14). The
         // terrain epoch re-places every world, and seed 14's high-elf lost
         // its barley band — the precondition repaired at the sixth pass
         // caught it by name, which is the repair working as intended. Re-swept

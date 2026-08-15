@@ -339,7 +339,7 @@ type Row = (
 // Four surfaces, one fact: a culture with no organized cult cannot exceed
 // Counted, which is this test's own structural law.
 //
-// **THE GLASSHOUSE re-measure (Stage B, decision 0132).** The craton rescale
+// **THE GLASSHOUSE re-measure (Stage B, decision 0134).** The craton rescale
 // delivers its budget, so every world's coastline rose to the shelf break and
 // mean land elevation fell 2257 -> 1783 m; every settlement was re-placed.
 // Re-measured wholesale by the same scaffold, not hand-edited. Twelve of the

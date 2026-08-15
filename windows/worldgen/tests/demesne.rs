@@ -883,7 +883,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // cold-adapted in the field" may well be true of this commit, but **this
     // line is not the measurement that says so** and must not be cited as
     // one.
-    // THE GLASSHOUSE re-pin (Stage B, decision 0132): 36.3288 -> 36.2088, and
+    // THE GLASSHOUSE re-pin (Stage B, decision 0134): 36.3288 -> 36.2088, and
     // **the identity in the two paragraphs above is no longer true**. Read the
     // printed decomposition rather than the arithmetic those paragraphs assume:
     // `raw_pole_mean` is now 0.011362 and `pole floored: false`, against `true`

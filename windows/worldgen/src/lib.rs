@@ -9601,7 +9601,7 @@ mod tests {
         // facts. Same reading as The Range's, one campaign later and thirty-
         // eight glosses larger.
         //
-        // THE GLASSHOUSE (Stage B Task 2, decision 0132): 355 -> 321, and the
+        // THE GLASSHOUSE (Stage B Task 2, decision 0134): 355 -> 321, and the
         // three counts above are UNCHANGED at 145 — the split this file keeps
         // on two lines holds for the fourth consecutive campaign. The roster
         // did not move; the ground did. The craton rescale delivers its
@@ -10234,7 +10234,7 @@ mod tests {
         // SEARCHED, not pinned. This read `CellId(21966)` — the single
         // pre-human gate-scar cell `vestige.rs` had pinned, whose stack's only
         // layer is breached + forgotten at dread 0.9. The terrain epoch of
-        // decision 0132 turned that cell to ocean, and seed 42 now carries NO
+        // decision 0134 turned that cell to ocean, and seed 42 now carries NO
         // pre-human scar anywhere (the finding is recorded on
         // `vestige::PREHUMAN_SEED`), so there is no seed-42 cell to move the
         // pin to.
@@ -10886,7 +10886,7 @@ mod tests {
         // against a lower ceiling. Exactly the "deliberate bake/carrying-
         // capacity change moves world identity" case this comment anticipates.
         //
-        // THE GLASSHOUSE re-pin (Stage B Task 2, decision 0132): 68 -> 66. The
+        // THE GLASSHOUSE re-pin (Stage B Task 2, decision 0134): 68 -> 66. The
         // craton rescale now delivers its budget, so seed 42's coastline sits
         // at the shelf break instead of ~1.1 km below it and mean land
         // elevation falls 2257 -> 1783 m. Land area, land temperature and
@@ -11691,7 +11691,7 @@ mod tests {
         let terrain = terrain_of(&world).unwrap();
         assert_eq!(terrain.globe().plates.len(), 12);
         let summary = hornvale_terrain::summarize(terrain.globe());
-        // THE GLASSHOUSE (Stage B, decision 0132): the tolerance widens
+        // THE GLASSHOUSE (Stage B, decision 0134): the tolerance widens
         // 0.01 -> 0.015, and the reason is MEASURED rather than assumed. Seed
         // 42 realises 0.68881 against a pinned 0.7 — a residual of 0.01119,
         // which is 0.00119 past the old bound.
@@ -13538,7 +13538,7 @@ mod tests {
             &affinity,
         );
         let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
-        // THE GLASSHOUSE re-pin (Stage B, decision 0132): 11_066 -> 11_283.
+        // THE GLASSHOUSE re-pin (Stage B, decision 0134): 11_066 -> 11_283.
         // The craton rescale delivers its budget, so seed 42's ocean fraction
         // falls slightly and the land mask grows by 217 cells (+1.96%). This is
         // a COUNT of the population P5's claim quantifies over, not the claim
