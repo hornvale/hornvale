@@ -82,24 +82,38 @@ fn you_lands_at_the_plans_own_coordinate() {
 // to pin. (This plan happens to have no leading spaces on any row, since
 // every row starts with the border wall — but the discipline is the same
 // one `chart.rs` documents, and the raw string costs nothing to keep.)
+/// **RE-DERIVED AT THE GLASSHOUSE'S CLOSE (2026-08-15).** The campaign's
+/// climate correction moved seed 42's world, and with it the chamber the
+/// committed `session-seed-42-chamber.json` fixture records — so this golden
+/// went stale for the same reason every other post-refresh witness did, and
+/// this test was the `clients` set's single red.
+///
+/// It was re-taken by running the recipe above against the sim, NOT by
+/// copying the client's own output into it. That distinction is the whole
+/// value of this test: the client's picture and the sim's are two independent
+/// renderers of `vessel/plan/v1`, and pasting the left-hand side of the
+/// failure into the right-hand side would turn a cross-implementation check
+/// into a tautology that can never fail again. The two agreed byte-for-byte
+/// once re-taken, which is the result that makes the re-pin safe — the client
+/// was already correct and only the transcription was old.
 const REFERENCE_PICTURE: &str = r"###################
-#........#........#
-#........#........#
-#........#........#
-#........#........#
-#........+........#
-#........#........#
-#........#........#
-#........#........#
-#....@...###+######
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....+...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
+#....#............#
+#....#............#
+#....+............#
+#....#............#
+#....#............#
+#....#######+######
+#....#............#
+#....#............#
+#..@.#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
 ###################";
 
 /// Extract the tight bounding box of every non-blank cell as its actual
