@@ -145,6 +145,84 @@ else
     bad "id4's row has $tab_row_fields fields, not 6 — a tab in a note corrupted the TSV shape"
 fi
 
+echo "== queue: no argument of any subcommand can corrupt the row shape"
+# The invariant that actually matters, stated once and checked after every
+# attempt below: no input to ANY subcommand can produce a row whose field
+# count is not 6. Attack every argument of every subcommand that ever
+# writes — not just note/branch/sha, the three the reviews discussed by
+# name; `id` and `state` too. `next` and `list` take no arguments, so they
+# have no attack surface here.
+assert_shape_intact() {
+    local label="$1" before="$2"
+    local after bad_rows
+    after="$(bash "$repo_root/scripts/sluice-queue.sh" list | wc -l | tr -d ' ')"
+    bad_rows="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=6{c++} END{print c+0}')"
+    if [ "$after" = "$before" ] && [ "$bad_rows" -eq 0 ]; then
+        ok "$label: row count unchanged ($before), every row still 6 fields"
+    else
+        bad "$label: row count $before -> $after, $bad_rows malformed row(s)"
+    fi
+}
+expect_reject() {
+    local label="$1"; shift
+    if bash "$repo_root/scripts/sluice-queue.sh" "$@" >/dev/null 2>&1; then
+        bad "$label: expected rejection, but the command succeeded"
+    else
+        ok "$label: rejected (nonzero exit) as expected"
+    fi
+}
+expect_accept() {
+    local label="$1"; shift
+    if bash "$repo_root/scripts/sluice-queue.sh" "$@" >/dev/null 2>&1; then
+        ok "$label: accepted as expected"
+    else
+        bad "$label: expected acceptance, but the command failed"
+    fi
+}
+
+rows_now="$(bash "$repo_root/scripts/sluice-queue.sh" list | wc -l | tr -d ' ')"
+
+# add: branch alone
+expect_reject "add: tab in branch"      add "$(printf 'br\tanch')" "$FIRST"
+assert_shape_intact "add: tab in branch"      "$rows_now"
+expect_reject "add: newline in branch"  add "$(printf 'br\nanch')" "$FIRST"
+assert_shape_intact "add: newline in branch"  "$rows_now"
+
+# add: sha alone
+expect_reject "add: newline in sha"     add campaign/z "$(printf 'sha\nwithnewline')"
+assert_shape_intact "add: newline in sha"     "$rows_now"
+expect_reject "add: tab in sha"         add campaign/z "$(printf 'sha\twithtab')"
+assert_shape_intact "add: tab in sha"         "$rows_now"
+expect_reject "add: non-hex sha (clean, no whitespace)" add campaign/z "not-hex-but-otherwise-clean"
+assert_shape_intact "add: non-hex sha"        "$rows_now"
+
+# add: the re-reviewer's exact repro — both fields malicious at once
+expect_reject "add: tab-branch AND newline-sha together (the re-reviewer's repro)" \
+    add "$(printf 'br\tanch')" "$(printf 'sha\nwithnewline')"
+assert_shape_intact "add: both branch and sha malicious" "$rows_now"
+
+# set-state: id alone — a garbage id just matches nothing, so this is a
+# no-op SUCCESS, not a rejection; there is no dedicated id validator, and
+# this is the evidence that none is needed (id is only ever compared
+# against, never freshly written into a new row).
+expect_accept "set-state: tab-bearing id (no match, no-op)"     set-state "$(printf 'id\twith\ttabs')" queued
+assert_shape_intact "set-state: tab-bearing id"     "$rows_now"
+expect_accept "set-state: newline-bearing id (no match, no-op)" set-state "$(printf 'id\nwith\nnewlines')" queued
+assert_shape_intact "set-state: newline-bearing id" "$rows_now"
+
+# set-state: state alone — closed vocabulary, reject anything outside it
+expect_reject "set-state: tab in state"          set-state "$id4" "$(printf 'run\tning')"
+assert_shape_intact "set-state: tab in state"          "$rows_now"
+expect_reject "set-state: unknown (clean) state" set-state "$id4" "not-a-real-state"
+assert_shape_intact "set-state: unknown state"         "$rows_now"
+
+# set-state: note alone — the one field that's STRIPPED, not rejected, so
+# the command is expected to SUCCEED here; already covered in the section
+# above by name, re-run once more as part of this same sweep for consistency.
+expect_accept "set-state: newline+tab note (strip path)" \
+    set-state "$id4" queued "$(printf 'more\nlines\tand\ttabs')"
+assert_shape_intact "set-state: newline+tab note"   "$rows_now"
+
 echo "== queue: a RUNNING request is never superseded"
 bash "$repo_root/scripts/sluice-queue.sh" set-state "$id2" running
 # NOTE: the brief's version of this test had a stray, uncommitted write to
@@ -160,6 +238,43 @@ if [ "$(state_of "$id2")" = "running" ]; then
     ok "a running request is not superseded by a newer descendant"
 else
     bad "a running request was superseded — an authoring job would be orphaned"
+fi
+
+echo "== queue: an interrupted rewrite leaves no temp file behind"
+# Moving the temp file INTO $HV_SLUICE_DIR fixed cross-filesystem atomicity
+# but opened a narrower hole: a signal or failing command between `mktemp`
+# and `mv` now leaks debris into the durable directory instead of an
+# OS-reaped $TMPDIR. Prove the EXIT trap actually fires by killing a
+# rewrite mid-flight: populate the queue with enough same-branch `queued`
+# rows that `add`'s coalescing scan (one real `git merge-base` subprocess
+# per candidate — measured ~5ms each on this box, so 3000 rows is a ~15s
+# window) is still running when the signal lands, then confirm no
+# `.queue.tmp.*` survives. Destructive to the queue file, so this section
+# runs LAST.
+kill_scratch="$tmp/kill-repo"; mkdir -p "$kill_scratch"; cd "$kill_scratch"
+g init -q -b main .
+g config user.email t@t; g config user.name t
+printf 'a\n' > f.txt; g add f.txt; g commit -qm root
+KSHA="$(g rev-parse HEAD)"
+{
+    n=0
+    while [ "$n" -lt 3000 ]; do
+        printf '2026-01-01T00:00:00Z\treq-slow-%d\tcampaign/slow\t%s\tqueued\t\n' "$n" "$KSHA"
+        n=$((n+1))
+    done
+} > "$HV_SLUICE_DIR/queue.tsv"
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/slow "$KSHA" &
+killpid=$!
+sleep 0.3
+kill -TERM "$killpid" 2>/dev/null || true
+wait "$killpid" 2>/dev/null || true
+
+leftover="$(find "$HV_SLUICE_DIR" -maxdepth 1 -name '.queue.tmp.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$leftover" -eq 0 ]; then
+    ok "an interrupted rewrite leaves no .queue.tmp.* file behind in the state dir"
+else
+    bad "$leftover leftover .queue.tmp.* file(s) found after a killed rewrite"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
