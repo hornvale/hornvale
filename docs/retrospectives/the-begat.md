@@ -140,6 +140,19 @@ not a law, and it is recorded as an observation with its sample size stated.
 
 ## Process notes
 
+- **The branch tip's subject is the census epoch label, so the headline commit
+  must be the LAST one.** `scripts/sluice-run.sh` takes
+  `git log -1 --format=%s` of the candidate tip verbatim as the merge subject,
+  and the census history tool reads that back as the permanent epoch label.
+  This campaign learned it twice: first when a tidy-up commit
+  ("remove probe study output committed by mistake") ended up as the tip and
+  would have labelled the whole merge, and again when a small addendum pushed
+  *after* the headline commit silently displaced it. Nothing warns — the
+  request path rejects only `wip`/`fixup`/`tmp`-style subjects, so an
+  ordinary-looking subject on an ordinary-looking commit passes. And the
+  branch cannot be reordered to fix it, because force-pushing is refused by
+  `scripts/hooks/pre-push`. **Sequence the headline commit last, or pay for an
+  extra commit to restore it.**
 - **`git add -A` cannot tell a regenerated artifact from scratch output**, because
   `make rebaseline` and a scratch study run both write into
   `book/src/laboratory/generated/`. Eight probe files landed in a commit this way
