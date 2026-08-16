@@ -1221,3 +1221,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-16T23:32:45Z | gate-commit | 234.486 | 750.463 | 132.149 | 3.76 | 0 | ec62ac56 | campaign/the-rhumb | MacBookPro | 10 |
 | 2026-08-16T23:42:11Z | rebaseline | 44.934 | 219.707 | 15.544 | 5.24 | 0 | dc1238dc | campaign/the-rhumb | MacBookPro | 10 |
 | 2026-08-16T23:43:20Z | gate-commit | 23.271 | 50.873 | 13.247 | 2.76 | 0 | 92a4b059 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-16T23:47:36Z | gate-commit | 24.862 | 51.709 | 13.213 | 2.61 | 0 | 7c1d3e24 | campaign/the-rhumb | MacBookPro | 10 |
