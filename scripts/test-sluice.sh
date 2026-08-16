@@ -362,5 +362,161 @@ else
 fi
 export HV_SLUICE_BASE=main
 
+echo "== mouth: an out-of-band landing on the base exits 4"
+cd "$scratch"
+g checkout -q main
+OLD_MAIN="$(g rev-parse main)"
+mkdir -p "$HV_SLUICE_DIR"
+printf '%s' "$OLD_MAIN" > "$HV_SLUICE_DIR/last-pushed"
+printf 'OOB\n' >> f.txt; g commit -qam out-of-band-on-main
+export HV_SLUICE_BASE=main
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/y "$(g rev-parse campaign/y)" \
+    >/dev/null 2>"$tmp/mouth-oob.err"
+rc=$?
+set -e
+if [ "$rc" -eq 4 ]; then
+    ok "an out-of-band landing on the base exits 4"
+else
+    bad "expected exit 4 for an out-of-band landing, got $rc"
+fi
+if grep -qi 'out-of-band' "$tmp/mouth-oob.err"; then
+    ok "the out-of-band reason is reported"
+else
+    bad "no out-of-band reason found in stderr"
+fi
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "an out-of-band-landing candidate never acquired the claim either"
+else
+    bad "the mouth took the claim on an out-of-band landing — must not"
+fi
+
+echo "== mouth: exit 4 (out-of-band) wins over exit 3 (already merged) when both apply"
+# THE ORDERING DECISION, stated once here because the controller asked for it
+# to be explicit and it is not obvious: OLD_MAIN is now an ancestor of the
+# moved base (the out-of-band commit above builds on it), so the ANCESTOR
+# CHECK ALONE would call OLD_MAIN "already merged" and return exit 3 —
+# read by a caller as a routine no-op, nothing to do. But the base ALSO moved
+# out-of-band since the queue last recorded pushing it, which means the
+# queue's inductive guarantee (each merge builds on an already-proven main)
+# is broken RIGHT NOW, independent of whether this specific candidate happens
+# to already be included. Silently returning 3 would let that break hide
+# behind an ordinary-looking "already merged" verdict — possibly masking some
+# OTHER, still-unmerged candidate sitting behind the same base movement. So
+# sluice-mouth.sh checks out-of-band FIRST and it wins: exit 4, not 3,
+# whenever both conditions hold. (Reversing this priority is the mutation
+# that would silently swallow an out-of-band landing under "nothing to do".)
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/collision "$OLD_MAIN" \
+    >/dev/null 2>"$tmp/mouth-collision.err"
+rc=$?
+set -e
+if [ "$rc" -eq 4 ]; then
+    ok "exit 4 (out-of-band) wins over exit 3 (already merged) when both conditions hold"
+else
+    bad "expected exit 4 to win the 3-vs-4 collision, got $rc"
+fi
+
+# Clean up so later sections (which assume no out-of-band tracking) are unaffected.
+rm -f "$HV_SLUICE_DIR/last-pushed"
+
+echo "== mouth: a clean, admissible candidate exits 0 and prints ADMIT"
+# Branch from the CURRENT (post-out-of-band-commit) tip of main and touch a
+# brand-new file, so the merge against base=main is unambiguously clean —
+# no shared history with f.txt's tangle of earlier conflict-test edits.
+g checkout -q -b campaign/clean main
+printf 'clean\n' > g.txt
+g add g.txt
+g commit -qam clean-commit
+CLEAN="$(g rev-parse campaign/clean)"
+
+export HV_SLUICE_BASE=main
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+admit_out="$(bash "$repo_root/scripts/sluice-mouth.sh" campaign/clean "$CLEAN" 2>"$tmp/mouth-admit.err")"
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+    ok "a clean, admissible candidate exits 0"
+else
+    bad "expected exit 0 for a clean candidate, got $rc (stderr: $(cat "$tmp/mouth-admit.err"))"
+fi
+if printf '%s\n' "$admit_out" | grep -q "ADMIT campaign/clean $CLEAN"; then
+    ok "the admit message names the branch and sha"
+else
+    bad "admit message missing or malformed: '$admit_out'"
+fi
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "an admitted candidate never acquires the claim either — the mouth is read-only end to end"
+else
+    bad "the mouth took the claim on the admit path — must not"
+fi
+
+echo "== mouth: git calls are hermetic to a bogus GIT_DIR/GIT_INDEX_FILE"
+# git EXPORTS GIT_DIR/GIT_INDEX_FILE to hooks and they OUTRANK cwd/`-C` — from
+# a linked worktree (where all campaign work happens) they are absolute paths
+# into a DIFFERENT repository (scripts/CLAUDE.md's board incident: an
+# unscrubbed `git -C <tempdir>` re-initialised a developer's real checkout as
+# bare). Point both at an unrelated decoy repo that does NOT contain $CLEAN,
+# and confirm the mouth still evaluates against $scratch (via cwd), not the
+# decoy — proven by still reaching the same exit-0 admit as the section above.
+decoy="$tmp/decoy"; mkdir -p "$decoy"
+( cd "$decoy" \
+  && g init -q -b decoy-main . \
+  && g config user.email t@t && g config user.name t \
+  && printf 'x\n' > d.txt && g add d.txt && g commit -qm decoy-root )
+
+cd "$scratch"
+export GIT_DIR="$decoy/.git"
+export GIT_INDEX_FILE="$decoy/.git/index"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+hermetic_out="$(bash "$repo_root/scripts/sluice-mouth.sh" campaign/clean "$CLEAN" 2>"$tmp/mouth-hermetic.err")"
+rc=$?
+set -e
+unset GIT_DIR GIT_INDEX_FILE
+
+if [ "$rc" -eq 0 ]; then
+    ok "a bogus GIT_DIR/GIT_INDEX_FILE does not redirect the mouth to a different repository"
+else
+    bad "expected exit 0 despite a bogus GIT_DIR, got $rc (stderr: $(cat "$tmp/mouth-hermetic.err"))"
+fi
+if printf '%s\n' "$hermetic_out" | grep -q "ADMIT campaign/clean $CLEAN"; then
+    ok "the admit message is unaffected by the bogus GIT_DIR"
+else
+    bad "admit message missing/wrong under a bogus GIT_DIR: '$hermetic_out'"
+fi
+
+echo "== mouth: a 40-char ref with a non-hex character is rejected (not just the first char)"
+# The brief's `case "$sha" in [0-9a-f]*)` only anchored the FIRST character,
+# so a 40-char string beginning with a hex digit but containing a non-hex
+# character elsewhere (a 'g', say) passed through. Task 2 settled that
+# identifiers are validated strictly, not stripped (sluice-queue.sh's
+# validate_sha); sluice-mouth.sh's SHA check is now the same shape.
+BAD_SHA="0123456789abcdef0123456789abcdefg1234567"  # 40 chars, one 'g'
+if [ "${#BAD_SHA}" -eq 40 ]; then
+    ok "test setup: BAD_SHA is exactly 40 characters"
+else
+    bad "test setup broken: BAD_SHA is ${#BAD_SHA} characters, not 40"
+fi
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/clean "$BAD_SHA" >/dev/null 2>"$tmp/mouth-badsha.err"
+rc=$?
+set -e
+if [ "$rc" -eq 2 ]; then
+    ok "a 40-char ref with an embedded non-hex character is rejected (exit 2)"
+else
+    bad "expected exit 2 for a 40-char non-hex ref, got $rc"
+fi
+if grep -qi 'hex' "$tmp/mouth-badsha.err"; then
+    ok "the rejection reason names the hex requirement"
+else
+    bad "no hex-related reason found in stderr"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

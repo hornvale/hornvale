@@ -19,6 +19,24 @@
 # resolve is an infrastructure fault the campaign did not cause. So the base
 # ref is resolved and verified ONCE, before either git call that depends on
 # it, and a failure there exits 2 — never 1.
+#
+# EXIT 4 (out-of-band) OUTRANKS EXIT 3 (already merged) when both conditions
+# hold at once — see the out-of-band check below, which runs BEFORE the
+# ancestor check for exactly this reason: an out-of-band landing means the
+# queue's inductive guarantee is broken, full stop, whether or not THIS
+# particular candidate happens to already be included. Returning 3 in that
+# case would read as "nothing to do" and let a caller silently skip past a
+# broken invariant that may still be hiding an unmerged candidate behind the
+# same base movement — a human must see it regardless.
+#
+# HERMETICITY: git exports GIT_DIR and GIT_INDEX_FILE to hooks, and they
+# OUTRANK cwd/`-C` — from a linked worktree (where all campaign work
+# happens) they are absolute paths into a DIFFERENT repository
+# (scripts/CLAUDE.md's board incident: an unscrubbed `git -C <tempdir>`
+# re-initialised a developer's real checkout as bare). This script is
+# invoked by other machinery, so every git call below is scrubbed with
+# `env -u GIT_DIR -u GIT_INDEX_FILE`, the same discipline
+# scripts/sluice-queue.sh:58,121 uses for its own git calls.
 set -euo pipefail
 branch="${1:?usage: sluice-mouth.sh <branch> <sha>}"
 sha="${2:?usage: sluice-mouth.sh <branch> <sha>}"
@@ -26,19 +44,23 @@ sha="${2:?usage: sluice-mouth.sh <branch> <sha>}"
 HV_SLUICE_DIR="${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}"
 last_pushed_file="$HV_SLUICE_DIR/last-pushed"
 
-git rev-parse --verify --quiet "$sha^{commit}" >/dev/null \
-    || { echo "sluice-mouth: '$sha' is not a commit in this repository" >&2; exit 2; }
-
+# Format first, existence second: shape validation is free (no git call) and
+# gives a more specific reason than "not a commit" when a caller passes
+# something that could never be a real SHA regardless of repository state.
 # A full 40-char SHA, for the reason lane-dispatch.sh gives: a ref feeds
 # checkout/reset on the far end and can land on a stale local branch of that
-# name.
+# name. Every character must be hex, not just the first — the same shape
+# sluice-queue.sh's validate_sha rejects, tightened to an exact 40 here.
 case "$sha" in
-    [0-9a-f]*) [ "${#sha}" -eq 40 ] || { echo "sluice-mouth: REF must be a full 40-char SHA; got '$sha'" >&2; exit 2; } ;;
-    *) echo "sluice-mouth: REF must be a full 40-char SHA; got '$sha'" >&2; exit 2 ;;
+    *[!0-9a-f]*|"") echo "sluice-mouth: REF must be a full 40-char SHA (hex only); got '$sha'" >&2; exit 2 ;;
 esac
+[ "${#sha}" -eq 40 ] || { echo "sluice-mouth: REF must be a full 40-char SHA; got '$sha'" >&2; exit 2; }
+
+env -u GIT_DIR -u GIT_INDEX_FILE git rev-parse --verify --quiet "$sha^{commit}" >/dev/null \
+    || { echo "sluice-mouth: '$sha' is not a commit in this repository" >&2; exit 2; }
 
 if [ -z "${HV_SLUICE_ALLOW_UNPUSHED:-}" ]; then
-    if [ -z "$(git branch -r --contains "$sha" 2>/dev/null)" ]; then
+    if [ -z "$(env -u GIT_DIR -u GIT_INDEX_FILE git branch -r --contains "$sha" 2>/dev/null)" ]; then
         echo "sluice-mouth: $sha is not on any remote branch — push first." >&2
         exit 2
     fi
@@ -50,7 +72,7 @@ base="${HV_SLUICE_BASE:-origin/main}"
 # (the out-of-band check below, the ancestor check, and merge-tree itself).
 # A base that does not resolve is an infrastructure fault, not a property of
 # the candidate — see the header note.
-if ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
+if ! env -u GIT_DIR -u GIT_INDEX_FILE git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
     echo "sluice-mouth: base ref '$base' does not resolve to a commit — cannot evaluate this candidate." >&2
     echo "  this is an infrastructure fault, not a conflict in $sha." >&2
     exit 2
@@ -59,10 +81,11 @@ fi
 # An out-of-band landing breaks the queue's inductive guarantee: each merge
 # builds on an already-proven main, so anything that lands another way makes
 # every later green weaker than it advertises. Detect it loudly; never resume
-# quietly.
+# quietly. Runs BEFORE the ancestor check on purpose — see the header note on
+# the 3-vs-4 ordering.
 if [ -f "$last_pushed_file" ]; then
     expected="$(cat "$last_pushed_file")"
-    actual="$(git rev-parse "$base")"
+    actual="$(env -u GIT_DIR -u GIT_INDEX_FILE git rev-parse "$base")"
     if [ "$expected" != "$actual" ]; then
         echo "sluice-mouth: OUT-OF-BAND LANDING on $base." >&2
         echo "  the queue last pushed: $expected" >&2
@@ -73,12 +96,12 @@ if [ -f "$last_pushed_file" ]; then
     fi
 fi
 
-if git merge-base --is-ancestor "$sha" "$base" 2>/dev/null; then
+if env -u GIT_DIR -u GIT_INDEX_FILE git merge-base --is-ancestor "$sha" "$base" 2>/dev/null; then
     echo "sluice-mouth: $sha is already an ancestor of $base — nothing to merge." >&2
     exit 3
 fi
 
-if ! out="$(git merge-tree --write-tree --name-only "$base" "$sha" 2>&1)"; then
+if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-only "$base" "$sha" 2>&1)"; then
     echo "sluice-mouth: MERGE CONFLICT between $base and $sha." >&2
     # Line 1 is the tree SHA; the conflicting paths follow, then a blank line
     # and git's own informational messages.
@@ -86,6 +109,7 @@ if ! out="$(git merge-tree --write-tree --name-only "$base" "$sha" 2>&1)"; then
     exit 1
 fi
 
-behind="$(git rev-list --count "$(git merge-base "$base" "$sha")".."$base")"
+merge_base_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-base "$base" "$sha")"
+behind="$(env -u GIT_DIR -u GIT_INDEX_FILE git rev-list --count "$merge_base_sha".."$base")"
 echo "sluice-mouth: ADMIT $branch $sha (merge base is $behind commits behind $base)"
 exit 0
