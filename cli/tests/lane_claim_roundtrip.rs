@@ -66,6 +66,7 @@ fn every_claim_writer_emits_every_required_field() {
         "scripts/lane-run.sh",
         "scripts/census-run.sh",
         "scripts/heavy-run.sh",
+        "scripts/sluice-run.sh",
     ] {
         let keys = claim_keys_written_by(script);
         let missing: Vec<&str> = REQUIRED

@@ -518,5 +518,299 @@ else
     bad "no hex-related reason found in stderr"
 fi
 
+echo "== chamber: setup =="
+# scripts/sluice-run.sh is a full standalone entry point (its own worktree,
+# its own claim, its own merge), not a library sourced with mocked
+# variables the way test-lane.sh extracts lane-run.sh's tail. So it is run
+# for real here, against a THROWAWAY scratch repo (HV_SLUICE_REPO_ROOT) that
+# stands in for this one — never against $scratch above (the queue/mouth
+# repo) or $root itself, so a chamber test can never fetch this repo's real
+# origin/main or register a worktree in its real registry.
+chamber_repo="$tmp/chamber-repo"
+mkdir -p "$chamber_repo"
+(
+    cd "$chamber_repo"
+    g init -q -b main .
+    g config user.email t@t; g config user.name t
+    printf 'root\n' > tracked.txt
+    g add tracked.txt
+    g commit -qm root
+)
+CHAMBER_MAIN="$(g -C "$chamber_repo" rev-parse main)"
+# Fakes a pushed `origin/main` without a real remote: sluice-run.sh resolves
+# its base via `git rev-parse origin/main` (or HV_SLUICE_BASE), and a
+# remote-tracking ref under refs/remotes/ satisfies that regardless of
+# whether an `origin` remote is actually configured.
+g -C "$chamber_repo" update-ref refs/remotes/origin/main "$CHAMBER_MAIN"
+
+# The chamber sources scripts/census-canonical-host.sh and invokes
+# scripts/timed.sh from `$repo_root/scripts/`, both resolved relative to
+# HV_SLUICE_REPO_ROOT — so the scratch repo needs its own copies. This is
+# the one place a chamber test depends on real repo content; both files are
+# already read-only inputs to every other lane test in this repo.
+mkdir -p "$chamber_repo/scripts"
+cp "$repo_root/scripts/census-canonical-host.sh" "$chamber_repo/scripts/census-canonical-host.sh"
+cp "$repo_root/scripts/timed.sh" "$chamber_repo/scripts/timed.sh"
+
+chamber_host_file="$tmp/chamber-host.txt"
+printf '%s\n' "$(hostname -s)" > "$chamber_host_file"
+
+# $1 = branch name, $2 = filename to add. Each topic branch touches its own
+# new file so every merge in every scenario below is trivially conflict-free
+# — conflict handling is sluice-mouth.sh's job (Task 3), not the chamber's;
+# the chamber assumes admission already happened.
+new_topic_branch() {
+    g -C "$chamber_repo" checkout -q -b "$1" main
+    printf 'x\n' > "$chamber_repo/$2"
+    g -C "$chamber_repo" add "$2"
+    g -C "$chamber_repo" commit -qm "topic: $1"
+    g -C "$chamber_repo" rev-parse "$1"
+}
+
+poll_for_file() {
+    local f="$1" tries="${2:-50}" i=0
+    while [ "$i" -lt "$tries" ]; do
+        [ -e "$f" ] && return 0
+        sleep 0.1
+        i=$((i+1))
+    done
+    return 1
+}
+
+export HV_SLUICE_DIR="$tmp/state"; mkdir -p "$HV_SLUICE_DIR"
+export HV_SLUICE_REPO_ROOT="$chamber_repo"
+export HV_CANONICAL_HOST_FILE="$chamber_host_file"
+export HV_CENSUS_LOCK="$tmp/chamber.lock"
+
+echo "== chamber: phases run in the declared order, the tree is cleaned between phases, and the claim is the eight-field shape while held =="
+lane_sets_1="$tmp/lane-sets-1.tsv"
+TRACKLOG_1="$tmp/tracklog-1"; : > "$TRACKLOG_1"
+CLEANMARKER_1="$tmp/cleanmarker-1"; : > "$CLEANMARKER_1"
+
+cat > "$tmp/phase-a.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo A >> "$TRACKLOG_1"
+echo residue > untracked-from-a.txt
+sleep 1
+SH
+cat > "$tmp/phase-b.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo B >> "$TRACKLOG_1"
+if [ -e untracked-from-a.txt ]; then
+    echo DIRTY >> "$CLEANMARKER_1"
+else
+    echo CLEAN >> "$CLEANMARKER_1"
+fi
+SH
+cat > "$tmp/phase-c.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo C >> "$TRACKLOG_1"
+SH
+chmod +x "$tmp/phase-a.sh" "$tmp/phase-b.sh" "$tmp/phase-c.sh"
+{
+    printf 'a\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-a.sh"
+    printf 'b\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-b.sh"
+    printf 'c\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-c.sh"
+} > "$lane_sets_1"
+
+sha1="$(new_topic_branch campaign/t1 topic1.txt)"
+wt1="$tmp/wt1"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_1"
+export HV_SLUICE_PHASES="a b c"
+export HV_SLUICE_WORKTREE="$wt1"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim1"
+export TRACKLOG_1 CLEANMARKER_1
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+bash "$repo_root/scripts/sluice-run.sh" campaign/t1 "$sha1" > "$tmp/run1.out" 2>&1 &
+run1_pid=$!
+
+if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
+    ok "the claim file appears while the chamber holds the staff"
+    missing=0
+    for k in pid host user started goldens label ref cmdline; do
+        grep -q "^${k}=" "$HV_CENSUS_CLAIM_PATH" || missing=$((missing+1))
+    done
+    if [ "$missing" -eq 0 ]; then
+        ok "the claim carries all eight required keys while held (Task 0's shape)"
+    else
+        bad "the claim is missing $missing of the eight required keys"
+    fi
+else
+    bad "the claim file never appeared — cannot verify its shape while held"
+fi
+
+if wait "$run1_pid"; then rc1=0; else rc1=$?; fi
+
+if [ "$rc1" -eq 0 ]; then
+    ok "the three-phase run exits 0"
+else
+    bad "expected rc 0, got $rc1 ($(cat "$tmp/run1.out"))"
+fi
+if [ "$(tr '\n' ' ' < "$TRACKLOG_1")" = "A B C " ]; then
+    ok "phases ran in the declared order (A, B, C)"
+else
+    bad "phases ran out of order: $(tr '\n' ' ' < "$TRACKLOG_1")"
+fi
+if [ "$(cat "$CLEANMARKER_1")" = "CLEAN" ]; then
+    ok "git clean -fd between phases removed phase a's untracked residue before phase b ran"
+else
+    bad "phase b saw phase a's untracked residue: marker=$(cat "$CLEANMARKER_1")"
+fi
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "the claim is removed after a normal (rc=0) exit"
+else
+    bad "the claim survived a normal exit"
+fi
+
+echo "== chamber: an authoring phase's drift is committed on the canonical host =="
+lane_sets_2="$tmp/lane-sets-2.tsv"
+cat > "$tmp/phase-d.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo authored >> tracked.txt
+SH
+chmod +x "$tmp/phase-d.sh"
+printf 'd\tcommit\tlocal\tyes\tbash %s\n' "$tmp/phase-d.sh" > "$lane_sets_2"
+
+sha2="$(new_topic_branch campaign/t2 topic2.txt)"
+wt2="$tmp/wt2"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_2"
+export HV_SLUICE_PHASES="d"
+export HV_SLUICE_WORKTREE="$wt2"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim2"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-run.sh" campaign/t2 "$sha2" > "$tmp/run2.out" 2>&1
+rc2=$?
+set -e
+
+if [ "$rc2" -eq 0 ]; then
+    ok "the authoring-phase run exits 0"
+else
+    bad "expected rc 0, got $rc2 ($(cat "$tmp/run2.out"))"
+fi
+subject2="$(g -C "$wt2" log -1 --format=%s)"
+if [ "$subject2" = "chore(artifacts): regenerate after d" ]; then
+    ok "an authoring phase's drift is committed with the expected subject"
+else
+    bad "unexpected HEAD subject after phase d: '$subject2'"
+fi
+if [ -z "$(g -C "$wt2" status --porcelain)" ]; then
+    ok "the tree is clean after the authoring commit"
+else
+    bad "the tree is dirty after phase d's commit"
+fi
+if g -C "$wt2" show HEAD:tracked.txt | grep -q authored; then
+    ok "the authored content reached the committed file"
+else
+    bad "tracked.txt's committed content does not contain phase d's write"
+fi
+
+echo "== chamber: the first failing phase stops the run before a later phase executes =="
+lane_sets_3="$tmp/lane-sets-3.tsv"
+TRACKLOG_3="$tmp/tracklog-3"; : > "$TRACKLOG_3"
+cat > "$tmp/phase-e.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo E >> "$TRACKLOG_3"
+SH
+cat > "$tmp/phase-f.sh" <<'SH'
+#!/usr/bin/env bash
+echo F >> "$TRACKLOG_3"
+exit 1
+SH
+cat > "$tmp/phase-g.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo G >> "$TRACKLOG_3"
+SH
+chmod +x "$tmp/phase-e.sh" "$tmp/phase-f.sh" "$tmp/phase-g.sh"
+{
+    printf 'e\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-e.sh"
+    printf 'f\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-f.sh"
+    printf 'g\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-g.sh"
+} > "$lane_sets_3"
+
+sha3="$(new_topic_branch campaign/t3 topic3.txt)"
+wt3="$tmp/wt3"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_3"
+export HV_SLUICE_PHASES="e f g"
+export HV_SLUICE_WORKTREE="$wt3"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim3"
+export TRACKLOG_3
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-run.sh" campaign/t3 "$sha3" > "$tmp/run3.out" 2>&1
+rc3=$?
+set -e
+
+if [ "$rc3" -eq 11 ]; then
+    ok "a failing phase exits 11"
+else
+    bad "expected rc 11, got $rc3 ($(cat "$tmp/run3.out"))"
+fi
+seen3="$(tr '\n' ' ' < "$TRACKLOG_3")"
+if [ "$seen3" = "E F " ]; then
+    ok "the run stopped after the failing phase — the later phase never ran"
+else
+    bad "unexpected phase trace: $seen3"
+fi
+failed_col="$(awk -F'\t' -v j="sluice-${sha3:0:12}" '$0 ~ j {print $8}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+if [ "$failed_col" = "f" ]; then
+    ok "jobs.tsv records phase f as the one that failed"
+else
+    bad "jobs.tsv phase_failed column is '$failed_col', expected 'f'"
+fi
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "the claim is removed after a phase-failure exit too"
+else
+    bad "the claim survived a phase-failure exit"
+fi
+
+echo "== chamber: the claim is removed even when the chamber is killed mid-phase =="
+lane_sets_4="$tmp/lane-sets-4.tsv"
+cat > "$tmp/phase-slow.sh" <<'SH'
+#!/usr/bin/env bash
+sleep 10
+SH
+chmod +x "$tmp/phase-slow.sh"
+printf 'slow\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-slow.sh" > "$lane_sets_4"
+
+sha4="$(new_topic_branch campaign/t4 topic4.txt)"
+wt4="$tmp/wt4"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_4"
+export HV_SLUICE_PHASES="slow"
+export HV_SLUICE_WORKTREE="$wt4"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim4"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+bash "$repo_root/scripts/sluice-run.sh" campaign/t4 "$sha4" > "$tmp/run4.out" 2>&1 &
+run4_pid=$!
+
+if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
+    ok "the claim appears before the slow phase completes"
+else
+    bad "the claim never appeared — cannot test signal cleanup"
+fi
+
+kill -TERM "$run4_pid" 2>/dev/null || true
+wait "$run4_pid" 2>/dev/null || true
+
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "the claim is removed after the chamber is killed with SIGTERM mid-phase"
+else
+    bad "the claim survived a SIGTERM kill mid-phase"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
