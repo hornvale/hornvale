@@ -458,7 +458,7 @@ fn raiders_and_abstainers(wc: &WorldComponents) -> (Vec<KindId>, Vec<KindId>) {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, abstainers) = raiders_and_abstainers(&wc);
@@ -732,7 +732,7 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// which term moved: "drow re-seated less often" and "drow was flagship-less
 /// on more worlds" are different facts, and only the first is the finding.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let tally = reselection_rates(&wc);

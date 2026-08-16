@@ -1288,7 +1288,7 @@ mod tests {
 
     /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,99,2026]
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn no_land_cell_bands_as_marine_relief_across_seeds() {
         for seed in [1u64, 7, 42, 99, 2026] {
             let w = build_world(

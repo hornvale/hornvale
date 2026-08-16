@@ -74,14 +74,41 @@ use std::path::{Path, PathBuf};
 /// sub-linear, nothing to fix.
 ///
 /// **So ~51% of the regression is optimisable** and the fix is contained to two
-/// functions (a `children`/`depth` map built once). That metric is 19.2% of the
-/// whole sweep, so even a 5x recovery returns ~150 s against the +97 s the
-/// regression cost — putting the census *below* where it started.
+/// functions. That metric is 19.2% of the whole sweep, so even a 5x recovery
+/// returns ~150 s against the +97 s the regression cost — putting the census
+/// *below* where it started.
 ///
-/// **The expiry.** When that fix lands, ratchet this back to 900. If it lands
-/// and the census is still over 900, that is a finding: the remaining ~49% is
-/// inherent epoch cost and the policy number needs re-deciding on evidence, not
-/// another raise.
+/// **THE FIX HAS LANDED (The Begat), AND THE FORM PROJECTED ABOVE WAS HALF
+/// UNSAFE.** This paragraph used to prescribe "a `children`/`depth` map built
+/// once". The children map is right; a global DEPTH map is not. `ancestry`
+/// carries a cycle guard, and depth is undefined on a cycle, so a depth map
+/// would have diverged silently in exactly the case the guard exists for —
+/// a faster metric with a different value, which is a save-format-class event
+/// rather than a speedup. What shipped instead is a hop-carrying downward walk
+/// over the children map, equivalent whether or not the data is acyclic:
+/// each node has at most one parent, so `ancestry`'s break-on-repeat makes
+/// "`of` is in `k`'s ancestry" exactly "`k` is reachable downward from `of`",
+/// and seeding the visited set with `of` blocks the one longer route (around a
+/// cycle through `of` itself). `windows/hearsay/tests/lineage.rs` keeps the old
+/// implementation as an oracle and asserts the equivalence on cyclic input.
+/// So establishing whether cycles can occur was never needed — the equivalence
+/// does not depend on it.
+///
+/// Measured on a 40-world panel, 3 interleaved reps, differenced against a
+/// control study building the same worlds: the metric fell from **1.708
+/// CPU-s/world to below that panel's noise floor** (hot minus control, −0.09
+/// CPU-s over 40 worlds — a bound, not a resolved figure), with the control
+/// unmoved at 91.66 → 91.65 CPU-s. That is a Mac reading on a 40-seed panel and
+/// is deliberately NOT offered as a prediction of the census number.
+///
+/// **The expiry, unchanged and still open.** The constant below is still 1050
+/// because the ratchet is settled by a census reading on the canonical box
+/// after the fix lands, not by the measurement above — the latest census row is
+/// still the pre-fix 979.539 s, so ratcheting today would simply redden this.
+/// When a post-fix census row exists: under 900, ratchet to 900 and cite the
+/// row; still over 900, that is a finding — the remaining ~49% is inherent
+/// epoch cost and the policy number needs re-deciding on evidence, not another
+/// raise.
 ///
 /// **Do not raise this number again to make a red go away.** The first version
 /// of this doc said "do not raise this number" flatly; that was right in spirit

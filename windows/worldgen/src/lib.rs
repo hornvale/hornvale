@@ -11072,7 +11072,7 @@ mod tests {
     /// claim: structural(seed: [7,42,1000]) — byte-identity between build_world
     /// and the pre-assembled-components entry point
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn build_world_from_assembled_components_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();

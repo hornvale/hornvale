@@ -481,7 +481,7 @@ fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(CellId, f64, f64)>) {
 /// claim: readout(preregistered) — off-gate (heavy:); own name states the
 /// shape
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_mires_preregistered_readout() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let min_conductance = default_min_conductance();

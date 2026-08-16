@@ -1,5 +1,5 @@
-//! Hand-built ledgers for the hearsay tests. A world build at Settlements
-//! depth is minutes; these are milliseconds and pin the shape exactly.
+//! Hand-built ledgers for the hearsay tests: these are milliseconds and pin
+//! the shape exactly.
 //!
 //! Shared by all three test files (Tasks 4 and 5 declare `mod common;` rather
 //! than copying it); not every helper is used by every consuming test
@@ -48,6 +48,28 @@ pub fn ledger_with(chain: &[(u64, Option<u64>)]) -> Ledger {
 pub fn put(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
     let mut reg = ConceptRegistry::default();
     reg.register_predicate(predicate, true, "test predicate")
+        .expect("register");
+    led.commit(
+        Fact {
+            subject: eid(subject),
+            predicate: predicate.to_string(),
+            object,
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        },
+        &reg,
+    )
+    .expect("commit");
+}
+
+/// Commit one extra fact onto an existing ledger, registering its predicate
+/// as NON-FUNCTIONAL — unlike [`put`], which registers functional. Several
+/// facts (e.g. one `moon-period-std` per moon) can then land on one subject
+/// without the registry rejecting the second as a contradiction.
+pub fn put_on(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
+    let mut reg = ConceptRegistry::default();
+    reg.register_predicate(predicate, false, "test predicate")
         .expect("register");
     led.commit(
         Fact {

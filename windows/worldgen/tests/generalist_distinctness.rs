@@ -547,7 +547,7 @@ fn substituting_goblins_niche_for_humans_is_detected() {
 /// Tracked as `BIO-gause-distinctness-vacuous`. The repair is a statistic
 /// with power against this world, not a lower floor.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
     let ratios = cv_ratios(&[
         None,

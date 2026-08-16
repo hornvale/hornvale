@@ -79,7 +79,7 @@ const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
 /// comparison is unreachable from the census, because `History::tally` is
 /// discarded after `emit_history` and a metric holds only a `World`.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn is_the_raid_proxy_ambiguous_or_is_its_population_stale() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

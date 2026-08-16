@@ -8,11 +8,16 @@ description = "Hornvale hearsay window: derive held claims from committed histor
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
 hornvale-history = { path = "../../domains/history" }
+# The precision ladder (Task 2b) reads this world's own cycles — fact
+# predicates and `StdDays` — from committed sky facts. That is presentation,
+# not composition, so it belongs in `[dependencies]` beside history rather
+# than dev-only: `cli/tests/architecture.rs` permits a window depending on a
+# domain.
+hornvale-astronomy = { path = "../../domains/astronomy" }
 
 # Task 6's heavy battery builds a real world. These are DEV-only on purpose:
 # the library reads a ledger and nothing else, and a read-only window must not
 # depend on the composition root at runtime.
 [dev-dependencies]
 hornvale-worldgen = { path = "../worldgen" }
-hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
