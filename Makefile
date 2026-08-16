@@ -98,7 +98,9 @@ style-run: fmt-check clippy type-audit type-audit-report
 #       never hides a failure.
 #   2730 - 3 + 19 = 2746, which is exactly what this target runs.
 subfloor-run: nextest-check
-	@filter="$$(bash scripts/subfloor-roster.sh)"; \
+	@tmp_filter="$$(mktemp)"; \
+	trap 'rm -f "$$tmp_filter"' EXIT; \
+	bash scripts/subfloor-roster.sh > "$$tmp_filter"; \
 	status=$$?; \
 	if [ $$status -eq 3 ]; then \
 	    echo "gate-commit: no sub-floor roster for this host — the test tier is UNAVAILABLE, not empty." >&2; \
@@ -109,11 +111,11 @@ subfloor-run: nextest-check
 	    echo "gate-commit: read its stderr above; this is a script fault, not a policy verdict." >&2; \
 	    exit 1; \
 	fi; \
-	if [ -z "$$filter" ]; then \
+	if [ ! -s "$$tmp_filter" ]; then \
 	    echo "gate-commit: the roster is EMPTY. That is never correct — it would make this gate vacuous." >&2; \
 	    exit 1; \
 	fi; \
-	cargo nextest run --workspace -E "$$filter"
+	bash scripts/subfloor-run-chunked.sh "$$tmp_filter"
 
 gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the lane (REF=<full-sha>)
 	@bash scripts/lane-dispatch.sh gate "$(REF)"
