@@ -448,9 +448,9 @@ fn run_drives_a_script_deterministically() {
     assert!(text.contains("in the lands of"));
 }
 
-/// The room prints "Ways on: SE, N, SW." — every one of those tokens must be
-/// a command you can actually type. This is the exact bug: the parser already
-/// accepted them, but the verb dispatch never reached it.
+/// The room says "the nearest ground lies SE, N, SW." — every one of those
+/// tokens must be a command you can actually type. This is the exact bug:
+/// the parser already accepted them, but the verb dispatch never reached it.
 #[test]
 fn every_printed_way_out_is_a_command_you_can_type() {
     let world = seam_world();
@@ -461,11 +461,13 @@ fn every_printed_way_out_is_a_command_you_can_type() {
     };
     let line = ways
         .lines()
-        .find(|l| l.starts_with("Ways on:"))
-        .expect("a room lists its ways out")
+        .find(|l| l.contains("the nearest ground lies"))
+        .expect("a room names its nearest ground")
         .to_string();
     let tokens: Vec<String> = line
-        .trim_start_matches("Ways on:")
+        .split("lies ")
+        .nth(1)
+        .expect("the sentence names a bearing list")
         .trim_end_matches('.')
         .split(',')
         .map(|t| t.trim().to_lowercase())
@@ -525,11 +527,12 @@ fn the_sky_follows_the_walker() {
         if let Some(l) = out.lines().find(|l| l.contains("The sky is")) {
             skies.insert(l.to_string());
         }
-        // Follow whatever exit this room actually offers.
+        // Follow whatever ground this room actually names.
         let dir = out
             .lines()
-            .find(|l| l.starts_with("Ways on:"))
-            .and_then(|l| l.trim_start_matches("Ways on:").split(',').next())
+            .find(|l| l.contains("the nearest ground lies"))
+            .and_then(|l| l.split("lies ").nth(1))
+            .and_then(|l| l.split(',').next())
             .map(|d| d.trim().trim_end_matches('.').to_lowercase());
         if let Some(d) = dir {
             s.handle(&d);
@@ -597,8 +600,9 @@ fn a_bare_direction_indoors_is_refused_exactly_as_go_is() {
         };
         let dir = out
             .lines()
-            .find(|l| l.starts_with("Ways on:"))
-            .and_then(|l| l.trim_start_matches("Ways on:").split(',').next())
+            .find(|l| l.contains("the nearest ground lies"))
+            .and_then(|l| l.split("lies ").nth(1))
+            .and_then(|l| l.split(',').next())
             .map(|d| d.trim().trim_end_matches('.').to_lowercase());
         match dir {
             Some(d) if !d.is_empty() => {
@@ -682,8 +686,8 @@ fn the_water_column_is_a_place_you_can_be() {
     // testing for, which is worse than the red.
     let lateral_dir = afloat
         .lines()
-        .find(|l| l.starts_with("Ways on"))
-        .and_then(|l| l.trim_end_matches('.').split(": ").nth(1))
+        .find(|l| l.contains("the nearest ground lies"))
+        .and_then(|l| l.trim_end_matches('.').split("lies ").nth(1))
         .and_then(|w| w.split(", ").next())
         .expect("open water reports its ways")
         .to_lowercase();

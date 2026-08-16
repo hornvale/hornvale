@@ -20,7 +20,7 @@
 use hornvale_kernel::{GeoCoord, RoomAddr, math, quantize};
 use hornvale_locale::Compass;
 use hornvale_vessel::course::{bearing_of, nearest_neighbour, rhumb_advance, step_length_rad};
-use hornvale_vessel::{PossessOpts, Session};
+use hornvale_vessel::{PossessOpts, Session, Turn};
 
 mod common;
 
@@ -486,4 +486,38 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
          attractor the control above measures",
         seen.len()
     );
+}
+
+/// Every compass point moves the possession, from any walk-band cell.
+/// There is no lateral passability model: `go` checks nothing about the
+/// destination's biome or water, and `exits_of` filters nothing, so a
+/// marine room is as walkable as any other. Task 1 confirmed this by
+/// reading `go` and by a 300,000-room walk that never met a refusal it
+/// did not cause itself.
+///
+/// FIRES WHEN: someone adds a passability check without a decision record.
+#[test]
+fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
+    let world = common::build(42).expect("seed 42 builds");
+    // Walk a path, and at each cell along it start a FRESH session, replay
+    // the path, and try all eight. `Session` is not `Clone` and must not be
+    // made so — it carries caches whose duplication is a real cost — so the
+    // probe re-walks rather than forks.
+    for cells in 0..8usize {
+        for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            for _ in 0..cells {
+                s.handle("go e");
+            }
+            let text = match s.handle(&format!("go {dir}")) {
+                Turn::Out(t) => t,
+                Turn::Released(t) => panic!("go {dir} released the possession: {t}"),
+            };
+            assert!(
+                !text.contains("No way"),
+                "after {cells} steps east, go {dir} refused: {text}"
+            );
+        }
+    }
 }

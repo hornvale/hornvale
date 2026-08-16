@@ -1365,10 +1365,13 @@ impl<'w> Session<'w> {
             ),
             "help" => Turn::Out(HELP.to_string()),
             "release" | "quit" => Turn::Released("You let go.".to_string()),
-            // A bare compass token IS a movement command. The room prints
-            // "Ways on: SE, N, SW." and every one of those tokens must be
-            // typeable; `parse_compass` already accepted them, and only this
-            // dispatch arm was missing.
+            // A bare compass token IS a movement command. The room names the
+            // three nearest bearings — "the nearest ground lies SE, N, SW" —
+            // and every one of those tokens must be typeable; `parse_compass`
+            // already accepted them, and only this dispatch arm was missing.
+            // (The Rhumb: those three no longer bound what `go` accepts, but
+            // they are still real destinations the prose promises, so the
+            // invariant they were written to satisfy is unchanged.)
             //
             // It carries `go`'s own band guards, and must: this arm dispatches
             // to `self.go` directly, so without them repeated here a bare `n`
@@ -1669,7 +1672,7 @@ impl<'w> Session<'w> {
             })
             .collect();
         Ok(format!(
-            "[room {}, day {}]\n{}\nWays on: {}.",
+            "[room {}, day {}]\n{}\nNo direction here is closed; the nearest ground lies {}.",
             v.locale.id,
             self.day.day(),
             f.prose,
@@ -1727,6 +1730,8 @@ impl<'w> Session<'w> {
             return Turn::Out("You have not walked anywhere yet.".to_string());
         };
         self.agent.position = prev;
+        // A retrace is not a continuation of any heading.
+        self.course = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -3752,9 +3757,10 @@ fn bearing_word(c: Compass) -> &'static str {
     }
 }
 
-/// A bearing abbreviated, for a list: `N`. The SAME spelling the locale's own
-/// `Ways on:` footer uses (`describe_here` uppercases the debug name), so one
-/// player habit reads both bands.
+/// A bearing abbreviated, for a list: `N`. The SAME spelling the outdoor
+/// nearest-ground sentence uses (`describe_here` uppercases the debug name)
+/// and the indoor `Ways on:` footer below uses too, so one player habit
+/// reads both bands.
 fn bearing_letter(c: Compass) -> String {
     format!("{c:?}").to_uppercase()
 }
@@ -3825,6 +3831,19 @@ mod tests {
             assert!(!text.contains("No way"), "go {dir} refused with: {text}");
             assert_ne!(s.agent.position, before, "go {dir} did not move");
         }
+    }
+
+    /// `back` clears the course, so a subsequent `go e` starts fresh rather
+    /// than continuing a reckoning from before the retrace.
+    #[test]
+    fn back_clears_the_course() {
+        let world = world_at(42).expect("seed 42 builds");
+        let (mut s, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        s.handle("go e");
+        assert!(s.course().is_some());
+        s.handle("back");
+        assert!(s.course().is_none(), "back left a stale course");
     }
 
     /// The XOR applied to `Inside::seed` by
