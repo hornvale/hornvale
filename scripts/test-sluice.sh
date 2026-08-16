@@ -534,6 +534,17 @@ mkdir -p "$chamber_repo"
     g config user.email t@t; g config user.name t
     printf 'root\n' > tracked.txt
     g add tracked.txt
+    # A TRACKED docs/timings.md, matching production (docs/timings.md is a
+    # committed file in the real repo). scripts/timed.sh appends a row to
+    # this file on EVERY phase, regardless of what the phase itself does —
+    # in a scratch repo where this path is untracked, `git clean -fd`
+    # silently removes that row and the fix round 1 Critical 1 bug (a
+    # non-authoring phase's tracked drift poisoning the next phase's tree)
+    # is invisible. Production always has this file tracked, so the test
+    # path must too.
+    mkdir -p docs
+    printf '# timings\n' > docs/timings.md
+    g add docs/timings.md
     g commit -qm root
 )
 CHAMBER_MAIN="$(g -C "$chamber_repo" rev-parse main)"
@@ -576,6 +587,9 @@ poll_for_file() {
     done
     return 1
 }
+
+# True iff pid $1 names a live process (kill -0 without actually signalling).
+pid_alive() { kill -0 "$1" 2>/dev/null; }
 
 export HV_SLUICE_DIR="$tmp/state"; mkdir -p "$HV_SLUICE_DIR"
 export HV_SLUICE_REPO_ROOT="$chamber_repo"
@@ -667,6 +681,80 @@ else
     bad "the claim survived a normal exit"
 fi
 
+echo "== chamber: a non-authoring phase's TRACKED drift does not poison the next phase's tree (fix round 1, Critical 1) =="
+# Reproduces the exact reported mechanism: scripts/timed.sh appends a row to
+# the TRACKED docs/timings.md on every phase, regardless of what the phase
+# itself does or whether the roster marks it `authors=yes`. `git clean -fd`
+# only removes UNTRACKED files, so that tracked modification used to survive
+# into the next phase — and a phase checking `git status --porcelain` is
+# empty (exactly what seam-guard's own `tree_is_clean()` does) would see it
+# and refuse. Phase "gate" here does nothing OF ITS OWN beyond `true` — the
+# dirt comes entirely from scripts/timed.sh's own write, proving the bug is
+# in the chamber's between-phase handling, not in anything a phase authors
+# itself.
+lane_sets_c1="$tmp/lane-sets-c1.tsv"
+seamguard_marker="$tmp/seamguard-marker"; : > "$seamguard_marker"
+cat > "$tmp/phase-gate.sh" <<'SH'
+#!/usr/bin/env bash
+true
+SH
+cat > "$tmp/phase-seamguard.sh" <<'SH'
+#!/usr/bin/env bash
+if [ -z "$(git status --porcelain)" ]; then
+    echo CLEAN >> "$SEAMGUARD_MARKER"
+    exit 0
+else
+    echo DIRTY >> "$SEAMGUARD_MARKER"
+    exit 1
+fi
+SH
+chmod +x "$tmp/phase-gate.sh" "$tmp/phase-seamguard.sh"
+{
+    printf 'gate\tstage\tlane\tno\tbash %s\n' "$tmp/phase-gate.sh"
+    printf 'seamguard\tcampaign\tlane\tno\tbash %s\n' "$tmp/phase-seamguard.sh"
+} > "$lane_sets_c1"
+
+shac1="$(new_topic_branch campaign/c1 topicc1.txt)"
+wtc1="$tmp/wtc1"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_c1"
+export HV_SLUICE_PHASES="gate seamguard"
+export HV_SLUICE_WORKTREE="$wtc1"
+export HV_CENSUS_CLAIM_PATH="$tmp/claimc1"
+export SEAMGUARD_MARKER="$seamguard_marker"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-run.sh" campaign/c1 "$shac1" > "$tmp/runc1.out" 2>&1
+rc_c1=$?
+set -e
+
+if [ "$rc_c1" -eq 0 ]; then
+    ok "the gate-then-seamguard run exits 0 (the tree entering seamguard is clean)"
+else
+    bad "expected rc 0, got $rc_c1 ($(cat "$tmp/runc1.out"))"
+fi
+if [ "$(cat "$seamguard_marker")" = "CLEAN" ]; then
+    ok "the non-authoring 'gate' phase's tracked drift (docs/timings.md) was committed before 'seamguard' ran, so it saw a clean tree"
+else
+    bad "seamguard saw a dirty tree: marker=$(cat "$seamguard_marker")"
+fi
+# Captured into a variable FIRST, not piped directly from `git log`: under
+# `set -o pipefail`, `git log --oneline | grep -q pattern` can report the
+# whole pipeline as failed even when grep finds its match, because `grep -q`
+# exits as soon as it has a hit and `git` (writing further lines into a pipe
+# grep has already closed) can exit non-zero from the resulting SIGPIPE —
+# which pipefail then reports as the pipeline's own status. Found live: this
+# exact assertion failed under `bash scripts/test-sluice.sh` while the same
+# `git log | grep -q` succeeded when typed by hand (no `pipefail` in an
+# interactive shell). Grepping a captured string sidesteps it entirely.
+wtc1_log="$(g -C "$wtc1" log --oneline)"
+if printf '%s\n' "$wtc1_log" | grep -q "regenerate after gate"; then
+    ok "gate's own tracked drift reached a real commit rather than being silently discarded"
+else
+    bad "no 'regenerate after gate' commit found — gate's legitimate drift was discarded, not committed"
+fi
+
 echo "== chamber: an authoring phase's drift is committed on the canonical host =="
 lane_sets_2="$tmp/lane-sets-2.tsv"
 cat > "$tmp/phase-d.sh" <<'SH'
@@ -707,7 +795,12 @@ if [ -z "$(g -C "$wt2" status --porcelain)" ]; then
 else
     bad "the tree is dirty after phase d's commit"
 fi
-if g -C "$wt2" show HEAD:tracked.txt | grep -q authored; then
+# Captured first, not piped directly from `git show` — see the wtc1_log
+# comment above for why: an external command piped straight into an
+# early-exiting `grep -q` can fail the whole pipeline under `pipefail` via
+# SIGPIPE even when grep finds its match.
+tracked_txt_head="$(g -C "$wt2" show HEAD:tracked.txt)"
+if printf '%s\n' "$tracked_txt_head" | grep -q authored; then
     ok "the authored content reached the committed file"
 else
     bad "tracked.txt's committed content does not contain phase d's write"
@@ -764,7 +857,9 @@ if [ "$seen3" = "E F " ]; then
 else
     bad "unexpected phase trace: $seen3"
 fi
-failed_col="$(awk -F'\t' -v j="sluice-${sha3:0:12}" '$0 ~ j {print $8}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+# jobs.tsv columns (fix round 1): when/job/branch/sha/why/rc/wall_s/waited_s/
+# phase_failed/user_s/sys_s/cpu_ratio — phase_failed is column 9, not 8.
+failed_col="$(awk -F'\t' -v j="sluice-${sha3:0:12}" '$0 ~ j {print $9}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
 if [ "$failed_col" = "f" ]; then
     ok "jobs.tsv records phase f as the one that failed"
 else
@@ -776,22 +871,35 @@ else
     bad "the claim survived a phase-failure exit"
 fi
 
-echo "== chamber: the claim is removed even when the chamber is killed mid-phase =="
+echo "== chamber: a killed chamber kills its children's process group before releasing the claim, and records why=TERM with a non-zero rc (fix round 1, Critical 2) =="
+# Reproduces the exact reported mechanism: a real external killer only ever
+# has the top-level pid (recorded in the claim), never a process group — so
+# this sends a PLAIN `kill -TERM` to that one pid, exactly as an operator or
+# a future abort tool would, and checks that the phase's own GRANDCHILD (the
+# actual long-running work — the thing that used to reparent to init and
+# keep the box busy, ledgered against scripts/lane-run.sh in
+# .superpowers/sdd/followups.md) dies too, and that the claim is never
+# observed gone while that grandchild is still alive.
 lane_sets_4="$tmp/lane-sets-4.tsv"
-cat > "$tmp/phase-slow.sh" <<'SH'
+grandchild_pid_file="$tmp/grandchild-pid"
+rm -f "$grandchild_pid_file"
+cat > "$tmp/phase-slow2.sh" <<'SH'
 #!/usr/bin/env bash
-sleep 10
+( sleep 30 ) &
+echo $! > "$GRANDCHILD_PID_FILE"
+wait
 SH
-chmod +x "$tmp/phase-slow.sh"
-printf 'slow\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-slow.sh" > "$lane_sets_4"
+chmod +x "$tmp/phase-slow2.sh"
+printf 'slow2\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-slow2.sh" > "$lane_sets_4"
 
 sha4="$(new_topic_branch campaign/t4 topic4.txt)"
 wt4="$tmp/wt4"
 
 export HV_SLUICE_LANE_SETS="$lane_sets_4"
-export HV_SLUICE_PHASES="slow"
+export HV_SLUICE_PHASES="slow2"
 export HV_SLUICE_WORKTREE="$wt4"
 export HV_CENSUS_CLAIM_PATH="$tmp/claim4"
+export GRANDCHILD_PID_FILE="$grandchild_pid_file"
 rm -f "$HV_CENSUS_CLAIM_PATH"
 
 bash "$repo_root/scripts/sluice-run.sh" campaign/t4 "$sha4" > "$tmp/run4.out" 2>&1 &
@@ -802,14 +910,80 @@ if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
 else
     bad "the claim never appeared — cannot test signal cleanup"
 fi
+chamber_pid="$(awk -F= '$1=="pid"{print $2}' "$HV_CENSUS_CLAIM_PATH")"
+if [ -n "$chamber_pid" ] && pid_alive "$chamber_pid"; then
+    ok "the claim's recorded pid ($chamber_pid) names a live process"
+else
+    bad "the claim's pid field is missing or not alive: '$chamber_pid'"
+fi
 
-kill -TERM "$run4_pid" 2>/dev/null || true
-wait "$run4_pid" 2>/dev/null || true
+if poll_for_file "$grandchild_pid_file" 50; then
+    ok "the phase's own grandchild (the actual long-running work) has started"
+else
+    bad "the grandchild never started — cannot test child cleanup"
+fi
+grandchild_pid="$(cat "$grandchild_pid_file")"
 
+# A PLAIN kill of the recorded top-level pid — not a process-group kill.
+# Turning this into full-subtree cleanup is the chamber's own job
+# (handle_signal + run_bg's process groups), which is what is under test.
+kill -TERM "$chamber_pid" 2>/dev/null || true
+
+# Poll BOTH conditions together, at the SAME instant, so a violation (the
+# claim gone while the grandchild is still alive) cannot hide in the gap
+# between two separate polls taken at different times.
+resolved=0
+violation=0
+i=0
+while [ "$i" -lt 100 ]; do
+    if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+        resolved=1
+        if pid_alive "$grandchild_pid"; then
+            violation=1
+        fi
+        break
+    fi
+    sleep 0.03
+    i=$((i+1))
+done
+if [ "$resolved" -eq 0 ]; then
+    bad "the claim was never removed within 3s of the kill — cannot confirm ordering"
+elif [ "$violation" -eq 0 ]; then
+    ok "the claim was never observed gone while the grandchild was still alive"
+else
+    bad "observed the claim removed WHILE the grandchild process was still running — the box would read free while a child still holds it"
+fi
+
+if wait "$run4_pid" 2>/dev/null; then rc4=0; else rc4=$?; fi
+
+if ! pid_alive "$grandchild_pid"; then
+    ok "the grandchild process is gone after the kill — not orphaned"
+else
+    bad "the grandchild process ($grandchild_pid) is STILL RUNNING — orphaned"
+fi
 if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
     ok "the claim is removed after the chamber is killed with SIGTERM mid-phase"
 else
     bad "the claim survived a SIGTERM kill mid-phase"
+fi
+if [ "$rc4" -ne 0 ]; then
+    ok "a killed run's own process exits with a non-zero status ($rc4)"
+else
+    bad "a killed run exited 0 — indistinguishable from a full green run"
+fi
+# jobs.tsv columns (fix round 1): when/job/branch/sha/why/rc/wall_s/waited_s/
+# phase_failed/user_s/sys_s/cpu_ratio.
+why_col="$(awk -F'\t' -v j="sluice-${sha4:0:12}" '$0 ~ j {print $5}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+rc_col="$(awk -F'\t' -v j="sluice-${sha4:0:12}" '$0 ~ j {print $6}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+if [ "$why_col" = "TERM" ]; then
+    ok "jobs.tsv records why=TERM for the killed run"
+else
+    bad "jobs.tsv why column is '$why_col', expected 'TERM'"
+fi
+if [ -n "$rc_col" ] && [ "$rc_col" -ne 0 ] 2>/dev/null; then
+    ok "jobs.tsv records a non-zero rc ($rc_col) for the killed run — never indistinguishable from a green run"
+else
+    bad "jobs.tsv rc column is '$rc_col', expected non-zero"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
