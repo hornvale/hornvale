@@ -46,6 +46,7 @@ trap 'rm -rf "$tmp"; \
       rm -f "$repo_root/scripts/.sluice-request-mutant-for-test.sh" \
             "$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"; \
       env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/empty 2>/dev/null || true; \
       env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
@@ -1656,19 +1657,37 @@ echo "== request: a headline-less or junk-headline submission is refused BY THE 
 # trap in case something aborts in between.
 headline_test_tree="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse "HEAD^{tree}")"
 wip_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "wip")"
+# `git commit-tree -m ""` genuinely succeeds (verified: git only refuses an
+# empty message from the interactive `git commit` editor path, not from
+# commit-tree), so the truly headline-LESS case — not merely a junk one — is
+# a real commit object here too, not a string the test merely hands the
+# script.
+empty_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "")"
 good_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "feat(sluice): a real headline for testing")"
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/wip "$wip_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/empty "$empty_sha"
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/good "$good_sha"
 
 if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$wip_sha" 2>"$tmp/wip.err"; then
-    bad "a submission whose commit subject is 'wip' was accepted"
+    bad "a submission whose commit subject is 'wip' (junk) was accepted"
 else
-    ok "a submission whose commit subject is 'wip' is refused"
+    ok "a submission whose commit subject is 'wip' (junk) is refused"
 fi
 if grep -q 'not a real headline' "$tmp/wip.err"; then
     ok "the wip refusal names the reason (and points at the census-epoch-label consequence)"
 else
     bad "no 'not a real headline' message refusing the wip commit"
+fi
+
+if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$empty_sha" 2>"$tmp/empty.err"; then
+    bad "a submission with a genuinely EMPTY commit subject (headline-less) was accepted"
+else
+    ok "a submission with a genuinely empty commit subject (headline-less) is refused"
+fi
+if grep -q 'not a real headline' "$tmp/empty.err"; then
+    ok "the empty-headline refusal names the reason"
+else
+    bad "no 'not a real headline' message refusing the empty-subject commit"
 fi
 
 if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok \
@@ -1702,6 +1721,7 @@ fi
 rm -f "$mutant2"
 
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/empty 2>/dev/null || true
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true
 
 echo "== make sluice-status / sluice-log: MUST reach the canonical box over ssh, never read local state directly"
