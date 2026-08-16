@@ -174,7 +174,7 @@ ten cores, so a second concurrent run roughly doubles both.
 Locally you may run:   make gate-commit
 
 Push, then dispatch:   make gate-stage     REF=<full-sha>
-                       make gate-campaign  REF=<full-sha>
+                       make sluice BRANCH=<branch> REF=<full-sha>
                        make lane SET=$set_name REF=<full-sha>
 
 A SHA, not a branch name: the ref feeds 'reset --hard', which can land on a

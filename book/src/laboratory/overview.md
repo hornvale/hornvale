@@ -109,8 +109,8 @@ successive regenerations sweep different slices of the seed range — and
 compares them against the committed rows. It was authored as an always-on,
 few-seconds check on every `cargo test`, but as the worldgen pipeline
 deepened its cost grew to minutes, so it now runs in the heavy tier (the
-`heavy` lane set — `make gate-campaign`, or `make heavy-remote REF=<sha>`
-directly) rather than in the commit gate.
+`heavy` lane set — `make lane SET=heavy REF=<sha>`, or `make heavy-remote
+REF=<sha>` directly) rather than in the commit gate.
 
 That left a real gap, and [The Sexton](../chronicle/the-sexton.md) narrowed
 it with a three-world, all-metric **sentinel** comparing the first three
