@@ -1608,7 +1608,7 @@ Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 
 ---
 
-## Task 11: The first real merge, then the book
+## Task 11: The first real merge (proves the queue before anything is deleted)
 
 **Files:**
 - Create: `book/src/chronicle/the-sluice.md`
@@ -1636,6 +1636,108 @@ git cat-file -p origin/main | head -5      # two parents, first is the old main
 cat ~/.local/state/hornvale/sluice/last-pushed
 git rev-parse origin/main                  # must equal last-pushed
 ```
+
+- [ ] **Step 3: STOP here if the merge did not land.** Task 12 deletes the
+      lane, and the lane is the only way to run expensive checks until the
+      queue demonstrably works. A queue that has not landed a merge does not
+      get to remove its predecessor.
+
+---
+
+## Task 12: The absorption — delete the lane, measure the net
+
+**Sequenced deliberately after Task 11.** Nothing here may run until the queue
+has landed a real merge on `main`. Deleting the lane first would leave no way
+to run anything expensive if the queue turned out to be wrong.
+
+**Files:**
+- Delete: `scripts/lane-dispatch.sh` (145), `scripts/lane-run.sh` (283),
+  `scripts/test-lane.sh` (377), `scripts/preflight-merge.sh` (145)
+- Modify: `Makefile` (remove `lane`, `lane-status`, `lane-log`, `lane-roster`,
+  `lane-wait`, `gate-stage`, `preflight`), `scripts/lane-sets.tsv` (the `where`
+  column loses its meaning — every phase runs in the chamber),
+  `CLAUDE.md`, `scripts/CLAUDE.md`
+- Keep: `scripts/lane-outboard.sh` (a phase driver), the `flock` claim (a
+  mutex, not a job manager), `scripts/lane-sets.tsv` itself (data)
+
+**Interfaces:**
+- Consumes: a working queue (Tasks 2-6) and a landed merge (Task 11).
+
+- [ ] **Step 1: Absorb `gate-stage` into the queue first, before deleting it**
+
+A stage-gate request is a queue entry with no merge: it runs the phases against
+`main + branch` and reports, but never pushes. Same mouth, same chamber, same
+claim. Add a `kind` column to the queue TSV (`merge` | `stage`) rather than a
+second code path — the difference is one branch at the push step.
+
+Verify with a real stage request before the deletion in Step 2:
+
+```bash
+make sluice-stage BRANCH=<a branch> REF=<full-sha>
+make sluice-status
+```
+
+Expected: phases run, nothing is pushed, the entry ends `reported`.
+
+- [ ] **Step 2: Delete, and prove nothing still calls the deleted things**
+
+```bash
+git rm scripts/lane-dispatch.sh scripts/lane-run.sh scripts/test-lane.sh scripts/preflight-merge.sh
+grep -rn 'lane-dispatch\|lane-run\|test-lane\|preflight-merge\|gate-stage\|make preflight' \
+    --include='*.sh' --include='*.rs' --include='Makefile' --include='*.md' . \
+    | grep -v '^./docs/superpowers/' | grep -v '^./docs/retrospectives/' | grep -v '^./book/src/chronicle/'
+```
+
+Branch table for that grep — a prediction here would be worthless, so decide by
+what it prints:
+
+- A hit in `Makefile` or a `*.sh` → a live caller. Fix it.
+- A hit in a `CLAUDE.md` → stale prose. Rewrite it in this same commit.
+- A hit in `docs/decisions/` → **do not edit.** Decisions are append-only;
+  0137 supersedes, it does not rewrite 0132/0133.
+- A hit only under the excluded paths → history describing what was true then.
+  Leave it.
+
+- [ ] **Step 3: Run the enforcement tests that know about the roster**
+
+```bash
+cargo test -p hornvale --test lane_sets
+cargo test -p hornvale --test docs_consistency
+cargo test -p hornvale --test generated_paths
+```
+
+`cli/tests/lane_sets.rs` asserts the roster has no second copy in prose and
+may assert on the `where` column. Read its assertions before changing the TSV —
+extend the vocabulary deliberately rather than loosening the check.
+
+- [ ] **Step 4: Measure the net, which is the campaign's own commitment**
+
+```bash
+git diff --stat $(git merge-base origin/main HEAD)..HEAD -- \
+    'scripts/*.sh' Makefile ':!scripts/sluice-*.sh' ':!scripts/test-sluice.sh'
+git diff --stat $(git merge-base origin/main HEAD)..HEAD -- \
+    'scripts/sluice-*.sh' scripts/test-sluice.sh
+```
+
+Spec §3a commits this campaign to ending with **fewer lines of process
+machinery than it started**. Record both numbers and the net. If the net is
+positive, that is a finding to report, not a number to bury — the guarantee did
+not simplify anything, it relocated the payment.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A
+git commit -m "feat(sluice): absorb the lane — delete 950 lines of dispatch machinery
+
+<paste the measured net from Step 4>
+
+Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
+```
+
+---
+
+## Task 13: The book
 
 - [ ] **Step 3: Write the chronicle entry**
 
