@@ -490,7 +490,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-309 registered tokens no situation in this corpus requires.
+310 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -726,6 +726,7 @@ missing half before this list can serve it.
 - `predicate:frost-retreat`
 - `predicate:genesis-note`
 - `predicate:glacial-maximum-era`
+- `predicate:greenhouse-forcing-k`
 - `predicate:hab-zone-inner-au`
 - `predicate:hab-zone-outer-au`
 - `predicate:highest-elevation-m`

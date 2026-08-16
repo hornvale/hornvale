@@ -904,7 +904,7 @@ fn the_dwarf_floors_are_what_the_roster_was_authored_against() {
 /// cell (`share == 1.0` exactly), plus a `checked == 2 * SEEDS.len()`
 /// non-vacuity guard. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
     let wc = WorldComponents::assemble().expect("components assemble");
     let mut checked = 0usize;
@@ -956,7 +956,7 @@ fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
 /// probe's discrimination control, not a calibrated threshold. Off-gate
 /// (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn p1_desert_dwarf_is_not_elevation_bound() {
     for seed in SEEDS {
         let profiles = bind_shares(seed, &["desert-dwarf"]);
@@ -1028,7 +1028,7 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 /// preregistered (spec §10.2 P3′, first half) and is asserted on every seed,
 /// not as a fraction of seeds clearing it. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn p3_desert_dwarfs_climate_curves_bind() {
     for seed in SEEDS {
         let profiles = bind_shares(seed, &["desert-dwarf"]);
@@ -1145,7 +1145,7 @@ fn p3_desert_dwarfs_climate_curves_bind() {
 /// is what keeps the refutation distinguishable from a probe that computes
 /// nothing. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
     // Frozen floor, spec §5 P4 / §10.2 P3′. Never move this.
     const FROZEN: f64 = 0.95;
@@ -1291,7 +1291,7 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 /// per-kind spatial structure and the diagnosis must be re-measured, not
 /// relaxed. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_supply_term_is_near_kind_independent_across_the_dwarf_family() {
     // The measured supply-only floor, to be read as "near-unity", not as a
     // tuned bound: the smallest of the nine measured values is 0.999354.
@@ -1569,7 +1569,7 @@ fn p5_the_cascade_regime_reads_the_paced_schedule() {
 /// Reported, not asserted: the campaign predicted no magnitude, and the
 /// dwarves' small holdings are still reported rather than explained.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn p6_seed_42s_committed_world_moved() {
     let world = build_world(
         Seed(REFERENCE_SEED),

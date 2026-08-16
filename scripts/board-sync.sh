@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # The Beacon's transport, for call sites that must never trigger a compile
-# and must never block on a hung network (`scripts/preflight-merge.sh`, and
-# any future SessionStart-style caller).
+# and must never block on a hung network (`scripts/sluice-request.sh`, and
+# the SessionStart hook).
 #
 # Mirrors scripts/board-render.sh's binary-discovery block exactly: prefer a
 # prebuilt release binary, fall back to debug, and do nothing at all --
 # silently -- if neither exists. A fresh worktree with no board binary built
-# yet must not fail `preflight-merge.sh`, which calls this before its own
-# hold-off read.
+# yet must not fail `sluice-request.sh`, which calls this before its own
+# hold-off read. (That call site was `scripts/preflight-merge.sh` until The
+# Sluice deleted it; the hold-off read moved to the submission, which is now
+# the moment work asks to integrate. The constraint is unchanged and is a
+# property of THIS script's callers in general, not of that one script.)
 #
 # NEVER FAILS THE CALLER (B6, extended to this wrapper): `board sync` itself
 # already reports push/fetch failures on stderr while exiting 0 (the local
@@ -23,12 +26,12 @@
 # unreachable or credential-prompting remote can hang far longer than any
 # local git call would. 20s is generous for the tiny ref this board pushes
 # (a few dozen small posts) while still bounding a caller like
-# `preflight-merge.sh` that a human is waiting on.
+# `sluice-request.sh` that a human is waiting on.
 #
 # `board sync`'s own stdout/stderr are DELIBERATELY MERGED (2>&1) below, not
 # suppressed the way board-render.sh's `2>/dev/null` suppresses its render:
 # a rejected push here is worth a human's attention (0118 part 3's
-# hostname-collision hazard), so `preflight-merge.sh` -- the caller that
+# hostname-collision hazard), so `sluice-request.sh` -- the caller that
 # actually cares -- sees it rather than having it swallowed.
 #
 # WHICH IS WHY THE MISSING-`timeout` CASE IS HANDLED SEPARATELY, ahead of

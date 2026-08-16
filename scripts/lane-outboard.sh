@@ -4,8 +4,8 @@
 # The Staff.
 #
 # DIRECTION: this runs the three out-of-workspace test suites and reports
-# every failure. It is blind to anything inside the workspace —
-# `make gate-stage`'s `gate` set owns that.
+# every failure. It is blind to anything inside the workspace — the chamber's
+# own `gate` phase owns that.
 #
 # seam-guard is DELIBERATELY NOT HERE. It shipped here first, but Task 8's
 # own measurement showed its 7 call sites cost 853.284 s (the

@@ -749,20 +749,40 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
 /// `session.rs`'s own tests can reach the private `delve_at` seam that
 /// sidesteps needing to.
 ///
-/// This mirrors `there_is_nothing_to_dive_into_on_dry_land` exactly: the
-/// flagship's own starting cell has no cave (measured, not assumed — the
-/// seed-42 fixture's cave count over land is nonzero but sparse, and the
-/// starting cell is never one of them), so no walk is needed to observe this
-/// outcome.
+/// This mirrored `there_is_nothing_to_dive_into_on_dry_land`: the flagship's
+/// own starting cell had no cave, so no walk was needed to observe the
+/// refusal.
+///
+/// **THE SUBJECT MOVED, NOT THE VERB** (decision 0134, 2026-08-14). That was
+/// always a measured contingency about one cell, and the terrain epoch's new
+/// coastlines put a cave under it — a SEALED one, whose entrance resolves to
+/// no chamber. So the public path here now exercises the *sealed* refusal
+/// instead of the *no-cave* refusal. Both are refusals that name what stopped
+/// you, which is the property this test exists to hold through the public
+/// verb; which of the two the flagship's own ground happens to produce is a
+/// fact about seed 42's karst, not about `delve`.
+///
+/// The no-cave branch did not lose coverage: `delve_has_three_distinguishable_outcomes`
+/// now reaches it directly through `delve_column(None)` rather than by
+/// standing somewhere that happens to qualify, so it can no longer be
+/// falsified by a coastline moving.
+///
+/// **THE SUBJECT MOVED AGAIN** (The Glasshouse, Stage B Task 4, the
+/// thermostat). The damped, greenhouse-forced insolation baseline
+/// re-places seed 42's settlements a second time this campaign, and the new
+/// flagship's own starting cell has no cave at all — back to the *no-cave*
+/// refusal, the same contingency this comment already names. Still a
+/// refusal that names what stopped you, which is the property this test
+/// holds regardless of which of the two fires.
 #[test]
-fn there_is_no_cave_at_the_flagships_own_starting_cell() {
+fn the_flagships_own_starting_cell_refuses_a_delve_and_names_why() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let out = match s.handle("delve") {
         Turn::Out(t) => t,
         _ => panic!("must not release"),
     };
-    assert!(out.contains("no cave here"), "{out}");
+    assert!(out.contains("no cave"), "{out}");
     let up = match s.handle("climb") {
         Turn::Out(t) => t,
         _ => panic!("must not release"),

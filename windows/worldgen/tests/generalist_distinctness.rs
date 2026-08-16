@@ -418,7 +418,7 @@ fn cv_ratios(variants: &[Option<ConditionNiche>]) -> Vec<f64> {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)"]
 fn human_is_not_goblin_recentred() {
     let cv_ratio = cv_ratios(&[None])[0];
     let gap = (cv_ratio - 1.0).abs();
@@ -432,7 +432,7 @@ fn human_is_not_goblin_recentred() {
 }
 
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)"]
 fn substituting_goblins_niche_for_humans_is_detected() {
     // All three variants in ONE seed sweep — see `cv_ratios`. The width-only
     // reading below comes out of the same pass rather than a third rebuild.
@@ -507,4 +507,70 @@ fn substituting_goblins_niche_for_humans_is_detected() {
     // instead of opposing: "human is a low-devotion, wide-tolerance
     // generalist" is both the authored intent and what the gate's
     // real-case number measures.
+}
+
+/// **The witness that keeps the cv-ratio instrument measured while both
+/// batteries above are `#[ignore]`d.**
+///
+/// It stays in the HEAVY tier, because the quantity costs a 30-seed sweep to
+/// obtain — the heavy tier still pays for this measurement and still reads
+/// it; what it no longer does is fail on a finding already recorded.
+///
+/// **This pins a witness, not a claim.** The three numbers are not bars the
+/// world must clear. They are what the corrected climate produced, recorded
+/// so that a change to either niche, to the fit landscape or to the sweep
+/// *forces a deliberate re-read*.
+///
+/// **All three arms pinned together, because that is the finding.** The
+/// instrument's whole logic is that the arms SEPARATE: the real pair should
+/// sit clear of 1.0 while a human given goblin's `ConditionNiche` collapses
+/// toward it. They no longer separate —
+///
+/// ```text
+/// real                        0.9945   gap 0.0055
+/// goblin-niche-substituted    0.9964   gap 0.0036
+/// width-only                  0.9964   gap 0.0036   (was 0.9747, gap 0.0253)
+/// ```
+///
+/// — so the residual real-versus-mutated difference is 0.0019, and the floor
+/// that is supposed to separate them is 0.007. **The statistic has lost its
+/// power, not its sign.** A single-arm pin would have hidden that: it is the
+/// *collapse of the spread between arms* that says the readout is vacuous,
+/// and no one number carries it.
+///
+/// The campaign authored no synonym — neither niche changed. The corrected
+/// climate changed the fit landscape underneath both, which is the same shape
+/// The Gnomon's underpowered battery took in that campaign's §17: an
+/// instrument can stop being able to answer its question without anyone
+/// touching the instrument.
+///
+/// Tracked as `BIO-gause-distinctness-vacuous`. The repair is a statistic
+/// with power against this world, not a lower floor.
+#[test]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+fn the_collapsed_cv_ratio_arms_are_pinned_as_witnesses() {
+    let ratios = cv_ratios(&[
+        None,
+        Some(goblin_niche_from_registry()),
+        Some(human_niche_with_goblins_widths()),
+    ]);
+    let (real, mutated, width_only) = (ratios[0], ratios[1], ratios[2]);
+    println!(
+        "witness: real {real:.4}, goblin-substituted {mutated:.4}, width-only {width_only:.4}"
+    );
+    for (name, got, want) in [
+        ("real", real, 0.9945),
+        ("goblin-substituted", mutated, 0.9964),
+        ("width-only", width_only, 0.9964),
+    ] {
+        assert!(
+            (got - want).abs() <= 0.0005,
+            "the {name} cv_ratio moved to {got:.4}, outside the pinned witness {want} \
+             +/- 0.0005. This is NOT a number to update — re-read whether the arms have \
+             SEPARATED again (which would restore the readout) or drifted together \
+             further, then re-state this witness, both #[ignore] reasons above, their \
+             roster entry in cli/tests/heavy_tier.rs and the \
+             BIO-gause-distinctness-vacuous registry row in the SAME commit."
+        );
+    }
 }

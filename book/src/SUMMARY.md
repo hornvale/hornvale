@@ -366,7 +366,10 @@
 - [The Hearsay](./chronicle/the-hearsay.md)
 - [The Retelling](./chronicle/the-retelling.md)
 - [The Staff](./chronicle/the-staff.md)
+- [The Glasshouse](./chronicle/the-glasshouse.md)
 - [The Ballast](./chronicle/the-ballast.md)
+- [The Compendium](./chronicle/the-compendium.md)
+- [The Sluice](./chronicle/the-sluice.md)
 
 # Appendix: The Frontier
 

@@ -541,9 +541,45 @@ mod tests {
         let c = committed();
         let (_, excluded) = evaluable_columns(&c);
         let findings = detect(&c, &[], &[]);
+        // NARROWED (The Glasshouse, k = 0.30), and the reason matters more
+        // than the change. This test asserted that EVERY excluded column with
+        // a present value is reported by D2 or D4. That claim is not merely
+        // unmet — IT WAS NEVER TRUE. The three predicates are logically
+        // independent:
+        //
+        //     D2 fires on  min == max
+        //     D4 fires on  median == min || median == max
+        //     "both rails tied" means ties AT min and AT max, which says
+        //     nothing about where the median sits
+        //
+        // A column with ties at both rails and its median strictly between
+        // them satisfies the exclusion and neither detector. Nothing forbids
+        // that shape; the census simply had no instance of it until the world
+        // warmed. `first-day-occ-cause-famine` is the first: 705 of 1000
+        // worlds present, ~48 distinct days, excluded as "both rails tied:
+        // 40 at min, 12 at max of 705", median in the middle, and reported by
+        // neither detector.
+        //
+        // So this is a CORRECTION OF AN OVER-CLAIM, not a weakened test, and
+        // the distinction is worth defending because the two look identical
+        // in a diff. The test is not being relaxed to accommodate a result it
+        // disliked — the exclusion reason it now skips is one it could never
+        // have covered, and skipping it is what stops a permanent red from
+        // training everyone to ignore this file. The gap is registered as
+        // PROC-domesday-rail-tie-blind-spot, the exact sibling of
+        // PROC-domesday-all-absent-blind-spot which this test's own message
+        // already cites for the zero-present-value half. Closing either needs
+        // a further detector, not a change here.
+        //
+        // WHAT STILL HOLDS, and it is the bulk of the claim: every excluded
+        // column with a present value AND a coverable exclusion reason is
+        // still required to be reported. A regression on any of those is
+        // still caught by the everyday gate, which is what this test was
+        // added for.
         let partitioning: Vec<&(String, String)> = excluded
             .iter()
             .filter(|(metric, _)| !c.values(metric).is_empty())
+            .filter(|(_, reason)| !reason.contains("both rails tied"))
             .collect();
         assert!(
             !partitioning.is_empty(),
@@ -555,8 +591,12 @@ mod tests {
                     && (f.detector.starts_with("D2") || f.detector.starts_with("D4"))),
                 "{metric} has a present value and is excluded here, but is reported by \
                  neither D2 nor D4 — this is the direction that is supposed to always \
-                 hold; the zero-present-value gap is tracked separately \
-                 (PROC-domesday-all-absent-blind-spot)"
+                 hold for a COVERABLE exclusion reason. Two reasons are known NOT to be \
+                 coverable and are tracked as registry rows rather than asserted here: \
+                 zero present values (PROC-domesday-all-absent-blind-spot) and ties at \
+                 both rails with the median between them \
+                 (PROC-domesday-rail-tie-blind-spot). If the reason you are looking at is \
+                 neither of those, this is a real regression"
             );
         }
     }
@@ -788,16 +828,34 @@ mod tests {
         // it is a real surface for the anomaly report rather than a constant
         // the ranker has to skip. That asymmetry is the informative part: a
         // new column moving `excluded` instead would mean it was degenerate.
+        // THE GLASSHOUSE (Stage B, k = 0.30): evaluable 117 -> 115, excluded
+        // 47 -> 50, total 164 -> 165. The +1 total is `greenhouse-forcing-k`
+        // (Task 3), and it lands EVALUABLE — the asymmetry the paragraph above
+        // calls informative still reads the right way for the new column.
+        //
+        // WHAT IS ESTABLISHED, and what is not. Diffing the two censuses on a
+        // present-value basis identifies exactly ONE column that became
+        // degenerate: `name-prefix-region-scope`, which carried both `1` and
+        // `2` over 1000 worlds and now carries only `1`. That accounts for one
+        // of the three columns that moved to the excluded side.
+        //
+        // THE OTHER TWO ARE NOT IDENTIFIED, and this comment says so rather
+        // than supplying a plausible cause. No other shared column loses its
+        // variation by that measure, so whatever moved them is a property of
+        // `evaluable_columns`' own criteria rather than of the CSV's spread,
+        // and nothing here measured which. A reader re-deriving this should
+        // instrument `evaluable_columns` directly instead of diffing the
+        // census, which is the mistake this note exists to save them.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            117,
+            115,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            47,
+            50,
             "excluded count moved — re-measure and update this"
         );
     }

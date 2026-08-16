@@ -883,11 +883,73 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // cold-adapted in the field" may well be true of this commit, but **this
     // line is not the measurement that says so** and must not be cited as
     // one.
+    // THE GLASSHOUSE re-pin (Stage B, decision 0134): 36.3288 -> 36.2088, and
+    // **the identity in the two paragraphs above is no longer true**. Read the
+    // printed decomposition rather than the arithmetic those paragraphs assume:
+    // `raw_pole_mean` is now 0.011362 and `pole floored: false`, against `true`
+    // at EVERY prior reading in this comment's history. The polar term has come
+    // off `POLE_FLOOR` for the first time, so `ratio` is a genuine
+    // tropics/poles ratio (0.411404 / 0.011362 = 36.2088) and NOT
+    // `100 * trop_mean` — that equality held only while the denominator was the
+    // constant. Anyone re-deriving this number from `trop_mean` alone will get
+    // 41.14 and conclude something is broken.
+    //
+    // The mechanism is the terrain epoch. The craton rescale delivers its
+    // budget, so the coastline sits at the shelf break; the land mask grows and
+    // mean land elevation falls 2257 -> 1783 m. Lower, warmer polar land is
+    // what lifts `raw_pole_mean` 0.004589 -> 0.011362 — which is, incidentally,
+    // the movement the withdrawn-paragraph above predicted a cold-adapted
+    // PEOPLE would produce and which no roster change ever did. It came from
+    // the ground, exactly where that paragraph said it no longer lived. Do not
+    // read this as vindication of the roster mechanism; it is the opposite.
+    //
+    // The degeneracy this assertion documents is therefore REDUCED, not gone,
+    // and it stays a drift tripwire on a Hornvale-internal number (0106's valid
+    // use), not evidence for the biomass-by-latitude gradient.
+    //
+    // THE GLASSHOUSE re-pin (Stage B Task 4): 36.2088 -> 7.7803. The
+    // thermostat (a damped, greenhouse-forced insolation baseline replacing
+    // the fixed 288 K blackbody one) warms polar land far more than
+    // tropical land moves: `raw_pole_mean` rises 0.011362 -> 0.061245 while
+    // `trop_mean` moves only 0.411404 -> 0.476504, so the tropics/poles
+    // ratio compresses sharply. The pole term is still off `POLE_FLOOR`
+    // (`pole floored: false`), so this remains a genuine ratio, not the
+    // constant-denominator degeneracy the paragraphs above retire. Measured
+    // against the OLD +30/-30 latitude profile (Task 5 had not yet landed).
+    //
+    // THE GLASSHOUSE re-pin (Stage B Task 5): 7.7803 -> 12.2953. The
+    // area-mean-zero latitude profile corrects the old profile's
+    // unrealistically hot equator (+44 C at the Earth anchor -> +26 C, spec
+    // §3.2) and its milder pole (-15 C -> -25 C at the anchor), cooling BOTH
+    // ends but the pole harder in absolute terms on this land distribution:
+    // `raw_pole_mean` falls 0.061245 -> 0.035406 while `trop_mean` falls
+    // less, 0.476504 -> 0.435333, so the ratio widens again. Still off
+    // `POLE_FLOOR` (`pole floored: false`), so still a genuine ratio.
+    // Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE GLASSHOUSE re-pin (Stage B, `k` re-decided 0.4 -> 0.3): 12.2953 ->
+    // 10.1472, and this is the first movement in this line's history where
+    // the ratio NARROWS because both ends rose. A smaller residual fraction
+    // compensates more of seed 42's insolation shortfall, so the whole world
+    // warms — but the two ends do not warm equally in effect:
+    //   trop_mean     0.435333 -> 0.450636   (+3.5%, 68565 cells)
+    //   raw_pole_mean 0.035406 -> 0.044410  (+25.4%,  7920 cells)
+    // Warming a near-unproductive pole buys far more proportional
+    // productivity than warming an already-productive tropics, which is
+    // ordinary saturation and not a latitudinal mechanism moving. The
+    // assertion's own message tells its reader to check the decomposition
+    // before assuming anything latitudinal moved; the decomposition is why
+    // this re-pin is a narrowing rather than a defect. `pole floored: false`
+    // still holds, so this remains a genuine tropics/poles ratio and not
+    // `100 * trop_mean` in disguise — which is the failure mode this line
+    // has to keep proving it is not. Post-unblinding re-measure, declared
+    // per decision 0016.
     assert!(
-        (ratio - 36.3288).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~36.3288). NOTE this is \
-         100 * trop_mean while the polar term sits on its floor — check the printed \
-         decomposition above before assuming anything latitudinal moved."
+        (ratio - 10.1472).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~10.1472). Check the \
+         printed decomposition above before assuming anything latitudinal moved — and \
+         note that since The Glasshouse the polar term is OFF its floor, so this is a \
+         real tropics/poles ratio and no longer 100 * trop_mean."
     );
 }
 

@@ -10,8 +10,10 @@ asking humans to remember instead.
 
 1. **A scheduled job never commits and never touches `main`'s working tree.**
    It reports to the board. Precedent: decision 0129's lane rule. The hazard is
-   a nightly job committing while a session is mid-landing, which
-   `make preflight` warns about and cannot prevent.
+   a nightly job committing while a merge is mid-landing. Since decision 0139
+   `main` advances only through the merge queue's serial claim on this box, and
+   a scheduled job takes no claim — so it is this rule, not the substrate, that
+   keeps a nightly run out of a landing merge's way.
 2. **Jobs run in a LINKED WORKTREE of lefford's main checkout, never a separate
    clone.** `git reset --hard` in a worktree touches only that worktree's own
    branch, so the "owns its checkout" property holds — while a *clone* would

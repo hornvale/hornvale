@@ -279,3 +279,59 @@ And the frozen roster will rot. It is frozen at nineteen columns precisely so
 the census schema cannot become seed-dependent, which means a predicate added
 to the history bake later will silently not be indexed, and nothing checks for
 that today.
+
+## Postscript: the world moved, and the verdict did not survive it (2026-08-15)
+
+The finding above — *H1 falsified, recall@10 = 0.5667 against a 0.60 bar* —
+was re-measured six weeks later by a campaign that had nothing to do with
+anomaly ranking, and it did not hold.
+
+The Glasshouse corrected three defects in the climate model and moved the
+census population from a −11.99 °C median land temperature to −3.65 °C. The
+injection fixtures were re-authored against the new census on the canonical
+box. **Nothing about the report changed** — not `REPORT_SIZE`, not
+`TAIL_DEPTH_BAR`, not the scorer, not the evaluable surface. Only the worlds
+were different.
+
+Re-measured on those worlds: **recall@10 = 0.6083, 73 hits over the same 120
+pairs.** The bar is 0.60.
+
+The tempting reading is that the report works after all and this chapter's
+headline was wrong. That reading is not available, for a reason this chapter
+should have anticipated and did not. **The new figure clears the bar by one
+hit out of a hundred and twenty.** At the bar, the standard error on a
+120-pair proportion is `sqrt(0.6 × 0.4 / 120) = 0.0447`. So the original
+0.5667 sat 0.75 standard errors *below* the line and the new 0.6083 sits 0.19
+*above* it, and the distance between the two measurements is 0.66 — smaller
+than the noise in either one.
+
+A 120-pair battery cannot tell "the ranking concentrates a planted
+perturbation" from "it does not" at a 0.60 threshold. It never could. The
+original refutation looked clean only because the measurement happened to land
+on the low side of a distribution wide enough to reach both sides of the bar,
+and this campaign happened to land on the high side of the same distribution.
+
+So the honest state of the question is **open**, and its registry row has been
+returned to that state rather than flipped to a confirmation. What this
+chapter got right is preserved and is worth more than the verdict was: the
+*spread* is the finding — per-injection recall ranges from 1/20 to 20/20, and
+both perfect arms scored at a tail depth outside the census's entire observed
+range, where the report cannot do otherwise. That structure is unchanged by the
+re-measurement, and it is still what says the report is a pointer rather than a
+detector.
+
+Two things are worth carrying out of this, and neither is about anomalies.
+
+**A preregistered bar needs a power calculation, not just a number.** Freezing
+"0.60" before the measurement is the right discipline and it is what this
+campaign did. But a threshold is only a decision rule if the instrument can
+resolve it, and one line of arithmetic before the freeze would have shown that
+120 pairs cannot separate 0.57 from 0.61. The freeze was honest and the bar was
+still unusable.
+
+**A published result has a shelf life measured in world-changes, not in time.**
+This finding was pinned as an explicit witness precisely so that a change to
+the report could not silently rewrite it — and what actually rewrote it was a
+change to the *world*, from a campaign that never touched the report. The pin
+worked: the re-read was forced rather than skipped. It simply caught a
+different mover than the one it was watching for.

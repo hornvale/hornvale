@@ -28,13 +28,14 @@ Read the root `CLAUDE.md` first; this file is about the second half.
   `book/src/frontier/`. Red = the docs drifted; fix the doc, not the test.
   See `docs/CLAUDE.md` and `book/src/frontier/CLAUDE.md`.
 - **`heavy_tier.rs`** — asserts every `#[ignore]`d live-worldgen battery
-  carries the one canonical reason string verbatim, so every gate short of
-  `gate-campaign` skips it and `gate-campaign` (via `scripts/gate-full-heavy.sh`)
-  runs it — the two can never fall out of sync. Red = someone `#[ignore]`d a
-  heavy test with an ad-hoc reason, which would make it invisible to *every*
-  tier. Ignore reasons that are deliberately **not** `heavy:` (the
-  census/calibration batteries) are excluded even from `gate-campaign` —
-  that is the intent, not an oversight.
+  carries the one canonical reason string verbatim, so every gate skips it and
+  only the dedicated `heavy` set (`scripts/gate-full-heavy.sh`, run as the
+  merge queue's last phase or on its own with `make heavy-remote
+  REF=<full-sha>`) runs it — the two can never fall out of sync. Red = someone
+  `#[ignore]`d a heavy test with an ad-hoc reason, which would make it
+  invisible to *every* tier. Ignore reasons that are deliberately **not**
+  `heavy:` (the census/calibration batteries) are excluded even from that
+  set — that is the intent, not an oversight.
 - **`lens_purity.rs`** — the **world-identity guard**: the seed-42 world's
   JSON is a committed fixture. Red = world identity drifted. That is either
   a genuine epoch (terrain/sky) or an accidental one — including the
@@ -55,8 +56,9 @@ Read the root `CLAUDE.md` first; this file is about the second half.
 ## A crate-scoped green is not a branch-green
 
 The root `CLAUDE.md` tells you to iterate cost-ordered — `cargo test -p <crate>`
-while working, full `--workspace` coverage at the stage gate's lane dispatch —
-and that advice is right. But
+while working, full `--workspace` coverage when the stage gate runs on the
+canonical box (`make sluice-stage BRANCH=<branch> REF=<full-sha>`) — and that
+advice is right. But
 it has one consequence worth stating where the tests actually live: **every
 invariant listed above is asserted from `cli/`, and none of them is about the
 crate you edited.** A `cargo test -p hornvale-terrain` cannot see layering, the
@@ -74,7 +76,7 @@ So: a task may *iterate* crate-scoped, but the evidence it reports as "green"
 must be workspace-wide, or it is reporting on a different question than the one
 being asked.
 
-## The heavy tier is invisible to every gate but `gate-campaign`, including on `main`
+## The heavy tier is invisible to every gate but the `heavy` set, including on `main`
 
 `gate-commit` and the stage gate's own suite both skip the `heavy:` tier by
 design, so anything only that tier can see is unobserved on every ordinary
@@ -113,6 +115,15 @@ ratchet goes stale the moment the batteries' cost changes again, so
 (`the_canonical_heavy_reason_states_no_duration`). Updating every
 `#[ignore]`d heavy test in the tree to match was the change, not a follow-up
 avoided for being cosmetic.
+
+**And the same trap caught the fix, within a day.** The Retelling replaced
+`gate-full` with `gate-campaign` — which decision 0139 then retired too, while
+that branch was still open. A ratchet that names a COMMAND goes stale whenever
+the command is renamed, which is the identical failure the duration clause had,
+one axis over. So the string now names the **set** rather than any target:
+`heavy` is a row in `scripts/lane-sets.tsv`, the single source of truth for
+what a set contains, and it survives every renaming of the thing that runs it.
+Do not put a command name back into this string.
 
 **Dropping the duration broke the OTHER guard, silently, until `gate-commit`
 said so.** `preregistration_guard.rs`'s `reason_is_sanctioned` treats any

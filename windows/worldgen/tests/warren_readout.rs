@@ -262,7 +262,7 @@ fn measure_seed(
 /// claim: readout(off-gate, heavy:) — blast-radius before/after readout over
 /// SEEDS
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_blast_radius_readout() {
     let wc_after = WorldComponents::assemble().expect("canonical registries are well-formed");
     let mut wc_before = WorldComponents::assemble().expect("canonical registries are well-formed");

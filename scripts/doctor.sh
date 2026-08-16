@@ -45,7 +45,7 @@ if [ -n "${board_bin}" ]; then
 else
   section "The board"
   echo "  the board binary is not built, so the session-start render, this"
-  echo "  block, and preflight's hold-off advisory are all inert — run"
+  echo "  block, and the sluice request's hold-off advisory are all inert — run"
   echo "  \`make prewarm\` (or \`make board\`) to build it"
 fi
 

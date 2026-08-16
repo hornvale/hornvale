@@ -91,6 +91,31 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   through `hornvale_kernel::quantize` — the scene/ephemeris JSON and the lab's
   `render_csv` are the existing boundaries. Never quantize in the compute
   path.
+- **Colour is ON by default in the playable path — and four readers in one
+  campaign concluded otherwise, each from something true.** `cli/src/main.rs:586`
+  selects `Lens::Lantern` for the interactive session; only `--script` takes
+  `Lens::Off`, deliberately, so committed transcripts stay byte-stable. Measure
+  before you claim: `possess --seed 42` then `enter; map` emits **414 escape
+  bytes**, while the same session outdoors emits **0** — and the chart's own
+  disclosure line says why, `0 tinted, 31 withheld (water, a mark, or you)`,
+  because seed 42's flagship stands on water. Seed 13 outdoors reports `30
+  tinted, 1 withheld`. **A single seed is not evidence about the renderer**, and
+  neither is `windows/scene/src/surrounds_ascii.rs`'s `\x1b[38;2;` path on its
+  own: a code path is not a default, a default is not a screen, and a screen at
+  one seed is not the program. Say **which surface, which seed, and whether the
+  player opted in.** The wrong answers in order were: colour is a client-side
+  deferral; colour is absent; colour is on (from the code path, without the
+  default); colour is off by default (from the default, without the interactive
+  arm — and evidenced by counting escape bytes in `scripts/possession-*.txt`,
+  which are **input command scripts** and could not have contained any). The
+  code was never wrong. Every claim about it was, and every correction came
+  from running the program.
+- **Separately, and this one IS unconditional: there is no per-entity
+  distinction in the walk band.** `clients/game/core/src/chart.rs` draws `@` for
+  the possession and `+` for everything else, "terrain and marks alike" in its
+  own words, and `Mark` carries `noun`/`kind`/`datum`/`salience` with no glyph
+  and no colour — so a creature and a boulder are the same character on every
+  seed, and no lens changes it.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff the paths `docs/generated-paths.txt` declares —
   `git diff -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')`. That

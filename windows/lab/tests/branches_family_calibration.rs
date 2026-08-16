@@ -242,7 +242,28 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
         // `inventory_closure_holds_on_every_swept_seed_for_every_daughter`
         // each pass with no exceptions. A real family-boundary break would
         // have moved those too; a widening chance tail moves only this one.
-        vec![47, 625, 731, 752, 797, 825],
+        // THE GLASSHOUSE (Stage B, k = 0.30, census refreshed on the canonical
+        // box): seed 47 DROPS OUT — {47, 625, 731, 752, 797, 825} -> {625,
+        // 731, 752, 797, 825}, 995/1000 clean. The first time in this line's
+        // history the tail has SHRUNK, and it is worth saying that a shrink
+        // gets exactly the same scrutiny as a growth: a tail moving toward
+        // empty is what a test being quietly rescued also looks like, so the
+        // boundary check below was run, not skipped because the news was good.
+        //
+        // Checked, not assumed: the three sibling STRUCTURAL guards
+        // (`monophyly_goblinoid_holds_on_every_swept_seed`,
+        // `divergence_real_holds_on_every_swept_seed`,
+        // `inventory_closure_holds_on_every_swept_seed_for_every_daughter`)
+        // all pass with no exceptions on this same refreshed census — 7 tests
+        // green. A real family-boundary break moves those too; a chance tail
+        // moves only this one, in either direction.
+        //
+        // The sequence is now 2 -> 0 -> 1 -> 5 -> 6 -> 5 across six censuses,
+        // which is the statistical near-certainty this doc has always claimed
+        // it to be. The EXCEPTION-LIST form is kept rather than relaxed to a
+        // rate: a sixth coincidence returning still fails loudly and names its
+        // seed. Post-unblinding re-measure, declared per decision 0016.
+        vec![625, 731, 752, 797, 825],
         "clean-outgroup-kobold coincided with the goblinoid family on seeds \
          {failures:?} — re-derive and re-pin, don't force back to empty"
     );
@@ -679,10 +700,33 @@ fn homophony_count_is_measured_and_pinned() {
     // closing that is one to two campaigns away. These re-pin the witnesses,
     // not the observation. Each mean is again an exact integer count over the
     // 1000-seed census divided by 1000 (6061, 5784, 19668, 5924).
-    assert!((mg - 6.061).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 5.784).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 19.668).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 5.924).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // THE GLASSHOUSE (Stage B, k = 0.30, census refreshed): the means move to
+    // 6.071 / 5.739 / 19.843 / 5.941 — and THE NARROWING TREND REVERSED.
+    //
+    //     bugbear/goblin     3.345 -> 3.331 -> 3.245 -> 3.2685
+    //     bugbear/hobgoblin           3.359 -> 3.400 -> 3.4576
+    //
+    // The paragraph above extrapolated three successive narrowings into a
+    // prediction: "at the current rate of closing that is one to two campaigns
+    // away" from falsifying the 3x threshold. The very next regen widened it.
+    // That prediction is now FALSIFIED, and recording it as such matters more
+    // than the re-pinned numbers: three points in one direction were read as a
+    // rate, on a quantity whose own doc calls it a witness rather than an
+    // observation. A trend fitted to three regens of a 1000-seed statistic is
+    // not a rate, and the reversal is the cheapest possible demonstration.
+    //
+    // The falsification threshold is UNCHANGED and still not to be widened:
+    // below 3x falsifies the claim outright and is a finding to report. It is
+    // simply further away than the previous paragraph believed, and nothing
+    // here should be read as saying it will not arrive.
+    //
+    // Each mean is again an exact integer count over the 1000-seed census
+    // divided by 1000 (6071, 5739, 19843, 5941). Post-unblinding re-measure,
+    // declared per decision 0016.
+    assert!((mg - 6.071).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 5.739).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 19.843).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.941).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

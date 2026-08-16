@@ -120,7 +120,7 @@ const ATTEMPT_BUDGET: usize = 30_000;
 /// claim: structural(seed: 42) — off-gate (heavy:); a cost-bound benchmark,
 /// not byte-identity, but still a single-seed claim in the rubric's sense
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn connection_graph_cost_is_bounded_on_seed_42() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let world = build_world_to(
@@ -224,7 +224,7 @@ const CASCADE_SIZE_BUDGET: u32 = CASCADE_DEPTH_CAP / 4;
 /// measurements (`--nocapture`) so a future re-measurement doesn't need to
 /// re-derive the harness.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn tumult_predation_bake_stays_within_budget() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
@@ -403,7 +403,7 @@ const RELATION_TABLE_BUDGET: usize = 400;
 /// could move, which is decoration. It is printed because it is the right
 /// diagnostic for a human re-measuring, not because it is a gate.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn tithe_tribute_bake_stays_within_budget() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 

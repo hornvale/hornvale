@@ -26,7 +26,8 @@ pub(crate) const REFERENCE_SEED: u64 = 42;
 /// The family `hornvale proto` renders when the caller names none — the
 /// roster's first multi-member family, and the one whose page predates the
 /// family argument.
-pub(crate) const DEFAULT_FAMILY: &str = "goblinoid";
+/// type-audit: bare-ok(identifier-text)
+pub const DEFAULT_FAMILY: &str = "goblinoid";
 
 /// Resolve `family` to the `&'static str` label the composition root's
 /// family-keyed reads want, failing loudly with the admissible set if this

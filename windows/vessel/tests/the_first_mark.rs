@@ -61,7 +61,54 @@ fn world() -> hornvale_kernel::World {
 /// `Dadogogodaga`, a different place entirely. Reading the rename off the
 /// almanac instead of the possession artifact gives a plausible wrong answer,
 /// because this NPC does not live in the chief settlement.
-const GRIEVANCE_NPC: &str = "bugbear of Googo";
+///
+/// A SEVENTH time, with The Glasshouse (decision 0134, 2026-08-14): the
+/// terrain epoch re-places seed 42's settlements, `Googo` -> **`Goodo`**.
+/// Re-read from `book/src/gallery/possession-seed-42.md`, the source the note
+/// above insists on. NOTE this constant is DUPLICATED in
+/// `possession_moves.rs` and both copies must move together — they did here,
+/// but nothing enforces it, which is worth knowing before the eighth rename.
+///
+/// The EIGHTH rename arrived immediately, with The Glasshouse's Stage B
+/// Task 4 (the thermostat): `Goodo` -> **`Doadaga`**. Both copies moved
+/// together again — re-read from `book/src/gallery/possession-seed-42.md`.
+///
+/// The NINTH, at The Glasshouse's close (`k` settled at 0.30):
+/// `Doadaga` -> **`Dooga`**. Re-read from the same gallery page, which had
+/// already been regenerated at the `k` commit (`0cdd1445`) — **the artifact
+/// moved and these two constants did not**, which is exactly the drift the
+/// note above predicted and is why all eight previous renames are recorded
+/// here rather than summarised.
+///
+/// The duplication is now GUARDED, not merely noted: see
+/// `the_two_grievance_npc_copies_agree` below. Nine renames of a constant
+/// that must move in two places at once, with nothing checking it, was long
+/// past the point where a comment was the right instrument.
+const GRIEVANCE_NPC: &str = "bugbear of Dooga";
+
+/// The duplication guard the comment above spent eight renames asking for.
+/// `possession_moves.rs` declares its own `GRIEVANCE_NPC` because integration
+/// tests are separate binaries and cannot share a private const; nothing made
+/// the two agree, and a stale copy in EITHER file satisfies every negative
+/// assertion that reads it (hostility is `false` for a label the session has
+/// never seen). Reads the sibling's source rather than its value, which is the
+/// only way one test binary can see another's private constant.
+#[test]
+fn the_two_grievance_npc_copies_agree() {
+    let sibling = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/possession_moves.rs"),
+    )
+    .expect("possession_moves.rs is readable");
+    let expected = format!("const GRIEVANCE_NPC: &str = {GRIEVANCE_NPC:?};");
+    assert!(
+        sibling.contains(&expected),
+        "possession_moves.rs does not declare `{expected}`. The two copies of \
+         GRIEVANCE_NPC have drifted — this constant has been renamed NINE times \
+         by world changes and both files must move together every time. Re-read \
+         the current value from book/src/gallery/possession-seed-42.md and fix \
+         whichever copy is stale; do not change this guard."
+    );
+}
 
 fn out_text(t: Turn) -> String {
     match t {

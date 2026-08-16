@@ -17,7 +17,8 @@ const ESPEAK_SPEED: &str = "130";
 /// phonology page's sample names (default out: `book/src/audio`). The
 /// offline authoring step — espeak-ng and ffmpeg run here and nowhere
 /// else; output is committed and CI only ever checks the file *set*.
-pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
+/// type-audit: bare-ok(identifier-text: args), bare-ok(prose: return)
+pub fn cmd_voice(args: &[String]) -> Result<(), String> {
     let out_dir = Path::new(crate::flag_value(args, "--out").unwrap_or("book/src/audio"));
     fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
     let world = World::new(Seed(crate::phonology::REFERENCE_SEED));

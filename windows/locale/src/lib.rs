@@ -1719,7 +1719,25 @@ mod tests {
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
         let loc = ctx.describe(&addr, WorldTime::GENESIS).unwrap();
-        assert_eq!(loc.fields.temperature_c, 38.082618);
+        // THE GLASSHOUSE, Stage B Tasks 4/5 re-pin: 38.082618 -> 37.232618.
+        // The thermostat (a damped, greenhouse-forced insolation baseline
+        // replacing the fixed 288 K blackbody one) plus the area-mean-zero
+        // latitude profile move this address's blended temperature; the
+        // corners below (pure barycentric geometry over unchanged terrain)
+        // are untouched, confirming only the climate field moved.
+        //
+        // THE GLASSHOUSE close re-pin (`k` settled at 0.30): 37.232618 ->
+        // 23.999847. `k` moved after the Task 4/5 re-pin above, and this is a
+        // 13.2 K fall at one address on a campaign whose population MEDIAN
+        // rose 8.3 K — not a contradiction, and worth a line so the next
+        // reader does not treat it as one. This address sits at face 3 down a
+        // fixed deep path; the corrected latitude profile is area-mean-zero
+        // where the old one carried a uniform +10 K, so it redistributes
+        // rather than lifts, and a low-latitude address that was reading the
+        // old offset loses more than the thermostat returns. The corners are
+        // again untouched, which is what says the climate field moved and the
+        // geometry did not.
+        assert_eq!(loc.fields.temperature_c, 23.999847);
         assert_eq!(
             loc.corners,
             vec![

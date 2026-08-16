@@ -122,7 +122,7 @@ and staled The Gnomon's injection fixtures under
 `docs/generated-paths.txt`** (see that directory's README and
 `scripts/gnomon-injection.sh`'s header) and therefore covered by no drift check
 and untouched by `make rebaseline`. Nothing caught it except their reader test
-going red in a full `gate-stage` run — after the census refresh had already run.
+going red in a full stage-gate run — after the census refresh had already run.
 
 So the check before you register: `grep -rl 'rows.csv\|schema.json'
 windows/lab/tests/fixtures/` and ask which of those have their own host-pinned

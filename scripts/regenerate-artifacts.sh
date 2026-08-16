@@ -67,8 +67,11 @@ set -euo pipefail
 #   internal builds), `tropes report`/`report --corpus …`/`matrix` (each
 #   builds its own `Seed(0)` world via `world_builder::build_world`,
 #   independent of Group A), and the seam-guard roster (a source-tree scan,
-#   no world at all). All of these are safe to co-schedule with B: distinct
-#   write targets, and no read dependency on B's or A's outputs.
+#   no world at all). `systems report`/`matrix` (The Compendium) joined this
+#   group later still, and builds no world at all — not even its own —
+#   because its anchors resolve against the digest, the idea registry, and
+#   the filesystem, never a genesis. All of these are safe to co-schedule with B:
+#   distinct write targets, and no read dependency on B's or A's outputs.
 #
 #   GROUP D — the lab studies (`lab run`, traced: internally parallel across
 #   seeds via `std::thread::available_parallelism`, per
@@ -338,11 +341,124 @@ gen_possession_overtime() {
 # twelve lasting under a year, founding parties arriving from five distinct
 # neighbouring clearings, and the standing twelfth founded in the year 1775. No
 # layer ends in ice -- every founding party instead ARRIVED fleeing it, the
-# shape this page has carried at every cell it has ever pointed at. The deepest
-# column on this seed has now gone 16 -> 11 -> 10 -> 12 across four roster
-# changes; that is a reported number and this script asserts NO mechanism for
-# it, because a roster change moves several things at once.
-history_site=4604
+# shape this page has carried at every cell it has ever pointed at.
+#
+# THE CAMERA MOVED AGAIN, 4604 -> 35120, for decision 0134's terrain epoch (The
+# Glasshouse). New coastlines put cell 4604 under a different sea and emptied
+# it; `the_history_page_prose_names_the_cell_it_renders` caught it by name
+# rather than letting the showcase for stratigraphy quietly render "Nothing
+# ever settled here". The standing rule applied once more: is the WORLD empty,
+# or only this cell? Scanning occ-site over the live seed-42 sky world, cell
+# 35120 carries TEN layers, every one hobgoblin, tied with 7754 for the deepest
+# column on this seed. The world is not shallow, so repointing is legitimate,
+# exactly as at The Tolerance and The Delvers.
+#
+# Re-read off the live block for 35120: ten layers from the year 300, nine
+# completed -- five put to flight by other hobgoblins, four leaving because
+# they had taken a neighbour's ground and carried the settlement onto it -- one
+# layer lasting under a year, and the standing tenth founded in the year 1200.
+# Nine of the ten founding parties arrived fleeing ice, from three distinct
+# neighbouring clearings; the tenth was sent out from cell 35127. No layer ends
+# in ice, the shape this page has carried at every cell it has ever pointed at.
+# The column also carries its own technological arc, bronze -> iron ->
+# classical, which none of the previous cells showed this cleanly. The deepest
+# column on this seed has now gone 16 -> 11 -> 10 -> 12 -> 10 across five
+# roster changes; that is a reported number and this script asserts NO
+# mechanism for it, because a roster change moves several things at once.
+#
+# THE CAMERA MOVED AGAIN, 35120 -> 2738, for The Glasshouse Stage B (Tasks
+# 4/5: the carbonate-silicate thermostat plus the area-mean-zero latitude
+# profile). The warmer, redistributed population re-placed settlements again
+# and emptied cell 35120; `the_history_page_prose_names_the_cell_it_renders`
+# caught it by name, exactly as designed. The standing rule applied once
+# more: is the WORLD empty, or only this cell? Scanning occ-site over the
+# live seed-42 sky world, cell 2738 carries EIGHTEEN layers, every one
+# hobgoblin — the deepest column this page has ever pointed at, and the
+# deepest this seed has shown across every roster and terrain change
+# recorded above. The world is not shallow, so repointing is legitimate.
+#
+# Re-read off the live block for 2738: eighteen layers from the year 0,
+# seventeen completed -- twelve put to flight by other hobgoblins, five
+# leaving because they had taken a neighbour's ground and carried the
+# settlement onto it -- eight of the eighteen lasting under a year, and the
+# standing eighteenth founded in the year 1800 (54 souls, "two huts and a
+# granary" in the grass today, matching the standing layer's own peak). This
+# cell differs from every prior one in ONE respect: the DEEPEST layer was not
+# founded fleeing ice -- it was raised from nothing, "the first to break this
+# soil" -- and every layer above it (seventeen of eighteen) arrived fleeing
+# ice instead, driven off one of five distinct neighbouring clearings (10885,
+# 10886, 10890, 10891, 10968). No layer ENDS in ice, the shape this page has
+# carried at every cell it has ever pointed at; only the FIRST founding breaks
+# the "arrived fleeing it" pattern, because there was no earlier hobgoblin
+# ground to flee from. The column carries its own bronze -> iron -> classical
+# arc, same as at 35120. The deepest column on this seed has now gone
+# 16 -> 11 -> 10 -> 12 -> 10 -> 18 across six roster/terrain changes; that is
+# a reported number and this script asserts NO mechanism for it.
+#
+# THE GLASSHOUSE, Stage B, resumed session: 2738 -> 7738. Task 5's latitude
+# profile landed and main was absorbed (50 commits, The Repose), and between
+# them cell 2738 went to ZERO occupations —
+# `the_history_page_prose_names_the_cell_it_renders` caught it by name for the
+# second time in one campaign, which is twice this guard has paid for itself
+# here. The standing rule applied again, and the answer is the same: scanning
+# `occ-site` over the live seed-42 sky world gives 620 occupations across 217
+# distinct sites, so the WORLD is not empty and only this cell is. Deepest
+# column is now cell 7738 at FIFTEEN layers (next are 8041 at 12 and 30730 at
+# 11), so repointing is legitimate.
+#
+# Re-read off the live block for 7738: fifteen layers from the year 25,
+# fourteen completed -- twelve put to flight by other hobgoblins, two leaving
+# because they had taken a neighbour's ground and carried the settlement onto
+# it -- five of the fifteen founded and ended in the SAME year, and the
+# standing fifteenth founded in the year 1525 (75 souls, "two huts and a
+# granary" in the grass today, matching the standing layer's own peak).
+# This cell restores the pattern 2738 broke: ALL FIFTEEN layers, the deepest
+# included, arrived fleeing ice, driven off one of five distinct neighbouring
+# clearings (30689 x5, 30693 x3, 30690 x3, 30748 x2, 30745 x2). There is no
+# first-breaker here at all — the ground has been a refuge from its first
+# layer, which is a cleaner statement of the same shape than 2738 gave. No
+# layer ENDS in ice, as at every cell this page has ever pointed at. The
+# column carries the fullest technological arc yet: neolithic at the base,
+# then bronze-working (ten layers), iron, and classical at the top. The
+# deepest column on this seed has now gone
+# 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 across seven roster/terrain/climate
+# changes; that is a reported number and this script asserts NO mechanism
+# for it.
+#
+# THE GLASSHOUSE, k re-decided (0.4 -> 0.3): 7738 -> 757, the THIRD repoint of
+# this one page inside a single campaign. 7738 fell from fifteen hobgoblin
+# layers to TWO (a high-elf steading and the human one that took it), and this
+# time the guard caught it on its OTHER arm — not the empty-column check but
+# the people cross-check, because the prose still said "hobgoblin" while the
+# rendered column no longer contained one.
+#
+# THE PATTERN IS NOW THE FINDING, and it should be read before the fourth
+# repoint rather than after. A showcase keyed on a HAND-PICKED CELL with
+# hand-written narrative about that cell's specific contents is invalidated by
+# every physics change, and this campaign has invalidated it three times
+# (Task 4 emptied 35120, Task 5 plus the absorption emptied 2738, k emptied
+# 7738). Each repoint costs a scan, a re-read and a rewritten paragraph. The
+# guard is not the problem — it is the only reason the page has never shipped
+# a lie — but the page's SHAPE is: prose asserting counts the tool could
+# derive. Options a later campaign should weigh: derive the framing sentences
+# from the rendered column, pin the showcase to a committed world rather than
+# regenerating from the live seed, or keep the prose but strip it of specific
+# counts. Not decided here; recorded so the fourth repoint is a choice.
+#
+# Read off the live block for 757: fifteen layers from the year 375, fourteen
+# completed, and this column tells a DIFFERENT story from its predecessors.
+# At 2738 and 7738 the endings were mostly flight; here EIGHT of the fourteen
+# ended because the occupants took a neighbour's ground and carried the
+# settlement onto it, against six put to flight — an expansionist column
+# rather than a harried one, and the first time this page has shown that. Only
+# one layer lasted under a year. All fifteen still arrived fleeing ice, from
+# five distinct clearings (11930 x5, 11939 x4, 13032 x3, 13022 x2, 11941 x1),
+# and none ends in ice, which is the one shape every cell this page has
+# pointed at has shared. Tech runs bronze -> iron -> classical with no
+# neolithic base. The standing fifteenth was founded in 1925 and holds 55
+# souls. Depth across eight changes:
+# 16 -> 11 -> 10 -> 12 -> 10 -> 18 -> 15 -> 15.
+history_site=757
 gen_history() {
     printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
@@ -352,23 +468,26 @@ gen_history() {
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 525 down to the present. Every one of the eleven\n'
-    printf 'completed layers ended at the hands of other gnolls: seven fell to a\n'
-    printf 'rival band, and four were not evictions at all — the occupants had\n'
-    printf 'just taken better ground from a neighbour and carried the settlement\n'
-    printf 'there, so the layer closes on a departure rather than a defeat. This\n'
-    printf 'is a people with only itself to fight, contesting one rise in a\n'
-    printf 'neighbourhood it had already filled.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and\n' "$history_site"
+    printf 'fifteen hobgoblin steadings have risen on it, one settling atop the ruins of\n'
+    printf 'the last, from the year 375 down to the present. Every one of the\n'
+    printf 'fourteen completed layers ended at the hands of other hobgoblins — but\n'
+    printf 'mostly not as defeats. Eight of the fourteen were not evictions at all:\n'
+    printf 'the occupants had taken better ground from a neighbour and carried the\n'
+    printf 'settlement onto it, so the layer closes on a departure. Only six fell to\n'
+    printf 'a rival band. This is a people with only itself to fight, and on this\n'
+    printf 'rise it is more often the one doing the taking.\n\n'
     printf 'The cold is in this column, but never as an ending. Not one layer\n'
-    printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
-    printf 'driven off one of five neighbouring clearings. Five of the twelve\n'
-    printf 'layers did not last a single year — founded and put to flight in the\n'
-    printf 'same year they began, which is what the record looks like when refuge\n'
-    printf 'and contest are the same ground. The twelfth was founded in the year\n'
-    printf '1775 and stands yet, 225 years on: some 27 souls, a hut and a\n'
-    printf 'granary, and no ruin yet to read.\n\n'
+    printf 'here fell to ice. Every layer instead *arrived* fleeing it — all\n'
+    printf 'fifteen, the deepest included, driven off one of five distinct\n'
+    printf 'neighbouring clearings. No one ever broke this soil by choice: the\n'
+    printf 'ground has been a refuge from its first layer to its last, and a\n'
+    printf 'staging ground for the next advance as often as a last resort. Only\n'
+    printf 'one of the fifteen failed to last a single year. Read bottom to top,\n'
+    printf 'the column carries its own technological arc: bronze-working at the\n'
+    printf 'base, iron above it, classical at the top. The fifteenth was founded\n'
+    printf 'in the year 1925 and stands yet, 75 years on: some 55 souls, two huts\n'
+    printf 'and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -498,6 +617,23 @@ gen_surrounds_seam() {
 
 echo "regenerate-artifacts: GROUP B+C — world readers and world-free dumps (parallel)" >&2
 
+# `systems matrix` (below) is the first Group C job with a dependency ON
+# ANOTHER GROUP C ARTIFACT: `RepoFacts::gather` reads
+# `docs/digest/decisions-in-force.md`, which `digest render decisions`
+# regenerates a few lines down — and until now nothing in this batch read a
+# sibling's OUTPUT, only $w42/$wsky/$wlocked from the already-reaped Group A.
+# Spawning both in the same untethered batch races: a `systems matrix` that
+# starts before the digest job finishes writing can read a truncated or
+# stale file and fail with "parsed to zero in-force decisions" (caught by
+# running this script, not by any test — nothing exercises the two
+# concurrently). So the digest decisions render runs first, alone, and is
+# reaped before anything that might read its output is spawned; `render
+# delta` has no such reader in this script and stays in the main batch
+# below.
+spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
+  > docs/digest/decisions-in-force.md
+reap
+
 # Group C: world-free dumps (see classification comment above).
 spawn run -p hornvale-kernel --example first_light
 spawn run -p hornvale -- book > book/src/gallery/the-book.md
@@ -519,8 +655,8 @@ spawn run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.m
 spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
   > docs/audits/trope-coverage-tvtropes-2012.md
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
-spawn run --manifest-path tools/digest/Cargo.toml -- render decisions \
-  > docs/digest/decisions-in-force.md
+spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
+spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
   > docs/digest/intent-vs-reality.md
 spawn build_atlas

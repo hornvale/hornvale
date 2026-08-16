@@ -87,7 +87,7 @@ fn ocean_column_heights(climate: &GeneratedClimate) -> BTreeMap<usize, usize> {
 /// Measured on seed 42 (29,896 ocean cells): heights `{1: 1749, 2: 6669, 3:
 /// 21478}` — distinct=3, median=3, tallest_bucket=21478 (71.8%).
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn h1_the_seas_column_is_non_degenerate() {
     let climate = seed_42_climate();
     let heights = ocean_column_heights(&climate);
@@ -178,7 +178,7 @@ fn h1_clause_3_single_rung_share_preregistered_not_met() {
 /// repaired here** — repair changes world bytes, which this measurement task
 /// (spec §2) is forbidden from doing.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn h2_sea_ice_below_the_epipelagic() {
     let climate = seed_42_climate();
 

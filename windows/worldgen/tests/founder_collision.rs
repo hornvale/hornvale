@@ -21,20 +21,55 @@
 //!    2 and 2 before it.
 //!
 //! The drop stays because the widening is **not total**, and this file is where
-//! that is visible: at seeds 2634 and 2898 the colliding pair's two *parents*
-//! are themselves twins, so the ancestry hop folds identically and the pair
-//! ties on everything else too. Those two are the whole residual over 0–2999.
-//! Restoring `select_founders`'s old fatal assert would therefore stop two
-//! legal seeds from building at all — which is why The Ell measured the
-//! proposal instead of shipping it.
+//! that is visible: at a colliding seed the pair's two *parents* are themselves
+//! twins, so the ancestry hop folds identically and the pair ties on everything
+//! else too. Restoring `select_founders`'s old fatal assert would therefore stop
+//! legal seeds from building at all — which is why The Ell measured the proposal
+//! instead of shipping it.
+//!
+//! **WHICH seeds those are is a property of the placement, not of the key, and
+//! decision 0134 proved it — three times now.** The Ell's residual over
+//! 0–2999 was 2634 and 2898. The craton-rescale terrain epoch re-placed every
+//! settlement and cleared both; a fresh full sweep found `[20, 514, 1412,
+//! 1505, 1738, 1892]`, one drop each. **The Glasshouse's thermostat (Stage B
+//! Task 4)** re-placed every settlement again and cleared five of those six;
+//! a second fresh full sweep of 0–2999 on the post-thermostat tree (768.72 s,
+//! ten threads) found `[1892, 2078]`, one drop each. **The Glasshouse's
+//! area-mean-zero latitude profile (Stage B Task 5)** re-placed every
+//! settlement a third time; a third fresh full sweep (798.87 s, ten threads)
+//! found `[1741, 1866, 1892]`, one drop each — 1892 survives all three
+//! epochs, 1741 and 1866 are new, 2078 cleared. The rate held at 3 in 3000
+//! (against 6 after the terrain epoch, 2 after the thermostat alone, and 2
+//! after The Ell). Read the rate, never the membership: the seeds in this
+//! file are witnesses that the residual exists and is small, and they will
+//! not survive the next epoch either.
+//!
+//! **The Glasshouse's `k` re-decision (0.4 → 0.3)** re-placed every
+//! settlement a FOURTH time; a fourth fresh full sweep (692.89 s, ten
+//! threads) found `[238, 1439, 1892, 2031, 2465, 2871]`, one drop each.
+//! 1892 survives all four epochs and is now the only seed that ever has;
+//! 1741 and 1866 cleared after a single epoch, exactly as the paragraph
+//! above predicted they would.
+//!
+//! **AND THIS TIME THE RATE MOVED, WHICH IS THE THING THIS HEADER TELLS YOU
+//! TO READ: 3 in 3000 → 6 in 3000.** It has now run 2 → 6 → 2 → 3 → 6 across
+//! five placements, so a doubling is inside its observed range and is not by
+//! itself alarming. What makes this one legible rather than noise is that an
+//! independent quantity moved with it and in the same direction: warming the
+//! population raised seed 42 from 620 occupations across 217 sites to 826
+//! across 302. More occupations mean more chances that two of them agree on
+//! every material fact `founder_handle` reads, so a rising collision count
+//! is the expected shadow of a rising settlement count, not evidence about
+//! the key. The key is unchanged; the ground under it is not.
 //!
 //! What this battery pins:
 //!
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
 //!    the depth the panic used to fire at;
 //! 2. **the size of the cut** — how many founders each seed loses, so a later
-//!    change that silently alters promotion coverage reddens here. Five of the
-//!    seven rows now read **zero**, and they are the campaign's headline: they
+//!    change that silently alters promotion coverage reddens here. Twelve of
+//!    the eighteen rows now read **zero**, and they are the campaign's
+//!    headline: they
 //!    are seeds that used to lose a founder and no longer do, so a regression
 //!    that reintroduces the collisions is visible rather than silent;
 //! 3. **no backfill** — the losing people ends one short of `MEMORY_DEPTH`
@@ -45,7 +80,7 @@
 //! before the widening. It is here so that a future absorption that re-exposes
 //! it is visible rather than surprising.
 //!
-//! Cost: eight `BuildDepth::Settlements` builds and two `Full` builds, ~2 s
+//! Cost: eighteen `BuildDepth::Settlements` builds and three `Full` builds, ~2 s
 //! each on an optimized dev profile — cheap enough for the commit gate, which
 //! is where a liveness guard belongs.
 //!
@@ -75,22 +110,32 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
     .unwrap_or_else(|e| panic!("seed {seed} failed to build to {depth:?}: {e:?}"))
 }
 
-/// The whole promotion path, on the two seeds that still collide. `Full` is
+/// The whole promotion path, on the seeds that still collide. `Full` is
 /// the depth `promote` runs at, so this is the end-to-end liveness claim rather
 /// than a claim about `select_founders` alone.
 ///
-/// **These are 2634 and 2898, not 283 and 705.** The Ell's widening cleared the
-/// census range, so 283 and 705 no longer collide and building them would prove
-/// only that a world without a collision survives — the vacuous form of this
-/// test. The seeds kept here are the ones where the drop genuinely fires, and
-/// the drop firing is asserted below so that a future widening which clears
-/// them too reddens this file rather than quietly hollowing it out.
+/// **These are 238, 1439 and 1892 (The Glasshouse, `k` re-decided 0.4 →
+/// 0.3).** The previous set — 1741, 1866, 1892 — lasted exactly one
+/// placement: 1741 and 1866 both cleared, and the assertion below is what
+/// made that visible rather than letting the test hollow out into "an
+/// uncontested world builds". It has now caught a cleared seed on two
+/// consecutive re-pins, which is the whole reason it is phrased as a
+/// liveness claim with a self-check rather than as three builds.
 ///
-/// claim: structural(seed: [2634, 2898]) — two named worlds, built once each. No
-/// search: the seeds come from a completed 0–2999 sweep, not from this test.
+/// The seeds come from a **re-run of the full 0–2999 sweep** on the
+/// post-`k` tree (692.89 s, ten threads, run outside this test), so the
+/// positive-set claim is a fresh measurement and not an inherited one:
+/// `[238, 1439, 1892, 2031, 2465, 2871]`, one drop each. Three of the six
+/// are built here; 1892 is the one seed that has survived all four epochs.
+/// The rate DOUBLED to six in three thousand — see the module header for why
+/// that tracks settlement volume rather than the key.
+///
+/// claim: structural(seed: [238, 1439, 1892]) — three named worlds, built
+/// once each. No search: the seeds come from a completed 0–2999 sweep, not
+/// from this test.
 #[test]
 fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
-    for seed in [2634u64, 2898] {
+    for seed in [238u64, 1439, 1892] {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
         assert!(
@@ -112,29 +157,62 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// change that moves them is a change in promotion coverage and must be read,
 /// not re-pinned reflexively.
 ///
-/// **Five of these seven now read zero, and that is The Ell's headline.** Under
-/// the pre-Ell key the row for 283, 705, 2403, 2634 and 2898 each read 1. The
-/// widening cleared the first three (and the whole census range with them) and
-/// left the last two, whose colliding pairs have twin parents.
+/// **All ten of these read zero after decision 0134, except 1892 — and
+/// 2078 joined it (The Glasshouse, Stage B Task 4).** The thermostat
+/// re-placed every settlement in every world a second time this campaign; a
+/// **fresh 0–2999 sweep** (768.72 s, ten threads) found `[1892, 2078]`, one
+/// drop each.
 ///
-/// claim: structural(seed: [42, 283, 705, 2403, 2634, 2793, 2898]) — seven
-/// named worlds with pinned per-seed values. Not a sweep and not a search: the
-/// enumeration is the whole of a completed 0–2999 sweep's positive set plus two
-/// controls, so nothing here scans for an instance.
+/// **2078 clears and 1741/1866 join 1892 (The Glasshouse, Stage B Task 5).**
+/// The area-mean-zero latitude profile re-placed every settlement a third
+/// time; a **fresh 0–2999 sweep** (798.87 s, ten threads, run outside this
+/// test) found `[1741, 1866, 1892]`, one drop each. 2078 is kept as a zero
+/// row, the same convention as every prior cleared positive.
+///
+/// **The set turns over again, and the rate doubles (The Glasshouse, `k`
+/// re-decided 0.4 → 0.3).** A fourth fresh 0–2999 sweep (692.89 s, ten
+/// threads, run outside this test) found `[238, 1439, 1892, 2031, 2465,
+/// 2871]`, one drop each. 1741 and 1866 clear after one placement; five new
+/// positives join 1892. Both cleared seeds are kept as zero rows, the same
+/// convention as every prior cleared positive, which is why this table grows
+/// rather than turning over — it is now eighteen rows, of which six are the
+/// live positive set and twelve are the record of what four epochs cleared.
+///
+/// The old seeds are KEPT as zero rows rather than deleted. They are the
+/// cheapest possible statement of what an epoch did — a collision set does not
+/// survive a re-placement — and they redden if a future change resurrects one,
+/// which is a thing worth knowing.
+///
+/// claim: structural(seed: [20, 42, 238, 514, 1412, 1439, 1505, 1738, 1741,
+/// 1866, 1892, 2031, 2078, 2465, 2634, 2793, 2871, 2898]) — eighteen named
+/// worlds with pinned per-seed values. Not a sweep and not a search: the enumeration is the whole of a
+/// completed 0–2999 sweep's positive set plus two controls and every
+/// superseded row, so nothing here scans for an instance.
 #[test]
 fn the_dropped_founders_are_pinned_per_seed() {
-    // (seed, founders dropped). The five seeds are the whole of
-    // `the-radiation`'s failure set over seeds 0–2999 (the campaign's
-    // founder-collision diagnosis); 42 and 2793 are the controls. The values
-    // are The Ell's re-measurement on this tree.
-    let expected: [(u64, usize); 7] = [
+    // (seed, founders dropped). 1741, 1866 and 1892 are the whole of the
+    // current positive set over seeds 0-2999; 42 and 2793 are the
+    // long-standing controls; the rest are prior positives, kept to record
+    // that they cleared. Values measured on this tree.
+    let expected: [(u64, usize); 18] = [
+        (20, 0),
         (42, 0),
-        (283, 0),
-        (705, 0),
-        (2403, 0),
-        (2634, 1),
+        (238, 1),
+        (514, 0),
+        (1412, 0),
+        (1439, 1),
+        (1505, 0),
+        (1738, 0),
+        (1741, 0),
+        (1866, 0),
+        (1892, 1),
+        (2031, 1),
+        (2078, 0),
+        (2465, 1),
+        (2634, 0),
         (2793, 0),
-        (2898, 1),
+        (2871, 1),
+        (2898, 0),
     ];
     for (seed, drops) in expected {
         let w = build(seed, BuildDepth::Settlements);
@@ -209,22 +287,28 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// to stand on.** It used to run on seed 283, whose losing people held more
 /// than `MEMORY_DEPTH` occupations, so a backfill would have had a real
 /// candidate below the cut to pull up. The Ell cleared 283, and neither seed
-/// that still collides can replace it: 2634's losing people holds exactly
-/// `MEMORY_DEPTH` occupations and 2898's holds nine. So the depth-binding case
-/// is asserted where it can be constructed — `person_promote.rs`'s
+/// that still collided could replace it. So the depth-binding case is asserted
+/// where it can be constructed — `person_promote.rs`'s
 /// `a_drop_costs_one_founder_and_is_not_backfilled`, on a synthetic record set
 /// — and what runs here is the live-world half: whatever the cap does, the
 /// people ends one short and nothing was substituted in.
+///
+/// **Seed 1892, not 20 (The Glasshouse, Stage B Task 4).** The thermostat
+/// re-placed every world a second time this campaign and cleared 20 along
+/// with the rest of the post-craton-rescale positive set; 1892 is the one
+/// seed that survives from that set into the fresh sweep's `[1892, 2078]`.
+/// The `available > 1` premise below is what makes the substitution question
+/// answerable at all, and it is asserted rather than assumed for exactly this
+/// reason.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
-    // Seed 2898, not 283: The Ell cleared 283, so it drops nobody to observe.
-    let w = build(2898, BuildDepth::Settlements);
+    let w = build(1892, BuildDepth::Settlements);
     let occs = occupation_records(&w);
     let cast = select_founders(&occs);
     let dropped = cast
         .unremembered
         .first()
-        .expect("seed 2898 drops exactly one founder");
+        .expect("seed 1892 drops exactly one founder");
     let people = dropped.people;
     let promoted = cast
         .remembered
@@ -234,7 +318,7 @@ fn a_dropped_founder_is_not_backfilled() {
     let available = occs.iter().filter(|o| o.core.people == people).count();
     assert!(
         available > 1,
-        "seed 2898's {people:?} must hold more than one occupation \
+        "seed 1892's {people:?} must hold more than one occupation \
          ({available}), or there is nothing a backfill could have reached for"
     );
     assert_eq!(

@@ -239,7 +239,7 @@ fn measure(seed: u64, depth: BuildDepth) -> Row {
 /// floors this claim used to include moved to the census column
 /// `climate-displacement-events` (The Assize) — see this file's module doc.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn history_gates_full_world_and_cross_seed() {
     // 1. Seed-42 at FULL depth — the gates survive the whole cascade (culture,
     //    religion, species, deep time), not just Settlements depth.

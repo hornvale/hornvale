@@ -33,7 +33,7 @@
 # The host file is overridable so the guard's own REFUSAL path is testable.
 # Without this the only way to exercise a refusal is to be on the wrong
 # machine, which means the refusal branch is never tested on the machine that
-# has to trust it. `scripts/test-lane.sh` drives it.
+# has to trust it. `scripts/test-sluice.sh`'s chamber sections drive it.
 #
 # TEST-ONLY. `windows/lab/src/census_guard.rs` bakes the canonical hostname
 # in at COMPILE TIME via `include_str!` on census-canonical-host.txt itself
@@ -148,12 +148,12 @@ EOF
 # (a set name from scripts/lane-sets.tsv, or a gate name).
 #
 # DIRECTION THIS ENFORCES: `this host is the canonical one`. It says nothing
-# about whether the SET is one that belongs on the lane — `lane-dispatch.sh`
-# owns that, reading the roster.
+# about whether the SET is one that belongs on the lane — `sluice-run.sh`
+# owns that, reading the roster (and exiting 2 on `no such set`).
 #
 # `require_canonical_census_host` above is untouched and keeps its own two
 # callers (census-run.sh, heavy-run.sh) and its own carefully-worded prose.
-# This is the general entry point The Staff's lane sets dispatch through.
+# This is the general entry point the merge queue's chamber runs through.
 require_canonical_host() {
     local set_name here here_lc want_lc
     set_name="${1:-gate}"
@@ -173,9 +173,13 @@ ten cores, so a second concurrent run roughly doubles both.
 
 Locally you may run:   make gate-commit
 
-Push, then dispatch:   make gate-stage     REF=<full-sha>
-                       make gate-campaign  REF=<full-sha>
-                       make lane SET=$set_name REF=<full-sha>
+Push, then submit:     make sluice       BRANCH=<branch> REF=<full-sha>
+                       make sluice-stage BRANCH=<branch> REF=<full-sha>
+
+The heavy tier and a census keep their own entry points, since the chamber
+does not run them ($set_name may be one of these):
+                       make heavy-remote REF=<full-sha>
+                       ssh $CANONICAL_CENSUS_HOST 'cd ~/Projects/hornvale && HV_CENSUS_REF=<sha> scripts/census-run.sh'
 
 A SHA, not a branch name: the ref feeds 'reset --hard', which can land on a
 stale local branch of that name over there.

@@ -72,11 +72,12 @@ deno task build      # then `git diff --exit-code` the bundle it wrote
 cannot see this tree, so a purely local commit is never checked here.** That
 part has not changed. What has: since 0125 retired GitHub Actions, this
 paragraph used to say nothing ran them for you at all, and that stopped
-being true this campaign. `gate-stage`'s `clients` lane set
+being true this campaign. The `clients` phase
 (`make clients-check-run`) now runs `vessel-check`, `world-check`,
-`game-check`, **and** `atlas-check` together, dispatched at every plan-stage
-boundary (The Staff) — a real backstop, not a manual-discipline promise. A
-client change still needs to reach a pushed stage gate before anything
+`game-check`, **and** `atlas-check` together, and the canonical box's chamber
+runs that phase in both the stage gate (`make sluice-stage`) and the merge
+queue (`make sluice`) — a real backstop, not a manual-discipline promise. A
+client change still needs to reach a pushed, queued request before anything
 catches it automatically; nothing local does, so don't mistake a clean
 `gate-commit` for a clean client tree.
 

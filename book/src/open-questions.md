@@ -92,23 +92,27 @@ the practice by one clause: **make it fail on command, and run the positive
 control, because a negative result from an instrument nobody has seen fire is
 not evidence.**
 
-**A note from The Staff (2026-08-14), since this score is read against an
-instrument this passage names by a label that no longer exists.** Both
-halves of Sexton's pairing — the census sentinel and the duration alarm —
-lived inside the single gate this chapter calls `make gate`, which decision
-0132 has since split by purpose into `gate-commit` (local, every commit) and
-`gate-stage` (the lane, each plan-stage boundary). The sentinel costs 12–25
-CPU-seconds depending on host, above the one-second floor that defines
-`gate-commit`'s test tier, so it no longer runs at every commit; the
-duration alarm moved with it, because both live inside the same `cargo
-nextest run --workspace` invocation, which is now `gate-stage`'s body rather
-than `gate-commit`'s. The pairing itself survives — generator and verifier
-still run together, just inside the slower gate — but the **frequency** this
-passage's score leans on does not automatically survive with it: nobody has
-yet counted how often `gate-stage` runs in a month, so "368" is not the
-number to read off this passage anymore, and no replacement has been
-measured. Score this bet as still paired, at a currently unmeasured
-frequency — not as reconfirmed at the old one.
+**A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
+since this score is read against an instrument this passage names by a label
+that no longer exists.** Both halves of Sexton's pairing — the census
+sentinel and the duration alarm — lived inside the single gate this chapter
+calls `make gate`, which decision 0132 has since split by purpose into
+`gate-commit` (local, every commit) and a **stage gate** on the canonical
+box, run at each plan-stage boundary. The sentinel costs 12–25 CPU-seconds
+depending on host, above the one-second floor that defines `gate-commit`'s
+test tier, so it no longer runs at every commit; the duration alarm moved
+with it, because both live inside the same `cargo nextest run --workspace`
+invocation, which is now the stage gate's body rather than `gate-commit`'s.
+Decision 0139 then moved the stage gate again without changing what it runs:
+it is a request to the canonical box's serial merge queue now (`make
+sluice-stage`), taking the same claim and running the same phases as a merge
+does, but reporting instead of pushing. The pairing itself survives —
+generator and verifier still run together, just inside the slower gate — but
+the **frequency** this passage's score leans on does not automatically
+survive with it: nobody has yet counted how often the stage gate runs in a
+month, so "368" is not the number to read off this passage anymore, and no
+replacement has been measured. Score this bet as still paired, at a
+currently unmeasured frequency — not as reconfirmed at the old one.
 
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
@@ -403,6 +407,119 @@ to self-scorable, and leaves every score in this chapter where it stood. Recorde
 explicitly, because a campaign that changes the save format and every founder's
 name looks from the outside like it should have moved something, and decision
 0030's sweep is answered by a statement either way rather than by silence.
+
+A twelfth campaign contributes the family's densest single instance and, with
+it, the first useful statistic about *detection*.
+[The Compendium](./chronicle/the-compendium.md) (2026-08-15) built one
+resolver — the anchor parser and audit in `cli/src/systems.rs`, most of it
+resolution logic rather than rendering or its own inline tests — whose
+entire purpose is noticing when a citation stops being true, and produced
+**four separate false-cleans inside it**: a symbol match that accepted any
+name it was a prefix of; a fallible
+operator inside a loop, so the guard's count propagated an empty result and
+could never fire; an exact string comparison against a status vocabulary whose
+real cells carry qualifiers, emphasis and transition arrows, leaving roughly a
+fifth of the rows it guards permanently unfalsifiable; and a citation of a test
+that is compiled but never run, which the resolver called resolved. Three are
+the same category error wearing different faces — treating a syntactic
+coincidence as a semantic fact — and each was made after the previous one had
+been found and fixed.
+
+The statistic is in *who found them*. One by review, one by the implementer
+using the tool rather than testing it, one by the controller reading a task
+ahead, and one by accident while hunting better evidence for an unrelated
+verdict. **Four detection mechanisms, each of which found exactly one.** Every
+prior entry in this thread argues that a particular check could not fire; this
+one argues something narrower and more actionable about the searching:
+redundant detection is not redundant when each detector has a different blind
+spot, and dropping any one of these four as duplicative would have shipped a
+false-clean in an instrument whose whole claim is that the citation is the
+evidence. The third defect was also, on inspection, the controller's own — a
+rule generalized from a single real row whose status happened to be the one
+unqualified form — which is this chapter's standing lesson that a correct
+observation and a false generalization are routinely the same sentence.
+
+**No bet in the map below moved.** The Compendium ships an instrument and one
+reading of it; it resolves no open question about the world and re-scores
+nothing here. Its one finding *about* the world is a render gap rather than a
+sim one: the first capability in an external catalogue this project cannot
+replicate is that catalogue's own first page — entities carrying their own
+appearance — and it reads **absent**, because the shipped character-grid
+client draws one glyph for the possession and one for everything else in view,
+terrain and marks alike. The catalogue's *refusals* are a separate and smaller
+set, each tracing to a ratified decision rather than to a deficiency; they
+confirm existing positions rather than moving a bet.
+
+A thirteenth campaign contributes two corners the practice does not reach,
+and a correction to a score written above. [The Sluice](./chronicle/the-sluice.md)
+(2026-08-16) built a serial merge queue and produced **fourteen** defects from
+its own plan text — the largest single tally this thread has recorded, from
+the same source every other tally names. Two were guards described as live
+that nothing could redden, and one was a check written against a situation
+that cannot occur: it grepped for git's default merge subject `Merge branch …`
+against a chamber that merges a bare identifier into a detached head, where the
+default is `Merge commit '<sha>' into HEAD`. Those belong to the family already
+described. The two below do not.
+
+**The first corner is a check whose predicate is right and whose model of the
+world is wrong.** A static lint scanned one file for commands that would write
+to the real remote. It was defeated three times, and not once by a missing
+pattern: first a denylist that could not enumerate the shell's syntax, then a
+hand-rolled word boundary that matched nothing at all, then a line-continuation
+joiner that inserted a space where the shell deletes the backslash outright —
+so a command split across two lines in an unusual place really executes as a
+force-push while the auditor reports zero violations. Mutation does not find
+this. The check fires; it fires reliably; it is pointed at everything it claims
+to be pointed at. What is wrong is its *model of the language it reads*, and
+each of the three looked correct by inspection. The lint was deleted rather
+than patched a fourth time, because by then it had acquired a worse property
+than the thing it protected — an unbalanced brace in the audited file closed
+the test wrapper early, so the audited content executed while the audit
+reported clean. The replacement is a runtime hook that refuses the operation
+rather than a reader that predicts it. So the floor gains a fifth question,
+asked of any check that parses rather than executes: *whose model of this
+language is this check using, and has that model been made to disagree with
+the real one on purpose?*
+
+**The second corner is a generator with no verifier at all, inside the gate.**
+The project's whole-world tier authors four committed artifacts. Two of the
+four tests compare what they build against a committed copy and fail when they
+differ; the other two only write. They assert nothing about what they wrote, so
+both artifacts went stale through a run reporting eighty passes out of eighty.
+This is The Siding's unpaired check with the pairing broken at the other end:
+there, the generator and the verifier existed and were never invoked together;
+here the verifier does not exist, and its absence is concealed by a green
+number in the same run that produced the drift. **A test that authors an
+artifact must also assert it**, and an authoring test that asserts nothing is
+not a weak check but a zero one wearing a passing test's clothes.
+
+**And a score in this chapter needs correcting.** The passage above credits
+The Ballast with building the missing half of the commit gate's roster loop —
+a copy of a green run's list to durable storage, carried back by a person. It
+never moved a byte, and neither published explanation of *why* was the cause.
+The list has one commit in its entire history. The blocker sat a step earlier
+than anyone had looked: the command that writes the list refuses whenever the
+machine's exclusive claim is held, and every serialized path in this project
+runs that command as a descendant of the process holding the claim — so the
+one thing that produces the list declined to, in the one environment where
+nothing else was running, and every mechanism downstream faithfully carried an
+unchanged file. Two campaigns diagnosed the symptom correctly and the cause
+wrongly, each building a remedy for the step it had found. The floor's second
+half — a check needs an enumeration it is answerable to — is unchanged and was
+right. What is added is narrower and aimed at repairs: **a remedy verified only
+at the step it was built for cannot tell you the pipeline ever ran**, and the
+cheapest thing that would have settled it, in either campaign, was reading the
+file's own history and finding one hand-written entry.
+
+**No bet in the map below moved.** The Sluice changes how work reaches merged
+reality; it resolves no open question about the world, raises nothing from
+taste-gated to self-scorable, and leaves every score below where it stood. Its
+one finding about the world arrived sideways, through a survivor the merge
+queue held on: a unit conversion from founding years to ledger days whose
+surrounding tests asserted only *ordering*, which a uniform rescaling cannot
+disturb. That is [The Ell](./chronicle/the-ell.md)'s question — *which test
+goes red if this crossing is deleted?* — answered once more in the negative,
+and closed with a cross-check rather than a threshold.
 
 ## What the world can already check itself on (high confidence)
 
@@ -2677,6 +2794,74 @@ precondition is now named and dated: it waits on distortion, which campaign 2
 supplies. The half that closed did so on the first honest attempt, and both
 halves lived inside a single sentence when the campaign opened.
 
+### A criterion can fail and confirm its own hypothesis (2026-08-15)
+
+*The Glasshouse* froze six criteria before writing a line of the physics they
+would grade, and four of them passed. The two that failed are the reason this
+entry exists, because the chapter has been treating a preregistered set as
+something that passes or fails *as a set*, and this campaign shows the useful
+structure is finer than that.
+
+The hypothesis was that a cold, uniform population had three separable causes
+and was not an attractor. Two criteria tested the *mechanism* — that the
+population would retain its temperature spread rather than being flattened onto
+a target, and that no biome class would dominate. Both passed, and the first was
+designed to be the one a lazy fix fails: a strong enough thermostat can hit any
+median by collapsing everyone onto it. The spread held at 34.92 K against a
+31.2 K floor, and the largest biome class fell from 65.1% to 25.0%.
+
+One criterion tested a *magnitude*: land the median within five degrees of
+Earth's +8.6 °C. It missed by twelve. And the same measurement that failed it
+said why, in a form the criterion itself could not have expressed. The habitable
+zone is denominated in the square root of luminosity while insolation goes as
+luminosity over radius squared, so luminosity cancels exactly and a uniform draw
+in orbital *radius* puts the population at a median insolation of 0.748 by
+construction. Across the entire range of the thermostat's free constant — up to
+*perfect* compensation — the median moves 7.2 K and two-fifths of worlds stay
+cold. The shortfall is a property of the draw's measure, and no climate model
+can argue with a measure.
+
+**What this adds to the axis.** A preregistered set is not one bet; it is a
+mechanism claim and a level claim wearing the same coat. When the mechanism
+criteria pass and the level criterion fails, the honest reading is not "the
+campaign half-worked" — it is *the model is right and something upstream sets
+the level*, which is a strictly more useful result than a clean pass would have
+been. The way to keep that reading available is to write at least one criterion
+that a successful fix could fail, and at least one that only a wrong model
+could.
+
+### A zero can be a scope error wearing a null's clothes (2026-08-15)
+
+The entry above concerns a number that moved less than hoped. This one concerns
+a number that did not move **at all**, and the distinction turned out to be the
+whole finding.
+
+One of the six criteria asked that the census's dominant soil order stop being
+frozen at a single value. It was `leptosol` on all thousand worlds before the
+campaign and `leptosol` on all thousand after — after a change that moved the
+median land temperature 8.3 K, halved the median land elevation, and cut
+ice-dominated worlds by two-thirds. Read as a measurement, that is an emphatic
+null: the strongest available intervention, and a response of exactly zero.
+
+It was not a null. The soil classifier's first question asks whether the soil is
+shallower than a quarter of a metre or the ground drops more than 300 m to a
+neighbour, and answers `leptosol` if either holds. Every question below that line
+reads temperature or moisture. Measured over 307,588 land cells, **72.1% never
+reach those questions** — 61.09% by depth alone. The classifier that the
+criterion was grading was, for three cells in four, never consulted.
+
+**What this adds to the axis.** The chapter already distinguishes a
+*self-scorable* bet from a *not-yet-scorable* one by asking what would have to
+vary for the number to move. This is the same question asked one layer lower and
+it needs its own name, because the failure looks different: here the world
+varies, the instrument is correct, and the statistic is still constant — because
+the quantity being varied is **downstream of the branch that decides**. A null
+of this kind is indistinguishable from a weak effect by inspection, and the only
+thing that separated them was attributing the branch instead of inferring it.
+The instruction that follows is cheap and general: when a statistic refuses to
+move under a large intervention, find the line that decides it before concluding
+anything about the effect size.
+
 ### The third position promotes back, and then reappears (2026-08-15)
 
 *The Retelling* supplied the missing mechanism, so the demotion above can be
@@ -2711,3 +2896,10 @@ question survives each recursion unchanged — ask what would have to vary, and
 believe the answer even when the instrument is already written and the numbers
 already look plausible. A four-rung ladder that only ever uses two rungs
 produces perfectly good numbers.
+
+Two campaigns reached that recursion independently and on the same day, from
+opposite directions — The Glasshouse from a statistic that would not move under
+a large intervention, The Retelling from a ladder that used two of its four
+rungs. Neither knew of the other's entry until they collided in a merge. That
+is weak evidence the recursion is a property of the axis rather than of either
+campaign's subject matter.

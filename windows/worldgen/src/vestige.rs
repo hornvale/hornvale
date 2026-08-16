@@ -303,8 +303,36 @@ mod tests {
     /// Build the seed-42 Full world (and its terrain provider) once per test,
     /// the same helper `history_emit`'s tests use.
     fn seed_42_world_and_terrain() -> (hornvale_kernel::World, GeneratedTerrain) {
+        world_and_terrain(42)
+    }
+
+    /// The seed the pre-human tests use, because **seed 42 no longer has a
+    /// pre-human gate scar at all.**
+    ///
+    /// This is a finding, and it is why three tests in this module moved off
+    /// the module's default fixture rather than being re-pinned on a different
+    /// cell of it. The scar gate is `land && crust_age > ANCIENT_CRUST_AGE &&
+    /// fbm01(...) < PREHUMAN_SCAR_THRESHOLD (0.3)`, and seed 42 cleared it on
+    /// exactly ONE cell before decision 0134 — `CellId(21966)`, described in
+    /// this module's own comment as "the one pre-human hit among that seed's
+    /// ~1900 ancient-crust cells". The terrain epoch moved the coastline to the
+    /// shelf break, and seed 42's ancient-crust land fell to 1,664 cells whose
+    /// **minimum noise is 0.3322** — clear of the threshold everywhere. One
+    /// marginal hit became none.
+    ///
+    /// **The feature itself is alive and is not marginal.** Measured at
+    /// `GLOBE_LEVEL` over ten seeds after the epoch: 0 -> 19 scars, 1 -> 5,
+    /// 2 -> 5, 3 -> 1, 4 -> 18, 5 -> 0, 6 -> 4, 7 -> 0, 8 -> 23, 42 -> 0.
+    /// Seven of ten worlds carry one; seed 42 is simply not one of them any
+    /// more. Seed 0 is chosen because 19 scars over 4,886 ancient-crust cells
+    /// is a comfortable fixture rather than another single marginal hit — the
+    /// shape that made 21966 die to the first epoch that touched it.
+    const PREHUMAN_SEED: u64 = 0;
+
+    /// Build a Full world and its terrain provider at any seed.
+    fn world_and_terrain(seed: u64) -> (hornvale_kernel::World, GeneratedTerrain) {
         let world = build_world(
-            Seed(42),
+            Seed(seed),
             &SkyPins::default(),
             SkyChoice::Generated,
             &TerrainPins::default(),
@@ -315,12 +343,39 @@ mod tests {
         (world, terrain)
     }
 
-    /// Found by an exploratory scan of seed 42's terrain: ancient continental
-    /// crust (`crust_age_at` ~0.992, well past terrain's ancient-crust
-    /// threshold) whose presence noise (~0.277) falls below terrain's
-    /// pre-human scar threshold (`GeneratedTerrain::prehuman_scar_at`) — the
-    /// one pre-human hit among that seed's ~1900 ancient-crust cells.
-    const DEEP_ANCIENT_NUMINOUS_CELL: CellId = CellId(21966);
+    /// A cell carrying a pre-human gate scar: land, ancient continental crust,
+    /// and a presence draw that clears terrain's `prehuman_scar_at` gate.
+    ///
+    /// **Searched, not pinned, and that is a repair.** This used to be the
+    /// constant `CellId(21966)`, described in its own doc comment as "the one
+    /// pre-human hit among that seed's ~1900 ancient-crust cells" — a single
+    /// sample standing in for a property, and the narrowest possible one. The
+    /// terrain epoch of decision 0134 turned it to ocean, so every test that
+    /// read it went red on its own premise assert ("the fixture cell must be
+    /// land"). Re-pinning on another seed-42 cell was not available either:
+    /// that seed now has no qualifying cell whatever (see [`PREHUMAN_SEED`]).
+    ///
+    /// This is not the seed-hunting decision 0093 forbids: no world is built to
+    /// find the cell. The scan is a pure read over one already-built terrain,
+    /// in deterministic `CellId` order, and it selects on the same gate
+    /// [`prehuman_vestige`] itself applies — so the assertions downstream are
+    /// about what a pre-human vestige *is*, which is the constructor's property
+    /// and not the cell's.
+    fn deep_ancient_numinous_cell(terrain: &GeneratedTerrain) -> CellId {
+        terrain
+            .geosphere()
+            .cells()
+            .find(|&c| {
+                !terrain.is_ocean(c)
+                    && terrain.crust_age_at(c) > ANCIENT_CRUST_AGE_FOR_TEST
+                    && prehuman_vestige(terrain, c).is_some()
+            })
+            .expect(
+                "the fixture seed must carry at least one ancient land cell whose \
+                 presence draw fires the pre-human scar gate — a world with none is a \
+                 finding to report, not a test to weaken",
+            )
+    }
 
     /// A land cell at seed 42 whose crust falls short of the ancient
     /// threshold (`crust_age_at` ~0.716) — fails the age gate regardless of
@@ -334,16 +389,14 @@ mod tests {
 
     #[test]
     fn a_deep_ancient_cell_can_yield_a_prehuman_gate_scar() {
-        let (_world, terrain) = seed_42_world_and_terrain();
+        let (_world, terrain) = world_and_terrain(PREHUMAN_SEED);
+        let cell = deep_ancient_numinous_cell(&terrain);
+        assert!(!terrain.is_ocean(cell), "the fixture cell must be land");
         assert!(
-            !terrain.is_ocean(DEEP_ANCIENT_NUMINOUS_CELL),
-            "the fixture cell must be land"
-        );
-        assert!(
-            terrain.crust_age_at(DEEP_ANCIENT_NUMINOUS_CELL) > ANCIENT_CRUST_AGE_FOR_TEST,
+            terrain.crust_age_at(cell) > ANCIENT_CRUST_AGE_FOR_TEST,
             "the fixture cell must be ancient"
         );
-        let v = prehuman_vestige(&terrain, DEEP_ANCIENT_NUMINOUS_CELL)
+        let v = prehuman_vestige(&terrain, cell)
             .expect("ancient crust + a firing presence draw yields a pre-human vestige");
         assert_eq!(v.kind, VestigeKind::GateScar);
         assert_eq!(v.hazard, HazardKind::Numinous);
@@ -364,11 +417,12 @@ mod tests {
 
     #[test]
     fn vestiges_at_orders_prehuman_first_then_people_and_is_deterministic() {
-        let (world_a, terrain_a) = seed_42_world_and_terrain();
-        let (world_b, terrain_b) = seed_42_world_and_terrain();
+        let (world_a, terrain_a) = world_and_terrain(PREHUMAN_SEED);
+        let (world_b, terrain_b) = world_and_terrain(PREHUMAN_SEED);
 
-        let stack_a = vestiges_at(&world_a, &terrain_a, DEEP_ANCIENT_NUMINOUS_CELL);
-        let stack_b = vestiges_at(&world_b, &terrain_b, DEEP_ANCIENT_NUMINOUS_CELL);
+        let cell = deep_ancient_numinous_cell(&terrain_a);
+        let stack_a = vestiges_at(&world_a, &terrain_a, cell);
+        let stack_b = vestiges_at(&world_b, &terrain_b, cell);
         assert_eq!(stack_a, stack_b, "vestiges_at must be deterministic");
 
         assert!(
@@ -413,19 +467,31 @@ mod tests {
         // to the per-cell path it replaces in the hot loops (`vestige_dread`,
         // the residue lens) — same ordering (pre-human first, then
         // oldest-founded-first occupations), same values.
-        let (world, terrain) = seed_42_world_and_terrain();
+        // On PREHUMAN_SEED, not seed 42: the batched/per-cell agreement has to
+        // be checked on a cell that actually carries a pre-human layer, and
+        // seed 42 no longer has one (see `PREHUMAN_SEED`). The other two arms
+        // below are seed-agnostic.
+        let (world, terrain) = world_and_terrain(PREHUMAN_SEED);
         let field = vestiges_field(&world, &terrain);
 
         // The pre-human fixture cell (a breached/forgotten gate-scar).
+        let deep = deep_ancient_numinous_cell(&terrain);
         assert_eq!(
-            field.get(DEEP_ANCIENT_NUMINOUS_CELL),
-            &vestiges_at(&world, &terrain, DEEP_ANCIENT_NUMINOUS_CELL),
+            field.get(deep),
+            &vestiges_at(&world, &terrain, deep),
             "the pre-human fixture cell must match"
         );
-        // A shallow cell with no pre-human layer at all.
+        // A cell with no pre-human layer at all, found by scan rather than
+        // pinned — `SHALLOW_YOUNG_CELL` is a seed-42 fixture and this arm is
+        // no longer running on seed 42.
+        let shallow = terrain
+            .geosphere()
+            .cells()
+            .find(|&c| prehuman_vestige(&terrain, c).is_none())
+            .expect("some cell carries no pre-human layer");
         assert_eq!(
-            field.get(SHALLOW_YOUNG_CELL),
-            &vestiges_at(&world, &terrain, SHALLOW_YOUNG_CELL),
+            field.get(shallow),
+            &vestiges_at(&world, &terrain, shallow),
             "a cell with no pre-human layer must match"
         );
         // A sample of cells that actually carry people occupations, so the

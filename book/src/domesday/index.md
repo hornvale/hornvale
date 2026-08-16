@@ -4,24 +4,24 @@
 
 A generated survey of the committed census: what Hornvale's worlds actually produce, and where the instrument finds them wanting.
 
-1000 worlds, 223 metrics across 12 domains.
+1000 worlds, 224 metrics across 12 domains.
 
 ## Domains
 
 | domain | metrics | weaknesses | |
 |---|---|---|---|
-| Astronomy | 25 | 5 | [page](./astronomy.md) |
+| Astronomy | 26 | 5 | [page](./astronomy.md) |
 | Terrain | 19 | 1 | [page](./terrain.md) |
 | Climate | 6 | 9 | [page](./climate.md) |
 | Hydrology | 17 | 13 | [page](./hydrology.md) |
 | Biology | 14 | 34 | [page](./biology.md) |
-| Settlement | 20 | 10 | [page](./settlement.md) |
+| Settlement | 20 | 11 | [page](./settlement.md) |
 | Demography | 7 | 7 | [page](./demography.md) |
 | Society | 5 | 3 | [page](./society.md) |
 | Religion | 21 | 12 | [page](./religion.md) |
-| Language | 48 | 35 | [page](./language.md) |
-| Naming | 17 | 9 | [page](./naming.md) |
-| History | 24 | 24 | [page](./history.md) |
+| Language | 48 | 36 | [page](./language.md) |
+| Naming | 17 | 10 | [page](./naming.md) |
+| History | 24 | 25 | [page](./history.md) |
 
 ## Crate coverage (D8)
 
@@ -38,11 +38,11 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | detector | findings |
 |---|---|
 | D1 | 29 |
-| D2 | 40 |
-| D3 | 13 |
-| D4 | 53 |
-| D5 direction | 0 |
-| D5 strength | 20 |
+| D2 | 41 |
+| D3 | 15 |
+| D4 | 55 |
+| D5 direction | 1 |
+| D5 strength | 18 |
 | D5 unmeasurable | 6 |
 | D6 | 1 |
 | D7 | 0 |

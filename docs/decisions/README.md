@@ -174,3 +174,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0132](0132-three-gates-named-for-the-campaign-moment.md) | Three gates, named for the campaign moment | Accepted |
 | [0133](0133-nontrivial-checks-run-in-one-serial-lane.md) | Nontrivial checks run in one serial lane | Accepted |
 | [0134](0134-a-partition-statistic-refuted-by-its-own-mechanism-is-retired-not-rescued.md) | A partition statistic refuted by its own mechanism is retired, not rescued | Accepted |
+| [0135](0135-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md) | A capability corpus is a sibling to a trope corpus, never a member | Accepted |
+| [0136](0136-a-coverage-verdict-cites-a-checked-anchor.md) | A coverage verdict cites a machine-checked anchor | Accepted |
+| [0137](0137-the-craton-clamp-is-a-budget-not-a-limit.md) | The craton clamp is a budget, not a limit | Accepted |
+| [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |
+| [0139](0139-main-advances-only-through-the-lock.md) | Main advances only through the lock | Accepted |
+| [0140](0140-the-stage-gate-is-a-kind-of-queue-request.md) | The stage gate is a kind of queue request, not a dispatch path | Accepted |

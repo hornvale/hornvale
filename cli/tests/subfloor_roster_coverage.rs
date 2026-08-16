@@ -5,8 +5,18 @@
 //! tested never, printing the same large green number regardless.
 //! `hornvale-hearsay` was found in exactly that state, and the documented
 //! remedy ("it enters on the next green stage gate, which measures it and
-//! rewrites the roster") had never once actually landed a byte — see
-//! `scripts/lane-run.sh` and root `CLAUDE.md`'s corrected paragraph.
+//! rewrites the roster") had never once actually landed a byte.
+//!
+//! THE ROOT CAUSE WAS FOUND AND FIXED BY THE SLUICE (Task 12), and it was a
+//! step earlier than anyone had looked: `ci-record` — the only thing that
+//! rewrites the roster — asked `current_holder()`, which reports a claim
+//! held by ANY live process including this one's own ancestors. Every
+//! serialized path in this project runs `ci-record` as a descendant of the
+//! claim holder, so it refused on every run, and the copy-out machinery
+//! downstream of it was faithfully copying an unchanged file. It now asks
+//! `contending_holder()` (`windows/lab/src/census_claim.rs`), so the
+//! chamber's `gate` phase genuinely rewrites the roster and the chamber
+//! commits it with the merge product.
 //!
 //! # THE VERDICT IS THREE-VALUED
 //!
@@ -159,8 +169,9 @@ fn every_workspace_crate_has_a_roster_entry_or_a_declared_reason() {
         "these workspace crates have NO entry in docs/timings/subfloor-roster.tsv, \
          so `gate-commit` compiles them and runs ZERO of their tests, printing a \
          green number that means nothing for them: {undeclared_absent:?}\n\
-         Either the committed roster is stale — run `make lane-roster` to pull \
-         the lane's last GREEN copy-out and review/commit it — or, if the fix \
+         Either the committed roster is stale — the next green chamber `gate` \
+         phase (a merge, or `make sluice-stage`) measures every test and \
+         commits a rewritten roster with the merge product — or, if the fix \
          genuinely belongs to another in-flight campaign, add a (crate, reason) \
          row to DECLARED_ABSENT in this file instead of leaving the gap silent."
     );

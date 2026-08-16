@@ -249,7 +249,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
 /// change pushes the pair above it, the correct response is to report that the
 /// roster has gone degenerate, never to relax the number.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_probe_separates_two_kinds_known_to_differ() {
     let pairs = pairwise_correlations(42, &["kobold", "gnoll"]);
     let (_, r) = &pairs[0];
@@ -267,7 +267,7 @@ fn the_probe_separates_two_kinds_known_to_differ() {
 ///
 /// Measured 2026-08-07: `r = 1.000000` for goblin against goblin on seed 42.
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_probe_reports_unity_for_a_kind_against_itself() {
     let pairs = pairwise_correlations(42, &["goblin", "goblin"]);
     assert_eq!(

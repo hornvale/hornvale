@@ -215,7 +215,7 @@ fn cascades_do_not_depopulate_the_world() {
 /// claim: readout(off-gate, heavy:) — cascade-size distribution over
 /// SHAPE_SAMPLE, with pooled revolt/flight counts, adjudicated
 #[test]
-#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
     let mut agg = [0u64; 12];
     let mut raided = 0u64;

@@ -517,12 +517,22 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// at these radii, the continental fraction of a cap is `1 - sqrt(e_i)`,
 /// with `e_i = (CONTINENTAL_THRESHOLD_KM - OCEANIC_KM) / (peak_i -
 /// OCEANIC_KM)` and `peak_i` the same age-derived peak `thickness_at`
-/// uses. Rescale: `Σ cap_area(r_i) * (1 - sqrt(e_i)) = budget * 4π`, same
-/// `s = sqrt(target / current)` shape as iteration 1's simpler area match,
-/// same 0.6 rad cap, zero extra stream draws. Over the peak range \[33,
-/// 45\] km, `e_i` ∈ \[0.342, 0.500\] and `1 - sqrt(e_i)` ∈ \[0.293,
-/// 0.415\] — radii grow roughly 1.6x versus the plain-area match, since
-/// only a fraction of each nominal cap is actually continental.
+/// uses. Rescale: `Σ cap_area(r_i) * (1 - sqrt(e_i)) = budget * 4π`, zero
+/// extra stream draws. Over the peak range \[33, 45\] km, `e_i` ∈ \[0.342,
+/// 0.500\] and `1 - sqrt(e_i)` ∈ \[0.293, 0.415\] — radii grow roughly 1.6x
+/// versus the plain-area match, since only a fraction of each nominal cap is
+/// actually continental.
+///
+/// **How that equation is solved changed in The Glasshouse (decision 0137).**
+/// Iterations 1–3' carried iteration 1's closed form `s = sqrt(target /
+/// current)`, which is exact only if area scaled as `r²`; cap area is
+/// `2π(1 − cos r)`, sub-quadratic at these radii, so the closed form
+/// systematically under-delivers, and it applied the radius clamp *after*
+/// solving, silently discarding area the solve had counted on. Both are now
+/// fixed together: [`solve_radius_scale`] bisects the real objective with
+/// [`CRATON_RADIUS_MAX_RAD`] inside it, and that constant rose from 0.6 to 0.8
+/// because at 0.6 the budget is unreachable on 97.1% of worlds and an exact
+/// solve alone could only pin every craton at the clamp.
 ///
 /// `--supercontinent` no longer transforms craton centers here (epoch v4,
 /// rift-and-fit spec §4): it holds the world at its pre-breakup ASSEMBLY
@@ -581,8 +591,17 @@ fn continental_cap_fraction(peak_km: f64) -> f64 {
 /// arithmetic, two callers: the `draw_cratons` rescale sums it over
 /// pre-rescale radii; `continental_supply` over the final set.
 fn craton_continental_steradians(c: &Craton) -> f64 {
+    craton_continental_steradians_at(c, c.radius_rad)
+}
+
+/// [`craton_continental_steradians`] at a hypothetical radius rather than the
+/// craton's own — what the rescale's objective needs to ask "how much area
+/// would this set deliver at scale `s`" without mutating anything. The
+/// arithmetic is one expression with one caller shape, so the objective and
+/// the realised supply can never disagree about what a radius is worth.
+fn craton_continental_steradians_at(c: &Craton, radius_rad: f64) -> f64 {
     let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
-    std::f64::consts::TAU * (1.0 - math::cos(c.radius_rad)) * continental_cap_fraction(peak)
+    std::f64::consts::TAU * (1.0 - math::cos(radius_rad)) * continental_cap_fraction(peak)
 }
 
 /// Analytic continental supply of a craton set: the fraction of the
@@ -600,6 +619,82 @@ pub fn continental_supply(cratons: &[Craton]) -> f64 {
         / (4.0 * std::f64::consts::PI)
 }
 
+/// The maximum angular radius of a craton, radians — the cap the
+/// area-normalization rescale applies to every radius it scales.
+///
+/// kind: **hornvale-choice** (decision 0106; re-decided in decision 0134).
+/// Not a geometric limit and not a measured one: it is a bound on how much of
+/// one world a single craton may be. Raised from 0.6 by The Glasshouse: at 0.6
+/// the rescale's own budget is unreachable on 97.1% of worlds, so an exact
+/// solve could only pin every craton at the clamp, collapsing continent-size
+/// variety (radius CV 0.001 simulated, against 0.2428 measured on the grid at
+/// 0.6). Overlap-deducted continental area rises with this constant and
+/// saturates by ~0.8; beyond that, added radius lands on ground another craton
+/// already covers. See `docs/audits/land-elevation-attribution.md` §5 Route 3
+/// for the standing case, and decision 0134 for the evidence and the ceiling.
+pub(crate) const CRATON_RADIUS_MAX_RAD: f64 = 0.8;
+
+/// Solve for the radius scale that makes the craton set deliver `target_sr`
+/// steradians of continental area, with [`CRATON_RADIUS_MAX_RAD`] applied
+/// *inside* the objective so clamped cratons do not silently discard the area
+/// the solve is counting on.
+///
+/// Bisection rather than the closed form the rescale used through epoch v4:
+/// cap area is `2π(1 − cos r)`, which is sub-quadratic in `r`, so
+/// `sqrt(target / current)` — exact only if area scaled as `r²` — systematically
+/// under-delivers even before the clamp fires. Deterministic by construction: a
+/// fixed iteration count with no early exit on a tolerance, so the result is a
+/// pure function of the inputs on every platform. The objective is pure — it
+/// never touches `c.radius_rad`, or the bisection would be reading its own
+/// side effects.
+///
+/// When the target is unreachable at any scale (every craton clamped and the
+/// clamped total still short), the bracket search stops at `hi = 1024` and the
+/// bisection converges there; every radius then pins at the clamp, which is
+/// the most area the set can deliver.
+fn solve_radius_scale(cratons: &[Craton], target_sr: f64) -> f64 {
+    let total = |s: f64| -> f64 {
+        cratons
+            .iter()
+            .map(|c| {
+                craton_continental_steradians_at(c, (c.radius_rad * s).min(CRATON_RADIUS_MAX_RAD))
+            })
+            .sum()
+    };
+    let (mut lo, mut hi) = (0.0_f64, 1.0_f64);
+    while total(hi) < target_sr && hi < 1024.0 {
+        hi *= 2.0;
+    }
+    for _ in 0..80 {
+        let mid = 0.5 * (lo + hi);
+        if total(mid) < target_sr {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    0.5 * (lo + hi)
+}
+
+/// The continental-area budget the rescale solves for, as a fraction of the
+/// sphere: the land quota `1 − ocean_target` widened by a drawn margin of
+/// 5–15%, which is the allowance for the cap overlaps neither the budget nor
+/// [`continental_supply`] deducts.
+///
+/// **This consumes the first `f64` off the `CRATONS` stream** — exactly one
+/// draw, taken before any craton is drawn — and stream consumption order is a
+/// save-format contract, so the caller must pass the stream it is about to
+/// draw cratons from, and no caller may take this draw twice or skip it. It is
+/// a function rather than three inline lines only so that the rescale and the
+/// test that judges the rescale cannot drift apart (the duplicated-formula trap
+/// `docs/audits/land-elevation-attribution.md` §1.1 documents for the per-term
+/// helpers).
+fn craton_budget(stream: &mut hornvale_kernel::seed::Stream, ocean_target: f64) -> f64 {
+    let u = stream.next_f64();
+    let margin = 0.05 + 0.10 * u;
+    (1.0 - ocean_target) * (1.0 + margin)
+}
+
 /// Everything in `draw_cratons` except the final repulsion pass: the draws,
 /// the area-normalization rescale, and the `--supercontinent` transform.
 /// Split out so the repulsion test can measure the pre-pass geometry.
@@ -610,9 +705,7 @@ fn draw_cratons_unrepelled(
     notes: &mut Vec<String>,
 ) -> Vec<Craton> {
     let mut stream = terrain_seed.derive(streams::CRATONS).stream();
-    let u = stream.next_f64();
-    let margin = 0.05 + 0.10 * u;
-    let budget = (1.0 - ocean_target) * (1.0 + margin);
+    let budget = craton_budget(&mut stream, ocean_target);
     let drawn_count = 3 + (budget * 20.0).round() as u32; // 8..=14 over the drawn budget range
     let count = pins.continents.unwrap_or(drawn_count);
     if let Some(n) = pins.continents {
@@ -633,9 +726,9 @@ fn draw_cratons_unrepelled(
         .collect();
     let continental_area: f64 = cratons.iter().map(craton_continental_steradians).sum();
     if continental_area > 0.0 {
-        let scale = ((budget * 4.0 * std::f64::consts::PI) / continental_area).sqrt();
+        let scale = solve_radius_scale(&cratons, budget * 4.0 * std::f64::consts::PI);
         for c in cratons.iter_mut() {
-            c.radius_rad = (c.radius_rad * scale).min(0.6);
+            c.radius_rad = (c.radius_rad * scale).min(CRATON_RADIUS_MAX_RAD);
         }
     }
     // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
@@ -653,7 +746,7 @@ fn draw_cratons_unrepelled(
 /// 2's implicit 1.0x): pairs are pushed toward 1.2x their combined radii
 /// rather than exact rim tangency, leaving a moat of open ocean the lobed
 /// rims' overlapping skirts are less likely to bridge back together.
-const REPEL_SEPARATION_FACTOR: f64 = 1.2;
+pub(crate) const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 
 /// One deterministic repulsion pass over craton centers (Task 9
 /// iteration 2, retargeted in iteration 3'): for each craton i > 0 in id
@@ -680,10 +773,44 @@ const REPEL_SEPARATION_FACTOR: f64 = 1.2;
 /// `repulsion_reduces_crowding_without_new_draws` test). Coincident
 /// centers (omega ~ 0) are left in place: no repulsion direction is
 /// privileged there.
+///
+/// **That guarantee is enforced, not merely intended (The Glasshouse,
+/// decision 0134).** It was stated in this doc and asserted by that test
+/// from the start, but nothing in the pass implemented it: the
+/// extrapolative slerp that clears craton `i` of craton `j` can drop it
+/// onto a third craton, and the pass had no way to notice. Measured over
+/// 200 default seeds, the shipped pass (closed-form rescale, 0.6 clamp)
+/// *reduced* the global minimum on **35 of them**, worst post/pre ratio
+/// 0.0613; the test only sampled seeds 0..8, all of which happened to
+/// hold. Delivering the rescale's real budget crowds the sphere harder
+/// and made it worse still — 55/200, with one world driven to exactly
+/// coincident centres — which is what forced the repair rather than a
+/// clamp retreat (the clamp sweep in 0131 shows 0.8 is the *safest*
+/// value, not the riskiest).
+///
+/// The repair is a **monotonicity guard**, chosen because it makes the
+/// property already claimed here true instead of inventing a new one:
+/// every candidate move is applied, the global minimum pairwise
+/// separation is recomputed, and the move is **rolled back unless the
+/// minimum is at least as large as before**. The running `floor` is
+/// therefore always the current set's true minimum and is non-decreasing
+/// by construction, so the pass cannot end below where it started — for
+/// any craton count, any radii, any clamp.
+///
+/// Deliberately *not* done: no extra stream draws (repulsion stays
+/// draw-free, so pin isolation and stream order are untouched), still one
+/// pass in id order, and no iteration-to-convergence — that would be the
+/// radius-aware re-calibration of `REPEL_SEPARATION_FACTOR` that 0131
+/// declines. On a world too crowded to improve, every move is rejected
+/// and the pass is a **no-op**; that is the correct outcome, not a
+/// failure, and there is no fallback that forces a move. The cost is one
+/// O(n²) rescan per candidate move at `n <= 14` — 91 pairs — evaluated in
+/// fixed index order so it adds no order dependence of its own.
 fn repel_cratons(cratons: &mut [Craton]) {
     /// Bound on the within-craton settle sweeps: convergence is typically
     /// 2-3 sweeps; the cap only guarantees termination.
     const REPEL_SWEEPS: u32 = 16;
+    let mut floor = min_pairwise_separation(cratons);
     for i in 1..cratons.len() {
         for _sweep in 0..REPEL_SWEEPS {
             let mut moved = false;
@@ -694,7 +821,17 @@ fn repel_cratons(cratons: &mut [Craton]) {
                 let omega = math::acos(dot(c_i, c_j).clamp(-1.0, 1.0));
                 if omega > 1e-9 && omega < separation - 1e-12 {
                     cratons[i].center = slerp(c_j, c_i, separation / omega);
-                    moved = true;
+                    let after = min_pairwise_separation(cratons);
+                    if after < floor {
+                        // This move clears j at the cost of crowding some
+                        // other pair worse than anything in the set today.
+                        // Roll it back: the pass may decline to improve a
+                        // world, but never degrades one.
+                        cratons[i].center = c_i;
+                    } else {
+                        floor = after;
+                        moved = true;
+                    }
                 }
             }
             if !moved {
@@ -704,6 +841,20 @@ fn repel_cratons(cratons: &mut [Craton]) {
     }
 }
 
+/// The smallest centre-to-centre angle over every craton pair, radians —
+/// the quantity [`repel_cratons`]'s monotonicity guard protects. Fewer
+/// than two cratons have no pairs, so the minimum is vacuously infinite
+/// and every candidate move trivially passes the guard.
+fn min_pairwise_separation(cratons: &[Craton]) -> f64 {
+    let mut min = f64::INFINITY;
+    for i in 0..cratons.len() {
+        for j in (i + 1)..cratons.len() {
+            min = min.min(angular_separation(cratons[i].center, cratons[j].center));
+        }
+    }
+    min
+}
+
 /// Fraction of `r_i + r_j` at which two cratons read as sutured (spec
 /// §3.1): less than 1 so lobed rim overlap still merges before craton
 /// *centers* reach exact tangency. Tuned only if the Task-6 pinned-world
@@ -711,23 +862,16 @@ fn repel_cratons(cratons: &mut [Craton]) {
 /// type-audit: bare-ok(ratio)
 pub const CONTACT_FACTOR: f64 = 0.85;
 
-/// Sweep cap for `assemble_cratons`'s outward-push branch (a craton that
-/// starts already overlapping an earlier one): mirrors `repel_cratons`'s
-/// `REPEL_SWEEPS` exactly — clearing the worst-violating earlier craton
-/// can re-violate a different one, so the push repeats until clear or
-/// this cap is spent. The guarantee at the cap is *reduction*, not
-/// *attainment* — the same honesty `repel_cratons` documents.
-const ASSEMBLY_PUSH_SWEEPS: u32 = 16;
-
-/// Doubling-search cap for the outward push's extrapolation factor: the
-/// factor doubles from 2 until the push clears every placed craton, or
-/// this many doublings are spent, whichever comes first.
-const ASSEMBLY_PUSH_DOUBLINGS: u32 = 32;
-
-/// Bisection iteration count shared by the inward pull and the outward
-/// push: 64 fixed iterations rather than a tolerance, so the settled
-/// position is deterministic bit-for-bit (no platform-dependent
-/// early-exit).
+/// Bisection iteration count for `pull_to_contact`: 64 fixed iterations
+/// rather than a tolerance, so the settled position is deterministic
+/// bit-for-bit (no platform-dependent early-exit).
+///
+/// The pull bisects the closed interval `[0, 1]`, so 64 halvings drive it
+/// to the float's own resolution. The count was verified sufficient rather
+/// than assumed — raising it to 128 or 200 changed not one bit of output
+/// (decision 0134) — which is how the *other* branch's failure was shown
+/// to be structural rather than a precision shortfall. The overlapped
+/// branch no longer bisects anything: see `settle_against_a_host`.
 const ASSEMBLY_BISECTION_ITERS: u32 = 64;
 
 /// Angular separation between two unit-sphere points, radians.
@@ -757,26 +901,6 @@ fn assembly_slack(
     (0..placed.len())
         .map(|j| angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]))
         .fold(f64::INFINITY, f64::min)
-}
-
-/// Index into `placed`/`assembly` of the worst-violated (most negative
-/// slack) placed craton against `pos`, with that slack value.
-fn worst_violation(
-    pos: [f64; 3],
-    craton_i: &Craton,
-    placed: &[Craton],
-    assembly: &[[f64; 3]],
-) -> (usize, f64) {
-    (0..placed.len())
-        .map(|j| {
-            let slack =
-                angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]);
-            (j, slack)
-        })
-        .fold(
-            (0, f64::INFINITY),
-            |acc, cur| if cur.1 < acc.1 { cur } else { acc },
-        )
 }
 
 /// Bisect the inward pull arc `slerp(start, anchor, t)`, `t` in
@@ -810,70 +934,149 @@ fn pull_to_contact(
     slerp(start, anchor, hi)
 }
 
-/// Bisect the outward extrapolation `slerp(anchor, pos, t)`, `t > 1`
-/// (the same extrapolation shape `repel_cratons` uses), for the
-/// smallest `t` at which `craton_i` is clear of every placed craton —
-/// not just `anchor`. Doubles a trial factor from 2 until clear (capped
-/// at `ASSEMBLY_PUSH_DOUBLINGS` doublings), then bisects `[1, t_hi]` for
-/// the exact crossing with the same fixed-iteration shape as
-/// `pull_to_contact`. If the doubling search never clears (pathological
-/// geometry), the bisection still runs and returns its best crossing —
-/// honesty about reduction, not attainment, mirrors `repel_cratons`.
-fn push_to_clear(
-    anchor: [f64; 3],
-    pos: [f64; 3],
-    craton_i: &Craton,
-    placed: &[Craton],
-    assembly: &[[f64; 3]],
-) -> [f64; 3] {
-    let mut hi = 2.0_f64;
-    for _ in 0..ASSEMBLY_PUSH_DOUBLINGS {
-        let clear = assembly_slack(slerp(anchor, pos, hi), craton_i, placed, assembly) >= 0.0;
-        if clear {
-            break;
-        }
-        hi *= 2.0;
+/// Azimuths sampled around a host craton's contact circle when settling
+/// an overlapped craton. A full turn at half-degree resolution.
+///
+/// Unlike a bisection budget this really is a resolution: every sample on
+/// the circle is at *exactly* contact with its host, so the scan chooses
+/// **which** contact point, never how precise one is. 720 puts adjacent
+/// candidates `contact · π/360 ≈ 0.012` rad apart at the widest contact
+/// separation in play — finer than the canonical globe's cell spacing, so
+/// a nearer-but-unsampled tangency could not move a cell.
+const ASSEMBLY_AZIMUTH_SAMPLES: u32 = 720;
+
+/// A unit vector tangent to the sphere at `at`, pointing toward `toward`.
+/// `None` when the two are parallel or antipodal, where no tangent
+/// direction is privileged.
+fn tangent_toward(at: [f64; 3], toward: [f64; 3]) -> Option<[f64; 3]> {
+    let d = dot(at, toward);
+    let t = [
+        toward[0] - d * at[0],
+        toward[1] - d * at[1],
+        toward[2] - d * at[2],
+    ];
+    if crate::plates::norm(t) < 1e-9 {
+        return None;
     }
-    let (mut lo, mut hi_bound) = (1.0_f64, hi);
-    for _ in 0..ASSEMBLY_BISECTION_ITERS {
-        let mid = 0.5 * (lo + hi_bound);
-        let slack = assembly_slack(slerp(anchor, pos, mid), craton_i, placed, assembly);
-        if slack < 0.0 {
-            lo = mid;
-        } else {
-            hi_bound = mid;
-        }
-    }
-    slerp(anchor, pos, hi_bound)
+    Some(crate::plates::normalize(t))
 }
 
-/// Push craton `i` away from whichever placed craton it violates most,
-/// repeating against the next worst violator until clear or
-/// `ASSEMBLY_PUSH_SWEEPS` is spent. Coincident (or antipodal) centers —
-/// where `slerp`'s own guards make the push direction undefined — are
-/// left in place for that pairing step, exactly as `repel_cratons`
-/// documents for omega ~ 0: no push direction is privileged there, so
-/// the sweep stops rather than chase an arbitrary one.
-fn push_clear_of_overlap(
+/// Settle a craton that starts *inside* the forbidden region: place it
+/// **exactly tangent to some already-placed craton**, clear of every
+/// other, and as close as it can be to where the world drew it.
+///
+/// **Why tangency, after two simpler repairs failed** (decision 0134).
+/// The obvious repairs both restrict the craton to the one great circle
+/// running from the anchor through its drawn position, and at these radii
+/// that circle can be *entirely* covered by the placed cratons' contact
+/// caps — a contact separation reaches 1.36 rad, so a handful of caps
+/// swallow a whole circle. Measured, in order of attempt:
+///
+/// 1. **A bisection along that arc** assumes one sign change, which
+///    silently requires the antipode to be clear. When it was not, the
+///    search returned the antipode and buried a craton 0.05–0.6 rad inside
+///    another.
+/// 2. **Relaxation** — push to exact contact with the worst violator,
+///    repeat — **limit-cycles**: sweep caps of 16, 64, 256, 1024 and 4096
+///    all leave craton 7 of the seed-42 assembly overlapping, alternating
+///    between two violators forever.
+/// 3. **A bracketing scan of the whole arc**, which at least reports
+///    honestly, found no clear sample at all on the arcs that matter —
+///    confirming the one-dimensional search space, not the search, was
+///    the defect.
+///
+/// None of the three is a budget problem, which is why none yields to a
+/// bigger constant. Nor was the bug that exposed them: through epoch v4
+/// this branch searched an *unbounded extrapolation multiplier* along that
+/// same arc, and `slerp` evaluates `sin(t · omega)`, so at the search's
+/// 2^33 cap the sine argument reached ~6.7e9 radians — where its own ULP
+/// is ~1e-6. `assembly_slack` degraded into a staircase with steps of that
+/// order, and the bisection converged to a step edge, returning cratons
+/// floating clear by ~1.4e-7 rad while reporting success. Measured on seed
+/// 42, `ASSEMBLY_BISECTION_ITERS` of 64, 128 and 200 gave byte-identical
+/// results: the search space was wrong, not the budget.
+///
+/// So the search moves to the surface where the answer actually lives.
+/// For each placed craton `h`, the points at exactly
+/// `contact_separation(i, h)` from it form a circle, and **every point on
+/// it attains contact with `h` by construction** — there is nothing to
+/// converge to. The only question is which of those points is clear of the
+/// *other* placed cratons, so each circle is scanned by azimuth outward
+/// from the bearing of the craton's drawn position, taking the first clear
+/// sample; across hosts, the candidate nearest the drawn position wins.
+/// Contact is therefore exact rather than approached, and the assembly
+/// still reflects the draw rather than flattening overlapped cratons onto
+/// one canonical spot.
+///
+/// If no host offers a clear tangency, the placed caps cover every contact
+/// circle. That is a geometric verdict rather than a numerical accident,
+/// and the craton is left where it was drawn for the caller's invariant
+/// test to see.
+fn settle_against_a_host(
     start: [f64; 3],
     craton_i: &Craton,
     placed: &[Craton],
     assembly: &[[f64; 3]],
 ) -> [f64; 3] {
-    let mut pos = start;
-    for _sweep in 0..ASSEMBLY_PUSH_SWEEPS {
-        let (worst_j, slack) = worst_violation(pos, craton_i, placed, assembly);
-        if slack >= 0.0 {
-            break;
+    let pi = std::f64::consts::PI;
+    let n = ASSEMBLY_AZIMUTH_SAMPLES;
+    // The nearest CLEAR tangency, and — for the geometrically impossible
+    // case below — the tangency that overlaps least.
+    let mut best: Option<([f64; 3], f64)> = None;
+    let mut least_bad: Option<([f64; 3], f64)> = None;
+    for h in 0..placed.len() {
+        let c = assembly[h];
+        let d = contact_separation(craton_i, &placed[h]);
+        if !(1e-9..=pi - 1e-9).contains(&d) {
+            continue;
         }
-        let violator = assembly[worst_j];
-        let omega = angular_separation(violator, pos);
-        if !(1e-9..=std::f64::consts::PI - 1e-9).contains(&omega) {
-            break;
+        let Some(u) = tangent_toward(c, start) else {
+            continue;
+        };
+        let v = crate::plates::cross(c, u);
+        let (cd, sd) = (math::cos(d), math::sin(d));
+        // Azimuth 0 is the bearing of `start`, so sweeping outward in
+        // +/- pairs reaches the nearest tangency first and lets the host
+        // finish as soon as it finds one.
+        for m in 0..=(n / 2) {
+            let mut found = None;
+            for phi in [
+                std::f64::consts::TAU * (m as f64) / (n as f64),
+                -std::f64::consts::TAU * (m as f64) / (n as f64),
+            ] {
+                let (cp, sp) = (math::cos(phi), math::sin(phi));
+                let p = crate::plates::normalize([
+                    cd * c[0] + sd * (cp * u[0] + sp * v[0]),
+                    cd * c[1] + sd * (cp * u[1] + sp * v[1]),
+                    cd * c[2] + sd * (cp * u[2] + sp * v[2]),
+                ]);
+                // Slack against the OTHER placed cratons: this candidate is
+                // at exactly contact with `h` by construction.
+                let slack = (0..placed.len())
+                    .filter(|j| *j != h)
+                    .map(|j| {
+                        angular_separation(p, assembly[j])
+                            - contact_separation(craton_i, &placed[j])
+                    })
+                    .fold(f64::INFINITY, f64::min);
+                if least_bad.is_none_or(|(_, s)| slack > s) {
+                    least_bad = Some((p, slack));
+                }
+                if slack >= 0.0 {
+                    found = Some(p);
+                    break;
+                }
+            }
+            if let Some(p) = found {
+                let gap = angular_separation(p, start);
+                if best.is_none_or(|(_, b)| gap < b) {
+                    best = Some((p, gap));
+                }
+                break;
+            }
         }
-        pos = push_to_clear(violator, pos, craton_i, placed, assembly);
     }
-    pos
+    best.or(least_bad).map_or(start, |(p, _)| p)
 }
 
 /// Derive the contact-configuration assembly frame: where each craton's
@@ -889,12 +1092,21 @@ fn push_clear_of_overlap(
 /// starts clear of every already-placed craton, it slides inward and
 /// settles the instant it first touches one (`pull_to_contact`,
 /// bisected exactly, not by tolerance). If it starts already
-/// overlapping one or more placed cratons, it is pushed directly away
-/// from the worst-violating one instead (`push_clear_of_overlap`), the
-/// same extrapolation `repel_cratons` uses, repeated against whichever
-/// craton is worst-violating next. If it starts exactly at zero slack,
-/// it is placed as-is. Craton 0 is the anchor and is never moved, so a
-/// single-craton input is the identity map.
+/// overlapping one or more placed cratons, it is placed instead at the
+/// nearest point that is exactly tangent to some already-placed craton
+/// and clear of the rest (`settle_against_a_host`).
+/// If it starts exactly at zero slack, it is placed as-is. Craton 0 is
+/// the anchor and is never moved, so a single-craton input is the
+/// identity map.
+///
+/// **Both branches attain contact** — every settled craton touches at
+/// least one earlier craton, to within float precision, and overlaps none
+/// (`the_assembly_attains_contact_across_the_sweep`). The push branch did
+/// not, before decision 0134: it searched an unbounded extrapolation
+/// multiplier whose sine argument lost all meaning past ~1e9 radians, and
+/// so returned cratons floating clear by up to 0.44 rad while reporting
+/// success. `settle_against_a_host`'s doc carries the mechanism, and the
+/// three simpler repairs that failed before it.
 /// type-audit: bare-ok(ratio: return)
 pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
     if cratons.is_empty() {
@@ -912,7 +1124,7 @@ pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
                 pull_to_contact(start, anchor, &cratons[i], placed, &assembly)
             }
             Some(std::cmp::Ordering::Less) => {
-                push_clear_of_overlap(start, &cratons[i], placed, &assembly)
+                settle_against_a_host(start, &cratons[i], placed, &assembly)
             }
             _ => start,
         };
@@ -1150,6 +1362,7 @@ impl hornvale_kernel::Field<f64> for CrustField {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::streams;
     use hornvale_kernel::seed::StreamLabel;
     use hornvale_kernel::{Geosphere, NearestCellIndex};
@@ -1268,13 +1481,16 @@ mod tests {
                 assert_eq!(c.id, i as u32);
                 assert!((crate::plates::norm(c.center) - 1.0).abs() < 1e-12);
                 // Post-rescale bound, exact by construction rather than
-                // observed: scale = sqrt(budget * 4pi / continental_area) is
-                // strictly positive (budget > 0, continental_area > 0), so
-                // radius_rad = min(r * scale, 0.6) is always in (0, 0.6].
+                // observed: `solve_radius_scale` bisects on [0, hi] with
+                // hi >= 1, and its objective is strictly increasing in the
+                // scale until every craton clamps, so the returned scale is
+                // strictly positive whenever the budget is; radius_rad =
+                // min(r * scale, CRATON_RADIUS_MAX_RAD) is therefore always
+                // in (0, CRATON_RADIUS_MAX_RAD].
                 // The pre-rescale draw range (0.10..=0.45) no longer bounds
                 // it — that is the area-normalization's whole point.
                 assert!(
-                    c.radius_rad > 0.0 && c.radius_rad <= 0.6,
+                    c.radius_rad > 0.0 && c.radius_rad <= CRATON_RADIUS_MAX_RAD,
                     "radius {}",
                     c.radius_rad
                 );
@@ -1712,15 +1928,56 @@ mod tests {
         assert_eq!(field.thickness_at(center).get(), CRUST_KM_MAX);
     }
 
+    /// claim: invariant(forall-seed) — the rescale must deliver the budget it
+    /// solves for, unless the clamp makes that budget unreachable
+    #[test]
+    fn the_rescale_delivers_its_own_budget() {
+        for seed in 0..200u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let cratons = draw_cratons(
+                terrain_seed,
+                &TerrainPins::default(),
+                ocean_target,
+                &mut Vec::new(),
+            );
+            let supply = continental_supply(&cratons);
+            // The same single draw the rescale takes, off a stream derived
+            // exactly as `draw_cratons_unrepelled` derives it.
+            let budget = craton_budget(
+                &mut terrain_seed.derive(streams::CRATONS).stream(),
+                ocean_target,
+            );
+            let all_clamped = cratons
+                .iter()
+                .all(|c| c.radius_rad >= CRATON_RADIUS_MAX_RAD - 1e-9);
+            // Either it hit the budget, or the clamp made the budget
+            // unreachable — in which case every craton is pinned at the clamp
+            // and no scale factor could have delivered more area.
+            if !all_clamped {
+                assert!(
+                    (supply - budget).abs() / budget < 0.02,
+                    "seed {seed}: supply {supply:.4} vs budget {budget:.4}, \
+                     nothing clamped — the solve did not converge",
+                );
+            }
+        }
+    }
+
     /// claim: invariant(forall-seed) — supply band, including a small pinned
     /// (continents: Some(1)) sub-sweep
     #[test]
     fn continental_supply_is_the_area_the_rescale_budgets() {
         // Empty set: no supply.
         assert_eq!(continental_supply(&[]), 0.0);
-        // A lone pinned craton clamps at 0.6 rad: supply is capped below the
-        // 0.6 rad cap area (1 - cos 0.6)/2 ~= 8.73% of the sphere times the
-        // best-case (young, peak 45 km) continental fraction ~0.415 ~= 3.63%.
+        // A lone pinned craton clamps at CRATON_RADIUS_MAX_RAD: no scale can
+        // make one cap carry a whole world's land budget, so the solve runs
+        // its bracket out and every radius pins at the clamp. Supply is then
+        // capped below the clamp's cap area (1 - cos 0.8)/2 ~= 15.16% of the
+        // sphere times the best-case (young, peak 45 km) continental fraction
+        // ~0.415 ~= 6.29%. The ceiling moved with the clamp: at 0.6 rad the
+        // same arithmetic gave (1 - cos 0.6)/2 ~= 8.73% x 0.415 ~= 3.63%, and
+        // this bound read 0.037 (decision 0137 raised the clamp to 0.8).
         for seed in 1..=8u64 {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
@@ -1731,7 +1988,7 @@ mod tests {
             let cratons = draw_cratons(terrain_seed, &pins, ocean_target, &mut Vec::new());
             let supply = continental_supply(&cratons);
             assert!(
-                supply > 0.0 && supply < 0.037,
+                supply > 0.0 && supply < 0.064,
                 "seed {seed}: supply {supply}"
             );
         }
@@ -1789,7 +2046,7 @@ mod tests {
         // Two hand-placed cratons ~0.5 rad apart, radii 0.3 — closer than
         // their contact separation (`CONTACT_FACTOR * 0.6 = 0.51 rad`), so
         // `assemble_cratons` nudges craton 1 OUTWARD by ~0.01 rad
-        // (`push_clear_of_overlap`) to first contact: the final centers are
+        // (`settle_against_a_host`) to first contact: the final centers are
         // NOT the assembly centers, they differ by that small push, and
         // craton 1's clip therefore rides a real (if tiny) assembly->final
         // rotation rather than the identity. The clip still determines

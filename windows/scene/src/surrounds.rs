@@ -1288,7 +1288,7 @@ mod tests {
 
     /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,99,2026]
     #[test]
-    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign (decision 0132)"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn no_land_cell_bands_as_marine_relief_across_seeds() {
         for seed in [1u64, 7, 42, 99, 2026] {
             let w = build_world(
@@ -1619,13 +1619,36 @@ mod tests {
         assert_eq!(cave_marks[0].salience, 30);
 
         // Elsewhere: a chart centred on the flagship settlement's own room
-        // (the module's ordinary `observer()` fixture) emits no cave mark,
-        // UNLESS that room happens to also sit on a cave-bearing cell.
-        let elsewhere = observer(&w);
-        let elsewhere_loc = ctx.describe(&elsewhere, WorldTime::GENESIS).unwrap();
-        assert!(
-            elsewhere_loc.cave.is_none(),
-            "fixture must actually be cave-free, or the negative half below is vacuous"
+        // Elsewhere: a chart centred on a cave-FREE room emits no cave mark.
+        //
+        // The room is found by the same directional sweep as the positive
+        // half, rather than taken from the module's `observer()` fixture (the
+        // flagship settlement's room). That fixture reached this branch only
+        // because the flagship happened to stand on a cave-free cell, and the
+        // terrain epoch of decision 0134 put a cave under it — the assertion
+        // guarding against exactly that vacuity is what went red. A sweep
+        // reaches the negative branch directly, so no re-pin can silently
+        // restore a lucky sample: the branch is now selected for, not
+        // inherited.
+        let mut clear_addr = None;
+        for i in 0..2000u32 {
+            let t = i as f64;
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, ctx.globe_level() + 6);
+            if let Ok(loc) = ctx.describe(&addr, WorldTime::GENESIS)
+                && loc.cave.is_none()
+            {
+                clear_addr = Some(addr);
+                break;
+            }
+        }
+        let elsewhere = clear_addr.expect(
+            "seed 42 must have a reachable cave-free cell findable by this sweep — a \
+             world caved everywhere is a finding to report, not a test to weaken",
         );
         let s2 = surrounds_scene_in(&w, &ctx, &elsewhere, 0, WorldTime::GENESIS).unwrap();
         assert!(
