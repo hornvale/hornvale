@@ -1801,40 +1801,45 @@ as "no drift". Branch table for the result:
 - `docs/digest/` did **not** move → the render did not run or the redirect was
   dropped. Investigate before committing; do not read it as "nothing changed".
 
-- [ ] **Step 3b: Sweep the `gate-campaign` mentions Task 7 left out of scope**
+- [ ] **Step 3b: Sweep every stale `gate-campaign` mention**
 
-Task 7 retired the target and fixed `CLAUDE.md` and `scripts/CLAUDE.md`, and
-correctly stayed inside its declared file scope. Six mentions remain, found by
-the controller after that task closed:
+Task 7 retired the target and fixed `CLAUDE.md` and `scripts/CLAUDE.md`,
+correctly staying inside its declared file scope.
 
-```
-cli/CLAUDE.md:32,36,77,109
-scripts/census-canonical-host.sh:177
-book/src/laboratory/overview.md:112
-```
-
-**Treat `scripts/census-canonical-host.sh:177` as the urgent one.** It is not
-prose drift — it prints `make gate-campaign REF=<full-sha>` inside a *refusal
-message*, so a guard that stops a reader now instructs them to run a target
-that refuses. An error message is a claim, and this one is false.
-
-`cli/CLAUDE.md`'s four are load-bearing prose about which tier sees the heavy
-battery, so rewrite rather than find-and-replace: two of them say the heavy
-tier is "invisible to every gate but `gate-campaign`", which after this
-campaign means invisible to every gate *and* visible only through the queue or
-an explicit `make lane SET=heavy`.
-
-Confirm the sweep is complete with a grep that covers the whole tree, not the
-paths you happen to have opened:
+**Do not work from a hardcoded list.** The controller wrote one and it was
+wrong in both directions — it missed `cli/tests/heavy_tier.rs:378` and two
+`book/src/frontier/idea-registry.md` rows, and it included mentions that are
+now *correct* because they describe the retirement. That is the same failure
+`docs/generated-paths.txt` exists to prevent: an inline list drifts from the
+moment it is written. Run the query instead:
 
 ```bash
-grep -rn 'gate-campaign' --include='*.md' --include='*.sh' --include='*.rs' . \
-  | grep -v '^./docs/superpowers/' | grep -v '^./.superpowers/' \
-  | grep -v '^./docs/decisions/' | grep -v '^./docs/retrospectives/'
+git grep -n 'gate-campaign' -- . \
+  ':!docs/superpowers/' ':!docs/decisions/' ':!docs/retrospectives/' \
+  ':!book/src/chronicle/'
 ```
 
-Decisions and retrospectives are excluded on purpose: they are append-only
-history and correctly describe what was true when written.
+History is excluded on purpose — decisions, retrospectives, chronicles and
+this plan are append-only and correctly describe what was true when written.
+
+**Classify every hit; do not find-and-replace.** Three kinds:
+
+1. **Correct as written** — describes `gate-campaign` *as retired*. Leave it.
+   Most of `CLAUDE.md`, `Makefile` and `scripts/CLAUDE.md` are already this,
+   because Task 7 rewrote them.
+2. **Stale prose** — describes it as a live target. Rewrite so the claim is
+   true. `cli/CLAUDE.md`'s are load-bearing statements about which tier sees
+   the heavy battery, so they need real rewriting: two say the tier is
+   "invisible to every gate but `gate-campaign`", which now means invisible to
+   every gate *and* reachable only through the queue or an explicit
+   `make lane SET=heavy`.
+3. **A false instruction** — worse than prose, and there is at least one:
+   `scripts/census-canonical-host.sh:177` prints `make gate-campaign
+   REF=<full-sha>` **inside a refusal message**, so a guard that stops a reader
+   then tells them to run a target that refuses. An error message is a claim;
+   this one is false. Fix these first.
+
+Re-run the query afterwards and confirm every surviving hit is kind 1.
 
 - [ ] **Step 4: Run the full doc consistency check**
 
