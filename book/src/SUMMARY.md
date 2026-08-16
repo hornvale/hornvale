@@ -368,6 +368,7 @@
 - [The Glasshouse](./chronicle/the-glasshouse.md)
 - [The Ballast](./chronicle/the-ballast.md)
 - [The Compendium](./chronicle/the-compendium.md)
+- [The Sluice](./chronicle/the-sluice.md)
 
 # Appendix: The Frontier
 
