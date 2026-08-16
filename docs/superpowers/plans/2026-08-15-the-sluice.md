@@ -68,6 +68,210 @@ enqueued_utc <TAB> request_id <TAB> branch <TAB> sha <TAB> state <TAB> note
 
 ---
 
+## Task 0: The lane's claim is unparseable, so `status` lies
+
+**Added at execution time, before Task 1 was dispatched.** Task 1 Step 1 uses
+`census-run.sh status` as its quiet-box gate; that gate is vacuous, so Task 1
+cannot be trusted until this is fixed.
+
+`parse_claim` (`windows/lab/src/census_claim.rs:100-129`) requires **all eight**
+fields via `?` — `pid host user started goldens label ref cmdline`.
+`census-run.sh`, `heavy-run.sh` and `census_claim.rs:86` each write all eight.
+`scripts/lane-run.sh` writes **seven**: it omits `goldens` and `cmdline` and
+adds a `job` key nothing parses. So `parse_claim` returns `None`,
+`live_holder_at` returns `None`, and `status_line()` returns the literal
+`"no heavy run in progress"` for the entire duration of *every* lane job.
+
+Observed live at 2026-08-16T00:16Z, with a lane `heavy` job holding 39 of 40
+cores: claim file present and correct, holder pid alive, `loadavg 32.37`, and
+`lab claim-status` reporting no run. The `flock` is unaffected — serialisation
+is fine. This is a false all-clear in the observability path, on the command
+root `CLAUDE.md` names as the way to ask.
+
+**Files:**
+- Modify: `scripts/lane-run.sh` (the claim block, ~lines 192-200)
+- Create: `cli/tests/lane_claim_roundtrip.rs`
+
+**Interfaces:**
+- Produces: a lane claim that `hornvale_lab::census_claim::parse_claim` accepts.
+  Task 4's chamber copies this block, so fix it here first.
+
+- [ ] **Step 1: Write the failing test**
+
+```rust
+//! A lane-written claim must round-trip through the claim parser (The Sluice).
+//!
+//! DIRECTION THIS CHECK ENFORCES: every writer of the shared claim file emits
+//! the field set the parser requires. It is blind to the opposite direction —
+//! a parser that stopped requiring a field would not fail here.
+//!
+//! WHY IT EXISTS: `scripts/lane-run.sh` shipped writing seven of the eight
+//! fields `parse_claim` requires, so `census-run.sh status`, `make
+//! heavy-status` and `lab claim-status` all reported "no heavy run in
+//! progress" for the whole duration of every lane job — while the job held the
+//! box. The lock was never affected; only the answer to "is the box busy?"
+//! was, which is the question CLAUDE.md tells every session to ask first.
+
+use std::path::{Path, PathBuf};
+
+/// The repository root, resolved from this crate's manifest directory.
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("cli/ always has a parent")
+        .to_path_buf()
+}
+
+/// The claim keys a writer emits, scraped from its `echo "<key>=…"` lines.
+fn claim_keys_written_by(script: &str) -> Vec<String> {
+    let text = std::fs::read_to_string(repo_root().join(script))
+        .unwrap_or_else(|e| panic!("{script} must be readable: {e}"));
+    let mut keys = Vec::new();
+    for line in text.lines() {
+        let t = line.trim();
+        let Some(rest) = t.strip_prefix("echo \"") else {
+            continue;
+        };
+        if let Some((key, _)) = rest.split_once('=') {
+            if !key.is_empty() && key.chars().all(|c| c.is_ascii_lowercase()) {
+                keys.push(key.to_string());
+            }
+        }
+    }
+    keys
+}
+
+/// Exactly the fields `parse_claim` requires. Kept as a literal on purpose: if
+/// the parser gains a required field, this list must be updated deliberately,
+/// which is the review moment this test exists to force.
+const REQUIRED: [&str; 8] = [
+    "pid", "host", "user", "started", "goldens", "label", "ref", "cmdline",
+];
+
+#[test]
+fn the_scraper_can_see_a_known_good_writer() {
+    // Guards the vacuous case: a scraper that matched nothing would make the
+    // assertion below pass for every script, including a broken one.
+    let keys = claim_keys_written_by("scripts/census-run.sh");
+    assert!(
+        REQUIRED.iter().all(|r| keys.iter().any(|k| k == r)),
+        "the scraper failed on census-run.sh, a writer known to be complete — \
+         it has gone vacuous. found: {keys:?}"
+    );
+}
+
+#[test]
+fn every_claim_writer_emits_every_required_field() {
+    for script in ["scripts/lane-run.sh", "scripts/census-run.sh", "scripts/heavy-run.sh"] {
+        let keys = claim_keys_written_by(script);
+        let missing: Vec<&str> = REQUIRED
+            .iter()
+            .copied()
+            .filter(|r| !keys.iter().any(|k| k == r))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "{script} omits {missing:?} from the claim file. parse_claim \
+             requires all of {REQUIRED:?} and returns None otherwise, so \
+             `census-run.sh status` would report no run while this job holds \
+             the box."
+        );
+    }
+}
+```
+
+- [ ] **Step 2: Run it and confirm it fails on `lane-run.sh` only**
+
+```bash
+cargo test -p hornvale --test lane_claim_roundtrip
+```
+
+Expected: `the_scraper_can_see_a_known_good_writer` PASSES,
+`every_claim_writer_emits_every_required_field` FAILS naming
+`scripts/lane-run.sh omits ["goldens", "cmdline"]`. If the first test fails,
+the scraper is wrong — fix it before touching `lane-run.sh`, or you will be
+tuning a broken instrument.
+
+- [ ] **Step 3: Fix `scripts/lane-run.sh`'s claim block**
+
+The `goldens` value must be truthful: read the set's `authors` column from
+`scripts/lane-sets.tsv` (column 4, `yes`/`no`) rather than hardcoding — a claim
+that lies about whether it writes goldens is worse than one that cannot be
+parsed, because it will be believed.
+
+```bash
+authors_col="$(grep -v '^#' "$repo_root/scripts/lane-sets.tsv" \
+    | awk -F'\t' -v s="$set_name" '$1==s{print $4}')"
+{
+    echo "pid=$$"
+    echo "host=$(hostname -s)"
+    echo "user=${USER:-unknown}"
+    echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "goldens=$authors_col"
+    echo "label=lane:$set_name"
+    echo "ref=$ref"
+    echo "cmdline=$command_line"
+    echo "job=$job_id"
+} > "$claim_path"
+```
+
+`job` stays: nothing parses it, but it is the only link from a claim back to
+its log, and `parse_claim` ignores unknown keys.
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+```bash
+cargo test -p hornvale --test lane_claim_roundtrip
+```
+
+Expected: both PASS.
+
+- [ ] **Step 5: Verify against a REAL running lane job, not only the test**
+
+The test scrapes source text; it does not prove the parser accepts what the
+script actually writes at runtime. Dispatch a cheap set and ask while it runs:
+
+```bash
+bash scripts/lane-dispatch.sh style "$(git rev-parse origin/main)"
+sleep 5
+bash scripts/census-run.sh status
+```
+
+Expected: a line naming `lane:style`, its pid, and its ref — **not**
+`no heavy run in progress`. Paste it. This is the assertion that actually
+matters; the source scrape is only its cheap standing guard.
+
+- [ ] **Step 6: Mutate to prove both tests can fail**
+
+Remove `goldens` from `census-run.sh`'s claim block → the second test must name
+that file. Restore. Then break the scraper's `strip_prefix` pattern → the first
+test must fail. Restore. Paste both red outputs.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cargo fmt
+make shellcheck
+git add scripts/lane-run.sh cli/tests/lane_claim_roundtrip.rs
+git commit -m "fix(lane): write a claim the claim parser can actually read
+
+parse_claim requires all eight fields via \`?\`; lane-run.sh wrote seven,
+omitting goldens and cmdline. So status_line() returned 'no heavy run in
+progress' for the entire duration of every lane job, on the exact command
+CLAUDE.md tells you to run before consuming the box. Observed live with a
+lane heavy job holding 39 of 40 cores at loadavg 32.37.
+
+The flock was never affected — this was a false all-clear in the
+observability path only.
+
+goldens is read from lane-sets.tsv's authors column rather than hardcoded: a
+claim that lies about whether it writes goldens would be believed.
+
+Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
+```
+
+---
+
 ## Task 1: Establish a green baseline on `main` (resolves spec P2)
 
 No code. The queue cannot bootstrap against a red `main`, and the evidence
@@ -91,6 +295,12 @@ uptime                                # loadavg near zero on 40 cores
 
 A run started on a busy box produces a `cpu_ratio` that cannot distinguish
 contention from regression, which is the exact question this task asks.
+
+**`census-run.sh status` is only trustworthy once Task 0 has landed** — before
+that fix it reports "no heavy run in progress" for the whole duration of every
+lane job. Until you have confirmed Task 0's Step 5 output, corroborate with
+`uptime` and `ps -eo pcpu,args --sort=-pcpu | head`: a lane job shows as a
+`cargo-nextest`/`the_*` process at several thousand percent CPU.
 
 - [ ] **Step 2: Dispatch each campaign-rung set against current `origin/main`**
 
