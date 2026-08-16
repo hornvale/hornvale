@@ -14,6 +14,30 @@
 //!
 //! THE MARGIN IS THIN AND THAT IS THE POINT. Of the last three runs at the time
 //! this landed — 949.579, 920.212, 882.487 — two would have tripped this.
+//!
+//! "MOST RECENT" IS CHRONOLOGICAL, NOT FILE POSITION. `docs/timings.md` is
+//! demonstrably not append-only in timestamp order — merge interleaving across
+//! parallel campaign branches produces 60+ out-of-order pairs (e.g. line 700
+//! stamped `2026-08-11T03:12:17Z`, line 707 stamped the earlier
+//! `2026-08-11T00:28:30Z`). Taking the last matching line would read a stale
+//! run as "latest" whenever an absorb lands a census row out of position — so
+//! this test sorts by the `when` field, not by where the row landed in the
+//! file. ASSUMED, NOT VERIFIED: `when` is an ISO-8601 UTC stamp (`...Z`) at
+//! second resolution, which is exactly what makes plain lexicographic string
+//! comparison sort correctly — this test never parses it as a date, and it
+//! trusts the recorded `when` itself (a hand-edited or clock-skewed timestamp
+//! would misorder here the same way file position used to).
+//!
+//! WHAT THE VACUITY TEST ACTUALLY GUARDS. It is not "a parser that matches
+//! nothing would make the budget assertion pass forever" — it wouldn't: with
+//! today's `rows.last().expect(...)`-equivalent lookup in the budget test, an
+//! empty `rows` panics too. The vacuity test earns its place for two other
+//! reasons instead: **diagnosis** (its message names the actual cause, "the
+//! column layout changed", where the budget test's panic would be an opaque
+//! `.expect()` message that doesn't); and **future-proofing** (a plausible
+//! refactor that replaces the budget test's `.expect()` with an `if let` would
+//! make it start silently passing on empty input, and this is exactly what
+//! would catch that regression).
 
 use std::path::{Path, PathBuf};
 
@@ -28,10 +52,9 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// Every successful census row as (when, wall_seconds), oldest first.
-fn successful_census_rows() -> Vec<(String, f64)> {
-    let text = std::fs::read_to_string(repo_root().join("docs/timings.md"))
-        .expect("docs/timings.md must exist");
+/// Parse every successful census row as (when, wall_seconds) out of raw
+/// `docs/timings.md` text, in whatever order the file happens to hold them.
+fn parse_successful_census_rows(text: &str) -> Vec<(String, f64)> {
     let mut rows = Vec::new();
     for line in text.lines() {
         let parts: Vec<&str> = line.split('|').map(str::trim).collect();
@@ -46,10 +69,32 @@ fn successful_census_rows() -> Vec<(String, f64)> {
     rows
 }
 
+/// Every successful census row as (when, wall_seconds), in file order.
+fn successful_census_rows() -> Vec<(String, f64)> {
+    let text = std::fs::read_to_string(repo_root().join("docs/timings.md"))
+        .expect("docs/timings.md must exist");
+    parse_successful_census_rows(&text)
+}
+
+/// The chronologically latest row, by ISO-8601 `when` — deliberately NOT
+/// `rows.last()`, because the file is not reliably in timestamp order (see
+/// the module doc). Panics on an empty slice; callers guard emptiness first.
+fn latest_by_timestamp(rows: &[(String, f64)]) -> (String, f64) {
+    rows.iter()
+        .max_by(|a, b| a.0.cmp(&b.0))
+        .expect("caller guards emptiness")
+        .clone()
+}
+
+/// The `n` most recent rows by `when`, newest first.
+fn most_recent(rows: &[(String, f64)], n: usize) -> Vec<(String, f64)> {
+    let mut sorted = rows.to_vec();
+    sorted.sort_by(|a, b| b.0.cmp(&a.0));
+    sorted.into_iter().take(n).collect()
+}
+
 #[test]
 fn the_census_ledger_has_rows_this_test_can_read() {
-    // Guards the vacuous case: a parser that silently matches nothing would
-    // make the budget assertion below pass forever.
     assert!(
         !successful_census_rows().is_empty(),
         "no successful `| census |` rows parsed from docs/timings.md — the \
@@ -60,11 +105,9 @@ fn the_census_ledger_has_rows_this_test_can_read() {
 #[test]
 fn the_latest_census_is_within_budget() {
     let rows = successful_census_rows();
-    let (when, wall) = rows.last().expect("guarded by the test above").clone();
-    let recent: Vec<String> = rows
+    let (when, wall) = latest_by_timestamp(&rows);
+    let recent: Vec<String> = most_recent(&rows, 5)
         .iter()
-        .rev()
-        .take(5)
         .map(|(w, s)| format!("  {w}  {s:.3} s"))
         .collect();
     assert!(
@@ -75,4 +118,24 @@ fn the_latest_census_is_within_budget() {
          last five successful runs, newest first:\n{}",
         recent.join("\n")
     );
+}
+
+#[test]
+fn the_chronologically_latest_row_wins_even_when_it_is_not_last_in_the_file() {
+    // A fixture, not the live file, so it cannot rot. Models the real defect
+    // shape found in `docs/timings.md`: the chronologically latest row can
+    // appear EARLIER in the file than an older row, because merge
+    // interleaving across parallel campaign branches does not preserve
+    // timestamp order. `rows.last()` would return the second entry here
+    // (the earlier stamp); the correct answer is the first.
+    let rows = vec![
+        ("2026-08-14T15:36:53Z".to_string(), 111.0),
+        ("2026-08-11T03:12:17Z".to_string(), 999.0),
+    ];
+    let (when, wall) = latest_by_timestamp(&rows);
+    assert_eq!(
+        when, "2026-08-14T15:36:53Z",
+        "must pick the chronologically latest row, not the last row in file order"
+    );
+    assert_eq!(wall, 111.0);
 }
