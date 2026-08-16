@@ -170,11 +170,12 @@ confirmation-gated in the Makefile.
 - Scripts run under `set -euo pipefail` where they can; `|| true` is used
   deliberately where a step is best-effort (e.g. `panic.sh`, safe to run
   repeatedly).
-- The git hook in `scripts/hooks/` runs `make quick` pre-commit (`make
-  install-hooks` points `core.hooksPath` at that directory — it is the ONLY
-  hook; a second, weaker one at the repo root was deleted 2026-07-31, since
-  `core.hooksPath` names one directory and the root copy still advertised
-  itself in its own header). `make quick` is skipped when nothing
+- `make install-hooks` points `core.hooksPath` at `scripts/hooks/` — the
+  ONLY hooks directory; a second, weaker one at the repo root was deleted
+  2026-07-31, since `core.hooksPath` names one directory and the root copy
+  still advertised itself in its own header. That directory now holds three
+  hooks: `pre-commit`, `post-merge`, and `pre-push` (see below for the
+  latter two). `pre-commit` runs `make quick`, which is skipped when nothing
   Rust-relevant is staged (`.rs`, `Cargo.*`, `clippy.toml`,
   `rust-toolchain.toml`, `.cargo/`, `tools/type-audit/`) so docs-only commits
   are instant; the guards below always run. A **linked worktree may not commit
@@ -234,6 +235,39 @@ confirmation-gated in the Makefile.
   has its own blind spot to match: a merge carrying code changes alone stales an
   artifact just as thoroughly and says nothing. After any absorption,
   `make rebaseline` and read the diff.
+- **`pre-push` is the third hook in this directory**, added after an
+  incident (2026-08-16): a subagent force-pushed campaign WIP over
+  `origin/main` while probing bash quote-splitting semantics, and its
+  dispatch had named that exact prohibition as the single most important
+  constraint in prose. Prose in a prompt is not a control; this hook is,
+  because `core.hooksPath` is repository-level and fires for every push from
+  every session with no opt-in, and the chamber (`sluice-run.sh`) disables
+  hooks only for its own `commit`, never for a `push`. It gates the
+  **destructive class only** — a delete (local sha all zeros) or a
+  non-fast-forward (force push: the remote sha is non-zero and not an
+  ancestor of the local sha) — and only when the remote is not a local path
+  (`file://` or a filesystem path, so scratch bare repos and tests stay
+  unrestricted). An ordinary fast-forward, including to `main`, is
+  deliberately NOT gated — that is Nathan's normal no-PR workflow, and the
+  incident was a *force* push, not an ordinary one. Refuse unless
+  `HV_PUSH_OK=1` is set; the refusal message says so, because a guard nobody
+  can satisfy is a guard people work around. **Ancestry that cannot be
+  verified locally (a shallow clone, or a remote sha this side has never
+  fetched) fails CLOSED, deliberately** — checked with an explicit
+  `git cat-file -e <sha>^{commit}` before ever calling `merge-base
+  --is-ancestor`, not left to fall out of that command's own error handling.
+  Mutation-tested (`scripts/test-pre-push.sh`): with that explicit check
+  removed, the same scenario still refuses in practice, because `git
+  merge-base --is-ancestor` exits 128 — still nonzero — on an object it does
+  not have; the explicit check exists for a deliberate, distinguishing
+  refusal message, not because the bare command would otherwise fail open.
+  The exact incident shape (`21847b08` -> `fb71dd2e` on `refs/heads/main`,
+  where the old sha is not an ancestor of the new one) is a named test case,
+  not merely an illustrative one — both objects are real commits in this
+  repository. **Never test this hook against a real network remote**: drive
+  it directly (`$1`/`$2` args, ref lines on stdin, exactly as git does) for
+  the refusal cases, and use a `file://` bare repo under `mktemp -d` for the
+  allow cases that need a real push.
 - **`git -C <dir>` DOES NOT SCOPE WHICH REPOSITORY GIT ACTS ON**, and wiring
   the board suite into the lane above is how the project learned it. Git runs
   a hook with `GIT_DIR` and `GIT_INDEX_FILE` **exported**, and from a linked

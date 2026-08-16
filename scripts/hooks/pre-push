@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# scripts/hooks/pre-push — refuse a force-push or delete to a real remote,
+# the control that prose was not.
+#
+# Added after the incident, 2026-08-16: a subagent force-pushed campaign WIP
+# over origin/main while probing bash quote-splitting semantics. Its dispatch
+# named that prohibition as the single most important constraint, in a boxed
+# warning, with an explicit "print `git remote -v` first" sub-rule. It still
+# happened, because the agent wrote a *diagnostic* and did not file that
+# under "the push tests" the rule was about. A instruction in a prompt is
+# advisory; this hook is not — `core.hooksPath` is `scripts/hooks` at
+# REPOSITORY level (shared by every linked worktree), so this fires for
+# every push from every session, with no opt-in required. The commit gate's
+# own chamber (`scripts/sluice-run.sh`) disables hooks only for its own
+# `commit` (`-c core.hooksPath=/dev/null`), never for a push, so it does not
+# evade this either.
+#
+# THE RULE — gate the destructive class, not all pushes. Refuse, unless
+# HV_PUSH_OK=1 is set in the environment:
+#   1. a DELETE (local sha all zeros), or
+#   2. a NON-FAST-FORWARD (remote sha is non-zero and is not an ancestor of
+#      the local sha — i.e. a force push),
+# and only when the remote is NOT a local path (`file://` or a filesystem
+# path). Pushes to scratch bare repos stay unrestricted by design, so tests
+# need no opt-in — see scripts/test-pre-push.sh.
+#
+# WHAT IS DELIBERATELY NOT GATED, AND WHY. An ordinary fast-forward push,
+# including to `main`. Nathan's normal workflow is to commit and push
+# directly to `main` with no PR, and gating that would add friction to the
+# common case to prevent a failure that has never occurred. The incident was
+# a FORCE push; deletes and non-fast-forwards are the destructive,
+# hard-to-recover class, and fast-forwards are additive.
+#
+# FAILING CLOSED ON UNVERIFIABLE ANCESTRY IS DELIBERATE, not an accident of
+# an unhandled `git merge-base` error. If the objects needed to decide
+# ancestry are not present locally (a shallow clone, or a remote sha this
+# side has never fetched), this hook cannot prove the push is a fast-forward
+# — and the safer default when a destructive-vs-additive judgment cannot be
+# made is to treat it as destructive and refuse, the same way the ancestry
+# guard below fails toward refusal rather than toward silently allowing.
+#
+# THE LOCAL-REMOTE CHECK IS A HEURISTIC, STATED HONESTLY: a remote counting
+# as "local" is `file://...`, an absolute path (`/...`), or an explicitly
+# relative path (`./...`, `../...`). Anything else — `https://`, `ssh://`,
+# `git@host:path` scp-syntax, or a bare relative path with no leading dot —
+# is treated as NOT local, which is the conservative direction: the
+# destructive-class gate applies to anything not unambiguously local, never
+# the reverse.
+#
+# The refusal message tells the reader exactly how to proceed deliberately
+# (HV_PUSH_OK=1), because a guard nobody can satisfy is a guard people work
+# around.
+#
+# Args: $1 = remote name, $2 = remote URL. Stdin: one line per ref being
+# pushed, "<local ref> <local sha1> <remote ref> <remote sha1>" — the same
+# shape git itself feeds a pre-push hook.
+set -euo pipefail
+
+remote_name="${1:-}"
+remote_url="${2:-}"
+
+zero='0000000000000000000000000000000000000000'
+
+is_local_remote() {
+    case "$1" in
+        file://*) return 0 ;;
+        /*) return 0 ;;
+        ./*|../*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+if is_local_remote "$remote_url"; then
+    exit 0
+fi
+
+if [ "${HV_PUSH_OK:-}" = "1" ]; then
+    exit 0
+fi
+
+refused=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if [ -z "${local_ref:-}" ]; then
+        continue
+    fi
+
+    if [ "$local_sha" = "$zero" ]; then
+        echo "pre-push: refusing to DELETE $remote_ref on '$remote_name' ($remote_url)." >&2
+        echo "pre-push: deletes are refused by default. If this is deliberate," >&2
+        echo "pre-push: set HV_PUSH_OK=1 and retry." >&2
+        refused=1
+        continue
+    fi
+
+    if [ "$remote_sha" = "$zero" ]; then
+        # A brand-new branch: there is nothing on the remote for the local
+        # sha to fail to descend from, so this is additive, not destructive.
+        continue
+    fi
+
+    if [ "$local_sha" = "$remote_sha" ]; then
+        continue
+    fi
+
+    if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null || ! git cat-file -e "${local_sha}^{commit}" 2>/dev/null; then
+        echo "pre-push: cannot verify $remote_ref is a fast-forward on '$remote_name' ($remote_url) —" >&2
+        echo "pre-push: the remote or local commit is not present in this repository" >&2
+        echo "pre-push: (a shallow clone, or a remote sha this side has never fetched)." >&2
+        echo "pre-push: refusing by default — failing closed. If this is deliberate," >&2
+        echo "pre-push: set HV_PUSH_OK=1 and retry." >&2
+        refused=1
+        continue
+    fi
+
+    if git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+        continue
+    fi
+
+    echo "pre-push: refusing a non-fast-forward (force) push of $remote_ref to '$remote_name' ($remote_url)." >&2
+    echo "pre-push: $remote_sha is not an ancestor of $local_sha." >&2
+    echo "pre-push: if this is deliberate, set HV_PUSH_OK=1 and retry." >&2
+    refused=1
+done
+
+if [ "$refused" -eq 1 ]; then
+    exit 1
+fi
+
+exit 0
