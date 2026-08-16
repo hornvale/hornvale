@@ -135,18 +135,18 @@ gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the l
 # way `gate-full: gate` did for `gate`), so retiring it orphans no downstream
 # target the way a naive `gate` signpost would have orphaned `gate-full`.
 gate-campaign: ## RETIRED (decision 0139) -- the merge queue gates the merge product
-	@echo "make gate-campaign no longer runs anything."; \
-	echo; \
-	echo "It gated a BRANCH TIP. What lands is that branch merged into whatever"; \
-	echo "main is at merge time, and nothing ever built that object -- which is"; \
-	echo "how two campaigns both minted decision 0134 through a green gate."; \
-	echo; \
-	echo "Use the merge queue, which gates the merge product and pushes the"; \
-	echo "exact SHA it tested:"; \
-	echo "    make sluice BRANCH=<branch> REF=<full-sha>"; \
-	echo "    make sluice-status"; \
-	echo; \
-	echo "make gate-stage REF=<full-sha> is unchanged."; \
+	@echo "make gate-campaign no longer runs anything." >&2; \
+	echo >&2; \
+	echo "It gated a BRANCH TIP. What lands is that branch merged into whatever" >&2; \
+	echo "main is at merge time, and nothing ever built that object -- which is" >&2; \
+	echo "how two campaigns both minted decision 0134 through a green gate." >&2; \
+	echo >&2; \
+	echo "Use the merge queue, which gates the merge product and pushes the" >&2; \
+	echo "exact SHA it tested:" >&2; \
+	echo "    make sluice BRANCH=<branch> REF=<full-sha>" >&2; \
+	echo "    make sluice-status" >&2; \
+	echo >&2; \
+	echo "make gate-stage REF=<full-sha> is unchanged." >&2; \
 	exit 1
 
 # The former `make gate` body, now a set that runs ON the lane
