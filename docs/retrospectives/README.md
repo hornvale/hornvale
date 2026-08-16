@@ -113,6 +113,7 @@ under review. This file is.
 
 - [The Hearsay](the-hearsay.md) — myth gets its channel; four things that could not go red, all in controller text and all caught by mutation; violence is intramural twice over
 - [The Retelling](the-retelling.md) — content learns to vary; stance replaces two incommensurable keys; the antichain predicts semantic divergence at rho 0.666; distortion caps at one rung, which is the third measurement of the same scarcity; six repo mechanisms found green while blind
+- [The Begat](the-begat.md) — a column 44% dearer with no code change, superlinear over a world that grew; the projected depth-map fix was unsafe on a cycle-guarded walk and a downward walk needed no cycle assumption at all; a BFS claim falsified against itself; byte-identity re-established on the joined result rather than inherited; a cost claim wrong 10.7x against a threshold that never existed
 
 - [Dissolution](the-dissolution.md) — ECS Campaign 3 \"The Dissolution\" — SpeciesDef god-struct DELETED, dissolved into per-domain component registries…
 - [Individuation](the-individuation.md) — ECS Campaign 5 (instance ⋈ ledger) — the instance half of the entity-component substrate; SHIPPED+PUSHED @1acbe98

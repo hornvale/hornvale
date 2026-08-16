@@ -92,6 +92,19 @@ the practice by one clause: **make it fail on command, and run the positive
 control, because a negative result from an instrument nobody has seen fire is
 not evidence.**
 
+**A confirming instance from The Begat (2026-08-16), on a path this passage
+has not yet covered: a byte-identity claim.** That campaign's entire
+correctness case was a comparison returning zero differences over a
+thousand-seed panel — the purest form of the failure this clause names, since
+an empty difference and a broken comparison are the same observation. It was
+handled the way the clause asks: perturb one value of the thousand, confirm
+the comparison reports exactly one disagreement, and only then read the zero
+as evidence; and check the column is not trivially constant, because a
+constant matches a constant. The score does not move — the practice was
+already the bet's — but it extends where the clause is known to apply, from
+checks that fire to **claims of no change**, which is the shape every
+determinism argument in this project takes.
+
 **A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
 since this score is read against an instrument this passage names by a label
 that no longer exists.** Both halves of Sexton's pairing — the census
