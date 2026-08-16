@@ -1129,3 +1129,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-15T23:53:38Z | gate-commit | 20.368 | 43.410 | 11.368 | 2.69 | 0 | fbf3cd25 | campaign/the-glasshouse | MacBookPro | 10 |
 | 2026-08-15T23:53:51Z | preflight | 3.502 | 0.992 | 0.972 | 0.56 | 0 | 1e856f05 | campaign/the-glasshouse | MacBookPro | 10 |
 | 2026-08-16T12:43:14Z | gate-commit | 197.814 | 118.718 | 163.391 | 1.43 | 0 | 1e856f05 | campaign/the-glasshouse | MacBookPro | 10 |
+| 2026-08-16T13:35:13Z | sluice:artifacts | 90.591 | 685.866 | 31.459 | 7.92 | 0 | f62bf653 |  | lefford | 40 |
+| 2026-08-16T13:35:20Z | sluice:outboard | 5.664 | 8.566 | 24.250 | 5.79 | 0 | b5e0b882 |  | lefford | 40 |
+| 2026-08-16T13:40:50Z | sluice:gate | 330.142 | 9002.093 | 460.972 | 28.66 | 0 | ecc799f5 |  | lefford | 40 |
+| 2026-08-16T13:46:23Z | sluice:clients | 332.612 | 703.320 | 69.189 | 2.32 | 0 | b2aebbcc |  | lefford | 40 |
+| 2026-08-16T14:17:47Z | sluice:heavy | 1883.754 | 30553.913 | 615.708 | 16.55 | 0 | 8ab963e5 |  | lefford | 40 |
