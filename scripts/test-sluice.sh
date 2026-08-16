@@ -64,7 +64,7 @@ else
     bad "next() did not return id2"
 fi
 
-echo "== queue: a NON-ancestor request of the same branch is NOT coalesced"
+echo "== queue: a request on a DIFFERENT branch is NOT coalesced"
 g checkout -q -b campaign/y main
 printf 'z\n' >> f.txt; g commit -qam other; OTHER="$(g rev-parse HEAD)"
 id3="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/y "$OTHER")"
@@ -77,6 +77,72 @@ if [ "$(state_of "$id3")" = "queued" ]; then
     ok "the new branch's own request lands queued"
 else
     bad "expected id3 queued, got '$(state_of "$id3")'"
+fi
+
+echo "== queue: a SAME-branch, non-ancestor sha (post-rebase) is NOT coalesced"
+# This is the property the header comment's "COALESCING IS BY ANCESTRY, NOT
+# BRANCH NAME" design decision actually exists for, and the section above
+# does not exercise it: that section's OTHER is on a DIFFERENT branch, so its
+# "ok" only ever proves the branch guard works — the ancestor guard is
+# whichever, since both are false there simultaneously (OTHER is not a
+# descendant of NEW regardless of branch). Isolate the ancestor guard with a
+# real rebase-shaped scenario: SAME branch, a sha that is no longer an
+# ancestor of its successor. `commit --amend` produces exactly that shape
+# more cheaply than a full rebase — a sibling commit sharing campaign/z's
+# parent, not a descendant of the pre-amend commit.
+g checkout -q -b campaign/z main
+printf 'p\n' >> f.txt; g commit -qam first; FIRST="$(g rev-parse HEAD)"
+id4="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/z "$FIRST")"
+g commit -q --amend -m "first (amended)"
+AMENDED="$(g rev-parse HEAD)"
+if g merge-base --is-ancestor "$FIRST" "$AMENDED"; then
+    bad "test setup broken: amend produced a descendant, not a sibling — this test cannot isolate the ancestor guard"
+else
+    ok "test setup: the amended commit is not a descendant of the pre-amend sha"
+fi
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/z "$AMENDED" >/dev/null
+if [ "$(state_of "$id4")" = "queued" ]; then
+    ok "a same-branch sha that is not an ancestor (post-rebase) does not supersede the old request"
+else
+    bad "id4 was wrongly superseded — branch-name-only matching would do this; ancestry must not"
+fi
+
+echo "== queue: a note cannot corrupt the queue file"
+# The reviewer's finding: set-state's note was written into the TSV
+# unsanitized. A physical newline in the note splits the row in two on the
+# very next rewrite's `while read` loop (the second half re-parses as its own
+# garbage row — when=<line2>, every other field empty), and that row then
+# persists and compounds on every later rewrite since nothing ever deletes a
+# row. A tab is less catastrophic (bash `read` folds an over-long tail into
+# the LAST named variable) but still shifts what `list`/`next` print.
+before_lines="$(bash "$repo_root/scripts/sluice-queue.sh" list | wc -l | tr -d ' ')"
+bash "$repo_root/scripts/sluice-queue.sh" set-state "$id4" queued "$(printf 'line1\nline2')" >/dev/null
+after_lines="$(bash "$repo_root/scripts/sluice-queue.sh" list | wc -l | tr -d ' ')"
+if [ "$before_lines" -eq "$after_lines" ]; then
+    ok "a newline embedded in a note does not add a row to the queue ($before_lines rows, unchanged)"
+else
+    bad "row count changed ($before_lines -> $after_lines) — a newline in a note split into an extra row"
+fi
+malformed="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=6{c++} END{print c+0}')"
+if [ "$malformed" -eq 0 ]; then
+    ok "every row still has exactly 6 tab-separated fields after a newline-bearing note"
+else
+    bad "$malformed row(s) do not have 6 fields — a note corrupted the TSV shape"
+fi
+
+# `id4`'s row lookup keys on field 2 (the id), which a corrupted field 6 can
+# never shift — so this check stays valid even under the corrupted shape it
+# is trying to catch. Deliberately NOT a substring check on the note field
+# itself: awk's own `-F'\t'` splits a row with a raw tab embedded in field 6
+# into 7 fields, so field 6 alone reads back as just "a" — the tab is real,
+# but hidden from that read by the very corruption it caused. The field
+# COUNT is the signal that cannot be fooled that way.
+bash "$repo_root/scripts/sluice-queue.sh" set-state "$id4" queued "$(printf 'a\tb')" >/dev/null
+tab_row_fields="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' -v i="$id4" '$2==i{print NF}')"
+if [ "$tab_row_fields" -eq 6 ]; then
+    ok "a tab embedded in a note does not split id4's row into extra fields"
+else
+    bad "id4's row has $tab_row_fields fields, not 6 — a tab in a note corrupted the TSV shape"
 fi
 
 echo "== queue: a RUNNING request is never superseded"

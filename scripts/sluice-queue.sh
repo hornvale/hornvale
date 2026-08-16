@@ -25,6 +25,24 @@ touch "$QUEUE"
 
 with_lock() { exec 8>"$LOCK"; flock 8; }
 
+# A note is caller-supplied free text (a merge conflict summary, a failing
+# phase name) that has to fit inside ONE field of a 6-field TSV row. A tab
+# shifts which field everything after it prints as; a newline is worse — the
+# next rewrite's `while read` sees it as a whole SEPARATE row (when=<the
+# second line>, every other field empty) and re-emits that garbage forever,
+# since nothing downstream ever removes a row. STRIP rather than reject:
+# rejecting only pushes this same check onto every caller (most of them
+# forwarding text they did not generate themselves, e.g. captured stderr),
+# duplicating it at every call site instead of once here, and a queue whose
+# job is durability should never fail closed on cosmetic input.
+sanitize_note() {
+    local s="$1"
+    s="${s//$'\t'/ }"
+    s="${s//$'\r'/ }"
+    s="${s//$'\n'/ }"
+    printf '%s' "$s"
+}
+
 cmd="${1:?usage: sluice-queue.sh add|next|set-state|list ...}"
 shift || true
 
@@ -36,7 +54,14 @@ add)
     id="req-$(printf '%.12s' "$sha")-$(date -u +%Y%m%dT%H%M%SZ)"
     # Supersede queued ancestors of THIS sha on THIS branch. `running` is
     # excluded by the state test, not by ordering — see the header.
-    tmp="$(mktemp)"
+    #
+    # The replacement file is created IN $HV_SLUICE_DIR, not the default
+    # $TMPDIR/tmp: `mv` is only atomic within one filesystem, and a bare
+    # `mktemp` can land on a tmpfs while $HV_SLUICE_DIR lives under $HOME —
+    # different filesystems make `mv` degrade to copy-then-unlink, which is
+    # exactly the "truncated partway through a rewrite" failure this queue
+    # (the only record a request existed) must not have.
+    tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
     while IFS=$'\t' read -r when rid rbranch rsha rstate rnote; do
         if [ "$rstate" = "queued" ] && [ "$rbranch" = "$branch" ] \
            && env -u GIT_DIR -u GIT_INDEX_FILE git merge-base --is-ancestor "$rsha" "$sha" 2>/dev/null; then
@@ -57,9 +82,9 @@ next)
 set-state)
     id="${1:?usage: set-state <id> <state> [note]}"
     state="${2:?usage: set-state <id> <state> [note]}"
-    note="${3:-}"
+    note="$(sanitize_note "${3:-}")"
     with_lock
-    tmp="$(mktemp)"
+    tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
     while IFS=$'\t' read -r when rid rbranch rsha rstate rnote; do
         if [ "$rid" = "$id" ]; then
             rstate="$state"
