@@ -133,6 +133,19 @@ dead, where the population that actually carries a claim gives 12.4%. **Both
 times the wrong denominator made a live mechanism look dead** — the failure
 direction that gets a good design abandoned rather than a bad one shipped.
 
+Those two figures are the ones measured during development. Absorbing 165
+commits at the close moved the world under them — seed 42 went from 658
+inheritance edges to 780 and from 408 qualifying endings to 511, and its
+people census is barely recognisable (drow 5 to 169, gnoll 171 to 23) because
+The Glasshouse re-centred the temperature baseline. The chronicle is restated
+on the merged tree; these process figures are left as they were measured,
+because the lesson is about the denominators and not about the world. What is
+worth carrying is that **every conclusion survived the world changing under
+it**: the correlation moved 0.004, the median not at all, the one-rung ceiling
+not at all, and the zero-crossing result held across 780 edges instead of 658.
+A campaign that had published its readout from the tree it developed on would
+have shipped numbers already false at merge.
+
 ## Process notes
 
 - **The two boxes had different `core.hooksPath` semantics**, and nobody knew.

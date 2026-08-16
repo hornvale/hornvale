@@ -27,14 +27,14 @@ standing property of a community, so a raider distorted every account he ever
 passed on — foundings, weather, anything.
 
 Measured before it was built, the rule marked the largest quadrant in the world
-frictionless: teller-raids against hearer-born-of-catastrophe is 254 of 658
+frictionless: teller-raids against hearer-born-of-catastrophe is 313 of 780
 inheritance edges, the perpetrator telling the community that fled him.
 
 The correction is **stance**: where a community stands relative to *the event
 the claim is about*. Perpetrator, victim-line, or bystander. One axis, three
 values, both parties positioned on it, and the comparison becomes meaningful.
 A retelling is lossy exactly when teller and hearer differ. On the population
-that matters — edges that actually carry the claim — that fires on 12.4%.
+that matters — edges that actually carry the claim — that fires on 11.9%.
 
 ## The rungs are the world's own cycles
 
@@ -67,24 +67,32 @@ precision-rank monotonicity, which is structural and needs no arithmetic.
 
 ## What the world said
 
+**Every figure below was re-measured on the merged tree**, after absorbing 165
+commits of main. It matters: that absorption moved the world itself — seed 42
+now yields 511 qualifying endings against 408, and 10,312 held claims against
+7,778 — while leaving every conclusion standing. A campaign that reported its
+readout from the tree it developed on would have published numbers that were
+already false at merge. The correlation moved by 0.004, the median not at all,
+and the ceiling not at all.
+
 Three predictions were frozen before the code that would move them.
 
 **Transmission decays geometrically, and the decay accelerates.** Per-hop
-survival of claims still at finest precision runs 0.959, 0.963, 0.938, 0.910,
-0.918, 0.911, 0.872, 0.867 — a mean of 0.917 with a variance of 0.001, but a
-slope of −0.014 per hop, a drift of −9.6% across eight hops at 2.9 standard
+survival of claims still at finest precision runs 0.955, 0.953, 0.943, 0.914,
+0.873, 0.936, 0.851, 0.877 — a mean of 0.913 with a variance of 0.001, but a
+slope of −0.013 per hop, a drift of −8.2% across eight hops at 2.5 standard
 deviations. The campaign's own decision table could not resolve this, because
 it specified one branch by variance and another by direction, and a tight
 downward trend satisfies both. The honest reading is neither: decay is
 approximately geometric with a per-hop survival rate that itself declines. The
 further a story has travelled intact, the likelier the next telling damages it.
 
-**Distortion manufactures multiplicity, barely.** Over 408 qualifying endings
-the median event carries two distinct variants — 178 carry one, 230 carry two,
+**Distortion manufactures multiplicity, barely.** Over 511 qualifying endings
+the median event carries two distinct variants — 227 carry one, 284 carry two,
 and none carries three.
 
 **Divergent structure predicts semantic divergence.** Spearman's ρ between an
-ending's maximum-antichain width and its variant count is 0.666. This is the
+ending's maximum-antichain width and its variant count is 0.662. This is the
 campaign's cleanest result, and it vindicates a correction rather than a guess:
 The Hearsay computed the *minimal* elements of a witness set, which for a
 raided village and its two survivors returns the village — scoring the
@@ -95,8 +103,8 @@ The corrected measure is the one that predicts.
 
 ## The ceiling nobody predicted
 
-Only two of the ladder's four rungs are ever reached. Of 7,778 held claims,
-5,576 sit at finest precision and 2,202 one rung below; the second moon and the
+Only two of the ladder's four rungs are ever reached. Of 10,312 held claims,
+7,075 sit at finest precision and 3,237 one rung below; the second moon and the
 year are never touched. **No transmission path takes more than one lossy step.**
 
 The cause is that stance is an absorbing partition. Victim-line and bystander
@@ -113,8 +121,9 @@ real; it simply built the other one.
 Read as a defect, that is a limitation. Read as a measurement, it says this
 world's transmission paths cross a social boundary at most once — and that is
 the third independent sighting of one scarcity. No inheritance edge crosses a
-people boundary; 92.7% of raids fall within one people; no story crosses more
-than one stance. Fission keeps lineages coherent, so accounts travel among
+people boundary — zero of 780, holding across a worldgen change that made seed
+42 a substantially different world; The Hearsay measured 92.7% of raids falling
+within one people; and no story crosses more than one stance. Fission keeps lineages coherent, so accounts travel among
 people who share a position, and the world remains short of the contact that
 would make them disagree.
 
