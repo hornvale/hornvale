@@ -189,13 +189,21 @@ cd "$wt"
 
 export HV_CENSUS_LOCK_HELD=$$
 
+# `goldens` is read from the roster's own `authors` column (yes/no), not
+# hardcoded: a claim that lies about whether it writes goldens would be
+# believed. Derived from `$row` — already parsed above at line 93 — the same
+# `cut -f<N>` idiom `command_line` (line 103) uses, rather than re-grepping
+# the roster: it cannot disagree with the row this job is actually running.
+authors_col="$(printf '%s' "$row" | cut -f4)"
 {
     echo "pid=$$"
     echo "host=$(hostname -s)"
     echo "user=${USER:-unknown}"
     echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "goldens=$authors_col"
     echo "label=lane:$set_name"
     echo "ref=$ref"
+    echo "cmdline=$command_line"
     echo "job=$job_id"
 } > "$claim_path"
 # shellcheck disable=SC2154  # code is assigned first thing inside this same trap string
