@@ -63,8 +63,8 @@ fn every_rostered_set_is_well_formed() {
     assert!(!rows.is_empty(), "the roster is empty — every set vanished");
     for (name, gate, wh, authors, command) in &rows {
         assert!(
-            matches!(gate.as_str(), "commit" | "stage" | "campaign"),
-            "set {name:?} has gate {gate:?}; the three gates are commit, stage, campaign"
+            matches!(gate.as_str(), "commit" | "stage" | "campaign" | "merge"),
+            "set {name:?} has gate {gate:?}; the rungs are commit, stage, campaign, merge"
         );
         assert!(
             matches!(wh.as_str(), "local" | "lane"),

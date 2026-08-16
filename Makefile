@@ -32,7 +32,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -388,6 +388,19 @@ lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the d
 	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
 	    until grep -q "	$(JOB)	" "$$d/jobs.tsv" 2>/dev/null; do sleep 20; done; \
 	    grep "	$(JOB)	" "$$d/jobs.tsv"'
+
+sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
+	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)"
+
+sluice-status: ## The merge queue: what is queued, running, held, landed
+	@bash scripts/sluice-queue.sh list | column -t -s "$$(printf '\t')" || true
+
+sluice-log: ## Read a finished merge-queue job back (JOB=<id>, or omit for the most recent)
+	@d="$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}"; \
+	if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; \
+	else f="$$(ls -1t "$$d"/*.log 2>/dev/null | head -1)"; fi; \
+	if [ -z "$$f" ] || [ ! -f "$$f" ]; then echo "sluice-log: no such job" >&2; exit 1; fi; \
+	echo "== $$f"; cat "$$f"
 
 fmt: ## Format the workspace in place
 	cargo fmt

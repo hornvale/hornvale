@@ -41,3 +41,4 @@ clients	stage	lane	yes	make --no-print-directory clients-check-run
 heavy	campaign	lane	yes	bash scripts/gate-full-heavy.sh
 census	campaign	lane	yes	bash scripts/census-run.sh
 seam-guard	campaign	lane	no	make --no-print-directory seam-guard
+integration	merge	lane	yes	bash scripts/sluice-run.sh
