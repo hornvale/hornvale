@@ -1272,13 +1272,37 @@ Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 
 **Files:**
 - Create: `scripts/sluice-request.sh`
+- Create: `.claude/skills/submitting-to-the-sluice/SKILL.md` — **added to this
+  plan after the fact.** The submit skill was decided during design (ledger
+  entry #8) and carried into the dispatch, but never written into this plan,
+  so the generated brief did not mention it. The implementer built it from the
+  dispatch notes and **flagged the discrepancy rather than assuming** — the
+  same controller error as Task 4's missing brief, and the same correct
+  response to it. The plan is amended here so the record matches what was
+  built. `.claude/skills/` is tracked; follow the layout of
+  `campaign-autopilot`, `closing-a-campaign`, `dispatching-hornvale-subagents`.
 - Modify: `scripts/lane-sets.tsv` (add the `integration` row)
 - Modify: `Makefile`
+- Modify: `cli/tests/lane_sets.rs` — the gate vocabulary is
+  `commit | stage | campaign` at `:66` and must be widened to admit `merge`.
+  Widen it **because the rung genuinely exists**, not to clear a red; read the
+  assertion's own message first. Its sibling at `:82` requires anything not
+  gated at `commit` to have `where = lane`, which `integration` satisfies —
+  confirm rather than assume.
 
 **Interfaces:**
 - Consumes: `sluice-queue.sh add`, `sluice-mouth.sh`, `sluice-run.sh`.
 - Produces: `make sluice BRANCH=<branch> REF=<full-sha>`, `make sluice-status`,
-  `make sluice-log [JOB=<id>]`.
+  `make sluice-log [JOB=<id>]`, and the `submitting-to-the-sluice` skill.
+
+**The submit sequence, and why its order is load-bearing** (spec §5.1.1):
+`make gate-commit` → push the branch → `ssh` enqueue → **then** nudge the
+operator. Steps 3 and 4 must not be reordered: the wire stores nothing, so if
+the message *is* the request, an operator that is dead, compacting, or an hour
+into another merge loses it silently and the campaign cannot tell. The payload
+**carries a headline and is refused without one** — under `--no-ff` the merge
+subject becomes the census epoch label `tools/census/history.sh` reads, and
+only the campaign knows what it did.
 
 - [ ] **Step 1: Add the `integration` row to `scripts/lane-sets.tsv`**
 
