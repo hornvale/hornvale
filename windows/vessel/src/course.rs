@@ -1,9 +1,10 @@
 //! Rhumb-course geometry: the pure half of compass navigation.
 //!
 //! Nothing here takes a `World`, a `Session` or a `Ledger`. That is what
-//! lets the property batteries in `tests/course_properties.rs` assert on a
-//! walk without paying for a genesis, and it is why this is a module rather
-//! than three private functions inside `session.rs`.
+//! lets this module's own unit tests assert on a walk without paying for a
+//! genesis, and it is why this is a module rather than three private
+//! functions inside `session.rs`. Wiring these functions into the `go` verb
+//! is a later task's job, not this module's.
 
 use hornvale_kernel::{GeoCoord, RoomAddr, math};
 use hornvale_locale::Compass;
@@ -25,7 +26,7 @@ const POLE_LIMIT: f64 = FRAC_PI_2 - 1e-9;
 /// course approaches due east or west that ratio becomes `0/0`, and the
 /// limit is `cos(phi1)` — which is why the epsilon branch below is a
 /// mathematical necessity rather than a defensive guard.
-/// type-audit: bare-ok(diagnostic-value: bearing_deg), bare-ok(ratio: delta_rad)
+/// type-audit: pending(wave-3: bearing_deg), bare-ok(ratio: delta_rad)
 pub fn rhumb_advance(from: GeoCoord, bearing_deg: f64, delta_rad: f64) -> GeoCoord {
     let phi1 = from.latitude.to_radians();
     let lam1 = from.longitude.to_radians();
@@ -122,7 +123,7 @@ pub fn nearest_neighbour(position: &RoomAddr, target: GeoCoord) -> RoomAddr {
 /// Exhaustive by construction: adding a `Compass` variant fails to compile
 /// here until it is given a bearing, which is the same discipline
 /// `compass_variants_must_all_be_rostered` holds one crate over.
-/// type-audit: bare-ok(diagnostic-value: return)
+/// type-audit: pending(wave-3: return)
 pub fn bearing_of(c: Compass) -> f64 {
     match c {
         Compass::N => 0.0,
@@ -219,6 +220,44 @@ mod tests {
         assert!((out.longitude - 2.0 * 0.1_f64.to_degrees()).abs() < 1e-6);
     }
 
+    /// A non-cardinal bearing (45 degrees, "NE") from a mid-latitude start.
+    /// Every other `rhumb_advance` test above is due-north, due-east, or a
+    /// pole clamp — the generic case where `q` actually mixes both
+    /// latitude and longitude is untested by any of them, and that is
+    /// exactly where an inverted or transposed `q` would hide.
+    ///
+    /// Expected values are derived independently of `rhumb_advance`'s own
+    /// closed form (the log-tan / Mercator-latitude `q` ratio): latitude is
+    /// exact by construction (`dphi/ds = cos(theta)` is constant along a
+    /// rhumb, so `phi2 = phi1 + delta*cos(theta)` has no approximation to
+    /// make), and longitude comes from numerically integrating the
+    /// loxodrome ODE `dlambda/ds = sin(theta) / cos(phi(s))` with Simpson's
+    /// rule at 2,000,000 intervals — a different derivation from the one
+    /// under test, sharing no code with it. That independent integration
+    /// and `rhumb_advance`'s closed form agree to ~7.5e-13 degrees, so the
+    /// epsilon below is generous by many orders of magnitude.
+    ///
+    /// FIRES WHEN: `q` is inverted (`* q` instead of `/ q`), or `sin`/`cos`
+    /// are transposed between the latitude and longitude updates.
+    #[test]
+    fn a_non_cardinal_course_matches_an_independently_derived_longitude() {
+        let from = GeoCoord {
+            latitude: 40.0,
+            longitude: -30.0,
+        };
+        let out = rhumb_advance(from, 45.0, 0.2);
+        assert!(
+            (out.latitude - 48.10284684541396).abs() < 1e-9,
+            "latitude was {}, expected 48.10284684541396",
+            out.latitude
+        );
+        assert!(
+            (out.longitude - (-18.69883715923524)).abs() < 1e-9,
+            "longitude was {}, expected -18.69883715923524",
+            out.longitude
+        );
+    }
+
     /// Due north advances latitude by exactly the distance travelled and does
     /// not touch longitude.
     #[test]
@@ -312,25 +351,32 @@ mod tests {
         );
     }
 
-    /// The step length is the MEAN of the three neighbour distances, so it sits
-    /// between the smallest and the largest of them. This is what pins it as an
-    /// average rather than a first-neighbour sample.
+    /// The step length is the MEAN of the three neighbour distances, computed
+    /// here independently (sum the three angles, divide by three) and
+    /// compared to `step_length_rad`'s output directly. A range check against
+    /// `[min, max]` is not enough: a first-neighbour sample is itself one of
+    /// the three values, so it always lies inside that range too. Comparing
+    /// to the exact mean is what tells the two apart.
     ///
-    /// FIRES WHEN: the loop returns early, or divides by the wrong count.
+    /// FIRES WHEN: the loop returns early, samples one neighbour instead of
+    /// averaging all three, or divides by the wrong count.
     #[test]
-    fn a_step_length_lies_between_its_smallest_and_largest_neighbour() {
+    fn a_step_length_is_the_mean_of_its_three_neighbour_distances() {
         let addr = RoomAddr {
             face: 0,
             path: vec![0; 12],
         };
-        let mean = step_length_rad(&addr);
-        let mut each: Vec<f64> = addr
+        let each: Vec<f64> = addr
             .neighbors()
             .iter()
             .map(|n| angle_between_coords(addr.coord(), n.coord()))
             .collect();
-        each.sort_by(|a, b| a.total_cmp(b));
-        assert!(mean >= each[0] - 1e-12 && mean <= each[2] + 1e-12);
+        let expected_mean: f64 = each.iter().sum::<f64>() / each.len() as f64;
+        let mean = step_length_rad(&addr);
+        assert!(
+            (mean - expected_mean).abs() < 1e-12,
+            "step_length_rad returned {mean}, expected the mean {expected_mean}"
+        );
     }
 
     /// Resolution returns one of the three edge-neighbours and never the cell
