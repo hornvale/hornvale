@@ -49,13 +49,13 @@ use std::process::Command;
 /// that campaign merges — the `roster_now_covers_every_declared_absent_crate`
 /// direction below will turn red on its own once it does, which is the
 /// signal to delete it, not a reason to pre-empt it.
-const DECLARED_ABSENT: &[(&str, &str)] = &[(
-    "hornvale-hearsay",
-    "campaign/the-retelling carries a committed fix restoring this crate's \
-     roster coverage; The Ballast's scope was the copy-out mechanism, not the \
-     roster's data (see CLAUDE.md's `Commands` block). Delete this row once \
-     that campaign merges and the crate reappears below.",
-)];
+// EMPTY, and that is the guard working exactly as designed. The Ballast
+// declared `hornvale-hearsay` absent and instructed that the row be deleted
+// once The Retelling's roster fix landed. It has: the crate now carries 32
+// entries, harvested from a green stage gate. The third verdict — a declared
+// crate that is now PRESENT is RED — is what forced this deletion rather than
+// leaving a false acknowledgement standing.
+const DECLARED_ABSENT: &[(&str, &str)] = &[];
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {

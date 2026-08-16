@@ -2,7 +2,7 @@
 
 **Merged:** 2026-08-15 · **Program:** Myth, campaign 2 of 4
 
-## Six blind spots, one shape
+## Six blind spots, one shape — and a seventh that works
 
 The campaign's most transferable output is not its measurement. It is that six
 separate mechanisms in this repo failed the same way, and every one was green
@@ -36,6 +36,32 @@ while failing.
    from one broke seven tests in another crate that names it nowhere.
 
 Every one was caught by running something. None was caught by reading.
+
+## And a seventh mechanism, which is what the other six should look like
+
+The campaign gate went red at the close on a test that did not exist when the
+campaign began: `cli/tests/subfloor_roster_coverage.rs`, added by *The Ballast*
+the same day, guarding — in its own header — "an allow-list gate cannot see
+that its own list went short." Two parallel campaigns found the identical
+defect independently, within hours, and neither knew until the guard fired.
+
+What it fired *on* is the point. The Ballast could not fix the roster's data,
+only the copy-out mechanism, so it declared `hornvale-hearsay` absent with a
+reason naming this campaign and an instruction: delete the row once the fix
+lands. When the harvested roster arrived, the declaration became false and the
+guard went **RED for a fix**, refusing to let a stale acknowledgement stand.
+
+That is a three-valued verdict — undeclared gap is red, declared gap is green,
+**declared-but-now-false is red** — the same shape `seam-guard` uses, and the
+exact property the other six mechanisms lacked. A verbatim ratchet, an
+allow-list, a scratch write, a detached job, a self-guarding assertion and a
+shared string all fail in one direction only: they can be satisfied and never
+un-satisfied, so they rot silently. A declaration that reddens when it stops
+being true cannot.
+
+It also worked as a handoff no human had to broker. One campaign left a machine-
+checked instruction for another and it was executed on contact, at merge, by a
+gate — not by anyone remembering.
 
 ## The controller wrote every defect again
 
