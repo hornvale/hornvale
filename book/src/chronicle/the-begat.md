@@ -101,6 +101,31 @@ comparison was made to fail on command first: perturb one value of the
 thousand, confirm it reports exactly one disagreement, and only then read the
 zero as evidence.
 
+## What the confirmation actually rested on
+
+The other campaign then re-ran its own readout against the joined tree, and
+the result was not merely unchanged: it was identical to the last digit, a
+rank correlation of 0.6622007159632117, with the whole hearsay suite passing.
+
+The reason that is a stronger result than it first appears is worth recording,
+because the first account of it — including the one offered in this campaign's
+favour — was wrong. It was said that the confirmation was a formality, since
+the membership memo and its construction had been shown byte-identical on both
+sides. That check was real but narrow. It did not cover the twenty-two lines
+this campaign changed *inside the other's file*, where the walk that produces
+their readout lives: the derivation there was rewritten to take its hop count
+from the downward walk instead of re-deriving each node's ancestry.
+
+So the readout did not survive an untouched dependency. It survived a
+**reimplemented** one. What licensed the conclusion was the other campaign's
+own verification: the ancestry walk hashed identical on both sides, and the
+reimplemented descendant query was shown to preserve its ordering contract —
+it sorts pairs whose identifiers are unique, so mapping away the hop count
+leaves the sequence ascending exactly as before. A bit-identical readout over
+a rewritten dependency is a much better piece of evidence than a bit-identical
+readout over an unchanged one, and it is only available because someone
+checked the thing the narrow test had not.
+
 ## A price recorded once is a price that rots
 
 The column had carried a cost claim since it was registered — about 0.16
