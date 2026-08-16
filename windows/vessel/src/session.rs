@@ -782,6 +782,16 @@ impl<'w> Session<'w> {
         &self.knowledge
     }
 
+    /// This session's walk-band course, if it is mid-traverse.
+    ///
+    /// An accessor rather than a `pub` field: the course is session-private
+    /// state whose invariant is that `reckoned` advances only through
+    /// `rhumb_advance`. A `pub` field invites a consumer that assigns to it,
+    /// which is exactly the memoryless walk this campaign exists to avoid.
+    pub fn course(&self) -> Option<&crate::course::Course> {
+        self.course.as_ref()
+    }
+
     /// The locale context this session walks (for the battery's checks).
     pub fn context(&self) -> &LocaleContext {
         &self.wctx.ctx
