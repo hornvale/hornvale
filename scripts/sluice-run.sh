@@ -604,12 +604,43 @@ final_sha="$(git rev-parse HEAD)"
 # tree with untested residue layered on top.
 echo "sluice-run: merge product $merge_sha, final tree $final_sha"
 
-# Fast-forward only, ALWAYS. HEAD's first parent is origin/main, so this IS a
-# fast-forward; a force push of any kind must never appear on this line. (Not
-# spelled out with its flag syntax here on purpose — the static guard below,
-# scripts/test-sluice.sh's "no force flag exists anywhere in the chamber",
-# greps this whole file for that syntax, and a mention in prose would trip its
-# own check as if it were a real flag on a real push.)
+# Fast-forward only, ALWAYS. HEAD's first parent is origin/main, so this IS
+# a fast-forward; a force push of any kind must never appear on this line.
+#
+# THIS USED TO BE GUARDED BY A STATIC LINT IN scripts/test-sluice.sh, and the
+# lint is gone — deleted deliberately, not lost track of. Four review rounds
+# tried to make "assert every git push in this file is one of the reviewed
+# invocations" hold as source-text analysis: a denylist of forbidden flags
+# (beaten by five unanticipated forms), an allowlist with a hand-rolled
+# line-joiner (beaten by bash's continuation semantics being reimplemented
+# wrong — a joined `git pu\`+newline+`sh -f …` line split "push" across a
+# space the joiner inserted, so the detector matched nothing), then a
+# rewrite that asked bash's own parser instead of re-modelling it
+# (`declare -f` on the file wrapped as a function body) — which closed that
+# class for good, but opened a worse one: an unbalanced `}` in the audited
+# file terminates the wrapper function early, so everything after it runs as
+# real top-level code AT AUDIT TIME, including a real `git push`. A static
+# checker that can be made to execute the thing it is auditing is a worse
+# security property than having no checker. What every round actually
+# confirmed, the hard way, is that a static detector over shell text cannot
+# see RUNTIME argv formation — `p=push; git "$p" …`, `git p''ush …` — because
+# that only exists once the shell actually evaluates it, which a safe static
+# checker must never do.
+#
+# The enforcement that actually matters lives at RUNTIME instead:
+# `scripts/hooks/pre-push` (repository-level `core.hooksPath`, so it fires
+# for every push from every session, no opt-in) refuses any delete or
+# non-fast-forward push to a non-local remote unless `HV_PUSH_OK=1` —
+# verified against the real remote (a genuine rewind of a campaign branch
+# was refused, the remote unmoved, while an ordinary fast-forward went
+# through). That covers the actual danger (this script, or a human, force-
+# pushing or deleting something on the shared remote) for every push this
+# repository ever makes, not just the two lines below. What it does not
+# cover — an ordinary, non-force push to the WRONG destination — is already
+# exercised functionally by this repo's own chamber tests, which run a real
+# push against a scratch origin and assert the pushed SHA and destination
+# ref are exactly what was expected; that is real execution catching a real
+# mistake, not text pattern-matching a hypothetical one.
 if ! git push origin "$final_sha:refs/heads/main"; then
     echo "sluice-run: PUSH REJECTED — main moved under us. Holding." >&2
     phase_failed="push"
