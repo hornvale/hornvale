@@ -45,12 +45,27 @@ with the triangle's orientation. These are exact integers.
 
 They have to be. The obvious alternative — placing each cell at the compass
 bearing of its exit — fails on a sphere. A room's three exits bucket to
-three distinct compass points everywhere, but *which* three depends on
-latitude and on the local orientation of the icosahedral face: an observer
-near the equator may read `E, Nw, Sw` while one at 85° N reads `E, N, S`.
+three distinct compass points everywhere, but *which* three varies from cell
+to cell: an observer in one place may read `E, Nw, Sw` and another `E, N, S`.
 The lattice's rotation relative to north drifts across the globe, so laying
 cells out by bearing would distort the very mesh the chart claims to depict,
 and would do it differently in every part of the world.
+
+What governs that variation is the **local triangle's orientation**, not
+latitude. [The Rhumb](../chronicle/the-rhumb.md) measured this directly while
+chasing a different question, and the distinction matters because latitude is
+the intuitive answer and it is wrong: two addresses at latitude *exactly* zero
+behave identically to each other and differently from a third at the same
+latitude on another base face. The lattice also alternates orientation between
+neighbours, so a walker meets two different triads on alternate steps.
+
+That campaign is also why a **player-facing** heading is not constrained by
+this. `go` accepts all eight compass points from every cell and resolves each
+against a carried rhumb course — an overlay on the adjacency graph, never a
+modification of it
+([decision 0141](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0141-compass-navigation-is-an-overlay.md)).
+Placement in this schema is unchanged by that and remains integer-lattice: the
+chart still draws the mesh, and the compass still names a direction of travel.
 
 Integer barycentric coordinates have no such drift. A triangle's *lattice
 base point* is the componentwise minimum of its three barycentric corners;
