@@ -368,7 +368,16 @@ mod tests {
 
     #[test]
     fn each_body_the_sky_names_is_examinable_and_moon_is_not_ambiguous_at_runtime() {
-        let v = vantage_at(0.0);
+        // THE GLASSHOUSE, Stage B Task 4 (the thermostat) re-pin: day 0.0 ->
+        // day 2.75. The damped, greenhouse-forced insolation baseline
+        // re-places seed 42's flagship, and day 0.0 at the new site is a
+        // persistently overcast night with no body visible at all (the flat
+        // rain-deck blocks everything, not only the moon). Re-swept 0..100 in
+        // 0.25-day steps: 46 of 400 sampled days show a moon; day 2.75 is the
+        // first. Nothing about the claim changed — the night sky must name a
+        // moon unambiguously whenever one is visible — only which day is a
+        // clear-enough witness.
+        let v = vantage_at(2.75);
         let f = TemplateFocalizer.render(&v);
         let moons: Vec<&Noun> = f.nouns.iter().filter(|n| n.matches("moon")).collect();
         assert!(!moons.is_empty(), "the night sky names at least one moon");

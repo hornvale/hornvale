@@ -445,8 +445,71 @@ fn river_exposure_tracks_real_proximity() {
 /// cohort moved which entries EXIST; they moved no word that already existed.
 /// That is the accession discipline's additivity claim, measured on the
 /// rendered product rather than argued from the cohort rule.
+///
+/// **THE GLASSHOUSE re-measure (Stage B, decision 0137) — the first cause on
+/// this list that is not a roster change.** The craton rescale delivers its
+/// budget, so seed 42's coastline rose to the shelf break and mean land
+/// elevation fell 2257 -> 1783 m. The roster is untouched at fifteen peoples;
+/// the GROUND under them moved, and every one of these four concepts is a
+/// toponymic exposure read off that ground. The four tables become:
+///
+/// ```text
+///                  before (15 peoples)     after (15 peoples)
+///   spring   0 root, 15 gap            8 root,  7 gap
+///   hill     3 root, 12 gap            1 root, 14 gap
+///   valley   2 root, 13 gap            6 root,  9 gap
+///   marsh    6 root,  9 gap            6 root,  9 gap
+/// ```
+///
+/// Total roots 11 -> 21 on an unchanged roster: total gaps fall 49 -> 39, 3.27
+/// to 2.60 per people. Exposure per people rose for the first time in this
+/// file's history, and the mechanism is not mysterious — a coastline at the
+/// shelf break puts more peoples within reach of a spring and a valley, and
+/// fewer within reach of a hill, because the hills got shorter.
+///
+/// **AND THE PHONOLOGY RETURNED BYTE-IDENTICAL FOR THE FOURTH EPOCH RUNNING,
+/// THIS TIME UNDER A TERRAIN EPOCH RATHER THAN A ROSTER CHANGE.** Every people
+/// that kept a root kept the same word, without exception: on `marsh`, drow
+/// `Goo`, gnoll `Gshoovzngaov`, hobgoblin `Qaneo`, kobold `Rorora` and snow-elf
+/// `Boosh` — five of five surviving entries; on `valley`, sea-elf `Nadbbeus`,
+/// and kobold's newly-recovered `valley` is `Raxoroo`, the same string this
+/// comment recorded for it three campaigns ago. Ten entries appeared and two
+/// disappeared; **zero words moved**. That is a stronger reading of the
+/// accession discipline's additivity than any of the roster re-measures above,
+/// because a roster change at least leaves an incumbent people's own
+/// circumstances alone, and this one did not: it moved the very ground the
+/// exposure is read from, and the phonology still did not notice.
+///
+/// All four tests are RENAMED to the shape they now measure, per this file's
+/// established policy (decision 0106 — a wrong label defends itself).
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** The thermostat (a damped,
+/// greenhouse-forced insolation baseline replacing the fixed 288 K blackbody
+/// one) re-placed every settlement again — a second cause on this list that
+/// is not a roster change. `spring` moves from 7 root/8 gap to 9 root/6 gap:
+/// bugbear, desert-dwarf, high-elf and hill-dwarf newly root it (hill-dwarf
+/// keeping its `Maqtog` from before); desert-elf and human, its two rooters
+/// under the craton-rescale reading, gap it instead.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 5, the area-mean-zero latitude
+/// profile).** `spring` moves from 9 root/6 gap to 5 root/10 gap: bugbear,
+/// desert-dwarf, high-elf, kobold and snow-elf all gap it now, leaving
+/// desert-elf, gnoll, gully-dwarf, hill-dwarf and hobgoblin — desert-elf's
+/// `Zeuz` and hill-dwarf's `Maqtog` both BYTE-IDENTICAL to the words they
+/// carried before this re-measure. Re-measured wholesale, not hand-edited.
+///
+/// **THE GLASSHOUSE re-measure (Stage B, `k` re-decided 0.4 → 0.3).**
+/// `spring` holds at 5 root/10 gap — the ONLY one of this file's four
+/// concepts whose count did not move under `k` — but the membership swapped
+/// underneath it: desert-elf and gully-dwarf gap it, goblin (`Nebao`) and
+/// snow-elf (`Booz`) gain it. hill-dwarf keeps `Maqtog`. The test keeps its
+/// name, and that is precisely the hazard worth naming: a count-shaped name
+/// is stable across a change that replaced two-fifths of the set, so **the
+/// name is not the assertion** — the named partition below is. A reviewer
+/// checking only that the name still reads true would have seen nothing
+/// here.
 #[test]
-fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
+fn spring_is_a_root_at_seed_42_for_five_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -469,26 +532,25 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
             "desert-dwarf",
             "desert-elf",
             "drow",
-            "gnoll",
-            "goblin",
             "gully-dwarf",
             "high-elf",
-            "hill-dwarf",
-            "hobgoblin",
             "human",
             "kobold",
             "sea-elf",
-            "snow-elf",
             "wood-elf",
         ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 NO placed people roots 'spring' — goblin, its sole rooter \
-         before The Range, lost the exposure when the competitive cascade \
-         re-placed it"
+        vec![
+            ("gnoll", "Dzhaap".to_string()),
+            ("goblin", "Nebao".to_string()),
+            ("hill-dwarf", "Maqtog".to_string()),
+            ("hobgoblin", "Negao".to_string()),
+            ("snow-elf", "Booz".to_string()),
+        ],
+        "the set of peoples rooting 'spring' at seed 42 moved"
     );
 }
 
@@ -560,8 +622,34 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
 /// shape from 0 rooters to 3. That is a threshold sitting near the middle of
 /// the roster's elevation spread, not a trend in anybody's niche, and this
 /// test asserts no mechanism for it.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `hill` splits 2/15 Root,
+/// 13/15 Gap: hobgoblin keeps its byte-identical `Nootea`, and gully-dwarf
+/// joins it as a second rooter (`Ngab`), the same climate epoch that moved
+/// `spring`/`valley`/`marsh` below.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 5, the area-mean-zero latitude
+/// profile).** `hill` splits 1/15 Root, 14/15 Gap: gully-dwarf gaps it
+/// again, leaving hobgoblin alone — still carrying its byte-identical
+/// `Nootea`. Re-measured wholesale, not hand-edited.
+///
+/// **THE GLASSHOUSE re-measure (Stage B, `k` re-decided 0.4 → 0.3).** `hill`
+/// splits 2/15 Root, 13/15 Gap: drow joins hobgoblin (`Godgoo`), and
+/// hobgoblin STILL carries the byte-identical `Nootea` — seven re-measures
+/// now without that word moving, which is the discriminator this file cares
+/// about. A surviving rooter whose word is unchanged means EXPOSURE moved,
+/// not phonology. The test is renamed rather than left claiming "alone".
+///
+/// This one is worth reading beside its three siblings, because they moved
+/// TOGETHER and in one direction: `hill` 1 → 2 rooters, `marsh` 5 → 6,
+/// `valley` 3 → 5, `spring` 5 → 5 with two swaps. Warming the population
+/// added settlement (826 occupations across 302 sites, against 620 across
+/// 217 at `k = 0.4`), settlement is what puts a people beside a landform,
+/// and a people beside a landform roots the word for it. That is the whole
+/// causal chain this file exists to expose, running forwards for once
+/// instead of being read backwards out of a drift.
 #[test]
-fn hill_is_a_root_at_seed_42_for_gnoll_kobold_and_wood_elf() {
+fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -587,32 +675,26 @@ fn hill_is_a_root_at_seed_42_for_gnoll_kobold_and_wood_elf() {
             "bugbear",
             "desert-dwarf",
             "desert-elf",
-            "drow",
+            "gnoll",
             "goblin",
             "gully-dwarf",
             "high-elf",
             "hill-dwarf",
-            "hobgoblin",
             "human",
+            "kobold",
             "sea-elf",
             "snow-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Pzoav".to_string()),
-            ("kobold", "Roxoro".to_string()),
-            ("wood-elf", "Nguznguu".to_string()),
+            ("drow", "Godgoo".to_string()),
+            ("hobgoblin", "Nootea".to_string()),
         ],
-        "at seed 42 three placed peoples root 'hill': kobold, the authored \
-         highland specialist, is back with the byte-identical `Roxoro` it \
-         carried before The Range took it away; gnoll and wood-elf are new \
-         rooters with new words. The partition is asserted EXACTLY, in both \
-         directions and by name, for the reason F11 gave — the exception is \
-         not noise to route around, it is what the elevation-maximum gate is \
-         FOR"
+        "the set of peoples rooting 'hill' at seed 42 moved"
     );
 }
 
@@ -666,8 +748,28 @@ fn hill_is_a_root_at_seed_42_for_gnoll_kobold_and_wood_elf() {
 /// already said neither of those alone; neither survives, so the name moves
 /// with the value. Sea-elf's `Nadbbeus` is BYTE-IDENTICAL to the word it
 /// carried at the previous pin.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `valley` moves from 6
+/// root/9 gap to 2 root/13 gap: gnoll, goblin, hobgoblin and kobold gap it
+/// now, leaving only drow (`Gadbvoo`) and sea-elf (`Nadbbeus`) rooting it —
+/// both BYTE-IDENTICAL to their previous words.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 5, the area-mean-zero latitude
+/// profile).** `valley` moves from 2 root/13 gap to 3 root/12 gap: drow gaps
+/// it now; gnoll and hobgoblin regain it (`Dsavshmaov`/`Konoa`, both
+/// BYTE-IDENTICAL to words this file has recorded for them before). Sea-elf
+/// keeps its `Nadbbeus`, unchanged across every re-measure in this file's
+/// history. Re-measured wholesale, not hand-edited.
+///
+/// **THE GLASSHOUSE re-measure (Stage B, `k` re-decided 0.4 → 0.3).**
+/// `valley` moves 3 root/12 gap → 5 root/10 gap, its widest yet: gnoll gaps
+/// it, and drow (`Gadbvoo`), high-elf (`Mazbveos`) and human (`Ngaatae`) all
+/// gain it. Both survivors keep their words — hobgoblin's `Konoa` and
+/// sea-elf's `Nadbbeus`, the latter still unmoved across the whole of this
+/// file's history. Renamed from `..._for_three_peoples`. Re-measured
+/// wholesale, not hand-edited.
 #[test]
-fn valley_is_a_root_at_seed_42_for_sea_elf_alone() {
+fn valley_is_a_root_at_seed_42_for_five_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -689,14 +791,10 @@ fn valley_is_a_root_at_seed_42_for_sea_elf_alone() {
             "bugbear",
             "desert-dwarf",
             "desert-elf",
-            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
-            "high-elf",
             "hill-dwarf",
-            "hobgoblin",
-            "human",
             "kobold",
             "snow-elf",
             "wood-elf",
@@ -705,13 +803,14 @@ fn valley_is_a_root_at_seed_42_for_sea_elf_alone() {
     );
     assert_eq!(
         rooted,
-        vec![("sea-elf", "Nadbbeus".to_string())],
-        "at seed 42 exactly one people roots 'valley': sea-elf, with the \
-         BYTE-IDENTICAL `Nadbbeus` it took at the previous pin. Kobold, which \
-         held `Raxoroo` here unchanged across three roster epochs, now gaps \
-         `valley` and roots `hill` instead — the two concepts trade, which is \
-         what a flagship crossing between a local elevation minimum and a \
-         local maximum looks like from the lexicon's side"
+        vec![
+            ("drow", "Gadbvoo".to_string()),
+            ("high-elf", "Mazbveos".to_string()),
+            ("hobgoblin", "Konoa".to_string()),
+            ("human", "Ngaatae".to_string()),
+            ("sea-elf", "Nadbbeus".to_string()),
+        ],
+        "the set of peoples rooting 'valley' at seed 42 moved"
     );
 }
 
@@ -806,8 +905,34 @@ fn valley_is_a_root_at_seed_42_for_sea_elf_alone() {
 /// Note desert-dwarf's `Dag` against hill-dwarf's departed `Tag`: two words in
 /// the same family's cohort, one letter apart and independently drawn — near
 /// neighbours, not a renamed pin.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 4).** `marsh` moves from 6
+/// root/9 gap to 7 root/8 gap: gnoll and desert-elf gap it now; bugbear,
+/// goblin and wood-elf gain it. **No dwarf roots it, for the fifth
+/// consecutive re-measure** (all three dwarf kinds — desert-dwarf,
+/// gully-dwarf, hill-dwarf — gap it). drow's `Goo`, hobgoblin's `Qaneo`,
+/// kobold's `Rorora` and snow-elf's `Boosh` are all BYTE-IDENTICAL to the
+/// words they carried before.
+///
+/// **THE GLASSHOUSE re-measure (Stage B Task 5, the area-mean-zero latitude
+/// profile).** `marsh` moves from 7 root/8 gap to 5 root/10 gap: bugbear,
+/// snow-elf and wood-elf gap it now; gnoll regains it (`Gshoovzngaov`,
+/// BYTE-IDENTICAL to the word it carried two re-measures ago). **No dwarf
+/// roots it, for the sixth consecutive re-measure.** drow's `Goo`, goblin's
+/// `Taneo`, hobgoblin's `Qaneo` and kobold's `Rorora` are all unchanged.
+/// Re-measured wholesale, not hand-edited.
+///
+/// **THE GLASSHOUSE re-measure (Stage B, `k` re-decided 0.4 → 0.3).**
+/// `marsh` moves 5 root/10 gap → 6 root/9 gap: goblin and kobold gap it,
+/// while bugbear (`Qadoo`), desert-elf (`Geesh`) and snow-elf (`Boosh`) gain
+/// it. Every survivor is byte-identical — drow's `Goo`, gnoll's
+/// `Gshoovzngaov`, hobgoblin's `Qaneo`. **No dwarf roots it, for the seventh
+/// consecutive re-measure**, which is now the longest-running invariant this
+/// file holds and the reason the clause is in the test's name. Renamed from
+/// `..._for_five_peoples_and_no_dwarf`. Re-measured wholesale, not
+/// hand-edited.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -826,34 +951,30 @@ fn marsh_is_a_root_at_seed_42_for_seven_peoples_including_one_dwarf() {
     assert_eq!(
         gapped,
         vec![
-            "bugbear",
-            "desert-elf",
+            "desert-dwarf",
             "goblin",
             "gully-dwarf",
             "high-elf",
             "hill-dwarf",
             "human",
+            "kobold",
             "sea-elf",
+            "wood-elf",
         ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
-            ("desert-dwarf", "Dag".to_string()),
+            ("bugbear", "Qadoo".to_string()),
+            ("desert-elf", "Geesh".to_string()),
             ("drow", "Goo".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
-            ("kobold", "Rorora".to_string()),
             ("snow-elf", "Boosh".to_string()),
-            ("wood-elf", "Gee".to_string()),
         ],
-        "at seed 42 seven of FIFTEEN placed peoples root 'marsh' — one more \
-         than the last pin, and still exactly one dwarf, but a DIFFERENT one: \
-         hill-dwarf lost it and desert-dwarf gained it as `Dag`. Human lost \
-         it; snow-elf and wood-elf gained it. gnoll's `Gshoovzngaov`, \
-         hobgoblin's `Qaneo`, kobold's `Rorora` and drow's `Goo` are all \
-         byte-identical to the words they carried before"
+        "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
+         is among them"
     );
 }
 

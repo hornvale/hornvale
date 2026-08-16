@@ -2718,3 +2718,71 @@ corroboration half moves from self-scorable to not-yet-scorable, and its
 precondition is now named and dated: it waits on distortion, which campaign 2
 supplies. The half that closed did so on the first honest attempt, and both
 halves lived inside a single sentence when the campaign opened.
+
+### A criterion can fail and confirm its own hypothesis (2026-08-15)
+
+*The Glasshouse* froze six criteria before writing a line of the physics they
+would grade, and four of them passed. The two that failed are the reason this
+entry exists, because the chapter has been treating a preregistered set as
+something that passes or fails *as a set*, and this campaign shows the useful
+structure is finer than that.
+
+The hypothesis was that a cold, uniform population had three separable causes
+and was not an attractor. Two criteria tested the *mechanism* — that the
+population would retain its temperature spread rather than being flattened onto
+a target, and that no biome class would dominate. Both passed, and the first was
+designed to be the one a lazy fix fails: a strong enough thermostat can hit any
+median by collapsing everyone onto it. The spread held at 34.92 K against a
+31.2 K floor, and the largest biome class fell from 65.1% to 25.0%.
+
+One criterion tested a *magnitude*: land the median within five degrees of
+Earth's +8.6 °C. It missed by twelve. And the same measurement that failed it
+said why, in a form the criterion itself could not have expressed. The habitable
+zone is denominated in the square root of luminosity while insolation goes as
+luminosity over radius squared, so luminosity cancels exactly and a uniform draw
+in orbital *radius* puts the population at a median insolation of 0.748 by
+construction. Across the entire range of the thermostat's free constant — up to
+*perfect* compensation — the median moves 7.2 K and two-fifths of worlds stay
+cold. The shortfall is a property of the draw's measure, and no climate model
+can argue with a measure.
+
+**What this adds to the axis.** A preregistered set is not one bet; it is a
+mechanism claim and a level claim wearing the same coat. When the mechanism
+criteria pass and the level criterion fails, the honest reading is not "the
+campaign half-worked" — it is *the model is right and something upstream sets
+the level*, which is a strictly more useful result than a clean pass would have
+been. The way to keep that reading available is to write at least one criterion
+that a successful fix could fail, and at least one that only a wrong model
+could.
+
+### A zero can be a scope error wearing a null's clothes (2026-08-15)
+
+The entry above concerns a number that moved less than hoped. This one concerns
+a number that did not move **at all**, and the distinction turned out to be the
+whole finding.
+
+One of the six criteria asked that the census's dominant soil order stop being
+frozen at a single value. It was `leptosol` on all thousand worlds before the
+campaign and `leptosol` on all thousand after — after a change that moved the
+median land temperature 8.3 K, halved the median land elevation, and cut
+ice-dominated worlds by two-thirds. Read as a measurement, that is an emphatic
+null: the strongest available intervention, and a response of exactly zero.
+
+It was not a null. The soil classifier's first question asks whether the soil is
+shallower than a quarter of a metre or the ground drops more than 300 m to a
+neighbour, and answers `leptosol` if either holds. Every question below that line
+reads temperature or moisture. Measured over 307,588 land cells, **72.1% never
+reach those questions** — 61.09% by depth alone. The classifier that the
+criterion was grading was, for three cells in four, never consulted.
+
+**What this adds to the axis.** The chapter already distinguishes a
+*self-scorable* bet from a *not-yet-scorable* one by asking what would have to
+vary for the number to move. This is the same question asked one layer lower and
+it needs its own name, because the failure looks different: here the world
+varies, the instrument is correct, and the statistic is still constant — because
+the quantity being varied is **downstream of the branch that decides**. A null
+of this kind is indistinguishable from a weak effect by inspection, and the only
+thing that separated them was attributing the branch instead of inferring it.
+The instruction that follows is cheap and general: when a statistic refuses to
+move under a large intervention, find the line that decides it before concluding
+anything about the effect size.

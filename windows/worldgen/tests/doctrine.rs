@@ -286,8 +286,44 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // its prediction when the diets are corrected, while duergar gains one on
     // four seeds). A dispersed arid forager does not build settlements big
     // enough to throw off a shaman caste.
+    // THE GLASSHOUSE re-found (Stage B, decision 0134), by the prescribed
+    // method and not by widening anything: the bounded 50..=60 scan, run
+    // OUTSIDE this test (decision 0093 — a test that sweeps seeds to find an
+    // instance is doing the census's job badly). The craton rescale moved every
+    // coastline, re-placed every world, and seed 57's desert-dwarf flagship
+    // went folk -> organized.
+    //
+    // The scan found 58 folk flagships across the eleven seeds, up from 20:
+    // (50, desert-dwarf/desert-elf/gnoll/hobgoblin/kobold/sea-elf),
+    // (51, desert-dwarf/desert-elf/gnoll/kobold/sea-elf/snow-elf),
+    // (52, desert-dwarf/desert-elf/gnoll/sea-elf/snow-elf),
+    // (53, desert-dwarf/desert-elf/drow/gnoll/sea-elf/snow-elf),
+    // (54, desert-dwarf/desert-elf/gnoll/kobold/sea-elf/snow-elf),
+    // (55, desert-dwarf/desert-elf/gnoll/kobold/sea-elf/snow-elf),
+    // (56, goblin/hill-dwarf/sea-elf), (57, hill-dwarf/human/kobold/sea-elf),
+    // (58, desert-dwarf/desert-elf/gnoll/sea-elf/snow-elf),
+    // (59, desert-dwarf/desert-elf/gnoll/kobold/sea-elf),
+    // (60, desert-dwarf/desert-elf/drow/gnoll/sea-elf/snow-elf).
+    //
+    // As at The Tense and The Delvers, only the KIND constant moves, and again
+    // it is FORCED rather than chosen — but by a different rule this time,
+    // because seed 57 now carries four folk flagships rather than one. The pin
+    // goes to the people that is folk on EVERY seed in the window:
+    // **sea-elf, 11 of 11**. desert-dwarf, the previous holder of that
+    // property at 10 of 11, is now folk on 9 and is one of the two kinds seed
+    // 57 organizes. Picking the most-often-folk people is what makes the next
+    // epoch least likely to have to move this line at all.
+    //
+    // Read the roster movement, though, because it is the epoch speaking: folk
+    // cult-forms nearly TRIPLED in this window (20 -> 58). A folk form is the
+    // absence of an organized one, and an organized cult needs a settlement
+    // large enough to support a shaman caste; the epoch lowered mean land
+    // elevation 2257 -> 1783 m and re-placed every settlement, and the net
+    // effect was smaller, more dispersed flagships. That is the same fact
+    // `genesis_observes_an_unoccluded_sky` reports as 230 -> 196 settlements at
+    // seed 42, read from the religion side.
     const FOLK_SMOKE_SEED: u64 = 57;
-    const FOLK_SMOKE_KIND: &str = "desert-dwarf";
+    const FOLK_SMOKE_KIND: &str = "sea-elf";
     let w = generated(FOLK_SMOKE_SEED);
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");

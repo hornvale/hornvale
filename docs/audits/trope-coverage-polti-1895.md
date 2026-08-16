@@ -110,7 +110,7 @@ that is the difference.
 
 ## Supply
 
-303 registered tokens no situation in this corpus requires.
+304 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -343,6 +343,7 @@ missing half before this list can serve it.
 - `predicate:founding-solstice-azimuth-degrees`
 - `predicate:frost-retreat`
 - `predicate:genesis-note`
+- `predicate:greenhouse-forcing-k`
 - `predicate:hab-zone-inner-au`
 - `predicate:hab-zone-outer-au`
 - `predicate:highest-elevation-m`

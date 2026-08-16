@@ -369,6 +369,7 @@ mod tests {
                     retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
+                greenhouse_residual: 0.0,
             },
             moons: vec![Moon {
                 mass: LunarMasses::new(1.0).unwrap(),

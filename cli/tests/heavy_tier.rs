@@ -239,13 +239,17 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 33] = [
+const EXPECTED_UNTOKENISED: [&str; 37] = [
     "...",
+    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs; the 0.60 bar sits 0.19 SE below it and 0.75 SE above the prior 0.5667, so the battery separates neither)",
+    "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
+    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 14 re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean cells; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
+    "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (1 of 35 riparian rooms on seed 42 reads dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and at n=1 a tolerance is indistinguishable from switching the test off)",
+    "PREREGISTERED, not met: awaits MAP-waterfall-threshold-mis-scaled (WATERFALL_MIN_DRAINAGE = 80 was calibrated on pre-epoch catchments; the sea-level epoch shortened drainage paths, so seed 42's loud cells fell 34 -> 16 against a floor of 17 and strong crossings 8 -> 2 against a floor of 4, and lowering either floor would delete the only instrument that noticed)",
     "PREREGISTERED, not met: awaits PROC-domesday-all-absent-blind-spot (5 zero-present-value columns are invisible to D2/D4 — stats::numeric returns None on an empty column)",
-    "PREREGISTERED, not met: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5667 over 120 pairs, below the preregistered 0.60 bar)",
     "PREREGISTERED, not met: awaits TOOL-min-vs-max-separation-compares-an-overlap (decision 0134 retires it; the whole-roster Spearman rho, already asserted above, carries the direction)",
     "TODO: re-enable once the number settles",
     "calibration: run by hand, prints the approach_ease quantiles",
@@ -336,6 +340,38 @@ const EXPECTED_UNTOKENISED: [&str; 33] = [
 /// of a PRIMARY sign claim The Radiation had diagnosed but deliberately left
 /// standing; evidence at
 /// `windows/lab/tests/disposition_calibration.rs::the_weakest_raider_beats_the_strongest_abstainer_primary_claim`.
+/// The Glasshouse added three at its close, reviewed 2026-08-15, all of one
+/// kind: an instrument that noticed something true about a world that moved
+/// under it, deferred at its pre-epoch value rather than widened to fit the
+/// new measurement.
+/// `LOC-riparian-dry-overlap` — R-8's zero-tolerance invariant, evidence at
+/// `windows/locale/tests/wetness_reading.rs::no_room_reads_riparian_and_dry`;
+/// at n=1 offender a tolerance would be indistinguishable from switching the
+/// test off, so it is ignored whole.
+/// `BIO-gause-distinctness-vacuous` — evidence at
+/// `windows/worldgen/tests/generalist_distinctness.rs`. All three arms of the
+/// cv-ratio instrument collapsed together under the corrected climate, so the
+/// statistic can no longer separate human from a goblin-substituted human.
+/// `BIO-raid-partition-order-statistic` — evidence at
+/// `windows/lab/tests/disposition_calibration.rs::every_raider_clears_the_floor_preregistered_not_met`.
+/// **A SECOND, INDEPENDENT failure in the file decision 0134 had just
+/// retired the PRIMARY claim from, and the two must not be read as one
+/// retirement**: 0134 explicitly KEPT the raider floor, which was true when
+/// written, and the climate correction then put drow under it at 14/60.
+/// **Two of the three were SPLIT out of a larger test rather than ignoring
+/// it**, which is worth doing whenever an ignore would take live assertions
+/// down with the stale one. `MAP-waterfall-threshold-mis-scaled` left the
+/// ordering claim, its straddle anti-vacuity and the universal "every
+/// crossing above the threshold is Impassable" running in
+/// `the_discharge_clause_makes_the_strongest_crossing_impassable`; the raider
+/// floor left the whole-roster Spearman rho running in the battery above,
+/// which is the claim that actually survives.
+/// All four carry the witness this doc asks for
+/// (`the_riparian_dry_overlap_is_pinned_as_a_witness`,
+/// `the_loud_reach_population_is_pinned_as_a_witness`,
+/// `the_collapsed_cv_ratio_arms_are_pinned_as_witnesses`,
+/// `the_sub_floor_raider_reading_is_pinned_as_a_witness`), so the deferred
+/// figures stay measured.
 ///
 /// **The Gnomon also found the rot this convention carries, and closed it for
 /// its own entry.** An `#[ignore]`d measurement stops being measured: the

@@ -166,7 +166,35 @@ const BANDS: [(f64, f64); 3] = [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0)];
 /// published figure** despite the intervening placement-changing merge.
 /// See `.superpowers/sdd/2026-08-04-the-fare/mire-remeasure.md` for the
 /// full remeasurement and its comparison against the chronicle.
-const H1_PINNED_MEDIAN: f64 = 0.0095;
+///
+/// **RE-READ AND RE-PINNED AT THE GLASSHOUSE'S CLOSE (2026-08-15): 0.0095 ->
+/// 0.0264, a 2.8x rise.** The pin did exactly what the paragraph above says
+/// it exists to do — it caught a change nobody was watching for, from a
+/// campaign that never touched this file.
+///
+/// **The falsification SURVIVES, and that is the load-bearing half of this
+/// re-read.** H1's original preregistered floor was `>= 0.05`; the new median
+/// is 0.0264, still barely half of it. So the number moved a long way and
+/// changed nothing about the verdict: weather's effect on land connectivity
+/// remains well below the scale §5a's doubling anchored it to. A reader
+/// arriving at a moved pin must not read the movement as a rescue, and this
+/// one is not.
+///
+/// **Mechanism.** The Glasshouse corrected the climate model (median land
+/// temperature -11.99 -> -3.65 degC). A warmer world has a wider liquid-water
+/// season, so the seasonal swing in traversable connectivity grows. Nothing
+/// in the connection graph, the sampling frame or `min_conductance` changed —
+/// the same measurement was taken on a different world, which is the one
+/// cause this pin's tolerance was explicitly NOT designed to absorb.
+///
+/// **The direction is worth recording, because it points at the floor.** The
+/// swing moved 2.8x TOWARD the 0.05 floor without reaching it, and the
+/// equatorial band alone now reads 0.0524 — above it. A further warming
+/// correction could plausibly carry the all-land median across, at which
+/// point H1 would need re-adjudicating rather than re-pinning, and the
+/// chronicle's "falsified" verdict would be genuinely in play. It is not in
+/// play yet.
+const H1_PINNED_MEDIAN: f64 = 0.0264;
 
 /// The relative tolerance around [`H1_PINNED_MEDIAN`] the pin allows before
 /// reddening.

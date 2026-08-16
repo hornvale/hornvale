@@ -10,11 +10,11 @@ The sky a world is generated under: its star, its moons, its rotation and tilt, 
 
 Absolute solstice-sunrise azimuth drift over the first kiloyear at the flagship settlement's latitude; Absent when locked, unplaced, or polar
 
-n = 952 present, 48 absent (of 1000 worlds)
+n = 951 present, 49 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0000027381534 | 0.012669558 | 0.034064379 | 0.083140679 | 0.39728966 | 0.059820444 |
+| 0.0000024506268 | 0.013145168 | 0.034454541 | 0.083282626 | 0.39802834 | 0.060485544 |
 
 ### `brightening-per-gyr`
 
@@ -128,6 +128,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|
 | `0` | 953 | 95.3% |
 | `1` | 47 | 4.7% |
+
+### `greenhouse-forcing-k`
+
+Dimensionless atmospheric greenhouse residual at the anchor, -1..1, mean 0 (The Glasshouse) — the spread the carbonate-silicate thermostat alone would not give it. Nothing consumes this metric yet.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| -0.99889957 | -0.50177467 | -0.019146973 | 0.51115284 | 0.99985543 | 0.0029902562 |
 
 ### `insolation-rel`
 

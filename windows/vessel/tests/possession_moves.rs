@@ -584,7 +584,26 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// `Dadogogodaga`, a different place entirely. Reading the rename off the
 /// almanac instead of the possession artifact gives a plausible wrong answer,
 /// because this NPC does not live in the chief settlement.
-const GRIEVANCE_NPC: &str = "bugbear of Googo";
+///
+/// A SEVENTH time, with The Glasshouse (decision 0134, 2026-08-14): the
+/// terrain epoch moves every coastline, so seed 42's settlements re-place
+/// once more and the flagship's name goes `Googo` -> **`Goodo`**. Re-read
+/// from `book/src/gallery/possession-seed-42.md` as the note above insists,
+/// where it appears identically in the room line, the `map` legend and the
+/// `whoami` output. The near-miss above still applies and still resolves the
+/// same way: the almanac's chief bugbear settlement is a different place.
+///
+/// Seven renames across seven campaigns is now enough to say what this
+/// constant is: a NAME, re-derived from the namer every time anything moves
+/// settlement placement, and never a fact about the NPC. The co-location this
+/// test needs has held through all seven.
+///
+/// An EIGHTH time, with The Glasshouse's Stage B Task 4 (the thermostat): the
+/// damped, greenhouse-forced insolation baseline (replacing the fixed 288 K
+/// blackbody one) re-places seed 42's settlements a second time this
+/// campaign, and the flagship's name goes `Goodo` -> **`Doadaga`**. Re-read
+/// from `book/src/gallery/possession-seed-42.md` as the note above insists.
+const GRIEVANCE_NPC: &str = "bugbear of Dooga";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

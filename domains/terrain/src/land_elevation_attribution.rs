@@ -64,6 +64,32 @@
 //! every seed (where sea level varies world to world and therefore carries
 //! variance), and **within-world**, averaged over seeds (where sea level is a
 //! constant and drops out). A term that dominates both is the target.
+//!
+//! ## What Stage B added, and why each accumulator is here
+//!
+//! The attribution above located the lever (the crust field and where the
+//! coastline cuts it); Stage B has to *judge a change to it*, and three
+//! quantities the first pass never computed are what a judgement needs:
+//!
+//! 1. **The conditional mean crust over the retained set.** §3.5 of the audit
+//!    names this as a debt: the 1113 m the coastline is cut below the shelf
+//!    break is the depth of the cut, not the elevation a fix recovers, since
+//!    raising sea level also drops the lowest band of today's land and so
+//!    raises the mean of what remains. Only the conditional mean turns the
+//!    cut depth into a defensible budget.
+//! 2. **The craton radius distribution, with its coefficient of variation and
+//!    the count at [`crate::crust::CRATON_RADIUS_MAX_RAD`].** Continent-size
+//!    variety is the axis the obvious fix to the rescale destroys — an exact
+//!    solve under a binding clamp can only pin every craton at the clamp — so
+//!    the CV is what says whether a change bought area at the cost of a world
+//!    of identical continents.
+//! 3. **Post-repulsion pair separation.** `repel_cratons` guarantees
+//!    reduction, not attainment. Recording what it achieves *today* is what
+//!    lets a later reading distinguish a working repulsion pass from one
+//!    saturating against radii it can no longer separate.
+//!
+//! None of the three changes a world: this module reads, and Stage B Task 1
+//! is byte-inert by construction.
 
 use crate::elevation::globe_elevation_terms;
 use crate::globe::generate;
@@ -220,6 +246,19 @@ fn print_table(title: &str, stats: &[Stat; 7], y_mean: f64, y_var: f64, cells: u
     println!("  mean(e - sea) recomputed directly: {y_mean:.2} m");
 }
 
+/// Minimum, mean, maximum and coefficient of variation (population sd over
+/// mean) of a sample. The CV is the variety axis: it is dimensionless, so a
+/// craton set that is uniformly large and one that is uniformly small are
+/// both near 0, and only a set with a genuine spread of sizes reads high.
+fn distribution(xs: &[f64]) -> (f64, f64, f64, f64) {
+    let n = xs.len() as f64;
+    let mean = xs.iter().sum::<f64>() / n;
+    let min = xs.iter().copied().fold(f64::INFINITY, f64::min);
+    let max = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let var = xs.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>() / n;
+    (min, mean, max, var.sqrt() / mean)
+}
+
 /// Where the isostatic base puts a crust thickness, and back again: the
 /// inverse of [`crate::elevation::isostatic_m`], used only to translate a
 /// measured mean elevation into the crust thickness that would produce it, so
@@ -236,7 +275,9 @@ fn crust_km_at(elevation_m: f64) -> f64 {
 /// Cheap enough to stay in the commit gate: **roughly 3–6 s at ordinary load**
 /// for twelve level-6 globes (terrain-only genesis, dev profile optimized since
 /// decision 0113) — 3.26–3.98 s bare, 4.755–5.702 s under nextest, 3.80 s on an
-/// independent re-run at loadavg ~16. The figure is load-dependent, not a
+/// independent re-run at loadavg ~16, and 2.85 s bare / 4.086 s under nextest
+/// on a quiet box *after* Stage B's three accumulators, which therefore did not
+/// move the cost. The figure is load-dependent, not a
 /// single number: at loadavg ~28 it reads 14.8 s while the whole crate suite
 /// scales by the same ~2.7×. All of it is well inside the ~30 s gate
 /// threshold, so this carries no `heavy:` deferral and the conservation assert
@@ -247,11 +288,13 @@ fn crust_km_at(elevation_m: f64) -> f64 {
 /// `cargo test -p hornvale-terrain --lib the_land_elevation_terms_attribute_their_variance -- --nocapture`.
 /// The committed finding is `docs/audits/land-elevation-attribution.md`.
 ///
-/// claim: readout(prints the variance decomposition over the first
-/// [`SEED_COUNT`] census seeds; the seed loop pools a sample rather than
-/// hunting one, and the only assertions are the per-cell conservation guard,
-/// the exactness of the covariance shares, and relief's zero mean — decision
-/// 0093, the `hollow_readout::report_cave_substrate` shape)
+/// claim: readout(prints the variance decomposition, the retained set's
+/// conditional mean crust, and the majors' radius and pair-separation
+/// distributions over the first [`SEED_COUNT`] census seeds; the seed loop
+/// pools a sample rather than hunting one, and the only assertions are the
+/// per-cell conservation guard, the exactness of the covariance shares, and
+/// relief's zero mean — decision 0093, the
+/// `hollow_readout::report_cave_substrate` shape)
 #[test]
 fn the_land_elevation_terms_attribute_their_variance() {
     let geo = Geosphere::new(LEVEL);
@@ -268,6 +311,22 @@ fn the_land_elevation_terms_attribute_their_variance() {
     // continental threshold, and the land area the percentile ended up
     // granting.
     let (mut supply_sum, mut threshold_sum, mut land_sum) = (0.0_f64, 0.0_f64, 0.0_f64);
+    // THE RETAINED SET (Stage B, the accumulator the audit's §3.5 says is
+    // owed). The cells whose crust clears `CONTINENTAL_THRESHOLD_KM` are
+    // exactly the land a world would keep if sea level were re-placed at the
+    // isostatic shelf break, so their *conditional mean crust* is the only
+    // honest way to turn the 1113 m cut depth into an elevation a fix
+    // recovers. Pooled cell-weighted, the same weighting `mean_land_crust`
+    // uses, so the two are directly comparable.
+    let (mut retained_crust_sum, mut retained_cells) = (0.0_f64, 0_usize);
+    // Craton geometry, majors only — `globe.cratons` excludes microcontinents
+    // and terranes by construction (see its field doc), and the variety and
+    // crowding numbers below would silently describe a different population
+    // if they were pooled in.
+    let mut craton_radii: Vec<f64> = Vec::new();
+    // Post-repulsion pair crowding: the centre-to-centre angle of every
+    // major pair against the target `repel_cratons` aims at.
+    let (mut pair_angles, mut pair_ratios) = (Vec::new(), Vec::new());
     for seed in 0..SEED_COUNT {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default())
             .expect("default pins never refuse a world");
@@ -305,12 +364,30 @@ fn the_land_elevation_terms_attribute_their_variance() {
         }
         assert!(!rows.is_empty(), "seed {seed} has no land cells");
         supply_sum += crate::crust::continental_supply(&globe.cratons);
-        threshold_sum += geo
-            .cells()
-            .filter(|c| *globe.crust.get(*c) >= crate::crust::CONTINENTAL_THRESHOLD_KM)
-            .count() as f64
-            / globe.crust.len() as f64;
+        let mut seed_retained = 0_usize;
+        for cell in geo.cells() {
+            let crust_km = *globe.crust.get(cell);
+            if crust_km >= crate::crust::CONTINENTAL_THRESHOLD_KM {
+                seed_retained += 1;
+                retained_crust_sum += crust_km;
+            }
+        }
+        retained_cells += seed_retained;
+        threshold_sum += seed_retained as f64 / globe.crust.len() as f64;
         land_sum += rows.len() as f64 / globe.crust.len() as f64;
+        for c in &globe.cratons {
+            craton_radii.push(c.radius_rad);
+        }
+        for (i, a) in globe.cratons.iter().enumerate() {
+            for b in globe.cratons.iter().skip(i + 1) {
+                let angle = hornvale_kernel::math::acos(
+                    crate::plates::dot(a.center, b.center).clamp(-1.0, 1.0),
+                );
+                let target = crate::crust::REPEL_SEPARATION_FACTOR * (a.radius_rad + b.radius_rad);
+                pair_angles.push(angle);
+                pair_ratios.push(angle / target);
+            }
+        }
         let (stats, y_mean, _) = statistics(&rows);
         per_seed.push((
             seed,
@@ -415,6 +492,75 @@ fn the_land_elevation_terms_attribute_their_variance() {
          fallback fires below SUPPLY_SHORTFALL_FACTOR = {})",
         supply_sum / land_sum,
         crate::elevation::SUPPLY_SHORTFALL_FACTOR
+    );
+
+    // THE RETAINED SET. The audit's §3.5 is explicit that the 1113 m cut
+    // depth is NOT a budget: raising sea level to the shelf break also drops
+    // the lowest band of the current land, and removing a band that lies
+    // entirely below the mean raises the mean of what remains. The inequality
+    // is rigorous; the size of the gap needs this measurement.
+    let retained_mean_crust = retained_crust_sum / retained_cells as f64;
+    let shelf_break_head_m = crate::elevation::isostatic_m(retained_mean_crust) - shelf_break_m;
+    let today_head_m = crate::elevation::isostatic_m(mean_land_crust)
+        - crate::elevation::isostatic_m(crust_km_at(mean_sea));
+    println!(
+        "\nTHE RETAINED SET (the cells that would still be land if sea level rose to the shelf break)"
+    );
+    println!("  retained cells                                {retained_cells:>10}");
+    println!("  conditional mean crust over the retained set  {retained_mean_crust:>10.2} km");
+    println!("  mean crust over TODAY's land                  {mean_land_crust:>10.2} km");
+    println!("  retained land would stand above the shelf break by {shelf_break_head_m:>10.2} m");
+    println!("  today's land stands above today's coastline by     {today_head_m:>10.2} m");
+    println!(
+        "  => raising sea level to the shelf break recovers   {:>10.2} m of mean land elevation \
+         (NOT the {:.2} m cut depth)",
+        today_head_m - shelf_break_head_m,
+        shelf_break_m - mean_sea
+    );
+
+    // CRATON GEOMETRY. Majors only: `globe.cratons` excludes microcontinents
+    // and terranes by construction, and `continental_supply` counts the same
+    // set, so this is the population the rescale actually budgets for.
+    let (r_min, r_mean, r_max, r_cv) = distribution(&craton_radii);
+    let at_clamp = craton_radii
+        .iter()
+        .filter(|r| **r >= crate::crust::CRATON_RADIUS_MAX_RAD - 1e-9)
+        .count();
+    println!("\nCRATON RADIUS DISTRIBUTION (majors only — microcontinents and terranes excluded)");
+    println!(
+        "  cratons over the sweep                        {:>10}",
+        craton_radii.len()
+    );
+    println!("  min / mean / max radius (rad)     {r_min:>8.4} {r_mean:>8.4} {r_max:>8.4}");
+    println!("  coefficient of variation                      {r_cv:>10.4}");
+    println!(
+        "  at the clamp (>= {:.2} rad)                    {:>10}  ({:.1}% of cratons)",
+        crate::crust::CRATON_RADIUS_MAX_RAD,
+        at_clamp,
+        100.0 * at_clamp as f64 / craton_radii.len() as f64
+    );
+
+    // POST-REPULSION CROWDING. `repel_cratons` guarantees *reduction*, not
+    // attainment, so the interesting number is not whether pairs meet their
+    // target but how far short they fall — the baseline any change to the
+    // radii has to be read against.
+    let (a_min, a_mean, a_max, _) = distribution(&pair_angles);
+    let (q_min, q_mean, q_max, _) = distribution(&pair_ratios);
+    let short = pair_ratios.iter().filter(|q| **q < 1.0 - 1e-9).count();
+    println!(
+        "\nPOST-REPULSION PAIR SEPARATION (majors only; target = {} x (r_i + r_j))",
+        crate::crust::REPEL_SEPARATION_FACTOR
+    );
+    println!(
+        "  pairs over the sweep                          {:>10}",
+        pair_angles.len()
+    );
+    println!("  min / mean / max centre angle (rad)  {a_min:>8.4} {a_mean:>8.4} {a_max:>8.4}");
+    println!("  min / mean / max angle / target      {q_min:>8.4} {q_mean:>8.4} {q_max:>8.4}");
+    println!(
+        "  pairs still inside their target               {:>10}  ({:.1}% of pairs)",
+        short,
+        100.0 * short as f64 / pair_angles.len() as f64
     );
 
     // The covariance decomposition is exact by construction; assert it so a

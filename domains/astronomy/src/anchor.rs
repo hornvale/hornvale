@@ -25,6 +25,7 @@ pub enum Rotation {
 }
 
 /// The habitable anchor world.
+/// type-audit: bare-ok(ratio: greenhouse_residual)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Anchor {
     /// Mass in Earth masses (drawn, 0.5–2.0).
@@ -37,6 +38,17 @@ pub struct Anchor {
     pub rotation: Rotation,
     /// Axial tilt in degrees (drawn 0–35 or pinned).
     pub obliquity: Degrees,
+    /// Dimensionless greenhouse residual, −1..1, mean 0: how much thicker or
+    /// thinner this world's atmosphere is than the carbonate–silicate
+    /// thermostat alone would give it.
+    ///
+    /// kind: **hornvale-choice** (decision 0106). The *thermostat* is physics
+    /// and is cited where it is applied (`domains/climate/src/temperature.rs`);
+    /// this residual is the spread around it, and no Earth datum fixes its
+    /// width. It exists because a purely derived thermostat leaves temperature
+    /// a deterministic function of insolation, which is what spec §4.1
+    /// criterion 6 exists to falsify.
+    pub greenhouse_residual: f64,
 }
 
 fn year_from_orbit(orbit: Au, star_mass: SolarMasses) -> StdDays {
@@ -177,12 +189,20 @@ pub fn generate_anchor(
         ),
     };
 
+    let greenhouse_residual = 2.0
+        * astronomy_seed
+            .derive(streams::GREENHOUSE)
+            .stream()
+            .next_f64()
+        - 1.0;
+
     Ok(Anchor {
         mass,
         orbit,
         year,
         rotation,
         obliquity,
+        greenhouse_residual,
     })
 }
 

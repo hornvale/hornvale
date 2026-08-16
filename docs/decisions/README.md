@@ -176,3 +176,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0134](0134-a-partition-statistic-refuted-by-its-own-mechanism-is-retired-not-rescued.md) | A partition statistic refuted by its own mechanism is retired, not rescued | Accepted |
 | [0135](0135-a-capability-corpus-is-a-sibling-to-a-trope-corpus.md) | A capability corpus is a sibling to a trope corpus, never a member | Accepted |
 | [0136](0136-a-coverage-verdict-cites-a-checked-anchor.md) | A coverage verdict cites a machine-checked anchor | Accepted |
+| [0137](0137-the-craton-clamp-is-a-budget-not-a-limit.md) | The craton clamp is a budget, not a limit | Accepted |
+| [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |

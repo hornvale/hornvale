@@ -4,13 +4,13 @@
 the same world in your browser — same crates, same bytes.)*
 
 ```text
-[room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 896860167, day 0]
+Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, SW.
 > look
-[room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 896860167, day 0]
+Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, SW.
 > map
 [lens: colour · depth 12 · radius 4 · lattice-aligned, not north-up]
   colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
@@ -20,67 +20,67 @@ Ways on: NE, NW, S.
 ++++@++++
  +++++++
   + + +
-  ways on: NE, NW, S
-  legend: Googo, bugbear of Googo, buttressed canopy, shaded, damp, in a hollow, tropical rainforest
+  ways on: E, NW, SW
+  legend: Dooga, bugbear of Dooga, buttressed canopy, damp, tropical rainforest
 
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > whoami
-A bugbear of Googo (agent 9947299063136102849), day 0, room 750518284.
+A bugbear of Dooga (agent 7649963730982468685), day 0, room 896860167.
 > enter
-[chamber 196743868198924, day 0]
+[chamber 235106516365287, day 0]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > enter further in
-[chamber 196743862489068, day 0]
+[chamber 235106515360871, day 0]
 A small room, holding a doorway and an alcove.
 Ways on: out, further in.
 > map
-[plan: chamber 196743862489068, 2 of 4]
+[plan: chamber 235106515360871, 2 of 3]
 ###################
-#........#........#
-#........#........#
-#........#........#
-#........#........#
-#........+@.......#
-#........#........#
-#........#........#
-#........#........#
-#........###+######
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....+...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
+#....#............#
+#....#............#
+#....+@...........#
+#....#............#
+#....#............#
+#....#######+######
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
 ###################
   legend: . the floor, # a wall, + a doorway, @ you
 > go n
 You step north. Ways on: N, E, S.
 > map
-[plan: chamber 196743862489068, 2 of 4]
+[plan: chamber 235106515360871, 2 of 3]
 ###################
-#........#........#
-#........#........#
-#........#........#
-#........#@.......#
-#........+........#
-#........#........#
-#........#........#
-#........#........#
-#........###+######
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
-#........#....+...#
-#........#....#...#
-#........#....#...#
-#........#....#...#
+#....#............#
+#....#@...........#
+#....+............#
+#....#............#
+#....#............#
+#....#######+######
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
+#....#............#
 ###################
   legend: . the floor, # a wall, + a doorway, @ you
 > examine an alcove
@@ -88,9 +88,9 @@ A recess cut back from the main space, deep enough to sit in.
 > examine a wall
 Set close and plumb, with no gap in it wide enough to pass.
 > out
-[room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 896860167, day 0]
+Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, SW.
 > go n
 No way n from here.
 > map out 2
@@ -102,39 +102,34 @@ No way n from here.
 ++++@++++
  +++++++
   + + +
-  ways on: NE, NW, S
-  legend: Googo, bugbear of Googo, buttressed canopy, sun-warmed, damp, tropical rainforest
+  ways on: E, NW, SW
+  legend: Dooga, bugbear of Dooga, buttressed canopy, sun-warmed, damp, tropical rainforest
 
 > enter
-[chamber 196743868198924, day 0]
+[chamber 235106516365287, day 0]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > look
-[chamber 196743868198924, day 0]
+[chamber 235106516365287, day 0]
 A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > out
-[room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 896860167, day 0]
+Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, SW.
 > go ne
-[room 750518380, day 0]
-Tropical rainforest — a stream gully, sun-warmed, damp, on a rise — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: N, SW, SE.
+No way ne from here.
 > back
-[room 750518284, day 0]
-Tropical rainforest — buttressed canopy, shaded, damp, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: NE, NW, S.
+You have not walked anywhere yet.
 > wait 90
-Time passes. You sense movement nearby (766 stirred).
+Time passes. You sense movement nearby (183 stirred).
 > examine sky
-Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus.
+Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows
-4 things seen:
-  room/750518284 = {"schema":"locale/room/v2","id":750518284,"face":12,"path…
-  room/750518380 = {"schema":"locale/room/v2","id":750518380,"face":12,"path…
-  settlement/10760661430244474880/name = Googo
-  settlement/10760661430244474880/population = 68
+3 things seen:
+  room/896860167 = {"schema":"locale/room/v2","id":896860167,"face":7,"path"…
+  settlement/10760661430244474881/name = Dooga
+  settlement/10760661430244474881/population = 68
 > release
 You let go.
 ```

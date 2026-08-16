@@ -685,7 +685,20 @@ mod tests {
             page.contains("mean-land-temperature-c"),
             "climate metrics appear"
         );
-        assert!(page.contains("-11.9"), "the median is read, not restated");
+        // THE POINT IS THE PROVENANCE, NOT THE VALUE: this substring must be
+        // a number the page COMPUTED from the census, so that a page which
+        // restated a hardcoded figure would fail. It therefore tracks the
+        // census and moves whenever the census does.
+        //
+        // THE GLASSHOUSE (Stage B, k = 0.30): `-11.9` -> `-3.6`. That is not
+        // drift, it is the campaign's headline arriving in a test that was
+        // never pointed at it. `mean-land-temperature-c`'s median over 1000
+        // worlds moves -11.99 -> -3.649 (spinning: -10.49 -> -2.868), and
+        // ice-dominant worlds fall 651/1000 -> 187/1000. The re-centring this
+        // campaign exists for is +8.34 K at the median and a 71% cut in ice
+        // dominance. Read `book/src/domesday/climate.md` for the rendered
+        // figure this assertion is checking against.
+        assert!(page.contains("-3.6"), "the median is read, not restated");
     }
 
     #[test]

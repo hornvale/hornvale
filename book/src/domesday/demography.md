@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 22 | 184 | 2513 | 180.268 |
+| 0 | 1 | 13 | 166 | 2472 | 176.832 |
 
 ### `goblin-flagship-population`
 
@@ -24,17 +24,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 34 | 40 | 41 | 43 | 35.006 |
+| 2 | 34 | 40 | 41 | 43 | 34.738 |
 
 ### `kobold-flagship-population`
 
 The kobold flagship settlement's committed population; Absent if kobolds placed no settlement
 
-n = 969 present, 31 absent (of 1000 worlds)
+n = 982 present, 18 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 27 | 46 | 53 | 70 | 40.044376 |
+| 2 | 28 | 45 | 56 | 70 | 41.234216 |
 
 ### `mean-population`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 8.1234568 | 24.406667 | 29.503765 | 32.20178 | 40.567251 | 27.585659 |
+| 5.9160839 | 24.22029 | 29.473357 | 32.262295 | 38.818471 | 27.420179 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 8 | 15 | 15 | 15 | 15 | 14.854 |
+| 8 | 15 | 15 | 15 | 15 | 14.906 |
 
 ### `peoples-placed`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 8 | 15 | 15 | 15 | 15 | 14.854 |
+| 8 | 15 | 15 | 15 | 15 | 14.906 |
 
 ### `total-population`
 
@@ -74,13 +74,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 400 | 4755 | 7125.5 | 9174 | 19182 | 6990.714 |
+| 517 | 5266 | 7609 | 9508 | 18016 | 7327.629 |
 
 ## Weaknesses found here
 
 ### `climate-displacement-events`
 
-- **D5 strength**: declared moderate tracking habitable-fraction, but observed r = -0.278 (1000 pairs) is weak (negative)
+- **D5 strength**: declared moderate tracking habitable-fraction, but observed r = -0.190 (1000 pairs) is weak (negative)
 
 ### `peoples-alive-at-bake-end`
 
@@ -94,6 +94,6 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.256 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.329 (1000 pairs) is moderate (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.251 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.268 (1000 pairs) is weak (positive)
 
