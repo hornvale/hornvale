@@ -1546,7 +1546,7 @@ mod tests {
     // never serialized/gated — a justified, scoped exception.
     #[test]
     #[allow(clippy::disallowed_types)]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn bench_commit_scaling_before_vs_after_index() {
         use std::hint::black_box;
         use std::time::Instant;

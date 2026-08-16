@@ -1,0 +1,55 @@
+{
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "buckets": [
+        0.0,
+        50000.0,
+        150000.0,
+        300000.0,
+        500000.0,
+        750000.0
+      ],
+      "doc": "Earliest world-day on which any settlement existed; Absent if the world has none",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "first-day-is-settlement",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 40,
+    "fnv1a64": "0x512d320557dd3408"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Begat: build-cost control — same panel, one O(ledger-scan) metric. Not a census; never committed as fixtures.",
+    "name": "begat-ctrl",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 40,
+      "from": 0
+    }
+  }
+}

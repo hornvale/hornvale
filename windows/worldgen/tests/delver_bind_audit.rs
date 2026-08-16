@@ -249,7 +249,7 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
 /// (`share == 1.0` exactly, ~11k-19k cells per seed), plus a `checked >= 3`
 /// non-vacuity guard. Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
     let mut checked = 0usize;
     for seed in [42u64, 7, 1234] {
@@ -295,7 +295,7 @@ fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
 /// the instrument's discrimination control, not a calibrated threshold.
 /// Off-gate (heavy:).
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn a_kind_above_its_floor_lets_a_climate_axis_bind() {
     for seed in [42u64, 7, 1234] {
         let report = bind_shares(seed);

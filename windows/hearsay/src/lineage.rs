@@ -1,18 +1,46 @@
 //! The community tree, read from `occ-founded-from`.
 
 use hornvale_kernel::ledger::{EntityId, Ledger, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The founding tree: who was founded from whom.
 ///
 /// `children` is the inverse of `parent`, derived once in `lineage_of` and
 /// never mutated after. It exists so the downward reads below walk the tree
 /// instead of re-deriving each node's ancestry, which made them quadratic.
+///
+/// TWO DERIVED STRUCTURES, DELIBERATELY, AND THE REASON IS THE QUERY SHAPE.
+/// The Begat and The Retelling attacked the same quadratic independently and
+/// in the same week, and the merge looked like it ought to collapse to one
+/// map — `is_ancestor(a, d)` is exactly `descendants_of(a).contains(&d)`, so
+/// `children` *can* answer it. It should not, and the reason is not
+/// correctness but the shape of the traffic:
+///
+/// - `children` serves FEW LARGE downward reads: `descendants_with_hops`
+///   walks a whole subtree once per witness, on the census path.
+/// - `ancestors` serves MANY SMALL membership queries: `stance_of` asks once
+///   per (holder, event), `maximum_antichain` asks O(|witnesses|²) per event.
+///   Answering those from `children` would cost a fresh O(subtree) walk with
+///   an allocation *per query* — the exact pattern The Begat deleted from the
+///   read path, reintroduced one level up.
+///
+/// So they are not two answers to one question; they are opposite directions
+/// with opposite access patterns. The memo's construction is ~6,221 node
+/// visits per world (The Retelling's own accounting: 2,946,813 naive visits
+/// at a measured 473.7x), against the millions the old `descendants_of`
+/// pattern cost — under 1% of what was removed, and below the resolution of a
+/// 40-world hot-vs-control differencing (hot minus control moved −0.09 →
+/// −0.19 CPU-s across the merge, i.e. not at all). Keeping both was measured,
+/// not assumed; folding either onto the other would be a regression.
 #[derive(Clone, Debug, Default)]
 pub struct Lineage {
     parent: BTreeMap<EntityId, EntityId>,
     children: BTreeMap<EntityId, Vec<EntityId>>,
     roots: Vec<EntityId>,
+    /// Every node's ancestor set, memoised once at construction. Membership
+    /// only — `EntityId` is not its own ancestor — never a replacement for
+    /// `ancestry`'s ordered walk, which callers rely on for hop counts.
+    ancestors: BTreeMap<EntityId, BTreeSet<EntityId>>,
 }
 
 impl Lineage {
@@ -133,6 +161,16 @@ impl Lineage {
         out.dedup();
         out
     }
+
+    /// Whether `ancestor` is a strict ancestor of `descendant` — O(log n)
+    /// against the memo built once in [`lineage_of`]. A node is never its
+    /// own ancestor, so `is_ancestor(x, x)` is always `false`.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_ancestor(&self, ancestor: EntityId, descendant: EntityId) -> bool {
+        self.ancestors
+            .get(&descendant)
+            .is_some_and(|anc| anc.contains(&ancestor))
+    }
 }
 
 /// Read the founding tree out of a ledger.
@@ -159,6 +197,14 @@ pub fn lineage_of(ledger: &Ledger) -> Lineage {
     // sorting per call.
     for (child, parent) in &out.parent {
         out.children.entry(*parent).or_default().push(*child);
+    }
+    // Build the ancestor memo once, here, rather than per lookup: one
+    // `ancestry` walk per node (self excluded) beats walking to the root on
+    // every `is_ancestor` call. See the plan's node-visit measurement.
+    for node in out.all() {
+        let mut anc = out.ancestry(node);
+        anc.retain(|a| *a != node);
+        out.ancestors.insert(node, anc.into_iter().collect());
     }
     out
 }

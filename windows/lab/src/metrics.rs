@@ -12508,7 +12508,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn shape_metrics_are_present_deterministic_and_sane() {
         let names = [
             "shoreline-development",
@@ -13227,7 +13227,7 @@ mod tests {
 
     /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,123,500]
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {
         // The root/v3 merger-aware family assignment chooses core proto-roots
         // that survive every daughter's cascade distinct, so core homophony —
@@ -13325,7 +13325,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn family_battery_metrics_are_deterministic_across_two_builds() {
         let names = [
             "lexicon-regular-family",

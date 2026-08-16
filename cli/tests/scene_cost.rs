@@ -332,7 +332,7 @@ const BASIS_HOST: &str = "x86_64-40";
 /// `cli/tests/heavy_tier.rs`'s `co_schedule_sensitive_heavy_tests` guard,
 /// which fails if this marker and that table's filter ever fall out of step.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn scene_api_cost_is_bounded_on_seed_42() {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let start = Instant::now();

@@ -1,0 +1,54 @@
+{
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0
+      ],
+      "doc": "Median inheritance depth of a held claim about a historical ending: 0 = the witnessing community itself, higher = the claim is carried by communities further down the founding tree. The no-decay ceiling on transmission depth (The Hearsay, spec section 6)",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "history-myth-hop-median",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 40,
+    "fnv1a64": "0xa393d7539206343a"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Begat: cost probe for history-myth-hop-median over a seed panel. Not a census; never committed as fixtures.",
+    "name": "begat-hot",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 40,
+      "from": 0
+    }
+  }
+}

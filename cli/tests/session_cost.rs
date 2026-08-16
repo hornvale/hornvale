@@ -458,7 +458,7 @@ const BASIS_HOST: &str = "aarch64-10";
 /// `co_schedule_sensitive_heavy_tests` guard, which fails if this marker and
 /// that table's filter ever fall out of step.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn a_possessed_turn_stays_within_its_ceilings() {
     let world = build_world(
         Seed(42),

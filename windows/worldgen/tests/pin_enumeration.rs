@@ -185,7 +185,7 @@ fn check_combo(combo: &Combo) -> bool {
 /// byte-deterministic (each `check_combo` builds its combo twice and compares
 /// serialized ledgers on its own thread) -- just off the per-commit path.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 

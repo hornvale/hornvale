@@ -2861,3 +2861,45 @@ thing that separated them was attributing the branch instead of inferring it.
 The instruction that follows is cheap and general: when a statistic refuses to
 move under a large intervention, find the line that decides it before concluding
 anything about the effect size.
+
+### The third position promotes back, and then reappears (2026-08-15)
+
+*The Retelling* supplied the missing mechanism, so the demotion above can be
+tested rather than believed. It holds, in both directions.
+
+**The promotion happened.** Once content could vary — a claim's day coarsens
+when a story crosses between communities standing differently toward the event
+it describes — the precondition became measurable on the first attempt that was
+tried. Spearman's rho between an ending's maximum-antichain width and its count
+of surviving variants is **0.666** over 408 qualifying endings. The axis that
+had been constant now varies, and the instrument that had failed three times
+worked immediately. Nothing about the instrument changed; the world did.
+
+That is the third position behaving exactly as this chapter predicted, which is
+the strongest thing that can be said for a category invented one campaign
+earlier: it made a dated claim about what would unblock a bet, and the
+unblocking happened for the stated reason.
+
+**And the position reappeared, one level in.** The campaign specified a model in
+which distortion *accumulates* along a path and built one in which it fires at a
+*boundary* — the distinction historical linguistics spent a century on,
+Neogrammarian sound law against lexical diffusion. Stance turns out to be an
+absorbing partition: victim-line and bystander are both closed under descent, so
+a story crosses at most one boundary and only two of a four-rung ladder are ever
+reached. Whether distortion compounds is therefore **not-yet-scorable** by the
+same test: what would have to vary is the number of boundary crossings, and the
+design holds it at one.
+
+The useful form of this is that the third position is not a waiting room a bet
+passes through once. It recurs at each level of mechanism, and the diagnostic
+question survives each recursion unchanged — ask what would have to vary, and
+believe the answer even when the instrument is already written and the numbers
+already look plausible. A four-rung ladder that only ever uses two rungs
+produces perfectly good numbers.
+
+Two campaigns reached that recursion independently and on the same day, from
+opposite directions — The Glasshouse from a statistic that would not move under
+a large intervention, The Retelling from a ladder that used two of its four
+rungs. Neither knew of the other's entry until they collided in a merge. That
+is weak evidence the recursion is a property of the axis rather than of either
+campaign's subject matter.

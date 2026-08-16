@@ -112,6 +112,7 @@ under review. This file is.
 ### Engine / ECS / infrastructure
 
 - [The Hearsay](the-hearsay.md) — myth gets its channel; four things that could not go red, all in controller text and all caught by mutation; violence is intramural twice over
+- [The Retelling](the-retelling.md) — content learns to vary; stance replaces two incommensurable keys; the antichain predicts semantic divergence at rho 0.666; distortion caps at one rung, which is the third measurement of the same scarcity; six repo mechanisms found green while blind
 
 - [Dissolution](the-dissolution.md) — ECS Campaign 3 \"The Dissolution\" — SpeciesDef god-struct DELETED, dissolved into per-domain component registries…
 - [Individuation](the-individuation.md) — ECS Campaign 5 (instance ⋈ ledger) — the instance half of the entity-component substrate; SHIPPED+PUSHED @1acbe98
