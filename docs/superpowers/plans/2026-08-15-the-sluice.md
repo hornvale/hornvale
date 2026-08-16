@@ -54,7 +54,7 @@ hold call. `gate-campaign` retires to a refusing signpost.
 | `cli/tests/census_duration.rs` | The 900 s census tripwire. |
 | `scripts/lane-sets.tsv` | Gains the `integration` row. |
 | `Makefile` | `sluice`, `sluice-status`, `sluice-log`; `gate-campaign` becomes a refusing signpost. |
-| `docs/decisions/0137-main-advances-only-through-the-lock.md` | The ratified decision. |
+| `docs/decisions/0139-main-advances-only-through-the-lock.md` | The ratified decision. |
 
 **Queue file format** — `~/.local/state/hornvale/sluice/queue.tsv`, TSV,
 append-and-rewrite under its own `flock` (distinct from the lane claim, because
@@ -1196,7 +1196,7 @@ prevent a failure that has never occurred. The incident was a *force* push.
 Deletes and non-fast-forwards are the destructive, hard-to-recover class;
 fast-forwards are additive.
 
-> **Followup, not this task:** once the merge queue is live, decision 0137
+> **Followup, not this task:** once the merge queue is live, decision 0139
 > ("`main` advances only through the lock") could be enforced here by gating
 > direct pushes to `refs/heads/main` behind the same opt-in — turning a stated
 > invariant into a mechanical one. Premature until the queue actually lands.
@@ -1403,7 +1403,7 @@ changes what hundreds of existing calls meant. Match the existing signposts'
 wording — read one first.
 
 ```makefile
-gate-campaign: ## RETIRED (decision 0137) — the merge queue gates the merge product
+gate-campaign: ## RETIRED (decision 0139) — the merge queue gates the merge product
 	@echo "make gate-campaign no longer runs anything."; \
 	echo; \
 	echo "It gated a BRANCH TIP. What lands is that branch merged into whatever"; \
@@ -1707,23 +1707,43 @@ Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 
 ---
 
-## Task 10: Decision 0137 and the documentation sweep
+## Task 10: Decision 0139 and the documentation sweep
 
 **Files:**
-- Create: `docs/decisions/0137-main-advances-only-through-the-lock.md`
+- Create: `docs/decisions/0139-main-advances-only-through-the-lock.md`
 - Modify: `book/src/frontier/idea-registry.md` (only once the Mac's uncommitted
   `PROC-merge-queue` row has landed — see `.superpowers/sdd/followups.md`)
 
-- [ ] **Step 1: Check the number is still free**
+- [ ] **Step 1: The number is 0139, and checking `main` alone would have got it wrong**
 
-```bash
-ls docs/decisions/ | grep -c '^0137'
-git fetch origin && git log origin/main --oneline -- docs/decisions/ | head -5
+**Already done, 2026-08-16, and the result is the campaign's own thesis
+demonstrated on itself.** `main`'s highest decision is `0136`, so `0137` looks
+free — and is not. `campaign/the-glasshouse`, unmerged, already holds **both**:
+
+```
+0137  campaign/the-glasshouse  0137-the-craton-clamp-is-a-budget-not-a-limit
+0138  campaign/the-glasshouse  0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong
 ```
 
-Expected: `0`. Two campaigns both minted `0134` this way — a duplicate raises
-no conflict and creates no gap, so `no_gaps_in_the_decision_log` cannot see it.
-If `0137` is taken on `origin/main`, take the next free number.
+Had this campaign minted `0137`, the merge would have raised **no conflict**
+(different slugs), both files would coexist, `docs/digest/` would render one
+line per file, and `no_gaps_in_the_decision_log` could not see it because a
+duplicate creates no hole. That is exactly how two campaigns both minted
+`0134` — the collision this campaign was built to prevent, arriving a second
+time, in this campaign, avoided only because someone looked.
+
+**So use `0139`**, and use this to compute it rather than `ls docs/decisions/`:
+
+```bash
+{ git ls-tree -r --name-only origin/main docs/decisions/ | grep -oE '/0[0-9]{3}' | tr -d '/'
+  for b in $(git branch -r --format='%(refname:short)' | grep -E 'origin/(campaign/|the-)'); do
+    git ls-tree -r --name-only "$b" docs/decisions/ 2>/dev/null | grep -oE '/0[0-9]{3}' | tr -d '/'
+  done; } | sort -n | uniq | tail -1
+```
+
+That prints the highest number claimed **anywhere**, including on unmerged
+branches; the next free one is that plus one. Re-run it immediately before
+writing the file — another campaign may have claimed one since.
 
 - [ ] **Step 2: Write the decision**
 
@@ -1768,8 +1788,8 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/decisions/0137-*.md docs/digest/
-git commit -m "docs(sluice): ratify 0137 — main advances only through the lock
+git add docs/decisions/0139-*.md docs/digest/
+git commit -m "docs(sluice): ratify 0139 — main advances only through the lock
 
 Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 ```
@@ -1862,7 +1882,7 @@ what it prints:
 - A hit in `Makefile` or a `*.sh` → a live caller. Fix it.
 - A hit in a `CLAUDE.md` → stale prose. Rewrite it in this same commit.
 - A hit in `docs/decisions/` → **do not edit.** Decisions are append-only;
-  0137 supersedes, it does not rewrite 0132/0133.
+  0139 supersedes, it does not rewrite 0132/0133.
 - A hit only under the excluded paths → history describing what was true then.
   Leave it.
 
@@ -1955,7 +1975,7 @@ Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 | §9 P1 credentials | done pre-plan |
 | §9 P2 heavy baseline | 1 |
 | §10 testing properties | 2, 3, 5, 8, 9 |
-| §11 decision 0137 | 10 |
+| §11 decision 0139 | 10 |
 
 **Gap accepted deliberately:** §5.3.3 ("a behavioural fix is committed to the
 branch, never amended into the merge commit") has **no mechanical enforcement**
