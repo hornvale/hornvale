@@ -134,6 +134,15 @@ never do because its caller was on another machine and left.
 paths. `scripts/lane-outboard.sh` (50) survives: it is a phase driver, not
 dispatch machinery.
 
+**`make preflight` largely dissolves too.** Its checkable half — ancestry
+comparison and a peek at main's checkout — is what the mouth does (§5.2), and
+does better: the mouth checks the *actual merge*, where preflight checks
+ancestry as a proxy for it. Its unmechanizable half ("read the other branches'
+chronicles, not just their diffs") was always human and stays human, moving
+into the `submitting-a-campaign` skill's prose rather than a script that
+implies it checked something. `scripts/preflight-merge.sh` joins the deletion
+list; the campaign measures and states the final net.
+
 **`gate-stage` is absorbed too** (Nathan, same exchange). Campaign sessions on
 the Mac are absent callers by definition, so leaving `gate-stage` its own
 dispatch path would keep the entire async layer alive for one caller and delete
@@ -181,13 +190,68 @@ A wire message to the operator session is a **nudge, never the request**. The
 request is durable on lefford before any session hears about it; a session that
 dies between the message and the merge loses nothing.
 
-**Ordering.** FIFO by enqueue time, with per-branch coalescing: enqueueing a
-SHA whose queued predecessor is its own ancestor **replaces** that entry and
-ledgers it `superseded` rather than dropping it silently. `git merge-base
---is-ancestor` is the whole test — ancestry, not branch name, so it survives
-rebases and detached refs. This is `TOOL-lane-supersession`'s prescribed fix,
-applied here first because the queue is where a superseded request is cheapest
-to discard.
+#### 5.1.1 `submit` — the campaign side
+
+A campaign-side skill, `submitting-a-campaign`, wrapping
+`scripts/sluice-request.sh`. Order is load-bearing at every step:
+
+1. **`make gate-commit`**, locally. Seconds, and it keeps an obviously broken
+   branch from consuming a queue slot.
+2. **Push the branch.** A SHA that is not on a remote cannot be fetched. The
+   mouth refuses it anyway (§5.2), but failing on the campaign's own machine is
+   the better error.
+3. **Enqueue over `ssh`** — durable on lefford before anything else happens.
+4. **Then** nudge the operator session over the wire.
+
+**Steps 3 and 4 must not be reordered, and the reason is the whole design.**
+The wire stores nothing. If the message *is* the request, an operator that is
+dead, compacting, or an hour into another merge loses it silently and the
+campaign has no way to know. Durable first, doorbell second.
+
+**The payload carries a headline**, and this is not cosmetic. Under `--no-ff`
+the merge subject becomes the census epoch label `tools/census/history.sh`
+reads (§5.3.2). Only the campaign knows what it did; an operator left to invent
+one writes something generic and silently degrades a committed artifact. A
+submission without a headline is refused rather than defaulted.
+
+#### 5.1.2 Ordering
+
+**FIFO by enqueue time. No priority tiers, no force override.** Decision 0133
+settled exactly this for the lane and the reasoning carries over unchanged:
+tiers invite negotiation, and negotiation is the cost this campaign exists to
+remove.
+
+There is no cleverer schedule to find. **Every merge invalidates every other
+queued candidate's merge product**, so total re-merge cost is
+order-independent — which removes the temptation to optimise it.
+
+One exception, justified by cost asymmetry rather than by priority:
+
+- **A conflicting candidate bounces immediately and the queue advances.**
+  Detected at the mouth in milliseconds, before the claim (§5.2). Absorbing
+  main is the branch owner's job and nobody else should wait for it.
+- **A red inside the chamber holds** (§6). That is the expensive case, where
+  the merge product revealed something no branch-tip gate could, and it is
+  worth stopping for.
+
+Without that split, a branch that merely needs an absorption would freeze the
+queue exactly as hard as a genuine interaction failure.
+
+**Coalescing.** Per-branch, by ancestry: enqueueing a SHA whose queued
+predecessor is its own ancestor **replaces** that entry and ledgers it
+`superseded` rather than dropping it silently. `git merge-base --is-ancestor`
+is the whole test — ancestry, not branch name, so it survives rebases and
+detached refs. This is `TOOL-lane-supersession`'s prescribed fix, applied here
+first because the queue is where a superseded request is cheapest to discard.
+A **running** request is never superseded; an authoring job inside the chamber
+would be orphaned mid-write.
+
+#### 5.1.3 Answering back
+
+A held or bounced request reaches its submitter by wire if that session is
+alive, and by a board `reply` post if it is not. Both, when the answer is worth
+keeping: the wire stores nothing, so an answer that lives only there
+evaporates.
 
 ### 5.2 The mouth — checks that run OUTSIDE the claim
 
