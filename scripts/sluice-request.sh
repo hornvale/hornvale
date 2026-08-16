@@ -18,15 +18,81 @@ ref="${2:?usage: sluice-request.sh <branch> <full-sha>}"
 host="$(cat "$repo_root/scripts/census-canonical-host.txt")"
 remote_dir="${HV_SLUICE_REMOTE_DIR:-~/Projects/hornvale}"
 
+# THE QUOTING HAZARD lane-dispatch.sh's own HV_LANE_REMOTE_DIR guard exists
+# to catch: `HV_SLUICE_REMOTE_DIR=~/foo` typed unquoted at a shell prompt is
+# expanded by the CALLER's OWN shell before this script ever reads it — the
+# '~' never reaches here, only its already-resolved LOCAL answer does. Same
+# topology fix-round-1 named for lane-dispatch.sh's own guard: catching "the
+# override, once fully resolved, sits under the caller's own $HOME" closes
+# the common, silent case (a redirect meant for the canonical box silently
+# becoming a path on the CALLER's machine that the canonical box has never
+# heard of) at the cost of one acceptable false positive (a caller whose home
+# genuinely is a meaningful remote path).
+if [ -n "${HV_SLUICE_REMOTE_DIR+x}" ] && [ -n "${HOME:-}" ]; then
+    case "$remote_dir" in
+        "$HOME" | "$HOME"/*)
+            cat >&2 <<EOF
+sluice-request: HV_SLUICE_REMOTE_DIR resolved to a path under YOUR OWN \$HOME
+($HOME) before this script ever ran:
+  HV_SLUICE_REMOTE_DIR=$remote_dir
+That is what an unquoted '~' in a shell assignment does — it expands against
+the CALLER's home, not the canonical box's, so this almost certainly is not
+the path you meant on '$host'.
+
+Quote it, so the '~' survives to reach the remote host and expands THERE,
+against its own \$HOME instead:
+  HV_SLUICE_REMOTE_DIR='~/Projects/hornvale-scratch' make sluice BRANCH=$branch REF=$ref
+
+or pass an absolute path that is meaningful on '$host' directly.
+EOF
+            exit 2
+            ;;
+    esac
+fi
+
+# A FULL 40-CHAR SHA, hex-pure — not merely hex-STARTING. The brief's
+# original `case "$ref" in [0-9a-f]*)` is a GLOB, not a regex: it matches
+# anything that starts with one hex digit, so a 40-character string with a
+# non-hex 2nd-through-40th character (`0` followed by 39 garbage bytes, say)
+# passed cleanly. This exact bug was already found and fixed in
+# sluice-mouth.sh during Task 3 of this same plan
+# (`*[!0-9a-f]*|""` — reject anything CONTAINING a non-hex character, or
+# empty — then check length separately); this reuses that corrected pattern
+# rather than the older lane-dispatch.sh shape this script was modelled on,
+# since a campaign's own fixed code is the precedent once it has one, not
+# the file that predates the fix.
 case "$ref" in
-    [0-9a-f]*) [ "${#ref}" -eq 40 ] || { echo "sluice-request: REF must be a full 40-char SHA; got '$ref'" >&2; exit 2; } ;;
-    *) echo "sluice-request: REF must be a full 40-char SHA (never a branch name); got '$ref'" >&2; exit 2 ;;
+    *[!0-9a-f]*|"") echo "sluice-request: REF must be a full 40-char SHA (hex only); got '$ref'" >&2; exit 2 ;;
 esac
+[ "${#ref}" -eq 40 ] || { echo "sluice-request: REF must be a full 40-char SHA; got '$ref'" >&2; exit 2; }
 
 if [ -z "$(git -C "$repo_root" branch -r --contains "$ref" 2>/dev/null)" ]; then
     echo "sluice-request: $ref is not on any remote branch — push first." >&2
     exit 2
 fi
+
+# THE HEADLINE IS REFUSED, NOT DEFAULTED — enforced here, by the script, not
+# left as advice in a skill. Under sluice-run.sh's `--no-ff` merge, this
+# commit's own subject becomes the merge commit's subject
+# (`headline="${HV_SLUICE_HEADLINE:-$(git log -1 --format=%s "$sha")}"`),
+# which tools/census/history.sh reads as the census epoch label
+# (`git log --follow --first-parent main`). Only the campaign that authored
+# $ref knows whether that subject is fit to become a permanent artifact
+# label — an operator triaging the queue later must never be the one
+# inventing or silently accepting a placeholder one. So this derives the
+# SAME subject sluice-run.sh will actually use (not a separately
+# caller-supplied string, which could say anything and still not match what
+# actually lands) and refuses to enqueue if it looks like a placeholder.
+headline="$(git -C "$repo_root" log -1 --format=%s "$ref" 2>/dev/null || true)"
+case "$headline" in
+    ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO)
+        echo "sluice-request: refusing — the commit at ${ref:0:12}'s subject ('$headline') is not a real headline." >&2
+        echo "  Under --no-ff this becomes the merge commit's subject, which" >&2
+        echo "  tools/census/history.sh reads as the census epoch label. Amend" >&2
+        echo "  the commit (or add a proper final commit) and push again." >&2
+        exit 2
+        ;;
+esac
 
 # shellcheck disable=SC2029  # meant to expand client-side into the remote command
 remote_cmd="if cd $remote_dir && [ -x scripts/sluice-queue.sh ]; then \

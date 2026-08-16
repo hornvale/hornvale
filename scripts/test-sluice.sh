@@ -33,12 +33,20 @@ bad()  { printf '  FAIL: %s\n' "$1"; fail=$((fail+1)); }
 g()    { env -u GIT_DIR -u GIT_INDEX_FILE git "$@"; }
 
 tmp="$(mktemp -d)"
-# The request-path mutation test below has to write its mutant INSIDE
-# scripts/ (see its own comment for why $tmp cannot host it), so the EXIT
-# trap sweeps that path too — belt-and-suspenders alongside the `rm -f`
-# immediately after that test uses it, in case `set -e` aborts the script
-# somewhere in between.
-trap 'rm -rf "$tmp"; rm -f "$repo_root/scripts/.sluice-request-mutant-for-test.sh"' EXIT
+# The request-path mutation tests below have to write their mutants INSIDE
+# scripts/ (see their own comments for why $tmp cannot host them), so the
+# EXIT trap sweeps those paths too — belt-and-suspenders alongside the
+# `rm -f`/`update-ref -d` immediately after each test uses them, in case
+# `set -e` aborts the script somewhere in between. The two `refs/remotes/
+# sluice-test/*` refs are throwaway local refs the headline-refusal test
+# creates with `git commit-tree` + `update-ref` (never a real remote, never
+# pushed) so a real commit object exists to test the headline check
+# against; swept here too for the same belt-and-suspenders reason.
+trap 'rm -rf "$tmp"; \
+      rm -f "$repo_root/scripts/.sluice-request-mutant-for-test.sh" \
+            "$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
 # A scratch repo with a main line and two campaign commits on one branch.
@@ -1608,6 +1616,173 @@ else
     bad "the mutant unexpectedly still exited nonzero — mutation did not take"
 fi
 rm -f "$mutant"
+
+echo "== request: a 40-char ref with an embedded non-hex character is rejected (not just the first char)"
+# Fix round 1, Important 1. `case "$ref" in [0-9a-f]*)` (the brief's original,
+# modelled on the older lane-dispatch.sh shape) is a GLOB: it matches
+# anything STARTING with one hex digit, so a 40-char string with a bad 2nd
+# character sailed through. sluice-mouth.sh already hit and fixed this exact
+# bug in Task 3 of this same plan (see its own "a 40-char ref with a
+# non-hex character is rejected" section above) — this pins the same fix in
+# sluice-request.sh.
+BAD_SHA="deadbeefdeadbeefdeadbeefdeadbeefdeadbeez"
+if [ "${#BAD_SHA}" -eq 40 ]; then
+    ok "test setup: BAD_SHA is exactly 40 characters"
+else
+    bad "test setup: BAD_SHA is not 40 characters (${#BAD_SHA})"
+fi
+if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$BAD_SHA" 2>"$tmp/badsha.err"; then
+    bad "a 40-char ref with an embedded non-hex character was accepted"
+else
+    ok "a 40-char ref with an embedded non-hex character is rejected (exit nonzero)"
+fi
+if grep -q 'hex only' "$tmp/badsha.err"; then
+    ok "the rejection reason names the hex requirement"
+else
+    bad "no hex-only message on a non-hex 40-char ref"
+fi
+
+echo "== request: a headline-less or junk-headline submission is refused BY THE SCRIPT, not merely advised in a skill"
+# Fix round 1, Important 2. sluice-request.sh now derives the SAME subject
+# sluice-run.sh's own default will actually use
+# (`git log -1 --format=%s "$sha"`) and refuses to enqueue when it looks
+# like a placeholder. Real commit objects, not strings the test merely
+# hands the script: `git commit-tree` mints them without touching this
+# repository's working tree or any real branch, and a throwaway
+# refs/remotes/ ref (never a real remote, never pushed anywhere) satisfies
+# the earlier "is this on a remote branch" check so execution actually
+# reaches the headline check under test. Both refs are removed
+# unconditionally below and the sweep is duplicated in the suite's own EXIT
+# trap in case something aborts in between.
+headline_test_tree="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse "HEAD^{tree}")"
+wip_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "wip")"
+good_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "feat(sluice): a real headline for testing")"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/wip "$wip_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/good "$good_sha"
+
+if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$wip_sha" 2>"$tmp/wip.err"; then
+    bad "a submission whose commit subject is 'wip' was accepted"
+else
+    ok "a submission whose commit subject is 'wip' is refused"
+fi
+if grep -q 'not a real headline' "$tmp/wip.err"; then
+    ok "the wip refusal names the reason (and points at the census-epoch-label consequence)"
+else
+    bad "no 'not a real headline' message refusing the wip commit"
+fi
+
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok \
+    bash "$repo_root/scripts/sluice-request.sh" campaign/x "$good_sha" \
+    >"$tmp/goodheadline.out" 2>"$tmp/goodheadline.err"; then
+    ok "a submission with a real headline is accepted — reaches the (mocked) enqueue step"
+else
+    bad "a submission with a real headline was wrongly refused: $(cat "$tmp/goodheadline.err")"
+fi
+
+echo "== request: MUTATION — deleting the headline check would flip the wip-refusal test red"
+mutant2="$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"
+# shellcheck disable=SC2016  # single-quoted on purpose: this is a literal grep pattern, not a shell expansion
+headline_start="$(grep -n '^headline="\$(git -C' "$repo_root/scripts/sluice-request.sh" | cut -d: -f1)"
+headline_end="$(awk -v s="$headline_start" 'NR>s && /^esac$/{print NR; exit}' "$repo_root/scripts/sluice-request.sh")"
+if [ -z "$headline_start" ] || [ -z "$headline_end" ]; then
+    bad "could not locate the headline-check block in sluice-request.sh to mutate — it may have changed shape"
+else
+    {
+        head -n "$((headline_start - 1))" "$repo_root/scripts/sluice-request.sh"
+        tail -n "+$((headline_end + 1))" "$repo_root/scripts/sluice-request.sh"
+    } > "$mutant2"
+fi
+chmod +x "$mutant2"
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok bash "$mutant2" campaign/x "$wip_sha" \
+    >"$tmp/wipmutant.out" 2>"$tmp/wipmutant.err"; then
+    ok "MUTATION CONFIRMED: without the headline check, a 'wip'-subject submission is accepted (the real script refuses it — see above)"
+else
+    bad "the headline-check mutant unexpectedly still refused — mutation did not take"
+fi
+rm -f "$mutant2"
+
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true
+
+echo "== make sluice-status / sluice-log: MUST reach the canonical box over ssh, never read local state directly"
+# Fix round 1, Critical. The first cut of these two Makefile targets read
+# \$HV_SLUICE_DIR (or its default) LOCALLY — but sluice-request.sh enqueues
+# onto the CANONICAL box over ssh, and sluice-run.sh runs there too, so from
+# any other machine the old targets silently reported an empty queue / "no
+# such job" regardless of the real state. Proven here by CONTENT, not merely
+# "ssh was invoked": a fake `ssh` on PATH runs the Makefile's own remote
+# command string, but against a DELIBERATELY DIFFERENT \$HV_SLUICE_DIR than
+# this test process's own environment carries — standing in for a real
+# remote host's own separate \$HOME. A target that (bug) reads its local
+# environment directly shows the LOCAL sentinel; a target that (fix) only
+# ever expands \$HV_SLUICE_DIR inside the single-quoted ssh payload shows the
+# REMOTE one, because the plain local value never reaches that payload at
+# all — make's own \$$ escaping keeps it literal until the far shell (here,
+# faked) expands it.
+mkdir -p "$tmp/bin" "$tmp/local-state" "$tmp/remote-state"
+cat > "$tmp/bin/ssh" <<'FAKESSH'
+#!/usr/bin/env bash
+# args: $1=host $2=remote command string, exactly as the Makefile's
+# sluice-status/sluice-log targets (and lane-status/lane-log before them)
+# build it. Runs it against $FAKE_REMOTE_STATE_DIR instead of whatever this
+# process's own environment carries, standing in for a real remote host's
+# own, separate $HOME.
+shift
+env HV_SLUICE_DIR="$FAKE_REMOTE_STATE_DIR" bash -c "$1"
+FAKESSH
+chmod +x "$tmp/bin/ssh"
+
+printf '2026-01-01T00:00:00Z\treq-local\tcampaign/x\tdeadbeef\tqueued\tLOCAL-SENTINEL-SHOULD-NOT-APPEAR\n' \
+    > "$tmp/local-state/queue.tsv"
+printf '2026-01-01T00:00:00Z\treq-remote\tcampaign/x\tdeadbeef\tqueued\tREMOTE-SENTINEL-EXPECTED\n' \
+    > "$tmp/remote-state/queue.tsv"
+
+status_out="$(cd "$repo_root" && PATH="$tmp/bin:$PATH" HV_SLUICE_DIR="$tmp/local-state" \
+    FAKE_REMOTE_STATE_DIR="$tmp/remote-state" make --no-print-directory sluice-status 2>&1)"
+if printf '%s' "$status_out" | grep -q 'REMOTE-SENTINEL-EXPECTED'; then
+    ok "sluice-status shows the canonical box's own queue (reached over ssh)"
+else
+    bad "sluice-status did not show the remote sentinel — got: $status_out"
+fi
+if printf '%s' "$status_out" | grep -q 'LOCAL-SENTINEL-SHOULD-NOT-APPEAR'; then
+    bad "sluice-status leaked the CALLER's own local state instead of the canonical box's"
+else
+    ok "sluice-status did not read the caller's own local queue file"
+fi
+
+echo "LOCAL LOG CONTENT — SHOULD NOT APPEAR" > "$tmp/local-state/some-job.log"
+echo "REMOTE LOG CONTENT — EXPECTED" > "$tmp/remote-state/some-job.log"
+log_out="$(cd "$repo_root" && PATH="$tmp/bin:$PATH" HV_SLUICE_DIR="$tmp/local-state" \
+    FAKE_REMOTE_STATE_DIR="$tmp/remote-state" make --no-print-directory sluice-log JOB=some-job 2>&1)"
+if printf '%s' "$log_out" | grep -q 'REMOTE LOG CONTENT'; then
+    ok "sluice-log shows the canonical box's own job log (reached over ssh)"
+else
+    bad "sluice-log did not show the remote sentinel — got: $log_out"
+fi
+if printf '%s' "$log_out" | grep -q 'LOCAL LOG CONTENT'; then
+    bad "sluice-log leaked the CALLER's own local log file instead of the canonical box's"
+else
+    ok "sluice-log did not read the caller's own local log file"
+fi
+
+echo "== make sluice-status: MUTATION — a local-only (pre-fix) target would show the local sentinel, reddening the test above"
+# Same "reproduce the exact deleted bug" discipline as the sluice-request.sh
+# mutations above: a standalone one-target Makefile carrying the ORIGINAL
+# (buggy) recipe, run with the SAME environment the fixed-target test above
+# used. If this shows the local sentinel where the real target does not,
+# the assertions above are proven non-vacuous.
+mutant_mk="$tmp/sluice-status-mutant.mk"
+cat > "$mutant_mk" <<'MUTANTMK'
+sluice-status:
+	@bash scripts/sluice-queue.sh list | column -t -s "$$(printf '\t')" || true
+MUTANTMK
+mutant_status_out="$(cd "$repo_root" && HV_SLUICE_DIR="$tmp/local-state" \
+    make --no-print-directory -f "$mutant_mk" sluice-status 2>&1)"
+if printf '%s' "$mutant_status_out" | grep -q 'LOCAL-SENTINEL-SHOULD-NOT-APPEAR'; then
+    ok "MUTATION CONFIRMED: the pre-fix (local-only) sluice-status recipe leaks the caller's own local queue (the real target does not — see above)"
+else
+    bad "the pre-fix sluice-status mutant unexpectedly did not show the local sentinel — mutation did not take"
+fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

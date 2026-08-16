@@ -392,15 +392,24 @@ lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the d
 sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
 	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)"
 
-sluice-status: ## The merge queue: what is queued, running, held, landed
-	@bash scripts/sluice-queue.sh list | column -t -s "$$(printf '\t')" || true
+# FIX ROUND 1: the queue and its jobs live on the CANONICAL BOX
+# ($HV_SLUICE_DIR under ITS $HOME — sluice-request.sh enqueues over ssh, and
+# sluice-run.sh runs there too), never on whatever machine typed `make
+# sluice-status`. The first cut of these two targets read a purely local
+# path instead — from anywhere but the canonical box that is silently an
+# EMPTY queue or "no such job", never an error, which is the worst kind of
+# wrong answer. lane-status/lane-log (above) already get this right by
+# ssh-ing first; these follow that exact shape.
+sluice-status: ## The merge queue: what is queued, running, held, landed (reads the canonical box over ssh)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
+	    cat "$$d/queue.tsv" 2>/dev/null || true' \
+	    | column -t -s "$$(printf '\t')" || true
 
-sluice-log: ## Read a finished merge-queue job back (JOB=<id>, or omit for the most recent)
-	@d="$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}"; \
-	if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; \
-	else f="$$(ls -1t "$$d"/*.log 2>/dev/null | head -1)"; fi; \
-	if [ -z "$$f" ] || [ ! -f "$$f" ]; then echo "sluice-log: no such job" >&2; exit 1; fi; \
-	echo "== $$f"; cat "$$f"
+sluice-log: ## Read a finished merge-queue job back (JOB=<id>, or omit for the most recent; reads the canonical box over ssh)
+	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
+	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; else f=$$(ls -1t "$$d"/*.log 2>/dev/null | head -1); fi; \
+	    if [ -z "$$f" ] || [ ! -f "$$f" ]; then echo "sluice-log: no such job" >&2; exit 1; fi; \
+	    echo "== $$f"; cat "$$f"'
 
 fmt: ## Format the workspace in place
 	cargo fmt
