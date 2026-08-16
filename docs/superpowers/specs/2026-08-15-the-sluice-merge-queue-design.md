@@ -91,6 +91,62 @@ Two moves come back from those domains and are adopted below:
 - **The lock-keeper is not the crew** (§6) — the operator triages and decides;
   it does not become the campaign's implementer.
 
+## 3a. The lane is absorbed, not extended (G3 amendment, 2026-08-16)
+
+Nathan, after Task 0 and the orphan finding: *"we should probably just rip that
+stuff out if we're moving to this merge tree approach."* Adopted, with one
+correction to the reasoning and one measurable commitment.
+
+**The correction: the enemy is asynchrony, not scripting.** Almost all of the
+lane's complexity exists to serve an **absent caller** — `setsid`/`nohup`
+detachment, a shared scratch worktree nobody owns, `jobs.tsv` as the only
+record a job existed, the roster copy-out that has to survive the next
+dispatch. Every defect found in the lane's first two days came from that layer:
+the unparseable claim (§9 P3), the orphan-on-kill that released the claim while
+39 cores ran, `seam-guard` refusing five of six runs on a tree an earlier set
+dirtied, and a sub-floor roster that never once landed a byte. Those are one
+design failing four ways — *run unattended, in a tree nobody owns, and
+reconstruct what happened afterwards*.
+
+But the fix is **not** "a session manages jobs instead of a script". This repo
+has repeated evidence that sessions are bad at exactly that: The Words had
+three subagents park on background jobs; Crust Task 7 parked despite an
+explicit prohibition; The Siding lost a run to a buffered `| tail -40` that
+made a job dead 60 s in look alive for an hour. What distinguishes a reliable
+session from those is **foreground, not authorship**. A resident operator can
+run each phase in the foreground and block until it exits, which the lane could
+never do because its caller was on another machine and left.
+
+**What survives, and why each is not sentiment:**
+
+- **The `flock` claim.** A mutex, not a job manager. The Mac exists, other
+  sessions exist, and a census dispatched from anywhere must not collide with
+  the queue. Decision 0081 is about the box, not about who is watching it.
+- **`scripts/lane-sets.tsv`.** Data, and `cli/tests/lane_sets.rs` fails on a
+  second copy. It stays the one place that says what a phase runs.
+- **The durable queue** (§5.1), which is what replaces `jobs.tsv` and answers
+  "what if the operator dies mid-merge".
+
+**What is deleted:** `scripts/lane-dispatch.sh` (145 lines),
+`scripts/lane-run.sh` (283), `scripts/test-lane.sh` (377), and the
+`lane`/`lane-status`/`lane-log`/`lane-roster`/`lane-wait` Makefile targets —
+**805 lines and 5 targets**, plus `gate-stage` and `gate-campaign` as dispatch
+paths. `scripts/lane-outboard.sh` (50) survives: it is a phase driver, not
+dispatch machinery.
+
+**`gate-stage` is absorbed too** (Nathan, same exchange). Campaign sessions on
+the Mac are absent callers by definition, so leaving `gate-stage` its own
+dispatch path would keep the entire async layer alive for one caller and delete
+far less than it appears. A stage-gate request becomes a queue entry like any
+other — lower priority than a merge, running in a tree someone owns, inheriting
+the same "gated as itself" property.
+
+**The commitment.** This campaign must end with **fewer lines of process
+machinery than it started**, and the retrospective states the measured net. A
+merge queue that costs more scaffolding than the lane it replaces has not
+simplified anything, whatever its guarantee — and the point of the guarantee is
+to stop paying attention to merging, not to relocate the payment.
+
 ## 4. Scope
 
 **In scope.** A serial merge queue on lefford; the `integration` lane set; the
