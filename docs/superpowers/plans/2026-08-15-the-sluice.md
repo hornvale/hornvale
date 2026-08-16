@@ -1031,6 +1031,27 @@ if ! git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '
     exit 13
 fi
 
+# THE PUSH MUST NOT TRUST A BARE rc=0. Task 4's review found that `code=$?`
+# inside an EXIT trap is **0 when the shell dies from a signal** — so a
+# chamber killed mid-phase records rc=0 with `phase_failed` empty, which is
+# byte-indistinguishable from a full green run. `lane-run.sh:70-72` and
+# `heavy-run.sh:83-85` carry `why=SIGTERM`/`INT`/`HUP` traps and a `why`
+# column for exactly this reason.
+#
+# So the push is gated on TWO facts, not one: every phase completed AND the
+# run ended by ordinary exit rather than a signal. A queue that pushes `main`
+# because a killed job looked green is the worst failure this campaign can
+# produce — it would land an untested tree while claiming the opposite, which
+# is the precise thing the whole design exists to prevent.
+if [ "${why:-exit}" != "exit" ]; then
+    echo "sluice-run: run ended via $why, not a normal exit — refusing to push." >&2
+    exit 15
+fi
+if [ -n "$phase_failed" ]; then
+    echo "sluice-run: phase '$phase_failed' failed — refusing to push." >&2
+    exit 16
+fi
+
 final_sha="$(git rev-parse HEAD)"
 
 # TESTED SHA == PUSHED SHA. Nothing may be created after the last green, so
@@ -1060,6 +1081,22 @@ bash scripts/test-sluice.sh
 ```
 
 Expected: every section `ok`, `0 failed`.
+
+- [ ] **Step 4b: Prove the push refuses a killed run**
+
+This is the assertion that matters most in the whole campaign, and it cannot
+be written from the outside — you have to construct a chamber run that dies
+from a signal and show the push does not happen.
+
+```bash
+# In the scratch repo: start a chamber whose phase sleeps, SIGTERM it,
+# then assert BOTH that `main` did not move AND that the recorded row
+# carries a non-zero rc and a `why` naming the signal.
+```
+
+Then mutate: remove the `why` guard, re-run, and confirm the killed run
+pushes. **Paste that red output.** A guard against pushing an untested tree
+that has never been observed refusing is not a guard.
 
 - [ ] **Step 5: Prove the push cannot be a force-push**
 
