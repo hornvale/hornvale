@@ -186,9 +186,19 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     //
     // The preregistered floor of 3 still clears decisively (6.4x), the claim
     // this row exists to guard, re-checked rather than assumed.
+    //
+    // THE GLASSHOUSE (Stage B, k = 0.30, census refreshed): 19.0939 ->
+    // 18.0819. The preregistered floor of 3 still clears — 6.0x rather than
+    // 6.4x — re-checked rather than assumed, which is this comment's own
+    // standing instruction. A warmer world flattens the latitudinal capacity
+    // gradient, because the cold end of the range is where warming buys the
+    // most habitability; a falling gradient is the predicted direction of this
+    // campaign's change, not a surprise. Still a DRIFT TRIPWIRE and still not
+    // evidence for the Earth-contingent gradient claim (decision 0106's
+    // circularity rule), exactly as the paragraph above says.
     assert!(
-        (mean - 19.0939).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~19.0939)"
+        (mean - 18.0819).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0819)"
     );
 }
 
@@ -332,9 +342,35 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // re-checked rather than assumed; note the margin is narrowing regen over
     // regen (17.67 -> 17.17 -> 16.44) and this row would become a finding
     // rather than a re-pin if it kept going.
+    // THE GLASSHOUSE (Stage B, k = 0.30): 16.2646 -> 17.3766, AND THE
+    // PARAGRAPH ABOVE ASKED FOR THIS TO BE TREATED AS A FINDING IF IT
+    // HAPPENED. It said the margin was narrowing regen over regen
+    // (17.67 -> 17.17 -> 16.44) and that "this row would become a finding
+    // rather than a re-pin if it kept going". IT KEPT GOING: the margin is now
+    // 15.32 degrees (32.7 - 17.3766), a fourth consecutive narrowing, and the
+    // ratio has fallen below 2x for the first time — 32.7 / 17.3766 = 1.88x
+    // against the 2.01x the previous note described as "better than 2x".
+    //
+    // SO, RECORDED AS A FINDING RATHER THAN A RE-PIN: population is settling
+    // steadily further from the equator, census after census, and this
+    // campaign accelerated it. The mechanism is the campaign's own thesis and
+    // needs no new hypothesis — warming buys the most habitability where it
+    // was least habitable, so the poleward tail gains population fastest. That
+    // is also why the sibling `capacity-by-abs-latitude` gradient FELL in the
+    // same refresh (19.09 -> 18.08): the same flattening seen from the
+    // capacity side rather than the population side. Two independent columns
+    // moving in the directions one mechanism predicts.
+    //
+    // THE ASSERTED CLAIM IS UNCHANGED AND STILL HOLDS: 17.3766 is below the
+    // uniform-sphere baseline of 32.7. What has been retired is the
+    // DESCRIPTIVE "better than 2x", which was prose about the margin and never
+    // the assertion — kept here as a record of when it stopped being true
+    // rather than quietly deleted. If the next regen narrows the margin again,
+    // the honest response is to ask what the floor of this trend is, not to
+    // re-pin a fifth time.
     assert!(
-        (mean - 16.2646).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~16.2646)"
+        (mean - 17.3766).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.3766)"
     );
 }
 

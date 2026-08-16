@@ -1491,7 +1491,24 @@ impl<'w> Session<'w> {
                 "You are already below; 'climb' brings you back up first.".to_string(),
             );
         }
-        let Some((cell, cave)) = self.chamber_column_here() else {
+        self.delve_column(self.chamber_column_here())
+    }
+
+    /// [`Self::delve`]'s outcome for an ALREADY-RESOLVED column — the
+    /// no-cave refusal plus the sealed/open decision below it.
+    ///
+    /// Split out for the same reason [`Self::delve_at`] was, one level up: the
+    /// no-cave branch used to be reachable from a test only by the flagship's
+    /// own starting cell happening to be cave-free, and decision 0134's
+    /// terrain epoch put a sealed cave under that cell and falsified the
+    /// contingency. Production still reaches this exactly one way, through
+    /// `delve` with `chamber_column_here()`, so nothing about the verb's
+    /// behaviour moved.
+    fn delve_column(
+        &mut self,
+        column: Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)>,
+    ) -> Turn {
+        let Some((cell, cave)) = column else {
             return Turn::Out("There is no cave here to delve into.".to_string());
         };
         self.delve_at(cell, cave)
@@ -3879,11 +3896,23 @@ mod tests {
         let w = seam_world();
         let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
         let scene = session.purview(0).expect("the chart builds");
+        // Skip entries whose first word is an ARTICLE. The head word is what
+        // this test hands to `examine`, and nobody examines "a" — an entry
+        // like "a karst cave" makes the assertion below vacuous while looking
+        // like it passed, or (as at decision 0134, when the terrain epoch
+        // reordered the legend and floated exactly that entry to the front)
+        // fails on a word no matcher should ever have resolved. The property
+        // under test is that a real noun in a multi-word name resolves; the
+        // selection has to actually deliver one.
         let mark = scene
             .legend
             .iter()
-            .find(|e| e.noun.split_whitespace().count() > 1)
-            .expect("some legend entry is a multi-word name");
+            .find(|e| {
+                let mut w = e.noun.split_whitespace();
+                let head = w.next().unwrap_or_default().to_lowercase();
+                w.next().is_some() && !matches!(head.as_str(), "a" | "an" | "the")
+            })
+            .expect("some legend entry is a multi-word name headed by a noun");
         let head = mark
             .noun
             .split_whitespace()
@@ -4869,9 +4898,16 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
 
-        // Outcome 1: no cave at all. The flagship's own starting cell — no
-        // walk needed, mirroring `there_is_nothing_to_dive_into_on_dry_land`.
-        let no_cave = match session.handle("delve") {
+        // Outcome 1: no cave at all — asserted through `delve_column(None)`,
+        // the branch production reaches when `chamber_column_here` finds
+        // nothing. This read the flagship's own STARTING CELL until decision
+        // 0131, a convenience resting on the contingency that that one cell
+        // happened to be cave-free; the terrain epoch put a sealed cave under
+        // it and falsified that. The other two outcomes were already found by
+        // scanning rather than assumed, so this brings outcome 1 into line
+        // with them and leaves the test independent of where the flagship
+        // happens to stand.
+        let no_cave = match session.delve_column(None) {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("delve must not release"),
         };
@@ -5108,6 +5144,63 @@ mod tests {
         session
     }
 
+    /// Does any anchor of this session's room draw at a chamber cell OUTSIDE
+    /// the possession's shadowcast? Factored out of
+    /// `a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks` so the
+    /// world search and the test itself apply one definition.
+    fn has_unlit_anchor(session: &Session<'_>) -> bool {
+        let room = session.agent.position.clone();
+        let Some(inside) = session.inside.as_ref() else {
+            return false;
+        };
+        let Some(chamber) = session.chamber_interior_here() else {
+            return false;
+        };
+        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+        let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+        let terrain = session.terrain_here();
+        let interior = crate::interior::interior_of(&room, &terrain);
+        interior.ids().into_iter().any(|a| {
+            let kind = interior.anchor(a).kind;
+            chamber
+                .ids()
+                .into_iter()
+                .find(|&c| chamber.anchor(c).kind == kind)
+                .and_then(|c| cells.get(&c).copied())
+                .is_some_and(|cell| !lit.contains(&cell))
+        })
+    }
+
+    /// The lowest seed whose opening chamber both holds a creature and draws
+    /// at least one of its room's anchors outside sight — the precondition
+    /// `a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks` rests
+    /// on. Searched rather than pinned, for the reason that test records.
+    fn world_whose_opening_chamber_has_an_unlit_anchor() -> World {
+        for seed in 0..32u64 {
+            let Some(world) = world_at(seed) else {
+                continue;
+            };
+            let qualifies = {
+                let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
+                    continue;
+                };
+                session.handle("wait");
+                session.handle("enter");
+                session.inside.is_some()
+                    && !session.colocated_npcs().is_empty()
+                    && has_unlit_anchor(&session)
+            };
+            if qualifies {
+                return world;
+            }
+        }
+        panic!(
+            "no seed in 0..32 opens into a chamber that both holds a creature and draws an \
+             anchor outside sight — the sight narrowing this test exercises would be \
+             unobservable, which is a finding about the sim, not a flaky fixture"
+        )
+    }
+
     /// The marks this session's snapshot draws.
     fn marks_of(session: &Session<'_>) -> Vec<crate::plan::PlanMark> {
         match session
@@ -5265,7 +5358,16 @@ mod tests {
         // shadowcast and then finds the room anchor that draws there. Hardcoding
         // an anchor id would pin a number that moves with the pattern
         // inventory.
-        let world = seam_world();
+        // THE WORLD IS SEARCHED, NOT PINNED (decision 0134). This read seed 42
+        // until the terrain epoch, and "some anchor draws outside sight" is a
+        // property of whichever chamber the possession happens to open in —
+        // seed 42's now has every anchor lit, so the precondition below failed
+        // and the test asserted nothing it was written to assert. That is the
+        // same shape as the staple-witness and craton sweeps: a contingent
+        // subject pinned to one sample. Searching for a qualifying world keeps
+        // the measurement-not-hardcoding discipline the paragraph above
+        // describes, one level up.
+        let world = world_whose_opening_chamber_has_an_unlit_anchor();
         let mut session = possessed_inside(&world);
         let room = session.agent.position.clone();
         let who = session

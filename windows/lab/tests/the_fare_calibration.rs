@@ -433,7 +433,35 @@ const F1_FLOOR_AT_40_DEG: f64 = 0.05;
 /// `.superpowers/sdd/2026-08-04-the-fare/readout.md`. This confirms step
 /// B's settlement-placement change reaches the settlement-frame secondary
 /// (which moved) but not the geographic frame F1 reads (which did not).
-const F1_PINNED_MEDIAN_SWING_AT_40_DEG: f64 = 0.003698;
+///
+/// **RE-READ AND RE-PINNED AT THE GLASSHOUSE'S CLOSE (2026-08-15): 0.003698
+/// -> 0.008553, a 2.3x rise.** The pin caught a mover it was not written to
+/// watch for — a campaign with an unrelated subject that never touched this
+/// file — which is the same thing The Gnomon's witness did in that campaign's
+/// §17, and the reason both were written as witnesses rather than left as
+/// prose.
+///
+/// **The falsification SURVIVES, and that is the load-bearing half.**
+/// [`F1_FLOOR_AT_40_DEG`] is 0.05; the new median is 0.008553, still an order
+/// of magnitude below it. The doc above forbids retuning that floor after
+/// seeing a result, and nothing here does: the floor is untouched and its
+/// verdict is unchanged. Only the witness moved, and a moved witness is a
+/// re-measurement, not a rescue.
+///
+/// **Mechanism, and it is the same one that moved The Mire's H1 by 2.8x in
+/// the same run.** The Glasshouse corrected the climate model (median land
+/// temperature -11.99 -> -3.65 degC); a warmer world has a wider seasonal
+/// band over which weather perturbs traversal cost, so the swing grows. The
+/// weather-cost transform, `REPLAN_*`, the band edges and the sampling frame
+/// are unchanged — the same measurement on a different world.
+///
+/// **That the two moved together, and by similar factors, is itself the
+/// evidence that this is climate and not two coincidences.** F1 reads a
+/// geographic frame and H1 reads land connectivity; they share no code path
+/// beyond the climate they both sample. Two independent statistics rising
+/// 2.3x and 2.8x under one temperature correction is a mechanism, and either
+/// one alone would have been an anecdote.
+const F1_PINNED_MEDIAN_SWING_AT_40_DEG: f64 = 0.008553;
 
 /// The relative tolerance around [`F1_PINNED_MEDIAN_SWING_AT_40_DEG`] the
 /// pin allows before reddening.

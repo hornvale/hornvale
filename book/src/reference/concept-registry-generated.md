@@ -27,6 +27,7 @@
 | `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `glacial-maximum-era` | yes | standard day of peak ice extent |
+| `greenhouse-forcing-k` | yes | dimensionless atmospheric greenhouse residual, -1..1, mean 0 (drawn; hornvale-choice, decision 0106 — nothing consumes this yet) |
 | `hab-zone-inner-au` | yes | habitable-zone inner bound in AU (derived 0.95√L) |
 | `hab-zone-outer-au` | yes | habitable-zone outer bound in AU (derived 1.37√L) |
 | `has-caste` | no | a caste present in a settlement |

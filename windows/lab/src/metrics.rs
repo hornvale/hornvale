@@ -1280,6 +1280,21 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "greenhouse-forcing-k",
+            doc: "Dimensionless atmospheric greenhouse residual at the anchor, \
+                   -1..1, mean 0 (The Glasshouse) — the spread the \
+                   carbonate-silicate thermostat alone would not give it. \
+                   Nothing consumes this metric yet.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, -0.6, -0.2, 0.2, 0.6, 1.0],
+            },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(v.system.anchor.greenhouse_residual)
+            }),
+        },
+        Metric {
             name: "zone-position",
             doc: "Where in the habitable zone the anchor sits, normalized: \
                    (a - inner)/(outer - inner), so 0.0 is the hot inner edge and 1.0 \
@@ -9616,7 +9631,12 @@ mod tests {
         // rows.csv rather than living only in a heavy-tier battery. Cost
         // measured before keeping it (~0.16 s/world, well under the 0.5
         // s/world KEEP threshold in `windows/lab/CLAUDE.md`).
-        assert_eq!(registry().len(), 223);
+        //
+        // +1 for THE GLASSHOUSE (Stage B, Task 3: greenhouse-forcing-k) — the
+        // dimensionless atmospheric greenhouse residual drawn in astronomy.
+        // A field read directly off `AstronomyView`, no sweep, so no cost
+        // concern; nothing consumes the predicate or the metric yet.
+        assert_eq!(registry().len(), 224);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -9741,14 +9761,25 @@ mod tests {
         // re-measure, which is the behaviour worth having while Tier 2 is about
         // to multiply the vertex count again.
         //
-        // +/-6% around 0.8306 and 1.1935 leaves a `k` window of roughly
+        // +/-6% around the measured centres leaves a `k` window of roughly
         // [0.95, 1.05] on each side — tighter than the original ratio test —
         // while absorbing ordinary terrain drift, which moves the network's
         // geometry far less than it moves any single reach.
-        let own_lo = 0.780;
-        let own_hi = 0.881;
-        let full_lo = 1.122;
-        let full_hi = 1.265;
+        //
+        // RE-MEASURED, not widened, for decision 0134 (The Glasshouse): the
+        // terrain epoch densified seed 42's network (3887 -> 3909 vertices)
+        // and own-line/analytic fell 0.8306 -> 0.7377, outside the old window.
+        // That is exactly the response the paragraph above predicted and asked
+        // for — "densification REDDENS this test and demands a deliberate
+        // re-measure" — and the direction is right too: more lines mean more
+        // of a reach's own water is won by a neighbour, so `own_line` falls
+        // relative to `analytic`. The bracket assert below, which is the
+        // structural claim rather than a calibration, held throughout. New
+        // centres 0.7377 and 1.2395, same +/-6%.
+        let own_lo = 0.693;
+        let own_hi = 0.782;
+        let full_lo = 1.165;
+        let full_hi = 1.314;
         assert!(
             own_line <= analytic && analytic <= sampled,
             "the integrated tube ({analytic}) is outside the bracket the shipped predicate \
@@ -10590,9 +10621,36 @@ mod tests {
         // live `BuiltView` on this Mac and the census on the canonical box —
         // land on the same value, which is stronger provenance than a green
         // local re-run. Still inside the 2-3 target, the row's claim.
+        //
+        // The Glasshouse re-pin (decision 0134, 2026-08-14): 2.375 -> 2.24.
+        // The terrain epoch re-places settlements, so goblin names a
+        // different set of sites and the mean syllable count moves with the
+        // sample. Still inside the 2-3 target, which is the row's actual
+        // claim; the exact value is a world-byte tripwire. NOT yet
+        // corroborated against a canonical census — the census refresh for
+        // this epoch has not been run, so unlike the two readings above this
+        // is a single live computation on one machine.
+        //
+        // The Glasshouse, Stage B Task 4 re-pin (the thermostat): 2.24 ->
+        // 2.193548387096774 (68/31). The thermostat re-places settlements a
+        // second time this campaign, so goblin names a different set of
+        // sites again. Still inside the 2-3 target. Not yet corroborated
+        // against a canonical census.
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30): 2.193548387096774
+        // -> 2.3225806451612905 (72/31). Same mechanism a third time — `k`
+        // moved after the Task 4 re-pin above, re-placing settlements once
+        // more. Still inside the 2-3 target.
+        //
+        // **AND NOW CORROBORATED**, which the two re-pins above could not be.
+        // The canonical census has since been refreshed on lefford
+        // (`c0211b18`) and its seed-42 row reads `name-syllables-goblin =
+        // 2.3225806` — the same value, quantized to 8 significant digits at
+        // the emit boundary. So this is no longer a single live computation
+        // on one machine: it agrees with the canonical host's own reading.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.375)
+            MetricValue::Number(2.3225806451612905)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -10725,9 +10783,41 @@ mod tests {
         // and it has risen at four of the last five passes. A pass that takes
         // it above 3 falsifies the target and is a finding to report, not a
         // bound to widen.
+        //
+        // The Glasshouse (decision 0134, 2026-08-14): 2.9285714 -> 2.8, and
+        // the margin the paragraph above flagged has WIDENED rather than
+        // closed — kobold now sits 0.2 below the ceiling instead of 0.071.
+        // Goblin falls too (2.375 -> 2.24), so the two move together this
+        // time, where the signature of a placement reshuffle has been that
+        // they move oppositely. That is worth noting rather than resolving:
+        // one joint fall is not evidence about the naming machinery, and
+        // nothing in this campaign touches phonology, wear or the namer.
+        //
+        // The Glasshouse, Stage B Task 4 re-pin (the thermostat): 2.8 -> 2.36,
+        // WIDENING the margin further still (kobold now sits 0.64 below the
+        // ceiling). Goblin falls too (2.24 -> 2.193548387096774), so the two
+        // move together for the second consecutive re-pin — again not
+        // evidence about the naming machinery, which nothing in this
+        // campaign touches.
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30): 2.36 ->
+        // 2.347826086956522, and the joint-movement note above finally
+        // BREAKS. Goblin RISES this time (2.193548387096774 ->
+        // 2.3225806451612905) while kobold is essentially flat (-0.012), so
+        // the two no longer move together — which restores the historical
+        // signature of a placement reshuffle rather than a machinery change,
+        // and retires the two-consecutive-passes coincidence the paragraph
+        // above was right to flag but not to resolve. Kobold now sits 0.652
+        // below the ceiling.
+        //
+        // **AND NOW CORROBORATED**: the refreshed canonical census
+        // (`c0211b18`) reads `name-syllables-kobold = 2.3478261` at seed 42,
+        // and `name-syllables-goblin = 2.3225806` — both this file's values at
+        // the 8-significant-digit emit boundary. Every pin in this test is
+        // now a canonical-host reading rather than a single local one.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.928_571_428_571_428_4)
+            MetricValue::Number(2.347826086956522)
         );
     }
 
@@ -10886,7 +10976,37 @@ mod tests {
         // `07117d05` records `name-transparency` = 0.6 on its own seed-42
         // row (and 0.63636364 on the census this replaces, matching The
         // Range's pin above). Two independent computations agree.
-        assert_eq!(share, 0.6, "seed 42 transparency drifted");
+        //
+        // The Glasshouse re-pin (decision 0134, 2026-08-14): 0.6 ->
+        // 0.5918367346938775, i.e. 29/49. The terrain epoch re-places
+        // settlements and the denominator moves with them. Note what this
+        // costs the paragraph above: 0.6 recurred at two very different
+        // placements and the argument was that a small denominator, not a
+        // fixed point, explained it. A third placement giving 29/49 rather
+        // than a third round value is the first evidence FOR that reading
+        // — and the ugly fraction is more informative than the round one
+        // was. Not corroborated against a canonical census: this epoch's
+        // refresh has not been run.
+        //
+        // The Glasshouse, Stage B Task 4 re-pin (the thermostat):
+        // 0.5918367346938775 (29/49) -> 0.6213592233009708 (64/103). The
+        // thermostat re-places settlements a second time this campaign and
+        // the denominator moves with them again. Still strictly between 0
+        // and 1. Not corroborated against a canonical census.
+        //
+        // The Glasshouse close re-pin (`k` settled at 0.30):
+        // 0.6213592233009708 (64/103) -> 0.6556016597510373 (158/241). A
+        // FOURTH distinct placement, and the denominator more than doubled
+        // (103 -> 241) because the warmed world settles far more sites. That
+        // is the strongest evidence yet for the reading this comment has been
+        // arguing across three re-pins: 0.6 was never a fixed point, it was a
+        // small denominator. At n = 241 the value has moved off it and stayed
+        // off it.
+        //
+        // **AND NOW CORROBORATED.** The refreshed canonical census
+        // (`c0211b18`) reads `name-transparency = 0.65560166` at seed 42 —
+        // this exact value at the 8-significant-digit emit boundary.
+        assert_eq!(share, 0.6556016597510373, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -11449,7 +11569,43 @@ mod tests {
             // precondition and the mutation below still flips, so the claim is
             // untouched. The coverage cost returns with it: the river gate
             // class only.
-            vec!["river", "ford"],
+            //
+            // The Glasshouse re-pin (decision 0134, 2026-08-14): back to
+            // three — "marsh" returns, a FIFTH oscillation between exactly
+            // these two readings. Cause is the terrain epoch itself: the
+            // craton rescale's exact solve and raised clamp move every
+            // coastline, so seed 7's goblins reach wetland ground again. Re-pin
+            // the set, do not swap the seed, per the precedent above. What five
+            // oscillations across five campaigns now say plainly is that this
+            // precondition is a WORLD-BYTE TRIPWIRE like `flagship-biome`, not
+            // a fact about goblins — every campaign that moves settlement
+            // placement moves it, in both directions, and no campaign has ever
+            // had to swap the seed or weaken the claim. The coverage improves
+            // with it: the river gate class and the karst/wetland gate are both
+            // exercised again.
+            //
+            // THE GLASSHOUSE, Stage B Task 4 re-pin (the thermostat): FOUR —
+            // "valley" joins "river", "ford" and "marsh". The damped,
+            // greenhouse-forced insolation baseline (replacing the fixed
+            // 288 K blackbody one) re-places seed 7's settlements a second
+            // time this campaign; goblin's reach widens again, the sixth
+            // oscillation in this precondition's history. Re-pin the set, do
+            // not swap the seed, per the precedent above. Coverage improves
+            // further: the river, elevation and karst/wetland gate classes
+            // are all exercised now.
+            //
+            // THE GLASSHOUSE close re-pin (`k` settled at 0.30): still FOUR,
+            // but not the same four — "valley" leaves and "spring" returns,
+            // giving "river", "ford", "marsh", "spring". `k` moved after the
+            // Task 4 re-pin above, re-placing seed 7's settlements a third
+            // time this campaign. Re-pin the set, do not swap the seed, per
+            // the precedent this comment has followed through seven
+            // oscillations now. Coverage: the river and karst/wetland gate
+            // classes are exercised; the elevation class leaves with
+            // "valley", so this reading is narrower than the last despite
+            // being the same size — which is the reason the set is pinned
+            // rather than its cardinality.
+            vec!["river", "ford", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -12111,7 +12267,20 @@ mod tests {
         // this list has been circling: **`flagship-biome` at seed 42 is a
         // world-byte tripwire, not a claim about goblins**, and it should not
         // be cited as one.
-        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
+        //
+        // Sixth pass (The Glasshouse, decision 0134, 2026-08-14): taiga ->
+        // temperate-forest, a SEVENTH oscillation between the same two
+        // biomes. Cause: the craton rescale's exact solve and raised clamp
+        // move every coastline, so the flagship reseats. `flagship-subsistence`
+        // is STILL "farming" through all seven — that invariance across seven
+        // independent world changes, spanning coastline moves, roster changes
+        // and affinity relevels, is now much the more interesting reading than
+        // the oscillation itself: the seat genesis picks is reliably farmable,
+        // and which farmable biome it happens to be carries no information.
+        assert_eq!(
+            m("flagship-biome"),
+            MetricValue::Text("temperate-forest".to_string())
+        );
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -12523,10 +12692,25 @@ mod tests {
     /// filtered minimum is *provably distinct from the predicate's own
     /// unfiltered minimum*, so dropping the `Some(object)` filter in
     /// `first_day` is something this test can actually see. `occ-tech`'s
-    /// `iron` horizon is the witness — probed on seed 42:
+    /// `iron` horizon is the witness.
+    ///
+    /// **THE GLASSHOUSE, Stage B Task 4 re-pin (the thermostat): seed 42 ->
+    /// seed 7.** At seed 42 the thermostat (a damped, greenhouse-forced
+    /// insolation baseline replacing the fixed 288 K blackbody one) now seats
+    /// a flagship that starts directly at `iron` from genesis — probed
+    /// directly, EVERY `occ-tech` horizon (`neolithic`, `bronze`, `iron`,
+    /// `classical`) has minimum `0.0` at that seed, so no tech key there can
+    /// discriminate a dropped object filter any more. Re-probed across seeds
+    /// 1/2/3/7/42/100: only seed 7 still shows the gap this test needs —
     /// `occ-tech` unfiltered min is `0.0` (neolithic settlements exist from
     /// genesis) but `iron`-keyed occupations do not begin until day
-    /// `36_525.0`, strictly later. No `occ-people` species has an analogous
+    /// `54_787.5`, strictly later (max `483_956.25`, 143 iron-keyed facts).
+    /// This is a technical witness, not a preregistered claim on a subject
+    /// world — the seed exists only to exhibit the gap `first_day`'s object
+    /// filter must preserve — so swapping it (rather than re-pinning the
+    /// numbers on the seed that lost the gap) is the right move, unlike the
+    /// preregistered-claim tests elsewhere in this campaign that keep their
+    /// seed and re-pin instead. No `occ-people` species has an analogous
     /// gap (see above), which is why this test reaches for a different
     /// predicate rather than a different species — `first_day` has no
     /// branching on the predicate string, so the code path this exercises is
@@ -12538,12 +12722,12 @@ mod tests {
     /// the maximum) and `expected_min` strictly greater than the predicate's
     /// own unfiltered minimum (catches the object filter being dropped —
     /// without this, `first_day` would fall back to `occ-tech`'s unfiltered
-    /// `0.0`, not `iron`'s `36_525.0`). If a later world change collapses
+    /// `0.0`, not `iron`'s `54_787.5`). If a later world change collapses
     /// either gap, this test must fail loudly rather than quietly start
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let v = FullView::build(Seed(7), &SkyPins::default()).expect("seed 7 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -13465,6 +13649,76 @@ mod tests {
     /// same world.
     const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
 
+    /// The sweep that re-witnesses [`the_independent_reading_covers_every_staple_worldgen_can_steep`]
+    /// when the ground moves under it, which has now happened **ten times**.
+    ///
+    /// Every one of those passes re-swept `0..150` "by the identical method"
+    /// and every one did it by hand, off-repo, leaving only a prose list of
+    /// qualifying pairs behind. That is a procedure described but never
+    /// shipped, and it is why the witness "spent a whole campaign reporting
+    /// the wrong one" (see that test's own comment). This is the method, as
+    /// code, so the eleventh pass reads a number off a run instead of
+    /// reconstructing the rule from a paragraph.
+    ///
+    /// The rule, unchanged and deliberately selection-free: a pair
+    /// `(seed, species)` qualifies when the species roots **and** independently
+    /// steeps every one of [`STAPLE_CONCEPTS`]; the witness is the EARLIEST
+    /// qualifying pair in seed order, then species order within a seed. Taking
+    /// any other pair would be a choice, and this test does not make choices.
+    ///
+    /// Prints the full qualifying list, not just the winner, because the
+    /// count is what tells the next reader whether the witness is
+    /// load-bearing alone or corroborated.
+    #[test]
+    #[ignore = "re-witness sweep: builds up to 150 FullView worlds (several minutes); \
+                run by hand only when the witness assertion below has gone red"]
+    fn sweep_for_the_independent_reading_witness() {
+        let mut qualifying: Vec<(u64, &'static str)> = Vec::new();
+        for seed in 0..150u64 {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let mut daughters = all_daughters(&view);
+            daughters.sort_unstable();
+            for species in daughters {
+                let (Ok(lexicon), Some(steeped)) = (
+                    lex(&view, species),
+                    independently_steeped_concepts(&view, species),
+                ) else {
+                    continue;
+                };
+                let all_six = STAPLE_CONCEPTS.iter().all(|staple| {
+                    matches!(lexicon.entry(staple), Some(LexEntry::Root { .. }))
+                        && steeped.contains(*staple)
+                });
+                if all_six {
+                    qualifying.push((seed, species));
+                }
+            }
+        }
+        println!("== qualifying (seed, species) pairs over 0..150 ==");
+        for (seed, species) in &qualifying {
+            println!("   ({seed}, {species})");
+        }
+        println!("   count = {}", qualifying.len());
+        match qualifying.first() {
+            Some((seed, species)) => println!(
+                "\n   WITNESS = ({seed}, {species}) — the earliest qualifying pair.\n   \
+                 Same-seed corroborator: {}",
+                if qualifying.iter().filter(|(s, _)| s == seed).count() > 1 {
+                    "yes"
+                } else {
+                    "none — this witness is load-bearing alone"
+                }
+            ),
+            None => println!(
+                "\n   NO QUALIFYING PAIR IN 0..150. Widen the range before \
+                 weakening the criterion: a staple no world steeps is a finding \
+                 about worldgen, not a reason to drop it from STAPLE_CONCEPTS."
+            ),
+        }
+    }
+
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
         // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
@@ -13670,6 +13924,22 @@ mod tests {
         // seven roster changes: still not monotone in anything, and still a
         // re-sweep rather than an extrapolation every time.
         //
+        // EIGHTH PASS (The Glasshouse, decision 0134, 2026-08-14). The
+        // terrain epoch re-places every world, and seed 14's high-elf lost
+        // its barley band — the precondition repaired at the sixth pass
+        // caught it by name, which is the repair working as intended. Re-swept
+        // 0..150 by the identical method. FIVE qualifying pairs —
+        // (3, kobold), (12, kobold), (16, bugbear), (77, hobgoblin),
+        // (132, hobgoblin) — so the count reads
+        // 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5. Only (16, bugbear) survives
+        // from the previous nine, which is the expected shape when coastlines
+        // move rather than the roster.
+        //
+        // **THE DUPLICATE AGREES ON ALL FIVE** — the sweep recorded
+        // `independently_steeped_concepts` steeping all six staples for 5 of
+        // 5 — so the second opinion remains sound on this axis wherever it can
+        // be checked, and this pass is not resting on a lenient subject.
+        //
         // **THE DUPLICATE AGREES ON ALL NINE.** The sweep recorded, for each
         // qualifying pair, whether `independently_steeped_concepts` steeps
         // all six as well; 9 of 9 do. So the second opinion is currently
@@ -13681,24 +13951,64 @@ mod tests {
         // already diagnosed, and carries its own ignore at
         // `calibration.rs::lexicon_is_exposure_sound_for_both_species`.)
         //
-        // Witness is **(14, high-elf)** — the earliest qualifying pair, the
-        // same selection-free rule every pass above used. For the FIRST time
-        // in this test's history the witness is an ELF, i.e. one of the
-        // peoples this campaign added; the fifth pass observed that "not one
-        // of the fifteen is an elf", and one roster-wide replacement later a
-        // new people spans all six farmable bands and carries the row. No
-        // same-seed second species at 14, so this witness is load-bearing
-        // alone; (85, hill-dwarf) and (85, human) do corroborate each other,
-        // but selecting them over the earliest pair would be a choice, and
-        // this test does not make choices.
+        // Witness is **(3, kobold)** — the earliest qualifying pair, the same
+        // selection-free rule every pass above used. The witness has now been
+        // an elf exactly once, at the pass above; the elves that carried it
+        // there no longer span all six farmable bands anywhere in the range.
+        // No same-seed second species at 3, so this witness is load-bearing
+        // alone; (12, kobold) is the nearest corroborator, but selecting it
+        // over the earliest pair would be a choice, and this test does not
+        // make choices.
         //
-        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 5 -> 14 and bugbear ->
-        // high-elf: a different world AND a different people. Nothing below
+        // NINTH PASS (The Glasshouse, Stage B Task 4, the thermostat). The
+        // damped, greenhouse-forced insolation baseline (replacing the fixed
+        // 288 K blackbody one) re-places every world a second time this
+        // campaign, and seed 3's kobold lost its barley band. Re-swept
+        // 0..150 by the identical method. TEN qualifying pairs —
+        // (23, bugbear), (26, hobgoblin), (59, hobgoblin), (82, hobgoblin),
+        // (111, hobgoblin), (115, bugbear), (120, hobgoblin), (126,
+        // hobgoblin), (128, bugbear), (146, hobgoblin) — so the count reads
+        // 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10. None of the previous
+        // five survive, the expected shape when the ground moves rather
+        // than the roster.
+        //
+        // Witness is **(23, bugbear)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used. No same-seed
+        // second species at 23, so this witness is load-bearing alone, the
+        // same shape as the previous pass.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 3 -> 23 and kobold ->
+        // bugbear: a different world AND a different people. Nothing below
         // is comparable line-for-line with the previous commit.
-        let view = FullView::build(Seed(14), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "high-elf").expect("seed 14 high-elves hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "high-elf")
-            .expect("high-elf is placed at seed 14");
+        //
+        // TENTH PASS (The Glasshouse close, `k` settled at 0.30). `k` moved
+        // after the ninth pass above, re-placing every world a third time
+        // this campaign, and seed 23's bugbear lost its barley band. Re-swept
+        // 0..150 by the identical method — and this time the sweep IS the
+        // method: `sweep_for_the_independent_reading_witness` above, run with
+        // `--ignored`, rather than a ninth hand-rolled off-repo pass.
+        //
+        // **TWO qualifying pairs — (26, hobgoblin) and (117, kobold) — so the
+        // count reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 -> 2.**
+        // That is the lowest this count has ever been and the sharpest fall
+        // in its history, and it is worth reading as a finding rather than
+        // bookkeeping: a people must span all six farmable bands to qualify,
+        // and the warmed population has far fewer peoples doing so. The
+        // campaign's own latitude correction is the plausible mechanism —
+        // a zero-mean profile steepens the equator-to-pole gradient that the
+        // old uniform +10 K offset had flattened, so a single people's
+        // territory covers a narrower slice of the staple range. NOT chased
+        // here; recorded, because at n = 2 this test is one world away from
+        // having no witness at all.
+        //
+        // (26, hobgoblin) SURVIVES from the previous pass's list of ten,
+        // which is the first time any witness generation has had a survivor.
+        // It is still selected by the same earliest-pair rule, not because it
+        // survived.
+        let view = FullView::build(Seed(26), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "hobgoblin").expect("seed 26 hobgoblins hold a lexicon");
+        let steeped = independently_steeped_concepts(&view, "hobgoblin")
+            .expect("hobgoblin is placed at seed 26");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -13708,7 +14018,7 @@ mod tests {
             // wrong one.
             assert!(
                 matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                "seed 14 high-elves must root {staple} for this test to bite"
+                "seed 26 hobgoblins must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),

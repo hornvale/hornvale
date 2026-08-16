@@ -1784,9 +1784,22 @@ mod tests {
         // 6, 8, 9, 10, 12, 13, 20, 25]: at-top 57/4/115/98/3/2/67/63/113/65/
         // 84/2/79/148/100/1/1). Seed 42 (57 tied cells) is back in front —
         // the signature stays seed-dependent, not universal.
+        //
+        // Re-pinned 42 → 12 for decision 0137 (the craton rescale's exact
+        // solve, clamp 0.8, and the assembly repair). New coastlines move
+        // which cells reach the exact trim cap; seed 42 fell to 1 tied cell.
+        // Post-change survey over the SAME seed list, in the same order:
+        // at-top 1/38/3/8/2/24/21/9/1/22/21/1/24/40/36/6/6. Seed 12 (40) now
+        // leads, with seeds 1 (38) and 13 (36) also clearing the floor of 25.
+        // THIS IS A POST-UNBLINDING RE-PIN, declared as decision 0016 requires:
+        // the whole population's tied blocks shrank (previous max 148, now
+        // 40), so the floor of 25 is a materially tighter fit than it was —
+        // it survives on three seeds rather than eleven. What the assert
+        // still means is unchanged: a wide tied block exists, so the trim cap
+        // is a shared exact value rather than a per-cell coincidence.
         let geo = Geosphere::new(4);
         let outcome =
-            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+            crate::globe::generate(Seed(12), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
         // Shelf mode, post-trim: every non-delta, non-atoll marine

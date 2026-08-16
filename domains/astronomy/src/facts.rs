@@ -159,6 +159,11 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// Dimensionless atmospheric greenhouse residual, −1..1, mean 0 (functional,
+/// Number; drawn — The Glasshouse). See [`crate::anchor::Anchor::greenhouse_residual`]
+/// for the "hornvale-choice" rationale. Nothing consumes this predicate yet.
+/// type-audit: bare-ok(identifier-text)
+pub const GREENHOUSE_FORCING_K: &str = "greenhouse-forcing-k";
 /// Predicate: the star's fractional main-sequence brightening per
 /// gigayear (The Long Count).
 /// type-audit: bare-ok(identifier-text)
@@ -398,6 +403,14 @@ pub fn genesis(
             subject,
             INSOLATION_REL,
             Value::Number(crate::star::insolation_rel(&system.star, &system.anchor)),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            GREENHOUSE_FORCING_K,
+            Value::Number(system.anchor.greenhouse_residual),
         ),
         &world.registry,
     )?;
@@ -994,9 +1007,16 @@ mod tests {
             ANCHOR_MASS_EARTH,
             ANCHOR_ORBIT_AU,
             INSOLATION_REL,
+            GREENHOUSE_FORCING_K,
         ] {
             assert!(w.ledger.value_of(subject, pred).is_some(), "missing {pred}");
         }
+        assert_eq!(
+            w.ledger.value_of(subject, GREENHOUSE_FORCING_K),
+            Some(&Value::Number(hornvale_kernel::quantize(
+                outcome.system.anchor.greenhouse_residual
+            )))
+        );
         assert_eq!(
             w.ledger.value_of(subject, INSOLATION_REL),
             Some(&Value::Number(hornvale_kernel::quantize(

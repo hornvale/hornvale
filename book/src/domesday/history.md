@@ -24,7 +24,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -24252.934 | -24252.934 | -24252.934 | -24252.934 | -24048.25 | -24249.864 |
+| -24252.934 | -24252.934 | -24252.934 | -24252.934 | -24048.25 | -24249.454 |
 
 ### `first-day-is-ruin`
 
@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9131.25 | 9131.25 | 18262.5 | 136968.75 | 13313.362 |
+| 0 | 0 | 9131.25 | 18262.5 | 73050 | 11468.85 |
 
 ### `first-day-is-settlement`
 
@@ -56,21 +56,21 @@ n = 0 present, 1000 absent (of 1000 worlds) — no world reports a value.
 
 Earliest world-day on which any occupation ended by famine; Absent if none ever does
 
-n = 718 present, 282 absent (of 1000 worlds)
+n = 705 present, 295 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 63918.75 | 155231.25 | 219150 | 429168.75 | 712237.5 | 291754.88 |
+| 63918.75 | 155231.25 | 219150 | 401775 | 703106.25 | 284325.11 |
 
 ### `first-day-occ-cause-fled`
 
 Earliest world-day on which any occupation ended by its people fleeing; Absent if none ever does
 
-n = 999 present, 1 absent (of 1000 worlds)
+n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9131.25 | 9131.25 | 18262.5 | 136968.75 | 13536.918 |
+| 0 | 0 | 9131.25 | 18262.5 | 447431.25 | 12582.862 |
 
 ### `first-day-occ-cause-migrated`
 
@@ -80,7 +80,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 9131.25 | 9131.25 | 18262.5 | 136968.75 | 13313.362 |
+| 0 | 0 | 9131.25 | 18262.5 | 73050 | 11468.85 |
 
 ### `first-day-occ-cause-plague`
 
@@ -136,7 +136,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 0 | 228281.25 | 4063.4062 |
+| 0 | 0 | 0 | 0 | 146100 | 3223.3313 |
 
 ### `first-day-occ-tech-classical`
 
@@ -152,31 +152,31 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 Earliest world-day on which any occupation held an iron technological horizon; Absent if none ever does
 
-n = 979 present, 21 absent (of 1000 worlds)
+n = 975 present, 25 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 36525 | 493087.5 | 24642.25 |
+| 0 | 0 | 0 | 27393.75 | 493087.5 | 24097.135 |
 
 ### `first-day-occ-tech-neolithic`
 
 Earliest world-day on which any occupation held a neolithic technological horizon; Absent if none ever does
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 0 | 0 | 100443.75 | 246.54375 |
+| 0 | 0 | 0 | 0 | 18262.5 | 27.421171 |
 
 ### `first-day-pays-tribute-to`
 
 Earliest world-day on which any community paid standing tribute to another; Absent if the world has none
 
-n = 991 present, 9 absent (of 1000 worlds)
+n = 997 present, 3 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 18262.5 | 27393.75 | 54787.5 | 703106.25 | 63458.041 |
+| 0 | 18262.5 | 27393.75 | 63918.75 | 675712.5 | 72024.223 |
 
 ### `first-day-person-died`
 
@@ -186,7 +186,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 14379.246 | 14379.246 | 14379.246 | 14379.246 | 23811.184 | 14577.284 |
+| 14379.246 | 14379.246 | 14379.246 | 14379.246 | 78248.204 | 14894.485 |
 
 ### `first-day-person-founded`
 
@@ -206,7 +206,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.21698113 | 0.50511945 | 0.56912695 | 0.65795724 | 0.97368421 | 0.59652934 |
+| 0.26851852 | 0.53349282 | 0.59423673 | 0.67567568 | 0.97836538 | 0.61875321 |
 
 ### `history-myth-hop-median`
 
@@ -216,7 +216,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 3 | 4 | 5 | 12 | 4.188 |
+| 1 | 4 | 4 | 5 | 10 | 4.438 |
 
 ### `mean-warning-legibility`
 
@@ -226,7 +226,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.032389129 | 0.41871327 | 0.51611038 | 0.57387919 | 0.7916476 | 0.48405628 |
+| 0.057217208 | 0.41475071 | 0.49406222 | 0.55090531 | 0.74885276 | 0.46947672 |
 
 ### `vestige-density`
 
@@ -236,7 +236,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0041301996 | 0.014168573 | 0.018510906 | 0.023604176 | 0.049348934 | 0.019340543 |
+| 0.004043455 | 0.015119676 | 0.019612246 | 0.024773889 | 0.054725016 | 0.020392029 |
 
 ## Weaknesses found here
 
@@ -253,6 +253,10 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D2**: min == median == max == 0 across 1000 worlds
 - **D4**: median 0 equals the min (0 .. 0)
+
+### `first-day-occ-cause-fled`
+
+- **D3**: p25..p75 spans 18262.5 (4.08% of the 447431.25 min..max range), under the 5% bar
 
 ### `first-day-occ-people-bugbear`
 
@@ -276,8 +280,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `first-day-occ-tech-bronze`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 228281.25 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 228281.25)
+- **D3**: p25..p75 spans 0 (0.00% of the 146100 min..max range), under the 5% bar
+- **D4**: median 0 equals the min (0 .. 146100)
 
 ### `first-day-occ-tech-classical`
 
@@ -290,13 +294,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `first-day-occ-tech-neolithic`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 100443.75 min..max range), under the 5% bar
-- **D4**: median 0 equals the min (0 .. 100443.75)
+- **D3**: p25..p75 spans 0 (0.00% of the 18262.5 min..max range), under the 5% bar
+- **D4**: median 0 equals the min (0 .. 18262.5)
 
 ### `first-day-person-died`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 9431.938000000002 min..max range), under the 5% bar
-- **D4**: median 14379.246 equals the min (14379.246 .. 23811.184)
+- **D3**: p25..p75 spans 0 (0.00% of the 63868.958 min..max range), under the 5% bar
+- **D4**: median 14379.246 equals the min (14379.246 .. 78248.204)
 
 ### `first-day-person-founded`
 

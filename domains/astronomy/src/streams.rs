@@ -60,5 +60,7 @@ hornvale_kernel::stream_labels! {
         /// moon in every branch, for the same index-stability reason as
         /// `MOON_DENSITY`.
         MOON_AGE = "moon-age" => "per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it)";
+        /// Atmospheric greenhouse residual draw (The Glasshouse).
+        GREENHOUSE = "greenhouse" => "atmospheric greenhouse residual draw";
     }
 }

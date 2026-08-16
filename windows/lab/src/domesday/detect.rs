@@ -1524,9 +1524,38 @@ mod tests {
         // +57.8%). Its correlation with `habitable-fraction` weakening as its
         // own distribution moves that far is unsurprising; nothing here says
         // which of the six new peoples did it, because nothing measured that.
+        // THE GLASSHOUSE (Stage B, k = 0.30): 20 -> 18. Investigated before
+        // re-pinning, as this line demands, by diffing the RENDERED findings
+        // across the census refresh rather than reasoning about the count.
+        // Three resolved and one appeared:
+        //
+        //   RESOLVED (hydrology, all three):
+        //     ocean-fraction        declared moderate, observed r = -0.755
+        //                           "dominant, and the sign is backwards"
+        //     continent-count       declared moderate, observed |r| = 0.004
+        //     mountain-coverage     declared moderate, observed |r| = 0.083
+        //   APPEARED (settlement):
+        //     mean-land-temperature-c  declared moderate, observed r = +0.144
+        //
+        // The appearing one is the legible half and it is a real result about
+        // the warmed world, not noise: settlement's coupling to land
+        // temperature WEAKENED. When 651 of 1000 worlds were ice-dominant,
+        // temperature was the binding constraint on where anyone could live,
+        // so the correlation was strong enough to match a "moderate"
+        // declaration. At 187 of 1000 ice-dominant it no longer binds, and
+        // other terms decide siting — so the same declaration now over-states
+        // the coupling. A mismatch APPEARING because a constraint stopped
+        // binding is the opposite of a regression.
+        //
+        // The three that resolved are hydrology's, and they resolved because
+        // the warmer world moved the hydrological fields those expectations
+        // were declared against; the most striking is ocean-fraction, whose
+        // observed |r| falls from 0.755 to inside its declared moderate band
+        // — see `d5_direction` below, which is the other half of that same
+        // metric's story.
         let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
         assert_eq!(
-            d5_strength, 20,
+            d5_strength, 18,
             "D5 strength hit count changed; investigate before re-pinning"
         );
         let d5_unmeasurable = f.iter().filter(|x| x.detector == "D5 unmeasurable").count();
@@ -1534,9 +1563,32 @@ mod tests {
             d5_unmeasurable, 6,
             "D5 unmeasurable hit count changed; investigate before re-pinning"
         );
+        // THE GLASSHOUSE (Stage B, k = 0.30): 0 -> 1, and this detector firing
+        // AT ALL for the first time is worth more attention than the count.
+        // The single finding is hydrology's:
+        //
+        //   declared positive moderate tracking ocean-fraction, but the
+        //   observed coupling is negative (r = -0.398, 1000 pairs)
+        //
+        // It is the same metric that vacated `d5_strength` above, and the two
+        // movements are one event rather than two. Before the refresh, ocean-
+        // fraction's observed |r| was 0.755 — so far outside its declared
+        // moderate band that D5 reported it as a STRENGTH mismatch, and the
+        // backwards sign rode along inside that finding's own text. The warmer
+        // world moves |r| to 0.398, which is inside the declared band, so the
+        // strength complaint is satisfied and what remains is the sign — which
+        // is what D5 direction exists to say. The declaration was wrong about
+        // the sign the whole time; the census refresh did not create that, it
+        // uncovered it by removing the louder error sitting on top of it.
+        //
+        // So do not read 0 -> 1 as a new defect in the world. Read it as a
+        // pre-existing wrong expectation becoming legible, and fix the
+        // EXPECTATION (comparators/expectations declare it positive; the world
+        // has said negative at both magnitudes) rather than this count, in a
+        // change that can be reviewed on its own terms.
         let d5_direction = f.iter().filter(|x| x.detector == "D5 direction").count();
         assert_eq!(
-            d5_direction, 0,
+            d5_direction, 1,
             "D5 direction hit count changed; investigate before re-pinning"
         );
     }

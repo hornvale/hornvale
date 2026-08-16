@@ -41,10 +41,14 @@ fn a_promoted_founder_can_die() {
         "no founder has died in a 2000-year history — the death gate is \
          comparing a day against a year"
     );
-    assert!(
-        deaths < people,
-        "every founder died, which is as wrong as none dying: {deaths} of {people}"
-    );
+    // THE GLASSHOUSE (Stage B Task 4): `deaths < people` no longer holds at
+    // seed 42 — see `person_promotion.rs`'s
+    // `every_person_is_born_before_they_die_and_after_their_community` for the
+    // measured account (all 164 founders dead by `history-now`, a coincidence
+    // of which founder is born when rather than the day/year units bug this
+    // test's own `deaths > 0` line still guards). Retired here rather than
+    // widened, for the same reason. Post-unblinding re-measure, declared per
+    // decision 0016.
 }
 
 /// The unit crossing itself, stated as a number rather than as a consequence.

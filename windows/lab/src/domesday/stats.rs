@@ -180,30 +180,57 @@ mod tests {
         // NOT use for `median` — `the_fare_calibration.rs`'s doc comment
         // warns against exactly that collapse. min/max are unaffected by
         // the median-vs-percentile distinction, so they carry over exactly.
+        // THE GLASSHOUSE (Stage B, k = 0.30) re-measure. Every figure below
+        // moved, because this is the metric the campaign exists to re-centre
+        // and the census behind it was refreshed on the canonical box:
+        //
+        //     median  -11.988568 -> -3.649021     (+8.34 K)
+        //     min     -47.151131 -> -35.378763
+        //     max      23.141691 ->  21.844769
+        //     p25     -22.551606 -> -10.781073    (+11.77 K)
+        //     p75       2.037309 ->   4.502500
+        //
+        // The distribution did not merely shift, it TIGHTENED: the p25-p75
+        // span narrows 24.59 -> 15.28 K and the min rises 11.77 K while the
+        // max FALLS 1.30 K. That is the thermostat doing what a thermostat
+        // does — compensating the extremes harder than the middle — and it is
+        // visible here in a test that pins percentiles for an unrelated
+        // reason (proving `median` and `percentile` use different formulae).
+        // The formula distinction this comment block was originally written
+        // to defend is untouched; only the sample moved.
         assert!(
-            (s.median - (-11.988568)).abs() < 1e-4,
+            (s.median - (-3.649021)).abs() < 1e-4,
             "median was {}",
             s.median
         );
-        assert!((s.min - (-47.151131)).abs() < 1e-4, "min was {}", s.min);
-        assert!((s.max - 23.141691).abs() < 1e-4, "max was {}", s.max);
+        assert!((s.min - (-35.378763)).abs() < 1e-4, "min was {}", s.min);
+        assert!((s.max - 21.844769).abs() < 1e-4, "max was {}", s.max);
         // p25/p75 are `percentile`'s nearest-rank formula (ceil(q·n)),
         // independently verified against the committed CSV.
-        assert!((s.p25 - (-22.551606)).abs() < 1e-4, "p25 was {}", s.p25);
-        assert!((s.p75 - 2.037309).abs() < 1e-4, "p75 was {}", s.p75);
+        assert!((s.p25 - (-10.781073)).abs() < 1e-4, "p25 was {}", s.p25);
+        assert!((s.p75 - 4.502500).abs() < 1e-4, "p75 was {}", s.p75);
 
         // A second metric with a different distribution shape, so a
         // percentile formula that happens to land right on one metric
         // (e.g. an off-by-one that only shows up at certain n or certain
         // clustering) cannot hide behind a single sample.
+        // Ocean-fraction moved too (p25 0.559787 -> 0.556443, p75 0.683219 ->
+        // 0.683316), and it is worth saying WHY it is here at all, because it
+        // is the one metric in this test that `k` cannot touch: this second
+        // sample exists to stop a percentile off-by-one hiding behind a single
+        // distribution shape, and it keeps doing that job. Its movement is the
+        // TERRAIN epoch's — the committed census predates this campaign's Task
+        // 2 craton rescale — not the thermostat's. Two different causes, one
+        // refresh; a reader attributing all of this test's movement to the
+        // climate work would be wrong about half of it.
         let o = super::numeric(&c, "ocean-fraction").expect("stats");
         assert!(
-            (o.p25 - 0.559787).abs() < 1e-4,
+            (o.p25 - 0.556443).abs() < 1e-4,
             "ocean-fraction p25 was {}",
             o.p25
         );
         assert!(
-            (o.p75 - 0.683219).abs() < 1e-4,
+            (o.p75 - 0.683316).abs() < 1e-4,
             "ocean-fraction p75 was {}",
             o.p75
         );

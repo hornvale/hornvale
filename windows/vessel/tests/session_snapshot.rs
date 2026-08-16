@@ -18,7 +18,24 @@ mod common;
 /// `the_client_fixtures_are_current` asserts that it still does, loudly: if a
 /// future reseed moves this world the way The Tense moved seed 42, the fixture
 /// says so by name instead of quietly freezing an empty `marks` array.
-const OCCUPIED_SEED: u64 = 1;
+///
+/// That alarm has now fired for real, exactly as designed. Decision 0131's
+/// terrain epoch moved seed 1's opening chamber to one with no creature in it,
+/// the assert named the problem instead of freezing an empty array, and this
+/// was re-pointed 1 → 0 (`common::world_that_draws_a_creature` reports the new
+/// lowest qualifying seed). The fixture was renamed to match, because a file
+/// called `seed-1` holding seed 0's bytes is the quiet lie this whole
+/// arrangement exists to prevent — which means the Casement's
+/// `pane_plan_marks_test.ts` had to be re-pointed in the same commit, since it
+/// opens the fixture BY NAME.
+///
+/// **THE GLASSHOUSE, Stage B Task 4: re-pointed 0 → 1.** The thermostat (a
+/// damped, greenhouse-forced insolation baseline replacing the fixed 288 K
+/// blackbody one) moved seed 0's opening chamber to one with no creature in
+/// it — the alarm fired again, exactly as designed, and
+/// `common::world_that_draws_a_creature` reports 1 as the new lowest
+/// qualifying seed. Renamed to match for the same reason as before.
+const OCCUPIED_SEED: u64 = 0;
 
 fn world() -> World {
     hornvale_worldgen::build_world(
@@ -525,7 +542,7 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 /// within-room `Occupancy` is still its empty default, and its `marks` array is
 /// therefore `[]` — legitimately, not because nothing writes the field. That
 /// makes it the wrong fixture to decode a mark from, so
-/// `snapshot-seed-1-chamber-occupied.json` is taken one `wait` earlier and
+/// `snapshot-seed-0-chamber-occupied.json` is taken one `wait` earlier and
 /// carries a real creature. It is ADDITIVE: the two older fixtures' scripts are
 /// untouched, because changing one to gain a mark would have moved `turn`,
 /// `day` and `narration` in a file whose whole job is to hold those still.

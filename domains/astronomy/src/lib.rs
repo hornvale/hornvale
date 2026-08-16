@@ -304,6 +304,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "insolation at the anchor relative to Earth (derived L/a²)",
     )?;
     registry.register_predicate(
+        facts::GREENHOUSE_FORCING_K,
+        true,
+        "dimensionless atmospheric greenhouse residual, -1..1, mean 0 (drawn; \
+         hornvale-choice, decision 0106 — nothing consumes this yet)",
+    )?;
+    registry.register_predicate(
         facts::BRIGHTENING_PER_GYR,
         true,
         "the star's fractional main-sequence brightening per gigayear",

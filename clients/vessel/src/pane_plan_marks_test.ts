@@ -23,7 +23,7 @@ function glyphRows(grid: PaneGrid | null): string[] | null {
 // occupied fixture a real mark: the bugbear's noun, kind `"agent"`,
 // salience 5.
 //
-// SEED 1, not seed 42, and the other two pane fixtures are still seed 42's.
+// SEED 0, not seed 42, and the other two pane fixtures are still seed 42's.
 // The Sighting was written when seed 42's world happened to put a creature in
 // the chamber the possession walks into; The Tense reseeded that world and the
 // creature stopped following it inside. Sight was untouched — most seeds still
@@ -32,9 +32,17 @@ function glyphRows(grid: PaneGrid | null): string[] | null {
 // world rather than pinning one (windows/vessel/tests/common/mod.rs); a golden
 // cannot sweep, so this one file stays concrete and is named for the seed it is
 // actually taken at.
+//
+// SEED 1 -> SEED 0 (The Glasshouse, 2026-08-15). The same thing happened a
+// second time, to the replacement: the campaign warmed the census and seed 1
+// stopped drawing a creature in its chamber. Re-swept 0..40 and re-pointed at
+// the earliest qualifying seed, which is 0. That the replacement seed rotted
+// in one campaign is the argument for the derived-coordinate assertion below,
+// not against it — the FILENAME is now the only concrete thing left here, and
+// it is checked by the Rust side naming the file from its own constant.
 const OCCUPIED = Deno.readTextFileSync(
   new URL(
-    "../../../windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json",
+    "../../../windows/vessel/tests/fixtures/snapshot-seed-0-chamber-occupied.json",
     import.meta.url,
   ),
 );
