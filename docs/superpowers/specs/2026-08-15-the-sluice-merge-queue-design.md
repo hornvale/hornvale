@@ -180,7 +180,7 @@ Sequence inside the claim:
 2. On conflict → **hold** and escalate (§6). The queue does not guess.
 3. Run the phases (§5.4), `git clean -fd` between each.
 4. After each authoring phase, commit any artifact drift as a single
-   `chore(artifacts)` commit (§5.3.2 decides where it lands).
+   `chore(artifacts)` commit (§5.3.3 decides where it lands).
 5. Assert `git status --porcelain` is empty and the declared drift check is
    clean: `git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt |
    grep -v '^$')`.
@@ -201,7 +201,52 @@ the chamber is doing. The chamber does not *own* `main` — it constructs a
 candidate for `main` and offers it. `main` moves only when the push in step 6
 succeeds, which is also the only moment at which the queue's guarantee attaches.
 
-#### 5.3.2 Where a fix goes
+#### 5.3.2 The merge commit message is an artifact, not decoration
+
+Under `--no-ff` the merge commit is the only object on `main`'s first-parent
+line that represents the campaign, which makes its message load-bearing in two
+independent ways.
+
+**It carries the queue's receipt.** The merge commit is the object the
+guarantee is *about*, so it is where the evidence belongs: the integration job
+id, which phases ran green, and the `main` SHA the candidate was tested
+against. Anything else puts the receipt somewhere that can drift away from what
+it certifies.
+
+**A generated artifact reads it.** `tools/census/history.sh` loads every
+committed snapshot of a study's `rows.csv` and tags it with an epoch label
+taken from the commit subject, via:
+
+```
+git log --follow --first-parent --name-only \
+    --format='C%x09%H%x09%cI%x09%s' main -- "$path"
+```
+
+Under the fast-forward topology the campaign's own commit sat on the
+first-parent line, so that label was `feat(census): …` or similar. Under
+`--no-ff` it is no longer on that line, and the label becomes the **merge
+commit's** subject. This is the only place found where history shape feeds
+generated output — the digest was checked and does not depend on it — but it is
+enough to make the rule mandatory rather than stylistic:
+
+> The merge subject names the campaign and its headline, in a form that reads
+> correctly as a census epoch label standing alone.
+
+Shape:
+
+```
+merge(the-wookie): <one-line headline>
+
+Gated as the merge product by sluice job <job-id>.
+main was <sha> at test time; phases green: artifacts outboard gate
+seam-guard clients heavy.
+```
+
+The consequence to keep in view: a bad merge subject is not a cosmetic
+problem, it silently degrades a committed artifact. `tools/census/history.sh`
+is the witness, and the campaign owes it a test.
+
+#### 5.3.3 Where a fix goes
 
 The `--no-ff` topology splits this, and the split is the rule:
 
@@ -280,7 +325,7 @@ default":
 **The operator does not become the crew.** A fix belongs on the campaign
 branch. Under the `--no-ff` topology the chamber sits on a detached HEAD, so
 this is a **rule the queue must enforce** rather than something the topology
-gives for free (§5.3.2): a behavioural fix is committed to the branch and the
+gives for free (§5.3.3): a behavioural fix is committed to the branch and the
 merge redone, never amended into the merge commit. Where the defect needs the
 author's knowledge, the request is bounced back with the evidence rather than
 fixed in the chamber at all.
@@ -412,7 +457,7 @@ Reviewed 2026-08-15. Two items decided by Nathan, two still open.
    **104 a month instead of the measured 993** — which is the unit the project
    already thinks in. The mechanics this forces are in §5.3.1 (detached HEAD,
    because the pre-commit hook refuses `main` from a linked worktree) and
-   §5.3.2 (conflict resolution lives in the merge commit; a behavioural fix
+   §5.3.3 (conflict resolution lives in the merge commit; a behavioural fix
    goes on the campaign branch and the merge is redone).
 2. **P1 — DECIDED and DONE.** Push credentials wired and verified (§9).
 3. **P2 — still open.** The heavy tier's baseline on `main`, and whether it
