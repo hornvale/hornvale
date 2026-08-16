@@ -33,7 +33,12 @@ bad()  { printf '  FAIL: %s\n' "$1"; fail=$((fail+1)); }
 g()    { env -u GIT_DIR -u GIT_INDEX_FILE git "$@"; }
 
 tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
+# The request-path mutation test below has to write its mutant INSIDE
+# scripts/ (see its own comment for why $tmp cannot host it), so the EXIT
+# trap sweeps that path too — belt-and-suspenders alongside the `rm -f`
+# immediately after that test uses it, in case `set -e` aborts the script
+# somewhere in between.
+trap 'rm -rf "$tmp"; rm -f "$repo_root/scripts/.sluice-request-mutant-for-test.sh"' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
 # A scratch repo with a main line and two campaign commits on one branch.
@@ -1468,273 +1473,141 @@ else
 fi
 rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
 
-echo "== push: every git push in sluice-run.sh is an exact member of the reviewed allowlist"
-# FIX ROUND 2 (coordinator's redirect): fix round 1's guard was a DENYLIST —
-# it named specific forbidden shapes and excluded two known-safe lines by
-# substring. The reviewer broke it with five forms it never named. A
-# denylist over shell syntax cannot be completed — every closed form invites
-# a sixth. So this is an ALLOWLIST: the only thing checked is whether every
-# `git push` invocation in this file is a byte-for-byte match of one of the
-# exactly two we have reviewed.
-#
-# FIX ROUND 3 (this section, rewritten): round 2's own line-joiner
-# reimplemented bash's continuation semantics by hand — `line="$buf $line"`
-# — and got them wrong: bash DELETES a backslash-newline and concatenates
-# with NOTHING between the fragments, not a space. `git pu\`-then-newline-
-# then-`sh -f origin …` genuinely runs as `git push -f origin …` (confirmed
-# with `bash -x`); the hand-rolled joiner produced `git pu sh -f origin …`,
-# splitting the word "push" across a space, so the detector never matched
-# and reported zero violations. Worse, the same hand-rolled model treated
-# a COMMENT line ending in a backslash as continuing into the next line too
-# — which real bash does not do (a comment always ends at its own newline)
-# — so `# comment \` followed by a real `git push -f …` on the next line
-# would have had the real, executing line SWALLOWED into what the detector
-# treated as pure comment text and never inspected at all.
-#
-# THE FIX IS TO STOP MODELLING BASH AND START ASKING IT. `extract_logical_lines`
-# below wraps the target file's content as a function BODY and `source`s the
-# wrapper — sourcing only DEFINES the function, it never calls it, so this is
-# safe regardless of what the file contains, including an actively malicious
-# mutation — then reads the definition back with `declare -f`. Bash's own
-# parser has, by construction, already resolved every continuation, every
-# quote span, and every comment boundary correctly by the time it stored the
-# parsed function; `declare -f` re-serializes THAT, not a second, competing
-# guess at bash's own grammar. Verified directly: `declare -f` joins
-# `git pu\<NL>sh` into `git push` with no space; a multi-line double-quoted
-# string with an internal backslash-continuation is joined the same way,
-# still inside the quotes; a comment ending in `\` terminates normally and
-# the real statement after it appears as its own, separate, fully-visible
-# logical line — all three checked in `scripts/test-sluice.sh`'s battery
-# below, not merely asserted here.
-#
-# WHAT THIS STILL DOES NOT COVER, precisely: `declare -f` reflects bash's
-# LEXICAL/PARSE-TIME structure (comments, quotes, continuations), never its
-# RUNTIME argv formation (quote REMOVAL, variable/command substitution,
-# globbing) — those happen only when the function is actually CALLED, which
-# this deliberately never does. So `p=push; git "$p" …` and `git p''ush …`
-# both still evade this detector: in the first, the literal word "push" is
-# never on the page at all; in the second, `declare -f` preserves the quote
-# characters verbatim (`p''ush`), so the literal contiguous word "push"
-# genuinely is not there either, even though bash's runtime quote-removal
-# would reassemble it. Both are demonstrated, not merely claimed, further
-# down. Closing this class would mean statically evaluating quote-removal
-# and/or auditing every `git` invocation in the file (this one also calls
-# fetch/checkout/rev-parse/status/diff/clean/add/commit/merge/worktree/log/
-# rev-list/merge-base/branch/ls-remote/config) against a much larger
-# allowlist — a different, bigger task than "every git push is reviewed,"
-# and the one honest limit of a static, never-execute detector: only runtime
-# execution resolves runtime word-formation, and this detector deliberately
-# never executes anything.
-#
-# CANDIDATE DETECTION AND THE ALLOWLIST are otherwise unchanged from round 2:
-# a logical line is a "push line" candidate if it contains the word-bounded
-# tokens `git` and `push`, in that order, anywhere on the line
-# (`\bgit\b.*\bpush\b`); comment-only lines are dropped first; the allowlist
-# is the two legitimate lines' own text, whitespace-normalised (indentation
-# collapsed, one optional trailing `;` stripped — `declare -f` adds that
-# separator to every non-final statement in the block, so whether a wholly
-# unrelated edit follows this line elsewhere in the file must not change
-# whether IT matches).
-extract_logical_lines() {
-    local file="$1" wrapper rc out
-    wrapper="$(mktemp)"
-    {
-        echo '__sluice_audit_wrapped_fn() {'
-        cat "$file"
-        echo '}'
-    } > "$wrapper"
-    # `source`, never anything that calls the function: defining a function
-    # has zero side effects, so this is safe no matter what "$file" contains.
-    out="$(bash -c 'source "$1" 2>&1 && declare -f __sluice_audit_wrapped_fn' _ "$wrapper" 2>&1)"
-    rc=$?
-    rm -f "$wrapper"
-    printf '%s' "$out"
-    return "$rc"
-}
-
-normalize_push_ws() {
-    local s
-    s="$(printf '%s' "$1" | tr -s '[:space:]' ' ' | sed -e 's/^ *//' -e 's/ *$//')"
-    case "$s" in
-        *';') s="${s%;}" ;;
-    esac
-    printf '%s' "$s"
-}
-
-# shellcheck disable=SC2016  # deliberately literal: this is sluice-run.sh's
-# own SOURCE TEXT compared byte-for-byte, not an expression meant to expand
-# in this script's environment.
-allowed_push_1='if ! git push origin "$final_sha:refs/heads/main"; then'
-# shellcheck disable=SC2016
-# `1>&2`, not `>&2`: `declare -f` always writes an explicit stdout fd when it
-# re-prints a `>&2` redirect — deterministic bash canonicalisation, not a
-# quirk of this one line — so the allowlist is written in the form the
-# comparison will actually see.
-allowed_push_2='git push origin "HEAD:refs/heads/$branch" || echo "sluice-run: warning — could not update $branch; main is already landed." 1>&2'
-
-# $1 = path to scan. Prints every non-allowlisted push-shaped logical line
-# found (empty output = clean). A separate function (not inlined at the call
-# site) so the same audit can run against a scratch mutation file below,
-# proving each bypass is actually caught by THIS code, not by eyeballing it.
-# FAILS CLOSED: if bash cannot parse the file as a function body at all (a
-# genuine syntax error, or anything else that makes extraction fail), that
-# is reported AS a violation — "cannot certify this file push-safe" — never
-# silently treated as zero violations.
-audit_push_allowlist() {
-    local file="$1" extracted rc logical trimmed
-    extracted="$(extract_logical_lines "$file")"
-    rc=$?
-    if [ "$rc" -ne 0 ] || [ -z "$extracted" ]; then
-        printf '%s\n' "PARSE FAILURE — cannot certify this file push-safe (bash could not parse it as a function body)"
-        return 0
-    fi
-    while IFS= read -r logical; do
-        trimmed="$(normalize_push_ws "$logical")"
-        case "$trimmed" in
-            ''|'#'*) continue ;;
-        esac
-        if printf '%s' "$trimmed" | grep -qE '\bgit\b.*\bpush\b'; then
-            if [ "$trimmed" != "$allowed_push_1" ] && [ "$trimmed" != "$allowed_push_2" ]; then
-                printf '%s\n' "$trimmed"
-            fi
-        fi
-    done <<< "$extracted"
-}
-
-push_violations="$(audit_push_allowlist "$repo_root/scripts/sluice-run.sh")"
-if [ -n "$push_violations" ]; then
-    bad "a git push line is not an exact member of the reviewed allowlist:
-$push_violations"
+echo "== request: REF shape validation (no ssh involved)"
+if bash "$repo_root/scripts/sluice-request.sh" campaign/x short 2>"$tmp/req.err"; then
+    bad "a short REF was accepted"
 else
-    ok "every git push in sluice-run.sh is an exact member of the reviewed allowlist"
+    ok "a short REF is refused (exit nonzero)"
+fi
+if grep -q '40-char SHA' "$tmp/req.err"; then
+    ok "the short-REF refusal names the 40-char requirement"
+else
+    bad "no 40-char message on a short REF"
 fi
 
-echo "== push: allowlist mutation battery — the reviewer's 5 bypasses plus 5 of our own, each caught"
-# Attack the allowlist itself, not just trust the design prose above. Each
-# case injects one bypass into a SCRATCH COPY of the real file (never the
-# committed one) immediately before the `last-pushed` write, then runs the
-# SAME `audit_push_allowlist` this section's own check above uses, so a
-# regression to either the detector or the allowlist text shows up here too.
-scratch_push_file="$tmp/sluice-run-attack.sh"
-# shellcheck disable=SC2016  # deliberately literal: matched against sluice-run.sh's own source text
-push_marker='printf '\''%s\n'\'' "$final_sha" > "$HV_SLUICE_DIR/last-pushed"'
-inject_push_mutation() {
-    local injection="$1" lineno
-    lineno="$(grep -n -F "$push_marker" "$repo_root/scripts/sluice-run.sh" | head -1 | cut -d: -f1)"
+echo "== request: an unpushed (but well-formed) REF is refused before ssh ever runs"
+# A syntactically valid 40-hex string that is not reachable from any remote
+# branch of THIS repo. sluice-request.sh's own repo_root is derived from its
+# OWN location (scripts/sluice-request.sh's BASH_SOURCE), not from cwd or any
+# scratch repo this suite builds elsewhere — same shape as
+# scripts/lane-dispatch.sh's own `git -C "$repo_root" branch -r --contains`,
+# so this check runs against the REAL repository test-sluice.sh itself lives
+# in, not the throwaway $scratch/$chamber_repo trees used above.
+unpushed_ref="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$unpushed_ref" 2>"$tmp/req2.err"; then
+    bad "an unpushed REF was accepted"
+else
+    ok "an unpushed (well-formed) REF is refused (exit nonzero)"
+fi
+if grep -q 'not on any remote branch' "$tmp/req2.err"; then
+    ok "the unpushed-REF refusal names the reason"
+else
+    bad "no 'not on any remote branch' message on an unpushed REF"
+fi
+
+echo "== request: durable-before-nudge — a failed remote enqueue prints no success line"
+# A fake `ssh` on PATH, standing in for the real canonical-box connection.
+# FAKE_SSH_RESULT picks whether the "remote" sluice-queue.sh add succeeded.
+# Real, already-pushed refs (this repo's own origin/main and
+# origin/campaign/the-sluice tips) so the REF-is-pushed check above this one
+# in sluice-request.sh passes and execution actually reaches the ssh call.
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/ssh" <<'FAKESSH'
+#!/usr/bin/env bash
+# Stand-in for a real ssh call in the request-path tests: ignores its host
+# and remote-command arguments (this suite is not exercising THEIR content,
+# only how sluice-request.sh reacts to the exit code and stdout/stderr ssh
+# would return) and answers according to $FAKE_SSH_RESULT.
+case "${FAKE_SSH_RESULT:-ok}" in
+    ok)   echo "req-deadbeef0000-20260101T000000Z" ;;
+    fail) echo "sluice-queue-remote: add refused" >&2; exit 1 ;;
+esac
+FAKESSH
+chmod +x "$tmp/bin/ssh"
+
+pushed_ref="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse origin/campaign/the-sluice)"
+
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=fail \
+    bash "$repo_root/scripts/sluice-request.sh" campaign/x "$pushed_ref" \
+    >"$tmp/req3.out" 2>"$tmp/req3.err"; then
+    bad "sluice-request.sh exited 0 despite a failed remote enqueue"
+else
+    ok "sluice-request.sh exits nonzero when the remote enqueue fails"
+fi
+if grep -q "read it back" "$tmp/req3.out"; then
+    bad "the nudge-worthy 'read it back' line was printed despite the enqueue failing — a caller watching stdout would wrongly nudge an operator about a request that was never queued"
+else
+    ok "no 'read it back' line on a failed enqueue — nothing here would cue a caller to nudge an operator about an unqueued request"
+fi
+if grep -q 'remote enqueue FAILED' "$tmp/req3.err"; then
+    ok "the failure is reported explicitly on stderr"
+else
+    bad "no explicit failure message on a failed enqueue"
+fi
+
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok \
+    bash "$repo_root/scripts/sluice-request.sh" campaign/x "$pushed_ref" \
+    >"$tmp/req4.out" 2>"$tmp/req4.err"; then
+    ok "sluice-request.sh exits 0 when the remote enqueue succeeds"
+else
+    bad "sluice-request.sh exited nonzero despite a successful (mocked) remote enqueue"
+fi
+if grep -q 'req-deadbeef0000-20260101T000000Z' "$tmp/req4.out" && grep -q "read it back" "$tmp/req4.out"; then
+    ok "a successful enqueue prints the id and the nudge-worthy 'read it back' line — exactly the signal a submit workflow should gate its operator-nudge step on"
+else
+    bad "a successful enqueue did not print the expected id/read-it-back lines"
+fi
+
+echo "== request: MUTATION — printing success unconditionally would flip the failed-enqueue test red"
+# Demonstrates the durable-before-nudge test above is non-vacuous: a
+# sluice-request.sh that echoes the ssh output regardless of its exit code
+# (the exact bug lane-dispatch.sh's own header names — "a dispatch that did
+# not start must not report success") makes the FAILURE case above wrongly
+# look like a nudge-worthy success.
+#
+# The mutant is written INSIDE scripts/, not under $tmp: sluice-request.sh
+# derives its own repo_root from its own BASH_SOURCE location (dirname/..),
+# so a copy living outside the repo cannot find
+# scripts/census-canonical-host.txt or `git -C` its way to a real repo at
+# all — this was caught live (the first cut of this mutation landed the
+# mutant in $tmp and failed for that reason, not because the mutation didn't
+# take). Removed unconditionally on the way out, success or failure.
+mutant="$repo_root/scripts/.sluice-request-mutant-for-test.sh"
+# Line-number surgery, not a text-pattern substitution: the four-line
+# `if ! req=...; then …; exit 1; fi` guard becomes one unconditional
+# assignment that swallows ssh's exit code entirely (`|| true`) — the exact
+# "reported success regardless of whether the remote side actually ran"
+# shape lane-dispatch.sh's own header warns about. Located by matching the
+# guard's own first and last lines so a future edit to sluice-request.sh
+# that moves this block does not silently mutate the wrong lines.
+# shellcheck disable=SC2016  # single-quoted on purpose: this is a literal grep pattern, not a shell expansion
+guard_start="$(grep -n '^if ! req="\$(ssh' "$repo_root/scripts/sluice-request.sh" | cut -d: -f1)"
+# The FIRST `^fi$' AFTER guard_start — sluice-request.sh's earlier
+# unpushed-ref check closes its own `if` with a bare `fi` too, so an
+# unconditional `head -1` over the whole file would find THAT one instead.
+guard_end="$(awk -v s="$guard_start" 'NR>s && /^fi$/{print NR; exit}' "$repo_root/scripts/sluice-request.sh")"
+if [ -z "$guard_start" ] || [ -z "$guard_end" ]; then
+    bad "could not locate the ssh-guard block in sluice-request.sh to mutate — sluice-request.sh may have changed shape"
+else
     {
-        head -n "$((lineno - 1))" "$repo_root/scripts/sluice-run.sh"
-        printf '%s\n' "$injection"
-        tail -n "+$lineno" "$repo_root/scripts/sluice-run.sh"
-    } > "$scratch_push_file"
-}
-assert_bypass_caught() {
-    local label="$1" injection="$2" result
-    inject_push_mutation "$injection"
-    result="$(audit_push_allowlist "$scratch_push_file")"
-    if [ -n "$result" ]; then
-        ok "bypass caught: $label"
+        head -n "$((guard_start - 1))" "$repo_root/scripts/sluice-request.sh"
+        # shellcheck disable=SC2016  # single-quoted on purpose: this is the literal mutant source line, not a shell expansion here
+        echo 'req="$(ssh "$host" "$remote_cmd" 2>/dev/null || true)"'
+        tail -n "+$((guard_end + 1))" "$repo_root/scripts/sluice-request.sh"
+    } > "$mutant"
+fi
+chmod +x "$mutant"
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=fail bash "$mutant" campaign/x "$pushed_ref" \
+    >"$tmp/req5.out" 2>"$tmp/req5.err"; then
+    if grep -q "read it back" "$tmp/req5.out"; then
+        ok "MUTATION CONFIRMED: the unguarded mutant prints the nudge-worthy line even on a failed enqueue (the real script does not — see above)"
     else
-        bad "bypass NOT caught (allowlist leaked): $label"
+        bad "the mutant did not reproduce the expected false-success shape"
     fi
-}
-
-assert_bypass_caught "reviewer 1: git push wrapped across lines, -f on the continuation" \
-    $'git push \\\n    -f origin "$final_sha:refs/heads/main"'
-assert_bypass_caught "reviewer 2: short refspec destination (no :refs/heads/ to anchor on)" \
-    'git push origin "+HEAD:main"'
-assert_bypass_caught "reviewer 3: destination built in a separately-declared variable" \
-    $'dst=refs/heads/main; git push origin "+$sha:$dst"'
-assert_bypass_caught "reviewer 4: force flag built in a variable" \
-    $'fflag=-f; git push $fflag origin "$final_sha:refs/heads/main"'
-assert_bypass_caught "reviewer 5: refspec concatenated from two variables" \
-    $'plus="+"; refspec="${plus}${sha}:refs/heads/main"; git push origin "$refspec"'
-assert_bypass_caught "ours 1: command-prefixed explicit --force" \
-    'command git push --force origin HEAD:refs/heads/main'
-assert_bypass_caught "ours 2: every push argument in one variable" \
-    $'GIT_PUSH_ARGS="-f origin HEAD:refs/heads/main"; git push $GIT_PUSH_ARGS'
-# shellcheck disable=SC2016  # deliberately literal mutation text, not an expression
-assert_bypass_caught "ours 3: --force-with-lease spelled out in full" \
-    'git push --force-with-lease origin "$final_sha:refs/heads/main"'
-# shellcheck disable=SC2016
-assert_bypass_caught "ours 4: syntactically clean, unreviewed destination branch" \
-    'git push origin "$final_sha:refs/heads/evil-branch"'
-assert_bypass_caught "ours 5: eval-wrapped push string" \
-    "eval 'git push -f origin HEAD:refs/heads/main'"
-
-echo "== push: round 3 — the reviewer's two reported joiner bypasses, plus new attacks against the joiner itself"
-# The two forms the reviewer reproduced with `bash -x` and a real git error:
-# a mid-WORD split (the space-insertion bug: round 2's joiner turned "push"
-# into "pu sh") and the same thing splitting BOTH words across several
-# continuations. Both are regression cases now, not just narrative — if the
-# `declare -f`-based extractor above is ever swapped back for a hand-rolled
-# joiner that reintroduces the space, these go red immediately.
-assert_bypass_caught "reviewer round-3 #1: mid-word split (git pu\\<newline>sh)" \
-    $'git pu\\\nsh -f origin HEAD:refs/heads/main'
-assert_bypass_caught "reviewer round-3 #2: both words split across several continuations" \
-    $'gi\\\nt \\\npu\\\nsh -f origin HEAD:refs/heads/main'
-
-# Four more, aimed at the JOINER's semantics specifically (not the allowlist
-# text) — each is a distinct way a line-oriented, hand-rolled continuation
-# model gets bash's real grammar wrong; all four are correctly handled here
-# because `declare -f` reflects bash's own parse, not a second guess at it.
-assert_bypass_caught "joiner attack #1: backslash before trailing whitespace is NOT a real continuation" \
-    $'git push origin "$final_sha:refs/heads/main" \\ \necho should-not-matter'
-assert_bypass_caught "joiner attack #2: backslash at the end of a COMMENT line does not hide the real line after it" \
-    $'# ordinary comment \\\ngit push -f origin HEAD:refs/heads/main'
-assert_bypass_caught "joiner attack #3: doubled backslash at line end is an ESCAPED backslash, not a continuation" \
-    $'echo "line ends in an escaped backslash" \\\\\ngit push -f origin HEAD:refs/heads/main'
-assert_bypass_caught "joiner attack #4: a continuation split INSIDE a double-quoted string, smuggling real code after it closes" \
-    $'x="start \\\ngit push -f origin HEAD:refs/heads/main #end"'
-
-rm -f "$scratch_push_file"
-
-# THE HONEST LIMIT, widened this round after finding a SECOND form in the
-# same family while building the battery above (not invented for this
-# comment). Both remaining gaps are the same root cause, restated precisely:
-# `declare -f` reflects bash's PARSE-TIME structure (comments, quotes,
-# continuations — all correctly resolved now), never its RUNTIME argv
-# formation (quote removal, variable/command substitution). Two distinct
-# ways to exploit that:
-#   1. `p=push; git "$p" -f origin HEAD:refs/heads/main` — the literal word
-#      "push" is never on the page; it exists only as the RUNTIME VALUE of
-#      $p, which this detector never evaluates (it never executes anything).
-#   2. `git p''ush -f origin HEAD:refs/heads/main` — the literal word IS on
-#      the page, but split by two adjacent empty quotes; bash's runtime
-#      quote-removal concatenates the argv token to "push", but `declare -f`
-#      preserves the quote characters verbatim (`p''ush`), so no contiguous
-#      "push" ever appears in the text this detector reads.
-# Recognising either would mean auditing EVERY `git` invocation in this file
-# against a much larger allowlist (this file also calls fetch/checkout/
-# rev-parse/status/diff/clean/add/commit/merge/worktree/log/rev-list/
-# merge-base/branch/ls-remote/config) or statically evaluating quote-removal
-# — a different, bigger task than "every git push is reviewed." Named here,
-# with both forms locked into the battery below as EXPECTED misses, rather
-# than left for the allowlist's own passing test to overstate what it covers.
-echo "== push: acknowledged gap — runtime word-formation (subcommand indirection, quote-splitting) is not caught (documented, not fixed)"
-cat > "$tmp/subcommand-indirect-demo.sh" << 'DEMO'
-#!/usr/bin/env bash
-p=push
-git "$p" -f origin HEAD:refs/heads/main
-DEMO
-demo_result="$(audit_push_allowlist "$tmp/subcommand-indirect-demo.sh")"
-if [ -z "$demo_result" ]; then
-    ok "confirmed: subcommand-name indirection evades this detector (acknowledged limitation, not a silent gap)"
 else
-    bad "subcommand-name indirection was unexpectedly caught — the limitation comment above is now stale and should be removed"
+    bad "the mutant unexpectedly still exited nonzero — mutation did not take"
 fi
-rm -f "$tmp/subcommand-indirect-demo.sh"
-
-cat > "$tmp/quote-split-demo.sh" << 'DEMO'
-#!/usr/bin/env bash
-git p''ush -f origin HEAD:refs/heads/main
-DEMO
-quote_split_result="$(audit_push_allowlist "$tmp/quote-split-demo.sh")"
-if [ -z "$quote_split_result" ]; then
-    ok "confirmed: quote-splitting the word 'push' evades this detector (acknowledged limitation, not a silent gap)"
-else
-    bad "quote-splitting was unexpectedly caught — the limitation comment above is now stale and should be removed"
-fi
-rm -f "$tmp/quote-split-demo.sh"
+rm -f "$mutant"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
