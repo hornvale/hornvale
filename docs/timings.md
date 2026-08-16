@@ -1200,3 +1200,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-16T19:41:53Z | gate-commit | 24.295 | 56.571 | 12.734 | 2.85 | 0 | cc1552a6 | campaign/the-retelling | MacBookPro | 10 |
 | 2026-08-16T20:14:10Z | rebaseline | 118.587 | 215.781 | 8.800 | 1.89 | 0 | 59afd515 | campaign/the-begat | MacBookPro | 10 |
 | 2026-08-16T20:19:42Z | gate-commit | 312.423 | 749.634 | 197.225 | 3.03 | 0 | 59afd515 | campaign/the-begat | MacBookPro | 10 |
+| 2026-08-16T20:20:49Z | gate-commit | 22.631 | 55.229 | 12.026 | 2.97 | 0 | 59afd515 | campaign/the-begat | MacBookPro | 10 |
