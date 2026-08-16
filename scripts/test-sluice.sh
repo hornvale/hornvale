@@ -519,6 +519,19 @@ else
 fi
 
 echo "== chamber: setup =="
+# The mouth tests above export HV_SLUICE_BASE=main and never unset it — fine
+# for them (base_ref there is only ever resolved, never CHASED across a
+# moving remote). Left set, every chamber test below would resolve its base
+# against $chamber_repo's own local `main` branch, which new_topic_branch()
+# always builds FROM and nothing ever advances — instead of `origin/main`,
+# which Task 5's real push moves forward after every successful landing. That
+# mismatch is invisible until a push actually happens: leaked into the
+# chamber section it built every later scenario on the SAME stale base,
+# so each one but the first was pushing a tree that no longer led to the
+# (by-then-advanced) origin/main — a real non-fast-forward rejection, not a
+# bug in the push guard. Unset it here so the chamber's own default
+# (origin/main) governs, matching production.
+unset HV_SLUICE_BASE
 # scripts/sluice-run.sh is a full standalone entry point (its own worktree,
 # its own claim, its own merge), not a library sourced with mocked
 # variables the way test-lane.sh extracts lane-run.sh's tail. So it is run
@@ -544,15 +557,29 @@ mkdir -p "$chamber_repo"
     # path must too.
     mkdir -p docs
     printf '# timings\n' > docs/timings.md
-    g add docs/timings.md
+    # A TRACKED, empty (comment-only) docs/generated-paths.txt — Task 5's
+    # drift check reads this file by name (`grep -v '^#' docs/generated-paths.txt`),
+    # and without it here the check's `grep` fails ("No such file or
+    # directory"), silently degrading `git diff --exit-code -- $(…)` to a
+    # bare `git diff --exit-code --` (no pathspec — a whole-tree diff that
+    # happens to still pass here, but for the wrong reason, and would hide a
+    # real omission in production). No entries: no chamber test phase here
+    # authors anything this path list would need to name.
+    printf '# no generated paths in this scratch fixture\n' > docs/generated-paths.txt
+    g add docs/timings.md docs/generated-paths.txt
     g commit -qm root
 )
-CHAMBER_MAIN="$(g -C "$chamber_repo" rev-parse main)"
-# Fakes a pushed `origin/main` without a real remote: sluice-run.sh resolves
-# its base via `git rev-parse origin/main` (or HV_SLUICE_BASE), and a
-# remote-tracking ref under refs/remotes/ satisfies that regardless of
-# whether an `origin` remote is actually configured.
-g -C "$chamber_repo" update-ref refs/remotes/origin/main "$CHAMBER_MAIN"
+# A REAL bare repo as `origin` — Task 5 adds an actual `git push origin`, so
+# the stand-in remote-tracking ref that sufficed for Tasks 2-4 (which never
+# pushed) no longer does: a push needs somewhere real to land. This is a
+# throwaway bare repo under $tmp, NEVER this repository's real origin — see
+# the campaign's own push-safety rule (root of this task's brief).
+chamber_origin="$tmp/chamber-origin.git"
+git init -q --bare -b main "$chamber_origin"
+g -C "$chamber_repo" remote add origin "$chamber_origin"
+g -C "$chamber_repo" push -q origin main
+g -C "$chamber_repo" fetch -q origin
+echo "test-sluice: chamber origin is $(g -C "$chamber_repo" remote get-url origin) (must be under \$tmp, never the real repo)"
 
 # The chamber sources scripts/census-canonical-host.sh and invokes
 # scripts/timed.sh from `$repo_root/scripts/`, both resolved relative to
@@ -689,6 +716,24 @@ if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
     ok "the claim is removed after a normal (rc=0) exit"
 else
     bad "the claim survived a normal exit"
+fi
+
+# THE INTERFACE CONTRACT ITSELF (this task's brief): a green chamber run
+# produces $HV_SLUICE_DIR/last-pushed containing the SHA it just pushed, and
+# that SHA is genuinely what landed on the shared origin's main — not merely
+# a file that happens to exist.
+wt1_final_sha="$(g -C "$wt1" rev-parse HEAD)"
+origin1_main_sha="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+last_pushed_val="$(cat "$HV_SLUICE_DIR/last-pushed" 2>/dev/null || true)"
+if [ -f "$HV_SLUICE_DIR/last-pushed" ] && [ "$last_pushed_val" = "$wt1_final_sha" ]; then
+    ok "last-pushed contains the exact SHA the run's own tree landed at ($wt1_final_sha)"
+else
+    bad "last-pushed is '$last_pushed_val', expected '$wt1_final_sha'"
+fi
+if [ "$origin1_main_sha" = "$wt1_final_sha" ]; then
+    ok "the shared origin's main genuinely advanced to that same SHA"
+else
+    bad "origin main is '$origin1_main_sha', expected '$wt1_final_sha' — last-pushed does not reflect what actually landed"
 fi
 
 echo "== chamber: a non-authoring phase's TRACKED drift does not poison the next phase's tree (fix round 1, Critical 1) =="
@@ -1100,6 +1145,78 @@ else
     bad "jobs.tsv rc column is '$rc_col', expected non-zero"
 fi
 
+echo "== push: a chamber killed mid-phase never pushes — main does not move (this is the assertion that matters most in the whole campaign) =="
+# Task 4's review found that \$? inside bash's own EXIT trap reads 0 when the
+# shell dies from a signal, so a killed run's rc alone cannot be trusted to
+# gate the push — the \`why\` guard (Step 3, sluice-run.sh) exists for exactly
+# this. This cannot be proven from the outside (the guard is INSIDE the
+# script that owns the push): construct a real chamber run, kill it with
+# SIGTERM mid-phase — before it ever reaches the drift check or the push —
+# and assert on the one fact that actually matters: the SHARED ORIGIN'S main
+# never moved. jobs.tsv's why/rc columns are checked too, but only as
+# corroborating evidence; a reviewer could otherwise object that a message
+# alone was checked while the push silently happened anyway.
+origin_main_before_kill="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+
+lane_sets_push="$tmp/lane-sets-push.tsv"
+sleeper_pid_file="$tmp/sleeper-pid"; rm -f "$sleeper_pid_file"
+cat > "$tmp/phase-sleeper.sh" <<'SH'
+#!/usr/bin/env bash
+( sleep 30 ) &
+echo $! > "$SLEEPER_PID_FILE"
+wait
+SH
+chmod +x "$tmp/phase-sleeper.sh"
+printf 'sleeper\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-sleeper.sh" > "$lane_sets_push"
+
+shapush="$(new_topic_branch campaign/tpush topicpush.txt)"
+wtpush="$tmp/wtpush"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_push"
+export HV_SLUICE_PHASES="sleeper"
+export HV_SLUICE_WORKTREE="$wtpush"
+export HV_CENSUS_CLAIM_PATH="$tmp/claimpush"
+export SLEEPER_PID_FILE="$sleeper_pid_file"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+bash "$repo_root/scripts/sluice-run.sh" campaign/tpush "$shapush" > "$tmp/runpush.out" 2>&1 &
+runpush_pid=$!
+
+if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
+    ok "the claim appears before the sleeper phase completes"
+else
+    bad "the claim never appeared — cannot test the push guard"
+fi
+if poll_for_file "$sleeper_pid_file" 50; then
+    ok "the sleeper phase's own grandchild has started (so the kill lands mid-phase, well before the push)"
+else
+    bad "the sleeper grandchild never started — cannot test the push guard"
+fi
+chamberpush_pid="$(awk -F= '$1=="pid"{print $2}' "$HV_CENSUS_CLAIM_PATH")"
+
+kill -TERM "$chamberpush_pid" 2>/dev/null || true
+wait "$runpush_pid" 2>/dev/null || true
+
+origin_main_after_kill="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+if [ "$origin_main_after_kill" = "$origin_main_before_kill" ]; then
+    ok "the shared origin's main did NOT move after a mid-phase SIGTERM kill — the killed candidate was never pushed"
+else
+    bad "origin's main MOVED after a killed run ($origin_main_before_kill -> $origin_main_after_kill) — an untested tree reached main"
+fi
+
+why_col_push="$(awk -F'\t' -v j="sluice-${shapush:0:12}" '$0 ~ j {print $5}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+rc_col_push="$(awk -F'\t' -v j="sluice-${shapush:0:12}" '$0 ~ j {print $6}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+if [ "$why_col_push" = "TERM" ]; then
+    ok "jobs.tsv records why=TERM for the killed candidate (corroborating evidence, not the property itself)"
+else
+    bad "jobs.tsv why column is '$why_col_push', expected 'TERM'"
+fi
+if [ -n "$rc_col_push" ] && [ "$rc_col_push" -ne 0 ] 2>/dev/null; then
+    ok "jobs.tsv records a non-zero rc ($rc_col_push) for the killed candidate"
+else
+    bad "jobs.tsv rc column is '$rc_col_push', expected non-zero"
+fi
+
 echo "== chamber: a child that traps and swallows TERM is escalated to SIGKILL within a bounded deadline, and the lock is genuinely freed (fix round 2) =="
 # Reproduces the exact reported mechanism: round 1's handle_signal sent
 # TERM and then `wait`ed with no timeout and no escalation. Verified by the
@@ -1276,6 +1393,38 @@ if [ "$caught_count" -eq 1 ]; then
     ok "exactly one shutdown sequence ran (one 'caught SIG' line) — the second signal did not restack a second escalation"
 else
     bad "expected exactly one 'caught SIG' line, found $caught_count — the second signal may have restacked the shutdown"
+fi
+
+echo "== push: the recorded last-pushed SHA is what the mouth compares against"
+cd "$scratch"
+mkdir -p "$HV_SLUICE_DIR"
+g checkout -q main
+g rev-parse main > "$HV_SLUICE_DIR/last-pushed"
+# Move main out from under the recorded value — simulating an out-of-band land.
+printf 'oob\n' >> f.txt; g commit -qam out-of-band
+export HV_SLUICE_BASE=main
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/x "$NEW" >/dev/null 2>"$tmp/oob.err"
+rc=$?
+set -e
+if [ "$rc" -eq 4 ]; then
+    ok "an out-of-band landing on the base is detected (exit 4)"
+else
+    bad "expected exit 4 for an out-of-band landing, got $rc"
+fi
+if grep -q 'OUT-OF-BAND' "$tmp/oob.err"; then
+    ok "the out-of-band message names the condition"
+else
+    bad "no OUT-OF-BAND message"
+fi
+rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
+
+echo "== push: no force flag exists anywhere in the chamber"
+if grep -nE '(--force-with-lease|--force([^-]|$)|push .*\+)' "$repo_root/scripts/sluice-run.sh" \
+     | grep -v 'checkout --force' | grep -v 'worktree add --force' | grep -q .; then
+    bad "a force flag reaches the push path"
+else
+    ok "no force flag on any push in sluice-run.sh"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

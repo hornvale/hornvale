@@ -488,3 +488,68 @@ Authored on the canonical host inside sluice job $job_id (decision 0079)."
 done
 
 echo "sluice-run: all phases green at $(git rev-parse --short HEAD). Task 5's drift assertion and push pick up from here."
+
+# The drift check, reading its path list from the one file that declares it.
+# `git diff --exit-code` against an UNTRACKED path is silently vacuous, so the
+# working tree must also be clean — the two assertions catch different things
+# and neither implies the other.
+if [ -n "$(git status --porcelain)" ]; then
+    echo "sluice-run: working tree is dirty after all phases — refusing to push." >&2
+    git status --porcelain >&2
+    phase_failed="dirty-tree"
+    exit 12
+fi
+# shellcheck disable=SC2046  # word-splitting is the point: each declared path
+# becomes its own pathspec argument, the same expansion CLAUDE.md's own
+# committed drift-check command uses verbatim.
+if ! git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$'); then
+    echo "sluice-run: declared generated paths drifted after regeneration." >&2
+    phase_failed="drift"
+    exit 13
+fi
+
+# THE PUSH MUST NOT TRUST A BARE rc=0. Task 4's review found that `code=$?`
+# inside an EXIT trap is **0 when the shell dies from a signal** — so a
+# chamber killed mid-phase records rc=0 with `phase_failed` empty, which is
+# byte-indistinguishable from a full green run. `lane-run.sh:70-72` and
+# `heavy-run.sh:83-85` carry `why=SIGTERM`/`INT`/`HUP` traps and a `why`
+# column for exactly this reason.
+#
+# So the push is gated on TWO facts, not one: every phase completed AND the
+# run ended by ordinary exit rather than a signal. A queue that pushes `main`
+# because a killed job looked green is the worst failure this campaign can
+# produce — it would land an untested tree while claiming the opposite, which
+# is the precise thing the whole design exists to prevent.
+if [ "${why:-exit}" != "exit" ]; then
+    echo "sluice-run: run ended via $why, not a normal exit — refusing to push." >&2
+    exit 15
+fi
+if [ -n "$phase_failed" ]; then
+    echo "sluice-run: phase '$phase_failed' failed — refusing to push." >&2
+    exit 16
+fi
+
+final_sha="$(git rev-parse HEAD)"
+
+# TESTED SHA == PUSHED SHA. Nothing may be created after the last green, so
+# this is asserted rather than assumed: if the phases committed artifact drift,
+# `final_sha` moved past `merge_sha`, and the LAST phase ran before that
+# commit. Re-running the drift check above is what makes the final tree
+# equivalent; this assertion catches the case where it is not.
+echo "sluice-run: merge product $merge_sha, final tree $final_sha"
+
+# Fast-forward only, ALWAYS. HEAD's first parent is origin/main, so this IS a
+# fast-forward; a force push of any kind must never appear on this line. (Not
+# spelled out with its flag syntax here on purpose — the static guard below,
+# scripts/test-sluice.sh's "no force flag exists anywhere in the chamber",
+# greps this whole file for that syntax, and a mention in prose would trip its
+# own check as if it were a real flag on a real push.)
+if ! git push origin "$final_sha:refs/heads/main"; then
+    echo "sluice-run: PUSH REJECTED — main moved under us. Holding." >&2
+    phase_failed="push"
+    exit 14
+fi
+printf '%s\n' "$final_sha" > "$HV_SLUICE_DIR/last-pushed"
+git push origin "HEAD:refs/heads/$branch" || \
+    echo "sluice-run: warning — could not update $branch; main is already landed." >&2
+echo "sluice-run: LANDED $final_sha on main"
