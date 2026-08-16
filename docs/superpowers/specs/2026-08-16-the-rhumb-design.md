@@ -293,6 +293,66 @@ a single trajectory can fail to vary.
 turns out to be indistinguishable at the distances a player walks, that is
 worth shipping as the null and taking the simpler implementation.
 
+### 7.1 RESULT (post-hoc) — H1's second clause is FALSIFIED
+
+**Nothing above this line has been edited.** H1 as preregistered is left
+exactly as frozen; this section records what measurement returned. Rewriting
+the hypothesis to match the result is the thing the freeze exists to prevent.
+
+H1 bundled two claims, and they have different fates.
+
+**The meridian invariant HOLDS, everywhere.** On a due-north course the
+carried reckoned point never leaves its meridian, to within 5.68e-14° of
+floating-point wobble in `normalize_lon`'s modulo chain — constant across
+forty steps, non-accumulating. This is the dead-reckoning property, it is
+what distinguishes the design from a memoryless walk, and it is the half
+worth having.
+
+**The one-step cross-track bound on the WALKED CELL is false in general.**
+Measured on correct code, the walked cell's deviation from the meridian
+exceeds one step length at 27 of 40 steps at some addresses, and **the error
+is unbounded**: 8.8 step-lengths at step 99, 44.0 at 499, **172.6 at 1,999**,
+growing linearly at ~0.086 per step.
+
+**The mechanism is lattice-meridian alignment, not latitude.** This was
+mis-diagnosed twice before it was measured — first as an equatorial effect,
+then as a latitude effect — and neither survives. Two addresses at latitude
+*exactly* 0.0 show zero exceedances; four between 31.7° and 58.3° show 19 of
+40; and one fixture's sibling at the *identical* latitude on another base
+face is among the worst in an 80-address sweep. What actually governs is the
+local triad's geometry, and the lattice alternates orientations so a walker
+meets two triads on alternate steps:
+
+- Where one triad offers an edge at bearing **exactly 0.00°** and the other
+  offers symmetric **±65.35°**, the walk closes into a 4-cycle with zero net
+  bias and stays bounded — 0.851 step-lengths, forever.
+- Where the two near-north edges are **asymmetric** (+18.0° and −47.35°,
+  midpoint −14.7°), no combination of available edges points north, and bias
+  accumulates without limit.
+
+**What this changes, and what it does not.** It does not touch the design:
+compass navigation still works, every direction still resolves, and the
+course still holds its bearing. What it retires is the belief that a
+discrete triangular lattice can track a rhumb to within a cell everywhere —
+it cannot, and the residual is a property of the tiling rather than of the
+navigation. A player walking a long due-north line will drift off their
+meridian at a rate set by the ground they cross.
+
+**Disclosure, because the process matters as much as the number.** The
+falsification surfaced when a test fixture was moved from an address where
+the assertion failed to one where it passed. That move is metric-chasing by
+the standard test — it would not have been made had the assertion passed —
+and it was caught only because the change was disclosed in full and a
+reviewer re-derived the mechanism rather than accepting the stated one. The
+fixture stays where it is; the assertion stays too, now documented as
+pinning a lattice-quantization property true *at that address* and known
+false in general.
+
+**Follow-up worth a registry row, not this campaign:** whether a
+bias-correcting resolution (choosing the edge that minimises *accumulated*
+cross-track rather than distance to the reckoned point) would bound the
+error everywhere. That is a different algorithm, not a fix to this one.
+
 ---
 
 ## 8. Out of scope, carried forward rather than dropped
