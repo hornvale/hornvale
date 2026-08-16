@@ -137,6 +137,21 @@ pub fn bearing_of(c: Compass) -> f64 {
     }
 }
 
+/// A held bearing and the point dead reckoning has carried the walker to.
+///
+/// `reckoned` is NOT a cell. It advances exactly along the rhumb and is
+/// never snapped to the cell the walker actually landed on — that is the
+/// whole mechanism. Snapping it would reduce this to picking the
+/// nearest-bearing neighbour each step, whose error is a random walk.
+/// type-audit: pending(wave-3: bearing_deg)
+#[derive(Debug, Clone, PartialEq)]
+pub struct Course {
+    /// Degrees clockwise from north; one of the eight canonical bearings.
+    pub bearing_deg: f64,
+    /// Where exact dead reckoning has arrived, independent of any cell.
+    pub reckoned: GeoCoord,
+}
+
 /// Fold a longitude in degrees into `GeoCoord`'s documented `(-180, 180]`.
 ///
 /// `%` alone is not enough: Rust's remainder keeps the sign of the dividend,

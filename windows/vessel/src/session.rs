@@ -392,6 +392,12 @@ pub struct Session<'w> {
     agent: Agent,
     knowledge: Knowledge,
     trail: Vec<RoomAddr>,
+    /// The walk-band course, if the possession is mid-traverse.
+    ///
+    /// `None` before the first `go` and after any verb that invalidates a
+    /// heading. Never serialized: a world is a seed plus a ledger, and a
+    /// course is a fact about this session's walk, not about the world.
+    course: Option<crate::course::Course>,
     day: WorldTime,
     focalizer: TemplateFocalizer,
     projection: IdentityProjection,
@@ -738,6 +744,7 @@ impl<'w> Session<'w> {
             agent,
             knowledge: Knowledge::default(),
             trail: Vec::new(),
+            course: None,
             day: opts.day,
             focalizer: TemplateFocalizer,
             projection: IdentityProjection,
@@ -1672,29 +1679,28 @@ impl<'w> Session<'w> {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
         };
-        let v = match observable(self.world, &self.wctx.ctx, &self.agent, self.day) {
-            Ok(v) => v,
-            Err(e) => return Turn::Out(format!("error: {e}")),
+        // The locale itself is no longer consulted for exit matching — a rhumb
+        // course resolves against pure geometry (`self.agent.position` and its
+        // neighbours), not `v.locale.exits` — but the current position must
+        // still be observable before a step is taken from it, so the call
+        // stays for its error-detection side effect alone.
+        if let Err(e) = observable(self.world, &self.wctx.ctx, &self.agent, self.day) {
+            return Turn::Out(format!("error: {e}"));
+        }
+        let bearing = crate::course::bearing_of(wanted);
+        // Continue an existing course only when the bearing is unchanged;
+        // any other direction starts a fresh one from where we stand.
+        let mut course = match self.course.take() {
+            Some(c) if c.bearing_deg == bearing => c,
+            _ => crate::course::Course {
+                bearing_deg: bearing,
+                reckoned: self.agent.position.coord(),
+            },
         };
-        let exit = v
-            .locale
-            .exits
-            .iter()
-            .find(|e| e.kind == ExitKind::Edge && e.direction == Direction::Compass(wanted));
-        let Some(exit) = exit else {
-            return Turn::Out(format!("No way {} from here.", dir.to_lowercase()));
-        };
-        // Lateral exits stay at walk depth: the destination is the
-        // neighbor whose packed id the exit names.
-        let dest = self
-            .agent
-            .position
-            .neighbors()
-            .into_iter()
-            .find(|n| n.pack().map(|r| r.0) == Ok(exit.to));
-        let Some(dest) = dest else {
-            return Turn::Out("error: exit names no neighbor".to_string());
-        };
+        let delta = crate::course::step_length_rad(&self.agent.position);
+        course.reckoned = crate::course::rhumb_advance(course.reckoned, bearing, delta);
+        let dest = crate::course::nearest_neighbour(&self.agent.position, course.reckoned);
+        self.course = Some(course);
         let from = std::mem::replace(&mut self.agent.position, dest);
         self.trail.push(from);
         if let Err(e) = self.absorb_here() {
@@ -3784,6 +3790,31 @@ mod tests {
             &SettlementPins::default(),
         )
         .ok()
+    }
+
+    /// H2. Every one of the eight compass points moves the possession from a
+    /// walk-band cell. This is the campaign's central claim and the whole of
+    /// the availability half of the defect.
+    ///
+    /// FIRES WHEN: `go` reverts to exact-matching one of the three exits.
+    #[test]
+    fn every_compass_point_moves_the_possession() {
+        // ONE world, eight sessions. Each direction must resolve from the same
+        // starting cell, so the session is fresh per direction — but genesis is
+        // far too expensive to repeat eight times, so the world is not.
+        let world = world_at(42).expect("seed 42 builds");
+        for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+            let (mut s, _) =
+                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+            let before = s.agent.position.clone();
+            let turn = s.handle(&format!("go {dir}"));
+            let text = match turn {
+                Turn::Out(t) => t,
+                Turn::Released(t) => panic!("go {dir} released the possession: {t}"),
+            };
+            assert!(!text.contains("No way"), "go {dir} refused with: {text}");
+            assert_ne!(s.agent.position, before, "go {dir} did not move");
+        }
     }
 
     /// The XOR applied to `Inside::seed` by
