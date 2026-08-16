@@ -591,6 +591,16 @@ poll_for_file() {
 # True iff pid $1 names a live process (kill -0 without actually signalling).
 pid_alive() { kill -0 "$1" 2>/dev/null; }
 
+poll_for_absence() {
+    local f="$1" tries="${2:-50}" i=0
+    while [ "$i" -lt "$tries" ]; do
+        [ ! -e "$f" ] && return 0
+        sleep 0.1
+        i=$((i+1))
+    done
+    return 1
+}
+
 export HV_SLUICE_DIR="$tmp/state"; mkdir -p "$HV_SLUICE_DIR"
 export HV_SLUICE_REPO_ROOT="$chamber_repo"
 export HV_CANONICAL_HOST_FILE="$chamber_host_file"
@@ -754,6 +764,110 @@ if printf '%s\n' "$wtc1_log" | grep -q "regenerate after gate"; then
 else
     bad "no 'regenerate after gate' commit found — gate's legitimate drift was discarded, not committed"
 fi
+
+echo "== chamber: the commit HOOK itself must not re-dirty the tree it just committed (fix round 2) =="
+# Reproduces the exact reported mechanism: this repo's core.hooksPath is a
+# REPOSITORY-level git config, inherited by every linked worktree including
+# the chamber's own, so scripts/hooks/pre-commit fires on every commit this
+# script makes. Its rust_relevant filter matches
+# docs/audits/type-audit-report.md by name, and the `artifacts` phase's own
+# commit stages exactly that file — so `make gate-commit` runs INSIDE the
+# chamber's own commit, and gate-commit's own timed.sh-wrapped steps append a
+# row to tracked docs/timings.md AFTER `git add` already ran, so `git commit`
+# does not include it: real dirt, surviving `git clean -fd` into the next
+# phase, same as Critical 1 but nested one level deeper. Reproduced here with
+# a lightweight STAND-IN hook (never the real scripts/hooks/pre-commit, which
+# would need a full Rust build to fire) that captures the identical
+# mechanism: fires only on a matching staged path, and as a side effect
+# dirties a SEPARATE tracked file — exactly what gate-commit's own timed.sh
+# does to docs/timings.md.
+# The hook file must be COMMITTED, not merely dropped into $chamber_repo's
+# own working directory: `core.hooksPath` is a RELATIVE path here (matching
+# production's own `scripts/hooks`), and git resolves a relative hooksPath
+# against the WORKTREE that is actually committing, not against wherever the
+# path happened to be created. $wth (the chamber's own worktree, created
+# below) only ever contains what its branch's history checks out — an
+# uncommitted `hooks-standin/` sitting only in $chamber_repo would never
+# appear there, and the hook would silently never fire, which is exactly
+# what happened on the first attempt at this test (caught by checking the
+# chamber's OWN job log for the hook's marker line and finding it absent
+# even with the fix reverted — a false green, not a working reproduction).
+# Production's `scripts/hooks/pre-commit` avoids this only because it is
+# already a normal tracked file, checked out fresh into every worktree.
+g -C "$chamber_repo" checkout -q main
+mkdir -p "$chamber_repo/hooks-standin"
+cat > "$chamber_repo/hooks-standin/pre-commit" <<'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '^trigger\.txt$'; then
+    echo "stand-in-hook: trigger matched -- appending to docs/timings.md (mimicking gate-commit's own timed.sh side effect)" >&2
+    echo "| hook-row |" >> docs/timings.md
+fi
+exit 0
+HOOK
+chmod +x "$chamber_repo/hooks-standin/pre-commit"
+g -C "$chamber_repo" add hooks-standin/pre-commit
+g -C "$chamber_repo" commit -qm "add the stand-in hook"
+g -C "$chamber_repo" config core.hooksPath hooks-standin
+
+lane_sets_h="$tmp/lane-sets-h.tsv"
+seamguard_h_marker="$tmp/seamguard-h-marker"; : > "$seamguard_h_marker"
+cat > "$tmp/phase-h1.sh" <<'SH'
+#!/usr/bin/env bash
+# Stands in for the real `artifacts` phase regenerating
+# docs/audits/type-audit-report.md: modifies an ALREADY-TRACKED file whose
+# name matches the stand-in hook's own trigger.
+echo v1 >> trigger.txt
+SH
+cat > "$tmp/phase-h2.sh" <<'SH'
+#!/usr/bin/env bash
+if [ -z "$(git status --porcelain)" ]; then
+    echo CLEAN >> "$SEAMGUARD_H_MARKER"
+    exit 0
+else
+    echo DIRTY >> "$SEAMGUARD_H_MARKER"
+    exit 1
+fi
+SH
+chmod +x "$tmp/phase-h1.sh" "$tmp/phase-h2.sh"
+{
+    printf 'h1\tstage\tlane\tyes\tbash %s\n' "$tmp/phase-h1.sh"
+    printf 'h2\tcampaign\tlane\tno\tbash %s\n' "$tmp/phase-h2.sh"
+} > "$lane_sets_h"
+
+# trigger.txt must be TRACKED already (matching type-audit-report.md's real
+# shape: an existing file being REGENERATED, not created for the first time).
+( cd "$chamber_repo" && printf 'v0\n' > trigger.txt && g add trigger.txt && g commit -qm "add trigger.txt" )
+
+shah="$(new_topic_branch campaign/h topich.txt)"
+wth="$tmp/wth"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_h"
+export HV_SLUICE_PHASES="h1 h2"
+export HV_SLUICE_WORKTREE="$wth"
+export HV_CENSUS_CLAIM_PATH="$tmp/claimh"
+export SEAMGUARD_H_MARKER="$seamguard_h_marker"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-run.sh" campaign/h "$shah" > "$tmp/runh.out" 2>&1
+rc_h=$?
+set -e
+
+if [ "$rc_h" -eq 0 ]; then
+    ok "the h1-then-h2 run exits 0 (the hook's own side effect did not poison h2's tree)"
+else
+    bad "expected rc 0, got $rc_h ($(cat "$tmp/runh.out"))"
+fi
+if [ "$(cat "$seamguard_h_marker")" = "CLEAN" ]; then
+    ok "h2 saw a clean tree — the stand-in hook's own dirt (fired inside h1's commit) did not survive into h2"
+else
+    bad "h2 saw a dirty tree: marker=$(cat "$seamguard_h_marker") — the commit hook re-dirtied the tree it just committed"
+fi
+# Unset again so it cannot affect any later scenario's own commits — every
+# remaining phase in this file happens not to touch trigger.txt, but there is
+# no reason to leave a global config change armed past the test that needs it.
+g -C "$chamber_repo" config --unset core.hooksPath
 
 echo "== chamber: an authoring phase's drift is committed on the canonical host =="
 lane_sets_2="$tmp/lane-sets-2.tsv"
@@ -984,6 +1098,184 @@ if [ -n "$rc_col" ] && [ "$rc_col" -ne 0 ] 2>/dev/null; then
     ok "jobs.tsv records a non-zero rc ($rc_col) for the killed run — never indistinguishable from a green run"
 else
     bad "jobs.tsv rc column is '$rc_col', expected non-zero"
+fi
+
+echo "== chamber: a child that traps and swallows TERM is escalated to SIGKILL within a bounded deadline, and the lock is genuinely freed (fix round 2) =="
+# Reproduces the exact reported mechanism: round 1's handle_signal sent
+# TERM and then `wait`ed with no timeout and no escalation. Verified by the
+# reviewer that a child which traps TERM makes that wait block forever, the
+# claim is never removed, and fd 9's flock is never released — a
+# permanently wedged lane with no force override. This phase's own child
+# (and ITS OWN backgrounded grandchild) both explicitly ignore TERM, so only
+# the bounded escalation to SIGKILL can ever end this run.
+lane_sets_5="$tmp/lane-sets-5.tsv"
+stubborn_pid_file="$tmp/stubborn-pid"; rm -f "$stubborn_pid_file"
+cat > "$tmp/phase-stubborn.sh" <<'SH'
+#!/usr/bin/env bash
+trap '' TERM
+( trap '' TERM; sleep 60 ) &
+echo $! > "$STUBBORN_PID_FILE"
+wait
+SH
+chmod +x "$tmp/phase-stubborn.sh"
+printf 'stubborn\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-stubborn.sh" > "$lane_sets_5"
+
+sha5="$(new_topic_branch campaign/t5 topic5.txt)"
+wt5="$tmp/wt5"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_5"
+export HV_SLUICE_PHASES="stubborn"
+export HV_SLUICE_WORKTREE="$wt5"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim5"
+export HV_SLUICE_KILL_TIMEOUT=2   # short for test speed; production default is 30s
+export STUBBORN_PID_FILE="$stubborn_pid_file"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+bash "$repo_root/scripts/sluice-run.sh" campaign/t5 "$sha5" > "$tmp/run5.out" 2>&1 &
+run5_pid=$!
+
+if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
+    ok "the claim appears before the stubborn phase completes"
+else
+    bad "the claim never appeared — cannot test escalation"
+fi
+chamber5_pid="$(awk -F= '$1=="pid"{print $2}' "$HV_CENSUS_CLAIM_PATH")"
+if poll_for_file "$stubborn_pid_file" 50; then
+    ok "the stubborn (TERM-ignoring) grandchild has started"
+else
+    bad "the stubborn grandchild never started — cannot test escalation"
+fi
+stubborn_pid="$(cat "$stubborn_pid_file")"
+
+kill_started="$(date +%s.%N)"
+kill -TERM "$chamber5_pid" 2>/dev/null || true
+
+if poll_for_absence "$HV_CENSUS_CLAIM_PATH" 150; then
+    kill_ended="$(date +%s.%N)"
+    ok "the claim is eventually removed — a TERM-ignoring child does not wedge the box forever"
+else
+    bad "the claim was never removed within 15s — the box appears wedged (the exact failure this fix closes)"
+    kill_ended="$kill_started"
+fi
+
+elapsed="$(awk -v a="$kill_started" -v b="$kill_ended" 'BEGIN{printf "%.2f", b-a}')"
+# THE TIMING EVIDENCE: bounded well below (proves it did not hang past the
+# deadline) and clearly NOT near-instant (proves it genuinely waited rather
+# than escalating immediately). The lower bound is loose on purpose:
+# `handle_signal`'s deadline math uses bash's own $SECONDS, which has
+# ONE-SECOND granularity, not sub-second — both when the deadline is set
+# (`SECONDS + N`, off by up to 1s from the true elapsed time already) and
+# when the loop's own exit condition is checked (`SECONDS -lt deadline`, so
+# it can fire anywhere up to 1s early relative to a sub-second clock). Found
+# live: a 2s nominal deadline measured 1.85s in one run and 1.24s in
+# another, both genuine, neither a bug — a tight lower bound here would be
+# testing $SECONDS' own rounding, not the escalation logic.
+if awk -v e="$elapsed" -v t="2" 'BEGIN{exit !(e>=0.5 && e<=t+6)}'; then
+    ok "the deadline worked: claim removed ${elapsed}s after SIGTERM (escalation deadline was 2s) — neither instant nor forever"
+else
+    bad "unexpected timing: claim removed after ${elapsed}s against a 2s escalation deadline"
+fi
+
+if ! pid_alive "$stubborn_pid"; then
+    ok "the TERM-ignoring grandchild is gone — SIGKILL escalation reached it"
+else
+    bad "the TERM-ignoring grandchild ($stubborn_pid) is STILL RUNNING — escalation did not reach it"
+fi
+
+# THE LOCK, NOT JUST THE CLAIM FILE: a fresh acquirer on the SAME lock path
+# must succeed quickly once this job is gone, proving fd 9 was actually
+# closed and the flock released — not merely that the claim file (a
+# separate, unlocked marker) was removed.
+if flock -w 3 -E 99 "$HV_CENSUS_LOCK" -c true; then
+    ok "the lock is genuinely freed after escalation — a fresh acquirer succeeds"
+else
+    bad "the lock is still held after the stubborn job is gone — fd 9 was never released"
+fi
+wait "$run5_pid" 2>/dev/null || true
+
+echo "== chamber: a second signal arriving mid-escalation does not re-enter or restack the shutdown (fix round 2) =="
+# Reproduces the reviewer's second observation: an earlier version of
+# handle_signal re-entered when a second signal arrived while the first was
+# still tearing a child down. Two TERMs sent 0.3s apart, both well inside
+# the 3s escalation window below, so the second unambiguously lands while
+# the first invocation is still in its escalation wait.
+lane_sets_6="$tmp/lane-sets-6.tsv"
+stubborn2_pid_file="$tmp/stubborn2-pid"; rm -f "$stubborn2_pid_file"
+cat > "$tmp/phase-stubborn2.sh" <<'SH'
+#!/usr/bin/env bash
+trap '' TERM
+( trap '' TERM; sleep 60 ) &
+echo $! > "$STUBBORN2_PID_FILE"
+wait
+SH
+chmod +x "$tmp/phase-stubborn2.sh"
+printf 'stubborn2\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-stubborn2.sh" > "$lane_sets_6"
+
+sha6="$(new_topic_branch campaign/t6 topic6.txt)"
+wt6="$tmp/wt6"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_6"
+export HV_SLUICE_PHASES="stubborn2"
+export HV_SLUICE_WORKTREE="$wt6"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim6"
+export HV_SLUICE_KILL_TIMEOUT=3
+export STUBBORN2_PID_FILE="$stubborn2_pid_file"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+bash "$repo_root/scripts/sluice-run.sh" campaign/t6 "$sha6" > "$tmp/run6.out" 2>&1 &
+run6_pid=$!
+
+if poll_for_file "$HV_CENSUS_CLAIM_PATH" 50; then
+    ok "the claim appears before the second stubborn phase completes"
+else
+    bad "the claim never appeared — cannot test reentrancy"
+fi
+chamber6_pid="$(awk -F= '$1=="pid"{print $2}' "$HV_CENSUS_CLAIM_PATH")"
+# The claim appears right after the lock is acquired — well BEFORE the merge
+# and the phase itself run. Sending the first kill here (without waiting for
+# the phase's own grandchild to exist) would land it during the MERGE
+# instead, which dies instantly to a plain TERM — no escalation, nothing to
+# send a second signal INTO, and the "first" test's own investigation found
+# exactly this: wall_s=0 and no "=== phase stubborn2 ===" line in the log.
+# Waiting for the grandchild's pid file the same way the escalation test
+# does guarantees both kills land inside the actual phase.
+if poll_for_file "$stubborn2_pid_file" 50; then
+    ok "the second stubborn (TERM-ignoring) grandchild has started"
+else
+    bad "the second stubborn grandchild never started — cannot test reentrancy"
+fi
+
+kill -TERM "$chamber6_pid" 2>/dev/null || true
+sleep 0.3
+kill -TERM "$chamber6_pid" 2>/dev/null || true
+
+if poll_for_absence "$HV_CENSUS_CLAIM_PATH" 150; then
+    ok "the run still completes cleanly after a second signal mid-handling"
+else
+    bad "the claim was never removed — a second signal broke the shutdown"
+fi
+wait "$run6_pid" 2>/dev/null || true
+
+job6_log="$(find "$HV_SLUICE_DIR" -maxdepth 1 -name "sluice-${sha6:0:12}-*.log" 2>/dev/null | head -1)"
+if [ -n "$job6_log" ] && grep -q "ignoring the repeat" "$job6_log"; then
+    ok "the second signal was recognised and ignored, not re-entered (the log confirms it)"
+else
+    bad "no 'ignoring the repeat' message found in the job log — cannot confirm the second signal did not re-enter"
+fi
+# `grep -c` ALREADY prints "0" (and exits 1) on no match, so `|| echo 0`
+# would double the output on that path (caught live: produced "0\n0",
+# which then failed the `-eq` test below with a shell syntax error rather
+# than a clean assertion failure). `|| true` adds nothing on top of what
+# grep already printed.
+if [ -n "$job6_log" ]; then
+    caught_count="$(grep -c "caught SIG" "$job6_log" || true)"
+else
+    caught_count=0
+fi
+if [ "$caught_count" -eq 1 ]; then
+    ok "exactly one shutdown sequence ran (one 'caught SIG' line) — the second signal did not restack a second escalation"
+else
+    bad "expected exactly one 'caught SIG' line, found $caught_count — the second signal may have restacked the shutdown"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

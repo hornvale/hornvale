@@ -29,40 +29,98 @@
 # EVERY PHASE STARTS ON A CLEAN TREE, AND EVERY LEGITIMATE ARTIFACT REACHES A
 # COMMIT (fix round 1, Critical 1). `scripts/timed.sh` appends a row to the
 # TRACKED docs/timings.md on every phase regardless of what the phase itself
-# does, and `gate-suite-run` additionally rewrites tracked
-# docs/audits/type-audit-report.md and docs/timings/subfloor-roster.tsv. `git
-# clean -fd` only removes UNTRACKED files, so none of that survives it — it
-# would carry forward into the next phase as a tracked modification, and
-# seam-guard's own `tree_is_clean()` (`tools/seam-guard/src/lib.rs:194`,
-# `git status --porcelain` being empty) would see it and refuse, reproducing
-# the exact rc=2 dirty-tree bug this file's phase-ordering comment below
-# claims to close. So EVERY phase — not only ones the roster marks
-# `authors=yes` — commits any tracked drift it leaves behind before `git
-# clean -fd` runs. `authors()` (below) still exists, but only to compute the
-# claim's informational `goldens` field; it no longer gates whether a commit
-# happens. `git add -u`, not `-A`: staging only already-tracked paths means a
-# phase's commit can never sweep up another phase's stray untracked residue
-# and misattribute it.
+# does, and `scripts/regenerate-artifacts.sh` (the `artifacts` phase)
+# regenerates the tracked docs/audits/type-audit-report.md for real — the
+# `gate` set's own `type-audit-report` Makefile target does NOT rewrite that
+# file (Makefile:419-425 regenerates into a `mktemp` and only diffs; an
+# earlier draft of this note wrongly said `gate-suite-run` rewrites it too —
+# corrected in fix round 2 after a reviewer caught it). `ci-record`'s rewrite
+# of docs/timings/subfloor-roster.tsv (part of the `gate` phase, on a green
+# run) stands. `git clean -fd` only removes UNTRACKED files, so none of that
+# survives it — it would carry forward into the next phase as a tracked
+# modification, and seam-guard's own `tree_is_clean()`
+# (`tools/seam-guard/src/lib.rs:194`, `git status --porcelain` being empty)
+# would see it and refuse, reproducing the exact rc=2 dirty-tree bug this
+# file's phase-ordering comment below claims to close. So EVERY phase — not
+# only ones the roster marks `authors=yes` — commits any tracked drift it
+# leaves behind before `git clean -fd` runs. `authors()` (below) still
+# exists, but only to compute the claim's informational `goldens` field; it
+# no longer gates whether a commit happens. `git add -u`, not `-A`: staging
+# only already-tracked paths means a phase's commit can never sweep up
+# another phase's stray untracked residue and misattribute it.
 #
-# SIGNAL HANDLING (fix round 1, Critical 2). `set -m` below gives every
-# explicitly-backgrounded job its own process group, and `run_bg` (below)
-# always backgrounds the command it runs rather than calling it in the
-# foreground — verified empirically: a plain synchronous foreground external
-# command defers a trapped signal until the command finishes ON ITS OWN
-# (bash's documented behaviour), which for a multi-minute `gate`/`heavy`
-# phase would mean a SIGTERM sent to this script does nothing for as long as
-# that phase keeps running. `wait` on an explicitly-backgrounded job, by
-# contrast, IS interrupted promptly. `handle_signal` (below) uses that: on
-# SIGINT/SIGTERM/SIGHUP it kills the CURRENT phase's whole process group
-# (never just the top-level pid — a `cargo`/`nextest` process tree survives a
-# kill of only its immediate parent, reparenting to init while the claim
-# reads free) and WAITS for it to actually exit before this script does
-# anything else — in particular, before the claim is released. Releasing the
-# claim first (the original shape) frees the box for the next queued job
-# while this job's own children are still consuming it. This is the exact bug
+# THE CLEAN-TREE INVARIANT ALSO BREAKS VIA THE COMMIT HOOK ITSELF (fix round
+# 2). This repo's `core.hooksPath=scripts/hooks` is a repository-level git
+# config, inherited by every linked worktree including this chamber's own —
+# so every `git commit` this script makes below runs
+# `scripts/hooks/pre-commit`. Its `rust_relevant` filter matches
+# `docs/audits/type-audit-report.md` by name (so the check that verifies it
+# also runs on a commit that only touches it), and the `artifacts` phase's
+# own commit stages exactly that file — so `make gate-commit` runs INSIDE
+# this script's own commit, and `make gate-commit`'s own `timed.sh`-wrapped
+# steps append a row to tracked docs/timings.md AFTER `git add` already ran
+# (staging happened before the hook fires), which `git commit` therefore
+# does NOT include. That row is real dirt, left in the working tree, and
+# survives the same `git clean -fd` for the same reason as the rest of this
+# section — a second, nested instance of the identical bug. Fixed by
+# `-c core.hooksPath=/dev/null` on this script's own commits (below) —
+# NEVER `--no-verify`, which the project's standing rule prohibits outright
+# and which this campaign is not authorised to except. The two are different
+# git mechanisms: `--no-verify` is a per-invocation flag that skips hook
+# execution for that one commit; `-c core.hooksPath=…` repoints WHERE git
+# looks for hooks, and the directory this points at (`/dev/null`, not a
+# directory at all) simply has none to find — the commit is still fully
+# verified, by the six phases already running around it. Re-running
+# `gate-commit`'s own fmt/clippy/type-audit/sub-floor-nextest subset INSIDE
+# every artifact-authoring commit is pure redundant, recursive cost on the
+# canonical box's one serial lane: the chamber's own `gate` phase already
+# runs a strict superset (the full `--workspace` suite plus doctests) later
+# in the same invocation. The one real cost of this choice: `gate` runs
+# fourth of six (`artifacts outboard gate seam-guard clients heavy`), so a
+# fmt/clippy regression introduced by `artifacts` itself is caught by `gate`
+# rather than fail-fast at `artifacts`'s own commit — later, and only after
+# `outboard` has also run — not never.
+#
+# SIGNAL HANDLING (fix round 1, Critical 2; escalation + reentrancy + a race,
+# fix round 2). `set -m` below gives every explicitly-backgrounded job its
+# own process group, and `run_bg` (below) always backgrounds the command it
+# runs rather than calling it in the foreground — verified empirically: a
+# plain synchronous foreground external command defers a trapped signal
+# until the command finishes ON ITS OWN (bash's documented behaviour), which
+# for a multi-minute `gate`/`heavy` phase would mean a SIGTERM sent to this
+# script does nothing for as long as that phase keeps running. `wait` on an
+# explicitly-backgrounded job, by contrast, IS interrupted promptly.
+# `handle_signal` (below) uses that: on SIGINT/SIGTERM/SIGHUP it kills the
+# CURRENT phase's whole process group (never just the top-level pid — a
+# `cargo`/`nextest` process tree survives a kill of only its immediate
+# parent, reparenting to init while the claim reads free) and WAITS for it to
+# actually exit before this script does anything else — in particular,
+# before the claim is released. Releasing the claim first (the original
+# shape) frees the box for the next queued job while this job's own children
+# are still consuming it. This is the exact bug
 # `.superpowers/sdd/followups.md` ledgers against `scripts/lane-run.sh` and
 # deliberately left unfixed there; it is fixed here because this file is new
 # code in this same task, not a pre-existing script under separate review.
+#
+# THE WAIT AFTER SIGTERM MUST BE BOUNDED (fix round 2). An unbounded `wait`
+# trades one failure mode for a worse one: verified empirically (a child
+# that traps and swallows TERM) that the original round-1 shape then holds
+# the box FOREVER, and the lane has no force override — that wedges every
+# future job, not just the one behind it, versus releasing early which only
+# corrupts the next job. `handle_signal` (below) escalates to SIGKILL after
+# a bounded wait, and guards against a second signal re-entering mid-cleanup
+# (see `handling_signal` below).
+#
+# THE RACE BETWEEN BACKGROUNDING AND CAPTURING $! (fix round 2). Two bash
+# simple commands — `"$@" &` and `current_child_pid=$!` — are not atomic; bash
+# checks for a pending trap between them. A signal landing in that
+# microsecond window used to find `current_child_pid` still empty, so
+# `handle_signal` killed nothing and the just-forked job orphaned anyway —
+# Critical 2's exact failure, just compressed into a much narrower window
+# instead of eliminated. `run_bg` (below) closes it with a short critical
+# section: the real handlers are swapped for a no-op (`:`, never `trap ''`)
+# for the two lines that matter, then restored immediately after the pid is
+# captured.
 set -euo pipefail
 set -m
 
@@ -93,6 +151,7 @@ why="exit"
 current_child_pid=""
 job_user_s=""
 job_sys_s=""
+handling_signal=""
 
 # Runs "$@" as a BACKGROUND job (never in the foreground — see the SIGNAL
 # HANDLING header note on why) and exposes its pid via $current_child_pid so
@@ -110,8 +169,20 @@ job_sys_s=""
 # verified empirically — which is what lets $current_child_pid stay the RAW
 # command's own pid for signal-targeting purposes.
 run_bg() {
+    # Critical section (fix round 2) — see the RACE header note above. `:`,
+    # never `trap ''`: an IGNORED disposition (`trap ''`) is inherited across
+    # fork+exec, which would leave "$@" itself permanently deaf to TERM; a
+    # CAUGHT one (any real handler, including a no-op) resets to default the
+    # moment "$@" execs, so the child is unaffected. A signal landing in this
+    # window is not queued for later redelivery — it is consumed by the
+    # no-op and gone, so a kill arriving in this exact instant needs a
+    # second send. The window is two bash simple commands wide.
+    trap ':' INT TERM HUP
     "$@" &
     current_child_pid=$!
+    trap 'handle_signal INT'  INT
+    trap 'handle_signal TERM' TERM
+    trap 'handle_signal HUP'  HUP
     local _tmp _rc _real _user _sys
     _tmp="$(mktemp)"
     { TIMEFORMAT='%R %U %S'; time wait "$current_child_pid"; } 2>"$_tmp"
@@ -159,7 +230,19 @@ trap 'record $?' EXIT
 # this script itself, and there is nothing to gain from letting a second
 # delivery race the cleanup already in progress.
 handle_signal() {
-    local sig="$1" num
+    local sig="$1" num deadline
+    # Reentrancy guard (fix round 2): a second signal arriving while this
+    # function is still tearing down a child must not restack a second
+    # kill/wait/escalate sequence on top of the first — observed happening
+    # without this guard. The first invocation's own cleanup is already in
+    # flight and will still reach `exit`; the repeat is a no-op.
+    if [ -n "$handling_signal" ]; then
+        # `>&4`, not `>&2` — see the fd 4 header note by the `exec 4>&2` line:
+        # this trap can fire while `run_bg`'s own `2>"$_tmp"` is still active.
+        echo "sluice-run: SIG$1 arrived while already handling SIG$handling_signal — ignoring the repeat" >&4
+        return
+    fi
+    handling_signal="$sig"
     why="$sig"
     case "$sig" in
         INT) num=130 ;;
@@ -167,9 +250,26 @@ handle_signal() {
         HUP) num=129 ;;
         *) num=1 ;;
     esac
-    echo "sluice-run: caught SIG$sig — stopping the running child's process group and waiting for it to exit before releasing anything" >&2
+    echo "sluice-run: caught SIG$sig — stopping the running child's process group before releasing anything" >&4
     if [ -n "$current_child_pid" ]; then
         kill -TERM -- "-$current_child_pid" 2>/dev/null || true
+        # BOUNDED escalation (fix round 2) — see the WAIT AFTER SIGTERM
+        # header note above. ${HV_SLUICE_KILL_TIMEOUT:-30}s mirrors the same
+        # graceful-then-forced tradeoff systemd (TimeoutStopSec, default 90s)
+        # and Kubernetes (terminationGracePeriodSeconds, default 30s) make:
+        # long enough for cargo/nextest's own ordinary SIGTERM wind-down,
+        # short enough that a genuinely stuck child costs the lane tens of
+        # seconds, never the length of a gate. `kill -0 -- "-$pid"` polls
+        # group liveness (succeeds while ANY member remains); SIGKILL cannot
+        # be trapped or ignored, so this branch is the actual bound.
+        deadline=$((SECONDS + ${HV_SLUICE_KILL_TIMEOUT:-30}))
+        while kill -0 -- "-$current_child_pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do
+            sleep 0.2
+        done
+        if kill -0 -- "-$current_child_pid" 2>/dev/null; then
+            echo "sluice-run: child group -$current_child_pid still alive after ${HV_SLUICE_KILL_TIMEOUT:-30}s — escalating to SIGKILL" >&4
+            kill -KILL -- "-$current_child_pid" 2>/dev/null || true
+        fi
         wait "$current_child_pid" 2>/dev/null || true
         current_child_pid=""
     fi
@@ -184,6 +284,21 @@ trap 'handle_signal HUP'  HUP
 require_canonical_host sluice || exit 1
 
 exec >>"$run_log" 2>&1
+# fd 4: a STABLE duplicate of the real log stream, established once, here,
+# before any `run_bg` call ever runs. `handle_signal`'s own diagnostics
+# (below) must use this, never a plain `>&2` — found live, not by
+# inspection: `run_bg`'s `{ TIMEFORMAT=…; time wait "$pid"; } 2>"$_tmp"`
+# redirects fd 2 to a scratch temp file for the duration of that `wait`,
+# and a signal arriving during that wait runs its trap handler WHILE that
+# redirection is still active — so a plain `echo … >&2` inside
+# `handle_signal` was landing in `run_bg`'s own `$_tmp` (rm -f'd moments
+# later, never read), not the job log. An operator reading a killed job's
+# log afterward saw only the final "finished … why=TERM" line (written by
+# the EXIT trap, which runs after `handle_signal`'s own `exit` has already
+# unwound past the interrupted redirection) with nothing about WHY or HOW —
+# confirmed by capturing `$_tmp` before its `rm -f` and finding the "missing"
+# lines inside it verbatim.
+exec 4>&2
 echo "sluice-run: $job_id started $(date -Is) on $(hostname -s) as pid $$"
 
 # The roster of phases and what each one runs — the SAME single source of
@@ -355,7 +470,15 @@ for phase in $phases; do
         # output must not fail on an empty commit). `git clean -fd` below
         # still removes it either way.
         if ! git diff --cached --quiet; then
-            git commit -q -m "chore(artifacts): regenerate after $phase
+            # `-c core.hooksPath=/dev/null`, NEVER `--no-verify` (the
+            # project's standing rule prohibits it outright and this
+            # campaign is not authorised to except it — see the CLEAN-TREE
+            # INVARIANT header note above for the two-mechanisms distinction
+            # and the full reasoning). This commit is still fully verified:
+            # by the six phases already running around it, one of which
+            # (`gate`) is a strict superset of what the hook itself would
+            # re-run here.
+            git -c core.hooksPath=/dev/null commit -q -m "chore(artifacts): regenerate after $phase
 
 Authored on the canonical host inside sluice job $job_id (decision 0079)."
             echo "sluice-run: committed tracked drift from $phase"
