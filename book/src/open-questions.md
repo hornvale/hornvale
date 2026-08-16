@@ -450,6 +450,77 @@ terrain and marks alike. The catalogue's *refusals* are a separate and smaller
 set, each tracing to a ratified decision rather than to a deficiency; they
 confirm existing positions rather than moving a bet.
 
+A thirteenth campaign contributes two corners the practice does not reach,
+and a correction to a score written above. [The Sluice](./chronicle/the-sluice.md)
+(2026-08-16) built a serial merge queue and produced **fourteen** defects from
+its own plan text — the largest single tally this thread has recorded, from
+the same source every other tally names. Two were guards described as live
+that nothing could redden, and one was a check written against a situation
+that cannot occur: it grepped for git's default merge subject `Merge branch …`
+against a chamber that merges a bare identifier into a detached head, where the
+default is `Merge commit '<sha>' into HEAD`. Those belong to the family already
+described. The two below do not.
+
+**The first corner is a check whose predicate is right and whose model of the
+world is wrong.** A static lint scanned one file for commands that would write
+to the real remote. It was defeated three times, and not once by a missing
+pattern: first a denylist that could not enumerate the shell's syntax, then a
+hand-rolled word boundary that matched nothing at all, then a line-continuation
+joiner that inserted a space where the shell deletes the backslash outright —
+so a command split across two lines in an unusual place really executes as a
+force-push while the auditor reports zero violations. Mutation does not find
+this. The check fires; it fires reliably; it is pointed at everything it claims
+to be pointed at. What is wrong is its *model of the language it reads*, and
+each of the three looked correct by inspection. The lint was deleted rather
+than patched a fourth time, because by then it had acquired a worse property
+than the thing it protected — an unbalanced brace in the audited file closed
+the test wrapper early, so the audited content executed while the audit
+reported clean. The replacement is a runtime hook that refuses the operation
+rather than a reader that predicts it. So the floor gains a fifth question,
+asked of any check that parses rather than executes: *whose model of this
+language is this check using, and has that model been made to disagree with
+the real one on purpose?*
+
+**The second corner is a generator with no verifier at all, inside the gate.**
+The project's whole-world tier authors four committed artifacts. Two of the
+four tests compare what they build against a committed copy and fail when they
+differ; the other two only write. They assert nothing about what they wrote, so
+both artifacts went stale through a run reporting eighty passes out of eighty.
+This is The Siding's unpaired check with the pairing broken at the other end:
+there, the generator and the verifier existed and were never invoked together;
+here the verifier does not exist, and its absence is concealed by a green
+number in the same run that produced the drift. **A test that authors an
+artifact must also assert it**, and an authoring test that asserts nothing is
+not a weak check but a zero one wearing a passing test's clothes.
+
+**And a score in this chapter needs correcting.** The passage above credits
+The Ballast with building the missing half of the commit gate's roster loop —
+a copy of a green run's list to durable storage, carried back by a person. It
+never moved a byte, and neither published explanation of *why* was the cause.
+The list has one commit in its entire history. The blocker sat a step earlier
+than anyone had looked: the command that writes the list refuses whenever the
+machine's exclusive claim is held, and every serialized path in this project
+runs that command as a descendant of the process holding the claim — so the
+one thing that produces the list declined to, in the one environment where
+nothing else was running, and every mechanism downstream faithfully carried an
+unchanged file. Two campaigns diagnosed the symptom correctly and the cause
+wrongly, each building a remedy for the step it had found. The floor's second
+half — a check needs an enumeration it is answerable to — is unchanged and was
+right. What is added is narrower and aimed at repairs: **a remedy verified only
+at the step it was built for cannot tell you the pipeline ever ran**, and the
+cheapest thing that would have settled it, in either campaign, was reading the
+file's own history and finding one hand-written entry.
+
+**No bet in the map below moved.** The Sluice changes how work reaches merged
+reality; it resolves no open question about the world, raises nothing from
+taste-gated to self-scorable, and leaves every score below where it stood. Its
+one finding about the world arrived sideways, through a survivor the merge
+queue held on: a unit conversion from founding years to ledger days whose
+surrounding tests asserted only *ordering*, which a uniform rescaling cannot
+disturb. That is [The Ell](./chronicle/the-ell.md)'s question — *which test
+goes red if this crossing is deleted?* — answered once more in the negative,
+and closed with a cross-check rather than a threshold.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

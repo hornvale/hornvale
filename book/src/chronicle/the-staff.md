@@ -60,6 +60,14 @@ deliberately. Coverage does grow by
 measurement rather than hope — but only once someone carries the measurement
 home, and an allow-list cannot notice that its own list has gone short.
 
+That correction was itself incomplete, and [The Sluice](./the-sluice.md)
+supplies the rest: the carrying-home never happened either, because nothing
+was ever produced to carry. The producer refuses while the machine's
+exclusive claim is held, and every serialised path runs it beneath the very
+process holding that claim. The roster is an ordinary regenerated artifact
+now, written and committed inside the merge that was tested, with no rescue
+and no human step in the middle.
+
 Everything
 costing minutes or more — the full suite, the artifact regeneration checks,
 the tests nobody had wired up, and the two verification tiers reserved for
