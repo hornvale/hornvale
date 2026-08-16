@@ -30,15 +30,15 @@ pub fn witnesses_of(
     if predicate == hornvale_history::OCC_ENDED {
         if let Some(Value::Number(day)) = ledger.value_of(subject, hornvale_history::OCC_ENDED) {
             let day = *day;
-            for child in lineage.descendants_of(subject) {
-                if lineage.parent(child) != Some(subject) {
-                    continue; // survivors are DIRECT children, not deeper kin
-                }
+            // Survivors are DIRECT children, not deeper kin — so ask for them
+            // directly rather than filtering the whole descendant set down to
+            // one hop, which is what this used to do.
+            for child in lineage.children_of(subject) {
                 if let Some(Value::Number(f)) =
-                    ledger.value_of(child, hornvale_history::OCC_FOUNDED)
+                    ledger.value_of(*child, hornvale_history::OCC_FOUNDED)
                     && *f == day
                 {
-                    out.push(child);
+                    out.push(*child);
                 }
             }
         }
@@ -92,16 +92,12 @@ pub fn claims_about(
         held.insert(*w, c); // hops 0, Witnessed
     }
     for w in &witnesses {
-        for d in lineage.descendants_of(*w) {
+        // The walk carries the hop count out with it, so the depth no longer
+        // costs a per-descendant re-derivation of that descendant's ancestry.
+        for (d, hops) in lineage.descendants_with_hops(*w) {
             if witnesses.contains(&d) {
                 continue; // a witness is never demoted to an inheritor
             }
-            let hops = lineage
-                .ancestry(d)
-                .iter()
-                .position(|a| a == w)
-                .expect("descendants_of(w) guarantees w is in d's ancestry")
-                as u32;
             let entry = held.entry(d).or_insert_with(|| {
                 let mut c = base.clone();
                 c.holder = d;

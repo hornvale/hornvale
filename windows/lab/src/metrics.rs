@@ -9628,9 +9628,42 @@ mod tests {
         // +1 for THE HEARSAY (Task 6: history-myth-hop-median) — the
         // preregistered readout (spec §6) needed a census column so the
         // no-decay ceiling on transmission depth is re-derivable from
-        // rows.csv rather than living only in a heavy-tier battery. Cost
-        // measured before keeping it (~0.16 s/world, well under the 0.5
-        // s/world KEEP threshold in `windows/lab/CLAUDE.md`).
+        // rows.csv rather than living only in a heavy-tier battery.
+        //
+        // THE COST CLAIM THAT USED TO SIT HERE WAS WRONG TWICE OVER (The
+        // Begat, 2026-08-16). It read "~0.16 s/world, well under the 0.5
+        // s/world KEEP threshold in `windows/lab/CLAUDE.md`". Measured on a
+        // 40-world panel, 3 interleaved reps, differenced against a control
+        // study that builds the same worlds and extracts one O(ledger-scan)
+        // metric: **1.708 CPU-s/world** pre-Begat on this Mac — 10.7x the
+        // figure claimed, and over the threshold it claimed to be under. The
+        // profile behind `cli/tests/census_duration.rs` put it near 2.97
+        // CPU-s/world on lefford. And the threshold itself does not exist:
+        // "KEEP threshold" appears nowhere in this repository except in the
+        // sentence that cited it, and `windows/lab/CLAUDE.md` contains no
+        // occurrence of "threshold" at all. So the comment invented both the
+        // measurement and the standard it was measured against.
+        //
+        // WHY A SCALAR WAS THE WRONG SHAPE, not merely the wrong number. The
+        // cost was superlinear in lineage nodes (`descendants_of` re-derived
+        // every node's ancestry, and `median_hops` called it twice per node),
+        // so "s/world" has a denominator that MOVES: The Glasshouse's epoch
+        // grew the lineage tree ~17% and the metric's bill grew 44%. Even a
+        // correct 0.16 would have rotted, because no per-world constant can
+        // express a superlinear cost. Post-Begat the walk is linear in the
+        // subtree and the metric measures below the noise floor of that same
+        // 40-world panel (hot minus control, −0.09 CPU-s over 40 worlds — a
+        // bound, not a resolved figure).
+        //
+        // WHAT RE-CHECKS THIS: nothing, per metric. `cli/tests/
+        // census_duration.rs` watches the census AGGREGATE and is the only
+        // live check; it caught this one but could not attribute it, which
+        // cost a 400-world profile. `Metric` carries no cost field, so there
+        // is nowhere structural for a per-metric cost to live and be
+        // drift-checked the way the type-audit report, the seam-guard roster
+        // and the sub-floor roster all are. Promoting it is TOOL-cost-per-
+        // metric in the idea registry; until that lands, treat this figure as
+        // what it is — a claim with a date.
         //
         // +1 for THE GLASSHOUSE (Stage B, Task 3: greenhouse-forcing-k) — the
         // dimensionless atmospheric greenhouse residual drawn in astronomy.
