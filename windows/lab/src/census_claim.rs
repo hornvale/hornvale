@@ -467,6 +467,28 @@ pub fn current_holder() -> Option<ClaimInfo> {
     live_holder_at(&path)
 }
 
+/// The live holder of this machine's claim **only when it is somebody else**.
+///
+/// [`current_holder`] answers "is the box claimed?"; this answers the
+/// different question "is this process CONTENDING with the claim holder?" —
+/// which is what a caller deciding whether its own measurements are trustworthy
+/// actually needs. A claim held by one of this process's own ancestors is not
+/// contention: it means the job that took the box is the job we are part of,
+/// and it is running us. Returning `Some` there is how `cmd_ci_record` came to
+/// refuse inside every serialized run in the project.
+///
+/// The ancestry test is the same one [`already_serialized_by`] uses for the
+/// lock itself — alive AND an ancestor, never one or the other, so a stale pid
+/// from an unrelated shell cannot pass. The two now agree: a nested run does
+/// not block against its own ancestor, and neither does a nested measurement.
+pub fn contending_holder() -> Option<ClaimInfo> {
+    let holder = current_holder()?;
+    if pid_is_alive(holder.pid) && is_ancestor(holder.pid) {
+        return None;
+    }
+    Some(holder)
+}
+
 /// One line describing the current claim, for `census-run.sh status` and
 /// `heavy-run.sh status`.
 /// type-audit: bare-ok(prose: return)
@@ -601,6 +623,67 @@ mod tests {
         assert!(!already_serialized_by(&u32::MAX.to_string()));
         assert!(!already_serialized_by(""));
         assert!(!already_serialized_by("not-a-pid"));
+    }
+
+    // Linux-only for the same reason as the test above: `contending_holder`
+    // decides through `pid_is_alive`/`is_ancestor`, both of which read
+    // `/proc`. On Darwin every pid reports dead and the assertions would
+    // describe a platform they are not running on.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_claim_held_by_our_own_ancestor_is_not_contention() {
+        // The bug this closes: `cmd_ci_record` asked `current_holder()`, which
+        // says "the box is claimed" — true, and irrelevant, when the claimant
+        // is the very job running us. Every serialized path in this project
+        // (the lane, then the chamber) runs `ci-record` as a descendant of the
+        // claim holder, so the sub-floor roster could never be rewritten from
+        // inside one. BOTH directions are asserted here, because a
+        // `contending_holder` that simply returned `None` always would pass
+        // the first half alone.
+        let dir = scratch("contending");
+
+        let mine = dir.join("mine.claim");
+        fs::write(
+            &mine,
+            render_claim(&sample(std::process::id(), "sluice-merge:x")),
+        )
+        .unwrap();
+        // SAFETY-of-intent: nextest runs each test in its own process, so this
+        // env var belongs to this test alone (windows/lab/CLAUDE.md).
+        unsafe { std::env::set_var("HV_CENSUS_CLAIM_PATH", &mine) };
+        assert!(
+            current_holder().is_some(),
+            "precondition: the claim file really is readable and live — \
+             without this the next assertion could pass vacuously"
+        );
+        assert!(
+            contending_holder().is_none(),
+            "a claim held by this very process (the degenerate ancestor) is \
+             not contention"
+        );
+
+        // A CHILD, NOT pid 1. The obvious stand-in for "somebody else holds
+        // the box" is `init`, and it is exactly wrong: every process's
+        // ancestor chain terminates at pid 1, so `is_ancestor(1)` is true and
+        // the assertion below read `None` — caught by running it, not by
+        // inspection. A spawned child is alive and is definitively NOT an
+        // ancestor, which is the property actually being tested.
+        let mut other = Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .expect("spawning a short-lived child to stand in for another job");
+        let theirs = dir.join("theirs.claim");
+        fs::write(&theirs, render_claim(&sample(other.id(), "the-census"))).unwrap();
+        unsafe { std::env::set_var("HV_CENSUS_CLAIM_PATH", &theirs) };
+        let verdict = contending_holder().map(|h| h.label);
+        let _ = other.kill();
+        let _ = other.wait();
+        unsafe { std::env::remove_var("HV_CENSUS_CLAIM_PATH") };
+        assert_eq!(
+            verdict,
+            Some("the-census".to_string()),
+            "a live claim held by an unrelated (non-ancestor) process is still contention"
+        );
     }
 
     #[test]

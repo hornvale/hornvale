@@ -10,21 +10,19 @@
 #                     # kernel/-layer edit — cost is the edit's blast radius in
 #                     # the kernel -> domains/* -> windows/* -> cli layering;
 #                     # see spec 2026-08-14-the-staff-design.md §4.2b)
-#   make gate-stage    REF=<full-sha> # THE STAGE GATE: dispatch gate + artifacts + outboard + clients to the lane
-#   make sluice BRANCH=<branch> REF=<full-sha> # THE MERGE QUEUE: gates the merge product and pushes it (decision 0139)
-#   make sluice-status # what is queued, running, held, landed
-#   make sluice-log    # read a finished merge-queue job back (JOB=<id>, or omit for the most recent)
-#   make lane-status  # who holds the staff on the canonical box, and who is queued
-#   make lane-log     # read a lane job back (JOB=<id>, or omit for the most recent)
-#   # `make gate`, `ci`, `gate-fast`, `gate-full` and `gate-campaign` are RETIRED
-#   # (decisions 0132, 0139) and now refuse with a nonzero exit, naming their
-#   # replacements: gate-commit, gate-stage, and the merge queue above.
+#   make sluice       BRANCH=<branch> REF=<full-sha> # THE MERGE QUEUE: gates the merge product and pushes it (decision 0139)
+#   make sluice-stage BRANCH=<branch> REF=<full-sha> # THE STAGE GATE: the same chamber, same phases, no push
+#   make sluice-status # what is queued, running, held, landed, reported
+#   make sluice-log    # read a finished chamber job back (JOB=<id>, or omit for the most recent)
+#   # `make gate`, `ci`, `gate-fast`, `gate-full`, `gate-campaign`, `gate-stage`,
+#   # `preflight` and the whole `lane*` family are RETIRED (decisions 0132,
+#   # 0139) and now refuse with a nonzero exit, naming their replacements:
+#   # gate-commit and the two queue entry points above.
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
-#   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #   make gate-remote  # ABANDONED (decision 0063): the AWS path is unused; kept only as history
@@ -35,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight preflight-run doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -62,7 +60,8 @@ gate-commit-run: style-run subfloor-run
 style-run: fmt-check clippy type-audit type-audit-report
 
 # THE SUB-FLOOR TIER. Selection is EXCLUDE-UNKNOWN: a test absent from the
-# roster is not run here, and enters on the next green `make gate-stage`.
+# roster is not run here, and enters on the next green chamber `gate` phase
+# (a merge or a `make sluice-stage`), which measures it and rewrites the file.
 # That inverts this repo's default-deny instinct deliberately — the commit gate
 # is a SPEED tier and coverage is the stage gate's job. Defaulting the other
 # way was measured at 178.6 s against a ~14 s estimate.
@@ -100,6 +99,15 @@ style-run: fmt-check clippy type-audit type-audit-report
 #       sharing that name. Over-selection is safe: it costs a little time and
 #       never hides a failure.
 #   2730 - 3 + 19 = 2746, which is exactly what this target runs.
+# EVERY NUMBER IN THAT ARITHMETIC IS A MEASUREMENT OF ONE ROSTER FILE, AND
+# THAT FILE IS ABOUT TO MOVE FOR THE FIRST TIME. The roster had a single
+# hand-authored commit in its whole history until The Sluice fixed the
+# `ci-record` refusal that prevented it from ever being rewritten (root
+# CLAUDE.md); the chamber now commits a fresh one with every green merge. So
+# read the block above as an explanation of WHY the two counts differ — the
+# platform-gating and name-collision effects are structural and permanent —
+# and re-derive the four figures rather than trusting them. They will be
+# stale by the next merge.
 subfloor-run: nextest-check
 	@tmp_filter="$$(mktemp)"; \
 	trap 'rm -f "$$tmp_filter"' EXIT; \
@@ -107,7 +115,7 @@ subfloor-run: nextest-check
 	status=$$?; \
 	if [ $$status -eq 3 ]; then \
 	    echo "gate-commit: no sub-floor roster for this host — the test tier is UNAVAILABLE, not empty." >&2; \
-	    echo "gate-commit: run a green 'make gate-stage REF=<sha>' to author one." >&2; \
+	    echo "gate-commit: run a green 'make sluice-stage BRANCH=<b> REF=<sha>' to author one." >&2; \
 	    exit 1; \
 	elif [ $$status -ne 0 ]; then \
 	    echo "gate-commit: scripts/subfloor-roster.sh failed with an unrecognised exit status ($$status), not the empty-filter case." >&2; \
@@ -120,11 +128,27 @@ subfloor-run: nextest-check
 	fi; \
 	bash scripts/subfloor-run-chunked.sh "$$tmp_filter"
 
-gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the lane (REF=<full-sha>)
-	@bash scripts/lane-dispatch.sh gate "$(REF)"
-	@bash scripts/lane-dispatch.sh artifacts "$(REF)"
-	@bash scripts/lane-dispatch.sh outboard "$(REF)"
-	@bash scripts/lane-dispatch.sh clients "$(REF)"
+# RETIRED AS A DISPATCH PATH, NOT AS A GATE (The Sluice, Task 12). The stage
+# gate still exists and still runs the same phases; it is now a queue entry
+# with `kind=stage` instead of four independent lane dispatches. A SIGNPOST
+# rather than an alias for the reason 0132 gives and one more: the argument
+# SHAPE changed (a stage request needs a BRANCH as well as a REF, because the
+# chamber merges main+branch and tests the product, where `gate-stage` tested
+# a bare tip), so aliasing would fail obscurely at the far end instead of
+# clearly here.
+gate-stage: ## RETIRED (Task 12) -- the stage gate is a queue entry now: make sluice-stage
+	@echo "make gate-stage no longer dispatches anything." >&2; \
+	echo >&2; \
+	echo "It ran four independent lane dispatches against a BRANCH TIP. The" >&2; \
+	echo "stage gate is now a queue entry like a merge -- same mouth, same" >&2; \
+	echo "chamber, same claim -- run against the real main+branch merge" >&2; \
+	echo "product, and it never pushes:" >&2; \
+	echo >&2; \
+	echo "    make sluice-stage BRANCH=<branch> REF=<full-sha>" >&2; \
+	echo "    make sluice-status        # the entry ends 'reported'" >&2; \
+	echo >&2; \
+	echo "Note the BRANCH: a stage gate tests the merge, not the tip." >&2; \
+	exit 1
 
 # RETIRED, NOT FOLDED INTO THE `gate ci gate-fast gate-full` SIGNPOST BELOW.
 # That rule's own message points callers AT `gate-campaign` as the still-live
@@ -146,12 +170,12 @@ gate-campaign: ## RETIRED (decision 0139) -- the merge queue gates the merge pro
 	echo "    make sluice BRANCH=<branch> REF=<full-sha>" >&2; \
 	echo "    make sluice-status" >&2; \
 	echo >&2; \
-	echo "make gate-stage REF=<full-sha> is unchanged." >&2; \
+	echo "The stage gate moved with it: make sluice-stage BRANCH=<branch> REF=<full-sha>." >&2; \
 	exit 1
 
 # The former `make gate` body, now a set that runs ON the lane
 # (scripts/lane-sets.tsv's `gate` row: `make --no-print-directory
-# gate-suite-run`). `lane-run.sh` supplies the `timed.sh`/dispatch wrapping
+# gate-suite-run`). `sluice-run.sh` supplies the `timed.sh` wrapping
 # that the old top-level `gate` target used to do itself; this target's own
 # job is unchanged from before The Staff — run the cheap checks, then the
 # nextest+doctest body below (gate-run), unchanged.
@@ -295,7 +319,7 @@ gate-run:
 # `gate-full: gate` — a prerequisite — so the moment `gate` becomes a refusing
 # signpost, `gate-full` would inherit the refusal and stop doing its job. It is
 # also genuinely superseded: `gate-full` was `gate` + the heavy tier, and
-# `gate-campaign` is `gate-stage` + heavy + census, which strictly contains it.
+# `gate-campaign` was the stage sets + heavy + census, which strictly contains it.
 # Leaving it as a live target pointing at a dead prerequisite would be the
 # worst of both. Verified before this task: `gate-full` and `ci` were the only
 # two targets that took `gate` as a prerequisite.
@@ -309,13 +333,13 @@ gate ci gate-fast gate-full:
 	@echo "the merge queue, and only two gates remain before it:" >&2
 	@echo "" >&2
 	@echo "  make gate-commit                    local, seconds, every commit" >&2
-	@echo "  make gate-stage    REF=<full-sha>   the lane, each plan-stage boundary" >&2
+	@echo "  make sluice-stage BRANCH=<branch> REF=<full-sha>   the queue, each plan-stage boundary" >&2
 	@echo "  make sluice BRANCH=<branch> REF=<full-sha>   the merge queue, before merging" >&2
 	@echo "" >&2
 	@echo "gate-full is superseded by the merge queue, which gates the merge" >&2
 	@echo "product rather than a branch tip." >&2
 	@echo "" >&2
-	@echo "One set on demand:  make lane SET=<set> REF=<full-sha>" >&2
+	@echo "The heavy tier alone: make heavy-remote REF=<full-sha>" >&2
 	@echo "The roster:         scripts/lane-sets.tsv" >&2
 	@exit 2
 
@@ -370,51 +394,48 @@ heavy-remote: ## Run the heavy tier on the canonical box (The Siding); REF=<full
 		exit 1; }
 	ssh lefford 'cd ~/Projects/hornvale && HV_HEAVY_REF=$(REF) scripts/heavy-run.sh'
 
-# The Staff's lane: one strictly serial queue on the canonical box for every
-# set above the commit gate. lane-dispatch.sh validates and ssh's, then
-# RETURNS — it never waits (flock -w pins its caller otherwise, and a job can
-# sit tens of minutes behind a heavy tier or a census). Read the job back with
-# `make lane-status` or `make lane-log`.
-lane: ## Dispatch one set to the lane (SET=<set> REF=<full-sha>)
-	@test -n "$(SET)" || { echo "usage: make lane SET=<set> REF=<full-sha>"; exit 2; }
-	@bash scripts/lane-dispatch.sh "$(SET)" "$(REF)"
-
-lane-status: ## Who holds the staff on the canonical box, and who is queued
-	@ssh $$(cat scripts/census-canonical-host.txt) 'cd ~/Projects/hornvale && \
-	    scripts/heavy-run.sh status; \
-	    d=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
-	    echo; echo "== recent jobs (utc, id, set, why, rc, wall_s, ref, waited_s, user_s, sys_s, cpu_ratio) =="; \
-	    tail -10 "$$d/jobs.tsv" 2>/dev/null || echo "  (no jobs recorded yet)"'
-
-lane-log: ## Read a lane job back (JOB=<id>, or omit for the most recent)
-	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
-	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).log"; else f=$$(ls -t "$$d"/*.log 2>/dev/null | head -1); fi; \
-	    if [ -n "$$f" ] && [ -f "$$f" ]; then echo "-- $$f"; tail -60 "$$f"; \
-	    else echo "  (no such job)"; fi'
-
-lane-roster: ## Fetch a green lane job's copied-out sub-floor roster into the tree and show the diff, left UNCOMMITTED (JOB=<id>, or omit for the most recent)
-	@tmp=$$(mktemp); \
-	if ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
-	    if [ -n "$(JOB)" ]; then f="$$d/$(JOB).subfloor-roster.tsv"; else f=$$(ls -t "$$d"/*.subfloor-roster.tsv 2>/dev/null | head -1); fi; \
-	    if [ -n "$$f" ] && [ -f "$$f" ]; then cat "$$f"; else exit 1; fi' > "$$tmp"; then \
-	    mv "$$tmp" docs/timings/subfloor-roster.tsv; \
-	    echo "lane-roster: fetched into docs/timings/subfloor-roster.tsv -- left UNCOMMITTED, review the diff below and commit it by hand (goldens are a deliberate human act):"; \
-	    echo ""; \
-	    git --no-pager diff -- docs/timings/subfloor-roster.tsv; \
-	else \
-	    rm -f "$$tmp"; \
-	    echo "lane-roster: no roster copy-out found (JOB=$(JOB)) on the canonical box -- only the 'gate' set's ci-record writes one, and only on a GREEN run; see scripts/lane-run.sh" >&2; \
-	    exit 1; \
-	fi
-
-lane-wait: ## Block until a lane job finishes (JOB=<id>) — opt-in, never the default
-	@test -n "$(JOB)" || { echo "usage: make lane-wait JOB=<id>"; exit 2; }
-	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_LANE_DIR:-$$HOME/.local/state/hornvale/lane}; \
-	    until grep -q "	$(JOB)	" "$$d/jobs.tsv" 2>/dev/null; do sleep 20; done; \
-	    grep "	$(JOB)	" "$$d/jobs.tsv"'
+# THE LANE'S FIVE TARGETS ARE GONE, AND EACH ONE'S WORK WENT SOMEWHERE
+# NAMEABLE (The Sluice, Task 12). This is one refusing rule rather than five,
+# because they share an answer: the asynchronous dispatch layer they were the
+# front end of no longer exists, and the queue's own two readers replace all
+# of the reading half.
+#
+# `lane-roster` deserves its own sentence, because deleting it looks like the
+# loss of the only path to updating `docs/timings/subfloor-roster.tsv` and is
+# the opposite. That copy-out could never fire: `ci-record` refused whenever
+# ANY claim was held, and the lane always held one, so the file it copied was
+# always the unchanged committed one and `git diff --quiet` skipped the copy.
+# The roster has exactly one commit in its whole history, authored by hand.
+# Task 12 fixed the actual blocker (`contending_holder`, cli/src/main.rs), so
+# the chamber's `gate` phase now genuinely rewrites the file — and the phase
+# loop commits it and pushes it with the merge product, like every other
+# artifact the chamber authors. There is nothing left to fetch by hand.
+lane lane-status lane-log lane-roster lane-wait:
+	@echo "make $@ no longer exists. The lane's dispatch layer is deleted;" >&2
+	@echo "everything above the commit gate is a queue entry now:" >&2
+	@echo "" >&2
+	@echo "  make sluice       BRANCH=<branch> REF=<full-sha>   gate + merge + push" >&2
+	@echo "  make sluice-stage BRANCH=<branch> REF=<full-sha>   gate only, never pushes" >&2
+	@echo "  make sluice-status / make sluice-log [JOB=<id>]    read either back" >&2
+	@echo "" >&2
+	@echo "The two sets the chamber does NOT run keep their own entry points:" >&2
+	@echo "  make heavy-remote REF=<full-sha>                   the heavy tier alone" >&2
+	@echo "  ssh <canonical> 'cd ~/Projects/hornvale && HV_CENSUS_REF=<sha> scripts/census-run.sh'" >&2
+	@echo "" >&2
+	@echo "lane-roster is retired because the roster now updates itself: the" >&2
+	@echo "chamber's gate phase rewrites it and commits it with the merge" >&2
+	@echo "product. The copy-out it fetched never once produced a byte." >&2
+	@exit 2
 
 sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
 	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)"
+
+# THE STAGE GATE, ABSORBED. Same script, same queue, same chamber, same
+# claim — `kind=stage` is one column in the queue TSV and one branch at the
+# push step. It runs the `stage`-rung phases against the real main+branch
+# merge product and reports; the entry ends `reported`, and main never moves.
+sluice-stage: ## Request a STAGE GATE through the queue — phases run, nothing is pushed (BRANCH=<branch> REF=<full-sha>)
+	@bash scripts/sluice-request.sh "$(BRANCH)" "$(REF)" stage
 
 # FIX ROUND 1: the queue and its jobs live on the CANONICAL BOX
 # ($HV_SLUICE_DIR under ITS $HOME — sluice-request.sh enqueues over ssh, and
@@ -424,7 +445,7 @@ sluice: ## Request a merge through the queue (BRANCH=<branch> REF=<full-sha>)
 # EMPTY queue or "no such job", never an error, which is the worst kind of
 # wrong answer. lane-status/lane-log (above) already get this right by
 # ssh-ing first; these follow that exact shape.
-sluice-status: ## The merge queue: what is queued, running, held, landed (reads the canonical box over ssh)
+sluice-status: ## The queue: what is queued, running, held, landed, reported (reads the canonical box over ssh)
 	@ssh $$(cat scripts/census-canonical-host.txt) 'd=$${HV_SLUICE_DIR:-$$HOME/.local/state/hornvale/sluice}; \
 	    cat "$$d/queue.tsv" 2>/dev/null || true' \
 	    | column -t -s "$$(printf '\t')" || true
@@ -544,7 +565,8 @@ prewarm-run:
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 	# The Cairn's binary, without which THREE of its four read seams are
 	# silently inert in a fresh worktree: `scripts/board-render.sh` (the
-	# SessionStart hook), `doctor`, and `preflight` all require a prebuilt
+	# SessionStart hook), `doctor`, and `sluice-request.sh`'s hold-off
+	# advisory all require a prebuilt
 	# binary and all deliberately refuse to compile one. `tools/board/target/`
 	# is gitignored and per-worktree, so nothing else in the repo ever
 	# produces it — a new campaign therefore started with the board dead and
@@ -612,11 +634,36 @@ census-check: ## Harness gate: mount-validate + smoke + golden-pins (local; need
 regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via scripts/census-run.sh; this AWS path is unused
 	@scripts/aws-gate/regen-git.sh .
 
-preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
-	@bash scripts/timed.sh preflight -- make --no-print-directory preflight-run
-
-preflight-run:
-	@bash scripts/preflight-merge.sh
+# RETIRED (The Sluice, Task 12), and each of its four halves went somewhere
+# BETTER, which is the only reason deleting a GO/NO-GO gate is defensible:
+#
+#   ancestry ("has main moved under this branch?") -> scripts/sluice-mouth.sh
+#     checks the ACTUAL merge with `git merge-tree`, where preflight compared
+#     ancestry as a proxy for it and could say GO on a branch that conflicts.
+#   both-sides-added slugs (a decision/chronicle/retro filename minted twice)
+#     -> an add/add conflict, which the mouth reports as a conflict (exit 1).
+#   registry row IDs minted on both sides -> `cli/tests/docs_consistency.rs`
+#     asserts ID uniqueness, and the chamber runs it against the real merge
+#     product in the `gate` phase. Again: the object that lands, not a proxy.
+#   the board's hold-off advisory -> `scripts/sluice-request.sh`, which is now
+#     the moment work asks to integrate. This is the one half with no other
+#     home, so it was moved rather than assumed covered.
+#
+# Its unmechanizable half ("read the other branches' chronicles, not just
+# their diffs") was always human and lives in the submitting-a-campaign skill.
+preflight:
+	@echo "make preflight no longer exists. Its checkable halves are now run" >&2
+	@echo "against the real merge, not against ancestry as a proxy for it:" >&2
+	@echo "" >&2
+	@echo "  make sluice-stage BRANCH=<branch> REF=<full-sha>" >&2
+	@echo "      merges main+branch in the chamber and runs the stage phases." >&2
+	@echo "      A conflict is refused at the mouth in milliseconds; a" >&2
+	@echo "      duplicate registry ID or slug reddens the gate phase." >&2
+	@echo "" >&2
+	@echo "The judgment half preflight printed and could not score is still" >&2
+	@echo "yours: read the other live branches' chronicles, not just their" >&2
+	@echo "diffs. Two campaigns have collided semantically on a clean GO." >&2
+	@exit 2
 
 doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh

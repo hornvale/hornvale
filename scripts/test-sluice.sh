@@ -50,6 +50,17 @@ trap 'rm -rf "$tmp"; \
       env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
+# THE BOARD READ IS OFF FOR THE WHOLE FILE, and this is a hermeticity guard,
+# not a convenience. Since Task 12, `sluice-request.sh` inherits
+# `preflight-merge.sh`'s hold-off advisory: it runs `scripts/board-sync.sh`,
+# which PUSHES `refs/hornvale/hosts/<host>` to this repository's real
+# `origin`. The request-path sections below run the real script (and mutated
+# copies of it) many times over, so leaving it on would mean a test suite
+# that writes to the shared remote — the exact class of accident
+# `scripts/CLAUDE.md`'s board incident records. Exported once, here, so a
+# section added later inherits it without having to remember.
+export HV_SLUICE_SKIP_BOARD=1
+
 # A scratch repo with a main line and two campaign commits on one branch.
 scratch="$tmp/repo"; mkdir -p "$scratch"; cd "$scratch"
 g init -q -b main .
@@ -137,32 +148,33 @@ if [ "$before_lines" -eq "$after_lines" ]; then
 else
     bad "row count changed ($before_lines -> $after_lines) — a newline in a note split into an extra row"
 fi
-malformed="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=6{c++} END{print c+0}')"
+malformed="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=7{c++} END{print c+0}')"
 if [ "$malformed" -eq 0 ]; then
-    ok "every row still has exactly 6 tab-separated fields after a newline-bearing note"
+    ok "every row still has exactly 7 tab-separated fields after a newline-bearing note"
 else
-    bad "$malformed row(s) do not have 6 fields — a note corrupted the TSV shape"
+    bad "$malformed row(s) do not have 7 fields — a note corrupted the TSV shape"
 fi
 
-# `id4`'s row lookup keys on field 2 (the id), which a corrupted field 6 can
+# `id4`'s row lookup keys on field 2 (the id), which a corrupted field 7 can
 # never shift — so this check stays valid even under the corrupted shape it
 # is trying to catch. Deliberately NOT a substring check on the note field
-# itself: awk's own `-F'\t'` splits a row with a raw tab embedded in field 6
-# into 7 fields, so field 6 alone reads back as just "a" — the tab is real,
+# itself: awk's own `-F'\t'` splits a row with a raw tab embedded in field 7
+# into 8 fields, so field 7 alone reads back as just "a" — the tab is real,
 # but hidden from that read by the very corruption it caused. The field
 # COUNT is the signal that cannot be fooled that way.
 bash "$repo_root/scripts/sluice-queue.sh" set-state "$id4" queued "$(printf 'a\tb')" >/dev/null
 tab_row_fields="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' -v i="$id4" '$2==i{print NF}')"
-if [ "$tab_row_fields" -eq 6 ]; then
+if [ "$tab_row_fields" -eq 7 ]; then
     ok "a tab embedded in a note does not split id4's row into extra fields"
 else
-    bad "id4's row has $tab_row_fields fields, not 6 — a tab in a note corrupted the TSV shape"
+    bad "id4's row has $tab_row_fields fields, not 7 — a tab in a note corrupted the TSV shape"
 fi
 
 echo "== queue: no argument of any subcommand can corrupt the row shape"
 # The invariant that actually matters, stated once and checked after every
 # attempt below: no input to ANY subcommand can produce a row whose field
-# count is not 6. Attack every argument of every subcommand that ever
+# count is not 7 (six through The Sluice Task 11; the `kind` column made it
+# seven). Attack every argument of every subcommand that ever
 # writes — not just note/branch/sha, the three the reviews discussed by
 # name; `id` and `state` too. `next` and `list` take no arguments, so they
 # have no attack surface here.
@@ -170,9 +182,9 @@ assert_shape_intact() {
     local label="$1" before="$2"
     local after bad_rows
     after="$(bash "$repo_root/scripts/sluice-queue.sh" list | wc -l | tr -d ' ')"
-    bad_rows="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=6{c++} END{print c+0}')"
+    bad_rows="$(bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' 'NF!=7{c++} END{print c+0}')"
     if [ "$after" = "$before" ] && [ "$bad_rows" -eq 0 ]; then
-        ok "$label: row count unchanged ($before), every row still 6 fields"
+        ok "$label: row count unchanged ($before), every row still 7 fields"
     else
         bad "$label: row count $before -> $after, $bad_rows malformed row(s)"
     fi
@@ -253,6 +265,75 @@ if [ "$(state_of "$id2")" = "running" ]; then
 else
     bad "a running request was superseded — an authoring job would be orphaned"
 fi
+
+echo "== queue: the kind column (Task 12 — gate-stage absorbed as a kind, not a second path)"
+kind_of() { bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' -v i="$1" '$2==i{print $6}'; }
+
+# 1. The default is `merge`, so every caller that predates the column — and
+#    every row already on the canonical box's queue — keeps meaning what it
+#    meant.
+g checkout -q -b campaign/kind main
+printf 'k1\n' > k.txt; g add k.txt; g commit -qm "kind one"; K1="$(g rev-parse HEAD)"
+idk_default="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/kind "$K1")"
+if [ "$(kind_of "$idk_default")" = "merge" ]; then
+    ok "a request enqueued with no kind argument records kind=merge"
+else
+    bad "the default kind is '$(kind_of "$idk_default")', not merge"
+fi
+
+# 2. A third value is REFUSED, not silently stored. `kind` selects a code
+#    path in the chamber (whether the run pushes), so a typo reaching the
+#    queue would be a request nothing knows how to run.
+if bash "$repo_root/scripts/sluice-queue.sh" add campaign/kind "$K1" rehearse >/dev/null 2>&1; then
+    bad "an unknown kind was accepted — the vocabulary is not closed"
+else
+    ok "an unknown kind ('rehearse') is refused"
+fi
+
+# 3. COALESCING IS SCOPED TO THE KIND. This is the property the column would
+#    be actively harmful without: a queued merge silently superseded by a
+#    later stage gate on the same branch would drop the merge request
+#    entirely, and the campaign would wait forever on a request the queue no
+#    longer holds.
+#
+# EVERY REQUEST BELOW USES A DISTINCT SHA, and that is a requirement of the
+# harness rather than a stylistic choice: `sluice-queue.sh`'s request id is
+# `req-<sha12>-<second-resolution timestamp>`, so two adds of the SAME sha
+# inside one second collide on the id, and `state_of` — which keys on the id —
+# then reports two rows' states at once. Found the hard way here; the first
+# draft reused $K1 and read back a two-line "superseded\nqueued".
+printf 'k2\n' >> k.txt; g commit -qam "kind two"; K2="$(g rev-parse HEAD)"
+printf 'k3\n' >> k.txt; g commit -qam "kind three"; K3="$(g rev-parse HEAD)"
+printf 'k4\n' >> k.txt; g commit -qam "kind four"; K4="$(g rev-parse HEAD)"
+idk_merge="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/kind "$K2" merge)"
+idk_stage="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/kind "$K3" stage)"
+if [ "$(state_of "$idk_merge")" = "queued" ]; then
+    ok "a queued merge is NOT superseded by a later stage request on the same branch"
+else
+    bad "a stage request superseded a queued merge (state=$(state_of "$idk_merge")) — the merge would be lost"
+fi
+# …and the same-kind case still coalesces, or the scoping would have been
+# achieved by breaking coalescing outright.
+idk_stage2="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/kind "$K4" stage)"
+if [ "$(state_of "$idk_stage")" = "superseded" ] && [ "$(kind_of "$idk_stage2")" = "stage" ]; then
+    ok "a stage request IS still superseded by a later same-kind descendant"
+else
+    bad "same-kind coalescing broke: idk_stage=$(state_of "$idk_stage"), idk_stage2 kind=$(kind_of "$idk_stage2")"
+fi
+
+# 4. `reported` is a real state. A stage run has no `landed` to reach, and
+#    reusing `landed` would assert main moved when it did not.
+if bash "$repo_root/scripts/sluice-queue.sh" set-state "$idk_stage2" reported "stage gate green" >/dev/null 2>&1; then
+    ok "set-state accepts 'reported', the stage kind's terminal state"
+else
+    bad "set-state refused 'reported' — a stage request has no way to terminate"
+fi
+if bash "$repo_root/scripts/sluice-queue.sh" set-state "$idk_stage2" finished >/dev/null 2>&1; then
+    bad "set-state accepted 'finished' — the state vocabulary is no longer closed"
+else
+    ok "set-state still refuses a state outside the vocabulary"
+fi
+g checkout -q campaign/x
 
 echo "== queue: an interrupted rewrite leaves no temp file behind"
 # Moving the temp file INTO $HV_SLUICE_DIR fixed cross-filesystem atomicity
@@ -1584,6 +1665,103 @@ else
 fi
 rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
 
+echo "== chamber: a kind=stage run gates the merge product and NEVER pushes (Task 12) =="
+# THE ONE PROPERTY THAT MAKES A STAGE GATE SAFE TO ABSORB INTO THE MERGE
+# QUEUE. Everything else about the two kinds is identical by construction
+# (same claim, same worktree, same merge, same phase loop), so the only
+# thing worth pinning is the difference: a stage run must reach rc=0 with
+# `main` exactly where it started. Asserting the *absence* of a push is the
+# assertion that can go vacuously green, so this reads origin's own ref
+# before and after and compares them, rather than trusting the log text.
+cd "$chamber_repo"
+lane_sets_stage="$tmp/lane-sets-stage.tsv"
+TRACKLOG_STAGE="$tmp/tracklog-stage"; : > "$TRACKLOG_STAGE"
+cat > "$tmp/phase-stage.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+echo S >> "$TRACKLOG_STAGE"
+SH
+chmod +x "$tmp/phase-stage.sh"
+printf 's\tstage\tlane\tno\tbash %s\n' "$tmp/phase-stage.sh" > "$lane_sets_stage"
+
+sha_stage="$(new_topic_branch campaign/tstage topic-stage.txt)"
+wt_stage="$tmp/wt-stage"
+origin_main_before_stage="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+last_pushed_before_stage="$(cat "$HV_SLUICE_DIR/last-pushed" 2>/dev/null || true)"
+
+HV_SLUICE_LANE_SETS="$lane_sets_stage" \
+HV_SLUICE_PHASES="s" \
+HV_SLUICE_WORKTREE="$wt_stage" \
+HV_CENSUS_CLAIM_PATH="$tmp/claim-stage" \
+TRACKLOG_STAGE="$TRACKLOG_STAGE" \
+    bash "$repo_root/scripts/sluice-run.sh" campaign/tstage "$sha_stage" stage \
+    > "$tmp/run-stage.out" 2>&1 && rc_stage=0 || rc_stage=$?
+
+origin_main_after_stage="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+last_pushed_after_stage="$(cat "$HV_SLUICE_DIR/last-pushed" 2>/dev/null || true)"
+
+if [ "$rc_stage" -eq 0 ]; then
+    ok "a green stage run exits 0"
+else
+    bad "expected rc 0 from a green stage run, got $rc_stage ($(cat "$tmp/wt-stage.log" 2>/dev/null; tail -30 "$HV_SLUICE_DIR"/*.log 2>/dev/null))"
+fi
+if [ "$(tr -d '\n' < "$TRACKLOG_STAGE")" = "S" ]; then
+    ok "the stage run really ran its phase (so the no-push assertion below is not vacuous)"
+else
+    bad "the stage run's phase never executed: '$(tr -d '\n' < "$TRACKLOG_STAGE")'"
+fi
+if [ "$origin_main_after_stage" = "$origin_main_before_stage" ]; then
+    ok "origin's main is untouched by a green stage run ($origin_main_before_stage)"
+else
+    bad "a stage run PUSHED: origin main moved $origin_main_before_stage -> $origin_main_after_stage"
+fi
+if [ "$last_pushed_after_stage" = "$last_pushed_before_stage" ]; then
+    ok "last-pushed is untouched by a stage run"
+else
+    bad "a stage run rewrote last-pushed: '$last_pushed_before_stage' -> '$last_pushed_after_stage'"
+fi
+if grep -q 'STAGE REPORT' "$HV_SLUICE_DIR"/sluice-"${sha_stage:0:12}"-*.log 2>/dev/null; then
+    ok "the stage run's log carries the STAGE REPORT verdict line"
+else
+    bad "no STAGE REPORT line in the stage run's log"
+fi
+
+echo "== chamber: MUTATION — deleting the kind gate makes the stage run push, reddening the assertion above =="
+# The assertion above is an ABSENCE, which is exactly the shape that passes
+# for the wrong reason. Prove it can fail: take the real script, delete the
+# four lines that turn `kind=stage` into an early `exit 0`, and confirm the
+# same scenario now moves origin's main.
+#
+# The range is anchored on the block's own opening COMMENT, not on `if [
+# "$kind" = "stage" ]` — that condition appears twice in the file (the phase
+# selection near the top uses it too), and deleting the first occurrence
+# would leave `$phases` unset under `set -u`, producing a mutant that fails
+# for a reason unrelated to pushing. The guard below checks BOTH directions:
+# the gate is gone AND the phase selection survived.
+mutant_run="$tmp/sluice-run-nokindgate.sh"
+sed '/^# THE ONE BRANCH THAT MAKES A STAGE GATE A KIND/,/^fi$/d' \
+    "$repo_root/scripts/sluice-run.sh" > "$mutant_run"
+if grep -q 'STAGE REPORT' "$mutant_run" || ! grep -q 'merge_phases=' "$mutant_run"; then
+    bad "the mutation did not cleanly remove just the kind gate — the demonstration below proves nothing"
+else
+    sha_stage_m="$(new_topic_branch campaign/tstagem topic-stage-m.txt)"
+    origin_main_before_m="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+    HV_SLUICE_LANE_SETS="$lane_sets_stage" \
+    HV_SLUICE_PHASES="s" \
+    HV_SLUICE_WORKTREE="$tmp/wt-stage-m" \
+    HV_CENSUS_CLAIM_PATH="$tmp/claim-stage-m" \
+    TRACKLOG_STAGE="$TRACKLOG_STAGE" \
+        bash "$mutant_run" campaign/tstagem "$sha_stage_m" stage \
+        > "$tmp/run-stage-m.out" 2>&1 || true
+    origin_main_after_m="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+    if [ "$origin_main_after_m" != "$origin_main_before_m" ]; then
+        ok "the mutant DOES push on kind=stage — the real script's no-push assertion is live, not vacuous"
+    else
+        bad "the mutant did not push either; the no-push assertion above may be passing for an unrelated reason"
+    fi
+fi
+cd "$scratch"
+
 echo "== request: REF shape validation (no ssh involved)"
 if bash "$repo_root/scripts/sluice-request.sh" campaign/x short 2>"$tmp/req.err"; then
     bad "a short REF was accepted"
@@ -1800,25 +1978,50 @@ else
     bad "a submission with a real headline was wrongly refused: $(cat "$tmp/goodheadline.err")"
 fi
 
+echo "== request: a kind=stage submission with the SAME junk headline is ACCEPTED (Task 12)"
+# The exemption's own test, and it is the reason the refusal above needed one
+# too. `wip_sha` is the identical commit object refused a few lines up: the
+# only thing that changed is the kind. A stage gate's merge commit is
+# discarded with the chamber's worktree, so no subject it carries can become
+# the census epoch label the refusal exists to protect — and refusing a
+# mid-campaign `wip` commit that a plan-stage boundary legitimately sits on
+# would block the one thing a stage gate is for.
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok bash "$repo_root/scripts/sluice-request.sh" \
+    campaign/x "$wip_sha" stage >"$tmp/wipstage.out" 2>"$tmp/wipstage.err"; then
+    ok "the same 'wip'-subject commit IS accepted as a kind=stage request"
+else
+    bad "a kind=stage request was refused for its headline: $(cat "$tmp/wipstage.err")"
+fi
+if grep -q 'kind=stage' "$tmp/wipstage.out"; then
+    ok "the accepted stage request reports kind=stage (so the acceptance above is not a merge in disguise)"
+else
+    bad "the stage request's success line does not report kind=stage: $(cat "$tmp/wipstage.out")"
+fi
+
 echo "== request: MUTATION — deleting the headline check would flip the wip-refusal test red"
 mutant2="$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"
-# shellcheck disable=SC2016  # single-quoted on purpose: this is a literal grep pattern, not a shell expansion
-headline_start="$(grep -n '^headline="\$(git -C' "$repo_root/scripts/sluice-request.sh" | cut -d: -f1)"
-headline_end="$(awk -v s="$headline_start" 'NR>s && /^esac$/{print NR; exit}' "$repo_root/scripts/sluice-request.sh")"
-if [ -z "$headline_start" ] || [ -z "$headline_end" ]; then
-    bad "could not locate the headline-check block in sluice-request.sh to mutate — it may have changed shape"
+# The range is anchored on the block's opening COMMENT and its closing `fi`.
+# It used to be anchored on `^headline="$(git -C` through the next `^esac$`,
+# which stopped matching the moment Task 12 wrapped the whole check in
+# `if [ "$kind" = "merge" ]` and indented it — and the failure mode was not a
+# `bad` verdict but an abort, because the `chmod` below ran unconditionally
+# on a file the `else` branch had never written. Both are fixed: the anchor
+# tracks the block's real shape, and every step after it is inside the
+# `else`.
+# shellcheck disable=SC2016  # single-quoted on purpose: a literal sed address, not a shell expansion
+if sed '/^# A `stage` REQUEST IS EXEMPT/,/^fi$/d' \
+        "$repo_root/scripts/sluice-request.sh" > "$mutant2" \
+   && ! grep -q 'not a real headline' "$mutant2" \
+   && grep -q 'sluice-queue.sh add' "$mutant2"; then
+    chmod +x "$mutant2"
+    if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok bash "$mutant2" campaign/x "$wip_sha" \
+        >"$tmp/wipmutant.out" 2>"$tmp/wipmutant.err"; then
+        ok "MUTATION CONFIRMED: without the headline check, a 'wip'-subject submission is accepted (the real script refuses it — see above)"
+    else
+        bad "the headline-check mutant unexpectedly still refused — mutation did not take: $(cat "$tmp/wipmutant.err")"
+    fi
 else
-    {
-        head -n "$((headline_start - 1))" "$repo_root/scripts/sluice-request.sh"
-        tail -n "+$((headline_end + 1))" "$repo_root/scripts/sluice-request.sh"
-    } > "$mutant2"
-fi
-chmod +x "$mutant2"
-if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok bash "$mutant2" campaign/x "$wip_sha" \
-    >"$tmp/wipmutant.out" 2>"$tmp/wipmutant.err"; then
-    ok "MUTATION CONFIRMED: without the headline check, a 'wip'-subject submission is accepted (the real script refuses it — see above)"
-else
-    bad "the headline-check mutant unexpectedly still refused — mutation did not take"
+    bad "could not cleanly excise the headline-check block from sluice-request.sh — it may have changed shape, and this mutation is now proving nothing"
 fi
 rm -f "$mutant2"
 

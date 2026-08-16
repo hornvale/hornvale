@@ -10,6 +10,15 @@
 //! progress" for the whole duration of every lane job — while the job held the
 //! box. The lock was never affected; only the answer to "is the box busy?"
 //! was, which is the question CLAUDE.md tells every session to ask first.
+//!
+//! THAT SCRIPT IS DELETED (The Sluice, Task 12) AND THE BUG IS NOT. The
+//! defect was never specific to the lane: it is what happens when a NEW
+//! writer of a file with an eight-field contract is added by hand, and this
+//! repository still has three such writers — a census, the heavy tier, and
+//! the merge queue's chamber. Removing the fourth from the list below is the
+//! only edit this deletion warranted; the guard's reason for existing is
+//! unchanged, which is why the paragraph above is kept in the past tense
+//! rather than rewritten as if it never happened.
 
 use std::path::{Path, PathBuf};
 
@@ -63,7 +72,6 @@ fn the_scraper_can_see_a_known_good_writer() {
 #[test]
 fn every_claim_writer_emits_every_required_field() {
     for script in [
-        "scripts/lane-run.sh",
         "scripts/census-run.sh",
         "scripts/heavy-run.sh",
         "scripts/sluice-run.sh",

@@ -132,8 +132,23 @@ set -m
 # one that was missing, and without it a test cannot avoid touching this
 # repository's own origin/main and worktree registry.
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-branch="${1:?usage: sluice-run.sh <branch> <full-sha>}"
-sha="${2:?usage: sluice-run.sh <branch> <full-sha>}"
+branch="${1:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+# THE STAGE GATE IS THIS SCRIPT WITH THE PUSH TURNED OFF (The Sluice, Task
+# 12). `gate-stage` used to be a separate dispatch path — its own script,
+# its own detached job, its own shared scratch worktree, its own jobs.tsv —
+# for one caller, and keeping it would have kept the whole asynchronous
+# layer alive to serve it. A stage request is instead a queue entry with
+# `kind=stage`: it takes the same claim, merges main+branch in the same
+# chamber, and runs the same roster-declared phases against the same real
+# merge product. It just never pushes, and it runs the `stage`-rung phases
+# rather than all six. One branch, at the push step — see the `kind` gate
+# below `final_sha`.
+kind="${3:-merge}"
+case "$kind" in
+    merge|stage) ;;
+    *) echo "sluice-run: unknown kind '$kind' (merge|stage)" >&2; exit 2 ;;
+esac
 
 # See the HERMETICITY header note: one blanket unset, before anything is
 # spawned, covers this script's own git calls AND every child process.
@@ -299,7 +314,7 @@ exec >>"$run_log" 2>&1
 # confirmed by capturing `$_tmp` before its `rm -f` and finding the "missing"
 # lines inside it verbatim.
 exec 4>&2
-echo "sluice-run: $job_id started $(date -Is) on $(hostname -s) as pid $$"
+echo "sluice-run: $job_id started $(date -Is) on $(hostname -s) as pid $$ kind=$kind"
 
 # The roster of phases and what each one runs — the SAME single source of
 # truth scripts/lane-run.sh reads (scripts/lane-sets.tsv), never a second
@@ -307,7 +322,28 @@ echo "sluice-run: $job_id started $(date -Is) on $(hostname -s) as pid $$"
 # phase LIST are overridable so tests can drive the chamber with trivial
 # stand-in phases instead of the real six-suite roster.
 lane_sets_file="${HV_SLUICE_LANE_SETS:-$repo_root/scripts/lane-sets.tsv}"
-phases="${HV_SLUICE_PHASES:-artifacts outboard gate seam-guard clients heavy}"
+
+# THE TWO PHASE LISTS ARE LITERALS, AND THAT IS A CHOICE, not an oversight.
+# Both could be derived from `scripts/lane-sets.tsv`'s `gate` column
+# (`stage` rows for one, `stage`+`campaign` minus `census` for the other),
+# and the roster would then be the only place a set is named. It is not done
+# that way because ORDER IS LOAD-BEARING here and roster order is not phase
+# order: the roster lists `heavy` fifth of ten, while the phase comment
+# below places it LAST deliberately (at a measured mean 1678 s it is 47% of
+# the set's ~3602 s, so running it before a cheap phase that would have gone
+# red wastes half an hour of the one serial box). A derived list would have
+# silently reordered that. `cli/tests/lane_sets.rs` reads these two lines
+# instead and fails if either names a set with no roster row — the same
+# direction it used to enforce over the Makefile's `lane-dispatch.sh` lines,
+# pointed at the caller that replaced them.
+merge_phases="artifacts outboard gate seam-guard clients heavy"
+stage_phases="artifacts outboard gate clients"
+
+if [ "$kind" = "stage" ]; then
+    phases="${HV_SLUICE_PHASES:-$stage_phases}"
+else
+    phases="${HV_SLUICE_PHASES:-$merge_phases}"
+fi
 
 # `census` MUST NEVER run as a chamber phase. `census-run.sh:132-145`
 # unconditionally overwrites and `rm -f`s the SAME shared claim path this
@@ -318,7 +354,7 @@ phases="${HV_SLUICE_PHASES:-artifacts outboard gate seam-guard clients heavy}"
 # phases finish. Refuse at the gate, before the flock wait even starts.
 case " $phases " in
     *' census '*)
-        echo "sluice-run: refusing — 'census' cannot run as a chamber phase. census-run.sh overwrites and unconditionally rm -f's the shared claim on exit (scripts/census-run.sh:132-145), even under HV_CENSUS_LOCK_HELD (which only skips ITS OWN flock acquisition, not the claim write/removal), so it would clobber and then delete this chamber's own claim mid-run. Dispatch census separately: make lane SET=census REF=<full-sha>." >&2
+        echo "sluice-run: refusing — 'census' cannot run as a chamber phase. census-run.sh overwrites and unconditionally rm -f's the shared claim on exit (scripts/census-run.sh:132-145), even under HV_CENSUS_LOCK_HELD (which only skips ITS OWN flock acquisition, not the claim write/removal), so it would clobber and then delete this chamber's own claim mid-run. Run a census separately, through its own wrapper: ssh <canonical> 'cd ~/Projects/hornvale && HV_CENSUS_REF=<full-sha> scripts/census-run.sh'." >&2
         exit 2
         ;;
 esac
@@ -377,7 +413,7 @@ done
     echo "user=${USER:-unknown}"
     echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "goldens=$goldens"
-    echo "label=sluice:$branch"
+    echo "label=sluice-$kind:$branch"
     echo "ref=$sha"
     echo "cmdline=phases=$phases"
     echo "job=$job_id"
@@ -595,6 +631,28 @@ if [ -n "$phase_failed" ]; then
 fi
 
 final_sha="$(git rev-parse HEAD)"
+
+# THE ONE BRANCH THAT MAKES A STAGE GATE A KIND AND NOT A SECOND SCRIPT.
+# Everything above ran identically for both kinds — same claim, same
+# worktree, same real merge against the current `origin/main`, same
+# roster-declared phases, same clean-tree invariant, same single failure
+# gate. A stage gate differs only in what it does with a green verdict:
+# nothing. It reports, and `main` is untouched.
+#
+# It is placed AFTER the failure gate, not before, deliberately: a stage run
+# whose phases went red must still exit with that phase's own code (10/11/12/
+# 15), or `kind=stage` would become a way to launder a red run into an rc=0
+# "reported". The only thing this skips is the push.
+#
+# The merge commit this run built is discarded with the worktree — the next
+# chamber job `checkout --force`s and `reset --hard`s it. That is the point:
+# a stage gate answers "would this branch survive contact with main today",
+# and tomorrow's answer is a different question against a different main.
+if [ "$kind" = "stage" ]; then
+    echo "sluice-run: STAGE REPORT — every phase green on merge product $merge_sha (final tree $final_sha)."
+    echo "sluice-run: nothing pushed; main is unchanged at $base_sha. kind=stage."
+    exit 0
+fi
 
 # TESTED SHA == PUSHED SHA. `final_sha` is read fresh, after the phase loop's
 # own commits (each phase's tracked drift lands as its own commit, so

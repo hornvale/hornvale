@@ -6,7 +6,10 @@
 # decision 0129's lane rule — "the lane must never be wired to auto-implement a
 # suggestion... that would make the board self-modifying with no human in the
 # loop" — and the concrete hazard is a nightly job committing while a session
-# is mid-landing, which `make preflight` warns about and cannot prevent.
+# is mid-landing. Nothing warns about that any more: `make preflight` used to
+# peek at main's checkout and say so, and The Sluice deleted it because main
+# now advances only through the chamber's own claim (decision 0139) — which
+# serializes the LANDING but says nothing about an unattended committer.
 #
 # Wall-clock time is used freely here. The determinism ban governs the SIM;
 # scheduling is outside that boundary, exactly as clients/ is.

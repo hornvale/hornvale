@@ -13,8 +13,13 @@
 # actually returned an id.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-branch="${1:?usage: sluice-request.sh <branch> <full-sha>}"
-ref="${2:?usage: sluice-request.sh <branch> <full-sha>}"
+branch="${1:?usage: sluice-request.sh <branch> <full-sha> [merge|stage]}"
+ref="${2:?usage: sluice-request.sh <branch> <full-sha> [merge|stage]}"
+kind="${3:-merge}"
+case "$kind" in
+    merge|stage) ;;
+    *) echo "sluice-request: unknown kind '$kind' (merge|stage)" >&2; exit 2 ;;
+esac
 host="$(cat "$repo_root/scripts/census-canonical-host.txt")"
 remote_dir="${HV_SLUICE_REMOTE_DIR:-~/Projects/hornvale}"
 
@@ -83,20 +88,60 @@ fi
 # SAME subject sluice-run.sh will actually use (not a separately
 # caller-supplied string, which could say anything and still not match what
 # actually lands) and refuses to enqueue if it looks like a placeholder.
-headline="$(git -C "$repo_root" log -1 --format=%s "$ref" 2>/dev/null || true)"
-case "$headline" in
-    ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO)
-        echo "sluice-request: refusing — the commit at ${ref:0:12}'s subject ('$headline') is not a real headline." >&2
-        echo "  Under --no-ff this becomes the merge commit's subject, which" >&2
-        echo "  tools/census/history.sh reads as the census epoch label. Amend" >&2
-        echo "  the commit (or add a proper final commit) and push again." >&2
-        exit 2
-        ;;
-esac
+#
+# A `stage` REQUEST IS EXEMPT, and the exemption is the same reasoning read
+# forwards. The refusal exists because the subject becomes a PERMANENT
+# artifact label on `main`'s first-parent line. A stage gate never pushes —
+# its merge commit is discarded with the chamber's worktree — so no subject
+# it carries can ever become that label, and refusing a mid-campaign `wip`
+# commit a plan-stage boundary legitimately sits on would block the one
+# thing a stage gate is for. The check returns in full the moment the same
+# branch asks to merge.
+if [ "$kind" = "merge" ]; then
+    headline="$(git -C "$repo_root" log -1 --format=%s "$ref" 2>/dev/null || true)"
+    case "$headline" in
+        ""|wip|WIP|fixup!*|squash!*|.|tmp|temp|TODO)
+            echo "sluice-request: refusing — the commit at ${ref:0:12}'s subject ('$headline') is not a real headline." >&2
+            echo "  Under --no-ff this becomes the merge commit's subject, which" >&2
+            echo "  tools/census/history.sh reads as the census epoch label. Amend" >&2
+            echo "  the commit (or add a proper final commit) and push again." >&2
+            exit 2
+            ;;
+    esac
+fi
+
+# THE CAIRN'S HOLD-OFF READ, INHERITED FROM `scripts/preflight-merge.sh`.
+# That script is deleted (Task 12); this is the seam of it that had no
+# successor. The mouth subsumes preflight's ancestry check and the chamber's
+# `gate` phase subsumes its registry-ID collision check (`docs_consistency`
+# asserts ID uniqueness on the real merge product, where preflight only
+# compared two diffs), but NOTHING else read the board at the moment work
+# asks to integrate — which is exactly when another session's `hold-off`
+# matters. Submitting is now that moment, so the read lives here.
+#
+# Advisory only, and never fatal, for the two reasons its old home gave: the
+# board has no standing to block a merge (D7), and `board-sync.sh` is
+# best-effort by design (B6) — a hung network must not cost a submission.
+# The binary is deliberately never compiled here; a checkout without one
+# reads nothing and says nothing, exactly as before.
+if [ "${HV_SLUICE_SKIP_BOARD:-}" != "1" ]; then
+    bash "$repo_root/scripts/board-sync.sh" || true
+    for candidate in tools/board/target/release/board tools/board/target/debug/board; do
+        if [ -x "$repo_root/$candidate" ]; then
+            holds="$("$repo_root/$candidate" read 2>/dev/null | grep -F 'polarity=hold-off' || true)"
+            if [ -n "$holds" ]; then
+                printf '\nADVISORY — hold-off notices from other sessions:\n' >&2
+                printf '%s\n' "$holds" | sed 's/^/  /' >&2
+                printf '  (advisory only; it does not change this submission)\n\n' >&2
+            fi
+            break
+        fi
+    done
+fi
 
 # shellcheck disable=SC2029  # meant to expand client-side into the remote command
 remote_cmd="if cd $remote_dir && [ -x scripts/sluice-queue.sh ]; then \
-scripts/sluice-queue.sh add '$branch' '$ref'; else \
+scripts/sluice-queue.sh add '$branch' '$ref' '$kind'; else \
 echo \"sluice-request-remote: cd '$remote_dir' failed or sluice-queue.sh missing on '$host' -- NOTHING WAS QUEUED\" >&2; \
 exit 1; fi"
 
@@ -105,5 +150,5 @@ if ! req="$(ssh "$host" "$remote_cmd")"; then
     echo "sluice-request: remote enqueue FAILED — nothing was queued." >&2
     exit 1
 fi
-echo "sluice-request: $req branch=$branch ref=${ref:0:12} host=$host"
+echo "sluice-request: $req branch=$branch ref=${ref:0:12} kind=$kind host=$host"
 echo "sluice-request: read it back with 'make sluice-status'"

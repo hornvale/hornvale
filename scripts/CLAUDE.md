@@ -87,47 +87,42 @@ Key knobs:
 
 ## The gate ladder
 
-Two gates plus the merge queue now exist, named for the campaign moment each
-one gates rather than for the machine or the scripts behind it (decisions
-0132, 0139): `gate-commit` (local), `gate-stage` (dispatched to the one lane
-on the canonical box, decision 0133), and the merge queue (`make sluice`,
-below), which retires `gate-campaign` — it gates the merge PRODUCT rather
-than a branch tip, running the former campaign-gate phases (`artifacts
-outboard gate seam-guard clients heavy`) against the actual merge commit
-before pushing it. The roster of what each lane set runs is
+One local gate and one queue with two mouths, named for the campaign moment
+each one gates rather than for the machine or the scripts behind it
+(decisions 0132, 0139): `gate-commit` (local, seconds), `make sluice-stage`
+(the stage gate) and `make sluice` (the merge), both of which are the SAME
+queue on the canonical box behind the SAME serial claim (decision 0133).
+The queue retires `gate-campaign` — it gates the merge PRODUCT rather
+than a branch tip, running the former campaign-gate phases against the
+actual merge commit before pushing it. A stage request is that same run with
+`kind=stage`: it merges and gates, runs the `stage`-rung phases, and never
+pushes. The roster of what each set runs is
 `scripts/lane-sets.tsv`, the single source of truth this section does not
 restate.
+
+**`gate-stage`, `preflight` and the five `make lane*` targets are gone**, as
+are `scripts/lane-dispatch.sh`, `lane-run.sh`, `test-lane.sh` and
+`preflight-merge.sh` (The Sluice, Task 12). What they were the front end of —
+an asynchronous dispatch layer serving a caller on another machine — is what
+the queue replaced; the `flock` claim they took is not, and survives
+unchanged. `scripts/lane-sets.tsv`'s `where` column still reads `lane` for
+exactly that reason: it names the claim, not the deleted machinery.
 
 - **`subfloor-roster.sh`** — emits `gate-commit`'s nextest filter: every test
   below `BASELINE_FLOOR_SECS` (1.0 s) in the committed duration baseline.
   EXCLUDE-UNKNOWN: a test with no baseline row is not selected here; it is
-  picked up on the next green stage gate, which measures it and rewrites the
-  roster. Exit 3 means no roster exists for this host — a different thing
+  picked up by the next green chamber `gate` phase, which measures it and
+  rewrites the roster — genuinely, since The Sluice fixed `ci-record`'s
+  refusal-under-its-own-ancestor's-claim (root `CLAUDE.md` carries the whole
+  account); the chamber then commits the rewritten roster with the merge
+  product. Exit 3 means no roster exists for this host — a different thing
   from an empty roster, and `gate-commit-run` treats it as a hard failure
   rather than silently gating nothing.
-- **`lane-dispatch.sh`** — validates a set name against `scripts/lane-sets.tsv`
-  and a `REF` (a **full SHA**, never a branch name — it feeds `reset --hard`
-  on the far end, which can otherwise land on a stale local branch of that
-  name there), then ssh's to the canonical box and forks a detached
-  `lane-run.sh`. It RETURNS as soon as the job is enqueued and never blocks
-  the caller. `make gate-stage REF=<sha>` is a thin wrapper dispatching
-  `gate`+`artifacts`+`outboard`+`clients` through this script; `heavy`,
-  `census` and `seam-guard` are no longer bundled behind an aggregate
-  Makefile target (`gate-campaign` retired them — decision 0139) and are
-  dispatched individually with `make lane SET=<set> REF=<sha>`, except that
-  the merge queue's own chamber (`sluice-run.sh`, below) now runs `heavy` and
-  `seam-guard` itself, in-process, once it already holds the shared claim —
-  see the merge-queue entries below.
-- **`lane-run.sh`** — runs one set under the **same shared canonical-box
-  claim** `heavy-run.sh` and `census-run.sh` already took (decisions
-  0086/0133), forked with `setsid` so a dropped ssh costs nothing. Writes
-  `<job-id>.log` and appends an outcome row to `jobs.tsv` on every exit path,
-  including a signal — read either back with `make lane-log [JOB=<id>]` or
-  `make lane-status`.
 - **`lane-outboard.sh`** — the driver for the `outboard` set: three suites
   nothing ran before The Staff — `tools/board`, `tools/digest`, and
   `tools/type-audit`'s own suite (distinct from the `type-audit check` lint
-  in `gate-commit`). Not fail-fast: independent suites, so it reports every
+  in `gate-commit`). Runs as a chamber phase of both a stage gate and a
+  merge. Not fail-fast: independent suites, so it reports every
   failure in one pass rather than stopping at the first. `seam-guard` is
   deliberately not in it — it shipped here first, but measurement showed its
   7 call sites cost 853.284 s — 99.8% of this set's 855.222 s wall time (the
@@ -137,9 +132,11 @@ restate.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
   `gate-commit` and the stage gate's own suite both defer (see
   `cli/tests/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
-  `make lane SET=heavy REF=<sha>`, or as one of the merge queue's chamber
-  phases (`sluice-run.sh`, below), which is now what `gate-campaign` used to
-  dispatch it. **Takes the shared box claim** (decisions 0086/0133) — here,
+  `make heavy-remote REF=<sha>`, or as the LAST of the merge queue's chamber
+  phases (`sluice-run.sh`, below), which is what `gate-campaign` used to
+  dispatch it. It is deliberately not a stage-gate phase: at a measured mean
+  1678 s it is 47% of the merge set's ~3602 s, which is a merge-frequency
+  cost, not a plan-stage-boundary one. **Takes the shared box claim** (decisions 0086/0133) — here,
   at the seam, rather than only in a wrapper, because a wrapper cannot guard
   a direct invocation of the script. Where there is no `flock` (macOS ships
   none) it proceeds unserialised with a note rather than failing.
@@ -174,7 +171,11 @@ the exact SHA it tested.
   ANCESTRY (`git merge-base --is-ancestor`), not branch name, so a rebase or
   a detached ref still supersedes correctly — and never supersedes a request
   already RUNNING inside the chamber, which would otherwise orphan it
-  mid-write.
+  mid-write. Its `kind` column (`merge` | `stage`) is how the stage gate was
+  absorbed without a second code path; coalescing is scoped to the kind as
+  well as the branch, or a stage request would silently drop a queued merge
+  on the same branch. `reported` is the stage kind's terminal state —
+  separate from `landed`, which would assert main moved when it did not.
 - **`sluice-mouth.sh`** — the checks that run OUTSIDE the lane claim (the
   canal-lock rule: turn a vessel away at the gate, never inside the
   chamber). Prevents a doomed candidate — already merged, unpushed, or
@@ -192,23 +193,31 @@ the exact SHA it tested.
   seam-guard clients heavy` — `census` refuses as a chamber phase, since it
   unconditionally clobbers the shared claim on exit) against the real merge
   commit before pushing it, so a broken interaction with main is caught
-  before it ever reaches main. Unsets `GIT_DIR`/`GIT_INDEX_FILE` once near
+  before it ever reaches main. A `kind=stage` run is the same code with one
+  branch turned the other way at the push step: it merges, runs the
+  `stage`-rung phases, reports, and exits 0 without pushing — placed AFTER
+  the single failure gate, so `kind=stage` can never launder a red run into
+  a green one. Unsets `GIT_DIR`/`GIT_INDEX_FILE` once near
   the top (the board-incident hermeticity lesson above), so no child process
   spawned mid-run can silently operate on a different repository.
 - **`sluice-request.sh`** — the caller's side; validates and ssh's, then
-  RETURNS without waiting, same shape as `lane-dispatch.sh` including its two
+  RETURNS without waiting, in the shape the deleted `lane-dispatch.sh`
+  established including its two
   hard-won guards (a full 40-char SHA, and a preflight kept outside the
   backgrounded segment so a dispatch that never started cannot report
-  success).
+  success). It also carries the board's HOLD-OFF ADVISORY, inherited from
+  `preflight-merge.sh`: submitting is now the moment work asks to integrate,
+  which is when another session's `hold-off` matters. Advisory only, never
+  fatal, and skippable with `HV_SLUICE_SKIP_BOARD=1` (which
+  `scripts/test-sluice.sh` sets for the whole file, so a test run never
+  pushes a board ref to the real `origin`).
 - **`test-sluice.sh`** — property tests for the queue, shaped after
-  `test-lane.sh`: pins the properties the queue would be worthless without
+  the deleted `test-lane.sh`: pins the properties the queue would be worthless without
   (flock ordering, coalescing by ancestry, never superseding a running
   request, the mouth's five-valued exit semantics) rather than merely
   asserting a lock file exists, and SKIPS (not fails) on a host without
   `flock`, since `sluice-queue.sh` only ever runs on the canonical box.
 
-- `preflight-merge.sh` — GO/NO-GO before integrating a campaign branch;
-  peeks at main's checkout and warns if another session is mid-landing.
 - `doctor.sh` — the repo self-map (`make doctor`); good orientation for a
   fresh session.
 

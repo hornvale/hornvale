@@ -29,8 +29,8 @@ Read the root `CLAUDE.md` first; this file is about the second half.
   See `docs/CLAUDE.md` and `book/src/frontier/CLAUDE.md`.
 - **`heavy_tier.rs`** — asserts every `#[ignore]`d live-worldgen battery
   carries the one canonical reason string verbatim, so every gate skips it and
-  only the dedicated `heavy` lane set (`scripts/gate-full-heavy.sh`, dispatched
-  via `make lane SET=heavy REF=<full-sha>` or `make heavy-remote
+  only the dedicated `heavy` set (`scripts/gate-full-heavy.sh`, run as the
+  merge queue's last phase or on its own with `make heavy-remote
   REF=<full-sha>`) runs it — the two can never fall out of sync. Red = someone
   `#[ignore]`d a heavy test with an ad-hoc reason, which would make it
   invisible to *every* tier. Ignore reasons that are deliberately **not**
@@ -56,8 +56,9 @@ Read the root `CLAUDE.md` first; this file is about the second half.
 ## A crate-scoped green is not a branch-green
 
 The root `CLAUDE.md` tells you to iterate cost-ordered — `cargo test -p <crate>`
-while working, full `--workspace` coverage at the stage gate's lane dispatch —
-and that advice is right. But
+while working, full `--workspace` coverage when the stage gate runs on the
+canonical box (`make sluice-stage BRANCH=<branch> REF=<full-sha>`) — and that
+advice is right. But
 it has one consequence worth stating where the tests actually live: **every
 invariant listed above is asserted from `cli/`, and none of them is about the
 crate you edited.** A `cargo test -p hornvale-terrain` cannot see layering, the
@@ -75,7 +76,7 @@ So: a task may *iterate* crate-scoped, but the evidence it reports as "green"
 must be workspace-wide, or it is reporting on a different question than the one
 being asked.
 
-## The heavy tier is invisible to every gate but the `heavy` lane set, including on `main`
+## The heavy tier is invisible to every gate but the `heavy` set, including on `main`
 
 `gate-commit` and the stage gate's own suite both skip the `heavy:` tier by
 design, so anything only that tier can see is unobserved on every ordinary
@@ -107,8 +108,8 @@ The string still says "make gate-full" even though that target is retired
 (decision 0132) — it predates the rename and is compared byte-for-byte across
 every `#[ignore]`d heavy test in the tree, so fixing the wording would mean
 touching every one of them for a cosmetic change. Read "make gate-full" in
-this one string as "the tier that now runs under the `heavy` lane set" (`make
-lane SET=heavy REF=<full-sha>` or `make heavy-remote REF=<full-sha>`), not as
+this one string as "the tier that now runs under the `heavy` set" (the merge
+queue's last phase, or `make heavy-remote REF=<full-sha>` on its own), not as
 evidence either retired target still exists — `gate-campaign`, which once ran
 this tier too, is itself retired (decision 0139).
 

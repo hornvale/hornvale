@@ -15,7 +15,7 @@
 #   knows the old name directly ($recycled, a plain shell variable that
 #   `git worktree repair` does not touch or erase) and passes it here,
 #   closing the gap for the one caller that has the information. A caller
-#   with no such extra knowledge (lane-run.sh, a human at a shell) can omit
+#   with no such extra knowledge (a human at a shell) can omit
 #   it; the check then falls back to the sibling-only behaviour below.
 #
 # DIRECTION THIS CHECK ENFORCES: it asserts `no compiled artifact references

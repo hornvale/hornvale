@@ -109,8 +109,8 @@ successive regenerations sweep different slices of the seed range — and
 compares them against the committed rows. It was authored as an always-on,
 few-seconds check on every `cargo test`, but as the worldgen pipeline
 deepened its cost grew to minutes, so it now runs in the heavy tier (the
-`heavy` lane set — `make lane SET=heavy REF=<sha>`, or `make heavy-remote
-REF=<sha>` directly) rather than in the commit gate.
+`heavy` phase of a merge through the queue, or `make heavy-remote REF=<sha>`
+on its own) rather than in the commit gate.
 
 That left a real gap, and [The Sexton](../chronicle/the-sexton.md) narrowed
 it with a three-world, all-metric **sentinel** comparing the first three
@@ -119,10 +119,15 @@ CPU-seconds. [The Staff](../chronicle/the-staff.md) then split the single
 gate that check lived in into three by purpose (decision 0132), sorted by
 cost rather than by hand: `gate-commit`'s local, every-commit tier runs only
 tests measured under one second, and the sentinel's own cost sits well above
-that floor. So it no longer runs at every commit — it runs inside
-`gate-stage`, the full `cargo nextest run --workspace` dispatched to the
-canonical box's lane at each plan-stage boundary, still well before a
-campaign close. It is a sample, not the census: it sees three worlds of a
+that floor. So it no longer runs at every commit — it runs inside the **stage
+gate**, the full `cargo nextest run --workspace` taken on the canonical box's
+serial claim at each plan-stage boundary, still well before a campaign close.
+The Sluice then moved that gate's mouth without changing its body (decision
+0139): a stage gate is a request to the same merge queue a merge goes
+through (`make sluice-stage`), running the same phases against the same real
+merge product and reporting rather than pushing.
+
+It is a sample, not the census: it sees three worlds of a
 thousand, and a drift confined to the other 997 still waits for the full
 refresh. Its value showed immediately under the old topology — within hours
 of shipping it had verified three separate campaigns' byte-identity claims on

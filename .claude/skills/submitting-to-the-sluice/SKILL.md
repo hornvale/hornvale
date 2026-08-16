@@ -1,6 +1,6 @@
 ---
 name: submitting-to-the-sluice
-description: Use when a Hornvale campaign's work is complete on its branch and ready to merge — asking the sluice (the serial merge queue on the canonical box) to take it, rather than merging by hand.
+description: Use when a Hornvale campaign needs the canonical box — either at a plan-stage boundary (a stage gate) or when work is complete and ready to merge — asking the sluice (the serial queue on the canonical box) to take it, rather than gating or merging by hand.
 ---
 
 # Submitting to the Sluice
@@ -25,6 +25,30 @@ messaging first "in case the enqueue is slow" — reintroduces exactly the
 failure this ordering exists to prevent: a nudge with nothing durable
 behind it.
 
+## Two kinds of request, one queue
+
+Since Task 12 (decision 0140) the queue takes **both** things a campaign
+needs the canonical box for, and they differ in exactly one respect:
+
+| | `make sluice-stage BRANCH=… REF=…` | `make sluice BRANCH=… REF=…` |
+|---|---|---|
+| when | every plan-stage boundary | work is complete |
+| phases | the `stage`-rung ones | all six, `heavy` last |
+| merges main+branch in the chamber | yes | yes |
+| pushes | **never** | yes, the exact SHA it tested |
+| terminal state | `reported` | `landed` |
+| headline refused if junk | no — nothing permanent carries it | yes |
+
+Everything below applies to both unless it says otherwise. A stage gate is
+not a lesser instrument: it gates the same real merge product, which is what
+makes it worth queueing behind an hour of someone else's heavy run. What it
+replaced (`make gate-stage`) tested a bare branch tip and could go green on
+a branch that would not survive contact with `main`.
+
+`make gate-stage` and `make preflight` are refusing signposts now; so are the
+five `make lane*` targets. If you find yourself reaching for one, the answer
+is `make sluice-stage`.
+
 ## The three steps, in order
 
 1. **`make gate-commit`.** Must pass. This is the only local, per-commit
@@ -39,7 +63,8 @@ behind it.
    ```bash
    git push origin HEAD:refs/heads/<branch>          # ordinary push, NEVER force
    ref="$(git rev-parse HEAD)"                        # full 40-char SHA
-   make sluice BRANCH=<branch> REF="$ref"
+   make sluice       BRANCH=<branch> REF="$ref"      # to merge
+   make sluice-stage BRANCH=<branch> REF="$ref"      # to gate only
    ```
 
    `make sluice` (`scripts/sluice-request.sh`) validates the ref is a full,
@@ -57,7 +82,11 @@ behind it.
    ```
 
    This is mechanical, not advisory — `sluice-request.sh` runs this itself
-   on every submission, using the exact same subject
+   on every **merge** submission (a `stage` request is exempt: its merge
+   commit is discarded with the chamber's worktree, so no subject it carries
+   can become a census epoch label, and refusing a mid-campaign `wip` commit
+   that a plan-stage boundary legitimately sits on would block the one thing
+   a stage gate is for), using the exact same subject
    `sluice-run.sh`'s own `--no-ff` merge will later use as the merge
    commit's subject (`headline="${HV_SLUICE_HEADLINE:-$(git log -1
    --format=%s "$sha")}"`), which `tools/census/history.sh` then reads as
@@ -133,9 +162,13 @@ understands why one held request can sit differently than another.
 ## Checking on a submitted request
 
 ```bash
-make sluice-status                  # queued / running / held / landed, FIFO order
+make sluice-status                  # queued / running / held / landed / reported, FIFO order
 make sluice-log [JOB=<id>]          # a finished chamber job's own log
 ```
+
+A stage request ends `reported`, never `landed` — `landed` would claim `main`
+moved, and a stage gate never pushes. Read its log for the verdict; the last
+line of a green one is `STAGE REPORT`.
 
 A `held` row needs a human: a merge conflict (absorb `main` and resubmit —
 a new request, not a retry of the same one, since the sha changed) or a

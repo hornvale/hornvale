@@ -15,6 +15,21 @@
 # OUTRANK `git -C`/cwd. This script may be invoked from a hook or another
 # wrapper that has them set for a different repository, so its own
 # merge-base check runs under `env -u GIT_DIR -u GIT_INDEX_FILE` too.
+#
+# THE `kind` COLUMN (The Sluice, Task 12) IS WHY THERE IS NO SECOND QUEUE.
+# `gate-stage` used to be its own dispatch path — a caller on the Mac, a
+# detached job on the canonical box, a shared scratch worktree, a jobs.tsv.
+# Absorbing it here makes a stage gate a queue entry like any other: same
+# mouth, same chamber, same claim, same FIFO. The ONLY difference is one
+# branch at the push step (`sluice-run.sh`), which is why this is a column
+# and not a second code path.
+#
+# THE COLUMN IS SIXTH, NOT SEVENTH, DELIBERATELY. `state` stays field 5, so
+# `next`'s `$5=="queued"` and every existing reader of a queue row keep
+# working unchanged; `note` — the one free-text field, and the only one whose
+# width varies — stays last, where a `column -t` render degrades gracefully.
+# A row written before this column existed has six fields and no `kind`; an
+# empty kind reads as `merge`, which is what every such row was.
 set -euo pipefail
 
 HV_SLUICE_DIR="${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}"
@@ -70,12 +85,31 @@ validate_sha() {
 
 # `state` is a CLOSED VOCABULARY, the third shape: neither free text to
 # strip nor an external identifier to validate against git, just an enum
-# that should not accept a seventh value. Listed here, not derived from the
+# that should not accept an eighth value. Listed here, not derived from the
 # TSV, because the set of legal states is a property of this script, not of
 # whatever happens to already be on disk.
+#
+# `reported` is `landed`'s counterpart for a `kind=stage` request: the
+# chamber ran every phase and told the author the answer, and there was
+# never anything to push. It is a SEPARATE terminal state rather than a
+# reuse of `landed` because the two make different claims about `main` —
+# reading a stage gate as "landed" would say main moved when it did not,
+# on the one file that is the durable record a request existed.
 validate_state() {
     case "$1" in
-        queued|running|held|landed|superseded|dropped) return 0 ;;
+        queued|running|held|landed|reported|superseded|dropped) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# `kind` is the second closed vocabulary, and it is closed for the same
+# reason `state` is: it selects a code path in the chamber (whether the run
+# pushes), so a third value arriving by typo must fail here rather than be
+# silently treated as one of the two. Empty is accepted and normalised to
+# `merge` by the caller, for rows written before this column existed.
+validate_kind() {
+    case "$1" in
+        merge|stage) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -85,8 +119,13 @@ shift || true
 
 case "$cmd" in
 add)
-    branch="${1:?usage: add <branch> <sha>}"
-    sha="${2:?usage: add <branch> <sha>}"
+    branch="${1:?usage: add <branch> <sha> [merge|stage]}"
+    sha="${2:?usage: add <branch> <sha> [merge|stage]}"
+    kind="${3:-merge}"
+    if ! validate_kind "$kind"; then
+        echo "sluice-queue: add: '$kind' is not a known kind (merge|stage)" >&2
+        exit 1
+    fi
     if ! validate_branch "$branch"; then
         echo "sluice-queue: add: '$branch' is not a valid branch name (git check-ref-format --branch rejected it)" >&2
         exit 1
@@ -116,16 +155,22 @@ add)
     # the normal path.
     tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
     trap 'rm -f "$tmp"' EXIT
-    while IFS=$'\t' read -r when rid rbranch rsha rstate rnote; do
-        if [ "$rstate" = "queued" ] && [ "$rbranch" = "$branch" ] \
+    while IFS=$'\t' read -r when rid rbranch rsha rstate rkind rnote; do
+        # Coalescing is scoped to the SAME KIND as well as the same branch.
+        # A stage gate and a merge on one branch are different requests
+        # asking for different things — a queued merge must not be silently
+        # dropped because a later stage gate happens to be its descendant,
+        # and vice versa. Only the ancestor test is shared.
+        [ -n "$rkind" ] || rkind="merge"
+        if [ "$rstate" = "queued" ] && [ "$rbranch" = "$branch" ] && [ "$rkind" = "$kind" ] \
            && env -u GIT_DIR -u GIT_INDEX_FILE git merge-base --is-ancestor "$rsha" "$sha" 2>/dev/null; then
             rstate="superseded"
             rnote="superseded by $id"
         fi
-        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rnote"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
     done < "$QUEUE" > "$tmp"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "" >> "$tmp"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$id" "$branch" "$sha" "queued" "$kind" "" >> "$tmp"
     mv "$tmp" "$QUEUE"
     printf '%s\n' "$id"
     ;;
@@ -137,21 +182,22 @@ set-state)
     id="${1:?usage: set-state <id> <state> [note]}"
     state="${2:?usage: set-state <id> <state> [note]}"
     if ! validate_state "$state"; then
-        echo "sluice-queue: set-state: '$state' is not a known state (queued|running|held|landed|superseded|dropped)" >&2
+        echo "sluice-queue: set-state: '$state' is not a known state (queued|running|held|landed|reported|superseded|dropped)" >&2
         exit 1
     fi
     note="$(sanitize_note "${3:-}")"
     with_lock
     tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
     trap 'rm -f "$tmp"' EXIT
-    while IFS=$'\t' read -r when rid rbranch rsha rstate rnote; do
+    while IFS=$'\t' read -r when rid rbranch rsha rstate rkind rnote; do
+        [ -n "$rkind" ] || rkind="merge"
         if [ "$rid" = "$id" ]; then
             rstate="$state"
             if [ -n "$note" ]; then
                 rnote="$note"
             fi
         fi
-        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rnote"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
     done < "$QUEUE" > "$tmp"
     mv "$tmp" "$QUEUE"
     ;;
