@@ -277,5 +277,90 @@ else
     bad "$leftover leftover .queue.tmp.* file(s) found after a killed rewrite"
 fi
 
+echo "== mouth: a conflicting candidate is refused WITHOUT taking the claim"
+cd "$scratch"
+g checkout -q main; printf 'MAIN\n' > f.txt; g commit -qam main-edit
+g checkout -q -b campaign/conflict main~1
+printf 'SIDE\n' > f.txt; g commit -qam side-edit
+CONF="$(g rev-parse HEAD)"
+
+# Point the claim at a path in our temp dir so we can assert it is untouched.
+export HV_CENSUS_CLAIM_PATH="$tmp/claim"
+export HV_CENSUS_LOCK="$tmp/lock"
+export HV_SLUICE_ALLOW_UNPUSHED=1     # scratch repo has no remote
+# Pin the base EXPLICITLY in every mouth test below. The scratch repo has no
+# `origin`, so an unpinned HV_SLUICE_BASE defaults to `origin/main`, which
+# does not resolve here — and sluice-mouth.sh now (correctly, see the
+# controller's fix) exits 2 for an unresolvable base, not 1. Leaving
+# HV_SLUICE_BASE unset would make the "exits 1" and "never took the claim"
+# assertions below pass VACUOUSLY: they would still be true, but for the
+# wrong reason (an infrastructure fault, not the conflict this test is
+# actually about) — the exact defect the controller's review caught.
+export HV_SLUICE_BASE=main
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/conflict "$CONF" >/dev/null 2>"$tmp/mouth.err"
+rc=$?
+set -e
+if [ "$rc" -eq 1 ]; then
+    ok "a conflicting candidate exits 1"
+else
+    bad "expected exit 1 for a conflict, got $rc"
+fi
+# THE PROPERTY THAT MATTERS: assert on the CLAIM, not on the message. A check
+# that merely printed the right words while consuming the box would pass a
+# message-based assertion.
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "the conflicting candidate never acquired the claim"
+else
+    bad "the mouth took the claim — the whole point is that it must not"
+fi
+if grep -q 'f.txt' "$tmp/mouth.err"; then
+    ok "the conflicting path is reported"
+else
+    bad "no conflicting path in stderr"
+fi
+
+echo "== mouth: an already-merged candidate exits 3"
+export HV_SLUICE_BASE=main
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" main "$(g rev-parse main)" >/dev/null 2>&1
+rc=$?
+set -e
+if [ "$rc" -eq 3 ]; then ok "already-merged exits 3"; else bad "expected 3, got $rc"; fi
+
+echo "== mouth: a base ref that does not resolve exits 2, not 1 — distinct from a conflict"
+# This is the controller's design fix, exercised directly: `git merge-tree
+# --write-tree` exits 1 both for a genuine conflict AND for a base ref that
+# fails to resolve ("not something we can merge") — the two mean opposite
+# things to the queue (bounce the campaign vs. an infrastructure fault that
+# is not the campaign's problem), so sluice-mouth.sh resolves and verifies
+# the base BEFORE calling merge-tree. Use the SAME conflicting candidate as
+# the first section so a regression back to "exit 1 for everything" would
+# still show as a false green there if this section did not exist.
+unset HV_SLUICE_BASE
+rm -f "$HV_CENSUS_CLAIM_PATH"
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/conflict "$CONF" >/dev/null 2>"$tmp/mouth-badbase.err"
+rc=$?
+set -e
+if [ "$rc" -eq 2 ]; then
+    ok "an unresolvable base ref (origin/main, no remote here) exits 2, not 1"
+else
+    bad "expected exit 2 for an unresolvable base ref, got $rc"
+fi
+if [ ! -e "$HV_CENSUS_CLAIM_PATH" ]; then
+    ok "an unresolvable-base candidate never acquired the claim either"
+else
+    bad "the mouth took the claim on an unresolvable base — must not"
+fi
+if grep -qi 'base ref' "$tmp/mouth-badbase.err"; then
+    ok "the unresolvable-base reason is reported, distinct from a conflict message"
+else
+    bad "no base-ref reason found in stderr"
+fi
+export HV_SLUICE_BASE=main
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
