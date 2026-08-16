@@ -89,8 +89,9 @@ per-claim, not one-directional.
 
 This corpus was generated **without the registry-first discipline** `docs/CLAUDE.md`
 mandates — *grep the frontier idea-registry before proposing, cross-link into it at
-merge*. That is the idea-layer analogue of the project's code habit (`make preflight`,
-absorb-main-at-boundaries), and skipping it is why two corpora drifted into the same
+merge*. That is the idea-layer analogue of the project's code habit (the merge queue's
+mouth testing the actual merge, absorb-main-at-boundaries), and skipping it is why two
+corpora drifted into the same
 space uncoordinated. The durable fix is not this one reconciliation; it is running
 **registry-first on future design cycles** so convergence is caught at the source, as
 a small absorption next to its cause, instead of a five-artifact reconciliation after

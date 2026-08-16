@@ -8,19 +8,28 @@
 //!   in the Makefile and is missing from the roster.
 //! - `CLAUDE.md names the roster file and does not restate its rows` — blind
 //!   to a restatement in any other document.
-//! - `every_dispatched_set_is_rostered` — every `gate-*` Makefile target
-//!   names only rostered sets. It reads the Makefile for literal
-//!   `lane-dispatch.sh <set>` invocations and asserts each `<set>` is in the
-//!   roster; it does NOT see what `make lane SET=...` is invoked with at
-//!   runtime (that argument is a make variable, not a literal name in the
-//!   Makefile text — see the test's own doc comment) — `lane-dispatch.sh`
-//!   validates that case itself, on the caller's side, when it runs.
+//! - `every_phase_the_chamber_runs_is_rostered` — every set the merge
+//!   queue's chamber names is in the roster. It reads
+//!   `scripts/sluice-run.sh`'s two literal phase lists (`merge_phases` and
+//!   `stage_phases`) and asserts each token has a roster row; it does NOT
+//!   see what `HV_SLUICE_PHASES` is overridden with at runtime (that is the
+//!   test harness's business, and the chamber refuses an unrostered phase
+//!   itself at that point, with `no such set '<phase>'`).
 //!
 //! The asymmetry between the first two checks and the third is the reason the
 //! third direction matters at all, not a detail to skim: the first two both
-//! read the *roster* and are blind to a set the Makefile invents out of
-//! nowhere; the third reads the *Makefile* and is blind to a rostered set
+//! read the *roster* and are blind to a set the chamber invents out of
+//! nowhere; the third reads the *chamber* and is blind to a rostered set
 //! nobody ever runs. Neither implies the other, so both sides are checked.
+//!
+//! THE THIRD CHECK USED TO READ THE MAKEFILE, for literal
+//! `@bash scripts/lane-dispatch.sh <set>` lines in the `gate-*` targets.
+//! The Sluice (Task 12) deleted that dispatch path — a stage gate is a queue
+//! entry now — so there are no such lines left anywhere. Re-pointing this at
+//! the caller that replaced them is deliberate: a check whose input
+//! disappears does not become correct, it becomes vacuous, and this file's
+//! own `!is_empty()` guard exists precisely to make that outcome loud rather
+//! than silent.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -63,8 +72,8 @@ fn every_rostered_set_is_well_formed() {
     assert!(!rows.is_empty(), "the roster is empty — every set vanished");
     for (name, gate, wh, authors, command) in &rows {
         assert!(
-            matches!(gate.as_str(), "commit" | "stage" | "campaign"),
-            "set {name:?} has gate {gate:?}; the three gates are commit, stage, campaign"
+            matches!(gate.as_str(), "commit" | "stage" | "campaign" | "merge"),
+            "set {name:?} has gate {gate:?}; the rungs are commit, stage, campaign, merge"
         );
         assert!(
             matches!(wh.as_str(), "local" | "lane"),
@@ -130,52 +139,62 @@ fn claude_md_names_the_roster_and_does_not_restate_it() {
     }
 }
 
-/// Every `gate-*` target's set list is drawn from the roster — the direction
-/// the other two checks in this file are structurally blind to.
+/// Every phase the chamber runs is drawn from the roster — the direction the
+/// other two checks in this file are structurally blind to.
 ///
 /// `every_rostered_set_is_well_formed` reads the roster and cannot see a set
-/// the Makefile invents; this reads the Makefile and cannot see a rostered set
+/// the chamber invents; this reads the chamber and cannot see a rostered set
 /// nobody runs. Neither implies the other, which is why both exist.
 #[test]
-fn every_dispatched_set_is_rostered() {
-    let makefile = fs::read_to_string(repo_root().join("Makefile")).expect("Makefile is readable");
+fn every_phase_the_chamber_runs_is_rostered() {
+    let chamber = fs::read_to_string(repo_root().join("scripts/sluice-run.sh"))
+        .expect("scripts/sluice-run.sh is readable");
     let rostered: Vec<String> = roster().into_iter().map(|r| r.0).collect();
 
-    let mut dispatched = Vec::new();
-    for line in makefile.lines() {
-        let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("@bash scripts/lane-dispatch.sh ")
-            && let Some(name) = rest.split_whitespace().next()
-        {
-            // SKIP make-variable arguments. `make lane` dispatches whatever the
-            // caller passes — `@bash scripts/lane-dispatch.sh "$(SET)" "$(REF)"`
-            // — so the token there is `"$(SET)"`, not a set name, and asserting
-            // it is rostered would fail on a target that is behaving correctly.
-            // Found by checking this test against the real Makefile one task
-            // before it was dispatched; the first draft asserted over it.
-            //
-            // The direction narrows accordingly and the doc must say so: this
-            // enforces `every LITERALLY-NAMED dispatched set is rostered`. It is
-            // blind to what `make lane` is invoked with at runtime, which is the
-            // caller's business and is validated by lane-dispatch.sh itself.
-            if !name.contains('$') {
-                dispatched.push(name.trim_matches('"').to_string());
+    // The chamber declares its two phase lists as plain shell assignments to
+    // string literals, deliberately (see the script's own comment: order is
+    // load-bearing and roster order is not phase order). Both are read here;
+    // finding only one is itself a failure, because a rename that hid one
+    // list from this scraper would leave that list unchecked while the test
+    // still reported green on the other.
+    let mut lists: Vec<(&str, Vec<String>)> = Vec::new();
+    for key in ["merge_phases", "stage_phases"] {
+        for line in chamber.lines() {
+            let t = line.trim();
+            if let Some(rest) = t.strip_prefix(&format!("{key}=\""))
+                && let Some(inner) = rest.strip_suffix('"')
+            {
+                lists.push((key, inner.split_whitespace().map(str::to_string).collect()));
+                break;
             }
         }
     }
-    assert!(
-        !dispatched.is_empty(),
-        "found no `lane-dispatch.sh <set>` invocations in the Makefile. Either \
-         the gate targets were renamed out from under this guard, or it is now \
-         asserting nothing — which is the one outcome it must never quietly reach."
+    assert_eq!(
+        lists.len(),
+        2,
+        "expected both `merge_phases=\"…\"` and `stage_phases=\"…\"` in \
+         scripts/sluice-run.sh; found {}. Either the chamber's phase lists \
+         were renamed out from under this guard, or it is now asserting \
+         nothing — which is the one outcome it must never quietly reach. \
+         (This check used to read the Makefile's `lane-dispatch.sh <set>` \
+         lines; The Sluice deleted that path and re-pointed it here.)",
+        lists.len()
     );
-    for name in &dispatched {
+    for (key, phases) in &lists {
         assert!(
-            rostered.contains(name),
-            "the Makefile dispatches set {name:?}, which is not in \
-             scripts/lane-sets.tsv. Add it to the roster, or fix the target: a \
-             dispatched set with no roster row has no host policy, no gate, and \
-             no declared command."
+            !phases.is_empty(),
+            "{key} is empty — the chamber would run no phases at all and \
+             every merge would pass by testing nothing"
         );
+        for name in phases {
+            assert!(
+                rostered.contains(name),
+                "scripts/sluice-run.sh's {key} names set {name:?}, which is \
+                 not in scripts/lane-sets.tsv. Add it to the roster, or fix \
+                 the list: a phase with no roster row has no host policy, no \
+                 gate, and no declared command — the chamber would exit 2 on \
+                 it, mid-merge, holding the box."
+            );
+        }
     }
 }

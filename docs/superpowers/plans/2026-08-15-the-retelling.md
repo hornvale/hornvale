@@ -1,0 +1,1271 @@
+# The Retelling Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Make myth content vary in transmission, so that divergence becomes measurable, by shipping a two-filter communication chain and a correct maximum-antichain measure of divergent structure.
+
+**Architecture:** A retelling passes through two deterministic filters — the teller's *incentive* (has this community ever raided?) and the hearer's *formation* (was it born of a catastrophe?). A retelling whose filter pair is **matched** is frictionless and carries content unchanged; a **mismatched** pair is lossy and coarsens the claim's day one rung down a ladder built from that world's own cycles. Everything is derived from committed facts, so `windows/hearsay` stays a window: no seeded draw, no `streams.rs` label, no epoch.
+
+**Tech Stack:** Rust 2024, `hornvale-kernel` + `hornvale-history` only at runtime (`hornvale-worldgen`/`astronomy`/`terrain` are dev-dependencies for the live batteries). Std-only; the workspace dependency allowlist is `serde`, `serde_json`, `libm`.
+
+**Spec:** `docs/superpowers/specs/2026-08-14-the-retelling-design.md`
+
+## Global Constraints
+
+- **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only; float sorts use `total_cmp` with a deterministic tie-break. Enforced by `clippy.toml`.
+- **No wall-clock time.** `Claim` carries no time; `hops` is the only clock.
+- **No new seeded draws.** Both filters are pure functions of committed facts. A draw would need a `streams.rs` label and an epoch, and would demote `hearsay` from window to domain.
+- **Every crate sets `#![warn(missing_docs)]`** — every `pub` item, field and variant gets a one-line doc comment.
+- **`type-audit:` tag on every primitive at a `pub` boundary**, and regenerate `docs/audits/type-audit-report.md` **in the same commit** that moves a pub boundary.
+- **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the single most common review finding.
+- **`Claim` is derived and never serialized.** It must not gain `Serialize`/`Deserialize`. This is what keeps the campaign off the save-format surface.
+- **The commit gate RUNS ZERO `hornvale-hearsay` TESTS.** Measured: the crate
+  is the only one in the workspace absent from
+  `docs/timings/subfloor-roster.tsv`, because that roster is authored by a
+  green stage gate on the canonical host and none has run since The Hearsay
+  merged. The commit gate COMPILES the crate and runs none of its tests, so a
+  green commit gate says nothing about this campaign's code. **Every task must
+  run its own scoped per-crate test invocation** and treat that, not the gate,
+  as its evidence. The gap closes on the next green stage gate.
+- **The gate ladder changed under this campaign (decisions 0132/0133, The
+  Staff).** `make gate`, `make ci`, `make gate-fast` and `make gate-full` are
+  now REFUSING SIGNPOSTS that exit non-zero. Use `make gate-commit` locally
+  (seconds; its cost tracks the edit's blast radius — a kernel-layer edit is
+  ~470 s, a windows-layer one seconds), and dispatch `make gate-stage
+  REF=<full-sha>` or `make gate-campaign REF=<full-sha>` to lefford's serial
+  lane. The pre-commit hook now calls `gate-commit`.
+- **The pre-commit hook runs `make quick` WORKSPACE-WIDE**, not on the crate
+  you touched. A task may therefore never leave a sibling crate
+  uncompilable "for the next task to fix" — nothing can be committed
+  until the whole workspace builds, and bypassing the hook is forbidden
+  without exception.
+- **A dependency change drifts a generated artifact.** Adding or moving a
+  crate dependency rewrites `book/src/reference/layering-generated.md`,
+  which `cli/tests/architecture.rs::the_layering_page_matches_the_enforced_graph`
+  asserts as a golden. Regenerate it with `REBASELINE=1` scoped to that
+  test and commit it alongside the code change. Task 2b found this the
+  hard way; it is not in `docs/generated-paths.txt`'s usual sweep.
+- **HOMONYM WARNING:** `hornvale_lab::census_claim::Claim` and `windows/book`'s `ChorusLine::RevealedClaim` are **different types**. This plan never touches them. The `Claim` this plan changes is `kernel/src/claim.rs:18` only.
+
+---
+
+## File Structure
+
+| File | Responsibility |
+|---|---|
+| `kernel/src/precision.rs` (create) | `Precision` — the rung INDEX only. No spans, no day arithmetic (see Task 1). |
+| `windows/hearsay/src/ladder.rs` (create) | `PrecisionLadder` — the per-world rungs, read from committed sky facts. |
+| `kernel/src/claim.rs` (modify) | `Claim` gains a `precision` field and two retelling constructors. |
+| `windows/hearsay/src/filters.rs` (create) | The two filter keys and the matched/lossy predicate. |
+| `windows/hearsay/src/divergence.rs` (create) | Maximum antichain over a witness set. |
+| `windows/hearsay/src/derive.rs` (modify) | `variants_about` — the path-aware walk that applies filters. |
+| `windows/hearsay/src/lib.rs` (modify) | Re-exports and the readout helpers H1/H2/H3 consume. |
+| `windows/hearsay/tests/retelling_readout_seed42.rs` (create) | The preregistered §6 readout. |
+| `cli/tests/heavy_tier.rs` (modify) | The canonical ignore-reason string. |
+
+**There are exactly three full-literal `Claim { … }` construction sites** — `kernel/src/claim.rs:38`, `kernel/src/claim.rs:59`, `windows/hearsay/src/derive.rs:78`. Adding a field breaks all three and nothing else; verified by `grep -rn 'Claim {' --include=*.rs kernel/ windows/ cli/`.
+
+---
+
+### Task 1: `Precision`, the rung index — LANDED, AS REVISED
+
+**Status: complete.** Kept here because a plan section describing something
+other than what shipped is a trap for the next reader.
+
+**What shipped** (`kernel/src/precision.rs`, commits `a161568b` then
+`1b7da3ba`, `46e8613b`): a bare newtype `Precision(pub u8)` with `FINEST`,
+`rung()` and an unbounded `coarser()`. No spans, no calendar units, no day
+arithmetic. Three tests: precision rank only ever rises, coarsening saturates
+rather than wrapping (a `u8` wrap would silently return a claim to first-hand
+precision, the one transition the model forbids), and `FINEST` orders below
+every other rung.
+
+**What the original Task 1 got wrong, in three layers.** It specified a
+five-variant enum `{Day, Season, Year, Decade, Generation}` carrying spans of
+`1 / 91 / 365 / 3650 / 10950`.
+
+1. **Those are Earth's calendar.** Every Hornvale world draws its own
+   `year-length-std`, `day-length-std` and `moon-period-std`. A world with no
+   moons, or no seasons (`Calendar::season_phase` returns `Option`), or a
+   tidally-locked day, does not have those rungs at all.
+2. **The nesting requirement was the wrong invariant.** The original test
+   asserted that coarsening never reduces error, and it was FALSE against its
+   own implementation (91 does not divide 365; at day 3661.75 the Year rung is
+   more accurate than the Season rung). The first fix nudged Season to 91.25 to
+   force nesting — fitting a physical constant to an arithmetic property. The
+   real invariant is **precision-rank monotonicity**: a coarsened claim is an
+   interval that widened, not a point that moved.
+3. **The kernel cannot hold spans at all.** A duration at a `pub` boundary
+   wants `StdDays` (design principle 5); `StdDays` lives in
+   `domains/astronomy`; the kernel may not depend on a domain. `type-audit`
+   refused the bare `f64` and was pointing at a layering fault, not a missing
+   annotation.
+
+Rungs, spans, saturation and snapping all live in Task 2b instead.
+
+---
+
+### Task 2: `Claim` learns to be retold
+
+**Files:**
+- Modify: `kernel/src/claim.rs` (struct at `:18`, `inherited_by` at `:37`, test helper at `:58`)
+- Test: in-module `#[cfg(test)]` in `kernel/src/claim.rs`
+
+**Interfaces:**
+- Consumes: `hornvale_kernel::Precision` (Task 1, landed).
+- Produces: `Claim.precision: Precision` (new public field);
+  `Claim::retold_by(&self, holder: EntityId) -> Claim` (frictionless);
+  `Claim::retold_by_lossy(&self, holder: EntityId, precision: Precision, object: Value) -> Claim`.
+  `Claim::inherited_by` keeps its exact existing behaviour and signature.
+
+**The kernel performs NO day arithmetic.** The lossy constructor is handed an
+already-coarsened `(precision, object)` by the window that owns the ladder. A
+day span at a `pub` boundary wants `StdDays`; `StdDays` lives in
+`domains/astronomy`; the kernel may not depend on a domain. `type-audit`
+refuses the bare `f64` alternative, which is how this was found.
+
+**`inherited_by` is kept, not replaced** — campaign 1's three tests assert on
+it and their meaning must not shift. A test pins
+`retold_by(h) == inherited_by(h)`.
+
+- [ ] **Step 1: Write the failing tests**, added to the existing `mod tests`:
+
+```rust
+    #[test]
+    fn a_frictionless_retelling_carries_content_and_precision_unchanged() {
+        let heir = witnessed().retold_by(eid(2));
+        assert_eq!(heir.object, witnessed().object);
+        assert_eq!(heir.precision, Precision::FINEST);
+        assert_eq!(heir.hops, 1);
+        assert_eq!(heir.grade, Provenance::Taught);
+    }
+
+    #[test]
+    fn retold_by_agrees_with_inherited_by() {
+        assert_eq!(witnessed().inherited_by(eid(2)), witnessed().retold_by(eid(2)));
+    }
+
+    #[test]
+    fn a_lossy_retelling_takes_the_coarsened_value_it_is_given() {
+        let heir = witnessed().retold_by_lossy(eid(2), Precision(1), Value::Number(63875.0));
+        assert_eq!(heir.precision, Precision(1));
+        assert_eq!(heir.object, Value::Number(63875.0));
+        assert_eq!(heir.grade, Provenance::Taught);
+    }
+
+    #[test]
+    fn hops_and_grade_advance_identically_on_both_paths() {
+        // The constructors differ ONLY in content and precision. If an edit
+        // makes one skip a hop or a downgrade, this fails.
+        let a = witnessed().retold_by(eid(2));
+        let b = witnessed().retold_by_lossy(eid(2), Precision(1), Value::Number(0.0));
+        assert_eq!((a.hops, a.grade, a.holder), (b.hops, b.grade, b.holder));
+        assert_eq!((a.subject, a.predicate.clone()), (b.subject, b.predicate.clone()));
+    }
+
+    #[test]
+    fn a_frictionless_retelling_never_sharpens_a_coarsened_claim() {
+        // The one transition the model forbids.
+        let c = witnessed()
+            .retold_by_lossy(eid(2), Precision(2), Value::Number(0.0))
+            .retold_by(eid(3));
+        assert_eq!(c.precision, Precision(2));
+        assert!(c.precision > Precision::FINEST);
+    }
+```
+
+- [ ] **Step 2: Run to verify they FAIL.** Scope to `-p hornvale-kernel --lib claim`.
+      Expected: `no method named retold_by`, `no field precision`.
+
+- [ ] **Step 3: Implement.** Add the field after `hops`:
+
+```rust
+    /// Which rung of the world's ladder this holder remembers the day at.
+    /// Witnesses hold [`Precision::FINEST`]; each lossy retelling descends.
+    pub precision: Precision,
+```
+
+and both methods beside `inherited_by`:
+
+```rust
+    /// The claim as a new holder receives it through a FRICTIONLESS retelling:
+    /// teller and hearer share a frame, so content and precision pass
+    /// unchanged. Behaviourally identical to [`Claim::inherited_by`], pinned
+    /// by test.
+    pub fn retold_by(&self, holder: EntityId) -> Claim {
+        Claim {
+            holder,
+            subject: self.subject,
+            predicate: self.predicate.clone(),
+            object: self.object.clone(),
+            grade: self.grade.on_transmission(),
+            hops: self.hops.saturating_add(1),
+            precision: self.precision,
+        }
+    }
+
+    /// The claim as a new holder receives it through a LOSSY retelling.
+    ///
+    /// `precision` and `object` arrive already coarsened from the window that
+    /// owns the world's ladder — the kernel performs no day arithmetic,
+    /// because a duration at a `pub` boundary wants `StdDays` and that type
+    /// lives in a domain the kernel may not depend on.
+    pub fn retold_by_lossy(
+        &self,
+        holder: EntityId,
+        precision: Precision,
+        object: Value,
+    ) -> Claim {
+        Claim {
+            holder,
+            subject: self.subject,
+            predicate: self.predicate.clone(),
+            object,
+            grade: self.grade.on_transmission(),
+            hops: self.hops.saturating_add(1),
+            precision,
+        }
+    }
+```
+
+Then fix the construction sites: `precision: self.precision` in
+`inherited_by`'s literal at `:38`, `precision: Precision::FINEST` in the test
+helper at `:59`. `windows/hearsay/src/derive.rs:78` is Task 4's.
+
+- [ ] **Step 4: Run to verify PASS** — 3 pre-existing plus 5 new.
+
+- [ ] **Step 5: Regenerate the type-audit report and commit.** `Claim` gained a
+      public field, so the report drifts and must move in the same commit.
+      Run `type-audit check`, then `type-audit report` redirected over
+      `docs/audits/type-audit-report.md`, then `cargo fmt`, then commit both
+      files.
+
+---
+
+### Task 2b: The world's precision ladder
+
+**Files:**
+- Create: `windows/hearsay/src/ladder.rs`
+- Modify: `windows/hearsay/src/lib.rs` (`pub mod ladder;`), `windows/hearsay/Cargo.toml` (add `hornvale-astronomy` to `[dependencies]`), `windows/hearsay/tests/common/mod.rs` (add `put_on`)
+- Test: `windows/hearsay/tests/ladder.rs`
+
+**Interfaces:**
+- Consumes: `hornvale_kernel::Precision`, `hornvale_astronomy::facts::{YEAR_LENGTH_STD, DAY_LENGTH_STD, MOON_PERIOD_STD}`, `hornvale_astronomy::units::StdDays`.
+- Produces: `pub struct PrecisionLadder`; `PrecisionLadder::of(ledger: &Ledger) -> PrecisionLadder`;
+  `len`, `is_empty`, `label(Precision) -> Option<&str>`, `span(Precision) -> Option<StdDays>`,
+  `coarser(&self, Precision) -> Precision` (saturating at this world's coarsest),
+  `apply(&self, Precision, day: f64) -> f64`;
+  `labels(&self) -> Vec<&str>` (finest first, for the readout's report line).
+
+**THE TRAP THIS TASK EXISTS TO AVOID — verified in the code, not inferred.**
+`MOON_PERIOD_STD` is registered **non-functional** (`domains/astronomy/src/lib.rs:138`,
+flag `false`) and committed **once per moon on the same subject**
+(`facts.rs:417-421`). `Ledger::value_of` returns only *the first fact in commit
+order* (`kernel/src/ledger.rs:361-369`). So `value_of(subject, MOON_PERIOD_STD)`
+silently yields **one moon on a two-mooned world**, every test still passes, and
+Nathan's explicit "both moons" decision is violated invisibly. Use the idiom
+astronomy's own test uses at `facts.rs:719`:
+
+```rust
+ledger.facts_about(subject).filter(|f| f.predicate == MOON_PERIOD_STD)
+```
+
+`YEAR_LENGTH_STD` and `DAY_LENGTH_STD` **are** functional, so `value_of` is
+correct for those two.
+
+**Do not snap or nest the rungs.** Real cycles are incommensurable and that is
+the modelled phenomenon (spec §5.2). A test below asserts that re-rounding can
+carry a claim off the event entirely; if it fails, the fix is never to make the
+spans divide each other.
+
+- [ ] **Step 1: Write the failing tests** in `windows/hearsay/tests/ladder.rs`:
+
+```rust
+//! The per-world ladder, over hand-built ledgers.
+
+mod common;
+
+use common::put_on;
+use hornvale_hearsay::ladder::PrecisionLadder;
+use hornvale_kernel::Precision;
+use hornvale_kernel::ledger::{Ledger, Value};
+
+fn sky(day: Option<f64>, moons: &[f64], year: Option<f64>) -> Ledger {
+    let mut led = Ledger::default();
+    if let Some(d) = day {
+        put_on(&mut led, 1, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(d));
+    }
+    for m in moons {
+        put_on(&mut led, 1, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(*m));
+    }
+    if let Some(y) = year {
+        put_on(&mut led, 1, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(y));
+    }
+    led
+}
+
+#[test]
+fn both_moons_of_a_two_mooned_world_become_rungs() {
+    // If this reports 3, someone reached for value_of and lost a moon.
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[29.3, 41.7], Some(372.4)));
+    assert_eq!(l.len(), 4, "day, two moons, year: {l:?}");
+}
+
+#[test]
+fn rungs_sort_by_actual_span_so_the_order_is_world_derived() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[41.7], Some(372.4)));
+    assert_eq!(l.label(Precision(0)), Some("day"));
+    assert_eq!(l.label(Precision(2)), Some("year"));
+}
+
+#[test]
+fn a_moonless_world_simply_has_no_lunar_rung() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[], Some(300.0)));
+    assert_eq!(l.len(), 2);
+    assert_eq!(l.coarser(Precision(1)), Precision(1), "saturates at the year");
+}
+
+#[test]
+fn an_empty_ladder_loses_no_precision() {
+    let l = PrecisionLadder::of(&Ledger::default());
+    assert!(l.is_empty());
+    assert_eq!(l.apply(Precision::FINEST, 3661.75), 3661.75);
+}
+
+#[test]
+fn two_moons_of_equal_period_contribute_one_rung() {
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[30.0, 30.0], Some(300.0)));
+    assert_eq!(l.len(), 3);
+}
+
+#[test]
+fn re_rounding_an_already_rounded_day_can_exclude_the_event() {
+    // The consequence of NOT nesting. Do not repair a failure here by
+    // snapping the rungs -- see spec section 5.2.
+    let l = PrecisionLadder::of(&sky(Some(1.0), &[41.7], Some(372.4)));
+    let year = Precision(2);
+    let truth = 745.0;
+    let width = l.span(year).expect("year rung").get();
+    let twice = l.apply(year, l.apply(Precision(1), truth));
+    assert!(
+        truth < twice || truth >= twice + width,
+        "re-rounding must be able to exclude the event: {truth} still in [{twice}, {})",
+        twice + width
+    );
+    let direct = l.apply(year, truth);
+    assert!(
+        truth >= direct && truth < direct + width,
+        "control: rounding the truth once must still contain it"
+    );
+}
+```
+
+`common/mod.rs` gains `put_on(led, subject, predicate, value)` — like the
+existing `put`, but registering the predicate **non-functional** so several
+`moon-period-std` facts can land on one subject. The existing `put` registers
+with `true` and would reject the second moon.
+
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test ladder`.
+      Expected: `unresolved import hornvale_hearsay::ladder`.
+
+- [ ] **Step 3: Implement.** For each subject carrying them, collect rungs:
+      `day-length-std` (label `"day"`, `value_of`); every `moon-period-std` on
+      that subject (labels `"moon 1"`, `"moon 2"`, ... in commit order, via
+      `facts_about().filter()`); `year-length-std` (label `"year"`, `value_of`).
+      Drop non-finite and non-positive spans. Sort ascending by span with a
+      label tie-break; de-duplicate on equal spans. Store spans as `StdDays`.
+      `apply` takes and returns a bare `f64` day because that is what
+      `Value::Number` holds; tag it. `coarser` saturates at `len() - 1`, and on
+      an empty ladder returns its argument unchanged.
+
+- [ ] **Step 4: Run to verify PASS** — 6 tests.
+
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit `windows/hearsay/`.
+
+---
+
+### Task 3: Stance, and the ancestry memo that makes it cheap
+
+**Files:**
+- Modify: `windows/hearsay/src/lineage.rs` (precomputed ancestor sets + `is_ancestor`)
+- Create: `windows/hearsay/src/stance.rs`
+- Modify: `windows/hearsay/src/lib.rs` (`pub mod stance;`)
+- Test: `windows/hearsay/tests/stance.rs`, plus additions to `tests/lineage.rs`
+
+**Interfaces:**
+- Consumes: `Lineage`, `hornvale_history::{OCC_ENDED_BY}`.
+- Produces:
+  `Lineage::is_ancestor(&self, ancestor: EntityId, descendant: EntityId) -> bool` (O(log n));
+  `pub enum Stance { Perpetrator, VictimLine, Bystander }`;
+  `pub fn stance_of(ledger: &Ledger, lineage: &Lineage, subject: EntityId, who: EntityId) -> Stance`;
+  `pub fn is_lossy(ledger: &Ledger, lineage: &Lineage, subject: EntityId, teller: EntityId, hearer: EntityId) -> bool`.
+
+**Why an ancestor MEMO and not just a faster loop.** Measured in node visits on
+seed 42: walking `ancestry` per (holder, event) pair costs 2,946,813 visits;
+building each node's ancestor set once costs **6,221**, a 473.7x reduction.
+Building it once per EVENT — the obvious middle option — is only 8.8x, because
+`descendants_of` itself walks `ancestry` for every candidate. Build it in
+`lineage_of`, once, at construction.
+
+**Keep `ancestry` as it is.** It returns an ORDERED `Vec` (self first, root
+last) and `derive.rs` uses that order to compute hop counts. The memo is a
+`BTreeSet` for membership only; it does not replace `ancestry`.
+
+- [ ] **Step 1: Write the failing tests**
+
+`windows/hearsay/tests/lineage.rs` (append):
+
+```rust
+#[test]
+fn is_ancestor_agrees_with_walking_the_ancestry() {
+    // The memo must not drift from the walk it replaces. Cross-checked over
+    // every ordered pair rather than a sampled one.
+    let led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, Some(1)), (5, None)]);
+    let lin = lineage_of(&led);
+    for a in lin.all() {
+        for d in lin.all() {
+            let walked = a != d && lin.ancestry(d).contains(&a);
+            assert_eq!(
+                lin.is_ancestor(a, d),
+                walked,
+                "is_ancestor({a:?}, {d:?}) disagrees with the ancestry walk"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_node_is_not_its_own_ancestor() {
+    let led = ledger_with(&[(2, Some(1))]);
+    let lin = lineage_of(&led);
+    assert!(!lin.is_ancestor(eid(1), eid(1)));
+    assert!(lin.is_ancestor(eid(1), eid(2)));
+    assert!(!lin.is_ancestor(eid(2), eid(1)), "ancestry is antisymmetric");
+}
+```
+
+`windows/hearsay/tests/stance.rs` (new):
+
+```rust
+//! Stance: where a community stands relative to one event.
+
+mod common;
+
+use common::{eid, ledger_with, put};
+use hornvale_hearsay::lineage::lineage_of;
+use hornvale_hearsay::stance::{Stance, is_lossy, stance_of};
+use hornvale_kernel::ledger::Value;
+
+/// 1 is raided by 4; 2 and 3 descend from 1; 5 is unrelated.
+fn raid() -> hornvale_kernel::ledger::Ledger {
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, None), (5, None)]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    led
+}
+
+#[test]
+fn the_attacker_is_the_perpetrator() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(4)), Stance::Perpetrator);
+}
+
+#[test]
+fn the_subject_and_its_descendants_are_the_victim_line() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(1)), Stance::VictimLine);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(2)), Stance::VictimLine);
+    assert_eq!(
+        stance_of(&led, &lin, eid(1), eid(3)),
+        Stance::VictimLine,
+        "a grandchild is still the victim's line"
+    );
+}
+
+#[test]
+fn an_unrelated_community_is_a_bystander() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(5)), Stance::Bystander);
+}
+
+#[test]
+fn a_retelling_is_lossy_exactly_when_the_two_stances_differ() {
+    let led = raid();
+    let lin = lineage_of(&led);
+    // victim -> its own descendant: same stance, frictionless.
+    assert!(!is_lossy(&led, &lin, eid(1), eid(1), eid(2)));
+    // perpetrator -> the victim's line: different stances, lossy.
+    assert!(is_lossy(&led, &lin, eid(1), eid(4), eid(2)));
+    // bystander -> perpetrator: different, lossy.
+    assert!(is_lossy(&led, &lin, eid(1), eid(5), eid(4)));
+    // bystander -> bystander: same, frictionless.
+    assert!(!is_lossy(&led, &lin, eid(1), eid(5), eid(5)));
+}
+
+#[test]
+fn stance_fires_on_an_event_with_no_attacker() {
+    // The peaceful case: no occ-ended-by, so nobody is a perpetrator, but the
+    // victim line and everyone else STILL differ. A predicate that went inert
+    // here could never distort a world without raids.
+    let mut led = ledger_with(&[(2, Some(1)), (5, None)]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(500.0));
+    let lin = lineage_of(&led);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(2)), Stance::VictimLine);
+    assert_eq!(stance_of(&led, &lin, eid(1), eid(5)), Stance::Bystander);
+    assert!(is_lossy(&led, &lin, eid(1), eid(5), eid(2)));
+}
+```
+
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test stance`
+      and `--test lineage`. Expected: `unresolved import hornvale_hearsay::stance`,
+      `no method named is_ancestor`.
+
+- [ ] **Step 3: Implement.** In `lineage.rs`, add a
+      `BTreeMap<EntityId, BTreeSet<EntityId>>` of ancestor sets populated inside
+      `lineage_of` (one `ancestry` walk per node), and `is_ancestor` reading it.
+      A node is NOT its own ancestor. In `stance.rs`, `stance_of` checks
+      `occ-ended-by` for `Perpetrator`, then `who == subject || is_ancestor(subject, who)`
+      for `VictimLine`, else `Bystander`; `is_lossy` compares two `stance_of`
+      calls with `!=`.
+
+- [ ] **Step 4: Run to verify PASS** — 5 stance tests, 2 new lineage tests, and
+      every pre-existing hearsay test still green.
+
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit.
+
+---
+
+### Task 4: The path-aware walk
+
+**Files:**
+- Modify: `windows/hearsay/src/derive.rs` (add `variants_about`)
+- Test: `windows/hearsay/tests/derive.rs` (append)
+
+**Interfaces:**
+- Consumes: `crate::stance::is_lossy` (Task 3), `crate::ladder::PrecisionLadder` (Task 2b),
+  `Claim::{retold_by, retold_by_lossy}` and `Precision` (Tasks 1-2), `witnesses_of` and
+  `Lineage` (existing).
+- Produces:
+  `pub fn variants_about(ledger: &Ledger, lineage: &Lineage, ladder: &PrecisionLadder, subject: EntityId, predicate: &str) -> Vec<Claim>`,
+  ascending by holder.
+
+**THIS TASK WAS REWRITTEN. The previous text targeted a `Filters` API that no
+longer exists** — `Filters::of`, `filters.is_lossy(teller, hearer)`,
+`crate::filters`, and a two-argument `Claim::retold_by(hearer, lossy)`. Tasks 2
+and 3 replaced all of it. The live API, verified in the source:
+
+```
+stance::is_lossy(ledger, lineage, subject, teller, hearer) -> bool
+PrecisionLadder::coarser(precision) -> Precision          // saturates at this world's coarsest
+PrecisionLadder::apply(precision, day: f64) -> f64        // identity past the end / empty ladder
+Claim::retold_by(holder) -> Claim                          // frictionless
+Claim::retold_by_lossy(holder, precision, object) -> Claim // takes an ALREADY-coarsened value
+```
+
+**The kernel does no day arithmetic**, so this function computes the coarsened
+value from the ladder and hands it to `retold_by_lossy`.
+
+**THE DESIGN DECISION THIS TASK LOCKS.** Campaign 1's `claims_about` took the
+*minimum hop count* across witnesses. Once content varies, a holder reachable
+from two witnesses has two DIFFERENT variants, so hops is no longer a total
+order. The rule is **the least-corrupted telling wins**, ordered by:
+
+1. fewest lossy steps, then
+2. fewest hops, then
+3. smallest witness `EntityId`.
+
+The first is the semantic rule — a community holds the clearest version it can
+reach. The third exists only to make the order total so two equally-good paths
+cannot race; say so in the doc comment, so a later reader does not mistake it
+for meaning.
+
+**Do not modify `claims_about`.** It is campaign 1's no-decay derivation and
+its tests pin the baseline this campaign measures against. `variants_about` is
+a sibling.
+
+- [ ] **Step 1: Write the failing tests**, appended to `windows/hearsay/tests/derive.rs`:
+
+```rust
+#[test]
+fn a_chain_of_one_stance_carries_the_day_unchanged() {
+    // 1 ends; 2 and 3 descend from it. No attacker, so every holder in the
+    // subtree is VictimLine -- one stance throughout, nothing lossy.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    assert!(!vs.is_empty(), "the subtree holds the claim");
+    for v in &vs {
+        assert_eq!(v.precision, Precision::FINEST, "no stance change: {v:?}");
+        assert_eq!(v.object, Value::Number(745.0));
+    }
+}
+
+#[test]
+fn crossing_a_stance_boundary_coarsens_the_day() {
+    // 4 raided 1, so 4 is Perpetrator and 1's line is VictimLine. A retelling
+    // from 4 into that line crosses stances and must lose a rung.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None), (5, Some(4))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    let five = vs.iter().find(|v| v.holder == eid(5));
+    // 5 descends from the perpetrator 4. Whatever it holds, assert the
+    // PROPERTY rather than a hand-computed number: if it is coarser than
+    // finest, its object must equal the ladder's snap of the truth at that
+    // rung -- content and precision must never disagree.
+    if let Some(v) = five {
+        if v.precision != Precision::FINEST {
+            assert_eq!(
+                v.object,
+                Value::Number(ladder.apply(v.precision, 745.0)),
+                "a coarsened claim's object must match its own rung"
+            );
+        }
+    }
+}
+
+#[test]
+fn precision_and_object_never_disagree_anywhere() {
+    // The invariant that matters across the whole population: every holder's
+    // object is SOME ancestor-value snapped to that holder's own rung. A
+    // claim whose precision says "year" but whose object carries a day is
+    // incoherent regardless of which path produced it.
+    let mut led = ledger_with(&[(2, Some(1)), (3, Some(2)), (4, None), (5, Some(4))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    put_on(&mut led, 9, hornvale_astronomy::facts::DAY_LENGTH_STD, Value::Number(1.0));
+    put_on(&mut led, 9, hornvale_astronomy::facts::MOON_PERIOD_STD, Value::Number(41.7));
+    put_on(&mut led, 9, hornvale_astronomy::facts::YEAR_LENGTH_STD, Value::Number(372.4));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        let Value::Number(d) = v.object else {
+            panic!("occ-ended is Number-valued")
+        };
+        assert_eq!(
+            d,
+            ladder.apply(v.precision, d),
+            "{:?} holds {d} at rung {:?}, which is not snapped to that rung",
+            v.holder,
+            v.precision
+        );
+    }
+}
+
+#[test]
+fn an_empty_ladder_leaves_every_claim_at_finest() {
+    // A world with no committed sky has no rungs, so a lossy step has nowhere
+    // to descend. It must be a no-op, not a panic and not a silent change.
+    let mut led = ledger_with(&[(2, Some(1)), (4, None)]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 1, hornvale_history::OCC_ENDED_BY, Value::Entity(eid(4)));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    assert!(ladder.is_empty());
+    for v in variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED) {
+        assert_eq!(v.precision, Precision::FINEST);
+        assert_eq!(v.object, Value::Number(745.0));
+    }
+}
+
+#[test]
+fn witnesses_hold_first_hand_and_are_never_demoted() {
+    // Campaign 1's rule, preserved: a survivor saw the raid; it does not
+    // merely hear about it from the village it fled.
+    let mut led = ledger_with(&[(2, Some(1))]);
+    put(&mut led, 1, hornvale_history::OCC_ENDED, Value::Number(745.0));
+    put(&mut led, 2, hornvale_history::OCC_FOUNDED, Value::Number(745.0));
+    let lin = lineage_of(&led);
+    let ladder = PrecisionLadder::of(&led);
+    let vs = variants_about(&led, &lin, &ladder, eid(1), hornvale_history::OCC_ENDED);
+    for w in [eid(1), eid(2)] {
+        let v = vs.iter().find(|v| v.holder == w).expect("witness holds");
+        assert_eq!(v.hops, 0, "{w:?} is a witness");
+        assert_eq!(v.grade, Provenance::Witnessed);
+        assert_eq!(v.precision, Precision::FINEST);
+    }
+}
+```
+
+The test file needs these imports added at the top:
+`use hornvale_hearsay::derive::variants_about;`,
+`use hornvale_hearsay::ladder::PrecisionLadder;`,
+`use hornvale_kernel::Precision;`,
+`use hornvale_kernel::provenance::Provenance;`, and `common::put_on`.
+
+**Note the sky facts go on a DIFFERENT subject (9) from the occupations.**
+`PrecisionLadder::of` scans the ledger for those predicates; putting them on an
+occupation id would work too, but a separate subject keeps the fixture honest
+about what is an occupation and what is the world.
+
+- [ ] **Step 2: Run to verify FAIL.** Scope to `-p hornvale-hearsay --test derive`.
+      Expected: `cannot find function variants_about`.
+
+- [ ] **Step 3: Implement.** `variants_about` mirrors `claims_about`'s witness
+      seeding, then for each witness walks the ancestry chain DOWN to each
+      descendant, retelling at every step:
+
+      - `let lossy = stance::is_lossy(ledger, lineage, subject, teller, hearer)`
+      - frictionless -> `c = c.retold_by(hearer)`
+      - lossy -> `let next = ladder.coarser(c.precision);` then the object is
+        `Value::Number(ladder.apply(next, d))` for a `Number`, or carried
+        unchanged for any other `Value`; then `c = c.retold_by_lossy(hearer, next, object)`
+      - track `lossy_steps` alongside, and keep the best candidate per holder by
+        `(lossy_steps, hops, witness)` ascending
+      - a holder that is itself a witness is never demoted to an inheritor
+
+- [ ] **Step 4: Run to verify PASS** — 5 new tests, plus every pre-existing
+      hearsay test still green. **The commit gate is blind to this crate**
+      (see Global Constraints), so the scoped per-crate run is the evidence.
+
+- [ ] **Step 5:** `type-audit check`, `cargo fmt`, commit.
+
+---
+
+### Task 5: Divergent structure is a maximum antichain
+
+**Files:**
+- Create: `windows/hearsay/src/divergence.rs`
+- Modify: `windows/hearsay/src/lib.rs` (add `pub mod divergence;`)
+- Test: `windows/hearsay/tests/divergence.rs`
+
+**Interfaces:**
+- Consumes: `Lineage`.
+- Produces: `pub fn maximum_antichain(lineage: &Lineage, witnesses: &[EntityId]) -> Vec<EntityId>`, ascending.
+
+**The correctness argument, which belongs in the doc comment:** in a forest poset the maximum antichain of a witness set `S` is exactly the elements of `S` with no strict `S`-descendant. It is an antichain (if `x` were an ancestor of `y`, `y` would be an `S`-descendant of `x`), and it is maximum, because any antichain `A ⊆ S` injects into it by sending each `a` to a deepest `S`-descendant of `a` — injectively, because incomparable elements of a tree have disjoint descendant sets.
+
+- [ ] **Step 1: Write the failing test**
+
+```rust
+//! Maximum antichain over a witness set.
+
+mod common;
+
+use common::{eid, ledger_with};
+use hornvale_hearsay::divergence::maximum_antichain;
+use hornvale_hearsay::lineage::lineage_of;
+
+#[test]
+fn the_motivating_scenario_returns_the_survivors_not_the_village() {
+    // A is raided; B and C are its survivors. Campaign 1's minimal-elements
+    // rule returned {A} and scored this scenario ZERO. The maximum antichain
+    // is {B, C} — the pair the scenario is about.
+    let led = ledger_with(&[(2, Some(1)), (3, Some(1))]);
+    let lin = lineage_of(&led);
+    let ws = vec![eid(1), eid(2), eid(3)];
+    assert_eq!(maximum_antichain(&lin, &ws), vec![eid(2), eid(3)]);
+}
+
+#[test]
+fn a_chain_of_witnesses_has_an_antichain_of_one() {
+    let led = ledger_with(&[(2, Some(1)), (3, Some(2))]);
+    let lin = lineage_of(&led);
+    let ws = vec![eid(1), eid(2), eid(3)];
+    assert_eq!(maximum_antichain(&lin, &ws), vec![eid(3)]);
+}
+
+#[test]
+fn witnesses_in_unrelated_lineages_are_all_incomparable() {
+    let led = ledger_with(&[(1, None), (2, None), (3, None)]);
+    let lin = lineage_of(&led);
+    let ws = vec![eid(1), eid(2), eid(3)];
+    assert_eq!(maximum_antichain(&lin, &ws), vec![eid(1), eid(2), eid(3)]);
+}
+
+#[test]
+fn an_empty_witness_set_has_an_empty_antichain() {
+    let led = ledger_with(&[(2, Some(1))]);
+    let lin = lineage_of(&led);
+    assert_eq!(maximum_antichain(&lin, &[]), Vec::new());
+}
+```
+
+**Use `Lineage::is_ancestor`, not `ancestry().contains()`.** Task 3 shipped the
+per-node ancestor memo precisely so membership is an O(log n) lookup; walking
+`ancestry` here would reintroduce the 473.7x cost the memo removed.
+
+**Do NOT change or delete `divergent_witnesses`.** It is campaign 1's
+minimal-elements measure, its tests pin the published H5 figure of 0.4632, and
+the readout compares the two. `maximum_antichain` is a sibling that corrects
+the extremum, not a replacement that erases the record.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cargo test -p hornvale-hearsay --test divergence`
+Expected: FAIL — `unresolved import hornvale_hearsay::divergence`.
+
+- [ ] **Step 3: Write the implementation**
+
+```rust
+//! Divergent structure: the maximum antichain of a witness set.
+//!
+//! Deliberately NOT called corroboration. It measures the PRECONDITION —
+//! whether two witnesses' accounts descend through communities that never
+//! inherited from one another — not the event of confirmation.
+
+use crate::lineage::Lineage;
+use hornvale_kernel::ledger::EntityId;
+
+/// The largest pairwise-incomparable subset of `witnesses`, ascending.
+///
+/// Corroboration is a SYMMETRIC relation; ancestry is a partial order and
+/// therefore antisymmetric, so filtering a witness set by ancestry can never
+/// express it. The symmetric relation available inside a partial order is
+/// incomparability, and a pairwise-incomparable set is an antichain.
+///
+/// In a forest the maximum antichain of a set `S` is exactly the elements of
+/// `S` with no strict `S`-descendant. It is an antichain: if `x` were an
+/// ancestor of `y`, then `y` would be an `S`-descendant of `x`. It is maximum:
+/// any antichain `A ⊆ S` injects into it by sending each `a` to a deepest
+/// `S`-descendant of `a`, injectively because incomparable elements of a tree
+/// have disjoint descendant sets. So no matching algorithm is needed.
+///
+/// For witnesses `{A, B, C}` with `B` and `C` survivors of `A`, this returns
+/// `{B, C}`. The minimal elements would be `{A}`, which scores that scenario
+/// zero — the error campaign 1 made.
+pub fn maximum_antichain(lineage: &Lineage, witnesses: &[EntityId]) -> Vec<EntityId> {
+    let mut out: Vec<EntityId> = witnesses
+        .iter()
+        .copied()
+        .filter(|w| {
+            !witnesses
+                .iter()
+                .any(|other| other != w && lineage.is_ancestor(*w, *other))
+        })
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+```
+
+Add `pub mod divergence;` to `windows/hearsay/src/lib.rs`.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cargo test -p hornvale-hearsay --test divergence`
+Expected: PASS, 4 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cargo fmt
+git add windows/hearsay/src/divergence.rs windows/hearsay/src/lib.rs windows/hearsay/tests/divergence.rs
+git commit -m "feat(hearsay): divergent structure as a maximum antichain, not minimal elements"
+```
+
+---
+
+### Task 6: The preregistered readout
+
+**Files:**
+- Create: `windows/hearsay/tests/retelling_readout_seed42.rs`
+- Modify: `windows/hearsay/src/lib.rs` (add the three helpers below)
+- Test: the readout file is itself the test.
+
+**Interfaces:**
+- Consumes: everything from Tasks 1–5.
+- Produces: `pub fn variant_count(ledger, lineage, ladder, subject, predicate) -> Option<usize>`; `pub fn finest_precision_hops(ledger, lineage, ladder, subject, predicate) -> Vec<u32>`; `pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64>`.
+
+**The `Filters` type does not exist.** Task 3 replaced it with stance, and Task 4's `variants_about` takes a `&PrecisionLadder` instead. Any `filters` parameter below is stale — report it if you find one in a step.
+
+**This task reports numbers against §6's decision tables. It does NOT retune anything to make a prediction come true.** A falsified prediction is the finding; several campaigns have shipped the null as the headline.
+
+- [ ] **Step 1: Write the helpers' unit tests first**
+
+Add to `windows/hearsay/src/lib.rs` in a `#[cfg(test)] mod tests`:
+
+```rust
+    #[test]
+    fn spearman_is_one_on_a_perfectly_monotone_pair() {
+        let xs = [1.0, 2.0, 3.0, 4.0];
+        let ys = [10.0, 20.0, 30.0, 40.0];
+        let r = spearman(&xs, &ys).expect("defined");
+        assert!((r - 1.0).abs() < 1e-9, "got {r}");
+    }
+
+    #[test]
+    fn spearman_is_minus_one_when_reversed() {
+        let xs = [1.0, 2.0, 3.0, 4.0];
+        let ys = [40.0, 30.0, 20.0, 10.0];
+        let r = spearman(&xs, &ys).expect("defined");
+        assert!((r + 1.0).abs() < 1e-9, "got {r}");
+    }
+
+    #[test]
+    fn spearman_is_undefined_when_a_side_has_no_variance() {
+        // A constant column has no ranks to correlate. Returning 0.0 here
+        // would read as "no relationship" when the truth is "not measurable".
+        assert_eq!(spearman(&[1.0, 1.0, 1.0], &[1.0, 2.0, 3.0]), None);
+    }
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `cargo test -p hornvale-hearsay --lib spearman`
+Expected: FAIL — `cannot find function spearman`.
+
+- [ ] **Step 3: Implement the three helpers**
+
+```rust
+/// Spearman's rank correlation, or `None` when either side is constant.
+///
+/// A constant column has no ranks to correlate; returning `0.0` would read as
+/// "no relationship" when the truth is "not measurable", which is the
+/// distinction H3's NO VERDICT branch depends on.
+/// type-audit: bare-ok(ratio: return)
+pub fn spearman(xs: &[f64], ys: &[f64]) -> Option<f64> {
+    if xs.len() != ys.len() || xs.len() < 2 {
+        return None;
+    }
+    fn ranks(v: &[f64]) -> Option<Vec<f64>> {
+        let mut idx: Vec<usize> = (0..v.len()).collect();
+        idx.sort_by(|a, b| v[*a].total_cmp(&v[*b]));
+        if v[idx[0]] == v[idx[idx.len() - 1]] {
+            return None; // constant: no variance
+        }
+        let mut r = vec![0.0; v.len()];
+        let mut i = 0;
+        while i < idx.len() {
+            let mut j = i;
+            while j + 1 < idx.len() && v[idx[j + 1]] == v[idx[i]] {
+                j += 1;
+            }
+            // average rank for ties, 1-based
+            let avg = ((i + j) as f64) / 2.0 + 1.0;
+            for k in i..=j {
+                r[idx[k]] = avg;
+            }
+            i = j + 1;
+        }
+        Some(r)
+    }
+    let (rx, ry) = (ranks(xs)?, ranks(ys)?);
+    let n = rx.len() as f64;
+    let mx = rx.iter().sum::<f64>() / n;
+    let my = ry.iter().sum::<f64>() / n;
+    let mut num = 0.0;
+    let mut dx = 0.0;
+    let mut dy = 0.0;
+    for i in 0..rx.len() {
+        let (a, b) = (rx[i] - mx, ry[i] - my);
+        num += a * b;
+        dx += a * a;
+        dy += b * b;
+    }
+    if dx == 0.0 || dy == 0.0 {
+        return None;
+    }
+    Some(num / (dx * dy).sqrt())
+}
+
+/// How many distinct `(precision, object)` variants of one event are held, or
+/// `None` when fewer than three holders qualify (§6's population rule).
+/// type-audit: bare-ok(count: return)
+pub fn variant_count(
+    ledger: &Ledger,
+    lineage: &Lineage,
+    ladder: &PrecisionLadder,
+    subject: EntityId,
+    predicate: &str,
+) -> Option<usize> {
+    let vs = crate::derive::variants_about(ledger, lineage, ladder, subject, predicate);
+    if vs.len() < 3 {
+        return None;
+    }
+    let mut seen: BTreeSet<(hornvale_kernel::Precision, String)> = BTreeSet::new();
+    for v in &vs {
+        seen.insert((v.precision, format!("{:?}", v.object)));
+    }
+    Some(seen.len())
+}
+
+/// The hop counts of holders still at the FINEST precision — H1's population.
+pub fn finest_precision_hops(
+    ledger: &Ledger,
+    lineage: &Lineage,
+    ladder: &PrecisionLadder,
+    subject: EntityId,
+    predicate: &str,
+) -> Vec<u32> {
+    crate::derive::variants_about(ledger, lineage, ladder, subject, predicate)
+        .into_iter()
+        .filter(|c| c.precision == hornvale_kernel::Precision::FINEST)
+        .map(|c| c.hops)
+        .collect()
+}
+```
+
+- [ ] **Step 4: Run to verify they pass**
+
+Run: `cargo test -p hornvale-hearsay --lib`
+Expected: PASS.
+
+- [ ] **Step 5: Write the readout battery**
+
+```rust
+//! The preregistered readout (spec §6). Live worldgen.
+//!
+//! Reports H1, H2 and H3 against their decision tables. It asserts only the
+//! NO VERDICT floors and the stated ceilings; the hypotheses themselves are
+//! REPORTED, because a falsified prediction is a finding and this file must
+//! not be edited to rescue one.
+
+use hornvale_hearsay::derive::witnesses_of;
+use hornvale_hearsay::divergence::maximum_antichain;
+use hornvale_hearsay::ladder::PrecisionLadder;
+use hornvale_hearsay::{finest_precision_hops, lineage::lineage_of, spearman, variant_count};
+
+/// claim: structural(seed: 42) — false-positive seed-loop flag; the loop binds
+/// occupation ids, not seeds.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn the_retelling_readout_on_seed_42() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .expect("seed 42 builds");
+    let led = &world.ledger;
+    let lin = lineage_of(led);
+    let ladder = PrecisionLadder::of(led);
+
+    // --- H1: per-hop counts of claims still at the finest precision ---
+    let mut by_hop: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
+    let mut finest_total = 0usize;
+    for s in lin.all() {
+        for h in finest_precision_hops(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) {
+            *by_hop.entry(h).or_default() += 1;
+            finest_total += 1;
+        }
+    }
+    let ratios: Vec<f64> = (1..=8)
+        .filter_map(|k| {
+            let a = *by_hop.get(&k)? as f64;
+            let b = *by_hop.get(&(k + 1))? as f64;
+            if a == 0.0 { None } else { Some(b / a) }
+        })
+        .collect();
+    let mean = if ratios.is_empty() {
+        f64::NAN
+    } else {
+        ratios.iter().sum::<f64>() / ratios.len() as f64
+    };
+    let var = if ratios.is_empty() {
+        f64::NAN
+    } else {
+        ratios.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / ratios.len() as f64
+    };
+
+    // --- H2 and H3 ---
+    let mut counts: Vec<f64> = Vec::new();
+    let mut widths: Vec<f64> = Vec::new();
+    for s in lin.all() {
+        let Some(n) = variant_count(led, &lin, &ladder, s, hornvale_history::OCC_ENDED) else {
+            continue;
+        };
+        let ws = witnesses_of(led, &lin, s, hornvale_history::OCC_ENDED);
+        counts.push(n as f64);
+        widths.push(maximum_antichain(&lin, &ws).len() as f64);
+    }
+    let qualifying = counts.len();
+    let mut sorted = counts.clone();
+    sorted.sort_by(f64::total_cmp);
+    let median = sorted.get(sorted.len() / 2).copied().unwrap_or(f64::NAN);
+    let rho = spearman(&widths, &counts);
+
+    println!(
+        "H1 finest_precision_pairs={finest_total} per_hop={by_hop:?} \
+         ratios={ratios:?} mean={mean:.4} var={var:.4}"
+    );
+    println!("H2 qualifying={qualifying} median_variants={median} distribution={sorted:?}");
+    println!("H3 spearman_rho={rho:?}");
+
+    // The only assertions are the floors and ceilings the spec states.
+    assert!(
+        finest_total >= 500 || qualifying < 100,
+        "H1 NO VERDICT floor: {finest_total} finest-precision pairs"
+    );
+    // The ceiling is THIS WORLD'S ladder length, not a constant -- a
+    // two-mooned world offers rungs a moonless one does not, which is why H2
+    // reports the ladder alongside its distribution rather than comparing raw
+    // variant counts across worlds.
+    let ceiling = ladder.len() as f64;
+    for n in &counts {
+        assert!(
+            *n <= ceiling,
+            "a variant count above this world's {ceiling} rungs is impossible: {n}"
+        );
+    }
+    println!("LADDER len={} rungs={:?}", ladder.len(), ladder.labels());
+}
+```
+
+- [ ] **Step 6: Run the readout**
+
+Run: `cargo test -p hornvale-hearsay --test retelling_readout_seed42 -- --ignored --nocapture`
+Expected: PASS, printing three lines. **Record the printed numbers verbatim into the campaign's chronicle draft** — they are the campaign's result.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cargo fmt
+git add windows/hearsay/src/lib.rs windows/hearsay/tests/retelling_readout_seed42.rs
+git commit -m "feat(hearsay): the preregistered H1/H2/H3 readout"
+```
+
+---
+
+### Task 7: Retier the batteries on measured cost
+
+**Files:**
+- Modify: `cli/tests/heavy_tier.rs` (the canonical reason string)
+- Modify: `windows/hearsay/tests/hop_depth_seed42.rs`, `retelling_readout_seed42.rs` (drop `#[ignore]`)
+- Modify: `windows/hearsay/tests/common/mod.rs` (the stale "is minutes" comment)
+
+**Measured, on the real subjects:**
+
+```
+hop_depth_seed42          4.31 s      asserts spec section 6's floors
+retelling_readout_seed42  5.91 s      asserts the NO VERDICT floors and ceilings
+probe_filter_mismatch     1.96 s      prints only
+probe_filter_variation    6.40 s      prints only
+probe_lossy_quadrants     ~2 s        prints only
+probe_stance_cost         ~6 s        prints only
+```
+
+**THE DECISION RULE THIS TASK USED TO CARRY WAS WRONG.** It said "under 20 s
+-> un-ignore it and every hearsay battery; they belong in the commit gate."
+That conflates two mechanisms The Staff deliberately separated:
+
+- `#[ignore]` decides whether a test runs in the **stage/campaign** gate's full
+  workspace suite.
+- `docs/timings/subfloor-roster.tsv` decides what runs in **`gate-commit`**,
+  and it holds only tests measured strictly below `BASELINE_FLOOR_SECS = 1.0`
+  (`windows/lab/src/timings.rs:110`).
+
+Every hearsay battery is 1.96-6.40 s, i.e. **above the floor**, so un-ignoring
+them can never place them in the commit gate. The right destination is the
+**stage gate**, which is still a real improvement over campaign-gate-only.
+
+**And only the batteries that ASSERT are un-ignored.** `hop_depth_seed42` and
+`retelling_readout_seed42` carry assertions worth defending. The four probes
+only print substrate counts; running them every stage gate spends ~16 s to
+produce output nobody reads. They stay ignored and are run on demand.
+
+- [ ] **Step 1: Fix the canonical reason string, which now carries TWO
+      falsehoods.** `cli/tests/heavy_tier.rs:64` still reads
+      `"heavy: live-worldgen battery (minutes); deferred from the commit gate
+      to make gate-full"`. The duration is wrong by two orders of magnitude,
+      and `make gate-full` is a refusing signpost since decisions 0132/0133.
+      Set it to
+      `"heavy: live-worldgen battery; deferred from the commit gate to make gate-campaign"`
+      and update every heavy-tier ignore attribute in the workspace to match
+      VERBATIM — the test asserts exact equality.
+
+- [ ] **Step 2: Add a guard that the string states no duration.**
+
+```rust
+#[test]
+fn the_canonical_heavy_reason_states_no_duration() {
+    // A duration baked into a ratchet freezes a measurement. This campaign
+    // measured the claim the string used to carry ("minutes") at 4.31 s.
+    assert!(
+        !CANONICAL_REASON.contains("minute")
+            && !CANONICAL_REASON.contains("second")
+            && !CANONICAL_REASON.contains("hour"),
+        "the canonical reason must not assert a duration: {CANONICAL_REASON}"
+    );
+}
+```
+
+- [ ] **Step 3: Drop `#[ignore]` from the two asserting batteries** and delete
+      the "is minutes" sentence from `windows/hearsay/tests/common/mod.rs`,
+      plus the explanatory comment above `probe_filter_variation`'s ignore
+      attribute, which exists only to describe the defect Step 1 removes.
+
+- [ ] **Step 4: Verify.** The scoped crate run, then `make gate-commit`. Expect
+      gate-commit's selection to be UNCHANGED — the un-ignored tests are above
+      the roster floor and must not appear there. That expectation is the point
+      of the step: if they do appear, the floor is not what this task measured.
+
+- [ ] **Step 5:** `cargo fmt`, commit.
+
+---
+
+### Task 8: The book, the record, and the close
+
+**Files:**
+- Create: `book/src/chronicle/the-retelling.md`
+- Create: `docs/retrospectives/the-retelling.md`
+- Modify: `book/src/SUMMARY.md`, `docs/retrospectives/README.md`
+- Modify: `book/src/frontier/idea-registry.md` (flip statuses)
+- Modify: `book/src/open-questions.md` **only if** a Confidence Gradient bet moved
+
+- [ ] **Step 1: Write the chronicle entry**
+
+Report H1/H2/H3 as measured, including any null, at the book's altitude: technical and mathematical, comprehensible without reading the code. State the numbers, the decision-table branch each landed in, and the ladder ceiling so a reader can tell a saturated measure from a real one.
+
+- [ ] **Step 2: Flip the registry rows**
+
+`KNOW-two-filter-chain` `spec'd` → `shipped`, **Where** repointed at the chronicle. `KNOW-mismatch-needs-contact` `raw` → `elaborated` or `shipped` per what actually landed. If H3 refuted, flip `KNOW-divergence-antichain` to `refuted (The Retelling)` — the seventh status exists for exactly this, and the parenthetical is required.
+
+- [ ] **Step 3: Write the retrospective**
+
+Process lessons, not product (decision 0020). The heavy-tier ratchet finding belongs here.
+
+- [ ] **Step 4: Run the drift check**
+
+```bash
+cargo test -p hornvale --test docs_consistency
+make rebaseline
+git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$')
+```
+
+**Branch on the diff, do not predict it:**
+- `docs/audits/` moved → expected (pub boundaries changed); commit it in this commit.
+- `book/src/domesday/` or a census CSV moved → **STOP**; that is a census refresh, which is a lefford-only act and a G6 item.
+- nothing moved → also fine; the type-audit report may already be current from Task 2.
+
+- [ ] **Step 5: Commit and stop at G6**
+
+```bash
+cargo fmt
+git add book/ docs/
+git commit -m "docs(the-retelling): chronicle, retrospective, and the registry statuses"
+```
+
+Then **stop**. G6 is a hard stop: present the post-G3 ledger digest to Nathan before any merge.
+
+---
+
+## Self-Review
+
+**Spec coverage.** §1.1 two-filter chain → Task 3. §1.2 derived keys → Task 3. §1.3 maximum antichain → Task 5. §1.4 preregistered measurement → Task 6. §5.2 precision ladder and `retold_by` → Tasks 1–2. §3.4 stale tiering → Task 7. §8 DoD → Tasks 7–8. §6 H1/H2/H3 decision tables → Task 6 reports, Task 8 records.
+
+**Deliberately not covered, and why:** §7's blind reconstruction, misattribution drift and filter width are all `Carried forward` — campaign 3. No task implements them.
+
+**Type consistency.** `Precision` (Task 1) is used by name in Tasks 2, 4, 6. `Filters::is_lossy` (Task 3) is called in Task 4 only. `variants_about` (Task 4) is consumed by `variant_count` and `finest_precision_hops` (Task 6). `maximum_antichain` (Task 5) is consumed by Task 6. `Claim.precision` is added in Task 2 and read in Tasks 4 and 6.
+
+**The perf risk this section used to carry is RETIRED.** It warned that
+`variants_about` walks `lineage.ancestry(d)` inside a loop over
+`descendants_of(w)`. Task 3 memoises ancestor sets at construction —
+measured 6,221 node visits for a whole world against 2,946,813 naive,
+a 473.7x reduction — so the shape is gone rather than managed.

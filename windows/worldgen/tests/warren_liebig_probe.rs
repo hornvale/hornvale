@@ -33,7 +33,7 @@ use hornvale_worldgen::{
 /// seed-loop flag (Fix round 1); `s` binds a `Substrate` in
 /// `for (label, s) in [("surface", surf), ("subterranean", sub)]`
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn which_axis_binds_for_a_subterranean_kind() {
     let world = build_world(
         Seed(42),

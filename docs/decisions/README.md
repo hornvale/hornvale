@@ -178,3 +178,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0136](0136-a-coverage-verdict-cites-a-checked-anchor.md) | A coverage verdict cites a machine-checked anchor | Accepted |
 | [0137](0137-the-craton-clamp-is-a-budget-not-a-limit.md) | The craton clamp is a budget, not a limit | Accepted |
 | [0138](0138-a-preregistered-criterion-may-be-restated-when-its-estimator-is-wrong.md) | A preregistered criterion may be restated when its estimator is wrong | Accepted |
+| [0139](0139-main-advances-only-through-the-lock.md) | Main advances only through the lock | Accepted |
+| [0140](0140-the-stage-gate-is-a-kind-of-queue-request.md) | The stage gate is a kind of queue request, not a dispatch path | Accepted |

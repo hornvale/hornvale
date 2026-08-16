@@ -119,7 +119,7 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
 /// tripwire's own live-vs-fixture freshness check over PROBE_SEEDS and a
 /// rotating WINDOW_SEEDS, across every study in CENSUSES
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn census_fixtures_match_a_probe_of_live_seeds() {
     for (study_path, rows_path) in CENSUSES {
         let study = load_study(Path::new(study_path)).expect("load study");

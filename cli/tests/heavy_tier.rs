@@ -7,7 +7,7 @@
 //! Two classes so far:
 //!
 //! - `heavy:` (fast-gate-tiers spec) — a live-worldgen battery deferred from
-//!   `make gate` to `make gate-full`, so the two stay in sync.
+//!   `gate-commit` to `make gate-campaign`, so the two stay in sync.
 //! - `stale-second-opinion:` (F11 discharge) — a row whose claim is blocked
 //!   because a metric's deliberately-duplicated second opinion has fallen out
 //!   of step with the code it duplicates, so the row reads a defect in the
@@ -79,7 +79,7 @@ use std::path::{Path, PathBuf};
 
 /// The one reason string every heavy-tier test must use verbatim.
 const CANONICAL: &str =
-    "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full";
+    "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)";
 
 /// The workspace root: the parent of this crate's manifest dir (`cli/`).
 /// Filesystem-based, not git-based — the remote gate runs the suite in an
@@ -143,6 +143,18 @@ fn heavy_tier_reason_strings_are_canonical() {
             "heavy-tier ignore reason must be verbatim canonical; found: {r:?}"
         );
     }
+}
+
+#[test]
+fn the_canonical_heavy_reason_states_no_duration() {
+    // A duration baked into a ratchet freezes a measurement. This campaign
+    // measured the claim the string used to carry ("minutes") at 4.31 s.
+    assert!(
+        !CANONICAL.contains("minute")
+            && !CANONICAL.contains("second")
+            && !CANONICAL.contains("hour"),
+        "the canonical reason must not assert a duration: {CANONICAL}"
+    );
 }
 
 /// The canonical `stale-second-opinion:` reason strings (F11 discharge,
@@ -411,7 +423,9 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 //                      from a regression on their own (The Ballast) — pinned
 //                      so the tier's OWN saturation does not redden them.
 //
-// `gate-full-heavy.sh` (now run by `make gate-campaign`) sets no
+// `gate-full-heavy.sh` (now run by the `heavy` lane set — `make lane
+// SET=heavy REF=<full-sha>`, `make heavy-remote REF=<full-sha>`, or as a
+// merge-queue chamber phase, decision 0139) sets no
 // `test-threads` limit, so without either pin the box runs up to 40 heavy
 // processes at once, each wanting 40 worker threads.
 //

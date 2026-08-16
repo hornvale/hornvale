@@ -696,7 +696,7 @@ fn trails_exist_age_ordered() {
 #[test]
 /// claim: rate(forall-seed, mean > 1.5) — off-gate (heavy:), a mean
 /// component-count claim over 40 seeds, not a hunt
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn arcs_are_discrete() {
     use hornvale_terrain::BoundaryKind;
     let geo = Geosphere::new(5);
@@ -750,7 +750,7 @@ fn arcs_are_discrete() {
 /// a cell-level rate, closer to rate/invariant than a hunt; needs new
 /// cell/entity-level aggregation metrics before it can move (spec §6 item 7),
 /// not a lift-and-shift — see docs/audits/the-assay-build-volume-audit.md
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn shelf_width_asymmetry() {
     let geo = Geosphere::new(5);
     let cap_depth_m = 2.0 * CarveParams::default().wedge_freeboard_m;
@@ -841,7 +841,7 @@ const V2_EUSTATIC_SWING_BASELINE: f64 = 0.00011887;
 #[test]
 /// claim: rate(forall-seed, mean >= V2_EUSTATIC_SWING_BASELINE) — off-gate
 /// (heavy:), a mean-swing claim over 4 seeds against a historical baseline
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn eustatic_dividend_regression() {
     let geo = Geosphere::new(5);
     let delta = 50.0_f64;

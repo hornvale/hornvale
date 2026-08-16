@@ -92,23 +92,40 @@ the practice by one clause: **make it fail on command, and run the positive
 control, because a negative result from an instrument nobody has seen fire is
 not evidence.**
 
-**A note from The Staff (2026-08-14), since this score is read against an
-instrument this passage names by a label that no longer exists.** Both
-halves of Sexton's pairing — the census sentinel and the duration alarm —
-lived inside the single gate this chapter calls `make gate`, which decision
-0132 has since split by purpose into `gate-commit` (local, every commit) and
-`gate-stage` (the lane, each plan-stage boundary). The sentinel costs 12–25
-CPU-seconds depending on host, above the one-second floor that defines
-`gate-commit`'s test tier, so it no longer runs at every commit; the
-duration alarm moved with it, because both live inside the same `cargo
-nextest run --workspace` invocation, which is now `gate-stage`'s body rather
-than `gate-commit`'s. The pairing itself survives — generator and verifier
-still run together, just inside the slower gate — but the **frequency** this
-passage's score leans on does not automatically survive with it: nobody has
-yet counted how often `gate-stage` runs in a month, so "368" is not the
-number to read off this passage anymore, and no replacement has been
-measured. Score this bet as still paired, at a currently unmeasured
-frequency — not as reconfirmed at the old one.
+**A confirming instance from The Begat (2026-08-16), on a path this passage
+has not yet covered: a byte-identity claim.** That campaign's entire
+correctness case was a comparison returning zero differences over a
+thousand-seed panel — the purest form of the failure this clause names, since
+an empty difference and a broken comparison are the same observation. It was
+handled the way the clause asks: perturb one value of the thousand, confirm
+the comparison reports exactly one disagreement, and only then read the zero
+as evidence; and check the column is not trivially constant, because a
+constant matches a constant. The score does not move — the practice was
+already the bet's — but it extends where the clause is known to apply, from
+checks that fire to **claims of no change**, which is the shape every
+determinism argument in this project takes.
+
+**A note from The Staff (2026-08-14), amended by The Sluice (2026-08-15),
+since this score is read against an instrument this passage names by a label
+that no longer exists.** Both halves of Sexton's pairing — the census
+sentinel and the duration alarm — lived inside the single gate this chapter
+calls `make gate`, which decision 0132 has since split by purpose into
+`gate-commit` (local, every commit) and a **stage gate** on the canonical
+box, run at each plan-stage boundary. The sentinel costs 12–25 CPU-seconds
+depending on host, above the one-second floor that defines `gate-commit`'s
+test tier, so it no longer runs at every commit; the duration alarm moved
+with it, because both live inside the same `cargo nextest run --workspace`
+invocation, which is now the stage gate's body rather than `gate-commit`'s.
+Decision 0139 then moved the stage gate again without changing what it runs:
+it is a request to the canonical box's serial merge queue now (`make
+sluice-stage`), taking the same claim and running the same phases as a merge
+does, but reporting instead of pushing. The pairing itself survives —
+generator and verifier still run together, just inside the slower gate — but
+the **frequency** this passage's score leans on does not automatically
+survive with it: nobody has yet counted how often the stage gate runs in a
+month, so "368" is not the number to read off this passage anymore, and no
+replacement has been measured. Score this bet as still paired, at a
+currently unmeasured frequency — not as reconfirmed at the old one.
 
 A third campaign extends the tally in a way that narrows the diagnosis. The
 Repertoire (2026-07-31) built a capability probe that touches no world state,
@@ -445,6 +462,77 @@ client draws one glyph for the possession and one for everything else in view,
 terrain and marks alike. The catalogue's *refusals* are a separate and smaller
 set, each tracing to a ratified decision rather than to a deficiency; they
 confirm existing positions rather than moving a bet.
+
+A thirteenth campaign contributes two corners the practice does not reach,
+and a correction to a score written above. [The Sluice](./chronicle/the-sluice.md)
+(2026-08-16) built a serial merge queue and produced **fourteen** defects from
+its own plan text — the largest single tally this thread has recorded, from
+the same source every other tally names. Two were guards described as live
+that nothing could redden, and one was a check written against a situation
+that cannot occur: it grepped for git's default merge subject `Merge branch …`
+against a chamber that merges a bare identifier into a detached head, where the
+default is `Merge commit '<sha>' into HEAD`. Those belong to the family already
+described. The two below do not.
+
+**The first corner is a check whose predicate is right and whose model of the
+world is wrong.** A static lint scanned one file for commands that would write
+to the real remote. It was defeated three times, and not once by a missing
+pattern: first a denylist that could not enumerate the shell's syntax, then a
+hand-rolled word boundary that matched nothing at all, then a line-continuation
+joiner that inserted a space where the shell deletes the backslash outright —
+so a command split across two lines in an unusual place really executes as a
+force-push while the auditor reports zero violations. Mutation does not find
+this. The check fires; it fires reliably; it is pointed at everything it claims
+to be pointed at. What is wrong is its *model of the language it reads*, and
+each of the three looked correct by inspection. The lint was deleted rather
+than patched a fourth time, because by then it had acquired a worse property
+than the thing it protected — an unbalanced brace in the audited file closed
+the test wrapper early, so the audited content executed while the audit
+reported clean. The replacement is a runtime hook that refuses the operation
+rather than a reader that predicts it. So the floor gains a fifth question,
+asked of any check that parses rather than executes: *whose model of this
+language is this check using, and has that model been made to disagree with
+the real one on purpose?*
+
+**The second corner is a generator with no verifier at all, inside the gate.**
+The project's whole-world tier authors four committed artifacts. Two of the
+four tests compare what they build against a committed copy and fail when they
+differ; the other two only write. They assert nothing about what they wrote, so
+both artifacts went stale through a run reporting eighty passes out of eighty.
+This is The Siding's unpaired check with the pairing broken at the other end:
+there, the generator and the verifier existed and were never invoked together;
+here the verifier does not exist, and its absence is concealed by a green
+number in the same run that produced the drift. **A test that authors an
+artifact must also assert it**, and an authoring test that asserts nothing is
+not a weak check but a zero one wearing a passing test's clothes.
+
+**And a score in this chapter needs correcting.** The passage above credits
+The Ballast with building the missing half of the commit gate's roster loop —
+a copy of a green run's list to durable storage, carried back by a person. It
+never moved a byte, and neither published explanation of *why* was the cause.
+The list has one commit in its entire history. The blocker sat a step earlier
+than anyone had looked: the command that writes the list refuses whenever the
+machine's exclusive claim is held, and every serialized path in this project
+runs that command as a descendant of the process holding the claim — so the
+one thing that produces the list declined to, in the one environment where
+nothing else was running, and every mechanism downstream faithfully carried an
+unchanged file. Two campaigns diagnosed the symptom correctly and the cause
+wrongly, each building a remedy for the step it had found. The floor's second
+half — a check needs an enumeration it is answerable to — is unchanged and was
+right. What is added is narrower and aimed at repairs: **a remedy verified only
+at the step it was built for cannot tell you the pipeline ever ran**, and the
+cheapest thing that would have settled it, in either campaign, was reading the
+file's own history and finding one hand-written entry.
+
+**No bet in the map below moved.** The Sluice changes how work reaches merged
+reality; it resolves no open question about the world, raises nothing from
+taste-gated to self-scorable, and leaves every score below where it stood. Its
+one finding about the world arrived sideways, through a survivor the merge
+queue held on: a unit conversion from founding years to ledger days whose
+surrounding tests asserted only *ordering*, which a uniform rescaling cannot
+disturb. That is [The Ell](./chronicle/the-ell.md)'s question — *which test
+goes red if this crossing is deleted?* — answered once more in the negative,
+and closed with a cross-check rather than a threshold.
 
 ## What the world can already check itself on (high confidence)
 
@@ -2786,3 +2874,45 @@ thing that separated them was attributing the branch instead of inferring it.
 The instruction that follows is cheap and general: when a statistic refuses to
 move under a large intervention, find the line that decides it before concluding
 anything about the effect size.
+
+### The third position promotes back, and then reappears (2026-08-15)
+
+*The Retelling* supplied the missing mechanism, so the demotion above can be
+tested rather than believed. It holds, in both directions.
+
+**The promotion happened.** Once content could vary — a claim's day coarsens
+when a story crosses between communities standing differently toward the event
+it describes — the precondition became measurable on the first attempt that was
+tried. Spearman's rho between an ending's maximum-antichain width and its count
+of surviving variants is **0.666** over 408 qualifying endings. The axis that
+had been constant now varies, and the instrument that had failed three times
+worked immediately. Nothing about the instrument changed; the world did.
+
+That is the third position behaving exactly as this chapter predicted, which is
+the strongest thing that can be said for a category invented one campaign
+earlier: it made a dated claim about what would unblock a bet, and the
+unblocking happened for the stated reason.
+
+**And the position reappeared, one level in.** The campaign specified a model in
+which distortion *accumulates* along a path and built one in which it fires at a
+*boundary* — the distinction historical linguistics spent a century on,
+Neogrammarian sound law against lexical diffusion. Stance turns out to be an
+absorbing partition: victim-line and bystander are both closed under descent, so
+a story crosses at most one boundary and only two of a four-rung ladder are ever
+reached. Whether distortion compounds is therefore **not-yet-scorable** by the
+same test: what would have to vary is the number of boundary crossings, and the
+design holds it at one.
+
+The useful form of this is that the third position is not a waiting room a bet
+passes through once. It recurs at each level of mechanism, and the diagnostic
+question survives each recursion unchanged — ask what would have to vary, and
+believe the answer even when the instrument is already written and the numbers
+already look plausible. A four-rung ladder that only ever uses two rungs
+produces perfectly good numbers.
+
+Two campaigns reached that recursion independently and on the same day, from
+opposite directions — The Glasshouse from a statistic that would not move under
+a large intervention, The Retelling from a ladder that used two of its four
+rungs. Neither knew of the other's entry until they collided in a merge. That
+is weak evidence the recursion is a property of the axis rather than of either
+campaign's subject matter.

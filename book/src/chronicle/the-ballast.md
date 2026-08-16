@@ -86,6 +86,23 @@ declaration that has quietly become satisfied fails just as loudly as an
 undeclared one. A one-directional acknowledgement can only ever be satisfied,
 and so it rots.
 
+The first of those two halves was wrong, and the correction belongs here
+rather than in a later chapter's footnote. The copy did not work either, and
+the reason is that this diagnosis stopped one step short. The list was not
+being written and then erased; it was never being written at all. The command
+that produces it refuses whenever the machine's exclusive claim is held —
+sound in itself, since a contended run's timings would poison the baseline —
+and every serialised path in this project runs that command as a descendant of
+the process already holding that claim. So the producer declined, in the one
+environment on the one machine where nothing else was running, and the copy
+faithfully carried an unchanged file, because it was conditioned on the file
+having changed. [The Sluice](./the-sluice.md) found it by reading the list's
+own recorded history and finding a single hand-written entry where two
+successive remedies should each have left a trail. The remedy that stands
+asks the question that was actually meant — not *is the machine claimed*, but
+*am I contending with whoever claimed it* — and a claim held by one's own
+ancestor is now recognised as the job one is part of.
+
 ## The pattern under all of it
 
 Five separate times in this campaign, a confident first explanation was

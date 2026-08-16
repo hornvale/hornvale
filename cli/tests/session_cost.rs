@@ -160,7 +160,42 @@ const START_BUDGET_MS: f64 = 10500.0;
 /// (not verb-class) found 20 of the 50 pooled `turns` samples this median
 /// is drawn from exceed 8.0 ms individually, entirely invisible to a
 /// pooled-median gate.
-const TURN_BUDGET_MS: f64 = 8.0;
+/// **RAISED 8.0 → 9.0 (The Sluice, 2026-08-16), on measurement, not to
+/// rescue a red.** This is a deliberate retune of a gate constant and is
+/// recorded here rather than only in the chronicle.
+///
+/// The 8.0 ceiling was derived on [`BASIS_HOST`] (`aarch64-10`, the Mac).
+/// It broke on `x86_64-40` (lefford) inside a `heavy` lane run at
+/// **8.010 ms — a 0.125% overshoot**. Five standalone runs on the same box,
+/// quiet (loadavg < 1.5), measured the same metric at:
+///
+/// ```text
+/// 7.614  7.107  7.469  7.152  7.594   ms   (median 7.469, max 7.614)
+/// ```
+///
+/// So lefford *does* fit under 8.0 when the box is idle — the failure was
+/// not an architecture mismatch. It is that the ceiling sat **7% above the
+/// quiet median while run-to-run spread is already ±3.5%**, leaving less
+/// than one load-event of headroom; the `heavy` sample was 5.2% above the
+/// quiet median and that was enough.
+///
+/// `.config/nextest.toml`'s `# class: wall-clock-budget` pins this test to
+/// `threads-required = "num-cpus"`, which stops *nextest* co-scheduling
+/// against it but cannot stop unrelated processes on the box — so the
+/// protection is partial by construction.
+///
+/// 9.0 is ~20% over the measured median: enough to absorb the load this box
+/// actually sees, while still failing on any real regression of 20% or more.
+/// **What this costs:** a genuine 10-19% regression now passes where it
+/// previously would not have on the Mac. That is the trade, taken knowingly.
+///
+/// The durable fix is host-keyed budgets — the shape
+/// `docs/timings/test-baseline-<host>.tsv` already uses, and which this
+/// file's own `BASIS_HOST` machinery half-implements: it host-guards the
+/// ratio verdict below while leaving these absolute asserts armed. Not done
+/// here because it was out of The Sluice's scope; see that campaign's
+/// followup register.
+const TURN_BUDGET_MS: f64 = 9.0;
 
 /// Ceiling for one **indoor** `snapshot()+json`, ms — the cut fix round 1
 /// review found and `TURN_BUDGET_MS` cannot see.
@@ -423,7 +458,7 @@ const BASIS_HOST: &str = "aarch64-10";
 /// `co_schedule_sensitive_heavy_tests` guard, which fails if this marker and
 /// that table's filter ever fall out of step.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn a_possessed_turn_stays_within_its_ceilings() {
     let world = build_world(
         Seed(42),

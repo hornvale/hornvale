@@ -89,14 +89,14 @@ verdict() {
     # answers this the way `cargo test --workspace` was asking to be answered:
     # `gate-commit` is local and fast but covers only the sub-floor tier, not
     # the whole workspace; the actual whole-workspace suite is the `gate` set,
-    # which `gate-stage` dispatches to the lane on the canonical box (decision
-    # 0132, The Staff). A run scoped with -p is left alone (see design
-    # constraint 2).
+    # which the merge queue's chamber runs on the canonical box, as a phase of
+    # either a merge or a stage gate (decisions 0132, 0139). A run scoped with
+    # -p is left alone (see design constraint 2).
     if grep -q -E 'cargo (test|nextest run)' <<<"$cmd" 2>/dev/null; then
         if grep -q -E -- '--workspace|--all([^-]|$)' <<<"$cmd" 2>/dev/null ||
             ! grep -q -E -- '(-p|--package|--manifest-path) ' <<<"$cmd" 2>/dev/null; then
             # shellcheck disable=SC2016  # the $? and backticks are literal advice text
-            printf '%b' 'Whole-workspace cargo test. `make gate`, `make gate-full` and `make gate-fast` no longer exist (decision 0132, The Staff) — each now refuses. What actually exists:\n\n  make gate-commit                   LOCAL, seconds — lints + the sub-floor test tier ONLY, not the whole workspace\n  make gate-stage    REF=<full-sha>  dispatched to the lane on the canonical box — the actual whole-workspace suite (fmt + clippy + type-audit + nextest + doctests)\n  make quick                         the cheap half (fmt + clippy + type-audit), no tests\n\nIf you want what `cargo test --workspace` was asking for, that'"'"'s `gate-stage` — it costs a push and a lane dispatch, not a local command; `gate-commit` will NOT run it for you. The set roster is scripts/lane-sets.tsv.\n\nFor most cases the cheapest correct answer is still to scope it: cargo test -p hornvale-vessel --lib lattice::\n\nOverride with HV_TEST_OK=1.'
+            printf '%b' 'Whole-workspace cargo test. `make gate`, `make gate-full` and `make gate-fast` no longer exist (decisions 0132/0139) — each now refuses. What actually exists:\n\n  make gate-commit                   LOCAL, seconds — lints + the sub-floor test tier ONLY, not the whole workspace\n  make sluice-stage BRANCH=<b> REF=<full-sha>  queued to the chamber on the canonical box — the actual whole-workspace suite (fmt + clippy + type-audit + nextest + doctests)\n  make quick                         the cheap half (fmt + clippy + type-audit), no tests\n\nIf you want what `cargo test --workspace` was asking for, that'"'"'s `sluice-stage` — it costs a push and a queue slot, not a local command; `gate-commit` will NOT run it for you. The set roster is scripts/lane-sets.tsv.\n\nFor most cases the cheapest correct answer is still to scope it: cargo test -p hornvale-vessel --lib lattice::\n\nOverride with HV_TEST_OK=1.'
             return 1
         fi
     fi
@@ -165,7 +165,7 @@ self_test() {
     check allow 'cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -12'
     check allow 'cargo run --manifest-path tools/type-audit/Cargo.toml -- check'
     check allow 'make gate-commit'
-    check allow 'make gate-stage REF=deadbeef 2>&1 | tail -30'
+    check allow 'make sluice-stage BRANCH=campaign/x REF=deadbeef 2>&1 | tail -30'
     check allow 'cargo clippy --workspace --all-targets -- -D warnings'
     check allow 'cargo build --release'
 

@@ -1,4 +1,6 @@
-//! The preregistered readout (spec §6). Live worldgen; heavy tier only.
+//! The preregistered readout (spec §6). Live worldgen; asserts and so runs
+//! in the ordinary workspace suite (above the sub-floor tier, so still
+//! outside `gate-commit` — see Task 7 of The Retelling).
 
 use hornvale_hearsay::derive::witnesses_of;
 use hornvale_hearsay::{
@@ -10,7 +12,6 @@ use hornvale_hearsay::{
 /// (event, holder) population over it, asserted universally per spec §6's
 /// preregistered decision rule.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn transmission_depth_on_seed_42_has_a_population_and_a_median() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
