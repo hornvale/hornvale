@@ -133,8 +133,11 @@ pub fn live_posts(posts: &[StoredPost], ctx: &LiveContext) -> Vec<StoredPost> {
 /// `polarity`, and therefore letting a notice with a note over ~200
 /// characters lose `polarity=hold-off` to the 240-char per-post cap. The
 /// reader was then shown a notice and not told it was a hold-off. This is
-/// also a correctness surface for a gate: `scripts/preflight-merge.sh` greps
-/// the full read for the literal `polarity=hold-off`.
+/// also a correctness surface for the submission path:
+/// `scripts/sluice-request.sh` greps the full read for the literal
+/// `polarity=hold-off`. (That grep lived in `scripts/preflight-merge.sh`
+/// until The Sluice deleted it and moved the hold-off advisory to the moment
+/// work asks to integrate; the token it matches is unchanged.)
 const LEADING_FIELDS: [&str; 3] = ["polarity", "paths", "subject"];
 
 /// Free prose, rendered **last** — so truncation removes the least
@@ -888,13 +891,15 @@ mod tests {
     }
 
     #[test]
-    fn a_verbose_hold_off_is_still_greppable_by_preflight_under_the_full_cap() {
-        // `scripts/preflight-merge.sh` greps `board read` for the literal
+    fn a_verbose_hold_off_is_still_greppable_by_the_submission_under_the_full_cap() {
+        // `scripts/sluice-request.sh` greps `board read` for the literal
         // `polarity=hold-off`. That advisory is the strongest of the four read
         // seams -- it fires at integration, unfiltered by cursor or relevance
         // -- and it depended on `line()`'s field ORDER surviving a 2000-char
         // cap. Pin the exact token the script matches, so a reordering that
-        // broke the gate surface cannot pass silently.
+        // broke that surface cannot pass silently. The grep moved from
+        // `scripts/preflight-merge.sh` to the submission when The Sluice
+        // retired preflight; the token, and this test, are unchanged.
         let long_note = "y".repeat(4_000);
         let posts = vec![stored(
             Post::new("notice", "campaign/live")
@@ -906,7 +911,7 @@ mod tests {
         let out = render(&live, 0, &RenderOptions::full());
         assert!(
             out.contains("polarity=hold-off"),
-            "preflight's grep token must survive the full render's cap: {out}"
+            "the submission's grep token must survive the full render's cap: {out}"
         );
     }
 

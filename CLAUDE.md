@@ -70,29 +70,44 @@ orientation for a fresh session.
 
 ## Commands
 
-**Where things run (decision 0133, The Staff, amending 0086).** Campaign
+**Where things run (decisions 0133 and 0139, amending 0086).** Campaign
 worktrees and the commit gate (`gate-commit`) run on the **Mac** — it is
 local, host-unguarded, and seconds-scale, so nothing about it needs the
-canonical box. Everything costing minutes or more —
-`gate-stage`, `gate-campaign`, the heavy tier, and censuses — runs on
+canonical box. Everything costing minutes or more — the stage gate, the
+merge queue, the heavy tier, and censuses — runs on
 **lefford**, the canonical box for the artifacts several of them author,
-behind one strictly serial lane (below). The heavy tier is an *authoring*
+behind one strictly serial claim (below). The heavy tier is an *authoring*
 path, not merely an expensive one — three of its tests write committed
 artifacts and one compares a live probe against lefford-authored census
 fixtures — so `heavy-run.sh` carries the same canonical-host guard a census
 does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>` (a
 SHA, not a branch name).
 
-**The lane, not the Mac, absorbs contention now (decision 0133).** The old
+**The claim, not the Mac, absorbs contention now (decision 0133).** The old
 loadavg-42–63 shape The Timekeeper measured — three campaign sessions each
 running a full-workspace gate concurrently on ten cores — cannot recur
 locally, because there is nothing left above `gate-commit` to run on the
-Mac at all. In its place: one strictly serial queue on lefford. Every lane
-job — a stage gate, a campaign gate, a heavy run, a census — takes the same
+Mac at all. In its place: one strictly serial queue on lefford. Every job on
+that box — a stage gate, a merge, a heavy run, a census — takes the same
 shared claim, one at a time, first-come-first-served, no priority tiers, no
 force override. A stage gate queuing behind an hour of heavy or census work
-is an accepted cost, not a bug: dispatch is asynchronous, so the wait costs
+is an accepted cost, not a bug: submission is asynchronous, so the wait costs
 queue position, not attention.
+
+**"THE LANE" NOW NAMES A MUTEX, NOT A JOB SYSTEM (The Sluice, decision
+0139).** The word survives all over this file, `scripts/lane-sets.tsv` and
+`cli/tests/lane_sets.rs`, and it still means something exact: the one
+`flock`ed claim on the canonical box that every expensive job takes. What is
+gone is the DISPATCH machinery that used to sit on top of it —
+`lane-dispatch.sh`, `lane-run.sh`, a shared scratch worktree nobody owned,
+a `jobs.tsv` that was the only record a job existed, and the five `make
+lane*` targets. Those existed to serve an ABSENT caller, and every defect the
+lane produced in its first two days came from that: an unparseable claim, an
+orphan-on-kill that released the claim while 39 cores ran, `seam-guard`
+refusing five of six runs on a tree an earlier set had dirtied, and a
+sub-floor roster that never once landed a byte. The queue replaced the absent
+caller with a resident operator running each phase in the foreground; the
+mutex was never the problem and was kept.
 
 **`gate-commit` is not entirely free of the old concern.** Its cost tracks
 the edit's blast radius in the kernel → domains/\* → windows/\* → cli
@@ -110,26 +125,44 @@ make doctor        # the repo self-map — run this first in a fresh session
 # The set roster — what each gate runs — is `scripts/lane-sets.tsv`, the single
 # source of truth (`cli/tests/lane_sets.rs` fails on a second copy).
 
-# The gate ladder (`make help` lists every target). THREE GATES, NAMED FOR
-# THE CAMPAIGN MOMENT EACH ONE GATES — not for the machine or the suites
-# behind it (decision 0132). What each one runs lives in exactly one place,
+# The gate ladder (`make help` lists every target). ONE LOCAL GATE, AND ONE
+# QUEUE WITH TWO MOUTHS — named for the campaign moment each one gates, not
+# for the machine or the suites behind it (decisions 0132, 0139). What each
+# one runs lives in exactly one place,
 # `scripts/lane-sets.tsv` — the set roster; `cli/tests/lane_sets.rs` fails on
 # a second copy in prose, so this block points at it rather than restating it:
 #
-#   make quick                         # cheap half only: fmt-check + clippy + type-audit
-#   make gate-commit                   # THE COMMIT GATE: local, seconds, every commit
-#   make gate-stage    REF=<full-sha>  # THE STAGE GATE: the lane, minutes, each plan-stage boundary
-#   make gate-campaign REF=<full-sha>  # THE CAMPAIGN GATE: the lane, tens of minutes, before merging
+#   make quick                                        # cheap half only: fmt-check + clippy + type-audit
+#   make gate-commit                                  # THE COMMIT GATE: local, seconds, every commit
+#   make sluice-stage BRANCH=<branch> REF=<full-sha>  # THE STAGE GATE: the queue, minutes, each plan-stage boundary — never pushes
+#   make sluice       BRANCH=<branch> REF=<full-sha>  # THE MERGE: same queue, all six phases, pushes the SHA it tested
 #
-# `make gate`, `make ci`, `make gate-fast` and `make gate-full` no longer run
-# anything. Each is now a REFUSING SIGNPOST: it prints the three replacements
-# above and exits non-zero (decision 0132). Deliberate, not an oversight —
-# aliasing `gate` to `gate-commit` would silently change what 417 calls a
-# month meant, so the project refuses rather than guessing which of the three
-# a caller wanted. `gate-fast` is retired outright, not repointed: it
-# measured only ~10% cheaper than the old full gate (n=4, 381 s vs 423 s)
-# because it scoped *tests* to changed crates but could not scope the
-# *build*, which is where nextest's wall time actually sits.
+# THE STAGE GATE IS THE SAME OBJECT AS A MERGE, MINUS THE PUSH. It is not a
+# separate system: one column in the queue TSV (`kind`), one branch at the
+# push step in `scripts/sluice-run.sh`. It merges main+branch on the canonical
+# box under the same claim and runs the `stage`-rung phases against that real
+# merge product, so it answers the question a campaign actually has ("would
+# this survive contact with main today?") rather than the proxy `gate-stage`
+# answered ("is this branch tip green in isolation?"). Its queue entry ends
+# `reported`, and main never moves.
+#
+# `make gate`, `ci`, `gate-fast`, `gate-full`, `gate-campaign`, `gate-stage`,
+# `preflight` and the five `make lane*` targets no longer run anything. Each
+# is a REFUSING SIGNPOST naming its replacement and exiting non-zero
+# (decisions 0132, 0139). Deliberate, not an oversight — aliasing
+# `gate` to `gate-commit` would silently change what 417 calls a month meant,
+# so the project refuses rather than guessing which replacement a caller
+# wanted, and `gate-stage` cannot be aliased at all because the argument shape
+# changed (a stage request needs a BRANCH as well as a REF). `gate-fast` is
+# retired outright, not repointed: it measured only
+# ~10% cheaper than the old full gate (n=4, 381 s vs 423 s) because it scoped
+# *tests* to changed crates but could not scope the *build*, which is where
+# nextest's wall time actually sits. `gate-campaign` is retired for a
+# different reason: it gated a BRANCH TIP, and nothing ever built the object
+# that actually lands — that branch merged into whatever main is at merge
+# time — which is how two campaigns both minted decision 0134 through a green
+# gate. The merge queue (`make sluice`) gates the merge product itself and
+# pushes the exact SHA it tested.
 #
 # WHY THREE, NOT ONE. The old full-workspace gate had drifted into pricing a
 # merge-gate workload at commit frequency: **417 calls/month at an average
@@ -154,30 +187,46 @@ make doctor        # the repo self-map — run this first in a fresh session
 # recorded baseline duration is EXCLUDED from gate-commit by design (coverage
 # is the stage gate's job, not the commit gate's — see spec §4.3).
 #
-# THE "NEXT GREEN STAGE GATE REWRITES THE ROSTER" REMEDY DID NOT WORK UNTIL
-# THE BALLAST (2026-08-15), AND IS STILL A HUMAN STEP, NOT AN AUTOMATIC ONE.
-# A green `gate` set (`cargo run -p hornvale -- ci-record`, called from
-# `gate-run`) does measure every test and rewrite
-# `docs/timings/subfloor-roster.tsv` — but it writes that file inside the
-# LANE'S SHARED SCRATCH WORKTREE, which the very next dispatch's
-# `checkout --force` + `reset --hard` (`scripts/lane-run.sh`) destroys before
-# anyone can commit it. `lane-run.sh` never `git add`s, `commit`s, or `push`es
-# anything, so nothing reached the committed file this way — verified by its
-# own two-commit history, both authored by hand. `hornvale-hearsay` sat at
-# zero roster entries for exactly this reason: `gate-commit` compiled the
-# crate and ran none of its tests, every commit, printing a green number that
-# meant nothing for it.
+# THE "NEXT GREEN STAGE GATE REWRITES THE ROSTER" REMEDY NEVER ONCE LANDED A
+# BYTE UNTIL THE SLUICE (2026-08-16), AND THE REASON WAS A STEP EARLIER THAN
+# ANYONE HAD LOOKED. `docs/timings/subfloor-roster.tsv` had ONE commit in its
+# entire history, authored by hand. Two successive explanations of that were
+# written here and both were downstream of the real cause:
 #
-# The fix mirrors `timed.sh`'s own `docs/timings.md` row a few lines up in
-# this same script: `scripts/lane-run.sh` now copies a GREEN run's roster to
-# `$HV_LANE_DIR` (outside the worktree, so it survives the next dispatch)
-# beside that job's log. `make lane-roster [JOB=<id>]` pulls the most recent
-# (or a named) copy-out into the tree and prints the diff, left
-# **uncommitted** — a human still reviews and commits it, on the canonical
-# box's own authority, the same deliberate act every other lane-authored
-# artifact gets. GREEN-only is load-bearing, not stylistic: `cmd_ci_record`
-# (`cli/src/main.rs`) notes a red run's `run.json` is truncated, so a roster
-# copied from one would silently DROP tests from the commit gate.
+#   - the first said `ci-record`'s rewrite was destroyed by the next lane
+#     dispatch's `checkout --force`/`reset --hard` of the shared scratch
+#     worktree;
+#   - the second (The Ballast) added a copy-out of a green run's roster to
+#     `$HV_LANE_DIR`, plus `make lane-roster` to fetch it back by hand.
+#
+# The copy-out was conditional on `git diff --quiet` showing the file had
+# CHANGED, and it never had. `cmd_ci_record` (`cli/src/main.rs`) refused on
+# every single run: it asked `current_holder()`, which reports a claim held by
+# ANY live process — and every serialized path in this project runs
+# `ci-record` as a DESCENDANT of the process holding the claim (the lane held
+# it; the chamber holds it). So the one thing that writes the roster declined
+# to write it, in the one environment on the one box where nothing else was
+# running at all, and the machinery downstream faithfully copied an unchanged
+# file. `hornvale-hearsay` sat at zero roster entries for exactly this reason:
+# `gate-commit` compiled the crate and ran none of its tests, every commit,
+# printing a green number that meant nothing for it.
+#
+# THE FIX IS `contending_holder()` (`windows/lab/src/census_claim.rs`), which
+# asks the question that was actually meant: not "is the box claimed?" but "am
+# I contending with whoever claimed it?" A claim held by our own ancestor is
+# the job we are part of — the most serialized moment available, not
+# contention. A claim held by anyone else still refuses, unchanged. The
+# ancestry test is the same one the lock itself has always used
+# (`already_serialized_by`: alive AND an ancestor), so the two now agree.
+#
+# CONSEQUENCE: THE ROSTER IS AN ORDINARY CHAMBER ARTIFACT NOW. The chamber's
+# `gate` phase rewrites it, the phase loop commits it like every other tracked
+# drift, and it lands with the merge product on the SHA that was tested. There
+# is nothing to fetch by hand and `make lane-roster` is gone. GREEN-only is
+# still load-bearing, not stylistic: a red run's `run.json` is truncated, so a
+# roster taken from one would silently DROP tests from the commit gate —
+# `gate-run` already guards that, recording only when nextest, the doctests
+# and the duration alarm are all green.
 #
 # NOT "one file per canonical host" — that was never true. `subfloor_path`
 # (`windows/lab/src/timings.rs`) returns a single unkeyed path, unlike the
@@ -188,22 +237,26 @@ make doctor        # the repo self-map — run this first in a fresh session
 # workspace crate having at least one entry here, three-valued the same way
 # `tropes check` and type-audit's `waiver(...)` are.
 #
-# GATE-STAGE AND GATE-CAMPAIGN DISPATCH TO ONE STRICTLY SERIAL LANE on the
+# EVERY EXPENSIVE JOB TAKES ONE STRICTLY SERIAL CLAIM on the
 # canonical box (decision 0133, amending 0086's placement table and
-# reversing 0081's advisory carve-out for the gates): every lane job — these
-# two gates, the heavy tier, and censuses — takes the same shared claim,
+# reversing 0081's advisory carve-out for the gates): the stage gate, a merge,
+# the heavy tier, and censuses all take the same shared claim,
 # first-come-first-served, no priority tiers, no force override. Two trials
 # on the canonical box (six spaced waiters, then eight simultaneous ones)
 # granted the lock strictly in arrival order, 8/8 both times, so this needed
 # no separate ticket-spool runner — the existing primitive already was one.
-# lefford unreachable means no stage or campaign gate anywhere: it fails
+# lefford unreachable means no stage gate and no merge anywhere: it fails
 # closed rather than falling back to an uncontrolled local run.
 #
-#   make lane SET=<set> REF=<full-sha>   # on-demand escape, named for the set (e.g. re-run just artifacts after an absorption)
-#   make lane-status                     # who holds the staff on the canonical box, who is queued
-#   make lane-log [JOB=<id>]             # read a finished lane job back
-#   make lane-wait JOB=<id>              # opt-in blocking, never the default
-#   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
+# THERE IS NO LONGER AN "ONE SET ON DEMAND" ESCAPE. `make lane SET=<set>` is
+# gone with the rest of the dispatch layer. The two sets the chamber does not
+# run keep their own entry points (`make heavy-remote`, `census-run.sh`); for
+# anything else, the honest answer is that an operator resident on the box
+# runs that set's own command from `scripts/lane-sets.tsv` directly, which is
+# what "one session managing one machine" means in practice.
+#
+#   make sluice-status                   # what is queued, running, held, landed, reported
+#   make sluice-log [JOB=<id>]           # read a finished chamber job back
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 #
 # tools/board and tools/seam-guard are dev tools outside the cargo workspace
@@ -238,8 +291,8 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
-# reasons, so even `make gate-campaign` skips them; the everyday commit gate
-# never pays for them.
+# reasons, so even a full census run (`scripts/census-run.sh`, the dispatch
+# line below) skips them; the everyday commit gate never pays for them.
 #
 # THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
 # the pre-merge close, by a human on lefford — see the dispatch line below.
@@ -360,8 +413,9 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
-# `campaign`-rung lane set (`make gate-campaign`, or `make lane SET=seam-guard
-# REF=<full-sha>`), not the commit gate — each call site costs a full scoped
+# `campaign`-rung set, run as one of the merge queue's chamber phases (there
+# is no aggregate campaign-gate target and no on-demand set dispatch anymore
+# — see the gate ladder above), not the commit gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
@@ -641,11 +695,19 @@ for his review at the spec and merge stops. Nathan saying "manual mode"
 disengages it for the session.
 
 **Campaign branches absorb main at every plan-stage boundary**, not only at
-close: run `make preflight` from the branch; on an ancestry NO-GO, merge
-main INTO the branch and re-run the gate there. Two exceptions: never
+close: submit `make sluice-stage BRANCH=<branch> REF=<full-sha>`, which
+merges main into the branch IN THE CHAMBER and gates that product without
+pushing it. A conflict is refused at the mouth in milliseconds, before the
+box is ever taken — that is the signal to absorb main locally and resubmit.
+Two exceptions: never
 absorb mid-measurement (a preregistered study's baseline and readout must
 see the same physics — finish the readout first), and never while main's
-checkout shows another session mid-landing (the preflight peeks and warns).
+checkout shows another session mid-landing. Nothing warns about that second
+one any more: `make preflight` used to peek at main's checkout and say so,
+and it is retired (see below). What replaced it is stronger where it
+applies — main advances only through the chamber's own claim (decision
+0139), so two LANDINGS cannot interleave — and silent where it does not: a
+human editing main's checkout by hand is outside that guarantee entirely.
 Parallel sessions are the norm; small absorptions keep semantic drift next
 to its cause instead of surfacing it at a 105-commit merge. Campaigns run in
 git worktrees under `.claude/worktrees/<campaign>/`
@@ -663,11 +725,21 @@ the pool from the **main checkout** regardless of which worktree you run it
 from — running it from inside the campaign you are about to retire is normal,
 and the pool it finds is always the same one.
 
-`make preflight` mechanizes only the **checkable** half. It compares ancestry
-and peeks at main's checkout; it has no opinion about whether two campaigns
+**`make preflight` is retired (The Sluice), and its four halves went four
+different places.** Ancestry is now the mouth's `git merge-tree` on the
+ACTUAL merge, which is strictly better than the proxy preflight compared;
+both-sides-added slugs surface as an add/add conflict there; duplicate
+idea-registry row IDs redden `cli/tests/docs_consistency.rs` in the
+chamber's `gate` phase, against the object that lands rather than a diff of
+two branches; and the board's hold-off advisory moved into
+`scripts/sluice-request.sh`, which is now the moment work asks to integrate.
+
+**The half nothing mechanizes is unchanged, and it is the one that has
+actually bitten.** No gate has an opinion about whether two campaigns
 changed the same idea in incompatible ways. The Tumult and The Waterline
-collided semantically with a clean GO. Read the other branches' chronicles,
-not just their diffs.
+collided semantically with a clean GO from a gate that was working
+correctly. Read the other live branches' chronicles, not just their diffs —
+that was preflight's own closing advice and it survives its instrument.
 
 **The board is the other half** (The Cairn, decision 0118). `refs/hornvale/board`
 carries what the substrate cannot: intent before the write, and technique after
@@ -711,8 +783,9 @@ the second is the one that would actually tell you.
 
 **SessionStart now syncs the board, one session behind.** Since The Staff the
 `SessionStart` hook runs `scripts/board-sync.sh` asynchronously, so peer
-mirrors refresh on every session instead of only on `make preflight` (which
-had 4 rows in the whole timings ledger). But the render runs *synchronously*
+mirrors refresh on every session instead of only on the integration
+preflight (which had 4 rows in the whole timings ledger before it was
+retired). But the render runs *synchronously*
 and the sync does not, so **the board you read at session start reflects the
 PREVIOUS session's sync** — freshness is "as current as your last session",
 not "as current as this one". Run `make board-sync && make board` when you

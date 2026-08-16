@@ -28,9 +28,9 @@ roster="$root/docs/timings/subfloor-roster.tsv"
 if [ ! -f "$roster" ]; then
     echo "subfloor-roster: no roster at $roster" >&2
     echo "  The commit gate's test tier is derived from a roster authored on" >&2
-    echo "  the canonical gating host, not this machine -- dispatch a stage" >&2
+    echo "  the canonical gating host, not this machine -- submit a stage" >&2
     echo "  gate rather than trying to author one locally:" >&2
-    echo "    make gate-stage REF=\$(git rev-parse HEAD)" >&2
+    echo "    make sluice-stage BRANCH=\$(git branch --show-current) REF=\$(git rev-parse HEAD)" >&2
     exit 3
 fi
 

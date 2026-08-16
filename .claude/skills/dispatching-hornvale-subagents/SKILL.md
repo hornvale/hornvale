@@ -138,9 +138,13 @@ the last commit of a multi-commit task.
 Fresh worktrees have an empty `target/`, and cargo keys workspace-crate
 artifacts to the absolute source path — nothing carries over from the main
 checkout. Measured solo on the M1 Max (2026-07-11): cold dev build 16 s,
-`make gate` ~4.5 min (dominated by test *runtime*, not compilation),
-`make rebaseline` ~2.5 min (cold release build + two 500-seed censuses +
-type-audit). The compiles are cheap; **parallel campaign sessions
+the then-single full workspace gate ~4.5 min (dominated by test *runtime*,
+not compilation), `make rebaseline` ~2.5 min (cold release build + two
+500-seed censuses + type-audit). That gate is retired (decision 0132); its
+local successor `make gate-commit` is priced by the edit's blast radius
+instead — up to ~470 s for a kernel-layer change — and everything above it
+is a queue entry on the canonical box, not a local command a subagent waits
+on. The compiles are cheap; **parallel campaign sessions
 contending for the same 10 cores are the multiplier** that pushes a gate
 past a timeout. So:
 

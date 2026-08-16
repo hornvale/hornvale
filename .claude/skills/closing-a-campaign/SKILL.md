@@ -15,13 +15,19 @@ not done until every one is checked or explicitly N/A.
 
 ## The walk (order is load-bearing)
 
-1. **Preflight the integration.** From the campaign branch: `make
-   preflight`. On NO-GO: merge main INTO the branch, re-run the full gate
-   there, re-run the preflight. Repeat every time main moves — parallel
-   sessions are the norm here, not the exception. If this preflight is the
-   branch's first meeting with main since the campaign began, the
+1. **Check the branch still merges.** `make preflight` is retired
+   (decision 0139): the merge queue's mouth (`scripts/sluice-mouth.sh`)
+   tests the actual merge with `git merge-tree` rather than ancestry as a
+   proxy, so a conflict is reported in milliseconds when you submit and the
+   queue advances past your request. On a bounced request: merge main INTO
+   the branch, re-run `make gate-commit` there, push, and submit again — a
+   new request, not a retry, since the sha changed. Repeat every time main
+   moves; parallel sessions are the norm here, not the exception. If this
+   is the branch's first meeting with main since the campaign began, the
    stage-boundary absorption cadence (CLAUDE.md Process) was missed —
-   record that in the retrospective.
+   record that in the retrospective. The half no tool scores is unchanged
+   and still yours: read the other branches' chronicles, not just their
+   diffs.
 
 2. **Sweep the scratch before it dies — and do it BEFORE writing the
    retrospective, not after.** `.superpowers/sdd/` is git-ignored and
@@ -90,9 +96,14 @@ not done until every one is checked or explicitly N/A.
    different thing from step 4's golden pins: pins re-pin in the drifting
    commit, keystones refreeze at merge.
 
-6. **Full gate + artifact drift on the merged result** (`make gate`, then
-   `git diff` after `make rebaseline` if worldgen moved). Only then
-   fast-forward main.
+6. **Submit to the merge queue** (`make sluice BRANCH=<branch>
+   REF=<full-sha>`; see the `submitting-to-the-sluice` skill for the
+   load-bearing order of gate-commit → push → enqueue → nudge). Do not
+   fast-forward main by hand: the chamber gates the merge *product* — the
+   full suite, the artifact regeneration and its drift check, the outboard
+   and client suites, seam-guard and the heavy tier — and pushes exactly
+   the sha it tested. A branch tip that gated green is not evidence about
+   the object that lands (decision 0139).
 
 7. **Memory.** Record what the close learned that the repo does not
    (process lessons, overturned estimates); prune memory entries the

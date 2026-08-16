@@ -1,19 +1,23 @@
 # The set roster (The Staff). THE SINGLE SOURCE OF TRUTH for what a set is.
-# Read by the Makefile, scripts/lane-dispatch.sh, scripts/lane-run.sh, and
-# cli/tests/lane_sets.rs. scripts/census-canonical-host.sh does NOT read this
-# file — its require_canonical_host() only takes a set NAME as $1, to name
-# the right dispatch line in its refusal prose. Do not restate this list in
-# prose anywhere — cli/tests/lane_sets.rs fails on a second copy, for the
+# Read by scripts/sluice-run.sh (which resolves a phase name to its command)
+# and cli/tests/lane_sets.rs. scripts/census-canonical-host.sh does NOT read
+# this file — its require_canonical_host() only takes a set NAME as $1, to
+# name the right dispatch line in its refusal prose. Do not restate this list
+# in prose anywhere — cli/tests/lane_sets.rs fails on a second copy, for the
 # reason docs/generated-paths.txt exists.
+#
+# `where` STILL SAYS `lane`, AND THAT IS NOT RESIDUE (The Sluice, Task 12).
+# The lane's DISPATCH machinery is deleted; the lane itself — one strictly
+# serial claim on the canonical box, decisions 0081/0086/0133 — is explicitly
+# what survives, and is what this column names. The chamber takes that same
+# claim, and so do `census-run.sh` and `heavy-run.sh`, which still run
+# outside the chamber. So the column's two values keep their exact meanings:
+# `local` is "any box, unserialised", `lane` is "the canonical box, behind
+# the shared claim". Renaming it would have been churn asserting a change
+# that did not happen.
 #
 # TSV, not JSON: /bin/sh on lefford is dash and must parse this without a tool,
 # and decision 0004 admits no TOML parser to the workspace.
-#
-# SOME COMMANDS BELOW DO NOT EXIST YET. `style-run`, `subfloor-run`,
-# `gate-suite-run`, `clients-check-run` (Makefile targets) and
-# scripts/lane-outboard.sh land in later tasks of this campaign (Tasks 5, 7,
-# 8, 9) — a cold reader hitting a missing target or script is not looking at
-# a typo or breakage, just an earlier task than the one that adds it.
 #
 # `seam-guard` moved OUT of `outboard` and onto its own `campaign`-rung row.
 # Task 8's own measurement forced this: 855.222 s for the four-suite
@@ -41,3 +45,4 @@ clients	stage	lane	yes	make --no-print-directory clients-check-run
 heavy	campaign	lane	yes	bash scripts/gate-full-heavy.sh
 census	campaign	lane	yes	bash scripts/census-run.sh
 seam-guard	campaign	lane	no	make --no-print-directory seam-guard
+integration	merge	lane	yes	bash scripts/sluice-run.sh

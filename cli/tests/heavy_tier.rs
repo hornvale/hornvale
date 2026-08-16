@@ -411,7 +411,9 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
 //                      from a regression on their own (The Ballast) — pinned
 //                      so the tier's OWN saturation does not redden them.
 //
-// `gate-full-heavy.sh` (now run by `make gate-campaign`) sets no
+// `gate-full-heavy.sh` (now run by the `heavy` lane set — `make lane
+// SET=heavy REF=<full-sha>`, `make heavy-remote REF=<full-sha>`, or as a
+// merge-queue chamber phase, decision 0139) sets no
 // `test-threads` limit, so without either pin the box runs up to 40 heavy
 // processes at once, each wanting 40 worker threads.
 //

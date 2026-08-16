@@ -269,3 +269,53 @@ fn reading_a_founding_back_out_of_the_ledger_is_lossless() {
         }
     }
 }
+
+/// `person_promote.rs::promote` crosses `Founder::founded` into days at its
+/// own call site — a call site distinct from the one three tests up that
+/// commits `occ-founded`, and from the read-back inverse
+/// [`occupation_records`] applies to reconstruct it. Both crossings start
+/// from the *same* `record.core.founded` year (a promoted founder's
+/// `community` is the entity `select_founders` set to `r.id`, the very
+/// `OccupationRecord` the founder was read out of), so a founder's own
+/// `person-founded` day stamp must equal the founding day already committed
+/// on their community's `occ-founded` fact.
+///
+/// This is the witness the ordering assertions in
+/// `person_promotion.rs`'s `every_person_is_born_before_they_die_and_after_their_community`
+/// cannot be: `identity(0)`ing the crossing at `person_promote.rs:303`
+/// replaces a day-scale founding with a year-scale one, and `birth_day`
+/// (`founded_day - maturity_days`, maturity already in real days) and
+/// `death` (`birth_day + lifespan.days()`, lifespan already in real days)
+/// both still land comfortably before `history-now` — so `died > born` and
+/// `deaths_seen > 0` both keep passing on a founder whose own founding day is
+/// wrong by a factor of `Years::DAYS_PER_YEAR`. Comparing the founder's day
+/// against their community's independently-committed day is what a units
+/// error at this one call site cannot survive.
+#[test]
+fn a_founder_is_founded_the_same_day_as_their_community() {
+    let world = world();
+    let mut checked = 0usize;
+    for f in world.ledger.find(hornvale_person::PERSON_FOUNDED) {
+        let Value::Entity(community) = f.object else {
+            panic!("person-founded's object is always the community entity");
+        };
+        let person_day = f.day.expect("person-founded carries a day").day();
+        let community_day = world
+            .ledger
+            .facts_about(community)
+            .find(|cf| cf.predicate == hornvale_history::OCC_FOUNDED)
+            .and_then(|cf| match cf.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .expect("every promoted founder's community carries its own occ-founded fact");
+        assert_eq!(
+            person_day, community_day,
+            "a founder must be founded the SAME DAY as their community — \
+             person-founded stamped {person_day}, occ-founded stamped \
+             {community_day}"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "seed 42 must promote some founders");
+}

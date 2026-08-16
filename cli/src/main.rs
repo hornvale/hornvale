@@ -1631,8 +1631,9 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
 /// Timekeeper). Reads what `make ci` just wrote; writes the rolling baseline
 /// that `cli/tests/timings_alarm.rs` compares against.
 ///
-/// Refuses on a CONTENDED box: `hornvale_lab::census_claim::current_holder()`
-/// naming a live holder means some other heavy job (a census, the heavy
+/// Refuses on a CONTENDED box:
+/// `hornvale_lab::census_claim::contending_holder()` naming a live holder
+/// means some other heavy job (a census, the heavy
 /// tier) is running here right now, so this run's durations are inflated
 /// (measured: a 5.2x swing under contention) and unfit to become the new
 /// baseline. Recording anyway is a one-way ratchet — once a contended
@@ -1640,6 +1641,21 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
 /// and can never fire again, silently. Refusing loudly (a non-zero exit) is
 /// chosen over a quiet no-op: `ci-record` run by hand or from a script should
 /// not look like it succeeded when it wrote nothing.
+///
+/// `contending_holder`, NOT `current_holder`, AND THE DIFFERENCE IS WHY THE
+/// SUB-FLOOR ROSTER NEVER ONCE UPDATED ITSELF (The Sluice, Task 12). This
+/// used to ask "is the box claimed?", which is a *strictly larger* question
+/// than "am I contending?" — and every serialized path in this project runs
+/// this command as a DESCENDANT of the process holding the claim. The lane
+/// (`lane-run.sh`) held it; the chamber (`sluice-run.sh`) holds it. So the
+/// `gate` set's `ci-record` refused on every single run, in the one
+/// environment on the one box where nothing else was running at all, and
+/// `docs/timings/subfloor-roster.tsv` has exactly one commit in its history —
+/// authored by hand. The remedy CLAUDE.md described (a copy-out surviving the
+/// next dispatch) addressed a later step in a pipeline whose first step never
+/// produced a byte. A claim held by our own ancestor is not contention: it is
+/// the job we are part of, and it is the most serialized moment available.
+/// A claim held by anyone else still refuses, unchanged.
 ///
 /// The write itself is: fold every sub-`BASELINE_FLOOR_SECS` test into the
 /// `<below-floor>` aggregate row (`fold_below_floor`), then read whatever
@@ -1650,17 +1666,18 @@ fn cmd_lab_anomalies(args: &[String]) -> Result<(), String> {
 /// decisions live in `windows/lab/src/timings.rs`; this function is just the
 /// read-fold-hysteresis-write plumbing.
 fn cmd_ci_record() -> Result<(), String> {
-    use hornvale_lab::census_claim::current_holder;
+    use hornvale_lab::census_claim::contending_holder;
     use hornvale_lab::timings::{
         BASELINE_FLOOR_SECS, apply_hysteresis, baseline_path, fold_below_floor, parse_baseline,
         parse_run, render_baseline, subfloor_path, subfloor_roster,
     };
 
-    if let Some(holder) = current_holder() {
+    if let Some(holder) = contending_holder() {
         return Err(format!(
-            "ci-record: refusing to record — {} (pid {}) holds this box, so \
-             this run's durations are contended and would poison the \
-             baseline. Re-run `make ci` once the box is quiet.",
+            "ci-record: refusing to record — {} (pid {}) holds this box and is \
+             not an ancestor of this process, so this run's durations are \
+             contended and would poison the baseline. Re-run once the box is \
+             quiet.",
             holder.label, holder.pid
         ));
     }
