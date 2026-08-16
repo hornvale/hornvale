@@ -1025,11 +1025,20 @@ if [ -n "$(git status --porcelain)" ]; then
     phase_failed="dirty-tree"
     exit 12
 fi
-if ! git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$'); then
-    echo "sluice-run: declared generated paths drifted after regeneration." >&2
-    phase_failed="drift"
-    exit 13
-fi
+# REMOVED IN IMPLEMENTATION (Task 5 review). A `git diff --exit-code`
+# drift check here is PROVABLY UNREACHABLE: `git status --porcelain` empty
+# strictly implies `git diff --exit-code -- <any pathspec>` empty, because
+# diff sees a subset (unstaged tracked modifications), and this ran only when
+# the status check had already passed. The plan asserted the two were
+# independent; that was wrong, and backwards.
+#
+# The consequence is worth stating rather than hiding: **the chamber cannot
+# detect a phase that silently failed to regenerate a declared artifact.**
+# Catching that needs a re-regeneration compared against the committed tree,
+# which is expensive when `artifacts` is already a phase. The surviving
+# working-tree check detects exactly one real thing — an untracked nested git
+# repo `git clean -fd` cannot remove — and is documented in the chamber as
+# such. See the campaign's followup register.
 
 # THE PUSH MUST NOT TRUST A BARE rc=0. Task 4's review found that `code=$?`
 # inside an EXIT trap is **0 when the shell dies from a signal** — so a
@@ -1047,6 +1056,17 @@ if [ "${why:-exit}" != "exit" ]; then
     echo "sluice-run: run ended via $why, not a normal exit — refusing to push." >&2
     exit 15
 fi
+# RESTRUCTURED IN IMPLEMENTATION (Task 5 review). As written below, this
+# guard was UNREACHABLE: every `phase_failed=` assignment was immediately
+# followed by its own `exit`, so nothing set it and reached here. The comment
+# above claiming the push is "gated on TWO facts" described a live gate that
+# did not exist — this campaign's own signature fault, authored into its own
+# plan.
+#
+# The shipped shape replaces the in-loop `exit`s with `break` to a single
+# post-loop gate, so `phase_failed` is the real decision point and the
+# existing killed-run and failed-phase tests genuinely cover it. Verified by
+# neutralising the gate and watching a failed phase push.
 if [ -n "$phase_failed" ]; then
     echo "sluice-run: phase '$phase_failed' failed — refusing to push." >&2
     exit 16
