@@ -437,10 +437,14 @@ observation and a false generalization are routinely the same sentence.
 
 **No bet in the map below moved.** The Compendium ships an instrument and one
 reading of it; it resolves no open question about the world and re-scores
-nothing here. Its one finding *about* the world is that the first capability in
-an external catalogue this project cannot replicate is refused by a ratified
-decision rather than absent — which confirms an existing position rather than
-moving a bet.
+nothing here. Its one finding *about* the world is a render gap rather than a
+sim one: the first capability in an external catalogue this project cannot
+replicate is that catalogue's own first page — entities carrying their own
+appearance — and it reads **absent**, because the shipped character-grid
+client draws one glyph for the possession and one for everything else in view,
+terrain and marks alike. The catalogue's *refusals* are a separate and smaller
+set, each tracing to a ratified decision rather than to a deficiency; they
+confirm existing positions rather than moving a bet.
 
 ## What the world can already check itself on (high confidence)
 

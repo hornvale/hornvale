@@ -149,18 +149,12 @@ one guard in the campaign that was observed failing against a *genuine* change
 rather than a synthetic fixture, and it happened because the campaign corrected
 itself rather than because anyone arranged a demonstration.
 
-It has since fired twice more — three times in all. The weakest-half
-re-verdict of section 6 took `absent` from 10 to 11, and the colour ruling of
-section 7 took it from 11 to 12; both went red before their rebaseline, exactly
-as designed. A fourth round that changed only notes and provenance produced the
-*generic* drift message instead, which is the guard drawing the distinction it
-exists to draw.
-
 Two things follow. The guard's first real firing being self-inflicted is the
 best available evidence that it is pointed the right way — the deliberate
 rebaseline that followed is exactly the human act it exists to force. And the
 correction it caught was a verdict that had been over-generous: one `present`
-in twenty-six, found by **internal inconsistency** (the verdict sat directly
+in the twenty-six the reading carried *then* (the merged reading is 24;
+sections 6 and 7 moved it after this) — found by **internal inconsistency** (the verdict sat directly
 above its own note conceding the chapter's real subject was absent, and its
 sibling chapter read `absent`) rather than by anyone's opinion about the code.
 An instrument that authors verdicts about itself will produce self-flattery;
@@ -205,19 +199,8 @@ instruction; "a spanning chapter takes its weakest half" is a decision rule,
 and only the second one can be violated visibly.
 
 **And the correction ran in both directions, which is the test of whether a
-correction is honest.** Re-auditing all 74 items touched fourteen — **twelve verdict
-changes and two re-anchorings** — and the twelve break down as five demotions
-from `present`, six promotions out of `refused`, and one `refused` → `absent`.
-The demotions are where the render half is genuinely missing (you can `delve`
-into the caves and no renderer can draw them — the underground band folds into
-the walk band, so the pane and the verb agree on a chart of the country
-*overhead*); the promotions are where the clients do the work (a journal-spread
-UI, a pan-and-zoom viewport in the atlas, text composited independently of the
-map in the Casement). Every figure in this paragraph is derived from the corpus
-by script rather than counted by hand, which is section 7's fourth lesson
-applied to section 6's own prose. A pass that had only demoted would have been a different
-kind of wrong. The count of items refused under 0022 went from eight to zero,
-and every surviving refusal in the corpus is decision 0070.
+correction is honest.** A pass that had only demoted would have been a
+different kind of wrong; the per-page breakdown is the chronicle's.
 
 The cheap generalisation, worth carrying to the next corpus in this family:
 **name the subject boundary before authoring any verdict, and write it as a
@@ -279,20 +262,16 @@ Five things to carry:
 - **Derive counts, never re-count them.** Four rounds in a row, self-authored
   derived figures went stale — an anchor-roster literal, a novelty pair, a
   surplus count and a percentage, then five separate arithmetic errors in the
-  correction of the correction. The figures in sections 5 and 6 above are now
+  correction of the correction. The figures in section 5 above are now
   produced by a script over the corpus and the git history.
 - **A wrong correction is likelier than a wrong original**, because it is
   written under the pressure of having just been shown wrong and reviewed as a
   fix rather than as a claim. Answers 2 and 4 were both corrections. Both were
   worse than what they replaced.
 
-The verdict consequence stands but changed its ground twice. Chapter 2.1,
-*Entities and Components*, is `absent` — **not** because colour defaults off,
-which is false, but because in the shipped character-grid client's walk band
-`chart.rs` draws `@` for the possession and `+` for everything else, "terrain
-and marks alike" in its own words. An entity is not distinguishable from the
-ground on any seed. Nathan's sentence for it was *everything in the wilderness
-is a `+`*, and he had reached it before this campaign started.
+An entity is not distinguishable from the ground on any seed. Nathan's
+sentence for it was *everything in the wilderness is a `+`*, and he had
+reached it before this campaign started.
 
 ## 8. Two Minor findings were ruled into fix rounds, deliberately
 
@@ -323,7 +302,136 @@ when. Nothing in the design was damaged; the claim simply had to be corrected
 rather than left standing, and the amendment belongs in the spec because that
 is where the next reader will look for it.
 
-## 10. What held up
+## 10. The lane has dispatch and no cancel, and killing by hand has two traps
+
+**Dispatch the campaign gate once, when the branch is final.** This campaign
+dispatched three sets at three SHAs inside an hour onto a strictly serial
+shared queue. Nothing about that is visible from the dispatching side — the
+dispatcher gets a job id back and moves on — and the whole cost lands on
+whoever queued behind it. Asynchronous dispatch removes the wait from the
+dispatcher's attention, not from the queue.
+
+Cancelling the surplus jobs by hand found two traps worth writing down, since
+the lane has no cancel at all:
+
+- **`pkill -f "lane-run.sh.*<sha>"` self-matches.** The pattern is a literal
+  substring of the killing command's own cmdline, so `pkill` matches its own
+  shell, kills it, `ssh` exits 255, and every job it was aimed at survives.
+  The failure presents as a connection error, not as a miss. Write the pattern
+  so it cannot match itself: `lane-run[.]sh.*<sha>`.
+- **`kill -TERM` was ignored by all six jobs; only `kill -9` worked** — and a
+  `-9` leaves the claim behind. It left a stale `/tmp/hv-census.lock` that
+  could have deadlocked the lane for every campaign on the box, and did not
+  only because the file was zero bytes and a holderless lock reads as free.
+  That is luck, not a design property.
+
+The rule: **a shared serial resource needs a cancel that releases the claim,
+never a kill.** Until one exists, treat every dispatch as uncancellable and
+spend them accordingly.
+
+## 11. The census was skipped, and this section is the evidence for it
+
+Recording a skip **with** its evidence is a judgment; recording nothing is a
+silent omission — and until this section existed, a silent omission is exactly
+what this campaign had.
+
+The naive diff test said REFRESH. Every file it named — `hazard.rs`,
+`knownness.rs`, `volcano.rs`, `ablation.rs` — predates this branch's point, so
+the debt it detected was **main's, not this branch's**. The branch's own
+metric-path delta is one file, `kernel/CLAUDE.md`, which is a doc.
+
+The positive evidence: `scripts/ci-census-probe.sh` at `f72ec26c` on lefford
+reported both studies byte-identical on the first eight seeds, `real
+0m56.392s`.
+
+The rule: **diff the metric path against the branch point, not against the
+committed census**, or a branch inherits main's refresh debt and pays hours for
+a change that is not its own. And a probe that answers the refresh question in
+56 seconds is worth running before committing to a run that answers it in
+hours.
+
+## 12. Two campaigns minted decision 0134, and the guard naming that hazard cannot see it
+
+Two campaigns each claimed the next free decision number against the `main`
+they branched from, and both landed. Differing slugs mean differing filenames,
+so **the collision raises no merge conflict**; the digest renders one line per
+*file*, so a duplicate renders as two ordinary rows. Nothing looks wrong
+anywhere.
+
+The blast radius was bounded by luck alone: no corpus anchor cites 0134 or
+0135 — all five cite 0070 — so nothing resolved the wrong record.
+
+**The sharper observation is about the guard.** `no_gaps_in_the_decision_log`
+sits in the same file and *names* a collision with main as a cause of gaps, yet
+cannot catch one, **because a duplicate creates no hole.** It is a guard
+describing the right hazard and checking the wrong side of it. The rule: **when
+a guard's comment names a hazard, check that the predicate it computes is that
+hazard and not its more convenient neighbour** — a numbering collision can
+produce either a gap or a duplicate, and only one of those is a hole.
+
+## 13. The gate verdict — green on all six sets, and a count published before checking back
+
+This branch was first gated at `bfd21abc`, and nothing in the repository
+recorded that. It does now, carried forward to `72185029` — this campaign's
+own final SHA:
+
+| set | rc | note |
+|---|---|---|
+| gate | 0 | 507 s |
+| artifacts | 0 | |
+| outboard | 0 | |
+| clients | 0 | |
+| heavy | 0 | 2,503 s |
+| seam-guard | 0 | 1,478 s |
+
+**The campaign gate is fully green, seam-guard included.** This section
+originally read "`seam-guard` has never returned a verdict inside a campaign
+gate," on the evidence of five of this campaign's six lane runs exiting 2
+with `refusing to run on a dirty working tree`. That claim is false. Reading
+lefford's `~/.local/state/hornvale/lane/jobs.tsv` end to end: an earlier run
+at `a2e5050d` was green, then `bfd21abc` read `rc=2 wall=2533` — the run this
+section was originally written against, and the last one anyone had looked
+at — but The Ballast's untracked-residue fix landed right after
+(`62243c1e`, `fix(lane): clean untracked residue…`) and ran green at
+`wall=769`, and `72185029` ran green at `wall=1478`. Five of six lane runs
+*did* exit 2 with that message, all before the fix, all from the same cause:
+earlier sets in the same dispatch left behind a **tracked modification** in
+the lane's shared worktree (not untracked debris — a plain `git clean -fd`
+already swept that), and seam-guard refuses to mutate a tree it cannot
+restore. The Ballast's fix closes exactly that.
+
+**How the false claim got published is the more durable finding than the
+number it got wrong.** It was built by dispatching seam-guard at this
+branch's own final SHA, watching the job report `queued`, reading the
+historical `rc` column, generalising "five reds so far" into "never" — and
+publishing that generalisation without checking back on the very run just
+started to answer the question. A peer session caught it before it could
+compound further. The rule this adds, alongside the two below: **a count
+taken at one moment is not a property of the system, and a job you dispatched
+yourself is the cheapest one to check back on before generalising about it.**
+
+**What survives the correction, and must not be overcorrected into "it's
+fine": both post-fix green runs (`62243c1e`, `72185029`) were solo
+dispatches** — seam-guard run alone, not trailing a full six-set campaign
+dispatch through the same shared worktree, which is the configuration every
+one of the five reds came from. The failure mode is fixed for untracked
+residue and untested for a full campaign set sharing the worktree end to end;
+the next full-set dispatch is the evidence for that case, not this
+paragraph.
+
+Two rules survive from the original telling, essentially unchanged. **A gate
+set that has never produced a verdict is an unmeasured set, not a passing
+one** — true of `bfd21abc`'s reading in the moment, and true of any future
+gate still in flight. **An `rc=2` repeating identically across runs is a
+configuration finding rather than a flake** — also still true; it stopped
+repeating once the configuration was fixed, not because the pattern was ever
+a flake. And **write the gate verdict somewhere durable**: a lane job's log
+dies with its lane directory, so a campaign that gated cleanly and recorded
+nothing is indistinguishable from one that never gated at all — which is
+exactly what let a five-red snapshot outlive the two green runs that
+followed it.
+
+## 14. What held up
 
 **Freezing the catalogue before authoring any verdict.** The corpus shipped
 with every verdict null and its item count asserted, one task before anything
@@ -370,6 +478,13 @@ Captured as registry rows rather than folded in:
 - **`TOOL-mechanism-anchor-matches-prose`** — the raw-text mechanism scan
   accepts a signature that appears in a comment or a string literal; a live
   instance already sits in the tree.
+- **`TOOL-lane-has-no-cancel`** — section 10's two kill traps, and the
+  `make lane-cancel` that would make them unnecessary.
+- **`TOOL-seam-guard-untested-in-a-full-lane-dispatch`** — section 13's
+  history: 5 of 6 pre-fix lane runs `rc=2` on tracked residue (not untracked
+  debris), The Ballast's fix, and the still-open case — every post-fix green
+  run was a solo dispatch, never a full six-set campaign dispatch sharing the
+  worktree end to end.
 - **`TOOL-worktree-take-branches-from-stale-origin`** — a recycled worktree
   starts from `origin/main` with no warning when the local `main` is ahead. Bit
   at this campaign's start. Banked as `raw` on a single observation, which is
