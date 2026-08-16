@@ -1051,3 +1051,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-15T21:35:16Z | rebaseline | 48.418 | 198.240 | 12.423 | 4.35 | 0 | bea31c07 | campaign/the-compendium | MacBookPro | 10 |
 | 2026-08-15T21:38:51Z | gate-commit | 16.332 | 39.193 | 10.188 | 3.02 | 0 | 8dc48419 | campaign/the-compendium | MacBookPro | 10 |
 | 2026-08-15T22:28:36Z | preflight | 3.284 | 0.970 | 0.965 | 0.59 | 0 | bfd21abc | campaign/the-compendium | MacBookPro | 10 |
+| 2026-08-16T00:50:21Z | gate-commit | 24.139 | 104.522 | 19.004 | 5.12 | 0 | 1a201f30 | campaign/the-sluice | lefford | 40 |
+| 2026-08-16T00:51:39Z | gate-commit | 32.089 | 35.955 | 3.394 | 1.23 | 0 | 1a201f30 | campaign/the-sluice | lefford | 40 |
+| 2026-08-16T01:04:43Z | gate-commit | 22.813 | 21.950 | 0.723 | 0.99 | 0 | 1a201f30 | campaign/the-sluice | lefford | 40 |
+| 2026-08-16T01:06:10Z | gate-commit | 38.904 | 110.719 | 41.944 | 3.92 | 0 | 1a201f30 | campaign/the-sluice | lefford | 40 |
+| 2026-08-16T01:07:50Z | gate-commit | 38.385 | 106.777 | 40.728 | 3.84 | 0 | 1a201f30 | campaign/the-sluice | lefford | 40 |
