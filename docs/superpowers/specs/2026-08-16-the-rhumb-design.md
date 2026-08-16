@@ -430,7 +430,18 @@ No epoch: no new stream label, no new draw, no world moves.
 
 ## 11. Decisions to promote
 
-One candidate, at **0139** (0137 and 0138 landed with The Glasshouse):
+One candidate, at **0140**.
+
+**Not 0139.** An earlier draft of this spec said 0139, reasoning from
+`docs/decisions/` alone — 0137 and 0138 landed with The Glasshouse, so the
+next free number *looks* like 0139. It is not: **`campaign/the-sluice`
+holds 0139**, unmerged, and a Glasshouse board post says so in as many
+words. Decision-number collisions are **silent** — the slugs differ, so a
+merge keeps both files with no conflict marker, and the digest renders one
+line per file. `no_gaps_in_the_decision_log` cannot catch it either, because
+a duplicate creates no hole. The board is the only place the claim exists
+before the file does, so **`ls docs/decisions/` is not sufficient to mint a
+number** — sync and read the board first.
 
 > **Compass navigation is an overlay, never the graph.** A player-facing
 > heading resolves to an edge of the geodesic adjacency; it never adds,
