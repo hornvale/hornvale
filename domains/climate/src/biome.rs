@@ -118,8 +118,8 @@ pub const ALL: &[Biome] = &[
 /// the slope to 57 m/degree moves `classify_land`'s `Alpine` branch on every
 /// high-latitude cell of every world, which is a census-moving physics change
 /// and would need its own preregistration and its own refresh. The defect is
-/// therefore RECORDED here and carried as a registry row rather than fixed at
-/// a campaign close. What makes that safe to defer: the error is one-directional
+/// therefore RECORDED here and carried as `CLIM-treeline-slope-not-earths`
+/// rather than fixed at a campaign close. What makes that safe to defer: the error is one-directional
 /// (too *few* `Alpine` cells at high latitude, never too many) and it is
 /// smallest exactly where this campaign's population now lives.
 /// type-audit: pending(wave-2)
