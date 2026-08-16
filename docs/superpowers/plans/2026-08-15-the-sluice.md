@@ -1157,6 +1157,117 @@ Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
 
 ---
 
+## Task 5a: A `pre-push` hook — the control that prose was not
+
+**Added after an incident, 2026-08-16.** A subagent force-pushed campaign WIP
+over `origin/main` while probing bash quote-splitting semantics. Its dispatch
+named that prohibition as the single most important constraint, in a boxed
+warning, with a "print `git remote -v` first" sub-rule. It still happened,
+because the agent wrote a *diagnostic* and did not file that under "the push
+tests" the rule described. **Prose in a prompt is not a control.**
+
+**Files:**
+- Create: `scripts/hooks/pre-push`
+- Create: `scripts/test-pre-push.sh`
+- Modify: `scripts/CLAUDE.md` (the hooks section)
+
+**Why a hook is the right mechanism, verified:** `core.hooksPath` is already
+`scripts/hooks` (repository-level, so it is shared by every linked worktree —
+confirmed from both the primary checkout and a campaign worktree). The chamber
+disables hooks only for its own `commit` (`-c core.hooksPath=/dev/null`,
+`sluice-run.sh:510`), never for a push. So a `pre-push` hook fires for every
+push from every session without anyone opting in.
+
+**The rule — gate the destructive class, not all pushes.**
+
+Refuse, unless `HV_PUSH_OK=1` is set in the environment:
+
+1. a **delete** (local sha all zeros), or
+2. a **non-fast-forward** (remote sha is non-zero and is not an ancestor of the
+   local sha),
+
+and only when the remote is **not** a local path (`file://` or a filesystem
+path). Pushes to scratch bare repos stay unrestricted, so tests need no opt-in.
+
+**What is deliberately NOT gated, and why.** An ordinary fast-forward push,
+including to `main`. Nathan's normal workflow is to commit and push directly to
+`main` with no PR, and gating that would add friction to the common case to
+prevent a failure that has never occurred. The incident was a *force* push.
+Deletes and non-fast-forwards are the destructive, hard-to-recover class;
+fast-forwards are additive.
+
+> **Followup, not this task:** once the merge queue is live, decision 0137
+> ("`main` advances only through the lock") could be enforced here by gating
+> direct pushes to `refs/heads/main` behind the same opt-in — turning a stated
+> invariant into a mechanical one. Premature until the queue actually lands.
+
+- [ ] **Step 1: Write the failing test**
+
+`scripts/test-pre-push.sh`, in the shape of `scripts/test-sluice.sh`. Every git
+call under `env -u GIT_DIR -u GIT_INDEX_FILE`. Drive the hook the way git does
+— pass `$1`/`$2` and feed the ref lines on **stdin** — rather than by pushing,
+so the tests need no network and no real remote at all.
+
+Cases, each of which must be shown to fail when the hook is neutered:
+
+- a force push to a non-local remote is **refused**
+- a delete to a non-local remote is **refused**
+- the same force push with `HV_PUSH_OK=1` is **allowed**
+- a force push to a `file://` remote is **allowed** (tests must stay frictionless)
+- an ordinary fast-forward to a non-local remote is **allowed**
+- a brand-new branch (remote sha all zeros) is **allowed** — this is the case
+  most likely to be misclassified as a force
+- **the exact incident**: `21847b08` → `fb71dd2e` on `refs/heads/main`, where
+  the old sha is not an ancestor of the new. Assert it is refused. That case is
+  the reason this file exists; name it in the test.
+
+- [ ] **Step 2: Run it and confirm it fails for the right reason**
+
+Expected: `scripts/hooks/pre-push: No such file or directory` — a missing-file
+red, not an assertion red. You are only confirming the harness runs.
+
+- [ ] **Step 3: Implement `scripts/hooks/pre-push`**
+
+Constraints: `set -euo pipefail`; explicit `if`/`then` over `A && B || C`; no
+bash-4+ builtins; `shellcheck` clean; and a header in the register of this
+repo's other hooks — what it prevents, and the incident that motivated it.
+
+The refusal message must tell the reader exactly how to proceed deliberately
+(set `HV_PUSH_OK=1`), because a guard people cannot satisfy is a guard they
+work around.
+
+Note the ancestry test needs the objects present locally; decide what to do
+when they are not (a shallow clone, or a remote sha this side has never
+fetched) and say which way you erred. **Failing closed is the safer default
+here** — but say so rather than letting it happen by accident.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+- [ ] **Step 5: Mutate every case**
+
+For each, break the hook so that case should pass wrongly, confirm red, restore.
+Paste the reds. In particular prove the `file://` and new-branch allowances are
+real allowances and not the hook silently failing open.
+
+- [ ] **Step 6: Verify against a real push, on a scratch remote only**
+
+Create a bare repo, push to it, force-push to it — the hook must allow both
+(local remote). Then, **without pushing**, demonstrate the refusal path by
+invoking the hook directly with a non-local remote URL. Do not test the refusal
+by attempting a real push to GitHub.
+
+- [ ] **Step 7: Commit**
+
+```bash
+make shellcheck
+git add scripts/hooks/pre-push scripts/test-pre-push.sh scripts/CLAUDE.md
+git commit -m "feat(hooks): refuse a force-push or delete to a real remote
+
+Claude-Session: https://claude.ai/code/session_01TUBQXYrm5S4cjFrEvaSJcJ"
+```
+
+---
+
 ## Task 6: The request path and the Makefile surface
 
 **Files:**
