@@ -2,7 +2,12 @@
 
 **Campaign:** The Rhumb
 **Branch:** `campaign/the-rhumb`
-**Status:** spec, awaiting G3 review
+**Status:** COMPLETE — Tasks 1–5 and 7 shipped; Task 6 (the north-up chart)
+deferred to the successor appearance campaign, blocked on `SurroundsCell`
+carrying no per-cell position (`NAV-north-up-needs-per-cell-position`).
+Ratified as decision 0141 — **not 0140**, see §11's own correction and the
+retrospective's §7: The Sluice minted two decisions, so the board claim that
+named 0139 under-reported by one.
 
 A player walking this world is offered eight compass directions and given
 three, and *which* three depends on which way the triangle under their feet
