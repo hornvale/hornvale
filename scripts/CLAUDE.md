@@ -87,10 +87,14 @@ Key knobs:
 
 ## The gate ladder
 
-Three gates now exist, named for the campaign moment each one gates rather
-than for the machine or the scripts behind it (decision 0132): `gate-commit`
-(local), `gate-stage` and `gate-campaign` (both dispatched to the one lane on
-the canonical box, decision 0133). The roster of what each lane set runs is
+Two gates plus the merge queue now exist, named for the campaign moment each
+one gates rather than for the machine or the scripts behind it (decisions
+0132, 0139): `gate-commit` (local), `gate-stage` (dispatched to the one lane
+on the canonical box, decision 0133), and the merge queue (`make sluice`,
+below), which retires `gate-campaign` — it gates the merge PRODUCT rather
+than a branch tip, running the former campaign-gate phases (`artifacts
+outboard gate seam-guard clients heavy`) against the actual merge commit
+before pushing it. The roster of what each lane set runs is
 `scripts/lane-sets.tsv`, the single source of truth this section does not
 restate.
 
@@ -106,8 +110,14 @@ restate.
   on the far end, which can otherwise land on a stale local branch of that
   name there), then ssh's to the canonical box and forks a detached
   `lane-run.sh`. It RETURNS as soon as the job is enqueued and never blocks
-  the caller. `make gate-stage REF=<sha>` and `make gate-campaign REF=<sha>`
-  are thin wrappers dispatching one or more sets through this script.
+  the caller. `make gate-stage REF=<sha>` is a thin wrapper dispatching
+  `gate`+`artifacts`+`outboard`+`clients` through this script; `heavy`,
+  `census` and `seam-guard` are no longer bundled behind an aggregate
+  Makefile target (`gate-campaign` retired them — decision 0139) and are
+  dispatched individually with `make lane SET=<set> REF=<sha>`, except that
+  the merge queue's own chamber (`sluice-run.sh`, below) now runs `heavy` and
+  `seam-guard` itself, in-process, once it already holds the shared claim —
+  see the merge-queue entries below.
 - **`lane-run.sh`** — runs one set under the **same shared canonical-box
   claim** `heavy-run.sh` and `census-run.sh` already took (decisions
   0086/0133), forked with `setsid` so a dropped ssh costs nothing. Writes
@@ -126,11 +136,13 @@ restate.
   it moved to its own `campaign`-rung set instead.
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that
   `gate-commit` and the stage gate's own suite both defer (see
-  `cli/tests/heavy_tier.rs`). Runs as the `heavy` set, dispatched by
-  `gate-campaign`. **Takes the shared box claim** (decisions 0086/0133) —
-  here, at the seam, rather than only in a wrapper, because a wrapper cannot
-  guard a direct invocation of the script. Where there is no `flock` (macOS
-  ships none) it proceeds unserialised with a note rather than failing.
+  `cli/tests/heavy_tier.rs`). Runs as the `heavy` set — either standalone via
+  `make lane SET=heavy REF=<sha>`, or as one of the merge queue's chamber
+  phases (`sluice-run.sh`, below), which is now what `gate-campaign` used to
+  dispatch it. **Takes the shared box claim** (decisions 0086/0133) — here,
+  at the seam, rather than only in a wrapper, because a wrapper cannot guard
+  a direct invocation of the script. Where there is no `flock` (macOS ships
+  none) it proceeds unserialised with a note rather than failing.
 - **`heavy-run.sh`** — run the heavy tier on THIS box under the shared claim,
   the same way `census-run.sh` runs a census. `HV_HEAVY_REF=<sha>` runs a
   pushed ref in a scratch worktree; `status` asks who holds the box and is
@@ -146,6 +158,55 @@ restate.
 - `test-heavy-lock.sh` — proves the claim EXCLUDES (second acquirer refused
   while held; a normal exit and a `-9` both release), not merely that a lock
   file exists. Skips where there is no `flock`.
+
+### The merge queue (`make sluice`; decision 0139, The Sluice)
+
+Retires `gate-campaign`, which gated a BRANCH TIP — the merge that actually
+lands, that tip merged into whatever main is at merge time, was never itself
+built or tested, which is how two campaigns both minted decision 0134
+through a green gate. The queue gates the merge PRODUCT instead and pushes
+the exact SHA it tested.
+
+- **`sluice-queue.sh`** — the merge queue's durable state: an
+  append-and-rewrite TSV under its OWN flock, deliberately not the shared
+  lane claim, so enqueueing never blocks behind a running gate (a caller
+  should not wait tens of minutes just to write one line). Coalesces by
+  ANCESTRY (`git merge-base --is-ancestor`), not branch name, so a rebase or
+  a detached ref still supersedes correctly — and never supersedes a request
+  already RUNNING inside the chamber, which would otherwise orphan it
+  mid-write.
+- **`sluice-mouth.sh`** — the checks that run OUTSIDE the lane claim (the
+  canal-lock rule: turn a vessel away at the gate, never inside the
+  chamber). Prevents a doomed candidate — already merged, unpushed, or
+  genuinely conflicting — from consuming the strictly serial lane's queue
+  wait (903-1823 s/job, measured over its first 46 jobs). Five-valued exit
+  (0 admit / 1 conflict / 2 invalid-or-unpushed / 3 already-merged / 4
+  out-of-band), with out-of-band deliberately outranking already-merged so a
+  broken induction is never silently read as "nothing to do".
+- **`sluice-run.sh`** — the chamber; runs ON the canonical box under the SAME
+  shared claim `heavy-run.sh` and `census-run.sh` take (decisions
+  0081/0086/0133), so the queue pays for one job, not the six separate
+  dispatches a campaign gate used to cost (67% of the lane's first 27.4 h of
+  wall time was queue wait for exactly that reason). Merges the candidate,
+  then runs the former campaign-gate phases (`artifacts outboard gate
+  seam-guard clients heavy` — `census` refuses as a chamber phase, since it
+  unconditionally clobbers the shared claim on exit) against the real merge
+  commit before pushing it, so a broken interaction with main is caught
+  before it ever reaches main. Unsets `GIT_DIR`/`GIT_INDEX_FILE` once near
+  the top (the board-incident hermeticity lesson above), so no child process
+  spawned mid-run can silently operate on a different repository.
+- **`sluice-request.sh`** — the caller's side; validates and ssh's, then
+  RETURNS without waiting, same shape as `lane-dispatch.sh` including its two
+  hard-won guards (a full 40-char SHA, and a preflight kept outside the
+  backgrounded segment so a dispatch that never started cannot report
+  success).
+- **`test-sluice.sh`** — property tests for the queue, shaped after
+  `test-lane.sh`: pins the properties the queue would be worthless without
+  (flock ordering, coalescing by ancestry, never superseding a running
+  request, the mouth's five-valued exit semantics) rather than merely
+  asserting a lock file exists, and SKIPS (not fails) on a host without
+  `flock`, since `sluice-queue.sh` only ever runs on the canonical box.
+
 - `preflight-merge.sh` — GO/NO-GO before integrating a campaign branch;
   peeks at main's checkout and warns if another session is mid-landing.
 - `doctor.sh` — the repo self-map (`make doctor`); good orientation for a

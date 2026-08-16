@@ -11,11 +11,14 @@
 #                     # the kernel -> domains/* -> windows/* -> cli layering;
 #                     # see spec 2026-08-14-the-staff-design.md §4.2b)
 #   make gate-stage    REF=<full-sha> # THE STAGE GATE: dispatch gate + artifacts + outboard + clients to the lane
-#   make gate-campaign REF=<full-sha> # THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard
+#   make sluice BRANCH=<branch> REF=<full-sha> # THE MERGE QUEUE: gates the merge product and pushes it (decision 0139)
+#   make sluice-status # what is queued, running, held, landed
+#   make sluice-log    # read a finished merge-queue job back (JOB=<id>, or omit for the most recent)
 #   make lane-status  # who holds the staff on the canonical box, and who is queued
 #   make lane-log     # read a lane job back (JOB=<id>, or omit for the most recent)
-#   # `make gate`, `ci`, `gate-fast` and `gate-full` are RETIRED (decision 0132)
-#   # and now refuse with exit 2, naming the three gates above.
+#   # `make gate`, `ci`, `gate-fast`, `gate-full` and `gate-campaign` are RETIRED
+#   # (decisions 0132, 0139) and now refuse with a nonzero exit, naming their
+#   # replacements: gate-commit, gate-stage, and the merge queue above.
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make worktree-take NAME=<campaign> [BASE=main] # claim a recycled pool worktree
 #   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
@@ -123,11 +126,28 @@ gate-stage: ## THE STAGE GATE: dispatch gate+artifacts+outboard+clients to the l
 	@bash scripts/lane-dispatch.sh outboard "$(REF)"
 	@bash scripts/lane-dispatch.sh clients "$(REF)"
 
-gate-campaign: ## THE CAMPAIGN GATE: the stage gate plus heavy, census and seam-guard (REF=<full-sha>)
-	@$(MAKE) --no-print-directory gate-stage REF="$(REF)"
-	@bash scripts/lane-dispatch.sh heavy "$(REF)"
-	@bash scripts/lane-dispatch.sh census "$(REF)"
-	@bash scripts/lane-dispatch.sh seam-guard "$(REF)"
+# RETIRED, NOT FOLDED INTO THE `gate ci gate-fast gate-full` SIGNPOST BELOW.
+# That rule's own message points callers AT `gate-campaign` as the still-live
+# replacement for the three names it refuses; this target's refusal has to
+# say something different — point at the merge queue instead — so it cannot
+# share that rule's text. Verified before writing this: nothing in this
+# Makefile declares `gate-campaign` as a prerequisite of another target (the
+# way `gate-full: gate` did for `gate`), so retiring it orphans no downstream
+# target the way a naive `gate` signpost would have orphaned `gate-full`.
+gate-campaign: ## RETIRED (decision 0139) -- the merge queue gates the merge product
+	@echo "make gate-campaign no longer runs anything."; \
+	echo; \
+	echo "It gated a BRANCH TIP. What lands is that branch merged into whatever"; \
+	echo "main is at merge time, and nothing ever built that object -- which is"; \
+	echo "how two campaigns both minted decision 0134 through a green gate."; \
+	echo; \
+	echo "Use the merge queue, which gates the merge product and pushes the"; \
+	echo "exact SHA it tested:"; \
+	echo "    make sluice BRANCH=<branch> REF=<full-sha>"; \
+	echo "    make sluice-status"; \
+	echo; \
+	echo "make gate-stage REF=<full-sha> is unchanged."; \
+	exit 1
 
 # The former `make gate` body, now a set that runs ON the lane
 # (scripts/lane-sets.tsv's `gate` row: `make --no-print-directory
@@ -281,15 +301,19 @@ gate-run:
 # two targets that took `gate` as a prerequisite.
 # `gate-fast` IS ALSO RETIRED (n=4 measurement: it only bought ~10% over the
 # full gate) rather than pointed at a set — see docs/decisions/0132.
+# `gate-campaign` ITSELF IS NOW RETIRED TOO (decision 0139, The Sluice), so
+# this message no longer names it as a live replacement — it points at the
+# merge queue instead, which is its own signpost below with its own message.
 gate ci gate-fast gate-full:
-	@echo "make $@ no longer exists. Since The Staff there are three gates," >&2
-	@echo "named for the campaign moment each one gates:" >&2
+	@echo "make $@ no longer exists. Since The Sluice, merging goes through" >&2
+	@echo "the merge queue, and only two gates remain before it:" >&2
 	@echo "" >&2
 	@echo "  make gate-commit                    local, seconds, every commit" >&2
 	@echo "  make gate-stage    REF=<full-sha>   the lane, each plan-stage boundary" >&2
-	@echo "  make gate-campaign REF=<full-sha>   the lane, before merging" >&2
+	@echo "  make sluice BRANCH=<branch> REF=<full-sha>   the merge queue, before merging" >&2
 	@echo "" >&2
-	@echo "gate-full is superseded by gate-campaign, which contains it." >&2
+	@echo "gate-full is superseded by the merge queue, which gates the merge" >&2
+	@echo "product rather than a branch tip." >&2
 	@echo "" >&2
 	@echo "One set on demand:  make lane SET=<set> REF=<full-sha>" >&2
 	@echo "The roster:         scripts/lane-sets.tsv" >&2

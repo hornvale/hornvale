@@ -74,7 +74,7 @@ orientation for a fresh session.
 worktrees and the commit gate (`gate-commit`) run on the **Mac** — it is
 local, host-unguarded, and seconds-scale, so nothing about it needs the
 canonical box. Everything costing minutes or more —
-`gate-stage`, `gate-campaign`, the heavy tier, and censuses — runs on
+`gate-stage`, the merge queue, the heavy tier, and censuses — runs on
 **lefford**, the canonical box for the artifacts several of them author,
 behind one strictly serial lane (below). The heavy tier is an *authoring*
 path, not merely an expensive one — three of its tests write committed
@@ -88,7 +88,7 @@ loadavg-42–63 shape The Timekeeper measured — three campaign sessions each
 running a full-workspace gate concurrently on ten cores — cannot recur
 locally, because there is nothing left above `gate-commit` to run on the
 Mac at all. In its place: one strictly serial queue on lefford. Every lane
-job — a stage gate, a campaign gate, a heavy run, a census — takes the same
+job — a stage gate, a merge-queue run, a heavy run, a census — takes the same
 shared claim, one at a time, first-come-first-served, no priority tiers, no
 force override. A stage gate queuing behind an hour of heavy or census work
 is an accepted cost, not a bug: dispatch is asynchronous, so the wait costs
@@ -110,26 +110,34 @@ make doctor        # the repo self-map — run this first in a fresh session
 # The set roster — what each gate runs — is `scripts/lane-sets.tsv`, the single
 # source of truth (`cli/tests/lane_sets.rs` fails on a second copy).
 
-# The gate ladder (`make help` lists every target). THREE GATES, NAMED FOR
-# THE CAMPAIGN MOMENT EACH ONE GATES — not for the machine or the suites
-# behind it (decision 0132). What each one runs lives in exactly one place,
+# The gate ladder (`make help` lists every target). TWO GATES PLUS THE MERGE
+# QUEUE, NAMED FOR THE CAMPAIGN MOMENT EACH ONE GATES — not for the machine
+# or the suites behind it (decisions 0132, 0139 — The Sluice retired the
+# third gate below). What each one runs lives in exactly one place,
 # `scripts/lane-sets.tsv` — the set roster; `cli/tests/lane_sets.rs` fails on
 # a second copy in prose, so this block points at it rather than restating it:
 #
-#   make quick                         # cheap half only: fmt-check + clippy + type-audit
-#   make gate-commit                   # THE COMMIT GATE: local, seconds, every commit
-#   make gate-stage    REF=<full-sha>  # THE STAGE GATE: the lane, minutes, each plan-stage boundary
-#   make gate-campaign REF=<full-sha>  # THE CAMPAIGN GATE: the lane, tens of minutes, before merging
+#   make quick                                  # cheap half only: fmt-check + clippy + type-audit
+#   make gate-commit                            # THE COMMIT GATE: local, seconds, every commit
+#   make gate-stage REF=<full-sha>               # THE STAGE GATE: the lane, minutes, each plan-stage boundary
+#   make sluice BRANCH=<branch> REF=<full-sha>   # THE MERGE QUEUE: gates the merge PRODUCT, before merging
 #
-# `make gate`, `make ci`, `make gate-fast` and `make gate-full` no longer run
-# anything. Each is now a REFUSING SIGNPOST: it prints the three replacements
-# above and exits non-zero (decision 0132). Deliberate, not an oversight —
-# aliasing `gate` to `gate-commit` would silently change what 417 calls a
-# month meant, so the project refuses rather than guessing which of the three
-# a caller wanted. `gate-fast` is retired outright, not repointed: it
-# measured only ~10% cheaper than the old full gate (n=4, 381 s vs 423 s)
-# because it scoped *tests* to changed crates but could not scope the
-# *build*, which is where nextest's wall time actually sits.
+# `make gate`, `make ci`, `make gate-fast`, `make gate-full` and `make
+# gate-campaign` no longer run anything. Each is now a REFUSING SIGNPOST: the
+# first four print the gates and the queue above and exit non-zero (decision
+# 0132); `gate-campaign` has its own message, because what replaced it is not
+# a gate at all (decision 0139). Deliberate, not an oversight — aliasing
+# `gate` to `gate-commit` would silently change what 417 calls a month meant,
+# so the project refuses rather than guessing which replacement a caller
+# wanted. `gate-fast` is retired outright, not repointed: it measured only
+# ~10% cheaper than the old full gate (n=4, 381 s vs 423 s) because it scoped
+# *tests* to changed crates but could not scope the *build*, which is where
+# nextest's wall time actually sits. `gate-campaign` is retired for a
+# different reason: it gated a BRANCH TIP, and nothing ever built the object
+# that actually lands — that branch merged into whatever main is at merge
+# time — which is how two campaigns both minted decision 0134 through a green
+# gate. The merge queue (`make sluice`) gates the merge product itself and
+# pushes the exact SHA it tested.
 #
 # WHY THREE, NOT ONE. The old full-workspace gate had drifted into pricing a
 # merge-gate workload at commit frequency: **417 calls/month at an average
@@ -238,8 +246,8 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
-# reasons, so even `make gate-campaign` skips them; the everyday commit gate
-# never pays for them.
+# reasons, so even a dispatched `census` lane run (`make lane SET=census
+# REF=<full-sha>`) skips them; the everyday commit gate never pays for them.
 #
 # THE STANDING RULE IS UNCHANGED: the census is refreshed ONCE PER CAMPAIGN, at
 # the pre-merge close, by a human on lefford — see the dispatch line below.
@@ -360,8 +368,9 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 #     /// seam-guard: identity(0) scope(hornvale-kernel)
 # `identity(N)` replaces the call with its Nth argument (unit conversions,
 # clamps, wrappers); `returns(EXPR)` replaces it outright. Runs as its own
-# `campaign`-rung lane set (`make gate-campaign`, or `make lane SET=seam-guard
-# REF=<full-sha>`), not the commit gate — each call site costs a full scoped
+# `campaign`-rung lane set (`make lane SET=seam-guard
+# REF=<full-sha>`; there is no aggregate campaign-gate target anymore — see
+# the gate ladder above), not the commit gate — each call site costs a full scoped
 # test run, so `list` (which shows the site count without building) is worth
 # reading first: an experimental tag on `quantize` listed 36 sites, and a
 # broadly-called function makes a poor seam.
