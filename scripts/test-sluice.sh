@@ -1470,74 +1470,95 @@ rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
 
 echo "== push: every git push in sluice-run.sh is an exact member of the reviewed allowlist"
 # FIX ROUND 2 (coordinator's redirect): fix round 1's guard was a DENYLIST —
-# it named specific forbidden shapes (`--force`, a short `-f`, a `+`-prefixed
-# refspec) and excluded two known-safe lines. The reviewer broke it with five
-# more forms it never named: a wrapped `git push \`-then-`-f origin …`; a
-# short destination (`"+HEAD:main"`, no `:refs/heads/` for the refspec
-# pattern to anchor on); a refspec built from a separately-declared
-# `dst=refs/heads/main`; a flag built from a variable (`fflag=-f`); a refspec
-# built from TWO variables concatenated. A denylist over shell syntax cannot
-# be completed — every closed form invites a sixth. So this is now an
-# ALLOWLIST: the only thing checked is whether every `git push` invocation in
-# this file is a byte-for-byte match of one of the exactly two we have
-# reviewed. New flag, new refspec shape, wrapped line, variable indirection —
-# all of it fails the same way, by not being an exact member, with no need to
-# have anticipated the specific form.
+# it named specific forbidden shapes and excluded two known-safe lines by
+# substring. The reviewer broke it with five forms it never named. A
+# denylist over shell syntax cannot be completed — every closed form invites
+# a sixth. So this is an ALLOWLIST: the only thing checked is whether every
+# `git push` invocation in this file is a byte-for-byte match of one of the
+# exactly two we have reviewed.
 #
-# SURVIVING LINE-WRAPPING: a wrapped command is one logical invocation split
-# across physical lines by a trailing `\` — `join_push_continuations` below
-# joins those before anything is matched or compared, so the allowlist is
-# expressed over the LOGICAL line (what bash actually parses as one
-# statement), which is the thing that survives reformatting; a purely
-# line-oriented check is not. This is deliberately narrower than a real shell
-# parser: it only recognises a literal trailing backslash, which is the ONLY
-# continuation form anywhere in this repo's own style (confirmed empirically
-# — `grep -n '\\$' scripts/sluice-run.sh` finds five, all real code, zero
-# comments), not the full grammar (`&&`/`||`/an unclosed quote can also
-# continue a line without a backslash). That gap is real and is called out
-# below, not hidden.
+# FIX ROUND 3 (this section, rewritten): round 2's own line-joiner
+# reimplemented bash's continuation semantics by hand — `line="$buf $line"`
+# — and got them wrong: bash DELETES a backslash-newline and concatenates
+# with NOTHING between the fragments, not a space. `git pu\`-then-newline-
+# then-`sh -f origin …` genuinely runs as `git push -f origin …` (confirmed
+# with `bash -x`); the hand-rolled joiner produced `git pu sh -f origin …`,
+# splitting the word "push" across a space, so the detector never matched
+# and reported zero violations. Worse, the same hand-rolled model treated
+# a COMMENT line ending in a backslash as continuing into the next line too
+# — which real bash does not do (a comment always ends at its own newline)
+# — so `# comment \` followed by a real `git push -f …` on the next line
+# would have had the real, executing line SWALLOWED into what the detector
+# treated as pure comment text and never inspected at all.
 #
-# CANDIDATE DETECTION: a joined logical line is a "push line" if it contains
-# the word-bounded tokens `git` and `push`, in that order, anywhere on the
-# line (`\bgit\b.*\bpush\b` — GNU grep's `\b`, not a hand-rolled
-# `[^A-Za-z0-9_]`-based boundary: an earlier draft of this used the latter and
-# it silently failed to match "git push origin ..." at all, because the
-# CONSUMING bracket-class match for `git`'s own trailing boundary ate the one
-# space separating it from `push`, leaving nothing left for `push`'s leading
-# boundary to match against — a real regex bug, not a tooling quirk, caught
-# by testing the detector against the file's own two legitimate lines before
-# trusting it against anything else). Comment-only lines (first non-blank
-# character `#`) are dropped first, so a comment mentioning "git push" in
-# prose is not a candidate at all.
+# THE FIX IS TO STOP MODELLING BASH AND START ASKING IT. `extract_logical_lines`
+# below wraps the target file's content as a function BODY and `source`s the
+# wrapper — sourcing only DEFINES the function, it never calls it, so this is
+# safe regardless of what the file contains, including an actively malicious
+# mutation — then reads the definition back with `declare -f`. Bash's own
+# parser has, by construction, already resolved every continuation, every
+# quote span, and every comment boundary correctly by the time it stored the
+# parsed function; `declare -f` re-serializes THAT, not a second, competing
+# guess at bash's own grammar. Verified directly: `declare -f` joins
+# `git pu\<NL>sh` into `git push` with no space; a multi-line double-quoted
+# string with an internal backslash-continuation is joined the same way,
+# still inside the quotes; a comment ending in `\` terminates normally and
+# the real statement after it appears as its own, separate, fully-visible
+# logical line — all three checked in `scripts/test-sluice.sh`'s battery
+# below, not merely asserted here.
 #
-# THE ALLOWLIST ITSELF is the two logical lines' own text, normalised the
-# same way (internal whitespace runs collapsed to one space, trimmed) so
-# indentation is not part of the comparison, but nothing else about the text
-# is. Anything else that looks like a push — by flag, by refspec shape, by
-# indirection, by a future edit to these two lines that isn't mirrored here —
-# fails.
-join_push_continuations() {
-    local file="$1" buf="" line
-    while IFS= read -r line || [ -n "$line" ]; do
-        if [ -n "$buf" ]; then
-            line="$buf $line"
-            buf=""
-        fi
-        case "$line" in
-            *\\)
-                buf="${line%\\}"
-                continue
-                ;;
-        esac
-        printf '%s\n' "$line"
-    done < "$file"
-    if [ -n "$buf" ]; then
-        printf '%s\n' "$buf"
-    fi
+# WHAT THIS STILL DOES NOT COVER, precisely: `declare -f` reflects bash's
+# LEXICAL/PARSE-TIME structure (comments, quotes, continuations), never its
+# RUNTIME argv formation (quote REMOVAL, variable/command substitution,
+# globbing) — those happen only when the function is actually CALLED, which
+# this deliberately never does. So `p=push; git "$p" …` and `git p''ush …`
+# both still evade this detector: in the first, the literal word "push" is
+# never on the page at all; in the second, `declare -f` preserves the quote
+# characters verbatim (`p''ush`), so the literal contiguous word "push"
+# genuinely is not there either, even though bash's runtime quote-removal
+# would reassemble it. Both are demonstrated, not merely claimed, further
+# down. Closing this class would mean statically evaluating quote-removal
+# and/or auditing every `git` invocation in the file (this one also calls
+# fetch/checkout/rev-parse/status/diff/clean/add/commit/merge/worktree/log/
+# rev-list/merge-base/branch/ls-remote/config) against a much larger
+# allowlist — a different, bigger task than "every git push is reviewed,"
+# and the one honest limit of a static, never-execute detector: only runtime
+# execution resolves runtime word-formation, and this detector deliberately
+# never executes anything.
+#
+# CANDIDATE DETECTION AND THE ALLOWLIST are otherwise unchanged from round 2:
+# a logical line is a "push line" candidate if it contains the word-bounded
+# tokens `git` and `push`, in that order, anywhere on the line
+# (`\bgit\b.*\bpush\b`); comment-only lines are dropped first; the allowlist
+# is the two legitimate lines' own text, whitespace-normalised (indentation
+# collapsed, one optional trailing `;` stripped — `declare -f` adds that
+# separator to every non-final statement in the block, so whether a wholly
+# unrelated edit follows this line elsewhere in the file must not change
+# whether IT matches).
+extract_logical_lines() {
+    local file="$1" wrapper rc out
+    wrapper="$(mktemp)"
+    {
+        echo '__sluice_audit_wrapped_fn() {'
+        cat "$file"
+        echo '}'
+    } > "$wrapper"
+    # `source`, never anything that calls the function: defining a function
+    # has zero side effects, so this is safe no matter what "$file" contains.
+    out="$(bash -c 'source "$1" 2>&1 && declare -f __sluice_audit_wrapped_fn' _ "$wrapper" 2>&1)"
+    rc=$?
+    rm -f "$wrapper"
+    printf '%s' "$out"
+    return "$rc"
 }
 
 normalize_push_ws() {
-    printf '%s' "$1" | tr -s '[:space:]' ' ' | sed -e 's/^ *//' -e 's/ *$//'
+    local s
+    s="$(printf '%s' "$1" | tr -s '[:space:]' ' ' | sed -e 's/^ *//' -e 's/ *$//')"
+    case "$s" in
+        *';') s="${s%;}" ;;
+    esac
+    printf '%s' "$s"
 }
 
 # shellcheck disable=SC2016  # deliberately literal: this is sluice-run.sh's
@@ -1545,14 +1566,28 @@ normalize_push_ws() {
 # in this script's environment.
 allowed_push_1='if ! git push origin "$final_sha:refs/heads/main"; then'
 # shellcheck disable=SC2016
-allowed_push_2='git push origin "HEAD:refs/heads/$branch" || echo "sluice-run: warning — could not update $branch; main is already landed." >&2'
+# `1>&2`, not `>&2`: `declare -f` always writes an explicit stdout fd when it
+# re-prints a `>&2` redirect — deterministic bash canonicalisation, not a
+# quirk of this one line — so the allowlist is written in the form the
+# comparison will actually see.
+allowed_push_2='git push origin "HEAD:refs/heads/$branch" || echo "sluice-run: warning — could not update $branch; main is already landed." 1>&2'
 
 # $1 = path to scan. Prints every non-allowlisted push-shaped logical line
 # found (empty output = clean). A separate function (not inlined at the call
 # site) so the same audit can run against a scratch mutation file below,
 # proving each bypass is actually caught by THIS code, not by eyeballing it.
+# FAILS CLOSED: if bash cannot parse the file as a function body at all (a
+# genuine syntax error, or anything else that makes extraction fail), that
+# is reported AS a violation — "cannot certify this file push-safe" — never
+# silently treated as zero violations.
 audit_push_allowlist() {
-    local file="$1" logical trimmed
+    local file="$1" extracted rc logical trimmed
+    extracted="$(extract_logical_lines "$file")"
+    rc=$?
+    if [ "$rc" -ne 0 ] || [ -z "$extracted" ]; then
+        printf '%s\n' "PARSE FAILURE — cannot certify this file push-safe (bash could not parse it as a function body)"
+        return 0
+    fi
     while IFS= read -r logical; do
         trimmed="$(normalize_push_ws "$logical")"
         case "$trimmed" in
@@ -1563,7 +1598,7 @@ audit_push_allowlist() {
                 printf '%s\n' "$trimmed"
             fi
         fi
-    done < <(join_push_continuations "$file")
+    done <<< "$extracted"
 }
 
 push_violations="$(audit_push_allowlist "$repo_root/scripts/sluice-run.sh")"
@@ -1626,22 +1661,56 @@ assert_bypass_caught "ours 4: syntactically clean, unreviewed destination branch
 assert_bypass_caught "ours 5: eval-wrapped push string" \
     "eval 'git push -f origin HEAD:refs/heads/main'"
 
+echo "== push: round 3 — the reviewer's two reported joiner bypasses, plus new attacks against the joiner itself"
+# The two forms the reviewer reproduced with `bash -x` and a real git error:
+# a mid-WORD split (the space-insertion bug: round 2's joiner turned "push"
+# into "pu sh") and the same thing splitting BOTH words across several
+# continuations. Both are regression cases now, not just narrative — if the
+# `declare -f`-based extractor above is ever swapped back for a hand-rolled
+# joiner that reintroduces the space, these go red immediately.
+assert_bypass_caught "reviewer round-3 #1: mid-word split (git pu\\<newline>sh)" \
+    $'git pu\\\nsh -f origin HEAD:refs/heads/main'
+assert_bypass_caught "reviewer round-3 #2: both words split across several continuations" \
+    $'gi\\\nt \\\npu\\\nsh -f origin HEAD:refs/heads/main'
+
+# Four more, aimed at the JOINER's semantics specifically (not the allowlist
+# text) — each is a distinct way a line-oriented, hand-rolled continuation
+# model gets bash's real grammar wrong; all four are correctly handled here
+# because `declare -f` reflects bash's own parse, not a second guess at it.
+assert_bypass_caught "joiner attack #1: backslash before trailing whitespace is NOT a real continuation" \
+    $'git push origin "$final_sha:refs/heads/main" \\ \necho should-not-matter'
+assert_bypass_caught "joiner attack #2: backslash at the end of a COMMENT line does not hide the real line after it" \
+    $'# ordinary comment \\\ngit push -f origin HEAD:refs/heads/main'
+assert_bypass_caught "joiner attack #3: doubled backslash at line end is an ESCAPED backslash, not a continuation" \
+    $'echo "line ends in an escaped backslash" \\\\\ngit push -f origin HEAD:refs/heads/main'
+assert_bypass_caught "joiner attack #4: a continuation split INSIDE a double-quoted string, smuggling real code after it closes" \
+    $'x="start \\\ngit push -f origin HEAD:refs/heads/main #end"'
+
 rm -f "$scratch_push_file"
 
-# THE HONEST LIMIT, found while building the battery above (not invented for
-# this comment): `p=push; git "$p" -f origin HEAD:refs/heads/main` is NOT
-# caught. The detector requires the literal word "push" to appear on the
-# joined logical line — indirecting the FLAG, the REFSPEC, or the whole
-# argument list still leaves "push" itself as a literal token next to "git"
-# (all ten cases above), but indirecting the subcommand name itself removes
-# the one word this check keys on. Recognising that would mean auditing
-# EVERY `git` invocation in this file against a much larger allowlist (this
-# file calls fetch/checkout/rev-parse/status/diff/clean/add/commit/merge/
-# worktree/log/rev-list/merge-base/branch/ls-remote/config), which is a
-# different, bigger task than "every git push is reviewed" — named here
-# rather than silently left for the allowlist's claim to overstate what it
-# covers.
-echo "== push: acknowledged gap — subcommand-name indirection is not caught (documented, not fixed)"
+# THE HONEST LIMIT, widened this round after finding a SECOND form in the
+# same family while building the battery above (not invented for this
+# comment). Both remaining gaps are the same root cause, restated precisely:
+# `declare -f` reflects bash's PARSE-TIME structure (comments, quotes,
+# continuations — all correctly resolved now), never its RUNTIME argv
+# formation (quote removal, variable/command substitution). Two distinct
+# ways to exploit that:
+#   1. `p=push; git "$p" -f origin HEAD:refs/heads/main` — the literal word
+#      "push" is never on the page; it exists only as the RUNTIME VALUE of
+#      $p, which this detector never evaluates (it never executes anything).
+#   2. `git p''ush -f origin HEAD:refs/heads/main` — the literal word IS on
+#      the page, but split by two adjacent empty quotes; bash's runtime
+#      quote-removal concatenates the argv token to "push", but `declare -f`
+#      preserves the quote characters verbatim (`p''ush`), so no contiguous
+#      "push" ever appears in the text this detector reads.
+# Recognising either would mean auditing EVERY `git` invocation in this file
+# against a much larger allowlist (this file also calls fetch/checkout/
+# rev-parse/status/diff/clean/add/commit/merge/worktree/log/rev-list/
+# merge-base/branch/ls-remote/config) or statically evaluating quote-removal
+# — a different, bigger task than "every git push is reviewed." Named here,
+# with both forms locked into the battery below as EXPECTED misses, rather
+# than left for the allowlist's own passing test to overstate what it covers.
+echo "== push: acknowledged gap — runtime word-formation (subcommand indirection, quote-splitting) is not caught (documented, not fixed)"
 cat > "$tmp/subcommand-indirect-demo.sh" << 'DEMO'
 #!/usr/bin/env bash
 p=push
@@ -1654,6 +1723,18 @@ else
     bad "subcommand-name indirection was unexpectedly caught — the limitation comment above is now stale and should be removed"
 fi
 rm -f "$tmp/subcommand-indirect-demo.sh"
+
+cat > "$tmp/quote-split-demo.sh" << 'DEMO'
+#!/usr/bin/env bash
+git p''ush -f origin HEAD:refs/heads/main
+DEMO
+quote_split_result="$(audit_push_allowlist "$tmp/quote-split-demo.sh")"
+if [ -z "$quote_split_result" ]; then
+    ok "confirmed: quote-splitting the word 'push' evades this detector (acknowledged limitation, not a silent gap)"
+else
+    bad "quote-splitting was unexpectedly caught — the limitation comment above is now stale and should be removed"
+fi
+rm -f "$tmp/quote-split-demo.sh"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
