@@ -420,14 +420,25 @@ merge_msg="merge($campaign): $headline
 
 Gated as the merge product by sluice job $job_id.
 main was $base_sha at test time."
+# FIX ROUND 1 (reviewer finding, Important 1): this used to `exit 10` right
+# here. Every one of the five sites in this file that assigns `phase_failed`
+# was immediately followed by its own `exit`, which meant the single gate
+# below it (further down, where `phase_failed` and `why` are actually
+# consulted) could NEVER be reached with `phase_failed` set — nothing that
+# set it ever survived to fall through and be read. The comment that used to
+# sit at that gate ("gated on TWO facts") described a live check that no
+# mutation test could ever redden, which is the exact fault shape this
+# campaign has hit three times before. The fix: every failure site below now
+# only RECORDS `phase_failed` (and, for the loop, `break`s) — never exits on
+# the spot. `phase_failed` becomes the actual decision point, read exactly
+# once, at the single gate. The per-site exit CODE is preserved there via a
+# `case`, so nothing external (jobs.tsv, an operator's `$?`, the existing
+# rc=11 phase-failure test) sees a different contract than before.
 if ! run_bg git merge --no-ff --no-edit -m "$merge_msg" "$sha"; then
     echo "sluice-run: MERGE CONFLICT — holding. A human resolves this." >&2
     phase_failed="merge"
     git merge --abort || true
-    exit 10
 fi
-merge_sha="$(git rev-parse HEAD)"
-echo "sluice-run: merge product is $merge_sha"
 
 # PHASE ORDER IS BY EXPECTED TIME-TO-RED, not by tree hygiene. `git clean -fd`
 # between phases makes cleanliness free, which frees the order to optimise for
@@ -445,97 +456,143 @@ echo "sluice-run: merge product is $merge_sha"
 # `authors=yes` ones, commits its own tracked drift before this runs, so that
 # bug cannot resurface via a phase (like `gate`) that dirties tracked files as
 # a side effect without being marked as an author.
-for phase in $phases; do
-    line="$(cmd_for "$phase")"
-    [ -n "$line" ] || { echo "sluice-run: no such set '$phase' in $lane_sets_file" >&2; exit 2; }
-    echo "sluice-run: === phase $phase ==="
-    # Task 1's verdict decides whether `heavy` gates or reports. If it
-    # REPORTS, replace this block for that one phase with a warning that does
-    # not exit.
-    if ! run_bg bash "$repo_root/scripts/timed.sh" "sluice:$phase" -- sh -c "$line"; then
-        echo "sluice-run: PHASE $phase FAILED — holding." >&2
-        phase_failed="$phase"
-        exit 11
-    fi
-    if [ -n "$(git status --porcelain)" ]; then
-        # `-u`, never `-A`: stage only paths git ALREADY tracks. `-A` would
-        # also sweep up any untracked residue this phase happened to leave
-        # behind and commit it as if it were this phase's authored output —
-        # misattributing it, and to whichever phase happens to run next if
-        # the residue is not itself gitignored.
-        git add -u
-        # A dirty tree is not necessarily a STAGED one: `git add -u` stages
-        # nothing when every change is to a new, untracked file (nothing here
-        # legitimately does that, but a phase producing only stray untracked
-        # output must not fail on an empty commit). `git clean -fd` below
-        # still removes it either way.
-        if ! git diff --cached --quiet; then
-            # `-c core.hooksPath=/dev/null`, NEVER `--no-verify` (the
-            # project's standing rule prohibits it outright and this
-            # campaign is not authorised to except it — see the CLEAN-TREE
-            # INVARIANT header note above for the two-mechanisms distinction
-            # and the full reasoning). This commit is still fully verified:
-            # by the six phases already running around it, one of which
-            # (`gate`) is a strict superset of what the hook itself would
-            # re-run here.
-            git -c core.hooksPath=/dev/null commit -q -m "chore(artifacts): regenerate after $phase
+#
+# Guarded by `phase_failed` still being empty: a merge conflict above means
+# there is nothing here worth running — `merge_sha` was never assigned, and
+# entering the loop against a half-merged (or aborted) tree would either error
+# on an unbound variable or silently test the wrong thing.
+if [ -z "$phase_failed" ]; then
+    merge_sha="$(git rev-parse HEAD)"
+    echo "sluice-run: merge product is $merge_sha"
+
+    for phase in $phases; do
+        line="$(cmd_for "$phase")"
+        [ -n "$line" ] || { echo "sluice-run: no such set '$phase' in $lane_sets_file" >&2; exit 2; }
+        echo "sluice-run: === phase $phase ==="
+        # Task 1's verdict decides whether `heavy` gates or reports. If it
+        # REPORTS, replace this block for that one phase with a warning that
+        # does not `break`.
+        if ! run_bg bash "$repo_root/scripts/timed.sh" "sluice:$phase" -- sh -c "$line"; then
+            echo "sluice-run: PHASE $phase FAILED — holding." >&2
+            phase_failed="$phase"
+            break
+        fi
+        if [ -n "$(git status --porcelain)" ]; then
+            # `-u`, never `-A`: stage only paths git ALREADY tracks. `-A`
+            # would also sweep up any untracked residue this phase happened
+            # to leave behind and commit it as if it were this phase's
+            # authored output — misattributing it, and to whichever phase
+            # happens to run next if the residue is not itself gitignored.
+            git add -u
+            # A dirty tree is not necessarily a STAGED one: `git add -u`
+            # stages nothing when every change is to a new, untracked file
+            # (nothing here legitimately does that, but a phase producing
+            # only stray untracked output must not fail on an empty commit).
+            # `git clean -fd` below still removes it either way.
+            if ! git diff --cached --quiet; then
+                # `-c core.hooksPath=/dev/null`, NEVER `--no-verify` (the
+                # project's standing rule prohibits it outright and this
+                # campaign is not authorised to except it — see the
+                # CLEAN-TREE INVARIANT header note above for the
+                # two-mechanisms distinction and the full reasoning). This
+                # commit is still fully verified: by the six phases already
+                # running around it, one of which (`gate`) is a strict
+                # superset of what the hook itself would re-run here.
+                git -c core.hooksPath=/dev/null commit -q -m "chore(artifacts): regenerate after $phase
 
 Authored on the canonical host inside sluice job $job_id (decision 0079)."
-            echo "sluice-run: committed tracked drift from $phase"
+                echo "sluice-run: committed tracked drift from $phase"
+            fi
         fi
+        git clean -fd --quiet
+    done
+    if [ -z "$phase_failed" ]; then
+        echo "sluice-run: all phases green at $(git rev-parse --short HEAD)."
     fi
-    git clean -fd --quiet
-done
+fi
 
-echo "sluice-run: all phases green at $(git rev-parse --short HEAD). Task 5's drift assertion and push pick up from here."
-
-# The drift check, reading its path list from the one file that declares it.
-# `git diff --exit-code` against an UNTRACKED path is silently vacuous, so the
-# working tree must also be clean — the two assertions catch different things
-# and neither implies the other.
-if [ -n "$(git status --porcelain)" ]; then
+# THE CLEAN-TREE CHECK, AND WHY THE SIBLING CHECK IT USED TO HAVE IS GONE
+# (fix round 1, Important 2). This used to be followed by a SECOND assertion,
+# `git diff --exit-code -- <declared generated paths>`, on the theory that it
+# caught something different. The reviewer found that is false: `git status
+# --porcelain` being empty STRICTLY IMPLIES that second diff is also empty,
+# because `git diff` (working tree vs. index/HEAD) sees a subset of what
+# `git status --porcelain` sees (which also reports staged-but-uncommitted
+# changes) — so once this check passes, that one could never have failed.
+# Worse, by the time execution reaches here the phase loop above has ALREADY
+# `git add -u`+committed every phase's tracked drift and `git clean -fd`'d the
+# rest, so the tree is clean by construction in the ordinary case; this check
+# only ever fires in the narrow residue `git clean -fd` cannot remove — a
+# phase leaving behind an untracked NESTED git repository, which git refuses
+# to delete with a single `-f` (this is what `scripts/test-sluice.sh`'s
+# "push: a nested untracked git repo the phase loop cannot clean is still
+# caught" section reproduces and reddens).
+#
+# The failure the deleted check's own comment claimed to catch — "a phase
+# failed to regenerate a declared artifact" — was never actually detectable
+# this way. Nothing here holds an independent copy of what a declared path
+# SHOULD contain; the phase loop stages and commits whatever the working tree
+# happens to hold, correct or not, and a path nothing touched (a phase that
+# silently no-ops instead of regenerating) produces no diff against HEAD
+# either, since nothing changed it. Detecting THAT failure needs either an
+# independent re-regeneration to diff against, or trusting the phase's own
+# rc=0 as an implicit "I actually did it" contract — genuinely out of this
+# task's scope, so it is named here rather than left to look like it was
+# quietly handled.
+if [ -z "$phase_failed" ] && [ -n "$(git status --porcelain)" ]; then
     echo "sluice-run: working tree is dirty after all phases — refusing to push." >&2
     git status --porcelain >&2
     phase_failed="dirty-tree"
-    exit 12
-fi
-# shellcheck disable=SC2046  # word-splitting is the point: each declared path
-# becomes its own pathspec argument, the same expansion CLAUDE.md's own
-# committed drift-check command uses verbatim.
-if ! git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$'); then
-    echo "sluice-run: declared generated paths drifted after regeneration." >&2
-    phase_failed="drift"
-    exit 13
 fi
 
-# THE PUSH MUST NOT TRUST A BARE rc=0. Task 4's review found that `code=$?`
-# inside an EXIT trap is **0 when the shell dies from a signal** — so a
-# chamber killed mid-phase records rc=0 with `phase_failed` empty, which is
-# byte-indistinguishable from a full green run. `lane-run.sh:70-72` and
-# `heavy-run.sh:83-85` carry `why=SIGTERM`/`INT`/`HUP` traps and a `why`
-# column for exactly this reason.
+# THE SINGLE GATE. Every failure site above only recorded `phase_failed` (or,
+# for `handle_signal`, `why`) and fell through — this is the one place that
+# turns either into an exit. `phase_failed` is genuinely live here now (see
+# the fix-round-1 note above): a real chamber run reaches this line with it
+# set, by construction, for a merge conflict, a failed phase, or a leftover
+# nested repo. The `case` preserves each site's ORIGINAL exit code so nothing
+# external (jobs.tsv, an operator's `$?`, the existing rc=11 phase-failure
+# test) sees a different contract than before this fix. Exit codes 13 and 16
+# are retired, not reassigned — 13 was the deleted drift check above; 16 was
+# this gate's own former generic "phase_failed set" exit, now replaced by the
+# per-cause codes below.
 #
-# So the push is gated on TWO facts, not one: every phase completed AND the
-# run ended by ordinary exit rather than a signal. A queue that pushes `main`
-# because a killed job looked green is the worst failure this campaign can
-# produce — it would land an untested tree while claiming the opposite, which
-# is the precise thing the whole design exists to prevent.
+# `why != exit` IS NOT LIVE THE SAME WAY, and it would be dishonest to claim
+# otherwise. `handle_signal` (the INT/TERM/HUP trap installed near the top of
+# this file) unconditionally calls `exit "$num"` in its own non-reentrant
+# branch, immediately after the one place that ever assigns `why="$sig"` — so
+# by the time ANY code in this script could observe a non-"exit" `why`, the
+# process has already terminated from inside the trap. Verified empirically,
+# not just reasoned: removing this whole `if` block and re-running
+# `scripts/test-sluice.sh`'s "a chamber killed mid-phase never pushes" section
+# left it green — mid-phase kills are ALREADY fully prevented from pushing by
+# that earlier, unconditional `exit`, independent of this check. It is kept
+# anyway as a backstop against a FUTURE `handle_signal` that returns instead
+# of exiting on some path (the same belt-and-suspenders shape
+# `lane-run.sh`/`heavy-run.sh` use), not because any test can currently redden
+# it without mutating `handle_signal` itself — which would assert on a script
+# this task does not ship.
 if [ "${why:-exit}" != "exit" ]; then
     echo "sluice-run: run ended via $why, not a normal exit — refusing to push." >&2
     exit 15
 fi
 if [ -n "$phase_failed" ]; then
     echo "sluice-run: phase '$phase_failed' failed — refusing to push." >&2
-    exit 16
+    case "$phase_failed" in
+        merge)      exit 10 ;;
+        dirty-tree) exit 12 ;;
+        *)          exit 11 ;;   # a named phase from $phases failed
+    esac
 fi
 
 final_sha="$(git rev-parse HEAD)"
 
-# TESTED SHA == PUSHED SHA. Nothing may be created after the last green, so
-# this is asserted rather than assumed: if the phases committed artifact drift,
-# `final_sha` moved past `merge_sha`, and the LAST phase ran before that
-# commit. Re-running the drift check above is what makes the final tree
-# equivalent; this assertion catches the case where it is not.
+# TESTED SHA == PUSHED SHA. `final_sha` is read fresh, after the phase loop's
+# own commits (each phase's tracked drift lands as its own commit, so
+# `final_sha` is ordinarily ahead of `merge_sha`) and after the clean-tree
+# check above has already refused to continue on anything left uncommitted —
+# so what gets pushed is exactly what every phase actually tested, never a
+# tree with untested residue layered on top.
 echo "sluice-run: merge product $merge_sha, final tree $final_sha"
 
 # Fast-forward only, ALWAYS. HEAD's first parent is origin/main, so this IS a

@@ -557,16 +557,7 @@ mkdir -p "$chamber_repo"
     # path must too.
     mkdir -p docs
     printf '# timings\n' > docs/timings.md
-    # A TRACKED, empty (comment-only) docs/generated-paths.txt — Task 5's
-    # drift check reads this file by name (`grep -v '^#' docs/generated-paths.txt`),
-    # and without it here the check's `grep` fails ("No such file or
-    # directory"), silently degrading `git diff --exit-code -- $(…)` to a
-    # bare `git diff --exit-code --` (no pathspec — a whole-tree diff that
-    # happens to still pass here, but for the wrong reason, and would hide a
-    # real omission in production). No entries: no chamber test phase here
-    # authors anything this path list would need to name.
-    printf '# no generated paths in this scratch fixture\n' > docs/generated-paths.txt
-    g add docs/timings.md docs/generated-paths.txt
+    g add docs/timings.md
     g commit -qm root
 )
 # A REAL bare repo as `origin` — Task 5 adds an actual `git push origin`, so
@@ -963,6 +954,61 @@ if printf '%s\n' "$tracked_txt_head" | grep -q authored; then
     ok "the authored content reached the committed file"
 else
     bad "tracked.txt's committed content does not contain phase d's write"
+fi
+
+echo "== push: a nested untracked git repo the phase loop cannot clean is still caught =="
+# THE ONE REACHABLE CASE for the surviving dirty-tree check (Important 2,
+# fix round 1): a plain `git clean -fd` refuses to delete an untracked
+# directory that is ITSELF a git repository (git requires force TWICE — `-f
+# -f` / `--force --force` — to remove a nested repo, precisely so `git clean`
+# never silently destroys unpushed work sitting in one). A phase that leaves
+# one behind survives the phase loop's own cleanup and must still be caught
+# before a push, or the chamber would land a candidate carrying stray,
+# unaccounted-for content. This is deliberately the ONLY thing left in this
+# check's reach after removing the redundant generated-paths diff (see
+# sluice-run.sh's own comment on the deletion) — proving it still catches a
+# real defect, not merely that it exists.
+lane_sets_nested="$tmp/lane-sets-nested.tsv"
+cat > "$tmp/phase-nested.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+git init -q leftover-nested-repo
+SH
+chmod +x "$tmp/phase-nested.sh"
+printf 'nested\tcommit\tlocal\tno\tbash %s\n' "$tmp/phase-nested.sh" > "$lane_sets_nested"
+
+shanested="$(new_topic_branch campaign/tnested topicnested.txt)"
+wtnested="$tmp/wtnested"
+
+origin_main_before_nested="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_nested"
+export HV_SLUICE_PHASES="nested"
+export HV_SLUICE_WORKTREE="$wtnested"
+export HV_CENSUS_CLAIM_PATH="$tmp/claimnested"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$repo_root/scripts/sluice-run.sh" campaign/tnested "$shanested" > "$tmp/runnested.out" 2>&1
+rc_nested=$?
+set -e
+
+if [ "$rc_nested" -eq 12 ]; then
+    ok "a phase leaving a nested untracked git repo behind exits 12 (dirty-tree), not 0"
+else
+    bad "expected rc 12, got $rc_nested ($(cat "$tmp/runnested.out"))"
+fi
+failed_col_nested="$(awk -F'\t' -v j="sluice-${shanested:0:12}" '$0 ~ j {print $9}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
+if [ "$failed_col_nested" = "dirty-tree" ]; then
+    ok "jobs.tsv records phase_failed=dirty-tree for the leftover nested repo"
+else
+    bad "jobs.tsv phase_failed column is '$failed_col_nested', expected 'dirty-tree'"
+fi
+origin_main_after_nested="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
+if [ "$origin_main_after_nested" = "$origin_main_before_nested" ]; then
+    ok "origin's main did not move — the dirty tree was never pushed"
+else
+    bad "origin's main MOVED despite a dirty tree ($origin_main_before_nested -> $origin_main_after_nested)"
 fi
 
 echo "== chamber: the first failing phase stops the run before a later phase executes =="
@@ -1419,10 +1465,74 @@ else
 fi
 rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
 
-echo "== push: no force flag exists anywhere in the chamber"
-if grep -nE '(--force-with-lease|--force([^-]|$)|push .*\+)' "$repo_root/scripts/sluice-run.sh" \
-     | grep -v 'checkout --force' | grep -v 'worktree add --force' | grep -q .; then
-    bad "a force flag reaches the push path"
+echo "== push: no force flag reaches the push path anywhere in the chamber"
+# FIX ROUND 1 (reviewer finding, Important 3): the original guard here missed
+# two forms the reviewer verified reproduce in a throwaway file —
+#   git push -f origin "$sha:refs/heads/main"                    (short flag)
+#   refspec="+$sha:refs/heads/main"; git push origin "$refspec"  (force via a
+#                                                     `+`-prefixed refspec,
+#                                                     built on a separate line
+#                                                     from the `push` call)
+# — because the old regex only matched `--force...` spelled out literally on
+# the SAME line as `push`, and its own two `grep -v` exclusions matched by
+# SUBSTRING ('checkout --force', 'worktree add --force') rather than by
+# identifying the two specific legitimate lines, so a line that combined
+# either substring with a real force push would have been excluded right
+# alongside the legitimate one.
+#
+# The fix: match a standalone short `-f` (word-bounded, so it cannot fire on
+# `-fd`/`-fdx` elsewhere in this same file), `--force-if-includes` (the
+# reviewer's explicit ask), and a `+`-prefixed refspec pattern
+# (`+<anything-non-space>:refs/heads/...`) WHEREVER it appears in the file —
+# not only on a line that also contains the literal word `push` — since a
+# force refspec is just as dangerous built into a variable one line away from
+# the call that uses it. Comment-only lines (first non-blank character `#`)
+# are excluded up front: prose cannot push anything, and without this a
+# pre-existing comment a few lines up (`# lane dispatch \`checkout --force\`s
+# ...`) would itself trip the guard on its own description of an unrelated
+# script's flag.
+#
+# The two lines that legitimately carry `--force` (a plain checkout, a plain
+# worktree add — never a push) are excluded by EXACT FULL-LINE match after
+# trimming leading/trailing whitespace, not by substring — full-line equality
+# cannot also hide an extra token, because a line carrying one is no longer
+# identical to the known-safe text.
+# shellcheck disable=SC2016  # deliberately literal: this is sluice-run.sh's
+# own SOURCE TEXT compared byte-for-byte, not an expression meant to expand
+# in this script's environment.
+allowed_force_line_1='git -C "$wt" checkout --force --detach "$base_sha"'
+# shellcheck disable=SC2016
+allowed_force_line_2='git -C "$repo_root" worktree add --force --detach "$wt" "$base_sha"'
+
+force_hit_lines=""
+while IFS= read -r raw; do
+    [ -z "$raw" ] && continue
+    # `raw` is grep -n's own "N:content" — strip the line-number prefix
+    # (shortest match up to the FIRST colon; the format guarantees that
+    # colon belongs to the prefix, not the content) before doing anything
+    # content-shaped with it. Comparing/trimming the un-stripped "N:..."
+    # string against a bare content pattern can never match, which is
+    # exactly the bug the first version of this rewrite shipped with: the
+    # two legitimate lines' own line numbers stayed glued to the front and
+    # silently defeated their own exclusion.
+    content="${raw#*:}"
+    trimmed="$(printf '%s' "$content" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    # Drop comment-only lines: prose cannot push anything.
+    case "$trimmed" in
+        \#*) continue ;;
+    esac
+    if [ "$trimmed" = "$allowed_force_line_1" ] || [ "$trimmed" = "$allowed_force_line_2" ]; then
+        continue
+    fi
+    force_hit_lines="$force_hit_lines
+$raw"
+done <<SCAN
+$(grep -nE -- '--force-with-lease|--force-if-includes|--force([^-]|$)|\+[^[:space:]]*:refs/heads/' "$repo_root/scripts/sluice-run.sh"
+grep -nE -- '(^|[^A-Za-z0-9-])-f([^A-Za-z0-9-]|$)' "$repo_root/scripts/sluice-run.sh" | grep -i push)
+SCAN
+
+if [ -n "$force_hit_lines" ]; then
+    bad "a force flag reaches the push path:$force_hit_lines"
 else
     ok "no force flag on any push in sluice-run.sh"
 fi
