@@ -741,6 +741,108 @@ else
     bad "origin main is '$origin1_main_sha', expected '$wt1_final_sha' — last-pushed does not reflect what actually landed"
 fi
 
+echo "== chamber: the merge subject is a valid census epoch label (merge(<campaign>): <headline>, not git's own auto-generated default) =="
+# tools/census/history.sh:59 tags every committed census snapshot with an
+# epoch label taken from `git log --follow --first-parent main -- <path>`'s
+# %s (the commit SUBJECT). Under --no-ff the campaign's own commit sits off
+# the first-parent line, so the MERGE commit's subject becomes that label —
+# a junk or generic one silently degrades a committed artifact rather than
+# merely reading badly. wt1_final_sha (above) IS that merge commit, produced
+# by the real chamber run's own merge_msg TEMPLATE (sluice-run.sh) — this
+# reads the actual commit the actual script wrote, never a hand-authored
+# string, so a change to the template reddens this test (see the MUTATION
+# below).
+#
+# NOT wt1_final_sha itself: every phase — authoring or not — commits its own
+# tracked drift (docs/timings.md, via scripts/timed.sh, per the file's own
+# "EVERY PHASE STARTS ON A CLEAN TREE" comment), so HEAD after a multi-phase
+# run is the LAST such drift commit, not the merge. Verified against the
+# actual chamber output (`git log --oneline --graph` on $wt1): merge(t1):
+# ... sits three commits behind HEAD, under "regenerate after a/b/c". The
+# merge is the run's only 2-parent commit, so walk back to it explicitly.
+merge_sha1="$(g -C "$wt1" rev-list --merges -1 "$wt1_final_sha")"
+wt1_subject="$(g -C "$wt1" log -1 --format=%s "$merge_sha1")"
+if printf '%s' "$wt1_subject" | grep -qE '^merge\([a-z0-9-]+\): .+'; then
+    ok "merge subject matches merge(<campaign>): <headline> ('$wt1_subject')"
+else
+    bad "merge subject '$wt1_subject' would be a useless census epoch label"
+fi
+# sluice-run.sh's `git merge` always takes a raw commit SHA as its candidate
+# (new_topic_branch above returns `git rev-parse`, and the chamber's second
+# positional argument is that SHA throughout this file, never a branch ref)
+# — so git's OWN auto-generated subject for THIS call shape is
+# "Merge commit '<sha>'", never "Merge branch ...". Confirmed empirically: a
+# bare `git merge --no-ff --no-edit <sha>` with no -m produces exactly that
+# in a scratch repo. The pattern below therefore matches every git-generated
+# default (branch/commit/tag) rather than only the branch-name form a
+# hand-authored `git merge campaign/y` would produce, so it stays correct
+# for the call shape production actually makes.
+if printf '%s' "$wt1_subject" | grep -qE '^Merge (branch|commit|tag) '; then
+    bad "git's auto-generated default merge subject reached the first-parent line"
+else
+    ok "not git's auto-generated default merge subject"
+fi
+
+echo "== chamber: MUTATION — dropping the -m \"\$merge_msg\" argument from the merge call reddens both assertions above"
+# Proves the two checks above watch the TEMPLATE, not a coincidence: strip
+# the chamber's own -m argument — the exact mechanism that writes
+# merge_msg's "merge(<campaign>): <headline>" subject — and confirm the
+# resulting real merge commit (still produced by running sluice-run.sh for
+# real, never hand-constructed) fails both assertions the way a genuine
+# regression would. Falls to git's own default ("Merge commit '<sha>'"),
+# which is exactly the shape the check above was written to catch.
+# shellcheck disable=SC2016  # single-quoted on purpose: this is a literal grep pattern, not a shell expansion
+mutant_merge_msg_line="$(grep -n '^if ! run_bg git merge --no-ff --no-edit -m "\$merge_msg" "\$sha"; then$' "$repo_root/scripts/sluice-run.sh" | cut -d: -f1)"
+mutant3="$tmp/sluice-run-merge-msg-mutant.sh"
+if [ -z "$mutant_merge_msg_line" ]; then
+    bad "could not locate the merge invocation line in sluice-run.sh to mutate — it may have changed shape"
+else
+    {
+        head -n "$((mutant_merge_msg_line - 1))" "$repo_root/scripts/sluice-run.sh"
+        # shellcheck disable=SC2016  # single-quoted on purpose: this is the literal replacement source line, not a shell expansion here
+        echo 'if ! run_bg git merge --no-ff --no-edit "$sha"; then'
+        tail -n "+$((mutant_merge_msg_line + 1))" "$repo_root/scripts/sluice-run.sh"
+    } > "$mutant3"
+fi
+chmod +x "$mutant3"
+
+lane_sets_mut="$tmp/lane-sets-mut.tsv"
+printf 'm\tcommit\tlocal\tno\ttrue\n' > "$lane_sets_mut"
+shamut="$(new_topic_branch campaign/tmut topicmut.txt)"
+wtmut="$tmp/wtmut"
+
+export HV_SLUICE_LANE_SETS="$lane_sets_mut"
+export HV_SLUICE_PHASES="m"
+export HV_SLUICE_WORKTREE="$wtmut"
+export HV_CENSUS_CLAIM_PATH="$tmp/claim-mut"
+rm -f "$HV_CENSUS_CLAIM_PATH"
+
+set +e
+bash "$mutant3" campaign/tmut "$shamut" > "$tmp/runmut.out" 2>&1
+rc_mut=$?
+set -e
+
+if [ "$rc_mut" -eq 0 ]; then
+    # Same reasoning as merge_sha1 above: the "m" phase is a no-op ("true")
+    # but still gets its own tracked-drift commit, so walk back to the
+    # run's one 2-parent commit rather than reading HEAD.
+    merge_sha_mut="$(g -C "$wtmut" rev-list --merges -1 HEAD)"
+    mut_subject="$(g -C "$wtmut" log -1 --format=%s "$merge_sha_mut")"
+    if printf '%s' "$mut_subject" | grep -qE '^merge\([a-z0-9-]+\): .+'; then
+        bad "MUTATION DID NOT TAKE: mutant subject '$mut_subject' still matched the shape check"
+    else
+        ok "MUTATION CONFIRMED (shape check): mutant subject '$mut_subject' fails merge(<campaign>): <headline>"
+    fi
+    if printf '%s' "$mut_subject" | grep -qE '^Merge (branch|commit|tag) '; then
+        ok "MUTATION CONFIRMED (default-subject check): mutant subject '$mut_subject' is git's own auto-generated default"
+    else
+        bad "MUTATION DID NOT TAKE: mutant subject '$mut_subject' did not fall back to git's default"
+    fi
+else
+    bad "the mutant chamber run failed outright (rc=$rc_mut): $(cat "$tmp/runmut.out")"
+fi
+rm -f "$mutant3"
+
 echo "== chamber: a non-authoring phase's TRACKED drift does not poison the next phase's tree (fix round 1, Critical 1) =="
 # Reproduces the exact reported mechanism: scripts/timed.sh appends a row to
 # the TRACKED docs/timings.md on every phase, regardless of what the phase
