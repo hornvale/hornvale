@@ -150,11 +150,39 @@ far less than it appears. A stage-gate request becomes a queue entry like any
 other — lower priority than a merge, running in a tree someone owns, inheriting
 the same "gated as itself" property.
 
-**The commitment.** This campaign must end with **fewer lines of process
-machinery than it started**, and the retrospective states the measured net. A
-merge queue that costs more scaffolding than the lane it replaces has not
-simplified anything, whatever its guarantee — and the point of the guarantee is
-to stop paying attention to merging, not to relocate the payment.
+**The commitment — CORRECTED, and the correction matters more than the
+commitment.** This section first said the campaign "must end with fewer lines
+of process machinery than it started with". That was the wrong instrument, and
+Nathan named why: *"More code does not mean less simple. The new workflow is a
+single session managing a machine and a sequence of operations. The workflow it
+replaces involves multiple sessions coordinating work on another machine."*
+
+The original ask was to stop *fretting about how to merge things*. Fretting is
+**coordination cost**, and it was translated into **source size**, which
+measures something else. By line count the campaign fails: +723 lines of
+machinery, +1,730 of tests, against 950 deleted. By the thing actually
+complained about, it does not:
+
+| | before | after |
+|---|---|---|
+| `make` targets in the landing path | 12 | 3 |
+| actors coordinating one merge | N campaign sessions | 1 operator |
+| machines a campaign must reason about | 2 (Mac + canonical box) | 1 (submit; read a verdict) |
+| concepts required to land work | 10 (below) | 1 (submit) |
+
+The ten this retires from a campaign author's head: lane sets and their rungs;
+full-SHA-not-branch-name dispatch; the shared claim and who holds it; job ids,
+logs, and reading `rc` yourself; supersession; `preflight` GO/NO-GO and what it
+cannot see; absorb timing; artifact regeneration and the drift check;
+canonical-host authoring; and which machine you are currently on.
+
+**So the campaign is judged on coordination surface, not line count**, and the
+retrospective states both numbers rather than the flattering one. The queue is
+*worth more* than the lane, not *cheaper* than it — and 439 of the chamber's
+652 lines are comments carrying the reasoning of four review rounds, which is
+cost this project deliberately pays.
+
+The deletions in §12 still happen. They are simply not the measure.
 
 ## 4. Scope
 
