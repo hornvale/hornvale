@@ -999,10 +999,13 @@ else
     bad "expected rc 12, got $rc_nested ($(cat "$tmp/runnested.out"))"
 fi
 failed_col_nested="$(awk -F'\t' -v j="sluice-${shanested:0:12}" '$0 ~ j {print $9}' "$HV_SLUICE_DIR/jobs.tsv" | tail -1)"
-if [ "$failed_col_nested" = "dirty-tree" ]; then
-    ok "jobs.tsv records phase_failed=dirty-tree for the leftover nested repo"
+# `<dirty-tree>`, not `dirty-tree` — fix round 2's collision-proofing (the
+# coordinator's minor finding): the internal sentinel is bracketed so it can
+# never collide with a literal set name from lane-sets.tsv.
+if [ "$failed_col_nested" = "<dirty-tree>" ]; then
+    ok "jobs.tsv records phase_failed=<dirty-tree> for the leftover nested repo"
 else
-    bad "jobs.tsv phase_failed column is '$failed_col_nested', expected 'dirty-tree'"
+    bad "jobs.tsv phase_failed column is '$failed_col_nested', expected '<dirty-tree>'"
 fi
 origin_main_after_nested="$(g -C "$chamber_repo" ls-remote "$chamber_origin" refs/heads/main | cut -f1)"
 if [ "$origin_main_after_nested" = "$origin_main_before_nested" ]; then
@@ -1465,77 +1468,192 @@ else
 fi
 rm -f "$HV_SLUICE_DIR/last-pushed"; unset HV_SLUICE_BASE
 
-echo "== push: no force flag reaches the push path anywhere in the chamber"
-# FIX ROUND 1 (reviewer finding, Important 3): the original guard here missed
-# two forms the reviewer verified reproduce in a throwaway file —
-#   git push -f origin "$sha:refs/heads/main"                    (short flag)
-#   refspec="+$sha:refs/heads/main"; git push origin "$refspec"  (force via a
-#                                                     `+`-prefixed refspec,
-#                                                     built on a separate line
-#                                                     from the `push` call)
-# — because the old regex only matched `--force...` spelled out literally on
-# the SAME line as `push`, and its own two `grep -v` exclusions matched by
-# SUBSTRING ('checkout --force', 'worktree add --force') rather than by
-# identifying the two specific legitimate lines, so a line that combined
-# either substring with a real force push would have been excluded right
-# alongside the legitimate one.
+echo "== push: every git push in sluice-run.sh is an exact member of the reviewed allowlist"
+# FIX ROUND 2 (coordinator's redirect): fix round 1's guard was a DENYLIST —
+# it named specific forbidden shapes (`--force`, a short `-f`, a `+`-prefixed
+# refspec) and excluded two known-safe lines. The reviewer broke it with five
+# more forms it never named: a wrapped `git push \`-then-`-f origin …`; a
+# short destination (`"+HEAD:main"`, no `:refs/heads/` for the refspec
+# pattern to anchor on); a refspec built from a separately-declared
+# `dst=refs/heads/main`; a flag built from a variable (`fflag=-f`); a refspec
+# built from TWO variables concatenated. A denylist over shell syntax cannot
+# be completed — every closed form invites a sixth. So this is now an
+# ALLOWLIST: the only thing checked is whether every `git push` invocation in
+# this file is a byte-for-byte match of one of the exactly two we have
+# reviewed. New flag, new refspec shape, wrapped line, variable indirection —
+# all of it fails the same way, by not being an exact member, with no need to
+# have anticipated the specific form.
 #
-# The fix: match a standalone short `-f` (word-bounded, so it cannot fire on
-# `-fd`/`-fdx` elsewhere in this same file), `--force-if-includes` (the
-# reviewer's explicit ask), and a `+`-prefixed refspec pattern
-# (`+<anything-non-space>:refs/heads/...`) WHEREVER it appears in the file —
-# not only on a line that also contains the literal word `push` — since a
-# force refspec is just as dangerous built into a variable one line away from
-# the call that uses it. Comment-only lines (first non-blank character `#`)
-# are excluded up front: prose cannot push anything, and without this a
-# pre-existing comment a few lines up (`# lane dispatch \`checkout --force\`s
-# ...`) would itself trip the guard on its own description of an unrelated
-# script's flag.
+# SURVIVING LINE-WRAPPING: a wrapped command is one logical invocation split
+# across physical lines by a trailing `\` — `join_push_continuations` below
+# joins those before anything is matched or compared, so the allowlist is
+# expressed over the LOGICAL line (what bash actually parses as one
+# statement), which is the thing that survives reformatting; a purely
+# line-oriented check is not. This is deliberately narrower than a real shell
+# parser: it only recognises a literal trailing backslash, which is the ONLY
+# continuation form anywhere in this repo's own style (confirmed empirically
+# — `grep -n '\\$' scripts/sluice-run.sh` finds five, all real code, zero
+# comments), not the full grammar (`&&`/`||`/an unclosed quote can also
+# continue a line without a backslash). That gap is real and is called out
+# below, not hidden.
 #
-# The two lines that legitimately carry `--force` (a plain checkout, a plain
-# worktree add — never a push) are excluded by EXACT FULL-LINE match after
-# trimming leading/trailing whitespace, not by substring — full-line equality
-# cannot also hide an extra token, because a line carrying one is no longer
-# identical to the known-safe text.
+# CANDIDATE DETECTION: a joined logical line is a "push line" if it contains
+# the word-bounded tokens `git` and `push`, in that order, anywhere on the
+# line (`\bgit\b.*\bpush\b` — GNU grep's `\b`, not a hand-rolled
+# `[^A-Za-z0-9_]`-based boundary: an earlier draft of this used the latter and
+# it silently failed to match "git push origin ..." at all, because the
+# CONSUMING bracket-class match for `git`'s own trailing boundary ate the one
+# space separating it from `push`, leaving nothing left for `push`'s leading
+# boundary to match against — a real regex bug, not a tooling quirk, caught
+# by testing the detector against the file's own two legitimate lines before
+# trusting it against anything else). Comment-only lines (first non-blank
+# character `#`) are dropped first, so a comment mentioning "git push" in
+# prose is not a candidate at all.
+#
+# THE ALLOWLIST ITSELF is the two logical lines' own text, normalised the
+# same way (internal whitespace runs collapsed to one space, trimmed) so
+# indentation is not part of the comparison, but nothing else about the text
+# is. Anything else that looks like a push — by flag, by refspec shape, by
+# indirection, by a future edit to these two lines that isn't mirrored here —
+# fails.
+join_push_continuations() {
+    local file="$1" buf="" line
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [ -n "$buf" ]; then
+            line="$buf $line"
+            buf=""
+        fi
+        case "$line" in
+            *\\)
+                buf="${line%\\}"
+                continue
+                ;;
+        esac
+        printf '%s\n' "$line"
+    done < "$file"
+    if [ -n "$buf" ]; then
+        printf '%s\n' "$buf"
+    fi
+}
+
+normalize_push_ws() {
+    printf '%s' "$1" | tr -s '[:space:]' ' ' | sed -e 's/^ *//' -e 's/ *$//'
+}
+
 # shellcheck disable=SC2016  # deliberately literal: this is sluice-run.sh's
 # own SOURCE TEXT compared byte-for-byte, not an expression meant to expand
 # in this script's environment.
-allowed_force_line_1='git -C "$wt" checkout --force --detach "$base_sha"'
+allowed_push_1='if ! git push origin "$final_sha:refs/heads/main"; then'
 # shellcheck disable=SC2016
-allowed_force_line_2='git -C "$repo_root" worktree add --force --detach "$wt" "$base_sha"'
+allowed_push_2='git push origin "HEAD:refs/heads/$branch" || echo "sluice-run: warning — could not update $branch; main is already landed." >&2'
 
-force_hit_lines=""
-while IFS= read -r raw; do
-    [ -z "$raw" ] && continue
-    # `raw` is grep -n's own "N:content" — strip the line-number prefix
-    # (shortest match up to the FIRST colon; the format guarantees that
-    # colon belongs to the prefix, not the content) before doing anything
-    # content-shaped with it. Comparing/trimming the un-stripped "N:..."
-    # string against a bare content pattern can never match, which is
-    # exactly the bug the first version of this rewrite shipped with: the
-    # two legitimate lines' own line numbers stayed glued to the front and
-    # silently defeated their own exclusion.
-    content="${raw#*:}"
-    trimmed="$(printf '%s' "$content" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-    # Drop comment-only lines: prose cannot push anything.
-    case "$trimmed" in
-        \#*) continue ;;
-    esac
-    if [ "$trimmed" = "$allowed_force_line_1" ] || [ "$trimmed" = "$allowed_force_line_2" ]; then
-        continue
-    fi
-    force_hit_lines="$force_hit_lines
-$raw"
-done <<SCAN
-$(grep -nE -- '--force-with-lease|--force-if-includes|--force([^-]|$)|\+[^[:space:]]*:refs/heads/' "$repo_root/scripts/sluice-run.sh"
-grep -nE -- '(^|[^A-Za-z0-9-])-f([^A-Za-z0-9-]|$)' "$repo_root/scripts/sluice-run.sh" | grep -i push)
-SCAN
+# $1 = path to scan. Prints every non-allowlisted push-shaped logical line
+# found (empty output = clean). A separate function (not inlined at the call
+# site) so the same audit can run against a scratch mutation file below,
+# proving each bypass is actually caught by THIS code, not by eyeballing it.
+audit_push_allowlist() {
+    local file="$1" logical trimmed
+    while IFS= read -r logical; do
+        trimmed="$(normalize_push_ws "$logical")"
+        case "$trimmed" in
+            ''|'#'*) continue ;;
+        esac
+        if printf '%s' "$trimmed" | grep -qE '\bgit\b.*\bpush\b'; then
+            if [ "$trimmed" != "$allowed_push_1" ] && [ "$trimmed" != "$allowed_push_2" ]; then
+                printf '%s\n' "$trimmed"
+            fi
+        fi
+    done < <(join_push_continuations "$file")
+}
 
-if [ -n "$force_hit_lines" ]; then
-    bad "a force flag reaches the push path:$force_hit_lines"
+push_violations="$(audit_push_allowlist "$repo_root/scripts/sluice-run.sh")"
+if [ -n "$push_violations" ]; then
+    bad "a git push line is not an exact member of the reviewed allowlist:
+$push_violations"
 else
-    ok "no force flag on any push in sluice-run.sh"
+    ok "every git push in sluice-run.sh is an exact member of the reviewed allowlist"
 fi
+
+echo "== push: allowlist mutation battery — the reviewer's 5 bypasses plus 5 of our own, each caught"
+# Attack the allowlist itself, not just trust the design prose above. Each
+# case injects one bypass into a SCRATCH COPY of the real file (never the
+# committed one) immediately before the `last-pushed` write, then runs the
+# SAME `audit_push_allowlist` this section's own check above uses, so a
+# regression to either the detector or the allowlist text shows up here too.
+scratch_push_file="$tmp/sluice-run-attack.sh"
+# shellcheck disable=SC2016  # deliberately literal: matched against sluice-run.sh's own source text
+push_marker='printf '\''%s\n'\'' "$final_sha" > "$HV_SLUICE_DIR/last-pushed"'
+inject_push_mutation() {
+    local injection="$1" lineno
+    lineno="$(grep -n -F "$push_marker" "$repo_root/scripts/sluice-run.sh" | head -1 | cut -d: -f1)"
+    {
+        head -n "$((lineno - 1))" "$repo_root/scripts/sluice-run.sh"
+        printf '%s\n' "$injection"
+        tail -n "+$lineno" "$repo_root/scripts/sluice-run.sh"
+    } > "$scratch_push_file"
+}
+assert_bypass_caught() {
+    local label="$1" injection="$2" result
+    inject_push_mutation "$injection"
+    result="$(audit_push_allowlist "$scratch_push_file")"
+    if [ -n "$result" ]; then
+        ok "bypass caught: $label"
+    else
+        bad "bypass NOT caught (allowlist leaked): $label"
+    fi
+}
+
+assert_bypass_caught "reviewer 1: git push wrapped across lines, -f on the continuation" \
+    $'git push \\\n    -f origin "$final_sha:refs/heads/main"'
+assert_bypass_caught "reviewer 2: short refspec destination (no :refs/heads/ to anchor on)" \
+    'git push origin "+HEAD:main"'
+assert_bypass_caught "reviewer 3: destination built in a separately-declared variable" \
+    $'dst=refs/heads/main; git push origin "+$sha:$dst"'
+assert_bypass_caught "reviewer 4: force flag built in a variable" \
+    $'fflag=-f; git push $fflag origin "$final_sha:refs/heads/main"'
+assert_bypass_caught "reviewer 5: refspec concatenated from two variables" \
+    $'plus="+"; refspec="${plus}${sha}:refs/heads/main"; git push origin "$refspec"'
+assert_bypass_caught "ours 1: command-prefixed explicit --force" \
+    'command git push --force origin HEAD:refs/heads/main'
+assert_bypass_caught "ours 2: every push argument in one variable" \
+    $'GIT_PUSH_ARGS="-f origin HEAD:refs/heads/main"; git push $GIT_PUSH_ARGS'
+# shellcheck disable=SC2016  # deliberately literal mutation text, not an expression
+assert_bypass_caught "ours 3: --force-with-lease spelled out in full" \
+    'git push --force-with-lease origin "$final_sha:refs/heads/main"'
+# shellcheck disable=SC2016
+assert_bypass_caught "ours 4: syntactically clean, unreviewed destination branch" \
+    'git push origin "$final_sha:refs/heads/evil-branch"'
+assert_bypass_caught "ours 5: eval-wrapped push string" \
+    "eval 'git push -f origin HEAD:refs/heads/main'"
+
+rm -f "$scratch_push_file"
+
+# THE HONEST LIMIT, found while building the battery above (not invented for
+# this comment): `p=push; git "$p" -f origin HEAD:refs/heads/main` is NOT
+# caught. The detector requires the literal word "push" to appear on the
+# joined logical line — indirecting the FLAG, the REFSPEC, or the whole
+# argument list still leaves "push" itself as a literal token next to "git"
+# (all ten cases above), but indirecting the subcommand name itself removes
+# the one word this check keys on. Recognising that would mean auditing
+# EVERY `git` invocation in this file against a much larger allowlist (this
+# file calls fetch/checkout/rev-parse/status/diff/clean/add/commit/merge/
+# worktree/log/rev-list/merge-base/branch/ls-remote/config), which is a
+# different, bigger task than "every git push is reviewed" — named here
+# rather than silently left for the allowlist's claim to overstate what it
+# covers.
+echo "== push: acknowledged gap — subcommand-name indirection is not caught (documented, not fixed)"
+cat > "$tmp/subcommand-indirect-demo.sh" << 'DEMO'
+#!/usr/bin/env bash
+p=push
+git "$p" -f origin HEAD:refs/heads/main
+DEMO
+demo_result="$(audit_push_allowlist "$tmp/subcommand-indirect-demo.sh")"
+if [ -z "$demo_result" ]; then
+    ok "confirmed: subcommand-name indirection evades this detector (acknowledged limitation, not a silent gap)"
+else
+    bad "subcommand-name indirection was unexpectedly caught — the limitation comment above is now stale and should be removed"
+fi
+rm -f "$tmp/subcommand-indirect-demo.sh"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -434,9 +434,18 @@ main was $base_sha at test time."
 # once, at the single gate. The per-site exit CODE is preserved there via a
 # `case`, so nothing external (jobs.tsv, an operator's `$?`, the existing
 # rc=11 phase-failure test) sees a different contract than before.
+# `phase_failed="<merge>"`, not `"merge"`: `$phase_failed` is either one of
+# these two internal sentinels OR a literal set name from `$phases` (read
+# from `scripts/lane-sets.tsv`), and the gate's `case` below tells them apart
+# by VALUE alone. Angle brackets make the two internal values impossible for
+# a real set name to collide with — no set in `lane-sets.tsv` is bracketed,
+# and `for phase in $phases` already implies a set name has no shell-breaking
+# characters — rather than merely unlikely (fix round 2, coordinator's minor
+# finding: nothing today is named `merge` or `dirty-tree`, but "impossible"
+# costs nothing here and doesn't rely on that staying true).
 if ! run_bg git merge --no-ff --no-edit -m "$merge_msg" "$sha"; then
     echo "sluice-run: MERGE CONFLICT — holding. A human resolves this." >&2
-    phase_failed="merge"
+    phase_failed="<merge>"
     git merge --abort || true
 fi
 
@@ -542,7 +551,7 @@ fi
 if [ -z "$phase_failed" ] && [ -n "$(git status --porcelain)" ]; then
     echo "sluice-run: working tree is dirty after all phases — refusing to push." >&2
     git status --porcelain >&2
-    phase_failed="dirty-tree"
+    phase_failed="<dirty-tree>"
 fi
 
 # THE SINGLE GATE. Every failure site above only recorded `phase_failed` (or,
@@ -579,9 +588,9 @@ fi
 if [ -n "$phase_failed" ]; then
     echo "sluice-run: phase '$phase_failed' failed — refusing to push." >&2
     case "$phase_failed" in
-        merge)      exit 10 ;;
-        dirty-tree) exit 12 ;;
-        *)          exit 11 ;;   # a named phase from $phases failed
+        "<merge>")      exit 10 ;;
+        "<dirty-tree>") exit 12 ;;
+        *)              exit 11 ;;   # a named phase from $phases failed
     esac
 fi
 
