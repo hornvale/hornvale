@@ -79,3 +79,17 @@ fn a_people_with_no_generation_length_yields_zero_rather_than_infinity() {
     let d = PeopleDurations::default();
     assert_eq!(gen_span(&led, &d, eid(1), eid(2)), 0.0);
 }
+
+#[test]
+fn the_span_uses_the_tellers_generation_length_not_the_hearers() {
+    // An artificial ledger: fission never crosses a people boundary in a
+    // real world (teller and hearer always share one), so the only way to
+    // pin which side the lookup reads is to give them different peoples.
+    let led = founded(&[(1, "human", 0.0), (2, "elf", 100.0)]);
+    let mut d = PeopleDurations::default();
+    d.insert("human", Some(StdDays::new(100.0).expect("positive")), None);
+    d.insert("elf", Some(StdDays::new(400.0).expect("positive")), None);
+    // The teller's ("human") generation gives 100.0/100.0 = 1.0; the
+    // hearer's ("elf") would give 100.0/400.0 = 0.25.
+    assert_eq!(gen_span(&led, &d, eid(1), eid(2)), 1.0);
+}
