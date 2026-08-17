@@ -171,7 +171,24 @@ presents movement to a player, not in the kernel that defines adjacency.
 
 ---
 
-## 4. The chart goes north-up
+## 4. The chart goes north-up — DEFERRED, DID NOT SHIP
+
+> **This section describes work that was not done.** Task 6 was deferred to
+> the successor appearance campaign; the chart still draws lattice-aligned
+> and `orientation` still reads `"lattice"`. The section is retained
+> unedited below because it is the successor's starting point, and because
+> deleting a design after deciding not to build it destroys the reasoning
+> the next campaign needs.
+>
+> **What re-planning found, which this section could not have known:**
+> `SurroundsCell` carries no latitude, longitude or bearing — only `room`
+> and the lattice offsets. So "cells place by bearing and great-circle
+> distance" is not implementable by any client at all, and north-up needs
+> per-cell position on the wire first. See the plan's Task 6 and
+> `NAV-north-up-needs-per-cell-position`.
+>
+> §5 and §12 below likewise describe the campaign as originally scoped.
+> The status header at the top of this file is authoritative on what shipped.
 
 `SurroundsScene` already carries `pub orientation: String`
 (`windows/scene/src/surrounds.rs:304`), set to `"lattice"` at line 502. This
