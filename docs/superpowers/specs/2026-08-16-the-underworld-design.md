@@ -303,10 +303,43 @@ says so — the same discipline every other authored constant here carries.
 
 ### 4.3 Chamber conditions stop being constants
 
-`subterranean_substrate` gains the chamber's delve rung and routes temperature
+`subterranean_substrate` gains the chamber's depth and routes temperature
 through `temperature_at_depth`. `moisture` derives from the water table's
 distance and `porosity` rather than a world constant. `insolation` stays
 `0.0`, which is correct and is §4.4's finding, not an oversight.
+
+**CORRECTED 2026-08-17, POST-TASK-5 — the depth coordinate is metres, not a
+rung.** This section originally said "gains the chamber's delve *rung*", and
+that is not jointly satisfiable with routing temperature through
+`temperature_at_depth`. Rungs are **ΔT bands**, so a temperature sampled at a
+rung is gradient-free by construction: every chamber in a rung would share one
+ΔT and crust age would drop out — the exact opposite of the variation §4.3
+exists to create. A chamber's conditions therefore take its depth in **metres**,
+and the rung remains what it always was, a *place-type* for addressing and
+description rather than a coordinate to sample conditions at. Found by the
+implementer, not by review.
+
+**AND A CONSUMER-SIDE FINDING THAT BINDS §4.7.** Task 5 made chambers differ
+at the substrate — 807/874, 1483/1681 and 1172/1266 cave columns now carry a
+distinct (temperature, moisture) reading where before there was one value —
+and **no live consumer can see it.** `tolerance_liebig` floors
+temperature/moisture/insolation at `sovereignty_floor(mass, potency)` but
+passes elevation a literal `0.0`, so for any kind whose elevation devotion
+sits below its own floor, elevation is the Liebig minimum on every cell and no
+improvement to the other three axes can reach the score. Drow's devotion is
+0.30 against a floor of 0.424802; `warren_readout`'s P1 tripwire reads
+ratio = 1.000 before and after, unchanged to six figures.
+
+**Consequence for §4.7, and it is a precondition rather than a preference:
+Mountain and Duergar must be authored with `devotion_elev >
+sovereignty_floor(mass, potency)`.** Otherwise the entire depth apparatus this
+campaign built is invisible to exactly the two kinds it was built for, and
+§5's H2 fails regardless of how well the ladder works. The pattern is
+precedented — The Delvers' desert-dwarf sits at devotion 0.70 against a floor
+of 0.443 and carries its identity on climate for this reason, while gully and
+hill sit below their floors and are elevation-bound on 100% of land. Compute
+the floor live from `hornvale_kernel::sovereignty_floor`; The Delvers' own
+plan table was wrong in the fourth decimal for two of its three kinds.
 
 ### 4.4 Underworld communities as points in the axis space
 
