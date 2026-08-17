@@ -1128,6 +1128,8 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1196,6 +1198,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -1945,7 +1948,6 @@ hornvale-terrain::hornvale_terrain$render::tests::column_png_is_well_formed_and_
 hornvale-terrain::hornvale_terrain$render::tests::every_cave_kind_has_a_distinct_palette_color
 hornvale-terrain::hornvale_terrain$render::tests::every_commodity_has_a_distinct_palette_color
 hornvale-terrain::hornvale_terrain$render::tests::every_rock_class_has_a_distinct_palette_color
-hornvale-terrain::hornvale_terrain$render::tests::features_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$render::tests::interpolation_stays_within_the_candidate_envelope
 hornvale-terrain::hornvale_terrain$render::tests::lithology_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$render::tests::refinement_respects_the_prior
