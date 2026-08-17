@@ -50,7 +50,7 @@ The standing rule this campaign adopted from those three — *measure a candidat
 quantity's scale against the scale it must be commensurate with, before writing
 it into a design* — is exactly the rule its own worst defect broke.
 
-## The seventh defect is the campaign's real output
+## The sixth defect is the campaign's real output
 
 The frozen model seeds an accumulated width in **standard days**, increments it
 by an amplitude that is a **dimensionless count of generations**, and compares
@@ -139,6 +139,17 @@ asked for.
 This is the campaign's recurring theme — a check or a claim that cannot fail —
 arriving for the **fourth** time, and the first time it arrived in the handoff
 rather than in the work.
+
+**And then it happened to this file.** An earlier fix round raised the count
+from seven to eight, edited the opening heading and the numbered list, and left
+the section heading below reading "the seventh defect" and the entry in
+`docs/retrospectives/README.md` reading "seven defects" — a correction whose
+blast radius stopped inside the paragraph it landed in, one screen above the
+paragraph explaining that corrections have a blast radius. Both were caught at
+the whole-branch review and are fixed here. The lesson does not need restating;
+what needs restating is that knowing it, and writing it down, and being three
+paragraphs away from it are all insufficient. **Grep the claim.** The heading
+was findable by searching the ordinal I had just changed, and nobody searched.
 
 ## An implementer reported a surviving mutant rather than hiding it
 

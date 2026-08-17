@@ -225,8 +225,14 @@ pub fn variants_about(
 ///
 /// Each retelling widens a continuous damage width by the step's generational
 /// span ([`crate::amplitude::gen_span`]) under `rule`, and the reported
-/// [`Precision`] is resolved from that width at emit against the TELLER's
-/// people's ladder. Where campaign 2 spends a whole rung per lossy step —
+/// [`Precision`] is resolved from that width at emit against the ladder of the
+/// ORIGINATING WITNESS's people — fixed once per path, before the walk, not
+/// re-read at each step. That is equivalent to "the teller's people's ladder"
+/// only for as long as a transmission path never crosses a people boundary,
+/// which is exactly the invariant §7 of the design expects a later campaign to
+/// break by adding a cross-people edge. When it breaks, this becomes a real
+/// choice — one ladder per path, or the current teller's — and the code above
+/// will have silently made it. Where campaign 2 spends a whole rung per lossy step —
 /// welding firing rate to firing depth — this separates them, so a frequent
 /// small-amplitude step costs little and a rare large one costs a lot.
 ///

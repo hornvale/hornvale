@@ -353,7 +353,13 @@ conversion. The implementation is faithful to the text.
 **What it costs the readout.** With coherent units a median step is ~9,131 days
 against a generation rung of ~11,362, so a path of 8–13 generations saturates
 the ladder — exactly §3.7's prediction. Dimensionless, the width crawls from
-~1 to ~50 against rungs at 0.88 and 16–42 and cannot pass rung 1. So:
+~1 to ~50 against a ladder whose rung spans differ by an order of magnitude
+between worlds (seed 42: 0.88 / 16–42 d; seed 0: 1.645 / 17.643 / 210.224 d),
+so how far it climbs is a property of the sky it is read against. Under
+additive it clears rung 1 on 11 of the 40 seeds and rung 2 on two of them —
+18,253 of 413,216 pooled claims, 4.4% — but on no seed does it reach a
+people's `generation` or `lifespan` rung, its occupied labels being exhausted
+by day, moon 1–3 and year. So:
 
 - **additive and quadrature did not disconfirm §3.7 — they never tested it.**
   Their `saturated fraction = 0.0000` is a fact about the units, not the world.
@@ -376,6 +382,17 @@ preregistered numbers.
 **For campaign 4.** The fix is one conversion — multiply the amplitude by the
 teller's generation length in std days before accumulating — and it should be
 frozen, with its own preregistration, by someone who has not seen §6.7.
+
+**A correction to this section, itself post-hoc.** The paragraph above
+originally read "cannot pass rung 1", generalising seed 42's rung spans to the
+whole panel. That is refuted by the panel's own output: additive reaches rungs
+2 and 3 on 11 of 40 seeds. The clause was corrected in place at the whole-branch
+review, and the correction is recorded here rather than silently applied,
+because §6.6 is already an after-the-fact erratum and an erratum that quietly
+rewrites itself is worth less than one that shows its own repair. **The
+conclusion the clause supported is untouched**: additive and quadrature report
+`saturated fraction = 0.0000` on every one of the 40 seeds, so they still never
+tested §3.7. What was wrong was the mechanism claim, not the finding.
 
 ## 6.7 The exploratory readout
 
@@ -410,8 +427,13 @@ each labelled.
 
   It is **not** true of the world. `domains/language/src/common_vocab.rs`
   gives every people a shared tongue, and `cli/tests/common_is_total.rs`
-  enforces that totality — `every_registered_concept_has_a_common_word`, with
-  one declared exception. There is no *linguistic* barrier to cross-people
+  enforces that totality — `every_registered_concept_has_a_common_word`
+  asserts it unconditionally, with no exception. (An earlier draft of this
+  line said "with one declared exception". The declared exception it was
+  thinking of — `hornvale_astronomy::common_words` — makes a concept better
+  **worded**, overriding the derived surface for things like `sun-like-star`;
+  it is not a concept exempted from having a word at all. Totality is total.)
+  There is no *linguistic* barrier to cross-people
   transmission at all; every concept a claim could carry is already sayable to
   a stranger. (Undercommon is not modelled; only Common.)
 
@@ -462,7 +484,18 @@ have been caught by one cheap probe run earlier.
 ## 9. Definition of done
 
 - The amplitude, the two derived rungs, and the three accumulation rules in
-  `windows/hearsay`; `worldgen::descent` made public; `#![warn(missing_docs)]`
+  `windows/hearsay`; ~~`worldgen::descent` made public~~ — **deviation, decided
+  at the whole-branch review**: the module was widened in Task 1 on the
+  expectation that the readout battery would assemble durations through
+  `descent::generation_length_of`, and it never did. Task 6, Task 6b and the
+  probe all call `hornvale_species::life_history` directly, which is why
+  `hornvale-species` stayed a dev-dependency; `git grep` found no consumer of
+  `hornvale_worldgen::descent` anywhere. The widening was reverted to
+  `mod descent;`. The composition root's public surface is not free, and a
+  consumer that never arrives does not buy any. The five items the crate root
+  already re-exports (`clan_root_of`, `forebear_of`, `founder_of`,
+  `generation_length_of`, `name_pattern`) are unaffected — they were public
+  before this campaign and remain so. Also: `#![warn(missing_docs)]`
   clean; `type-audit:` tags on every pub-boundary primitive and the report
   regenerated **in the same commit**.
 - `hornvale-species` promoted from the probe's dev-dependency to whatever the

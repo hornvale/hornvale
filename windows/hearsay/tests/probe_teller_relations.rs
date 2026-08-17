@@ -309,9 +309,16 @@ fn does_generation_length_vary_by_people_on_seed_42() {
         let Some(Value::Text(people)) = led.value_of(occ, hornvale_history::OCC_PEOPLE) else {
             continue;
         };
-        // Replicates the body of the (private) worldgen
-        // `descent::generation_length_of`. If this design ships, that module
-        // gets made public rather than this being copied into the crate.
+        // Deliberately duplicates the shape of the private worldgen
+        // `descent::generation_length_of` rather than calling it. That module
+        // was briefly made public for this, and the widening was reverted at
+        // the campaign's whole-branch review because nothing ever called it:
+        // `generation_length_of` returns only the generation length, while
+        // this file also needs `lifespan` off the same `life_history` result
+        // (see the derived-rung probe above), so `hornvale_species` is a
+        // dev-dependency here either way. Widening a composition-root module
+        // to save three lines that would still be written anyway is a bad
+        // trade.
         let gl = hornvale_worldgen::WorldComponents::assemble()
             .ok()
             .and_then(|wc| {

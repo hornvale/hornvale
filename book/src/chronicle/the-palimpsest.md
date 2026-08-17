@@ -139,8 +139,15 @@ are wrong":
 
 - With coherent units, a median step is ~9,131 days against a generation rung
   of ~11,362, so a path of 8–13 generations saturates the ladder — exactly the
-  prediction above. Dimensionless, the width crawls from ~1 to ~50 against
-  rungs at 0.88 and 16–42 days, and cannot pass the first moon.
+  prediction above. Dimensionless, the width crawls from ~1 to ~50 against a
+  ladder whose rung spans vary by an order of magnitude from world to world —
+  seed 42's first three sit at 0.88 and 16–42 days, seed 0's at 1.645, 17.643
+  and 210.224 — so how far the width gets varies with the sky it is read
+  against. Under additive it clears the second rung on 11 of the 40 seeds, and
+  a third on two of them: 18,253 of 413,216 pooled claims, 4.4%. What it never
+  does on any seed is reach a people's `generation` or `lifespan` rung —
+  additive's occupied labels are exhausted by day, moon 1–3 and year — and that
+  is why the saturated fraction is exactly 0.0000 on all forty.
 - So **additive and quadrature did not disconfirm the saturation prediction —
   they never tested it.** Their saturated fraction of exactly zero is a fact
   about units, not about worlds.
@@ -217,10 +224,14 @@ interesting — witnesses hold at the finest rung by construction and are 14.9%
 of the pooled population, capping the pooled fraction near 0.851 — so the
 distance from 0.79 to 1.0 is smaller than it looks.
 
-**H2's evidence is the frozen column, and only the frozen column.** Confirmation
-required mass at three or more distinct rungs under at least one rule;
-multiplicative gives a median of 5 and reaches 7, spanning the entire ladder
-from day to lifespan, while additive and quadrature sit at 2. Read rule by
+**H2 is confirmed, and its evidence is the frozen column and only the frozen
+column.** The decision table set before the readout was explicit: confirmed if
+the retained distribution puts mass at three or more distinct rungs *under at
+least one accumulation rule*, falsified if it collapses to two. Multiplicative
+gives a median of 5 and reaches 7, spanning the entire ladder from day to
+lifespan, while additive and quadrature sit at 2. One rule clearing the bar is
+what the table asked for, so the verdict is **confirmed** — the ceiling of one
+that campaign 2 measured is broken. Read rule by
 rule, one confirms and two read as the falsification — which the frozen units
 explain. The exploratory column's constant 4 is not evidence for anything: it
 is `min = max = 4.0` on all forty seeds, and the occupied set is exactly the

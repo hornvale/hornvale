@@ -85,7 +85,7 @@ pub mod chamber;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
-pub mod descent;
+mod descent;
 pub mod disposition;
 pub mod graph_derive;
 pub mod hazard;

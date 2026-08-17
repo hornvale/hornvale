@@ -2931,8 +2931,10 @@ rules, and two under the other two.
 bearing.** It says victim-line and bystander are both closed under descent.
 Bystander is not: a bystander whose subtree contains the attacker has a
 perpetrator descendant, and a bystander that is the subject's own parent has a
-victim-line child. Those are the 209 paths that were measured crossing stance
-twice. The law that actually holds is narrower — any predicate over the
+victim-line child. Only the first of those can produce a path that crosses
+stance twice — the 209 that were measured all take it. The second breaks
+closure just as really, but `VictimLine` *is* descent-closed, so a path that
+steps into it crosses once and can never cross back. The law that actually holds is narrower — any predicate over the
 teller/hearer *lineage relation* is constant along a single-parent walk by
 construction — and stance is not such a predicate. It merely behaves like one
 because the label that breaks closure holds exactly one community, the named
@@ -2946,9 +2948,12 @@ a way no amount of asking "what would have to vary" would have found.** The
 accumulated width was seeded in days and incremented in a dimensionless count
 of generations, then compared against rungs measured in days — a defect in the
 design text, which defines the amplitude in one unit and the ladder in another
-and never states a conversion. Two of the three rules could not reach past the
-second rung for that reason alone, so their apparently clean falsification of a
-predicted saturation was not a measurement of the world at all. A post-hoc
+and never states a conversion. For that reason alone, two of the three rules
+never reached a people's coarsest rungs at all: additive's occupied labels stop
+at `year` on every one of the forty worlds, touching neither `generation` nor
+`lifespan`, and it clears even the second rung on only eleven of them — 4.4% of
+pooled claims. So their apparently clean falsification of a predicted
+saturation was not a measurement of the world at all. A post-hoc
 re-measurement with the units reconciled turns their saturated fraction from
 exactly 0.0000 into 0.72–0.75.
 
