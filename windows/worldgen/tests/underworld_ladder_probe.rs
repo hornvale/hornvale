@@ -252,3 +252,160 @@ fn how_hot_is_a_cave() {
         println!("  [ 50.0,   inf) K : {over}  (band-derived: {over_band})");
     }
 }
+
+/// Candidate rung boundaries the fine re-bin below measures the local mass
+/// around. Includes the shipped table's interior edges and a spread of
+/// alternatives, so "is this edge in a spike?" is answered for the shipped
+/// choice and for what one would move it to. **10.0 is kept in the list after
+/// the ladder stopped using it** — it is the edge this probe condemned, and a
+/// reader should be able to re-measure the condemnation, not take it on
+/// trust.
+const CANDIDATE_EDGES_K: [f64; 14] = [
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0, 25.0, 35.0, 50.0,
+];
+
+/// claim: readout(off-gate, heavy:, prints only, no assertion) — the FINE
+/// structure of the same ΔT distribution `how_hot_is_a_cave` bins coarsely.
+///
+/// Occasioned by review: the coarse table cannot tell an edge that separates
+/// two populations from one that sits inside a mode, and
+/// `cave_depth_reach_m` has hard clamps (`LAVATUBE_CEILING_M = 200.0`,
+/// `CAVE_REACH_CEILING_M = 3000.0`) that put **atoms** in the reach
+/// distribution, which ΔT inherits scaled by the gradient. An edge inside an
+/// atom's smear is the least stable place an edge can be: a small move
+/// migrates a large fraction of the population across it.
+///
+/// Three readouts per seed:
+///
+/// 1. the most common exact reach values, which is where the clamps show;
+/// 2. a 1 K histogram of ΔT, printed as `lo:count` for non-empty bins only;
+/// 3. for each [`CANDIDATE_EDGES_K`], the share of caves within ±0.5 K of it
+///    — the direct answer to "does this edge cut a spike?"
+///
+/// ## Measured, 2026-08-17, seeds 42 / 7 / 1234
+///
+/// ```text
+/// seed 42: caves=874
+///   reach atoms: 483.5m x202 (23.1%), 425.8m x87 (10.0%), 407.8m x65 (7.4%),
+///                2145.7m x53 (6.1%), 2271.9m x51 (5.8%), 2117.4m x50 (5.7%)
+///   deltaT 1K bins: 0:77 5:37 6:94 9:18 10:349 15:12 16:6 17:7 24:7 25:1 27:3
+///                   33:3 34:8 35:20 36:10 37:2 38:1 39:5 50:13 51:32 52:10
+///                   53:26 54:45 55:35 56:19 57:25 58:7 61:2
+///   mass +/-0.5K: 1K:5.0% 2K:0.0% 3K:0.0% 4K:0.0% 5K:0.2% 6K:14.8% 8K:0.0%
+///                 10K:19.6% 12K:0.0% 15K:0.6% 20K:0.0% 25K:0.6% 35K:2.1% 50K:0.0%
+/// seed 7: caves=1681
+///   reach atoms: 2474.3m x193 (11.5%), 215.3m x170 (10.1%), 250.8m x131 (7.8%),
+///                2232.4m x125 (7.4%), 2260.4m x121 (7.2%), 2230.4m x101 (6.0%)
+///   deltaT 1K bins: 0:72 1:12 5:272 6:327 9:40 10:13 14:17 15:21 16:5 22:1
+///                   23:9 24:15 25:7 31:1 32:21 33:22 34:19 35:12 36:5 37:11
+///                   38:5 39:11 40:3 41:2 48:15 49:16 50:15 51:91 52:69 53:69
+///                   54:97 55:145 56:106 57:70 58:32 59:28 60:3 65:1 67:1
+///   mass +/-0.5K: 1K:2.7% 2K:0.0% 3K:0.0% 4K:0.0% 5K:0.3% 6K:35.0% 8K:0.0%
+///                 10K:1.8% 12K:0.0% 15K:1.1% 20K:0.0% 25K:1.1% 35K:0.8% 50K:0.4%
+/// seed 1234: caves=1266
+///   reach atoms: 478.2m x194 (15.3%), 2039.1m x147 (11.6%), 2694.0m x120 (9.5%),
+///                2702.6m x120 (9.5%), 461.1m x41 (3.2%), 1871.4m x34 (2.7%)
+///   deltaT 1K bins: 0:81 1:10 5:121 6:23 9:18 10:284 14:5 15:17 16:25 17:6
+///                   23:4 24:7 25:7 26:26 27:3 32:5 33:9 34:9 35:9 36:9 37:20
+///                   38:3 40:1 41:10 42:11 43:2 49:5 50:37 51:53 52:45 53:56
+///                   54:12 55:24 56:64 57:59 58:73 59:77 60:30 61:1 65:2 66:2 68:1
+///   mass +/-0.5K: 1K:3.9% 2K:0.2% 3K:0.0% 4K:0.0% 5K:1.4% 6K:9.3% 8K:0.0%
+///                 10K:6.5% 12K:0.0% 15K:1.6% 20K:0.0% 25K:0.2% 35K:0.9% 50K:1.5%
+/// ```
+///
+/// **What it showed, and what moved because of it.** The reach atoms are the
+/// mechanism: seed 42's single fattest reach value covers 23.1% of its caves,
+/// and the gradient spans only 1.27x, so ΔT is a row of spikes rather than a
+/// spread. Nine of the ~70 1 K bins hold everything.
+///
+/// The 1 K bin ranges EMPTY on all three seeds — the valleys an edge should
+/// sit in — are `[2,5)`, `[7,9)`, `[11,14)`, `[18,22)`, `[28,31)`, `[44,48)`.
+///
+/// `DEEPS_TOP_K` was 10.0, which is none of those: bin `[10,11)` alone holds
+/// 39.9% of seed 42, and 19.6% of that seed lies within ±0.5 K of the edge. It
+/// moved to **8.0**, inside `[7,9)`, measuring 0.0% on every seed. The other
+/// three interior edges were left alone — 2.0 is already inside `[2,5)`, 25.0
+/// is sparse rather than modal (0.2–1.1%), and 50.0 is authored and frozen
+/// (and, as the 48/49 bins show, the least stable of the four — an accepted
+/// cost of it not being a measured quantity). See
+/// `domains/terrain/src/delve.rs`'s constants for each decision in full.
+#[test]
+#[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
+fn how_lumpy_is_the_delta_t_distribution() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    for seed_value in SEEDS {
+        let seed = hornvale_kernel::Seed(seed_value);
+        let artifacts = build_world_to_with_artifacts(
+            seed,
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+            BuildDepth::Terrain,
+        )
+        .expect("probe seed builds");
+        let terrain = artifacts
+            .terrain
+            .expect("terrain is Some at BuildDepth::Terrain");
+        let geo = terrain.geosphere();
+
+        let mut dt: Vec<f64> = Vec::new();
+        let mut reaches: Vec<f64> = Vec::new();
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            let Some(cave) = terrain.cave_at(cell) else {
+                continue;
+            };
+            let gradient = terrain.geothermal_gradient_at(cell).get();
+            reaches.push(cave.depth_reach_m);
+            dt.push(gradient * (cave.depth_reach_m / 1000.0));
+        }
+        assert!(!dt.is_empty(), "seed {seed_value} has no caves");
+        let n = dt.len();
+        dt.sort_by(f64::total_cmp);
+
+        // 1. Reach atoms. Bucket to 0.1 m so float noise does not split an
+        // exact clamp into neighbours, then report the fattest buckets.
+        let mut reach_counts: std::collections::BTreeMap<i64, usize> =
+            std::collections::BTreeMap::new();
+        for r in &reaches {
+            *reach_counts.entry((r * 10.0).round() as i64).or_default() += 1;
+        }
+        let mut atoms: Vec<(i64, usize)> = reach_counts.into_iter().collect();
+        atoms.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        let atom_line: Vec<String> = atoms
+            .iter()
+            .take(6)
+            .map(|&(tenths, c)| {
+                format!(
+                    "{:.1}m x{c} ({:.1}%)",
+                    tenths as f64 / 10.0,
+                    100.0 * c as f64 / n as f64
+                )
+            })
+            .collect();
+        println!("seed {seed_value}: caves={n}");
+        println!("  reach atoms: {}", atom_line.join(", "));
+
+        // 2. The 1 K histogram, non-empty bins only.
+        let mut hist: std::collections::BTreeMap<i64, usize> = std::collections::BTreeMap::new();
+        for d in &dt {
+            *hist.entry(d.floor() as i64).or_default() += 1;
+        }
+        let bins: Vec<String> = hist.iter().map(|(k, v)| format!("{k}:{v}")).collect();
+        println!("  deltaT 1K bins: {}", bins.join(" "));
+
+        // 3. Mass within +/-0.5 K of each candidate edge.
+        let edge_line: Vec<String> = CANDIDATE_EDGES_K
+            .iter()
+            .map(|&e| {
+                let m = dt.iter().filter(|d| (**d - e).abs() <= 0.5).count();
+                format!("{e:.0}K:{:.1}%", 100.0 * m as f64 / n as f64)
+            })
+            .collect();
+        println!("  mass within +/-0.5K of edge: {}", edge_line.join(" "));
+    }
+}

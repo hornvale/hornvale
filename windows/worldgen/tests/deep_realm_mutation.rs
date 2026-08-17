@@ -361,10 +361,11 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
 
     assert!(
         authored_count > fabricated_count,
-        "the real, terrain-authored cave ({authored_count} chambers) did not \
-         out-grow a fabricated Regolith downgrade of the SAME cave \
-         ({fabricated_count} chambers) — the budget reaching chamber_exists \
-         is not the one terrain authored"
+        "the real, terrain-authored cave ({authored_count} chambers, \
+         {} m) did not out-grow a fabricated {FABRICATED_REACH_M} m downgrade \
+         of the SAME cave ({fabricated_count} chambers) — the budget reaching \
+         chamber_exists is not the one terrain authored",
+        real_cave.depth_reach_m
     );
     assert_ne!(
         authored_deepest, fabricated_deepest,

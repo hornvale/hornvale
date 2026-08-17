@@ -43,18 +43,26 @@
 //! seed 1234: band hist=[0, 13, 1253, 0, 0]   addr 11.959 | realized 7547   (5.961/cave)
 //! ```
 //!
-//! **After** (delve gate, `chamber/v2`):
+//! **After** (delve gate, `chamber/v2`, `Deeps` beginning at 8 K):
 //!
 //! ```text
-//! seed 42:   rung hist=[77, 149, 381, 53, 214]  addr 12.815 | realized 5568   (6.371/cave)
-//! seed 7:    rung hist=[84, 639, 81, 150, 727]  addr 13.896 | realized 11664  (6.939/cave)
-//! seed 1234: rung hist=[91, 162, 348, 129, 536] addr 14.708 | realized 9351   (7.386/cave)
+//! seed 42:   rung hist=[77, 131, 399, 53, 214]  addr 12.897 | realized 5604   (6.412/cave)
+//! seed 7:    rung hist=[84, 599, 121, 150, 727] addr 13.992 | realized 11747  (6.988/cave)
+//! seed 1234: rung hist=[91, 144, 366, 129, 536] addr 14.765 | realized 9384   (7.412/cave)
 //! ```
+//!
+//! The "after" arm was re-taken when review's finer re-bin moved
+//! `DEEPS_TOP_K` from 10 K to 8 K (see that constant's own doc). The earlier
+//! reading at 10 K was `[77, 149, 381, 53, 214]` / `[84, 639, 81, 150, 727]` /
+//! `[91, 162, 348, 129, 536]`, addressable 12.815 / 13.896 / 14.708, realized
+//! 5568 / 11664 / 9351 — kept here because a boundary that moved after
+//! unblinding should leave both readings visible, not only the one that
+//! survived.
 //!
 //! Two readings, and the second is the one that mattered.
 //!
-//! 1. **Realized rises 6.5 / 16.6 / 23.9%**, and `realized / addressable` is
-//!    0.497 / 0.499 / 0.502 after against 0.502 / 0.500 / 0.498 before — the
+//! 1. **Realized rises 7.2 / 17.4 / 24.3%**, and `realized / addressable` is
+//!    0.497 / 0.499 / 0.502 after against 0.502 / 0.500 / 0.499 before — the
 //!    density is untouched at `EXISTENCE_DENSITY = 0.5` and the whole change
 //!    is reach, exactly as the two figures were printed side by side to check.
 //!
@@ -64,7 +72,7 @@
 //!    histograms) has mean addressable 12.15 / 11.72 / 12.71, against 11.91 /
 //!    11.89 / 11.96 after — −2.0% / +1.4% / −5.9%, a mean of −2.2% and a rise
 //!    on one of three seeds. What Task 1b actually broke is not the COUNT but
-//!    the VARIANCE: `deepest_band` collapsed onto `Basement` for 97.8–99.0% of
+//!    the VARIANCE: `deepest_band` collapsed onto `Basement` for 97.3–99.0% of
 //!    cave-bearing cells, so every cave got the same three-rung lattice and
 //!    the depth axis stopped distinguishing a shallow cave from a deep one at
 //!    all. That is the defect the re-point closes, and it is a worse one than

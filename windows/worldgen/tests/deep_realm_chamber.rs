@@ -495,8 +495,10 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
 
     // Direction 1: same stratum, different rung. On this column the basement
-    // contact is at 401 m, and at 24 K/km the Deeps (10 K) begin at 417 m and
-    // the Underdeep (25 K) at 1042 m — both in the basement.
+    // contact is at 401 m, and at 24 K/km the Shallows (2 K) begin at 83 m and
+    // the Deeps (8 K) at 333 m — both still in the cover; the Underdeep (25 K)
+    // at 1042 m and the Sunless (50 K) at 2083 m are both in the basement. So
+    // the sweep sees two distinct rung pairs that share a stratum.
     let mut seen: Vec<(DelveRung, hornvale_climate::Stratum)> = Vec::new();
     for band in 0..=3u8 {
         for slot in 0..SLOTS_PER_BAND {
@@ -529,9 +531,9 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     );
 
     // Direction 2: same rung, different stratum — the half that a pure
-    // function of `addr.band` cannot produce. The Deeps begin at 10 K, which
-    // is 667 m under a cool craton (basement, contact at 401 m) and 333 m
-    // under hot young crust (still cover).
+    // function of `addr.band` cannot produce. The Deeps begin at 8 K, which is
+    // 533 m under a cool craton (basement, contact at 401 m) and 267 m under
+    // hot young crust (still cover).
     let deeps = ChamberAddr {
         cell,
         entrance: 0,
@@ -557,8 +559,8 @@ fn a_chamber_reports_both_its_rung_and_its_stratum() {
     );
     assert_ne!(
         under_cool.stratum, under_hot.stratum,
-        "the same rung under a 15 K/km and a 30 K/km cell sits at 667 m and \
-         333 m, which straddle this column's 401 m basement contact — so the \
+        "the same rung under a 15 K/km and a 30 K/km cell sits at 533 m and \
+         267 m, which straddle this column's 401 m basement contact — so the \
          strata must differ. They do not, which means `stratum` is not being \
          read from the cell at all."
     );

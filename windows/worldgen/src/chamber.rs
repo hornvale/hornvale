@@ -84,12 +84,12 @@ const EXISTENCE_DENSITY: f64 = 0.5;
 /// values. `MAP-cave-depth-weld` — the fix rule 1a named as the reason to keep
 /// the address space wider than the realized one — landed in this campaign
 /// (spec §4.0) and made the situation worse, not better: with a metre budget
-/// capped at 3 km, `deepest_band` reached exactly `Basement` on 97.8–99.0% of
+/// capped at 3 km, `deepest_band` reached exactly `Basement` on 97.3–99.0% of
 /// cave-bearing cells across seeds 42 / 7 / 1234, so the lattice's depth axis
 /// carried almost no information at all. Re-pointing it at the delve ladder is
 /// what restores it: the same three seeds spread across all five rungs
-/// (`[77, 149, 381, 53, 214]`, `[84, 639, 81, 150, 727]`,
-/// `[91, 162, 348, 129, 536]`). Keeping the address space at 5 rungs is why
+/// (`[77, 131, 399, 53, 214]`, `[84, 599, 121, 150, 727]`,
+/// `[91, 144, 366, 129, 536]`). Keeping the address space at 5 rungs is why
 /// no address had to move for a reason other than the epoch itself.
 ///
 /// This is the third time the project has met the "generation order is
@@ -274,9 +274,20 @@ fn rung_name(rung: DelveRung) -> &'static str {
 /// The depth used is the rung's own **top** (`delta_t_range_of(rung).0`
 /// divided by the gradient), not a point inside it: a rung spans a range of
 /// depths and a chamber is placed *at* a rung rather than at a metre, so the
-/// shallowest rock the rung touches is the one non-arbitrary choice. The top
-/// habitation rung begins at ΔT = 0 and therefore reads the column at 0 m,
-/// which `band_at_depth` answers with the topmost band.
+/// shallowest rock the rung touches is the one non-arbitrary choice.
+///
+/// **That choice makes the top rung degenerate, and Task 5 should know it
+/// before picking differently.** `Undercroft` begins at ΔT = 0, so this reads
+/// the column at 0 m — and `band_at_depth` answers 0 m with the topmost band
+/// in *every* column under *every* gradient. So a rank-0 chamber's `stratum`
+/// is a constant, and the "neither ladder derives the other" independence
+/// [`Chamber::stratum`] claims is **vacuous for that one rung**: it holds for
+/// ranks 1–4, where the same rung genuinely straddles different rock in
+/// different cells, and says nothing at rank 0. That is a property of taking
+/// the top rather than a defect in the ladder — the midpoint of a rung, or its
+/// bottom, would give rank 0 a cell-varying stratum at the cost of naming a
+/// depth no chamber is actually at. Whichever a later task picks, it should
+/// pick knowing this is the trade, not discover it from a constant column.
 fn stratum_at(
     rung: DelveRung,
     gradient: GeothermalGradient,
@@ -446,9 +457,19 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
 /// would be digging, which this campaign does not ship (no writer exists to
 /// produce such an override in the first place).
 ///
-/// With an empty `overrides` map this is byte-identical to the pre-Task-4
-/// derivation: `stratum` is the same pure function of `addr.band` it always
-/// was, and `origin` resolves to the address-derived default, `Found`.
+/// With an empty `overrides` map, `origin` resolves to the address-derived
+/// default, `Found` — this campaign ships no writer, so that is the only
+/// value the shipped path produces.
+///
+/// **It is NOT byte-identical to the pre-`chamber/v2` derivation, and this
+/// sentence used to claim it was.** `stratum` was
+/// `Realm::UNDERDARK.strata()[addr.band]` — a pure function of the address,
+/// i.e. the address restated in another vocabulary — and that identity was
+/// the defect spec §4.1 removed, not a property to preserve. It is now read
+/// off the cell's own column at the depth the rung begins ([`stratum_at`]),
+/// so it depends on `gradient` and `column` and varies between cells that
+/// share an address. Two chambers on the same rung can sit in different rock,
+/// which is the entire point of carrying both.
 pub fn chamber_at(
     seed: Seed,
     cave: &Cave,

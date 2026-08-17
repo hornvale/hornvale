@@ -30,25 +30,59 @@
 //! 1–25 caves total in between; fitting to it would have re-derived the
 //! two-class ladder Task 1b exists to remove.
 //!
-//! The boundaries below are the ones the probe **binned against**, which is
-//! deliberate and is the whole of their justification: they are the only
-//! thresholds in this campaign with a measured per-class occupancy on every
-//! preregistered seed. A boundary moved to a rounder or more elegant number
-//! would be a threshold whose occupancy nobody has looked at. Per-class share
-//! of cave-bearing cells, seeds 42 / 7 / 1234:
+//! Three of the four interior boundaries are the ones the probe **binned
+//! against** — §4.1 published them as an illustration *before* Task 1 ran, so
+//! adopting them is reading an a-priori bin, not fitting an edge and calling
+//! it a measurement. They are also the only thresholds with a measured
+//! per-class occupancy on every preregistered seed.
+//!
+//! **The fourth moved after the fact, and that is stated rather than
+//! smuggled.** `Deeps` began at 10 K in the first landing of this file. A
+//! finer re-bin (`how_lumpy_is_the_delta_t_distribution`, added to the same
+//! probe) showed the reach distribution carries **atoms** — `cave_depth_reach_m`
+//! clamps at `LAVATUBE_CEILING_M = 200.0` and `CAVE_REACH_CEILING_M = 3000.0`,
+//! and a paleokarst arm clamps too — which ΔT inherits scaled by a gradient
+//! that only spans 1.27×. So the distribution is a row of spikes, not a
+//! spread, and 10 K sat on the lower lip of the largest one: the single 1 K
+//! bin `[10, 11)` holds **39.9% of seed 42**, and 19.6% of that seed lies
+//! within ±0.5 K of the edge. See [`DEEPS_TOP_K`] for the move and its rule.
+//!
+//! Per-class share of cave-bearing cells, seeds 42 / 7 / 1234:
 //!
 //! ```text
 //! rung        ΔT (K)      seed 42        seed 7         seed 1234
 //! Undercroft  [ 0,  2)     77  ( 8.8%)     84  ( 5.0%)     91  ( 7.2%)
-//! Shallows    [ 2, 10)    149  (17.0%)    639  (38.0%)    162  (12.8%)
-//! Deeps       [10, 25)    381  (43.6%)     81  ( 4.8%)    348  (27.5%)
+//! Shallows    [ 2,  8)    131  (15.0%)    599  (35.6%)    144  (11.4%)
+//! Deeps       [ 8, 25)    399  (45.7%)    121  ( 7.2%)    366  (28.9%)
 //! Underdeep   [25, 50)     53  ( 6.1%)    150  ( 8.9%)    129  (10.2%)
 //! Sunless     [50,  ∞)    214  (24.5%)    727  (43.2%)    536  (42.3%)
 //! ```
 //!
-//! Every rung is occupied on every seed; the thinnest class holds 4.8% and the
-//! fattest 43.6%. Five rungs sits inside §4.1's 4–6 band with headroom in both
+//! Every rung is occupied on every seed; the thinnest class holds 5.0% and the
+//! fattest 45.7%. Five rungs sits inside §4.1's 4–6 band with headroom in both
 //! directions. Each boundary's own basis is recorded on its constant.
+//!
+//! ## How stable each edge is, measured
+//!
+//! Share of each seed's caves within **±0.5 K** of the edge — the direct
+//! answer to "would a small move migrate a large population across this?":
+//!
+//! ```text
+//! edge      seed 42   seed 7   seed 1234   verdict
+//!  2 K        0.0%     0.0%      0.2%      in the empty valley [2,5)
+//!  8 K        0.0%     0.0%      0.0%      in the empty valley [7,9)
+//! 25 K        0.6%     1.1%      0.2%      sparse; no mode nearby
+//! 50 K        0.0%     0.4%      1.5%      AUTHORED — see HABITABLE_CEILING_K
+//! (10 K       19.6%     1.8%      6.5%      the edge that was moved)
+//! ```
+//!
+//! **50 K is the least well-placed edge in the table and cannot be moved.**
+//! It is authored, frozen before the fit, and seed 1234 puts 1.5% of its caves
+//! within half a kelvin of it; the 1 K bins immediately below it are occupied
+//! on two of three seeds (seed 7: 48:15, 49:16; seed 1234: 49:5). That is an
+//! accepted cost of the ceiling being a fidelity choice rather than a measured
+//! one, and it is recorded here so no later reader mistakes the silence for
+//! stability.
 //!
 //! ## What this ladder is not
 //!
@@ -78,8 +112,16 @@ pub enum DelveRung {
     Deeps,
     /// Deep habitation, warm enough that living here is a choice with a cost.
     Underdeep,
-    /// Past the habitable ceiling: hot, open-ended, and the deepest class the
-    /// measured cave population reaches.
+    /// Past the habitable ceiling: hot, and the deepest class the measured
+    /// cave population reaches.
+    ///
+    /// **Open-ended formally, bounded empirically.** No upper threshold exists
+    /// here and none should — a ladder needs a class that cannot overflow. But
+    /// no *cave* can reach far into it: reach is capped at
+    /// [`crate::CAVE_REACH_CEILING_M`] (3000 m) and the gradient is clamped to
+    /// 15–30 K/km, so a cave's ΔT cannot exceed 90 K and measures ~[50, 68] K
+    /// in practice, unreachable at all below 16.7 K/km. Read "open-ended" as a
+    /// property of the ladder, not as a claim about how hot a chamber gets.
     Sunless,
 }
 
@@ -100,32 +142,72 @@ pub const HABITABLE_CEILING_K: f64 = 50.0;
 
 /// The ΔT at which [`DelveRung::Shallows`] begins.
 ///
-/// Measured: this is the top of the gap between the shallow cluster and the
-/// bulk. The post-Task-1b reading puts reach-p10 at 200.0 / 215.3 / 201.7 m
-/// while `[0, 2)` K is, at the measured median gradients (24.4 / 25.0 / 23.1
-/// K/km), everything above 80–87 m — so the class isolates a genuinely
-/// separate sub-p10 population (8.8 / 5.0 / 7.2% of cave-bearing cells) rather
-/// than slicing the body of the distribution.
+/// **An a-priori bin, kept.** Spec §4.1 published `< 2 K` as its illustrative
+/// top rung before Task 1 ran, the probe binned against it, and it is one of
+/// the four thresholds with a measured per-class occupancy — 8.8 / 5.0 / 7.2%
+/// below it on seeds 42 / 7 / 1234. That is the whole claim.
+///
+/// The finer re-bin is consistent with it and is why it was not moved: the
+/// 1 K bins `[2, 5)` are **empty on all three seeds**, so the edge sits in a
+/// measured valley (0.0 / 0.0 / 0.2% of caves within ±0.5 K). It separates a
+/// shallow cluster from the bulk, which is what §4.1 guessed it would.
 /// type-audit: bare-ok(diagnostic-value)
 const SHALLOWS_TOP_K: f64 = 2.0;
 
 /// The ΔT at which [`DelveRung::Deeps`] begins.
 ///
-/// Measured: the `[2, 10)` class holds 17.0 / 38.0 / 12.8% of cave-bearing
-/// cells, and the ΔT-p10 of all three seeds (5.581 / 5.870 / 5.765 K) lands
-/// inside it — a 0.29 K spread across three independent worlds, the tightest
-/// seed-agreement anywhere in the reading, so the class is anchored on a real
-/// feature of the population rather than on an arbitrary cut.
+/// **This edge was MOVED after seeing finer data — 10.0 → 8.0 — and it is the
+/// only one in the table that was.** Recorded here rather than in a commit
+/// message alone, because a post-hoc boundary move is legitimate exactly when
+/// it is stated and illegitimate when it is not.
+///
+/// *What was wrong:* 10 K was §4.1's a-priori bin and the coarse table gave no
+/// reason to doubt it — the `[2, 10)` class held 17.0 / 38.0 / 12.8% and the
+/// ΔT-p10 of all three seeds landed inside it. A coarse histogram cannot
+/// distinguish an edge that separates two populations from one that sits on
+/// the lip of a spike, and this was the second: the single 1 K bin `[10, 11)`
+/// holds **349 of seed 42's 874 caves (39.9%)**, seed 42's p25 is 9.973 and
+/// its p50 is 10.735, and **19.6% of that seed lies within ±0.5 K of 10.0**.
+/// Nudging the edge to 10.8 would have moved roughly a quarter of the seed
+/// from `Deeps` to `Shallows`. That is the least stable place an edge can be.
+///
+/// *Why the distribution is spiky at all, which is the part worth carrying:*
+/// [`crate::cave_depth::cave_depth_reach_m`] has hard clamps —
+/// `LAVATUBE_CEILING_M = 200.0`, [`crate::CAVE_REACH_CEILING_M`] `= 3000.0`,
+/// and the paleokarst arm clamps too — so reach has **atoms** (seed 42's
+/// single fattest reach value covers 23.1% of its caves). ΔT is reach times a
+/// gradient spanning only 1.27×, so it inherits them as smears, not as a
+/// spread.
+///
+/// *The rule applied:* place the edge inside a **valley** — a 1 K bin range
+/// empty on all three seeds — rather than at a percentile or a round number.
+/// `[7, 9)` is such a valley; 8.0 is its interior and measures **0.0% within
+/// ±0.5 K on every seed**. The rule was applied to this edge and not to the
+/// others because no other edge sat in a mode (next worst is 25 K at 1.1%);
+/// moving an edge nothing condemns, after unblinding, would be the
+/// metric-chasing this move is not.
+///
+/// *Effect on the table:* `Deeps` gains the `[8, 10)` caves from `Shallows` —
+/// 18 / 40 / 18 cells — so its thinnest seed goes 4.8% → 7.2% and the table's
+/// minimum class 4.8% → 5.0%. The rung names, arity and ordering are
+/// unchanged, so `chamber/v2`'s key spellings do not move with it.
 /// type-audit: bare-ok(diagnostic-value)
-const DEEPS_TOP_K: f64 = 10.0;
+const DEEPS_TOP_K: f64 = 8.0;
 
 /// The ΔT at which [`DelveRung::Underdeep`] begins.
 ///
-/// Measured: `[25, 50)` holds 6.1 / 8.9 / 10.2% of cave-bearing cells — a
-/// 4.1-percentage-point spread, the most seed-stable share in the table
-/// (`Deeps` swings 38.8 points across the same three seeds). It is also the
-/// only interior threshold between [`DEEPS_TOP_K`] and the authored
-/// [`HABITABLE_CEILING_K`] with a measured occupancy at all.
+/// **An a-priori bin, kept.** Spec §4.1 published `25 – 50 K` before Task 1
+/// ran, the probe binned against it, and the class holds 6.1 / 8.9 / 10.2% of
+/// cave-bearing cells on seeds 42 / 7 / 1234 — occupied on every seed, which
+/// is the claim.
+///
+/// It is not in a valley the way [`SHALLOWS_TOP_K`] and [`DEEPS_TOP_K`] are:
+/// 0.6 / 1.1 / 0.2% of caves lie within ±0.5 K of it, against 0.0% for those
+/// two. It is kept because that is sparse rather than modal — an order of
+/// magnitude below the 19.6% that condemned the old `Deeps` edge — and moving
+/// an unflagged edge after unblinding buys a marginal improvement at the cost
+/// of the discipline. `[18, 22)` is the nearest empty valley if a later
+/// campaign has a reason to revisit it.
 /// type-audit: bare-ok(diagnostic-value)
 const UNDERDEEP_TOP_K: f64 = 25.0;
 
