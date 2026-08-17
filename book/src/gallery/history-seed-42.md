@@ -91,7 +91,7 @@ And later — a classical hobgoblin steading, an ordinary place, neither famed n
   They fled — put to flight by hobgoblins — and did not return.
 
 And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height some 75 souls.
-  Its founders fled the ice of the clearing at cell 11939, hobgoblins looking for kinder ground. It was founded by Ngjonbange.
+  Its founders fled the ice of the clearing at cell 11939, hobgoblins looking for kinder ground. It was founded by Nglonbange.
   Founded in the year 1175, it held for 575 years, until the year 1750.
   They were not driven from this ground — they left it: in that same year they drove the hobgoblins off the clearing at cell 11930, and carried the settlement onto the land they had taken.
 

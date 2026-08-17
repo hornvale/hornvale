@@ -84,7 +84,14 @@ fn world() -> hornvale_kernel::World {
 /// `the_two_grievance_npc_copies_agree` below. Nine renames of a constant
 /// that must move in two places at once, with nothing checking it, was long
 /// past the point where a comment was the right instrument.
-const GRIEVANCE_NPC: &str = "bugbear of Dooga";
+///
+/// The TENTH rename, at The Burr (Task 4): admitting an alveolar trill as
+/// an ordinary manner reseeds every candidate-consonant draw, which
+/// re-places seed 42's settlements again: `Dooga` -> **`Doaba`**. Re-read
+/// from `book/src/gallery/possession-seed-42.md`, regenerated at this
+/// commit. Both copies moved together — see `the_two_grievance_npc_copies_
+/// agree` below, which is exactly the guard the ninth rename asked for.
+const GRIEVANCE_NPC: &str = "bugbear of Doaba";
 
 /// The duplication guard the comment above spent eight renames asking for.
 /// `possession_moves.rs` declares its own `GRIEVANCE_NPC` because integration

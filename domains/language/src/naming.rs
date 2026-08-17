@@ -2208,15 +2208,74 @@ mod tests {
     /// through the namer's own syllable machinery — never hand-constructed
     /// `Segment` variants, which would prove the wear only against a form
     /// the phonology could not have produced.
+    /// Re-search the probe seed for
+    /// [`frequent_morphemes_wear_and_rare_ones_do_not`].
+    ///
+    /// The fixture needs one seed satisfying three things at once: its wear
+    /// cascade contains a length-reducing rule, a 3-syllable probe drawn
+    /// under it wears at 0.95 frequency, and stays whole at 0.02 — so a
+    /// phonotactic change reseeds it the same way it reseeds the two
+    /// `two_word_lexicon` fixtures above. `#[ignore]`d for the same reason:
+    /// a search, not a gate.
+    ///
+    /// ```text
+    /// cargo test -p hornvale-language sweep_wear_probe_seed -- --ignored --nocapture
+    /// ```
+    /// claim: reachability(seed: 0..600) — finds probe seeds satisfying the
+    /// test's preconditions
+    #[test]
+    #[ignore = "search: re-derives the wear-probe fixture's seed; run explicitly with --ignored"]
+    fn sweep_wear_probe_seed() {
+        let ph = wordy_ph();
+        let qualifying: Vec<u64> = (0..600)
+            .filter(|&n| {
+                let seed = Seed(n);
+                let namer = Namer::new(&seed, "kobold", &ph);
+                let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold", &ph);
+                if !cascade.rules.iter().any(|r| {
+                    matches!(
+                        r.kind,
+                        crate::etymology::RuleKind::ClusterSimplify
+                            | crate::etymology::RuleKind::FinalLoss
+                    )
+                }) {
+                    return false;
+                }
+                let mut stream = seed.derive(streams::ROOT).stream();
+                let stem = segments_of(&namer.draw_syllables(&mut stream, 3, 3, false));
+                if stem.is_empty() {
+                    return false;
+                }
+                let worn = namer.wear(&stem, 0.95);
+                let whole = namer.wear(&stem, 0.02);
+                worn.len() < stem.len() && whole == stem
+            })
+            .collect();
+        println!("qualifying wear-probe seeds in 0..600: {qualifying:?}");
+        assert!(
+            !qualifying.is_empty(),
+            "no probe seed in 0..600 satisfies the fixture's preconditions — \
+             widen the range, or the phonotactics have moved far enough that \
+             the fixture's shape needs rethinking rather than reseeding"
+        );
+    }
+
     #[test]
     fn frequent_morphemes_wear_and_rare_ones_do_not() {
-        // "kobold" at Seed(42) is chosen because its WEAR cascade actually
-        // contains length-reducing rules; the precondition below asserts
-        // that rather than assuming it, so a reseed fails loudly and
-        // diagnosably instead of silently proving nothing (the Task 2
-        // lesson: name the precondition the test rests on).
+        // "kobold" at Seed(1) is chosen because its WEAR cascade actually
+        // contains length-reducing rules AND its drawn 3-syllable probe
+        // wears at 0.95 and stays whole at 0.02; the precondition below
+        // asserts the cascade half rather than assuming it, so a reseed
+        // fails loudly and diagnosably instead of silently proving nothing
+        // (the Task 2 lesson: name the precondition the test rests on).
+        //
+        // Re-searched at The Burr (Task 4): admitting an alveolar trill as
+        // an ordinary manner reseeds every candidate-consonant draw, which
+        // moved Seed(42)'s probe to one the wear rule no longer touches.
+        // Swept 0..600 with [`sweep_wear_probe_seed`] and found Seed(1) —
+        // the first of many qualifying seeds.
         let ph = wordy_ph();
-        let seed = Seed(42);
+        let seed = Seed(1);
         let namer = Namer::new(&seed, "kobold", &ph);
         let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold", &ph);
         assert!(
@@ -2901,7 +2960,15 @@ mod tests {
         // four qualifying seeds in 0..600 — [367, 407, 549, 575]; 367 is
         // simply the first (see the sweep's own doc comment for how to
         // re-derive this when it goes stale again).
-        let lex = two_word_lexicon(367);
+        //
+        // Re-swept again at The Burr (Task 4): admitting an alveolar trill
+        // as an ordinary manner reseeds `wordy_ph()` itself (extra
+        // candidate-consonant draws), which moves every lexicon seed's
+        // wear behaviour. 367 stopped satisfying the survive-repair
+        // preconditions; re-swept 0..600 and found 53 qualifying seeds
+        // (far more than before — the wider phonology admits more
+        // consonant-final roots) — 2 is simply the first.
+        let lex = two_word_lexicon(2);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
@@ -2984,6 +3051,60 @@ mod tests {
         );
     }
 
+    /// Re-search the lexicon seed for
+    /// [`wear_that_repair_would_annihilate_is_given_up`].
+    ///
+    /// The mirror image of [`sweep_wear_fixture_seed`]: that fixture needs
+    /// both worn roots to SURVIVE repair, this one needs at least one to be
+    /// ANNIHILATED by it, so the two searches can never share a seed and are
+    /// kept as separate sweeps rather than one predicate with a flag.
+    /// `#[ignore]`d for the same reason: a search, not a gate.
+    ///
+    /// ```text
+    /// cargo test -p hornvale-language sweep_annihilate_fixture_seed -- --ignored --nocapture
+    /// ```
+    /// claim: reachability(seed: 0..600) — finds fixture seeds satisfying the
+    /// test's preconditions
+    #[test]
+    #[ignore = "search: re-derives the annihilate fixture's seed; run explicitly with --ignored"]
+    fn sweep_annihilate_fixture_seed() {
+        let ph = wordy_ph();
+        let namer = Namer::new(&Seed(42), "kobold", &ph);
+        let chosen = ["water", "fire"];
+        let qualifying: Vec<u64> = (0..600)
+            .filter(|&s| {
+                let lex = two_word_lexicon(s);
+                let attested = attested_forms(&lex);
+                if !chosen.iter().all(|c| {
+                    let raw = concept_segments(&lex, c);
+                    !raw.is_empty() && namer.wear(&raw, 0.95).len() < raw.len()
+                }) {
+                    return false;
+                }
+                let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
+                saturated.insert("water".to_string(), 0.95);
+                saturated.insert("fire".to_string(), 0.95);
+                let (_segments, surrendered) = namer.worn_compound(
+                    &lex,
+                    &chosen,
+                    &NameCorpus {
+                        frequencies: &saturated,
+                    },
+                    &attested,
+                    Prominence::InitialVowel,
+                );
+                surrendered > 0
+            })
+            .collect();
+        println!("qualifying annihilate-fixture seeds in 0..600: {qualifying:?}");
+        assert!(
+            !qualifying.is_empty(),
+            "no lexicon seed in 0..600 satisfies the fixture's preconditions — \
+             widen the range, or the phonotactics have moved far enough that the \
+             fixture's shape needs rethinking rather than reseeding"
+        );
+    }
+
     #[test]
     fn wear_that_repair_would_annihilate_is_given_up() {
         // Critical: wear breaks attestedness, and `repair_phonotactics` is
@@ -3000,8 +3121,14 @@ mod tests {
         // 0..3000): kobold@42's wear cascade fires on both roots, and
         // neither worn form survives repair. The survival rule must
         // therefore give the wear back rather than let the morpheme vanish.
+        //
+        // Re-searched again at The Burr (Task 4): the trill epoch reseeds
+        // `wordy_ph()` itself, which moved seed 2 into the OTHER fixture's
+        // (survive-repair) camp instead. Swept 0..600 with
+        // [`sweep_annihilate_fixture_seed`]'s predicate and found seed 6 —
+        // the first of many qualifying seeds.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(2);
+        let lex = two_word_lexicon(6);
         let namer = Namer::new(&Seed(42), "kobold", &ph);
         let attested = attested_forms(&lex);
         let chosen = ["water", "fire"];
@@ -3062,7 +3189,13 @@ mod tests {
         // candidates) then 0..2000, crossed with namer seed 0..300 — the
         // first hit was (1319, 0). That guard is the point — the agreement
         // asserted in the loop is worthless if no name ever wears.
-        let lex = two_word_lexicon(1319);
+        //
+        // Re-searched again at The Burr (Task 4): admitting an alveolar
+        // trill as an ordinary manner reseeds `wordy_ph()` and every
+        // lexicon/namer draw under it, and (1319, 0) stopped wearing any of
+        // the 80 names. Crossed lexicon seed 0..2000 with namer seed
+        // 0..300 again; the first hit this time is (1, 0).
+        let lex = two_word_lexicon(1);
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };

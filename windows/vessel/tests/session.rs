@@ -318,9 +318,13 @@ fn the_stitch_law_end_to_end() {
         // re-draws them once more: Booko -> Xoaboa. The Contour's epoch v2
         // (2026-08-02, history/bake/v2) re-mints the draw again: Xoaboa ->
         // Pao. The Tense (2026-08-05) re-mints it once more, and it lands back
-        // where it already was two renames ago: Pao -> Xoaboa. Moon count
-        // ("two"), subject and sentence frame unchanged at every step.
-        after.contains("Xoaboa has two moons, as the initiated count."),
+        // where it already was two renames ago: Pao -> Xoaboa. The Burr
+        // (Task 4): admitting an alveolar trill as an ordinary manner
+        // reseeds every family's root assignment (`ROOT_EPOCH` v3 -> v4,
+        // a decision recorded at this campaign's close): Xoaboa -> Booko, landing back on The Wearing's
+        // own spelling by coincidence of the draw. Moon count ("two"),
+        // subject and sentence frame unchanged at every step.
+        after.contains("Booko has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
     assert!(
@@ -352,7 +356,9 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        consulted.contains("Xoaboa has two moons, as the initiated count."),
+        // See the primary arm's re-pin note above (The Burr, Task 4):
+        // Xoaboa -> Booko.
+        consulted.contains("Booko has two moons, as the initiated count."),
         "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
     );
     assert!(

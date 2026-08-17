@@ -59,7 +59,7 @@ fn is_unnameable(world: &World, concept: &str) -> bool {
 
 /// The seed-42 proto-root table: every registered concept's proto-root,
 /// assigned via the SAME merger-aware, injective `assign_proto_roots`
-/// (epoch `root/v3`) the `hornvale proto` reference page renders through
+/// (epoch `root/v4`) the `hornvale proto` reference page renders through
 /// (`cli/src/proto.rs::render_proto`) — not the superseded per-concept
 /// `hornvale_language::proto_root`, which draws each concept's root
 /// independently and so can (and on this seed does) collide across

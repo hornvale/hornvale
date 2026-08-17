@@ -106,7 +106,7 @@ pub fn render_proto(family: &str) -> Result<String, String> {
          reference seed {REFERENCE_SEED} and the family's authored ancestral articulation \
          vector (`hornvale_language::family_proto`). Every registered concept's proto-root \
          below is assigned injectively over the whole concept universe from this inventory \
-         (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two \
+         (`hornvale_language::assign_proto_roots`, epoch `root/v4` — merger-aware, so no two \
          core concepts collide even after a daughter's cascade), \
          independent of any daughter's actual exposure — the ancestral vocabulary exists \
          whether or not a given daughter still holds it as a root today. **Excepted:** a \
@@ -163,7 +163,7 @@ pub fn render_proto(family: &str) -> Result<String, String> {
         .map(|c| c.name.as_str())
         .filter(|name| !is_unnameable(&world, name))
         .collect();
-    // The merger-aware assignment (epoch root/v3): the same daughters the
+    // The merger-aware assignment (epoch root/v4): the same daughters the
     // composition root feeds `build_lexicon`, so this page's proto-roots are
     // exactly the ones the dictionary's modern forms descend from.
     let daughters = world_builder::family_daughters(&world, &wc, family);

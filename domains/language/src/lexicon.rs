@@ -329,7 +329,7 @@ pub fn build_lexicon(
     // family level, once (the homophony fix, draw side — replaces per-concept
     // `proto_root` drawing). `daughters` (the family's members, supplied by
     // the composition root) make the assignment merger-aware (epoch
-    // root/v3): a core proto is chosen to survive every daughter's cascade
+    // root/v4): a core proto is chosen to survive every daughter's cascade
     // distinct, so core homophony is zero. See [`proto_root_universe`] for
     // which concepts the universe includes.
     let universe = proto_root_universe(exposures);

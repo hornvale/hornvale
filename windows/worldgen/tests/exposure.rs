@@ -541,14 +541,17 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
         ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
+    // The Burr (Task 4): the trill epoch reseeds every family's root
+    // assignment. Which peoples root vs. gap 'spring' is unchanged — only
+    // the drawn words moved.
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Dzhaap".to_string()),
-            ("goblin", "Nebao".to_string()),
-            ("hill-dwarf", "Maqtog".to_string()),
-            ("hobgoblin", "Negao".to_string()),
-            ("snow-elf", "Booz".to_string()),
+            ("gnoll", "Qshoox".to_string()),
+            ("goblin", "Tebae".to_string()),
+            ("hill-dwarf", "Ngabgob".to_string()),
+            ("hobgoblin", "Qebae".to_string()),
+            ("snow-elf", "Ngaash".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
     );
@@ -688,11 +691,14 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
+    // The Burr (Task 4): the trill epoch reseeds every family's root
+    // assignment, "Godgoo" -> "Godpoo" and "Nootea" -> "Noono". Which
+    // peoples root vs. gap 'hill' is unchanged — only the drawn words moved.
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Godgoo".to_string()),
-            ("hobgoblin", "Nootea".to_string()),
+            ("drow", "Godpoo".to_string()),
+            ("hobgoblin", "Noono".to_string()),
         ],
         "the set of peoples rooting 'hill' at seed 42 moved"
     );
@@ -801,14 +807,17 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
         ],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
+    // The Burr (Task 4): the trill epoch reseeds every family's root
+    // assignment. Which peoples root vs. gap 'valley' is unchanged — only
+    // the drawn words moved.
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Gadbvoo".to_string()),
-            ("high-elf", "Mazbveos".to_string()),
-            ("hobgoblin", "Konoa".to_string()),
-            ("human", "Ngaatae".to_string()),
-            ("sea-elf", "Nadbbeus".to_string()),
+            ("drow", "Poosdo".to_string()),
+            ("high-elf", "Doosdoz".to_string()),
+            ("hobgoblin", "Ganee".to_string()),
+            ("human", "Xeke".to_string()),
+            ("sea-elf", "Tuusdud".to_string()),
         ],
         "the set of peoples rooting 'valley' at seed 42 moved"
     );
@@ -963,15 +972,18 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
         ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
+    // The Burr (Task 4): the trill epoch reseeds every family's root
+    // assignment. Which peoples root vs. gap 'marsh' is unchanged — only
+    // the drawn words moved.
     assert_eq!(
         rooted,
         vec![
-            ("bugbear", "Qadoo".to_string()),
-            ("desert-elf", "Geesh".to_string()),
-            ("drow", "Goo".to_string()),
-            ("gnoll", "Gshoovzngaov".to_string()),
-            ("hobgoblin", "Qaneo".to_string()),
-            ("snow-elf", "Boosh".to_string()),
+            ("bugbear", "Godoa".to_string()),
+            ("desert-elf", "Zkeaz".to_string()),
+            ("drow", "Koa".to_string()),
+            ("gnoll", "Dshoopdshop".to_string()),
+            ("hobgoblin", "Kotoa".to_string()),
+            ("snow-elf", "Bfoaz".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
          is among them"

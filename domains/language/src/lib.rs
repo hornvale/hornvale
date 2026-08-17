@@ -1027,8 +1027,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "the glossed epithet (The Wearing): as v2, reseeded by the epoch bump. No name corpus, so nothing wears here",
         ),
         (
+            "language/<family>/lexicon/root/v4/<concept>",
+            "per-concept family proto-root, injectively and MERGER-AWARELY assigned (epoch root/v4): the open-addressing draw also rejects a core candidate whose evolved form would merge with an already-placed core concept in any daughter, so core homophony is zero; family == species for a singleton stock. Probe re-draws key a /probe/<n> sub-stream. The Burr: an alveolar trill is no longer gated behind the exotic-consonant capability (a decision recorded at this campaign's close), which inserts extra candidate-consonant draws ahead of every species' inventory and so reseeds every root, not only the trill-drawing ones",
+        ),
+        (
             "language/<family>/lexicon/root/v3/<concept>",
-            "per-concept family proto-root, injectively and MERGER-AWARELY assigned (epoch root/v3): the open-addressing draw also rejects a core candidate whose evolved form would merge with an already-placed core concept in any daughter, so core homophony is zero; family == species for a singleton stock. Probe re-draws key a /probe/<n> sub-stream",
+            "(retired at The Burr, superseded by root/v4) the merger-aware assignment as v4, before the trill's exotic gate was lifted",
         ),
         (
             "language/<family>/lexicon/root/v2/<concept>",

@@ -5583,7 +5583,7 @@ pub fn family_daughter_kinds(wc: &WorldComponents, family: &str) -> Vec<KindId> 
 
 /// The family's members (all kinds in `wc` sharing `family`), each as a
 /// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
-/// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
+/// so the merger-aware proto assignment (epoch `root/v4`) can choose core roots
 /// that survive every daughter's descent distinct. The rejection is
 /// order-independent (a candidate is rejected iff it merges in ANY daughter),
 /// so the iteration order does not affect the result; a singleton family yields

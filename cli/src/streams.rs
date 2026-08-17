@@ -111,8 +111,8 @@ fn split_version(label: &str) -> Option<(String, u32)> {
 ///
 /// **The highest version for a stem wins, and that is load-bearing.** The
 /// manifest roster keeps RETIRED labels as rows, marked only in their prose
-/// (`language/<family>/lexicon/root/v2/<concept>` sits beside the live
-/// `.../root/v3/<concept>`), so a stem can appear more than once. Taking
+/// (`language/<family>/lexicon/root/v3/<concept>` sits beside the live
+/// `.../root/v4/<concept>`), so a stem can appear more than once. Taking
 /// whichever the roster happened to list last would have recorded the retired
 /// epoch as the current one in every world written from then on, and diffed
 /// the first real bump against a wrong baseline. Epoch suffixes are monotonic
@@ -386,7 +386,20 @@ mod tests {
                 // record. It claims nothing about the save's BYTES, and
                 // says so.
                 "history/flesh v2",
-                "language/<family>/lexicon/root/<concept> v3",
+                // The Burr: an alveolar trill is no longer gated behind the
+                // exotic-consonant capability (a decision recorded at this
+                // campaign's close). `assign_proto_roots` itself is
+                // unchanged, but the phonology it draws
+                // candidates from now offers a trill to any species, which
+                // inserts extra candidate-consonant draws ahead of every
+                // species' inventory — so every family's root assignment
+                // reseeds, not only families whose daughters end up with a
+                // trill. `ROOT_EPOCH` bumps to `v4` per decision 0089's
+                // riding precedent: this branch's later tasks make further
+                // consumption changes to the same draw before merge, so one
+                // epoch suffix covers the whole campaign rather than one per
+                // task.
+                "language/<family>/lexicon/root/<concept> v4",
                 "language/<species>/lexicon/cascade v2",
                 "language/<species>/lexicon/cascade/wear v2",
                 "language/<species>/name/deity v3",
@@ -438,13 +451,13 @@ mod tests {
 
     #[test]
     fn a_retired_label_never_outranks_its_live_successor() {
-        // The manifest keeps `language/<family>/lexicon/root/v2/<concept>` as a
-        // row (retired, superseded by root/v3) and lists it AFTER v3, so
+        // The manifest keeps `language/<family>/lexicon/root/v3/<concept>` as a
+        // row (retired, superseded by root/v4) and lists it AFTER v4, so
         // last-write-wins would have recorded the retired epoch as current in
         // every world written from then on.
         assert_eq!(
             versioned_labels().get("language/<family>/lexicon/root/<concept>"),
-            Some(&"v3".to_string())
+            Some(&"v4".to_string())
         );
     }
 

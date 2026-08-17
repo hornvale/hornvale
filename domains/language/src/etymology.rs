@@ -478,13 +478,13 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
 /// about worlds generated in those two days survives — a save re-derives its
 /// whole lexicon from the seed — so the withdrawal costs a regeneration and
 /// nothing else.
-const ROOT_EPOCH: &str = "v3";
+const ROOT_EPOCH: &str = "v4";
 
 /// Assign a distinct proto-root to every concept in `concepts` under
 /// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
 /// replacement for per-concept [`proto_root`] drawing (the homophony fix,
 /// draw side). Deterministic open-addressing: each concept draws a candidate
-/// root at epoch `root/v3`, and on collision re-draws from a probe-keyed
+/// root at epoch `root/v4`, and on collision re-draws from a probe-keyed
 /// sub-stream (double hashing — colliders scatter rather than cluster), the
 /// root lengthening only once a same-length probe budget is exhausted. Core
 /// concepts (the authored Swadesh strata) are assigned first, so they win the

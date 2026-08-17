@@ -6,4 +6,4 @@ $ hornvale scene surrounds --world world.json --render ascii
  +++++++
   + + +
   ways on: E, NW, SW
-  legend: Dooga, buttressed canopy, damp, tropical rainforest
+  legend: Doaba, buttressed canopy, damp, tropical rainforest

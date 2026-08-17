@@ -14,50 +14,50 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 896860167, day 0]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > look
 [room 896860167, day 0]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > npcs
 7 NPC(s) derived this session:
-  [1] bugbear of Dooga
-  [2] hobgoblin of Toa
-  [3] hobgoblin of Neneo
+  [1] bugbear of Doaba
+  [2] hobgoblin of Bago
+  [3] hobgoblin of To
   [4] a wild rust-monster
   [5] a wild xorn
   [6] a wild otyugh
   [7] a wild carrion-crawler
 > needs
-The bugbear of Dooga seems content.
+The bugbear of Doaba seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
 [room 896860167, day 5]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Dooga settles down to rest.
+The bugbear of Doaba settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (11 stirred).
 > look
 [room 896860167, day 6]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Dooga settles down to rest.
+The bugbear of Doaba settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (1 stirred).
 > look
 [room 896860167, day 7]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The sky is a low grey rain-deck.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Dooga grows restless.
+The bugbear of Doaba grows restless.
 > why hobgoblin
-hobgoblin of Toa:
-- canonical name of an entity: hobgoblin of Toa (asserted by the-quickening)
+hobgoblin of Bago:
+- canonical name of an entity: hobgoblin of Bago (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
@@ -65,10 +65,10 @@ hobgoblin of Toa:
 Time passes. You sense movement nearby (194 stirred).
 > look
 [room 896860167, day 97]
-Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical rainforest — buttressed canopy, damp — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 No direction here is closed; the nearest ground lies E, NW, SW.
 > needs
-The bugbear of Dooga casts about for water.
+The bugbear of Doaba casts about for water.
 > release
 You let go.
 ```

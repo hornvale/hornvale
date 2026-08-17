@@ -1,56 +1,56 @@
 # The Book
 
-## Volume 1: Xoaboa
+## Volume 1: Booko
 
-Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.
-The Booxo are bugbears.
-The Tngobpngap are desert dwarfs.
-The Beba are desert elfs.
-The Bobash are drows.
-The Kabja are gnolls.
-The Woove are goblins.
-The Tngobknga are gully dwarfs.
-The Tedash are high elfs.
-The Dngovgngav are hill dwarfs.
-The Boove are hobgoblins.
-The Ngeevnao are humans.
-The Ngosho are kobolds.
-The Petash are sea elfs.
-The Bzhonopsho are snow elfs.
-The Tetas are wood elfs.
+Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.
+The Bao are bugbears.
+The Pngoppap are desert dwarfs.
+The Bua are desert elfs.
+The Boa are drows.
+The Wakdao are gnolls.
+The Qwootoqo are goblins.
+The Pngoppa are gully dwarfs.
+The Doa are high elfs.
+The Bngovbav are hill dwarfs.
+The Dweowbaw are hobgoblins.
+The Naavea are humans.
+The Ngongo are kobolds.
+The Tua are sea elfs.
+The Shnotsozhmo are snow elfs.
+The Tensnonkun are wood elfs.
 
 ### Tongues
 
-Xngatboa Booxo Bobao. (in the bugbear tongue: "The Booxo are bugbears.")
-Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: "Xoaboa is the earth.")
-Tngobpngap Bngaap. (in the desert-dwarf tongue: "The Tngobpngap are desert dwarfs.")
-Xoaboa Qngoaz. (in the desert-dwarf tongue: "Xoaboa is the earth.")
-Beba Tebu Zhaufbou. (in the desert-elf tongue: "The Beba are desert elfs.")
-Xoaboa Bokuebu Zhaufbou. (in the desert-elf tongue: "Xoaboa is the earth.")
-Bobash Qaoshtoos Ta. (in the drow tongue: "The Bobash are drows.")
-Xoaboa Botoos Ta. (in the drow tongue: "Xoaboa is the earth.")
-Kabja Paab Jaadjaajoo. (in the gnoll tongue: "The Kabja are gnolls.")
-Xoaboa Paab Paokaa. (in the gnoll tongue: "Xoaboa is the earth.")
-Sa Woowoo Woove. (in the goblin tongue: "The Woove are goblins.")
-Sa Weveawea Xoaboa. (in the goblin tongue: "Xoaboa is the earth.")
-Tngobknga Gngaappaa Xan. (in the gully-dwarf tongue: "The Tngobknga are gully dwarfs.")
-Xoaboa Pngoa Xan. (in the gully-dwarf tongue: "Xoaboa is the earth.")
-Tedash Vo Dos Da. (in the high-elf tongue: "The Tedash are high elfs.")
-Xoaboa Vo Togoes Da. (in the high-elf tongue: "Xoaboa is the earth.")
-Dngovgngav Gavgoash Koav. (in the hill-dwarf tongue: "The Dngovgngav are hill dwarfs.")
-Xoaboa Qngoash Koav. (in the hill-dwarf tongue: "Xoaboa is the earth.")
-Boove Beebo Boa Boo. (in the hobgoblin tongue: "The Boove are hobgoblins.")
-Xoaboa Veabea Boa Be. (in the hobgoblin tongue: "Xoaboa is the earth.")
-Ngeevnao Vavneozhoa Voosaa. (in the human tongue: "The Ngeevnao are humans.")
-Xoaboa Saseo Voosaa. (in the human tongue: "Xoaboa is the earth.")
-Ngosho Ngod Nga. (in the kobold tongue: "The Ngosho are kobolds.")
-Xoaboa Ngod Ngotngo. (in the kobold tongue: "Xoaboa is the earth.")
-Petash Teostuosh. (in the sea-elf tongue: "The Petash are sea elfs.")
-Xoaboa Pokues. (in the sea-elf tongue: "Xoaboa is the earth.")
-Bzhonopsho Baot. (in the snow-elf tongue: "The Bzhonopsho are snow elfs.")
-Xoaboa Bogoot. (in the snow-elf tongue: "Xoaboa is the earth.")
-Tetas Gon Tuu Qas. (in the wood-elf tongue: "The Tetas are wood elfs.")
-Xoaboa Gon Tuu Tukues. (in the wood-elf tongue: "Xoaboa is the earth.")
+Xngatboa Bao Boobao. (in the bugbear tongue: "The Bao are bugbears.")
+Xngatboa Booko Booko. (in the bugbear tongue: "Booko is the earth.")
+Pngoppap Bngoz. (in the desert-dwarf tongue: "The Pngoppap are desert dwarfs.")
+Booko Qoop. (in the desert-dwarf tongue: "Booko is the earth.")
+Bua Beuskuubu Zhaufbou. (in the desert-elf tongue: "The Bua are desert elfs.")
+Booko Boobu Zhaufbou. (in the desert-elf tongue: "Booko is the earth.")
+Boa Boostaash Ta. (in the drow tongue: "The Boa are drows.")
+Booko Boos Ta. (in the drow tongue: "Booko is the earth.")
+Wakdao Paab Loadwaawoo. (in the gnoll tongue: "The Wakdao are gnolls.")
+Booko Paab Laakaa. (in the gnoll tongue: "Booko is the earth.")
+Ka Jookaojo Qwootoqo. (in the goblin tongue: "The Qwootoqo are goblins.")
+Ka Jejoeke Booko. (in the goblin tongue: "Booko is the earth.")
+Pngoppa Pngo Xan. (in the gully-dwarf tongue: "The Pngoppa are gully dwarfs.")
+Booko Poo Xan. (in the gully-dwarf tongue: "Booko is the earth.")
+Doa Vo Gashvaas Da. (in the high-elf tongue: "The Doa are high elfs.")
+Booko Vo Toos Da. (in the high-elf tongue: "Booko is the earth.")
+Bngovbav Boat Koaw. (in the hill-dwarf tongue: "The Bngovbav are hill dwarfs.")
+Booko Qoov Koaw. (in the hill-dwarf tongue: "Booko is the earth.")
+Dweowbaw Waawa Woa Woo. (in the hobgoblin tongue: "The Dweowbaw are hobgoblins.")
+Booko Woeke Woa We. (in the hobgoblin tongue: "Booko is the earth.")
+Naavea Vaozeezhoa Voosaa. (in the human tongue: "The Naavea are humans.")
+Booko Zooveaseo Voosaa. (in the human tongue: "Booko is the earth.")
+Ngongo Ngod Ngokngo. (in the kobold tongue: "The Ngongo are kobolds.")
+Booko Ngod Sosho. (in the kobold tongue: "Booko is the earth.")
+Tua Toaspush. (in the sea-elf tongue: "The Tua are sea elfs.")
+Booko Poos. (in the sea-elf tongue: "Booko is the earth.")
+Shnotsozhmo Goot. (in the snow-elf tongue: "The Shnotsozhmo are snow elfs.")
+Booko Boot. (in the snow-elf tongue: "Booko is the earth.")
+Tensnonkun Gon Tuu Qasgas. (in the wood-elf tongue: "The Tensnonkun are wood elfs.")
+Booko Gon Tuu Tuus. (in the wood-elf tongue: "Booko is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -70,604 +70,604 @@ wood-elf: gap — planet (no entry in this lexicon)
 
 ### The Chorus
 
-#### As the Booxo tell it
+#### As the Bao tell it
 
-The Booxo are bugbears — ourselves.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth with two moons.
-The moons cross because they are Boko's kin.
+The Bao are bugbears — ourselves.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth with two moons.
+The moons cross because they are Xooka's kin.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Booxo teach it
+##### As the priesthood of the Bao teach it
 
-Xngatbo Xoaboa Xoaboa. ("Xoaboa is the earth — as it is taught.")
+Xngatbo Booko Booko. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — ourselves.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth with two moons.
-The moons cross because Boko walks the sky, slowly.
+The Bao are bugbears — ourselves.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth with two moons.
+The moons cross because Xooka walks the sky, slowly.
 The day returns, as all things return.
 
-— though the folk say The moons cross because they are Boko's kin.
+— though the folk say The moons cross because they are Xooka's kin.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Tngobpngap tell it
+#### As the Pngoppap tell it
 
-Xoaboa is the earth with two moons.
-The moons cross because they answer Gngaa.
-The day returns because Goobbaagngaa strides the sky, briskly.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — ourselves.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because they answer Gngaobgngoo.
+The day returns because Gngoobtoogngaobgngoo strides the sky, briskly.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — ourselves.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Beba tell it
+#### As the Bua tell it
 
-Xoaboa is the earth with two moons.
-The moons cross because they are Tobo's kin.
-The day returns because Tekotobo walks the sky, briskly.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — ourselves.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because they are Boe's kin.
+The day returns because Bookabo walks the sky, briskly.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — ourselves.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Bobash tell it
+#### As the Boa tell it
 
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — ourselves.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth with two moons.
-The moons cross because they are Togo's kin.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — ourselves.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth with two moons.
+The moons cross because they are Boo's kin.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Bobash teach it
+##### As the priesthood of the Boa teach it
 
-Xoaboa Botoos Ta. ("Xoaboa is the earth — as it is taught.")
+Booko Boos Ta. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — ourselves.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth with two moons.
-The moons cross because Togo walks the sky, slowly.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — ourselves.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth with two moons.
+The moons cross because Boo walks the sky, slowly.
 
-— though the folk say The moons cross because they are Togo's kin.
+— though the folk say The moons cross because they are Boo's kin.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Kabja tell it
+#### As the Wakdao tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — ourselves.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth with two moons.
-The moons cross because they are Ja's kin.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — ourselves.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because they are Pa's kin.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Woove tell it
+#### As the Qwootoqo tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — ourselves.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — ourselves.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Woove teach it
+##### As the priesthood of the Qwootoqo teach it
 
-Sa Weveawea Xoaboa. ("Xoaboa is the earth — as it is taught.")
+Ka Jejoeke Booko. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — ourselves.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — ourselves.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because Tleavese strides the sky, slowly.
-The day returns because Vooboo strides the sky, briskly.
+The moons cross because Shmeakjeta strides the sky, slowly.
+The day returns because Veewe strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Tngobknga tell it
+#### As the Pngoppa tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — ourselves.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — ourselves.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Tngobknga teach it
+##### As the priesthood of the Pngoppa teach it
 
-Xoaboa Pngoa Xan. ("Xoaboa is the earth — as it is taught.")
+Booko Poo Xan. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — ourselves.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — ourselves.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because they answer Gngaa.
+The moons cross because they answer Gngaopgngoo.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Tedash tell it
+#### As the Doa tell it
 
-Xoaboa is the earth with two moons.
-The moons cross because Dogo strides the sky, slowly.
-The day returns because Degosh walks the sky, briskly.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — ourselves.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because Voe strides the sky, slowly.
+The day returns because Doogas walks the sky, briskly.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — ourselves.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Tedash teach it
+##### As the priesthood of the Doa teach it
 
-Xoaboa Vo Togoes Da. ("Xoaboa is the earth — as it is taught.")
+Booko Vo Toos Da. ("Booko is the earth — as it is taught.")
 
-Xoaboa is the earth with two moons.
-The moons cross because Dogo strides the sky, slowly.
-The day returns because Degosh strides the sky, briskly.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — ourselves.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because Voe strides the sky, slowly.
+The day returns because Doogas strides the sky, briskly.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — ourselves.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Dngovgngav tell it
+#### As the Bngovbav tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — ourselves.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — ourselves.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The day returns to keep the balance.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Dngovgngav teach it
+##### As the priesthood of the Bngovbav teach it
 
-Xoaboa Qngoash Koav. ("Xoaboa is the earth — as it is taught.")
+Booko Qoov Koaw. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — ourselves.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — ourselves.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because Qaxvavvox walks the sky, slowly.
-The day returns because Goovbata strides the sky, briskly.
+The moons cross because Qawdvowkxow walks the sky, slowly.
+The day returns because Ngoovdota strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Boove tell it
+#### As the Dweowbaw tell it
 
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — ourselves.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — ourselves.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Boove teach it
+##### As the priesthood of the Dweowbaw teach it
 
-Xoaboa Veabea Bo Be. ("Xoaboa is the earth — as it is taught.")
+Booko Woeke Wo We. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — ourselves.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — rivals.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
-Xoaboa is the earth.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — ourselves.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — rivals.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
+Booko is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because Koonkem strides the sky, slowly.
-The day returns because Vooboo strides the sky, briskly.
+The moons cross because Kwoowdaw strides the sky, slowly.
+The day returns because Veewe strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Ngeevnao tell it
+#### As the Naavea tell it
 
-Xoaboa is the earth.
+Booko is the earth.
 The day returns because the sky must be crossed.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — ourselves.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — ourselves.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Ngeevnao teach it
+##### As the priesthood of the Naavea teach it
 
-Xoaboa Saseo Voovaa. ("Xoaboa is the earth — as it is taught.")
+Booko Zooveaseo Voovaa. ("Booko is the earth — as it is taught.")
 
-Xoaboa is the earth.
+Booko is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Vaezho strides the sky, slowly.
 The day returns to keep the balance.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — ourselves.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — ourselves.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Ngosho tell it
+#### As the Ngongo tell it
 
-Xoaboa is the earth with two moons.
-The moons cross because they answer Ngotsa.
+Booko is the earth with two moons.
+The moons cross because they answer Zhoqnga.
 The day returns to keep the balance.
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — ourselves.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — ourselves.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Ngosho teach it
+##### As the priesthood of the Ngongo teach it
 
-Xoaboa Ngod Ngotngo. ("Xoaboa is the earth — as it is taught.")
+Booko Ngod Sosho. ("Booko is the earth — as it is taught.")
 
-Xoaboa is the earth with two moons.
-The moons cross because Ngotsa strides the sky, slowly.
+Booko is the earth with two moons.
+The moons cross because Zhoqnga strides the sky, slowly.
 The day returns to keep the balance.
-The Booxo are bugbears — rivals.
-The Tngobpngap are desert dwarfs — rivals.
-The Beba are desert elfs — rivals.
-The Bobash are drows — rivals.
-The Kabja are gnolls — rivals.
-The Woove are goblins — rivals.
-The Tngobknga are gully dwarfs — rivals.
-The Tedash are high elfs — rivals.
-The Dngovgngav are hill dwarfs — rivals.
-The Boove are hobgoblins — rivals.
-The Ngeevnao are humans — rivals.
-The Ngosho are kobolds — ourselves.
-The Petash are sea elfs — rivals.
-The Bzhonopsho are snow elfs — rivals.
-The Tetas are wood elfs — rivals.
+The Bao are bugbears — rivals.
+The Pngoppap are desert dwarfs — rivals.
+The Bua are desert elfs — rivals.
+The Boa are drows — rivals.
+The Wakdao are gnolls — rivals.
+The Qwootoqo are goblins — rivals.
+The Pngoppa are gully dwarfs — rivals.
+The Doa are high elfs — rivals.
+The Bngovbav are hill dwarfs — rivals.
+The Dweowbaw are hobgoblins — rivals.
+The Naavea are humans — rivals.
+The Ngongo are kobolds — ourselves.
+The Tua are sea elfs — rivals.
+The Shnotsozhmo are snow elfs — rivals.
+The Tensnonkun are wood elfs — rivals.
 
-— though the folk say The moons cross because they answer Ngotsa.
+— though the folk say The moons cross because they answer Zhoqnga.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Petash tell it
+#### As the Tua tell it
 
-Xoaboa is the earth with two moons.
-The moons cross because they answer Tugu.
+Booko is the earth with two moons.
+The moons cross because they answer Pue.
 The day returns to keep the balance.
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — ourselves.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — neighbors.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — ourselves.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — neighbors.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Bzhonopsho tell it
+#### As the Shnotsozhmo tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — ourselves.
-The Tetas are wood elfs — neighbors.
-Xoaboa is the earth with two moons.
-The moons cross because Togo strides the sky, slowly.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — ourselves.
+The Tensnonkun are wood elfs — neighbors.
+Booko is the earth with two moons.
+The moons cross because Boo strides the sky, slowly.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Tetas tell it
+#### As the Tensnonkun tell it
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — ourselves.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — ourselves.
+Booko is the earth.
 The day returns to keep the balance.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Tetas teach it
+##### As the priesthood of the Tensnonkun teach it
 
-Xoaboa Gon Gees Tukues. ("Xoaboa is the earth — as it is taught.")
+Booko Gon Gees Tuus. ("Booko is the earth — as it is taught.")
 
-The Booxo are bugbears — neighbors.
-The Tngobpngap are desert dwarfs — neighbors.
-The Beba are desert elfs — neighbors.
-The Bobash are drows — neighbors.
-The Kabja are gnolls — neighbors.
-The Woove are goblins — neighbors.
-The Tngobknga are gully dwarfs — neighbors.
-The Tedash are high elfs — neighbors.
-The Dngovgngav are hill dwarfs — neighbors.
-The Boove are hobgoblins — neighbors.
-The Ngeevnao are humans — neighbors.
-The Ngosho are kobolds — neighbors.
-The Petash are sea elfs — neighbors.
-The Bzhonopsho are snow elfs — neighbors.
-The Tetas are wood elfs — ourselves.
-Xoaboa is the earth.
+The Bao are bugbears — neighbors.
+The Pngoppap are desert dwarfs — neighbors.
+The Bua are desert elfs — neighbors.
+The Boa are drows — neighbors.
+The Wakdao are gnolls — neighbors.
+The Qwootoqo are goblins — neighbors.
+The Pngoppa are gully dwarfs — neighbors.
+The Doa are high elfs — neighbors.
+The Bngovbav are hill dwarfs — neighbors.
+The Dweowbaw are hobgoblins — neighbors.
+The Naavea are humans — neighbors.
+The Ngongo are kobolds — neighbors.
+The Tua are sea elfs — neighbors.
+The Shnotsozhmo are snow elfs — neighbors.
+The Tensnonkun are wood elfs — ourselves.
+Booko is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because they answer Tugu.
-The day returns because Tegus strides the sky, briskly.
+The moons cross because they answer Gue.
+The day returns because Tuugas strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ### The Reckoning of Years
 
@@ -677,115 +677,115 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-Among the Booxo, the sky has darkened, now and again.
-The priesthood of the Booxo numbers the darkenings: 6472.
+Among the Bao, the sky has darkened, now and again.
+The priesthood of the Bao numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
-The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Tngobpngap, the sky has darkened, now and again.
-Among the Beba, the sky has darkened, now and again.
-Among the Bobash, the sky has darkened, now and again.
-The priesthood of the Bobash numbers the darkenings: 6472.
+The Bao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Pngoppap, the sky has darkened, now and again.
+Among the Bua, the sky has darkened, now and again.
+Among the Boa, the sky has darkened, now and again.
+The priesthood of the Boa numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
-The Bobash's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Kabja, the sky has darkened, now and again.
-Among the Woove, the sky has darkened, now and again.
-The priesthood of the Woove numbers the darkenings: 4010.
+The Boa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Wakdao, the sky has darkened, now and again.
+Among the Qwootoqo, the sky has darkened, now and again.
+The priesthood of the Qwootoqo numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Woove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Tngobknga, the sky has darkened, now and again.
-The priesthood of the Tngobknga numbers the darkenings: 4010.
+The Qwootoqo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Pngoppa, the sky has darkened, now and again.
+The priesthood of the Pngoppa numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Tngobknga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Tedash, the sky has darkened, now and again.
-The priesthood of the Tedash numbers the darkenings: 6472.
+The Pngoppa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Doa, the sky has darkened, now and again.
+The priesthood of the Doa numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
-The Tedash's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Dngovgngav, the sky has darkened, now and again.
-The priesthood of the Dngovgngav numbers the darkenings: 4010.
+The Doa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Bngovbav, the sky has darkened, now and again.
+The priesthood of the Bngovbav numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Dngovgngav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Boove, the sky has darkened, now and again.
-The priesthood of the Boove numbers the darkenings: 4010.
+The Bngovbav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Dweowbaw, the sky has darkened, now and again.
+The priesthood of the Dweowbaw numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Boove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Ngeevnao, the sky has darkened, now and again.
-The priesthood of the Ngeevnao numbers the darkenings: 4010.
+The Dweowbaw's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Naavea, the sky has darkened, now and again.
+The priesthood of the Naavea numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Ngeevnao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Ngosho, the sky has darkened, now and again.
-The priesthood of the Ngosho numbers the darkenings: 6472.
+The Naavea's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Ngongo, the sky has darkened, now and again.
+The priesthood of the Ngongo numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
-The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Petash, the sky has darkened, now and again.
-Among the Bzhonopsho, the sky has darkened, now and again.
-Among the Tetas, the sky has darkened, now and again.
-The priesthood of the Tetas numbers the darkenings: 4010.
+The Ngongo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Tua, the sky has darkened, now and again.
+Among the Shnotsozhmo, the sky has darkened, now and again.
+Among the Tensnonkun, the sky has darkened, now and again.
+The priesthood of the Tensnonkun numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Tetas's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The Tensnonkun's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
-*In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Tedash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Tetas's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Boa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Pngoppa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Doa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Bngovbav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Tensnonkun's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
-## Volume 2: Boaboo
+## Volume 2: Boodoa
 
-Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
-The Bobboo are bugbears.
-The Wazwo are desert dwarfs.
-The Feqboq are desert elfs.
-The Kxoqboq are drows.
-The Loshjo are gnolls.
-The Mepmee are goblins.
-The Njanjo are gully dwarfs.
-The Xeqmoq are high elfs.
-The Wanwo are hill dwarfs.
-The Webwee are hobgoblins.
-The Foetjee are humans.
-The Dngooqdngo are kobolds.
-The Xeqmu are sea elfs.
-The Kopnop are snow elfs.
-The Keqnguq are wood elfs.
+Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
+The Koodzhoo are bugbears.
+The Jajozza are desert dwarfs.
+The Fofa are desert elfs.
+The Popa are drows.
+The Ratra are gnolls.
+The Peerzhoe are goblins.
+The Mwawonla are gully dwarfs.
+The Shezhzhaz are high elfs.
+The Wawonwa are hill dwarfs.
+The Geerjoe are hobgoblins.
+The Leoglo are humans.
+The Gnga are kobolds.
+The Pupa are sea elfs.
+The Zoopa are snow elfs.
+The Xuxa are wood elfs.
 
 ### Tongues
 
-Bobboo Boa Bo Zhabo. (in the bugbear tongue: "The Bobboo are bugbears.")
-Boaboo Boaboo Boo Zhabo. (in the bugbear tongue: "Boaboo is the earth.")
-Wazwo Wowwowwa Wo. (in the desert-dwarf tongue: "The Wazwo are desert dwarfs.")
-Boaboo Wozwo Wo. (in the desert-dwarf tongue: "Boaboo is the earth.")
-Feqboq Fepbeqba. (in the desert-elf tongue: "The Feqboq are desert elfs.")
-Boaboo Fopbofep. (in the desert-elf tongue: "Boaboo is the earth.")
-Kxoqboq Za Ba Kxopkxap. (in the drow tongue: "The Kxoqboq are drows.")
-Boaboo Za Pop Kxopbo. (in the drow tongue: "Boaboo is the earth.")
-Loshjo Shjo Jakla La. (in the gnoll tongue: "The Loshjo are gnolls.")
-Boaboo Shjo Lapja La. (in the gnoll tongue: "Boaboo is the earth.")
-Mepmee Maa. (in the goblin tongue: "The Mepmee are goblins.")
-Boaboo Moameo. (in the goblin tongue: "Boaboo is the earth.")
-Njanjo Njojajo Jo So. (in the gully-dwarf tongue: "The Njanjo are gully dwarfs.")
-Boaboo Mjonjo Ja So. (in the gully-dwarf tongue: "Boaboo is the earth.")
-Xeqmoq Zazhxok Mokmob. (in the high-elf tongue: "The Xeqmoq are high elfs.")
-Boaboo Zazhxok Xokmo. (in the high-elf tongue: "Boaboo is the earth.")
-Wanwo Nwoan Wo Wo Wonwawa. (in the hill-dwarf tongue: "The Wanwo are hill dwarfs.")
-Boaboo Nwoan Wo Wa Wonwo. (in the hill-dwarf tongue: "Boaboo is the earth.")
-Webwee Gwobwee Wo. (in the hobgoblin tongue: "The Webwee are hobgoblins.")
-Boaboo Woowoaweo Wo. (in the hobgoblin tongue: "Boaboo is the earth.")
-Foetjee Veabjoo. (in the human tongue: "The Foetjee are humans.")
-Boaboo Vevee. (in the human tongue: "Boaboo is the earth.")
-Dngooqdngo Dngaa. (in the kobold tongue: "The Dngooqdngo are kobolds.")
-Boaboo Dngashgsho. (in the kobold tongue: "Boaboo is the earth.")
-Xeqmu Xla Xoqxema. (in the sea-elf tongue: "The Xeqmu are sea elfs.")
-Boaboo Xla Xopmope. (in the sea-elf tongue: "Boaboo is the earth.")
-Kopnop Poknok Daa. (in the snow-elf tongue: "The Kopnop are snow elfs.")
-Boaboo Kokno Daa. (in the snow-elf tongue: "Boaboo is the earth.")
-Keqnguq Ngegngognga Sue. (in the wood-elf tongue: "The Keqnguq are wood elfs.")
-Boaboo Kogngoxet Sue. (in the wood-elf tongue: "Boaboo is the earth.")
+Koodzhoo Zhoa Zho Zhako. (in the bugbear tongue: "The Koodzhoo are bugbears.")
+Boodoa Boodoa Koo Zhako. (in the bugbear tongue: "Boodoa is the earth.")
+Jajozza Jangjojo Zo. (in the desert-dwarf tongue: "The Jajozza are desert dwarfs.")
+Boodoa Jangja Zo. (in the desert-dwarf tongue: "Boodoa is the earth.")
+Fofa Fapfapba. (in the desert-elf tongue: "The Fofa are desert elfs.")
+Boodoa Fefep. (in the desert-elf tongue: "Boodoa is the earth.")
+Popa Za Ba Poqpop. (in the drow tongue: "The Popa are drows.")
+Boodoa Za Pop Po. (in the drow tongue: "Boodoa is the earth.")
+Ratra Bro Rokro Ra. (in the gnoll tongue: "The Ratra are gnolls.")
+Boodoa Bro Roshra Ra. (in the gnoll tongue: "Boodoa is the earth.")
+Peerzhoe Zhagee. (in the goblin tongue: "The Peerzhoe are goblins.")
+Boodoa Peotoa. (in the goblin tongue: "Boodoa is the earth.")
+Mwawonla Nwawo Wo Ro. (in the gully-dwarf tongue: "The Mwawonla are gully dwarfs.")
+Boodoa Wamwa La Ro. (in the gully-dwarf tongue: "Boodoa is the earth.")
+Shezhzhaz Zazhxok Xakfok. (in the high-elf tongue: "The Shezhzhaz are high elfs.")
+Boodoa Zazhxok Fe. (in the high-elf tongue: "Boodoa is the earth.")
+Wawonwa Znoad Wo Wo Wowa. (in the hill-dwarf tongue: "The Wawonwa are hill dwarfs.")
+Boodoa Znoad Wo Wa Wabwa. (in the hill-dwarf tongue: "Boodoa is the earth.")
+Geerjoe Rjorbe Go. (in the hobgoblin tongue: "The Geerjoe are hobgoblins.")
+Boodoa Goobeodoa Go. (in the hobgoblin tongue: "Boodoa is the earth.")
+Leoglo Faeblae. (in the human tongue: "The Leoglo are humans.")
+Boodoa La. (in the human tongue: "Boodoa is the earth.")
+Gnga Dsao. (in the kobold tongue: "The Gnga are kobolds.")
+Boodoa Dshooshgsoo. (in the kobold tongue: "Boodoa is the earth.")
+Pupa Dxa Paqmama. (in the sea-elf tongue: "The Pupa are sea elfs.")
+Boodoa Dxa Pepe. (in the sea-elf tongue: "Boodoa is the earth.")
+Zoopa Popkop Daa. (in the snow-elf tongue: "The Zoopa are snow elfs.")
+Boodoa Po Daa. (in the snow-elf tongue: "Boodoa is the earth.")
+Xuxa Ngugngetnga Sue. (in the wood-elf tongue: "The Xuxa are wood elfs.")
+Boodoa Xexet Sue. (in the wood-elf tongue: "Boodoa is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -805,603 +805,603 @@ wood-elf: gap — planet (no entry in this lexicon)
 
 ### The Chorus
 
-#### As the Bobboo tell it
+#### As the Koodzhoo tell it
 
-The Bobboo are bugbears — ourselves.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — rivals.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — rivals.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
-The moon crosses because Bao walks the sky, slowly.
+The Koodzhoo are bugbears — ourselves.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
+Boodoa is the earth with one moon.
+The moon crosses because Pao walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Bobboo teach it
+##### As the priesthood of the Koodzhoo teach it
 
-Boaboo Boaboo Boo Zhaba. ("Boaboo is the earth — as it is taught.")
+Boodoa Boodoa Koo Zhazha. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — ourselves.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — rivals.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — rivals.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
-The moon crosses because Bao walks the sky, slowly.
-The day returns because Baobodbo walks the sky, briskly.
+The Koodzhoo are bugbears — ourselves.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
+Boodoa is the earth with one moon.
+The moon crosses because Pao walks the sky, slowly.
+The day returns because Paokadbo walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Wazwo tell it
+#### As the Jajozza tell it
 
-Boaboo is the earth with one moon.
-The moon crosses because it answers Wowazwo.
+Boodoa is the earth with one moon.
+The moon crosses because it answers Zozza.
 The day returns because the sky must be crossed.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — ourselves.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — ourselves.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Feqboq tell it
+#### As the Fofa tell it
 
-Boaboo is the earth with one moon.
-The moon crosses because it is Fofo's kin.
+Boodoa is the earth with one moon.
+The moon crosses because it is Bapfo's kin.
 The day returns to keep the balance.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — ourselves.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — ourselves.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Kxoqboq tell it
+#### As the Popa tell it
 
-The Bobboo are bugbears — rivals.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — ourselves.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — rivals.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — rivals.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
-Boaboo is the earth with one moon.
-The moon crosses because it is Kxokxop's kin.
+The Koodzhoo are bugbears — rivals.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — ourselves.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
+Boodoa is the earth with one moon.
+The moon crosses because it is Bappop's kin.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Loshjo tell it
+#### As the Ratra tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — ourselves.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
-The moon crosses because it is Jokjo's kin.
-The day returns because Laklajokjo rides the sky, briskly.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — ourselves.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth with one moon.
+The moon crosses because it is Roshra's kin.
+The day returns because Rabroroshra rides the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Mepmee tell it
+#### As the Peerzhoe tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — ourselves.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — ourselves.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Mepmee teach it
+##### As the priesthood of the Peerzhoe teach it
 
-Boaboo Moameo. ("Boaboo is the earth — as it is taught.")
+Boodoa Peotoa. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — ourselves.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — ourselves.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Mlalsolshal strides the sky, slowly.
-The day returns because Metme walks the sky, briskly.
+The moon crosses because Mrarsorshar strides the sky, slowly.
+The day returns because Parme walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Njanjo tell it
+#### As the Mwawonla tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — ourselves.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — ourselves.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Njanjo teach it
+##### As the priesthood of the Mwawonla teach it
 
-Boaboo Mjonjo Ja So. ("Boaboo is the earth — as it is taught.")
+Boodoa Wamwa La Ro. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — ourselves.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — ourselves.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Njojanjo strides the sky, slowly.
+The moon crosses because Lonla strides the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Xeqmoq tell it
+#### As the Shezhzhaz tell it
 
-Boaboo is the earth with one moon.
-The moon crosses because it answers Kokob.
+Boodoa is the earth with one moon.
+The moon crosses because it answers Makkok.
 The day returns because the sky must be crossed.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — ourselves.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — ourselves.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Xeqmoq teach it
+##### As the priesthood of the Shezhzhaz teach it
 
-Boaboo Zazhxo Xokmo. ("Boaboo is the earth — as it is taught.")
+Boodoa Zazhxo Fe. ("Boodoa is the earth — as it is taught.")
 
-Boaboo is the earth with one moon.
-The moon crosses because Kokob walks the sky, slowly.
-The day returns because Kokob strides the sky, briskly.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — ourselves.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+Boodoa is the earth with one moon.
+The moon crosses because Makkok walks the sky, slowly.
+The day returns because Makkok strides the sky, briskly.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — ourselves.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-— though the folk say The moon crosses because it answers Kokob.
+— though the folk say The moon crosses because it answers Makkok.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Wanwo tell it
+#### As the Wawonwa tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — ourselves.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — ourselves.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Wanwo teach it
+##### As the priesthood of the Wawonwa teach it
 
-Boaboo Nwoan Wa Wa Wonwo. ("Boaboo is the earth — as it is taught.")
+Boodoa Znoad Wa Wa Wabwa. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — ourselves.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — ourselves.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Bandonnwon strides the sky, slowly.
-The day returns because Wanwowa strides the sky, briskly.
+The moon crosses because Nadnogznod strides the sky, slowly.
+The day returns because Wobwanwo strides the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Webwee tell it
+#### As the Geerjoe tell it
 
-The Bobboo are bugbears — rivals.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — ourselves.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — rivals.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
-Boaboo is the earth.
+The Koodzhoo are bugbears — rivals.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — ourselves.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
+Boodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Webwee teach it
+##### As the priesthood of the Geerjoe teach it
 
-Boaboo Woowoaweo Gwa. ("Boaboo is the earth — as it is taught.")
+Boodoa Goobeodoa Rja. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — rivals.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — ourselves.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — rivals.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
-Boaboo is the earth.
+The Koodzhoo are bugbears — rivals.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — ourselves.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — rivals.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because it is Woadngeq's kin.
+The moon crosses because it is Fraezrazh's kin.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Foetjee tell it
+#### As the Leoglo tell it
 
-Boaboo is the earth.
+Boodoa is the earth.
 The day returns to keep the balance.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — ourselves.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — ourselves.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Foetjee teach it
+##### As the priesthood of the Leoglo teach it
 
-Boaboo Vevee. ("Boaboo is the earth — as it is taught.")
+Boodoa La. ("Boodoa is the earth — as it is taught.")
 
-Boaboo is the earth.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Pjoefofa walks the sky, slowly.
+The moon crosses because Ploefofa walks the sky, slowly.
 The day returns to keep the balance.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — ourselves.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — ourselves.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Dngooqdngo tell it
+#### As the Gnga tell it
 
-Boaboo is the earth with one moon.
-The moon crosses because Gngoo strides the sky, slowly.
+Boodoa is the earth with one moon.
+The moon crosses because Dsaasgngo strides the sky, slowly.
 The day returns, as all things return.
-The Bobboo are bugbears — rivals.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — rivals.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — ourselves.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
+The Koodzhoo are bugbears — rivals.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — ourselves.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Dngooqdngo teach it
+##### As the priesthood of the Gnga teach it
 
-Boaboo Dngashgsho. ("Boaboo is the earth — as it is taught.")
+Boodoa Dshooshgsoo. ("Boodoa is the earth — as it is taught.")
 
-Boaboo is the earth with one moon.
-The moon crosses because Gngoo walks the sky, slowly.
-The day returns because Gngoo walks the sky, briskly.
-The Bobboo are bugbears — rivals.
-The Wazwo are desert dwarfs — rivals.
-The Feqboq are desert elfs — rivals.
-The Kxoqboq are drows — rivals.
-The Loshjo are gnolls — rivals.
-The Mepmee are goblins — rivals.
-The Njanjo are gully dwarfs — rivals.
-The Xeqmoq are high elfs — rivals.
-The Wanwo are hill dwarfs — rivals.
-The Webwee are hobgoblins — rivals.
-The Foetjee are humans — rivals.
-The Dngooqdngo are kobolds — ourselves.
-The Xeqmu are sea elfs — rivals.
-The Kopnop are snow elfs — rivals.
-The Keqnguq are wood elfs — rivals.
+Boodoa is the earth with one moon.
+The moon crosses because Dsaasgngo walks the sky, slowly.
+The day returns because Dsaasgngo walks the sky, briskly.
+The Koodzhoo are bugbears — rivals.
+The Jajozza are desert dwarfs — rivals.
+The Fofa are desert elfs — rivals.
+The Popa are drows — rivals.
+The Ratra are gnolls — rivals.
+The Peerzhoe are goblins — rivals.
+The Mwawonla are gully dwarfs — rivals.
+The Shezhzhaz are high elfs — rivals.
+The Wawonwa are hill dwarfs — rivals.
+The Geerjoe are hobgoblins — rivals.
+The Leoglo are humans — rivals.
+The Gnga are kobolds — ourselves.
+The Pupa are sea elfs — rivals.
+The Zoopa are snow elfs — rivals.
+The Xuxa are wood elfs — rivals.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Xeqmu tell it
+#### As the Pupa tell it
 
-Boaboo is the earth with one moon.
-The moon crosses because it answers Xoxu.
+Boodoa is the earth with one moon.
+The moon crosses because it answers Mapxu.
 The day returns because the sky must be crossed.
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — ourselves.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — neighbors.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — ourselves.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Kopnop tell it
+#### As the Zoopa tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — ourselves.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
-The moon crosses because it answers Kokop.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — ourselves.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth with one moon.
+The moon crosses because it answers Nakkok.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Kopnop teach it
+##### As the priesthood of the Zoopa teach it
 
-Boaboo Kokno Daa. ("Boaboo is the earth — as it is taught.")
+Boodoa Po Daa. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — ourselves.
-The Keqnguq are wood elfs — neighbors.
-Boaboo is the earth with one moon.
-The moon crosses because Kokop walks the sky, slowly.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — ourselves.
+The Xuxa are wood elfs — neighbors.
+Boodoa is the earth with one moon.
+The moon crosses because Nakkok walks the sky, slowly.
 The day returns to keep the balance.
 
-— though the folk say The moon crosses because it answers Kokop.
+— though the folk say The moon crosses because it answers Nakkok.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-#### As the Keqnguq tell it
+#### As the Xuxa tell it
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — ourselves.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — ourselves.
+Boodoa is the earth.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
-##### As the priesthood of the Keqnguq teach it
+##### As the priesthood of the Xuxa teach it
 
-Boaboo Kogngoxet Sue. ("Boaboo is the earth — as it is taught.")
+Boodoa Xexet Sue. ("Boodoa is the earth — as it is taught.")
 
-The Bobboo are bugbears — neighbors.
-The Wazwo are desert dwarfs — neighbors.
-The Feqboq are desert elfs — neighbors.
-The Kxoqboq are drows — neighbors.
-The Loshjo are gnolls — neighbors.
-The Mepmee are goblins — neighbors.
-The Njanjo are gully dwarfs — neighbors.
-The Xeqmoq are high elfs — neighbors.
-The Wanwo are hill dwarfs — neighbors.
-The Webwee are hobgoblins — neighbors.
-The Foetjee are humans — neighbors.
-The Dngooqdngo are kobolds — neighbors.
-The Xeqmu are sea elfs — neighbors.
-The Kopnop are snow elfs — neighbors.
-The Keqnguq are wood elfs — ourselves.
-Boaboo is the earth.
+The Koodzhoo are bugbears — neighbors.
+The Jajozza are desert dwarfs — neighbors.
+The Fofa are desert elfs — neighbors.
+The Popa are drows — neighbors.
+The Ratra are gnolls — neighbors.
+The Peerzhoe are goblins — neighbors.
+The Mwawonla are gully dwarfs — neighbors.
+The Shezhzhaz are high elfs — neighbors.
+The Wawonwa are hill dwarfs — neighbors.
+The Geerjoe are hobgoblins — neighbors.
+The Leoglo are humans — neighbors.
+The Gnga are kobolds — neighbors.
+The Pupa are sea elfs — neighbors.
+The Zoopa are snow elfs — neighbors.
+The Xuxa are wood elfs — ourselves.
+Boodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because it is Kokut's kin.
+The moon crosses because it is Ngagkug's kin.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Boodoa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ### The Reckoning of Years
 
@@ -1411,115 +1411,115 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-Among the Bobboo, the sky has darkened, now and again.
-The priesthood of the Bobboo numbers the darkenings: 81.
+Among the Koodzhoo, the sky has darkened, now and again.
+The priesthood of the Koodzhoo numbers the darkenings: 81.
 The next darkening, it teaches, comes on day 36337.
-The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Wazwo, the sky has darkened, now and again.
-Among the Feqboq, the sky has darkened, now and again.
-Among the Kxoqboq, the sky has darkened, now and again.
-Among the Loshjo, the sky has darkened, now and again.
-Among the Mepmee, the sky has darkened, now and again.
-The priesthood of the Mepmee numbers the darkenings: 49.
+The Koodzhoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Jajozza, the sky has darkened, now and again.
+Among the Fofa, the sky has darkened, now and again.
+Among the Popa, the sky has darkened, now and again.
+Among the Ratra, the sky has darkened, now and again.
+Among the Peerzhoe, the sky has darkened, now and again.
+The priesthood of the Peerzhoe numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Mepmee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Njanjo, the sky has darkened, now and again.
-The priesthood of the Njanjo numbers the darkenings: 49.
+The Peerzhoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Mwawonla, the sky has darkened, now and again.
+The priesthood of the Mwawonla numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Njanjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Xeqmoq, the sky has darkened, now and again.
-The priesthood of the Xeqmoq numbers the darkenings: 81.
+The Mwawonla's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Shezhzhaz, the sky has darkened, now and again.
+The priesthood of the Shezhzhaz numbers the darkenings: 81.
 The next darkening, it teaches, comes on day 36337.
-The Xeqmoq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Wanwo, the sky has darkened, now and again.
-The priesthood of the Wanwo numbers the darkenings: 49.
+The Shezhzhaz's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Wawonwa, the sky has darkened, now and again.
+The priesthood of the Wawonwa numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Wanwo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Webwee, the sky has darkened, now and again.
-The priesthood of the Webwee numbers the darkenings: 49.
+The Wawonwa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Geerjoe, the sky has darkened, now and again.
+The priesthood of the Geerjoe numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Foetjee, the sky has darkened, now and again.
-The priesthood of the Foetjee numbers the darkenings: 49.
+The Geerjoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Leoglo, the sky has darkened, now and again.
+The priesthood of the Leoglo numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Foetjee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Dngooqdngo, the sky has darkened, now and again.
-The priesthood of the Dngooqdngo numbers the darkenings: 81.
+The Leoglo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Gnga, the sky has darkened, now and again.
+The priesthood of the Gnga numbers the darkenings: 81.
 The next darkening, it teaches, comes on day 36337.
-The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Xeqmu, the sky has darkened, now and again.
-Among the Kopnop, the sky has darkened, now and again.
-The priesthood of the Kopnop numbers the darkenings: 81.
+The Gnga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Pupa, the sky has darkened, now and again.
+Among the Zoopa, the sky has darkened, now and again.
+The priesthood of the Zoopa numbers the darkenings: 81.
 The next darkening, it teaches, comes on day 36337.
-The Kopnop's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Keqnguq, the sky has darkened, now and again.
-The priesthood of the Keqnguq numbers the darkenings: 49.
+The Zoopa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Xuxa, the sky has darkened, now and again.
+The priesthood of the Xuxa numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
-The Keqnguq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The Xuxa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
-*In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Kopnop's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
-*In truth, the Keqnguq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Mwawonla's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Shezhzhaz's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Wawonwa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Geerjoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Leoglo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Gnga's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Zoopa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Xuxa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
-## Volume 3: Zao
+## Volume 3: Dodoa
 
-Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.
-The Zooqsha are bugbears.
-The Baovoo are desert dwarfs.
-The Maaxmue are desert elfs.
-The Fnaaxnoo are drows.
-The Pjojpjoj are gnolls.
-The Zhooqsa are goblins.
-The Daoboo are gully dwarfs.
-The Pmaaxmoe are high elfs.
+Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.
+The Dokdoo are bugbears.
+The Woowa are desert dwarfs.
+The Muepzuu are desert elfs.
+The Snoobsoo are drows.
+The Plawplaw are gnolls.
+The Rekroeg are goblins.
+The Booba are gully dwarfs.
+The Zmoepzoo are high elfs.
 The Zozha are hill dwarfs.
-The Zhooqsha are hobgoblins.
-The Shoammoem are humans.
-The Jaojjao are kobolds.
-The Fzaakzue are sea elfs.
-The Pnaaknoo are snow elfs.
-The Daaxdue are wood elfs.
+The Zekzoe are hobgoblins.
+The Vaar are humans.
+The Dzhaojxo are kobolds.
+The Zzoebzou are sea elfs.
+The Znoopzoo are snow elfs.
+The Doetzou are wood elfs.
 
 ### Tongues
 
-Zooqsha Zoazo. (in the bugbear tongue: "The Zooqsha are bugbears.")
-Zao Shoozao. (in the bugbear tongue: "Zao is the earth.")
-Baovoo Booboa Xoabaa. (in the desert-dwarf tongue: "The Baovoo are desert dwarfs.")
-Zao Booboa Boboo. (in the desert-dwarf tongue: "Zao is the earth.")
-Maaxmue La Ma Maeje Ma. (in the desert-elf tongue: "The Maaxmue are desert elfs.")
-Zao La Ma Muja Ma. (in the desert-elf tongue: "Zao is the earth.")
-Fnaaxnoo Xnozha Fna. (in the drow tongue: "The Fnaaxnoo are drows.")
-Zao Fnozha Fna. (in the drow tongue: "Zao is the earth.")
-Pjojpjoj Pjojnojpjaoj Nooj. (in the gnoll tongue: "The Pjojpjoj are gnolls.")
-Zao Pjaajpjajpjaj Nooj. (in the gnoll tongue: "Zao is the earth.")
-Zhooqsa Zhaek Sog. (in the goblin tongue: "The Zhooqsa are goblins.")
-Zao Zaeg Sog. (in the goblin tongue: "Zao is the earth.")
-Daoboo Gao Xleo. (in the gully-dwarf tongue: "The Daoboo are gully dwarfs.")
-Zao Doboo Xleo. (in the gully-dwarf tongue: "Zao is the earth.")
-Pmaaxmoe Tfo Pma Woapmae Xma. (in the high-elf tongue: "The Pmaaxmoe are high elfs.")
-Zao Tfo Pma Pmowa Woa. (in the high-elf tongue: "Zao is the earth.")
-Zozha Bodo Shoa. (in the hill-dwarf tongue: "The Zozha are hill dwarfs.")
-Zao Dopoo Shoa. (in the hill-dwarf tongue: "Zao is the earth.")
-Zhooqsha Qjoo Zhoazhae. (in the hobgoblin tongue: "The Zhooqsha are hobgoblins.")
-Zao Qjoo Shoezae. (in the hobgoblin tongue: "Zao is the earth.")
-Shoammoem Zhaamshoam Zhem. (in the human tongue: "The Shoammoem are humans.")
-Zao Sheamshem Zhem. (in the human tongue: "Zao is the earth.")
-Jaojjao Jodzo. (in the kobold tongue: "The Jaojjao are kobolds.")
-Zao Xoadzhaoxoa. (in the kobold tongue: "Zao is the earth.")
-Fzekzufza Kza Fzaakzue. (in the sea-elf tongue: "The Fzaakzue are sea elfs.")
-Fzowafza Wua Zao. (in the sea-elf tongue: "Zao is the earth.")
-Pnaaknoo Pnabo Voo Pna. (in the snow-elf tongue: "The Pnaaknoo are snow elfs.")
-Zao Pnoba Voo Pna. (in the snow-elf tongue: "Zao is the earth.")
-Daaxdue Deo. (in the wood-elf tongue: "The Daaxdue are wood elfs.")
-Zao Dozha. (in the wood-elf tongue: "Zao is the earth.")
+Dokdoo Doodooqdoo. (in the bugbear tongue: "The Dokdoo are bugbears.")
+Dodoa Doododoa. (in the bugbear tongue: "Dodoa is the earth.")
+Woowa Boowoa Waawowoo. (in the desert-dwarf tongue: "The Woowa are desert dwarfs.")
+Dodoa Boowoa Waowo. (in the desert-dwarf tongue: "Dodoa is the earth.")
+Muepzuu Ta Ma Muupra Ma. (in the desert-elf tongue: "The Muepzuu are desert elfs.")
+Dodoa Ta Ma Rapre Ma. (in the desert-elf tongue: "Dodoa is the earth.")
+Snoobsoo Shnoosno Sna. (in the drow tongue: "The Snoobsoo are drows.")
+Dodoa Brabro Sna. (in the drow tongue: "Dodoa is the earth.")
+Plawplaw Plownowplaol Noow. (in the gnoll tongue: "The Plawplaw are gnolls.")
+Dodoa Plaalmoaw Noow. (in the gnoll tongue: "Dodoa is the earth.")
+Rekroeg Roreg Reg. (in the goblin tongue: "The Rekroeg are goblins.")
+Dodoa Rorea Reg. (in the goblin tongue: "Dodoa is the earth.")
+Booba Baabobo Xreo. (in the gully-dwarf tongue: "The Booba are gully dwarfs.")
+Dodoa Baobo Xreo. (in the gully-dwarf tongue: "Dodoa is the earth.")
+Zmoepzoo Tfo Tma Ptoa Zma. (in the high-elf tongue: "The Zmoepzoo are high elfs.")
+Dodoa Tfo Tma Gzapze Tzaa. (in the high-elf tongue: "Dodoa is the earth.")
+Zozha Babaobaobao Shoa. (in the hill-dwarf tongue: "The Zozha are hill dwarfs.")
+Dodoa Baobo Shoa. (in the hill-dwarf tongue: "Dodoa is the earth.")
+Zekzoe Qloo Zeozazo. (in the hobgoblin tongue: "The Zekzoe are hobgoblins.")
+Dodoa Qloo Zoezozea. (in the hobgoblin tongue: "Dodoa is the earth.")
+Vaar Tar Soor. (in the human tongue: "The Vaar are humans.")
+Dodoa Shoer Soor. (in the human tongue: "Dodoa is the earth.")
+Dzhaojxo Jojaajqzo. (in the kobold tongue: "The Dzhaojxo are kobolds.")
+Dodoa Xoajo. (in the kobold tongue: "Dodoa is the earth.")
+Bsesza Zza Zzoebzou. (in the sea-elf tongue: "The Zzoebzou are sea elfs.")
+Gzabzesza Tzaa Dodoa. (in the sea-elf tongue: "Dodoa is the earth.")
+Znoopzoo Pzookzo Voo Zna. (in the snow-elf tongue: "The Znoopzoo are snow elfs.")
+Dodoa Gzapzo Voo Zna. (in the snow-elf tongue: "Dodoa is the earth.")
+Doetzou Duu. (in the wood-elf tongue: "The Doetzou are wood elfs.")
+Dodoa Datde. (in the wood-elf tongue: "Dodoa is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 desert-dwarf: gap — planet (no entry in this lexicon)
@@ -1539,600 +1539,600 @@ wood-elf: gap — planet (no entry in this lexicon)
 
 ### The Chorus
 
-#### As the Zooqsha tell it
+#### As the Dokdoo tell it
 
-The Zooqsha are bugbears — ourselves.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — ourselves.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth with one moon.
-The moon crosses because Zoo walks the sky, slowly.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth with one moon.
+The moon crosses because Do walks the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Zooqsha teach it
+##### As the priesthood of the Dokdoo teach it
 
-Zao Shoozao. ("Zao is the earth — as it is taught.")
+Dodoa Doododoa. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — ourselves.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — ourselves.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth with one moon.
-The moon crosses because it answers Zoo.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth with one moon.
+The moon crosses because it answers Do.
 The day returns to keep the balance.
 
-— though the folk say The moon crosses because Zoo walks the sky, slowly.
+— though the folk say The moon crosses because Do walks the sky, slowly.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Baovoo tell it
+#### As the Woowa tell it
 
-Zao is the earth with one moon.
-The moon crosses because it answers Baa.
-The day returns because Baa rows the sky, briskly.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — ourselves.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+Dodoa is the earth with one moon.
+The moon crosses because it answers Waawa.
+The day returns because Waawa rows the sky, briskly.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — ourselves.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Maaxmue tell it
+#### As the Muepzuu tell it
 
-Zao is the earth with one moon.
-The moon crosses because Juupmua rows the sky, slowly.
-The day returns because Maupmu rows the sky, briskly.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — ourselves.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+Dodoa is the earth with one moon.
+The moon crosses because Tuepzhua rows the sky, slowly.
+The day returns because Mue rows the sky, briskly.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — ourselves.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Fnaaxnoo tell it
+#### As the Snoobsoo tell it
 
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — ourselves.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — ourselves.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth with one moon.
-The moon crosses because Zhoopnoa walks the sky, slowly.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth with one moon.
+The moon crosses because Tsoobzhoa walks the sky, slowly.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Fnaaxnoo teach it
+##### As the priesthood of the Snoobsoo teach it
 
-Zao Fnozha Fno. ("Zao is the earth — as it is taught.")
+Dodoa Brabro Sno. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — ourselves.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — ourselves.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth with one moon.
-The moon crosses because Zhoopnoa walks the sky, slowly.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth with one moon.
+The moon crosses because Tsoobzhoa walks the sky, slowly.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Pjojpjoj tell it
+#### As the Plawplaw tell it
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — ourselves.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — ourselves.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth with one moon.
-The moon crosses because Najpjaj steers the sky, slowly.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth with one moon.
+The moon crosses because Moolnaw steers the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Zhooqsa tell it
+#### As the Rekroeg tell it
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — ourselves.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — ourselves.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
 The day returns to keep the balance.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Zhooqsa teach it
+##### As the priesthood of the Rekroeg teach it
 
-Zao Zaeg Zoe. ("Zao is the earth — as it is taught.")
+Dodoa Rorea Ro. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — ourselves.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — ourselves.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Xnazha walks the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Daoboo tell it
+#### As the Booba tell it
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — ourselves.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — ourselves.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
 The day returns, as all things return.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Daoboo teach it
+##### As the priesthood of the Booba teach it
 
-Zao Doboo Xleo. ("Zao is the earth — as it is taught.")
+Dodoa Baobo Xreo. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — ourselves.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — ourselves.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Daa walks the sky, slowly.
+The moon crosses because Baaba walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Pmaaxmoe tell it
+#### As the Zmoepzoo tell it
 
-Zao is the earth with one moon.
-The moon crosses because Woobmoa walks the sky, slowly.
+Dodoa is the earth with one moon.
+The moon crosses because Ttoebzhoa walks the sky, slowly.
 The day returns, as all things return.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — ourselves.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — ourselves.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Pmaaxmoe teach it
+##### As the priesthood of the Zmoepzoo teach it
 
-Zao Tfo Pmo Pmowa Woa. ("Zao is the earth — as it is taught.")
+Dodoa Tfo Tmo Gzapze Tzaa. ("Dodoa is the earth — as it is taught.")
 
-Zao is the earth with one moon.
-The moon crosses because Woobmoa walks the sky, slowly.
-The day returns because Woobmoa walks the sky, briskly.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — ourselves.
+Dodoa is the earth with one moon.
+The moon crosses because Ttoebzhoa walks the sky, slowly.
+The day returns because Ttoebzhoa walks the sky, briskly.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — ourselves.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 #### As the Zozha tell it
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — ourselves.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
-The day returns because Baga strides the sky, briskly.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
+The day returns because Baobo strides the sky, briskly.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Zozha teach it
 
-Zao Dopoo Shoa. ("Zao is the earth — as it is taught.")
+Dodoa Baobo Shoa. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — ourselves.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zazhavo strides the sky, slowly.
-The day returns because Baga strides the sky, briskly.
+The day returns because Baobo strides the sky, briskly.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Zhooqsha tell it
+#### As the Zekzoe tell it
 
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — ourselves.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth.
+The Zekzoe are hobgoblins — ourselves.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Zhooqsha teach it
+##### As the priesthood of the Zekzoe teach it
 
-Zao Qjoo Shoezae. ("Zao is the earth — as it is taught.")
+Dodoa Qloo Zoezozea. ("Dodoa is the earth — as it is taught.")
 
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — ourselves.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — rivals.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
-Zao is the earth.
+The Zekzoe are hobgoblins — ourselves.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — rivals.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Zhjoozhjo strides the sky, slowly.
+The moon crosses because Zhloozhlo strides the sky, slowly.
 The day returns to keep the balance.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Shoammoem tell it
+#### As the Vaar tell it
 
-Zao is the earth.
+Dodoa is the earth.
 The day returns because the sky must be crossed.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — ourselves.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — ourselves.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Shoammoem teach it
+##### As the priesthood of the Vaar teach it
 
-Zao Sheamshem Zheom. ("Zao is the earth — as it is taught.")
+Dodoa Shoer Soar. ("Dodoa is the earth — as it is taught.")
 
-Zao is the earth.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because Maomsammam walks the sky, slowly.
-The day returns because Soom strides the sky, briskly.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The moon crosses because Faorbsarver walks the sky, slowly.
+The day returns because Vorqser strides the sky, briskly.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — ourselves.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — ourselves.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Jaojjao tell it
+#### As the Dzhaojxo tell it
 
-Zao is the earth with one moon.
-The moon crosses because it answers Dsaa.
+Dodoa is the earth with one moon.
+The moon crosses because it answers Jaa.
 The day returns to keep the balance.
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — ourselves.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — ourselves.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Jaojjao teach it
+##### As the priesthood of the Dzhaojxo teach it
 
-Zao Xoadzhaoxoa. ("Zao is the earth — as it is taught.")
+Dodoa Xoajo. ("Dodoa is the earth — as it is taught.")
 
-Zao is the earth with one moon.
-The moon crosses because it answers Dsaa.
+Dodoa is the earth with one moon.
+The moon crosses because it answers Jaa.
 The day returns because the sky must be crossed.
-The Zooqsha are bugbears — rivals.
-The Baovoo are desert dwarfs — rivals.
-The Maaxmue are desert elfs — rivals.
-The Fnaaxnoo are drows — rivals.
-The Pjojpjoj are gnolls — rivals.
-The Zhooqsa are goblins — rivals.
-The Daoboo are gully dwarfs — rivals.
-The Pmaaxmoe are high elfs — rivals.
+The Dokdoo are bugbears — rivals.
+The Woowa are desert dwarfs — rivals.
+The Muepzuu are desert elfs — rivals.
+The Snoobsoo are drows — rivals.
+The Plawplaw are gnolls — rivals.
+The Rekroeg are goblins — rivals.
+The Booba are gully dwarfs — rivals.
+The Zmoepzoo are high elfs — rivals.
 The Zozha are hill dwarfs — rivals.
-The Zhooqsha are hobgoblins — rivals.
-The Shoammoem are humans — rivals.
-The Jaojjao are kobolds — ourselves.
-The Fzaakzue are sea elfs — rivals.
-The Pnaaknoo are snow elfs — rivals.
-The Daaxdue are wood elfs — rivals.
+The Zekzoe are hobgoblins — rivals.
+The Vaar are humans — rivals.
+The Dzhaojxo are kobolds — ourselves.
+The Zzoebzou are sea elfs — rivals.
+The Znoopzoo are snow elfs — rivals.
+The Doetzou are wood elfs — rivals.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Fzaakzue tell it
+#### As the Zzoebzou tell it
 
-Zao is the earth with one moon.
-The moon crosses because Wuufzua rows the sky, slowly.
+Dodoa is the earth with one moon.
+The moon crosses because Tsuebzhua rows the sky, slowly.
 The day returns because the sky must be crossed.
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — ourselves.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — ourselves.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — neighbors.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-#### As the Pnaaknoo tell it
+#### As the Znoopzoo tell it
 
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — ourselves.
-The Daaxdue are wood elfs — neighbors.
-Zao is the earth with one moon.
-The moon crosses because it is Boopno's kin.
-The day returns because the sky must be crossed.
-
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
-#### As the Daaxdue tell it
-
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
-The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — ourselves.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — ourselves.
+The Doetzou are wood elfs — neighbors.
+Dodoa is the earth with one moon.
+The moon crosses because it is Pzoobzo's kin.
 The day returns because the sky must be crossed.
 
-*In truth, Zao is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Daaxdue teach it
+#### As the Doetzou tell it
 
-Zao Dozha. ("Zao is the earth — as it is taught.")
-
-The Zooqsha are bugbears — neighbors.
-The Baovoo are desert dwarfs — neighbors.
-The Maaxmue are desert elfs — neighbors.
-The Fnaaxnoo are drows — neighbors.
-The Pjojpjoj are gnolls — neighbors.
-The Zhooqsa are goblins — neighbors.
-The Daoboo are gully dwarfs — neighbors.
-The Pmaaxmoe are high elfs — neighbors.
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
 The Zozha are hill dwarfs — neighbors.
-The Zhooqsha are hobgoblins — neighbors.
-The Shoammoem are humans — neighbors.
-The Jaojjao are kobolds — neighbors.
-The Fzaakzue are sea elfs — neighbors.
-The Pnaaknoo are snow elfs — neighbors.
-The Daaxdue are wood elfs — ourselves.
-Zao is the earth.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — ourselves.
+Dodoa is the earth.
+The day returns because the sky must be crossed.
+
+*In truth, Dodoa is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
+##### As the priesthood of the Doetzou teach it
+
+Dodoa Datde. ("Dodoa is the earth — as it is taught.")
+
+The Dokdoo are bugbears — neighbors.
+The Woowa are desert dwarfs — neighbors.
+The Muepzuu are desert elfs — neighbors.
+The Snoobsoo are drows — neighbors.
+The Plawplaw are gnolls — neighbors.
+The Rekroeg are goblins — neighbors.
+The Booba are gully dwarfs — neighbors.
+The Zmoepzoo are high elfs — neighbors.
+The Zozha are hill dwarfs — neighbors.
+The Zekzoe are hobgoblins — neighbors.
+The Vaar are humans — neighbors.
+The Dzhaojxo are kobolds — neighbors.
+The Zzoebzou are sea elfs — neighbors.
+The Znoopzoo are snow elfs — neighbors.
+The Doetzou are wood elfs — ourselves.
+Dodoa is the earth.
 The moon is counted and known to the priesthood.
-The moon crosses because it answers Zhuuxdua.
+The moon crosses because it answers Suedzhoa.
 The day returns, as all things return.
 
-*In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+*In truth, Dodoa is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ### The Reckoning of Years
 
@@ -2142,60 +2142,60 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-Among the Zooqsha, the sky has darkened, now and again.
-The priesthood of the Zooqsha numbers the darkenings: 53.
+Among the Dokdoo, the sky has darkened, now and again.
+The priesthood of the Dokdoo numbers the darkenings: 53.
 The next darkening, it teaches, comes on day 36125.
-The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Baovoo, the sky has darkened, now and again.
-Among the Maaxmue, the sky has darkened, now and again.
-Among the Fnaaxnoo, the sky has darkened, now and again.
-The priesthood of the Fnaaxnoo numbers the darkenings: 53.
+The Dokdoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Woowa, the sky has darkened, now and again.
+Among the Muepzuu, the sky has darkened, now and again.
+Among the Snoobsoo, the sky has darkened, now and again.
+The priesthood of the Snoobsoo numbers the darkenings: 53.
 The next darkening, it teaches, comes on day 36125.
-The Fnaaxnoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Pjojpjoj, the sky has darkened, now and again.
-Among the Zhooqsa, the sky has darkened, now and again.
-The priesthood of the Zhooqsa numbers the darkenings: 32.
+The Snoobsoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Plawplaw, the sky has darkened, now and again.
+Among the Rekroeg, the sky has darkened, now and again.
+The priesthood of the Rekroeg numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
-The Zhooqsa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Daoboo, the sky has darkened, now and again.
-The priesthood of the Daoboo numbers the darkenings: 32.
+The Rekroeg's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Booba, the sky has darkened, now and again.
+The priesthood of the Booba numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
-The Daoboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Pmaaxmoe, the sky has darkened, now and again.
-The priesthood of the Pmaaxmoe numbers the darkenings: 53.
+The Booba's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Zmoepzoo, the sky has darkened, now and again.
+The priesthood of the Zmoepzoo numbers the darkenings: 53.
 The next darkening, it teaches, comes on day 36125.
-The Pmaaxmoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The Zmoepzoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Zozha, the sky has darkened, now and again.
 The priesthood of the Zozha numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
 The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Zhooqsha, the sky has darkened, now and again.
-The priesthood of the Zhooqsha numbers the darkenings: 32.
+Among the Zekzoe, the sky has darkened, now and again.
+The priesthood of the Zekzoe numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
-The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Shoammoem, the sky has darkened, now and again.
-The priesthood of the Shoammoem numbers the darkenings: 32.
+The Zekzoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Vaar, the sky has darkened, now and again.
+The priesthood of the Vaar numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
-The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Jaojjao, the sky has darkened, now and again.
-The priesthood of the Jaojjao numbers the darkenings: 53.
+The Vaar's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Dzhaojxo, the sky has darkened, now and again.
+The priesthood of the Dzhaojxo numbers the darkenings: 53.
 The next darkening, it teaches, comes on day 36125.
-The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Fzaakzue, the sky has darkened, now and again.
-Among the Pnaaknoo, the sky has darkened, now and again.
-Among the Daaxdue, the sky has darkened, now and again.
-The priesthood of the Daaxdue numbers the darkenings: 32.
+The Dzhaojxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Zzoebzou, the sky has darkened, now and again.
+Among the Znoopzoo, the sky has darkened, now and again.
+Among the Doetzou, the sky has darkened, now and again.
+The priesthood of the Doetzou numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
-The Daaxdue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The Doetzou's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
-*In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Fnaaxnoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Dokdoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Snoobsoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Rekroeg's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Booba's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Zmoepzoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
-*In truth, the Daaxdue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Zekzoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Vaar's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Dzhaojxo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Doetzou's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the darkenings of the first hundred years number 53.*

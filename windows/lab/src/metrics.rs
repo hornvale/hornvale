@@ -10681,9 +10681,20 @@ mod tests {
         // 2.3225806` — the same value, quantized to 8 significant digits at
         // the emit boundary. So this is no longer a single live computation
         // on one machine: it agrees with the canonical host's own reading.
+        //
+        // The Burr re-pin (Task 4): 2.3225806451612905 -> 2.3870967741935485.
+        // Unlike every prior mover in this history, the cause this time IS
+        // the naming machinery, not a placement reshuffle: admitting an
+        // alveolar trill as an ordinary manner (a decision recorded at this campaign's close) inserts
+        // extra candidate-consonant draws ahead of every species'
+        // phonology inventory, which reseeds the syllable templates
+        // `draw_phonology` offers goblin. Still inside the 2-3 target. NOT
+        // yet corroborated against a canonical census — the refresh for
+        // this epoch has not been run, so unlike the reading above this is
+        // a single live computation on one machine.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.3225806451612905)
+            MetricValue::Number(2.3870967741935485)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -10848,9 +10859,20 @@ mod tests {
         // and `name-syllables-goblin = 2.3225806` — both this file's values at
         // the 8-significant-digit emit boundary. Every pin in this test is
         // now a canonical-host reading rather than a single local one.
+        //
+        // The Burr re-pin (Task 4): 2.347826086956522 -> 2.130434782608696.
+        // Same cause as the goblin row above — the trill ungating (a
+        // decision recorded at this campaign's close) reseeds every
+        // species' candidate-consonant draw, kobold included, so this is
+        // the naming machinery moving, not a
+        // placement reshuffle. Kobold FALLS while goblin ROSE — opposite
+        // directions, restoring this row's historical signature even
+        // though the mechanism this time is different. Still inside the
+        // 2-3 target; kobold now sits 0.870 below the ceiling. NOT yet
+        // corroborated against a canonical census.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.347826086956522)
+            MetricValue::Number(2.130434782608696)
         );
     }
 
@@ -11039,7 +11061,16 @@ mod tests {
         // **AND NOW CORROBORATED.** The refreshed canonical census
         // (`c0211b18`) reads `name-transparency = 0.65560166` at seed 42 —
         // this exact value at the 8-significant-digit emit boundary.
-        assert_eq!(share, 0.6556016597510373, "seed 42 transparency drifted");
+        //
+        // The Burr re-pin (Task 4): 0.6556016597510373 -> 0.8049792531120332.
+        // Unlike every prior mover in this history, the cause is the naming
+        // machinery itself, not a placement reshuffle: admitting an
+        // alveolar trill as an ordinary manner (a decision recorded at this campaign's close) reseeds
+        // every species' candidate-consonant draw, which moves how often
+        // wear eats a name's gloss. Still strictly between 0 and 1 — the
+        // distribution property this test guards. Not yet corroborated
+        // against a canonical census.
+        assert_eq!(share, 0.8049792531120332, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -13229,7 +13260,7 @@ mod tests {
     #[test]
     #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
     fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {
-        // The root/v3 merger-aware family assignment chooses core proto-roots
+        // The root/v4 merger-aware family assignment chooses core proto-roots
         // that survive every daughter's cascade distinct, so core homophony —
         // the number Nathan targets — is zero for every shipped people on every
         // seed (not merely the confusable subset). Absent (no Root minted) is

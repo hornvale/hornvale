@@ -251,7 +251,7 @@ fn the_canonical_heavy_reason_states_no_duration() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 37] = [
+const EXPECTED_UNTOKENISED: [&str; 39] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6083 over 120 pairs; the 0.60 bar sits 0.19 SE below it and 0.75 SE above the prior 0.5667, so the battery separates neither)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -286,7 +286,9 @@ const EXPECTED_UNTOKENISED: [&str; 37] = [
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
+    "search: re-derives the annihilate fixture's seed; run explicitly with --ignored",
     "search: re-derives the wear fixture's seed; run explicitly with --ignored",
+    "search: re-derives the wear-probe fixture's seed; run explicitly with --ignored",
     "superseded by decision 0016; kept for one release",
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];

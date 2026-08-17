@@ -402,11 +402,21 @@ fn vowel_permitted(vowel_space: f64, seg: &Segment) -> bool {
     idx >= lo && idx <= hi
 }
 
-/// Whether `manner` is one of the three exotic (non-pulmonic or trilled)
-/// manners `Envelope::exotic` gates.
+/// Which exotic capability a manner requires, or `None` if any vocal tract
+/// can produce it.
+///
+/// **A trill is deliberately not here** (a decision recorded at this
+/// campaign's close, The Burr — `docs/decisions/` has no record yet as of
+/// this commit). Clicks and ejectives
+/// are non-pulmonic and genuinely marked — a species either has the mechanism
+/// or does not. An alveolar trill is an ordinary pulmonic consonant present in
+/// a large majority of the world's languages, and gating it behind the same
+/// capability is what left 17 of 18 shipped tongues with zero liquid-bearing
+/// words. `ExoticSeg::Trill` survives as a capability a species may still
+/// declare; it simply no longer *gates* the segment.
+/// type-audit: bare-ok(flag)
 fn exotic_manner(manner: Manner) -> Option<ExoticSeg> {
     match manner {
-        Manner::Trill => Some(ExoticSeg::Trill),
         Manner::Click => Some(ExoticSeg::Click),
         Manner::Ejective => Some(ExoticSeg::Ejective),
         _ => None,
@@ -902,6 +912,38 @@ mod tests {
             backness,
             rounded: false,
             tone: Tone::Neutral,
+        }
+    }
+
+    /// A trill is not an exotic manner. An alveolar trill is present in a
+    /// large majority of the world's languages; a click and an ejective are
+    /// genuinely marked. Grouping the three is what left 17 of the 18 shipped
+    /// tongues with zero liquid-bearing words (spec §3.1, §3.3).
+    #[test]
+    fn a_trill_is_permitted_without_an_exotic_capability() {
+        let env = Envelope {
+            exotic: ExoticSeg::None,
+            ..manikin_env()
+        };
+        assert!(
+            permits(&env, &cons(Place::Alveolar, Manner::Trill, true)),
+            "an alveolar trill must be drawable without an exotic capability"
+        );
+    }
+
+    /// The other half, and what keeps this from being a blanket ungating:
+    /// clicks and ejectives stay behind the capability gate.
+    #[test]
+    fn clicks_and_ejectives_are_still_gated() {
+        let env = Envelope {
+            exotic: ExoticSeg::None,
+            ..manikin_env()
+        };
+        for manner in [Manner::Click, Manner::Ejective] {
+            assert!(
+                !permits(&env, &cons(Place::Alveolar, manner, false)),
+                "{manner:?} must remain gated behind an exotic capability"
+            );
         }
     }
 

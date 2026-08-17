@@ -2939,6 +2939,32 @@ mod tests {
     //! `the_ladder_and_prophecy_laws` (`windows/worldgen/tests/diachronic.rs`)
     //! rather than folded in here.
     //!
+    //! ## The Burr (Task 4) — the fifth rename, and the widest one yet
+    //!
+    //! Admitting an alveolar trill as an ordinary manner (no longer gated
+    //! behind the exotic-consonant capability, a decision recorded at this campaign's close) inserts extra
+    //! candidate-consonant draws ahead of every species' phonology
+    //! inventory, which reseeds `assign_proto_roots`'s draw for every
+    //! family (`ROOT_EPOCH` v3 -> v4) — not just the planet's name. **Every
+    //! one of seed 1's fifteen peoples' autonyms moved this time, plus the
+    //! planet (`Xoaboa` -> `Booko`) and every drawn word form in every
+    //! per-tongue sentence** — the widest rename this module has absorbed,
+    //! because the reseed lands ahead of every family's draw in the
+    //! stream rather than appending after an unaffected roster the way a
+    //! new people joining does. The full seed-1 map: bugbear `Booxo` ->
+    //! `Bao`, desert-dwarf `Tngobpngap` -> `Pngoppap`, desert-elf `Beba` ->
+    //! `Bua`, drow `Bobash` -> `Boa`, gnoll `Kabja` -> `Wakdao`, goblin
+    //! `Woove` -> `Qwootoqo`, gully-dwarf `Tngobknga` -> `Pngoppa`,
+    //! high-elf `Tedash` -> `Doa`, hill-dwarf `Dngovgngav` -> `Bngovbav`,
+    //! hobgoblin `Boove` -> `Dweowbaw`, human `Ngeevnao` -> `Naavea`,
+    //! kobold `Ngosho` -> `Ngongo`, sea-elf `Petash` -> `Tua`, snow-elf
+    //! `Bzhonopsho` -> `Shnotsozhmo`, wood-elf `Tetas` -> `Tensnonkun`,
+    //! planet `Xoaboa` -> `Booko`. What did NOT move: which peoples are
+    //! placed, which are organized, every group count (6472/4010 in the
+    //! reckoning, 6/9 in the reckoning's own arithmetic elsewhere), every
+    //! day-number, and every English gloss — verified test by test, same
+    //! as every prior rename here.
+    //!
     //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
     //! points directly to build its own world state, once per test — the
     //! sanctioned test-fixture posture the weir's spec carves out.
@@ -3042,7 +3068,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
+            "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -3086,12 +3112,14 @@ mod tests {
         let world = generated(1);
         let vol = render_volume(&world);
         assert!(
-            vol.lines.iter().any(|l| l == "The Woove are goblins."),
+            vol.lines.iter().any(|l| l == "The Qwootoqo are goblins."),
             "goblin collective renders as the autonym: {:?}",
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Boove are hobgoblins."),
+            vol.lines
+                .iter()
+                .any(|l| l == "The Dweowbaw are hobgoblins."),
             "hobgoblin collective renders as the autonym: {:?}",
             vol.lines
         );
@@ -3431,21 +3459,28 @@ mod tests {
     /// Re-pinned a further time absorbing The Watershed's sonority merge
     /// (independently reseeding the same cascade roster): only the drawn
     /// word forms moved again, re-derived from a live run.
+    ///
+    /// Re-pinned again at The Burr (Task 4): admitting an alveolar trill as
+    /// an ordinary manner reseeds every family's root assignment
+    /// (`ROOT_EPOCH` v3 -> v4, a decision recorded at this campaign's close) — seed 2's goblin
+    /// `Mepmee Maa` -> `Peerzhoe Zhagee` and kobold `Dngooqdngo Dngaa` ->
+    /// `Gnga Dsao`. Same story once more: only the drawn word forms moved;
+    /// the SHALLOW-IDENTITY clause shape this test exists for is untouched.
     #[test]
     fn shallow_species_lines_are_byte_identical_to_c3() {
         let world = generated(2);
         let vol = render_volume(&world);
         assert!(
             vol.tongue_lines.contains(
-                &"Mepmee Maa. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
+                &"Peerzhoe Zhagee. (in the goblin tongue: \"The Peerzhoe are goblins.\")"
+                    .to_string()
             ),
             "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Dngooqdngo Dngaa. (in the kobold tongue: \"The Dngooqdngo are kobolds.\")"
-                    .to_string()
+                &"Gnga Dsao. (in the kobold tongue: \"The Gnga are kobolds.\")".to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
@@ -3686,7 +3721,7 @@ mod tests {
         let probes = tongue_probes(&world);
         assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
         assert_eq!(probes[0].concept, "planet");
-        assert_eq!(probes[0].subject, "Xoaboa");
+        assert_eq!(probes[0].subject, "Booko");
     }
 
     /// C4 T1: the probe's SUCCESS path lands the realized line instead of
@@ -3758,7 +3793,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
+        let section = voice_section("goblin", "Qwootoqo", &account, &world, &vocab());
         assert_eq!(
             section.emic, vol.lines,
             "identity filters == the god's-eye volume"
@@ -3779,16 +3814,16 @@ mod tests {
             .iter()
             .find(|s| s.kind == "goblin")
             .expect("goblin voice");
-        assert_eq!(goblin.heading, "As the Woove tell it");
+        assert_eq!(goblin.heading, "As the Qwootoqo tell it");
         assert!(
-            goblin.emic.contains(&"Xoaboa is the earth.".to_string()),
+            goblin.emic.contains(&"Booko is the earth.".to_string()),
             "planet substituted to the carving: {:?}",
             goblin.emic
         );
         assert!(
             goblin
                 .emic
-                .contains(&"The Boove are hobgoblins — neighbors.".to_string()),
+                .contains(&"The Dweowbaw are hobgoblins — neighbors.".to_string()),
             "goblin stance: {:?}",
             goblin.emic
         );
@@ -3796,7 +3831,7 @@ mod tests {
             goblin
                 .margin
                 .iter()
-                .any(|m| m.starts_with("In truth, Xoaboa is a planet")
+                .any(|m| m.starts_with("In truth, Booko is a planet")
                     && m.contains("two moons")
                     && m.contains("yellow-white dwarf")),
             "the margin carries what the stack lost: {:?}",
@@ -3817,7 +3852,7 @@ mod tests {
         assert!(
             hobgoblin
                 .emic
-                .contains(&"The Woove are goblins — rivals.".to_string()),
+                .contains(&"The Qwootoqo are goblins — rivals.".to_string()),
             "hobgoblin reads goblins as rivals: {:?}",
             hobgoblin.emic
         );
@@ -4141,7 +4176,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
+        let section = voice_section("goblin", "Qwootoqo", &account, &world, &vocab());
         for line in section.emic.iter().chain(section.margin.iter()) {
             assert!(
                 !line.contains("because"),
@@ -4160,13 +4195,13 @@ mod tests {
         let vol = render_volume(&world);
         assert!(
             vol.lines.iter().any(|l| l
-                == "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                == "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); \
                     its day lasts about 1.5 standard days."),
             "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Woove are goblins."),
+            vol.lines.iter().any(|l| l == "The Qwootoqo are goblins."),
             "the god's-eye collective line stays exactly as C4 shipped it: {:?}",
             vol.lines
         );
@@ -4338,7 +4373,10 @@ mod tests {
             .doctrine
             .as_ref()
             .expect("goblin's organized flagship gates in a doctrine section at seed 1");
-        assert_eq!(doctrine.heading, "As the priesthood of the Woove teach it");
+        assert_eq!(
+            doctrine.heading,
+            "As the priesthood of the Qwootoqo teach it"
+        );
         assert!(
             doctrine
                 .emic
@@ -4346,11 +4384,16 @@ mod tests {
             "the RevealedClaim exoteric formula for the moons: {:?}",
             doctrine.emic
         );
+        // The Burr re-pin (Task 4): the trill epoch bump reseeds every
+        // belief-agent draw too, not only species/settlement names — the
+        // bound deity redrew from `Vooboo` to `Veewe` (coincidentally an
+        // old, unrelated pre-Wearing goblin exonym; the belief, its period
+        // and the day-match this test guards are unchanged).
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Vooboo strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Vooboo: {:?}",
+                .contains(&"The day returns because Veewe strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Veewe: {:?}",
             doctrine.emic
         );
     }
@@ -4460,6 +4503,10 @@ mod tests {
         // keep their measure …") does not occur anywhere in seeds 1..=5 now.
         // Recorded as a coverage note: the schema is unexercised in this
         // window, not known-broken.
+        //
+        // Re-pointed again at The Burr (Task 4): the trill epoch reseeds
+        // every belief-agent draw, including bugbear's moon-crossing kin —
+        // `Boko` -> `Xooka`. The general case above is unaffected.
         let vol1 = render_volume(&generated(1));
         let bugbear1 = vol1
             .chorus
@@ -4469,7 +4516,7 @@ mod tests {
             .expect("seed 1 bugbear is organized");
         assert!(
             bugbear1.annotations.contains(
-                &"— though the folk say The moons cross because they are Boko's kin.".to_string()
+                &"— though the folk say The moons cross because they are Xooka's kin.".to_string()
             ),
             "the Contested renders its counter-annotation quoting the folk's own \
              because-clause: {:?}",
@@ -4744,29 +4791,29 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
-                "The Booxo are bugbears — neighbors.".to_string(),
-                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
-                "The Beba are desert elfs — neighbors.".to_string(),
-                "The Bobash are drows — neighbors.".to_string(),
-                "The Kabja are gnolls — neighbors.".to_string(),
-                "The Woove are goblins — ourselves.".to_string(),
-                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
-                "The Tedash are high elfs — neighbors.".to_string(),
-                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
-                "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Ngeevnao are humans — neighbors.".to_string(),
-                "The Ngosho are kobolds — neighbors.".to_string(),
-                "The Petash are sea elfs — neighbors.".to_string(),
-                "The Bzhonopsho are snow elfs — neighbors.".to_string(),
-                "The Tetas are wood elfs — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — neighbors.".to_string(),
+                "The Pngoppap are desert dwarfs — neighbors.".to_string(),
+                "The Bua are desert elfs — neighbors.".to_string(),
+                "The Boa are drows — neighbors.".to_string(),
+                "The Wakdao are gnolls — neighbors.".to_string(),
+                "The Qwootoqo are goblins — ourselves.".to_string(),
+                "The Pngoppa are gully dwarfs — neighbors.".to_string(),
+                "The Doa are high elfs — neighbors.".to_string(),
+                "The Bngovbav are hill dwarfs — neighbors.".to_string(),
+                "The Dweowbaw are hobgoblins — neighbors.".to_string(),
+                "The Naavea are humans — neighbors.".to_string(),
+                "The Ngongo are kobolds — neighbors.".to_string(),
+                "The Tua are sea elfs — neighbors.".to_string(),
+                "The Shnotsozhmo are snow elfs — neighbors.".to_string(),
+                "The Tensnonkun are wood elfs — neighbors.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4780,29 +4827,29 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Booxo are bugbears — rivals.".to_string(),
-                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
-                "The Beba are desert elfs — rivals.".to_string(),
-                "The Bobash are drows — rivals.".to_string(),
-                "The Kabja are gnolls — rivals.".to_string(),
-                "The Woove are goblins — rivals.".to_string(),
-                "The Tngobknga are gully dwarfs — rivals.".to_string(),
-                "The Tedash are high elfs — rivals.".to_string(),
-                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
-                "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Ngeevnao are humans — rivals.".to_string(),
-                "The Ngosho are kobolds — rivals.".to_string(),
-                "The Petash are sea elfs — rivals.".to_string(),
-                "The Bzhonopsho are snow elfs — rivals.".to_string(),
-                "The Tetas are wood elfs — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — rivals.".to_string(),
+                "The Pngoppap are desert dwarfs — rivals.".to_string(),
+                "The Bua are desert elfs — rivals.".to_string(),
+                "The Boa are drows — rivals.".to_string(),
+                "The Wakdao are gnolls — rivals.".to_string(),
+                "The Qwootoqo are goblins — rivals.".to_string(),
+                "The Pngoppa are gully dwarfs — rivals.".to_string(),
+                "The Doa are high elfs — rivals.".to_string(),
+                "The Bngovbav are hill dwarfs — rivals.".to_string(),
+                "The Dweowbaw are hobgoblins — ourselves.".to_string(),
+                "The Naavea are humans — rivals.".to_string(),
+                "The Ngongo are kobolds — rivals.".to_string(),
+                "The Tua are sea elfs — rivals.".to_string(),
+                "The Shnotsozhmo are snow elfs — rivals.".to_string(),
+                "The Tensnonkun are wood elfs — rivals.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
+                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
             ]
         );
     }
@@ -5048,14 +5095,14 @@ mod tests {
 
         // The initiated reader: exactly one line, for exactly this key.
         let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
-        reader.insert(("Xoaboa".to_string(), MOON_COUNT.to_string()));
+        reader.insert(("Booko".to_string(), MOON_COUNT.to_string()));
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
             // The Book Polish (2026-07-20): re-pinned with its subject
             // (was the bare "— two, as the initiated count."). Merge:
             // planet renamed Vebe -> Booko.
-            vec!["Xoaboa has two moons, as the initiated count.".to_string()],
+            vec!["Booko has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
@@ -5066,26 +5113,26 @@ mod tests {
         // would NOT match what `esoteric_lines` actually produced (the
         // "verify the mechanism by asserting a WRONG expected value
         // fails" arm this test's own doc calls out).
-        let xobo = entity_named(&world, "Xoaboa").expect("Xoaboa resolves to an entity");
+        let xobo = entity_named(&world, "Booko").expect("Booko resolves to an entity");
         let ledger_value = match world.ledger.value_of(xobo, MOON_COUNT) {
             Some(Value::Number(n)) => *n as u64,
-            other => panic!("Xoaboa's ledger moon-count must be a Value::Number: {other:?}"),
+            other => panic!("Booko's ledger moon-count must be a Value::Number: {other:?}"),
         };
         assert_eq!(
             ledger_value, 2,
-            "Xoaboa's committed moon-count is two at seed 1"
+            "Booko's committed moon-count is two at seed 1"
         );
         let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
             format!(
-                "Xoaboa has {} {moon_word}, as the initiated count.",
+                "Booko has {} {moon_word}, as the initiated count.",
                 cardinal(ledger_value)
             ),
             "the line's cardinal must equal the ledger's own value"
         );
         let wrong = format!(
-            "Xoaboa has {} {moon_word}, as the initiated count.",
+            "Booko has {} {moon_word}, as the initiated count.",
             cardinal(ledger_value + 1)
         );
         assert_ne!(
@@ -5138,7 +5185,7 @@ mod tests {
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
             // The Book Polish (2026-07-20): re-pinned with its subject.
-            initiated_extra.contains(&"Xoaboa has two moons, as the initiated count.".to_string()),
+            initiated_extra.contains(&"Booko has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -5248,55 +5295,63 @@ mod tests {
         // ARITHMETIC did not move, only who has a priesthood to report it.
         // The cause is this campaign's own later placement movement, not a new
         // mechanism.
+        //
+        // The Burr re-pin (Task 4): admitting an alveolar trill as an
+        // ordinary manner (a decision recorded at this campaign's close) reseeds every family's root
+        // assignment (`ROOT_EPOCH` v3 -> v4), so every autonym below moved.
+        // The two group counts (6472 lunar-witnessing, 4010 solar-only) and
+        // every day-number are BYTE-IDENTICAL — the reckoning ARITHMETIC did
+        // not move, only the drawn names, and which peoples are organized
+        // (ten of fifteen) is unchanged too.
         let seed1 = render_volume(&generated(1));
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
-                "Among the Booxo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Booxo numbers the darkenings: 6472.".to_string(),
+                "Among the Bao, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Bao numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Booxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Tngobpngap, the sky has darkened, now and again.".to_string(),
-                "Among the Beba, the sky has darkened, now and again.".to_string(),
-                "Among the Bobash, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Bobash numbers the darkenings: 6472.".to_string(),
+                "The Bao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Pngoppap, the sky has darkened, now and again.".to_string(),
+                "Among the Bua, the sky has darkened, now and again.".to_string(),
+                "Among the Boa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Boa numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Bobash's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Kabja, the sky has darkened, now and again.".to_string(),
-                "Among the Woove, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Woove numbers the darkenings: 4010.".to_string(),
+                "The Boa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Wakdao, the sky has darkened, now and again.".to_string(),
+                "Among the Qwootoqo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Qwootoqo numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Woove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Tngobknga, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Tngobknga numbers the darkenings: 4010.".to_string(),
+                "The Qwootoqo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Pngoppa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Pngoppa numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Tngobknga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Tedash, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Tedash numbers the darkenings: 6472.".to_string(),
+                "The Pngoppa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Doa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Doa numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Tedash's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Dngovgngav, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Dngovgngav numbers the darkenings: 4010.".to_string(),
+                "The Doa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Bngovbav, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Bngovbav numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Dngovgngav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Boove, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Boove numbers the darkenings: 4010.".to_string(),
+                "The Bngovbav's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Dweowbaw, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dweowbaw numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Boove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Ngeevnao, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngeevnao numbers the darkenings: 4010.".to_string(),
+                "The Dweowbaw's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Naavea, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Naavea numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Ngeevnao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Ngosho, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngosho numbers the darkenings: 6472.".to_string(),
+                "The Naavea's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Ngongo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngongo numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Petash, the sky has darkened, now and again.".to_string(),
-                "Among the Bzhonopsho, the sky has darkened, now and again.".to_string(),
-                "Among the Tetas, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Tetas numbers the darkenings: 4010.".to_string(),
+                "The Ngongo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Tua, the sky has darkened, now and again.".to_string(),
+                "Among the Shnotsozhmo, the sky has darkened, now and again.".to_string(),
+                "Among the Tensnonkun, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Tensnonkun numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Tetas's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "The Tensnonkun's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
             "seed 1: ten organized priesthoods of fifteen placed peoples (desert-dwarf, \
              desert-elf, gnoll, sea-elf and snow-elf are folk-only — high-elf rejoined \
@@ -5306,16 +5361,16 @@ mod tests {
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
-                "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tedash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tetas's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Boa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Pngoppa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Doa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Bngovbav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Tensnonkun's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
             ],
             "seed 1: each organized priesthood carries a live prediction crisis, and the true \
@@ -5375,70 +5430,75 @@ mod tests {
         // cardinality check would have reported no change at all, while two
         // peoples' religious lives in fact swapped. That is the argument for
         // pinning the LINES rather than the tallies.
+        // The Burr re-pin (Task 4): admitting an alveolar trill as an
+        // ordinary manner reseeds every family's root assignment
+        // (`ROOT_EPOCH` v3 -> v4, a decision recorded at this campaign's close), so every autonym below
+        // moved. The group counts (81 lunar-witnessing, 49 solar-only) and
+        // every day-number are BYTE-IDENTICAL.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
             vec![
-                "Among the Bobboo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Bobboo numbers the darkenings: 81.".to_string(),
+                "Among the Koodzhoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Koodzhoo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Wazwo, the sky has darkened, now and again.".to_string(),
-                "Among the Feqboq, the sky has darkened, now and again.".to_string(),
-                "Among the Kxoqboq, the sky has darkened, now and again.".to_string(),
-                "Among the Loshjo, the sky has darkened, now and again.".to_string(),
-                "Among the Mepmee, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
+                "The Koodzhoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Jajozza, the sky has darkened, now and again.".to_string(),
+                "Among the Fofa, the sky has darkened, now and again.".to_string(),
+                "Among the Popa, the sky has darkened, now and again.".to_string(),
+                "Among the Ratra, the sky has darkened, now and again.".to_string(),
+                "Among the Peerzhoe, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Peerzhoe numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Mepmee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Njanjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Njanjo numbers the darkenings: 49.".to_string(),
+                "The Peerzhoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Mwawonla, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Mwawonla numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Njanjo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Xeqmoq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Xeqmoq numbers the darkenings: 81.".to_string(),
+                "The Mwawonla's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Shezhzhaz, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shezhzhaz numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Xeqmoq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Wanwo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Wanwo numbers the darkenings: 49.".to_string(),
+                "The Shezhzhaz's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Wawonwa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Wawonwa numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Wanwo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Webwee, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Webwee numbers the darkenings: 49.".to_string(),
+                "The Wawonwa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Geerjoe, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Geerjoe numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Foetjee, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Foetjee numbers the darkenings: 49.".to_string(),
+                "The Geerjoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Leoglo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Leoglo numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Foetjee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Dngooqdngo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Dngooqdngo numbers the darkenings: 81.".to_string(),
+                "The Leoglo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Gnga, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Gnga numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Xeqmu, the sky has darkened, now and again.".to_string(),
-                "Among the Kopnop, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kopnop numbers the darkenings: 81.".to_string(),
+                "The Gnga's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Pupa, the sky has darkened, now and again.".to_string(),
+                "Among the Zoopa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zoopa numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kopnop's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Keqnguq, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Keqnguq numbers the darkenings: 49.".to_string(),
+                "The Zoopa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Xuxa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Xuxa numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Keqnguq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "The Xuxa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
             vec![
-                "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Wanwo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Kopnop's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
-                "In truth, the Keqnguq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Koodzhoo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Peerzhoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Mwawonla's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Shezhzhaz's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Wawonwa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Geerjoe's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Leoglo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Gnga's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Zoopa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Xuxa's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
             ]
         );
@@ -5531,54 +5591,61 @@ mod tests {
         // set drops eight -> six (desert-dwarf, desert-elf, gnoll, high-elf,
         // hobgoblin, sea-elf). The witnessed counts (53 lunar, 32 solar) and
         // the taught day are unchanged again.
+        // The Burr re-pin (Task 4): admitting an alveolar trill as an
+        // ordinary manner reseeds every family's root assignment
+        // (`ROOT_EPOCH` v3 -> v4, a decision recorded at this campaign's close), so every autonym below
+        // moved (one, `Zozha`, happens to redraw to itself — measured, not
+        // assumed). The two group counts (53 lunar-witnessing, 32
+        // solar-only), every day-number and which nine of fifteen peoples
+        // are organized are BYTE-IDENTICAL.
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "Among the Zooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zooqsha numbers the darkenings: 53.".to_string(),
+                "Among the Dokdoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dokdoo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Baovoo, the sky has darkened, now and again.".to_string(),
-                "Among the Maaxmue, the sky has darkened, now and again.".to_string(),
-                "Among the Fnaaxnoo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Fnaaxnoo numbers the darkenings: 53.".to_string(),
+                "The Dokdoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Woowa, the sky has darkened, now and again.".to_string(),
+                "Among the Muepzuu, the sky has darkened, now and again.".to_string(),
+                "Among the Snoobsoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Snoobsoo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Fnaaxnoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Pjojpjoj, the sky has darkened, now and again.".to_string(),
-                "Among the Zhooqsa, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zhooqsa numbers the darkenings: 32.".to_string(),
+                "The Snoobsoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Plawplaw, the sky has darkened, now and again.".to_string(),
+                "Among the Rekroeg, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Rekroeg numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zhooqsa's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Daoboo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Daoboo numbers the darkenings: 32.".to_string(),
+                "The Rekroeg's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Booba, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Booba numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Daoboo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Pmaaxmoe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Pmaaxmoe numbers the darkenings: 53.".to_string(),
+                "The Booba's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Zmoepzoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zmoepzoo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Pmaaxmoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "The Zmoepzoo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Zozha, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Zozha numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Zozha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zhooqsha numbers the darkenings: 32.".to_string(),
+                "Among the Zekzoe, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zekzoe numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
+                "The Zekzoe's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Vaar, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Vaar numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jaojjao numbers the darkenings: 53.".to_string(),
+                "The Vaar's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Dzhaojxo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dzhaojxo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
-                "Among the Fzaakzue, the sky has darkened, now and again.".to_string(),
-                "Among the Pnaaknoo, the sky has darkened, now and again.".to_string(),
-                "Among the Daaxdue, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Daaxdue numbers the darkenings: 32.".to_string(),
+                "The Dzhaojxo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "Among the Zzoebzou, the sky has darkened, now and again.".to_string(),
+                "Among the Znoopzoo, the sky has darkened, now and again.".to_string(),
+                "Among the Doetzou, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Doetzou numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Daaxdue's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
+                "The Doetzou's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
             ],
             "seed 3: nine organized priesthoods of fifteen placed peoples (desert-dwarf, \
              desert-elf, gnoll, high-elf, hobgoblin and sea-elf are folk-only); the \
@@ -5587,16 +5654,16 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                "In truth, the Zooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Fnaaxnoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Daoboo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Pmaaxmoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Dokdoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Snoobsoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Rekroeg's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Booba's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Zmoepzoo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the Zozha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
-                "In truth, the Daaxdue's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Zekzoe's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Vaar's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Dzhaojxo's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
+                "In truth, the Doetzou's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
             ]
         );
@@ -5653,16 +5720,16 @@ mod tests {
         assert_eq!(
             day100.margin,
             vec![
-                "In truth, the Booxo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Bobash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tngobknga's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tedash's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Dngovgngav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Tetas's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Boa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Pngoppa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Doa's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Bngovbav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Tensnonkun's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),
             ],
             "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
@@ -5716,6 +5783,22 @@ mod tests {
     /// recorded: six new tongues entered the cascade roster and perturbed no
     /// existing tongue's drawn word forms at all. The additivity property this
     /// test guards is untouched; only the ground truth grew.
+    ///
+    /// The Burr re-pin (Task 4): admitting an alveolar trill as an ordinary
+    /// manner (no longer gated behind the exotic-consonant capability,
+    /// a decision recorded at this campaign's close) inserts extra candidate-consonant draws ahead of
+    /// every species' phonology inventory, which reseeds `assign_proto_
+    /// roots`'s draw for every family (`ROOT_EPOCH` v3 -> v4) — not only
+    /// the families a trill lands in. **Unlike The Delvers and The
+    /// Radiation above, no line is BYTE-IDENTICAL this time: every entry
+    /// in `vol.lines` and `vol.tongue_lines` moved**, because the reseed
+    /// happens ahead of every species' draw in the stream, not append-only
+    /// at the roster's end the way adding a people is. The additivity
+    /// property this test guards — that growing the peoples roster
+    /// perturbs no other register's SHAPE — is still intact: same sixteen
+    /// `vol.lines` entries, same fifteen tongues with their two-clause
+    /// self-statements, same order and gloss-per-tongue pairing; only the
+    /// drawn proper nouns and word forms differ.
     #[test]
     fn the_additivity_law() {
         let vol = render_volume(&generated(1));
@@ -5723,22 +5806,22 @@ mod tests {
         assert_eq!(
             vol.lines,
             vec![
-                "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
-                "The Booxo are bugbears.".to_string(),
-                "The Tngobpngap are desert dwarfs.".to_string(),
-                "The Beba are desert elfs.".to_string(),
-                "The Bobash are drows.".to_string(),
-                "The Kabja are gnolls.".to_string(),
-                "The Woove are goblins.".to_string(),
-                "The Tngobknga are gully dwarfs.".to_string(),
-                "The Tedash are high elfs.".to_string(),
-                "The Dngovgngav are hill dwarfs.".to_string(),
-                "The Boove are hobgoblins.".to_string(),
-                "The Ngeevnao are humans.".to_string(),
-                "The Ngosho are kobolds.".to_string(),
-                "The Petash are sea elfs.".to_string(),
-                "The Bzhonopsho are snow elfs.".to_string(),
-                "The Tetas are wood elfs.".to_string(),
+                "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
+                "The Bao are bugbears.".to_string(),
+                "The Pngoppap are desert dwarfs.".to_string(),
+                "The Bua are desert elfs.".to_string(),
+                "The Boa are drows.".to_string(),
+                "The Wakdao are gnolls.".to_string(),
+                "The Qwootoqo are goblins.".to_string(),
+                "The Pngoppa are gully dwarfs.".to_string(),
+                "The Doa are high elfs.".to_string(),
+                "The Bngovbav are hill dwarfs.".to_string(),
+                "The Dweowbaw are hobgoblins.".to_string(),
+                "The Naavea are humans.".to_string(),
+                "The Ngongo are kobolds.".to_string(),
+                "The Tua are sea elfs.".to_string(),
+                "The Shnotsozhmo are snow elfs.".to_string(),
+                "The Tensnonkun are wood elfs.".to_string(),
             ]
         );
         assert_eq!(
@@ -5776,36 +5859,52 @@ mod tests {
                 // roster): the bugbear self-statement and the kobold earth
                 // clause both moved once more; every other tongue's
                 // rendering again happened to land unchanged.
-                "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")".to_string(),
-                "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Tngobpngap Bngaap. (in the desert-dwarf tongue: \"The Tngobpngap are desert dwarfs.\")".to_string(),
-                "Xoaboa Qngoaz. (in the desert-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Beba Tebu Zhaufbou. (in the desert-elf tongue: \"The Beba are desert elfs.\")".to_string(),
-                "Xoaboa Bokuebu Zhaufbou. (in the desert-elf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Bobash Qaoshtoos Ta. (in the drow tongue: \"The Bobash are drows.\")".to_string(),
-                "Xoaboa Botoos Ta. (in the drow tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Kabja Paab Jaadjaajoo. (in the gnoll tongue: \"The Kabja are gnolls.\")".to_string(),
-                "Xoaboa Paab Paokaa. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
-                "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Tngobknga Gngaappaa Xan. (in the gully-dwarf tongue: \"The Tngobknga are gully dwarfs.\")".to_string(),
-                "Xoaboa Pngoa Xan. (in the gully-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Tedash Vo Dos Da. (in the high-elf tongue: \"The Tedash are high elfs.\")".to_string(),
-                "Xoaboa Vo Togoes Da. (in the high-elf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Dngovgngav Gavgoash Koav. (in the hill-dwarf tongue: \"The Dngovgngav are hill dwarfs.\")".to_string(),
-                "Xoaboa Qngoash Koav. (in the hill-dwarf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")".to_string(),
-                "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Ngeevnao Vavneozhoa Voosaa. (in the human tongue: \"The Ngeevnao are humans.\")".to_string(),
-                "Xoaboa Saseo Voosaa. (in the human tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
-                "Xoaboa Ngod Ngotngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Petash Teostuosh. (in the sea-elf tongue: \"The Petash are sea elfs.\")".to_string(),
-                "Xoaboa Pokues. (in the sea-elf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Bzhonopsho Baot. (in the snow-elf tongue: \"The Bzhonopsho are snow elfs.\")".to_string(),
-                "Xoaboa Bogoot. (in the snow-elf tongue: \"Xoaboa is the earth.\")".to_string(),
-                "Tetas Gon Tuu Qas. (in the wood-elf tongue: \"The Tetas are wood elfs.\")".to_string(),
-                "Xoaboa Gon Tuu Tukues. (in the wood-elf tongue: \"Xoaboa is the earth.\")".to_string(),
+                //
+                // Re-pinned again at The Burr (Task 4): admitting a trill as
+                // an ordinary manner (no longer gated behind the exotic-
+                // consonant capability, a decision recorded at this campaign's close) inserts extra
+                // candidate-consonant draws ahead of every species'
+                // phonology, so `draw_candidate`'s root assignment reseeds
+                // for every family, not only the ones a trill lands in
+                // (`ROOT_EPOCH` v3 -> v4). Unlike The Generalist/The
+                // Delvers/The Radiation re-pins above, **every pre-existing
+                // line moves this time** — there is no BYTE-IDENTICAL
+                // subset to report, because the reseed reaches every
+                // family's cascade, not a scoped subset of it. The clause
+                // shape, gloss and tongue-pairing this test guards are
+                // otherwise untouched: same ten tongues, same two clauses
+                // each, same order, every English gloss still byte-
+                // identical to its exonym.
+                "Xngatboa Bao Boobao. (in the bugbear tongue: \"The Bao are bugbears.\")".to_string(),
+                "Xngatboa Booko Booko. (in the bugbear tongue: \"Booko is the earth.\")".to_string(),
+                "Pngoppap Bngoz. (in the desert-dwarf tongue: \"The Pngoppap are desert dwarfs.\")".to_string(),
+                "Booko Qoop. (in the desert-dwarf tongue: \"Booko is the earth.\")".to_string(),
+                "Bua Beuskuubu Zhaufbou. (in the desert-elf tongue: \"The Bua are desert elfs.\")".to_string(),
+                "Booko Boobu Zhaufbou. (in the desert-elf tongue: \"Booko is the earth.\")".to_string(),
+                "Boa Boostaash Ta. (in the drow tongue: \"The Boa are drows.\")".to_string(),
+                "Booko Boos Ta. (in the drow tongue: \"Booko is the earth.\")".to_string(),
+                "Wakdao Paab Loadwaawoo. (in the gnoll tongue: \"The Wakdao are gnolls.\")".to_string(),
+                "Booko Paab Laakaa. (in the gnoll tongue: \"Booko is the earth.\")".to_string(),
+                "Ka Jookaojo Qwootoqo. (in the goblin tongue: \"The Qwootoqo are goblins.\")".to_string(),
+                "Ka Jejoeke Booko. (in the goblin tongue: \"Booko is the earth.\")".to_string(),
+                "Pngoppa Pngo Xan. (in the gully-dwarf tongue: \"The Pngoppa are gully dwarfs.\")".to_string(),
+                "Booko Poo Xan. (in the gully-dwarf tongue: \"Booko is the earth.\")".to_string(),
+                "Doa Vo Gashvaas Da. (in the high-elf tongue: \"The Doa are high elfs.\")".to_string(),
+                "Booko Vo Toos Da. (in the high-elf tongue: \"Booko is the earth.\")".to_string(),
+                "Bngovbav Boat Koaw. (in the hill-dwarf tongue: \"The Bngovbav are hill dwarfs.\")".to_string(),
+                "Booko Qoov Koaw. (in the hill-dwarf tongue: \"Booko is the earth.\")".to_string(),
+                "Dweowbaw Waawa Woa Woo. (in the hobgoblin tongue: \"The Dweowbaw are hobgoblins.\")".to_string(),
+                "Booko Woeke Woa We. (in the hobgoblin tongue: \"Booko is the earth.\")".to_string(),
+                "Naavea Vaozeezhoa Voosaa. (in the human tongue: \"The Naavea are humans.\")".to_string(),
+                "Booko Zooveaseo Voosaa. (in the human tongue: \"Booko is the earth.\")".to_string(),
+                "Ngongo Ngod Ngokngo. (in the kobold tongue: \"The Ngongo are kobolds.\")".to_string(),
+                "Booko Ngod Sosho. (in the kobold tongue: \"Booko is the earth.\")".to_string(),
+                "Tua Toaspush. (in the sea-elf tongue: \"The Tua are sea elfs.\")".to_string(),
+                "Booko Poos. (in the sea-elf tongue: \"Booko is the earth.\")".to_string(),
+                "Shnotsozhmo Goot. (in the snow-elf tongue: \"The Shnotsozhmo are snow elfs.\")".to_string(),
+                "Booko Boot. (in the snow-elf tongue: \"Booko is the earth.\")".to_string(),
+                "Tensnonkun Gon Tuu Qasgas. (in the wood-elf tongue: \"The Tensnonkun are wood elfs.\")".to_string(),
+                "Booko Gon Tuu Tuus. (in the wood-elf tongue: \"Booko is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
@@ -5837,77 +5936,79 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
-                "The Booxo are bugbears — neighbors.".to_string(),
-                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
-                "The Beba are desert elfs — neighbors.".to_string(),
-                "The Bobash are drows — neighbors.".to_string(),
-                "The Kabja are gnolls — neighbors.".to_string(),
-                "The Woove are goblins — ourselves.".to_string(),
-                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
-                "The Tedash are high elfs — neighbors.".to_string(),
-                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
-                "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Ngeevnao are humans — neighbors.".to_string(),
-                "The Ngosho are kobolds — neighbors.".to_string(),
-                "The Petash are sea elfs — neighbors.".to_string(),
-                "The Bzhonopsho are snow elfs — neighbors.".to_string(),
-                "The Tetas are wood elfs — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — neighbors.".to_string(),
+                "The Pngoppap are desert dwarfs — neighbors.".to_string(),
+                "The Bua are desert elfs — neighbors.".to_string(),
+                "The Boa are drows — neighbors.".to_string(),
+                "The Wakdao are gnolls — neighbors.".to_string(),
+                "The Qwootoqo are goblins — ourselves.".to_string(),
+                "The Pngoppa are gully dwarfs — neighbors.".to_string(),
+                "The Doa are high elfs — neighbors.".to_string(),
+                "The Bngovbav are hill dwarfs — neighbors.".to_string(),
+                "The Dweowbaw are hobgoblins — neighbors.".to_string(),
+                "The Naavea are humans — neighbors.".to_string(),
+                "The Ngongo are kobolds — neighbors.".to_string(),
+                "The Tua are sea elfs — neighbors.".to_string(),
+                "The Shnotsozhmo are snow elfs — neighbors.".to_string(),
+                "The Tensnonkun are wood elfs — neighbors.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
+                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
             ]
         );
         let goblin_doctrine = goblin.doctrine.as_ref().expect("goblin is organized");
         assert_eq!(
             goblin_doctrine.heading,
-            "As the priesthood of the Woove teach it"
+            "As the priesthood of the Qwootoqo teach it"
         );
         assert_eq!(
             goblin_doctrine.tongue_taught_line,
             // The same goblin lexicon re-draw as the `tongue_lines` block
-            // above: `Saa Wovewe` -> `Sa Wewoeke`, gloss byte-identical.
-            "Sa Weveawea Xoaboa. (\"Xoaboa is the earth — as it is taught.\")"
+            // above: `Saa Wovewe` -> `Sa Wewoeke` -> `Ka Jejoeke` (The Burr,
+            // Task 4: the trill epoch reseeds every family's root
+            // assignment), gloss byte-identical throughout.
+            "Ka Jejoeke Booko. (\"Booko is the earth — as it is taught.\")"
         );
         assert_eq!(
             goblin_doctrine.emic,
             vec![
-                "The Booxo are bugbears — neighbors.".to_string(),
-                "The Tngobpngap are desert dwarfs — neighbors.".to_string(),
-                "The Beba are desert elfs — neighbors.".to_string(),
-                "The Bobash are drows — neighbors.".to_string(),
-                "The Kabja are gnolls — neighbors.".to_string(),
-                "The Woove are goblins — ourselves.".to_string(),
-                "The Tngobknga are gully dwarfs — neighbors.".to_string(),
-                "The Tedash are high elfs — neighbors.".to_string(),
-                "The Dngovgngav are hill dwarfs — neighbors.".to_string(),
-                "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Ngeevnao are humans — neighbors.".to_string(),
-                "The Ngosho are kobolds — neighbors.".to_string(),
-                "The Petash are sea elfs — neighbors.".to_string(),
-                "The Bzhonopsho are snow elfs — neighbors.".to_string(),
-                "The Tetas are wood elfs — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — neighbors.".to_string(),
+                "The Pngoppap are desert dwarfs — neighbors.".to_string(),
+                "The Bua are desert elfs — neighbors.".to_string(),
+                "The Boa are drows — neighbors.".to_string(),
+                "The Wakdao are gnolls — neighbors.".to_string(),
+                "The Qwootoqo are goblins — ourselves.".to_string(),
+                "The Pngoppa are gully dwarfs — neighbors.".to_string(),
+                "The Doa are high elfs — neighbors.".to_string(),
+                "The Bngovbav are hill dwarfs — neighbors.".to_string(),
+                "The Dweowbaw are hobgoblins — neighbors.".to_string(),
+                "The Naavea are humans — neighbors.".to_string(),
+                "The Ngongo are kobolds — neighbors.".to_string(),
+                "The Tua are sea elfs — neighbors.".to_string(),
+                "The Shnotsozhmo are snow elfs — neighbors.".to_string(),
+                "The Tensnonkun are wood elfs — neighbors.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Tleavese strides the sky, slowly.".to_string(),
+                "The moons cross because Shmeakjeta strides the sky, slowly.".to_string(),
                 // The Radiation, task 6: `Voobo` -> `Vooboo`. One syllable on
                 // a generated deity name, redrawn because the campaign's later
                 // placement movement moved the draws; the belief, its period
                 // and the day-match are unchanged. Pinned in two places (here
                 // and `worldgen::doctrine::the_high_god_takes_the_day_where_
                 // compatible`) — move both together.
-                "The day returns because Vooboo strides the sky, briskly.".to_string(),
+                "The day returns because Veewe strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());
         assert_eq!(
             goblin_doctrine.margin,
             vec![
-                "In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
+                "In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
             ]
         );
 
@@ -5919,29 +6020,29 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Booxo are bugbears — rivals.".to_string(),
-                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
-                "The Beba are desert elfs — rivals.".to_string(),
-                "The Bobash are drows — rivals.".to_string(),
-                "The Kabja are gnolls — rivals.".to_string(),
-                "The Woove are goblins — rivals.".to_string(),
-                "The Tngobknga are gully dwarfs — rivals.".to_string(),
-                "The Tedash are high elfs — rivals.".to_string(),
-                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
-                "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Ngeevnao are humans — rivals.".to_string(),
-                "The Ngosho are kobolds — rivals.".to_string(),
-                "The Petash are sea elfs — rivals.".to_string(),
-                "The Bzhonopsho are snow elfs — rivals.".to_string(),
-                "The Tetas are wood elfs — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — rivals.".to_string(),
+                "The Pngoppap are desert dwarfs — rivals.".to_string(),
+                "The Bua are desert elfs — rivals.".to_string(),
+                "The Boa are drows — rivals.".to_string(),
+                "The Wakdao are gnolls — rivals.".to_string(),
+                "The Qwootoqo are goblins — rivals.".to_string(),
+                "The Pngoppa are gully dwarfs — rivals.".to_string(),
+                "The Doa are high elfs — rivals.".to_string(),
+                "The Bngovbav are hill dwarfs — rivals.".to_string(),
+                "The Dweowbaw are hobgoblins — ourselves.".to_string(),
+                "The Naavea are humans — rivals.".to_string(),
+                "The Ngongo are kobolds — rivals.".to_string(),
+                "The Tua are sea elfs — rivals.".to_string(),
+                "The Shnotsozhmo are snow elfs — rivals.".to_string(),
+                "The Tensnonkun are wood elfs — rivals.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
+                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.".to_string(),
             ]
         );
         // Merge re-placement: seed-1 hobgoblin (Veebe) is now organized too
@@ -5952,30 +6053,30 @@ mod tests {
         let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
         assert_eq!(
             hobgoblin_doctrine.heading,
-            "As the priesthood of the Boove teach it"
+            "As the priesthood of the Dweowbaw teach it"
         );
         assert_eq!(
             hobgoblin_doctrine.emic,
             vec![
-                "The Booxo are bugbears — rivals.".to_string(),
-                "The Tngobpngap are desert dwarfs — rivals.".to_string(),
-                "The Beba are desert elfs — rivals.".to_string(),
-                "The Bobash are drows — rivals.".to_string(),
-                "The Kabja are gnolls — rivals.".to_string(),
-                "The Woove are goblins — rivals.".to_string(),
-                "The Tngobknga are gully dwarfs — rivals.".to_string(),
-                "The Tedash are high elfs — rivals.".to_string(),
-                "The Dngovgngav are hill dwarfs — rivals.".to_string(),
-                "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Ngeevnao are humans — rivals.".to_string(),
-                "The Ngosho are kobolds — rivals.".to_string(),
-                "The Petash are sea elfs — rivals.".to_string(),
-                "The Bzhonopsho are snow elfs — rivals.".to_string(),
-                "The Tetas are wood elfs — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "The Bao are bugbears — rivals.".to_string(),
+                "The Pngoppap are desert dwarfs — rivals.".to_string(),
+                "The Bua are desert elfs — rivals.".to_string(),
+                "The Boa are drows — rivals.".to_string(),
+                "The Wakdao are gnolls — rivals.".to_string(),
+                "The Qwootoqo are goblins — rivals.".to_string(),
+                "The Pngoppa are gully dwarfs — rivals.".to_string(),
+                "The Doa are high elfs — rivals.".to_string(),
+                "The Bngovbav are hill dwarfs — rivals.".to_string(),
+                "The Dweowbaw are hobgoblins — ourselves.".to_string(),
+                "The Naavea are humans — rivals.".to_string(),
+                "The Ngongo are kobolds — rivals.".to_string(),
+                "The Tua are sea elfs — rivals.".to_string(),
+                "The Shnotsozhmo are snow elfs — rivals.".to_string(),
+                "The Tensnonkun are wood elfs — rivals.".to_string(),
+                "Booko is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Koonkem strides the sky, slowly.".to_string(),
-                "The day returns because Vooboo strides the sky, briskly.".to_string(),
+                "The moons cross because Kwoowdaw strides the sky, slowly.".to_string(),
+                "The day returns because Veewe strides the sky, briskly.".to_string(),
             ]
         );
         assert!(hobgoblin_doctrine.annotations.is_empty());
@@ -6059,7 +6160,8 @@ mod tests {
         // seeds carries a live prediction crisis (see
         // `the_reckoning_renders_the_epoch_pair`) -- so it is exercised
         // synthetically here too, through the same public round-trip pair.
-        let synthetic_doctrine = "None among the Woove have shown the priesthood's teaching false.";
+        let synthetic_doctrine =
+            "None among the Qwootoqo have shown the priesthood's teaching false.";
         let chorus_line = parse_chorus_line(synthetic_doctrine, &ctx)
             .unwrap_or_else(|e| panic!("the doctrine crisis_live=false line must invert: {e:?}"));
         let ChorusLine::Reckoning(reckoning) = &chorus_line else {
@@ -6068,7 +6170,7 @@ mod tests {
         assert_eq!(
             *reckoning,
             ReckoningLine::Doctrine {
-                autonym: "Woove".to_string(),
+                autonym: "Qwootoqo".to_string(),
                 crisis_live: false,
             }
         );
@@ -6088,20 +6190,24 @@ mod tests {
     /// teaches no day rather than a falsehood.
     #[test]
     fn the_prediction_line_omits_honestly_beyond_the_teaching_horizon() {
-        let lines =
-            reckoning_culture_lines("Woove", hornvale_worldgen::LadderRung::Predictive, 8, None);
+        let lines = reckoning_culture_lines(
+            "Qwootoqo",
+            hornvale_worldgen::LadderRung::Predictive,
+            8,
+            None,
+        );
         assert_eq!(
             lines,
             vec![
                 // The Book Polish (2026-07-20): re-pinned attributed.
-                "Among the Woove, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Woove numbers the darkenings: eight.".to_string(),
+                "Among the Qwootoqo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Qwootoqo numbers the darkenings: eight.".to_string(),
             ],
             "Predictive + None: the count still renders, but no prediction line"
         );
 
         let lines_with_prediction = reckoning_culture_lines(
-            "Woove",
+            "Qwootoqo",
             hornvale_worldgen::LadderRung::Predictive,
             8,
             Some(9080.42957840976),
@@ -6109,8 +6215,8 @@ mod tests {
         assert_eq!(
             lines_with_prediction,
             vec![
-                "Among the Woove, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Woove numbers the darkenings: eight.".to_string(),
+                "Among the Qwootoqo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Qwootoqo numbers the darkenings: eight.".to_string(),
                 "The next darkening, it teaches, comes on day 9080.".to_string(),
             ],
             "Predictive + Some: the prediction line renders, integer-truncated"
@@ -6128,8 +6234,8 @@ mod tests {
             last_actual: 40_850.9,
         };
         assert_eq!(
-            reckoning_crisis_margin_line("Woove", crisis),
-            "In truth, the Woove's priesthood taught the darkening would come on day 41200; \
+            reckoning_crisis_margin_line("Qwootoqo", crisis),
+            "In truth, the Qwootoqo's priesthood taught the darkening would come on day 41200; \
              it came on day 40850 instead."
         );
     }
@@ -6139,9 +6245,9 @@ mod tests {
     /// other doctrine-gated render path's `None` convention.
     #[test]
     fn the_doctrine_line_is_none_for_a_folk_only_culture() {
-        assert_eq!(reckoning_doctrine_line("Woove", false, false), None);
+        assert_eq!(reckoning_doctrine_line("Qwootoqo", false, false), None);
         assert_eq!(
-            reckoning_doctrine_line("Woove", false, true),
+            reckoning_doctrine_line("Qwootoqo", false, true),
             None,
             "a folk-only culture never has a doctrine to have taught anything wrongly"
         );
@@ -6154,13 +6260,13 @@ mod tests {
     #[test]
     fn the_doctrine_line_names_the_crisis_when_one_is_live() {
         assert_eq!(
-            reckoning_doctrine_line("Woove", true, false),
-            Some("None among the Woove have shown the priesthood's teaching false.".to_string())
+            reckoning_doctrine_line("Qwootoqo", true, false),
+            Some("None among the Qwootoqo have shown the priesthood's teaching false.".to_string())
         );
         assert_eq!(
-            reckoning_doctrine_line("Woove", true, true),
+            reckoning_doctrine_line("Qwootoqo", true, true),
             Some(
-                "The Woove's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Qwootoqo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string()
             )
