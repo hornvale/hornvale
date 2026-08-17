@@ -132,6 +132,74 @@ pub fn assignment_accuracy(tongues: &[(String, Vec<String>)]) -> f64 {
     }
 }
 
+/// The em-dash the dictionary renders for a lexical gap. A gap is not a word.
+const GAP: &str = "—";
+
+/// Per-tongue wordlists parsed from the committed dictionary artifact
+/// (`book/src/reference/dictionary-generated.md`). A `## Heading` opens a
+/// tongue; a table row's **third** cell is its surface word.
+///
+/// Two rows are excluded and both exclusions are load-bearing. The table's own
+/// `| Concept | Gloss | Word | ... |` **header** parses as a row whose third
+/// cell is the literal `Word` — counting it is the defect that nearly put a
+/// fabricated figure into this campaign's spec. And a `—` cell is a lexical
+/// gap, not a word. A tongue left with no words is omitted entirely rather
+/// than returned empty, so it cannot enter the accuracy denominator.
+///
+/// The `Cognates` section is skipped: its rows carry one column per daughter,
+/// so its third cell is a proto form rather than one tongue's word.
+/// **No heading recognized at all is an error**, not an empty vector: it
+/// means the `## Heading` shape itself changed under us, and a silent empty
+/// list would propagate as a plausible-looking zero-tongue baseline. A
+/// heading that *is* recognized but whose tongue turns out all-gap is not
+/// this case — that tongue is omitted from the returned list (see above),
+/// and an otherwise-valid document is still `Ok`, possibly with an empty
+/// list, rather than erroring on a document shape that parsed fine. This is
+/// the only `Err` path, and it is the reason this function returns `Result`
+/// at all.
+/// type-audit: bare-ok(prose: return), bare-ok(identifier-text: md)
+pub fn wordlists_from_dictionary(md: &str) -> Result<Vec<(String, Vec<String>)>, String> {
+    let mut out: Vec<(String, Vec<String>)> = Vec::new();
+    let mut current: Option<(String, Vec<String>)> = None;
+    let mut saw_heading = false;
+    for line in md.lines() {
+        if let Some(rest) = line.strip_prefix("## ") {
+            saw_heading = true;
+            if let Some(t) = current.take()
+                && !t.1.is_empty()
+            {
+                out.push(t);
+            }
+            current = Some((rest.trim().to_string(), Vec::new()));
+            continue;
+        }
+        let Some((name, words)) = current.as_mut() else {
+            continue;
+        };
+        if name == "Cognates" || !line.starts_with('|') {
+            continue;
+        }
+        let cells: Vec<&str> = line.split('|').collect();
+        if cells.len() < 5 {
+            continue;
+        }
+        let word = cells[3].trim();
+        if word.is_empty() || word == GAP || word == "Word" || word.starts_with("---") {
+            continue;
+        }
+        words.push(word.to_string());
+    }
+    if let Some(t) = current
+        && !t.1.is_empty()
+    {
+        out.push(t);
+    }
+    if !saw_heading {
+        return Err("no tongues parsed — the dictionary's shape changed".to_string());
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,6 +259,46 @@ mod tests {
         assert_eq!(
             assignment_accuracy(&forward),
             assignment_accuracy(&reversed)
+        );
+    }
+
+    /// The parser must key on the Word column and must NOT count the table
+    /// header. This is the exact defect that nearly put a fictitious "1 liquid
+    /// word per tongue" figure into the spec: `| Word |` matches a naive
+    /// row filter, and a header counted as a word is indistinguishable from a
+    /// real one in the output.
+    #[test]
+    fn the_table_header_is_not_a_word() {
+        let md = "\
+## Alpha
+
+| Concept | Gloss | Word | IPA | Proto | Derivation |
+|---|---|---|---|---|---|
+| `fire` | flame | Baba | /baba/ | Baba | no change |
+| `water` | drink | — | — | — | gap (experiential): none |
+";
+        let lists = wordlists_from_dictionary(md).expect("parse");
+        assert_eq!(lists.len(), 1);
+        assert_eq!(lists[0].0, "Alpha");
+        assert_eq!(lists[0].1, vec!["Baba".to_string()]);
+    }
+
+    /// A gap renders as an em-dash and is not a word; a tongue that is all
+    /// gaps contributes no wordlist at all rather than an empty one, so it
+    /// cannot silently drag the accuracy denominator.
+    #[test]
+    fn an_all_gap_tongue_is_omitted() {
+        let md = "\
+## Beta
+
+| Concept | Gloss | Word | IPA | Proto | Derivation |
+|---|---|---|---|---|---|
+| `fire` | flame | — | — | — | gap (experiential): none |
+";
+        let lists = wordlists_from_dictionary(md).expect("parse");
+        assert!(
+            lists.is_empty(),
+            "all-gap tongue must be omitted, got {lists:?}"
         );
     }
 }
