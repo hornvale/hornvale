@@ -21,3 +21,8 @@ hornvale-astronomy = { path = "../../domains/astronomy" }
 [dev-dependencies]
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-terrain = { path = "../../domains/terrain" }
+# The Palimpsest substrate probe only: the allometric generation length, to
+# test whether a people-varying duration is commensurate with the ladder.
+# DEV-only — if the design ships, the runtime path goes through worldgen's
+# `descent::generation_length_of` rather than this.
+hornvale-species = { path = "../../domains/species" }
