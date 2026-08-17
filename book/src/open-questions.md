@@ -2884,7 +2884,7 @@ tested rather than believed. It holds, in both directions.
 when a story crosses between communities standing differently toward the event
 it describes — the precondition became measurable on the first attempt that was
 tried. Spearman's rho between an ending's maximum-antichain width and its count
-of surviving variants is **0.666** over 408 qualifying endings. The axis that
+of surviving variants is **0.662** over 408 qualifying endings. The axis that
 had been constant now varies, and the instrument that had failed three times
 worked immediately. Nothing about the instrument changed; the world did.
 
@@ -2926,6 +2926,19 @@ distortion compound" moves off **not-yet-scorable**, and the score is a
 qualified yes: over forty worlds, the retained rung distribution spans a median
 of five and a maximum of seven rungs under one of three co-equal accumulation
 rules, and two under the other two.
+
+**One sentence in the entry above needs striking, and the strike is load-
+bearing.** It says victim-line and bystander are both closed under descent.
+Bystander is not: a bystander whose subtree contains the attacker has a
+perpetrator descendant, and a bystander that is the subject's own parent has a
+victim-line child. Those are the 209 paths that were measured crossing stance
+twice. The law that actually holds is narrower — any predicate over the
+teller/hearer *lineage relation* is constant along a single-parent walk by
+construction — and stance is not such a predicate. It merely behaves like one
+because the label that breaks closure holds exactly one community, the named
+attacker, so a path entering it must leave at the next step and the crossing
+count stops at two rather than growing. The bet's blocker was real; the reason
+given for it was not the reason.
 
 The qualification is the part worth keeping, and it is a fourth position rather
 than a fourth level of the third. **The instrument was internally incoherent in

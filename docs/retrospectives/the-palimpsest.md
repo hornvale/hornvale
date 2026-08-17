@@ -2,16 +2,29 @@
 
 **Merged:** 2026-08-17 · **Program:** Myth, campaign 3 of 4
 
-## Seven defects, all in controller text, none surviving in implementer code
+## Eight defects, all in controller text, none surviving in implementer code
 
 The ratio held for the third campaign running: every defect that reached an
 implementer originated in spec or plan prose I wrote, and none originated in
-the code written against it. Two reserved-keyword and lint collisions in
-sample code; a test suite in which teller and hearer were always the same
-people, so the design's one load-bearing choice was pinned by nothing; a
-tie-break branch that no fixture could reach; a control blind to the failure it
-named; and the unit mismatch below. **Every one was caught by running
-something. None was caught by reading.**
+the code written against it.
+
+1–3. Caught by the pre-flight scan before any dispatch: a generated artifact
+the plan never named, a missing import, and two steps ordered so that the
+second answered the first's question.
+4–5. In sample code handed over verbatim: a reserved keyword, and a closure
+parameter shaped so that a repo lint false-positived it.
+6. **The unit mismatch** below — the most consequential.
+7. **A control I specified that could not fail** — below, and third-order.
+8. **A stale claim that survived its own correction and travelled toward the
+registry** — below, and the best lesson here.
+
+Two more sat one step away, in test code the plan dictated: a suite in which
+teller and hearer were always the same people, so the design's one load-bearing
+choice was pinned by nothing, and a tie-break branch no fixture could reach.
+Both were caught in review and fixed rather than parked.
+
+**Every one was caught by running something, or by checking a claim against a
+measurement. None was caught by reading.**
 
 The half that is not a lament: four were caught by verification run one task
 ahead of dispatch, against live source rather than against the plan, and two of
@@ -94,6 +107,39 @@ reversal reddens the first only. That is strictly better than what I asked for.
   maximum. A predicted mechanism measured and found absent is worth the same
   as one found present, and costs a paragraph either way.
 
+## Defect eight: the file was corrected and the claim was not
+
+The eighth defect was exposed by this campaign's own closing task, and of the
+eight it is the one that would have done the most damage.
+
+The sequence: an early draft asserted that crossing stance twice was
+structurally impossible; the positive control above went red at 2; the spec was
+corrected. But the *phrasing* that draft had produced — that the one
+non-descent-closed class is "reachable only as a path origin" — survived the
+correction, and I carried it forward, unaltered, into the closing task's brief,
+aimed at a row in the idea registry.
+
+**Fixing the file is not fixing the claim.** A correction has a blast radius:
+the sentence that was wrong had already been copied, and correcting its
+original does nothing to the copies. This one was travelling toward the index
+other campaigns grep *before* they propose anything, which is the worst
+possible destination for a falsehood — a spec is read by the campaign that
+wrote it, and the registry is read by every campaign that comes after.
+
+It was caught because the implementer checked the claim against the
+measurement instead of transcribing it: `stance_of` returns `Perpetrator` for
+exactly the community named by `occ-ended-by`, so that label is a singleton —
+and the measured all-paths maximum of **two** crossings requires the
+perpetrator to be reached *mid-path*, which is precisely what "reachable only
+as a path origin" denies. The singleton is also the reason the maximum is two
+and not more: a path that enters a one-element class must leave it at the next
+step. The row states that instead, and it is a better statement than the one I
+asked for.
+
+This is the campaign's recurring theme — a check or a claim that cannot fail —
+arriving for the **fourth** time, and the first time it arrived in the handoff
+rather than in the work.
+
 ## An implementer reported a surviving mutant rather than hiding it
 
 A tie-break arm (`<=` → `<`) left both new controls green. The implementer
@@ -116,7 +162,8 @@ explicitly. The honest report:
 **The mechanism held.** The binding consequence written into the freeze — no
 campaign-2 figure may be used as a threshold anywhere — was respected
 throughout, and it mattered in exactly the place it was written for. H3 came in
-at +0.03 to +0.05 against the previous campaign's 0.662, and an author anchored
+at +0.0306, +0.0067 and +0.0489 against the previous campaign's 0.662 — its
+weakest rule two orders of magnitude down — and an author anchored
 on that number would have been under real pressure to call the result a failure
 or to go looking for a rule that recovered it. The direction-only framing,
 frozen in advance, made that a reportable weakening instead of a crisis.

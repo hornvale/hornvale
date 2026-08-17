@@ -135,10 +135,13 @@ claims above need amending, and the amendments matter more than the errors.
 The ceiling of one is correct for *held* claims and wrong for paths: 209 paths
 do cross stance twice, when an attacker sits inside a witness's own subtree,
 and they carry no held claim only because retention keeps the least-corrupted
-route per holder. The cause is sharper than an absorbing partition — every
-predicate over the teller/hearer *lineage relation* is constant along a
-single-parent descent walk by construction, so descent-closure is the general
-statement and stance merely an instance of it. And the world is not short of
+route per holder. The cause is sharper than an absorbing partition, and stance
+is not in fact one: every predicate over the teller/hearer *lineage relation*
+is constant along a single-parent descent walk by construction, and stance is
+not such a predicate — it only behaves like one because the label that breaks
+closure holds exactly one community, the named attacker, so a path entering it
+must leave at the next step and the crossing count stops at two. And the world
+is not short of
 contact: a shared tongue is total across peoples and 17 of 474 endings already
 carry a witness of another people. What is missing is a transmission edge that
 is not descent. Once damage accumulates as a continuous width rather than one

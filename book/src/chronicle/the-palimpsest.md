@@ -183,16 +183,18 @@ uniformly makes it `w × (1 + span_days)`, which adds a duration to a pure
 number: a *third* differently-incoherent model, growing by ~10⁶⁶ over fifteen
 steps. Its exploratory row is not a corrected counterpart to anything, and the
 tell was in the numbers before it was in the argument — the erratum names
-multiplicative as the one rule the defect does not touch, and it moved the
-most of the three.
+multiplicative as the one rule the defect does not touch, and its headline
+correlation then moved further between the columns than either of the others'
+(0.119, against 0.066 and 0.020). A prediction that specific, contradicted
+that plainly, is worth more attention than it got.
 
 ## What survives, and it is the thing the campaign was for
 
 **H1 is negative under all three rules in both readouts.** Long-generation
 peoples retain finer precision for events of comparable age, on 27 of 29, 23
 of 27 and 37 of 40 seeds where the correlation is defined under the frozen
-units, and on 37, 37 and 32 of 40 under the exploratory ones. The panel never
-disagrees on sign, so the no-verdict branch is never reached.
+units, and on 37, 37 and 32 of 40 under the exploratory ones. The panel's
+dominant sign never flips, so the no-verdict branch is never reached.
 
 It survives *because* of the defect rather than despite it. A unit mismatch
 that rescales every people's width by the same factor cannot disturb a
@@ -261,7 +263,8 @@ Every people shares a total common tongue — every registered concept has a
 word in it, and that totality is enforced — so nothing linguistic blocks a
 claim from crossing a people boundary. Contact itself is in the ledger
 already: seventeen of 474 endings carry a witness of another people, which is
-exactly the raid seam, and those witnesses hold claims at the first hop.
+exactly the raid seam, and those witnesses hold claims at hop 0 — having
+travelled no edge at all.
 
 What is missing is neither language nor contact but an **edge**. Every
 transmission model built so far walks parent to child down the founding tree
