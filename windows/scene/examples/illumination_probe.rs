@@ -265,6 +265,183 @@ fn sample_days(
     (min_t, min_day, frozen_count, first_frozen_day)
 }
 
+/// Build the CLI's `new --seed <N>` world for an arbitrary seed — the same
+/// construction [`genesis`] fixes at `SEED`, parameterized. Task 6 fix round
+/// (Finding 1 and the flagship-siting check): both measurements below need
+/// more than one seed, and [`genesis`] itself stays untouched (Task 6's
+/// tests transcribe it verbatim).
+fn genesis_for(seed: u64) -> World {
+    build_world(
+        Seed(seed),
+        &Default::default(),
+        SkyChoice::Generated,
+        &Default::default(),
+        &SettlementPins::default(),
+    )
+    .expect("seed builds")
+}
+
+/// Task 6 fix round, Finding 1: does a walk band carry at least two GROUND
+/// cells (dry land, unmarked, not the observer — the only cells
+/// `terrain_glyph` ever tints), and among those, does any pair share the
+/// SAME impedance rung but a DIFFERENT colour? That pairing is exactly what
+/// makes a coloured render more distinguishable than a monochrome one — the
+/// configuration the fixture in `illumination_hypotheses.rs` was built to
+/// guarantee. Reproduces `impedance_glyph`'s published formula (its own doc
+/// comment in `surrounds_ascii.rs`) rather than calling the private
+/// function; `water == 3` is `WaterKind::LEGEND`'s `"dry-land"` index,
+/// always in that position on every real scene (`WaterKind::LEGEND`).
+fn h3_band_classification(scene: &SurroundsScene) -> (bool, bool) {
+    let ground: Vec<(i64, Option<[u8; 3]>)> = scene
+        .cells
+        .iter()
+        .filter(|c| c.state != "here" && c.marks.is_empty() && c.water == 3)
+        .map(|c| {
+            let canopy = (1.0 - c.micro.openness) / 2.0;
+            let roughness = c.micro.relief.abs();
+            let impedance = f64::from(c.relief) + 0.5 * canopy + 0.5 * roughness;
+            (impedance.round() as i64, c.color)
+        })
+        .collect();
+    let dry_land_band = ground.len() >= 2;
+    let mut exhibits_pair = false;
+    for i in 0..ground.len() {
+        for j in (i + 1)..ground.len() {
+            if ground[i].0 == ground[j].0 && ground[i].1 != ground[j].1 {
+                exhibits_pair = true;
+            }
+        }
+    }
+    (dry_land_band, exhibits_pair)
+}
+
+/// Task 6 fix round, Finding 1: "the H1 band is 100% river" widened across
+/// the whole globe, the same way §6.1 widened when one fixed cell was
+/// unobservable — is that a property of seed 42, or of settlement siting?
+/// Sweeps a 12 (latitude) x 24 (longitude) grid of arbitrary observer
+/// positions (288 bands, matching the reviewer's own sample size) at the
+/// SAME radius/depth/day the H1 band uses, and returns `(dry_land_bands,
+/// exhibiting_bands, first_qualifying_lat_lon)`.
+fn h3_real_band_sweep(world: &World) -> (usize, usize, Option<(f64, f64)>) {
+    let ctx = LocaleContext::build(world).expect("world builds a locale context");
+    let depth = ctx.globe_level() + 6;
+    let star = hornvale_astronomy::star::generate_star(
+        world.seed.derive(hornvale_astronomy::streams::ROOT),
+    );
+    let light = hornvale_astronomy::illuminant::daylight(&star);
+
+    let mut dry_land_bands = 0usize;
+    let mut exhibiting_bands = 0usize;
+    let mut first_qualifying: Option<(f64, f64)> = None;
+
+    for lat_i in 0..12i64 {
+        let lat = -82.5 + 15.0 * lat_i as f64;
+        for lon_i in 0..24i64 {
+            let lon = -180.0 + 15.0 * lon_i as f64;
+            let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+            let Ok(scene) = surrounds_scene_colored_in(
+                world,
+                &ctx,
+                &observer_room,
+                WALK_BAND_RADIUS,
+                WorldTime::GENESIS,
+                &standard_observer(),
+                &light,
+                Sight {
+                    observer: "standard".to_string(),
+                    channels: 0,
+                    chromatic: 0,
+                    projection: String::new(),
+                    preserves: String::new(),
+                    sun_altitude_deg: 0.0,
+                },
+            ) else {
+                continue;
+            };
+            let (dry_land, exhibits) = h3_band_classification(&scene);
+            if dry_land {
+                dry_land_bands += 1;
+                if exhibits {
+                    exhibiting_bands += 1;
+                    if first_qualifying.is_none() {
+                        first_qualifying = Some((lat, lon));
+                    }
+                }
+            }
+        }
+    }
+    (dry_land_bands, exhibiting_bands, first_qualifying)
+}
+
+/// Task 6 fix round: is the flagship's own outdoor band's colour disclosure
+/// — `0 tinted, 31 withheld` — a property of seed 42, or of settlement
+/// siting generally? Builds the flagship band exactly as [`baseline_band`]
+/// does (parameterized by seed) and returns the `(tinted, withheld, bare)`
+/// counts `render_surrounds_ascii`'s `colour` lens itself would print, read
+/// directly off the scene rather than re-parsed out of the rendered string.
+fn flagship_band_colour_counts(world: &World) -> Option<(usize, usize, usize)> {
+    let ctx = LocaleContext::build(world).expect("world builds a locale context");
+    let village = hornvale_settlement::village_info(world)?;
+    let lat = match world
+        .ledger
+        .value_of(village.id, hornvale_settlement::LATITUDE)
+    {
+        Some(Value::Number(n)) => *n,
+        _ => return None,
+    };
+    let lon = match world
+        .ledger
+        .value_of(village.id, hornvale_settlement::LONGITUDE)
+    {
+        Some(Value::Number(n)) => *n,
+        _ => return None,
+    };
+    let depth = ctx.globe_level() + 6;
+    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    let star = hornvale_astronomy::star::generate_star(
+        world.seed.derive(hornvale_astronomy::streams::ROOT),
+    );
+    let light = hornvale_astronomy::illuminant::daylight(&star);
+    let scene = surrounds_scene_colored_in(
+        world,
+        &ctx,
+        &observer_room,
+        WALK_BAND_RADIUS,
+        WorldTime::GENESIS,
+        &standard_observer(),
+        &light,
+        Sight {
+            observer: "standard".to_string(),
+            channels: 0,
+            chromatic: 0,
+            projection: String::new(),
+            preserves: String::new(),
+            sun_altitude_deg: 0.0,
+        },
+    )
+    .ok()?;
+    // `terrain_glyph`'s ground rule again: a cell tints only when it is not
+    // the observer, carries no mark, and its water index is `"dry-land"`
+    // (3). A river/ocean/salt-basin cell is always withheld regardless of
+    // colour.
+    let mut tinted = 0usize;
+    let mut withheld = 0usize;
+    let mut bare = 0usize;
+    for c in &scene.cells {
+        let placed = c.u.is_some(); // non-seam
+        if !placed {
+            continue;
+        }
+        let ground = c.state != "here" && c.marks.is_empty() && c.water == 3;
+        match (ground, c.color.is_some()) {
+            (true, true) => tinted += 1,
+            (false, true) => withheld += 1,
+            (_, false) => bare += 1,
+        }
+    }
+    Some((tinted, withheld, bare))
+}
+
 fn main() {
     let world = genesis();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
@@ -418,4 +595,48 @@ fn main() {
          H1 ceiling: strictly less than {cell_count})",
         distinct_colors.len()
     );
+    println!();
+
+    // ---------------------------------------------------------------
+    // Task 6 fix round, Finding 1 — is the H1 band's all-river flatness a
+    // property of seed 42, or of settlement siting? Widen across the whole
+    // globe (288 arbitrary bands) rather than one settlement, on seed 42 and
+    // seed 13.
+    // ---------------------------------------------------------------
+    println!("--- Task 6 fix round, Finding 1: real dry-land band sweep, seed 42 ---");
+    let (dry_land_42, exhibiting_42, first_42) = h3_real_band_sweep(&world);
+    println!(
+        "dry-land bands: {dry_land_42} of 288 sampled; exhibiting a same-glyph/different-colour \
+         pair: {exhibiting_42} of {dry_land_42}"
+    );
+    println!("first qualifying (lat, lon): {first_42:?}");
+    println!();
+
+    println!("--- Task 6 fix round, Finding 1: real dry-land band sweep, seed 13 ---");
+    let world13 = genesis_for(13);
+    let (dry_land_13, exhibiting_13, first_13) = h3_real_band_sweep(&world13);
+    println!(
+        "dry-land bands: {dry_land_13} of 288 sampled; exhibiting a same-glyph/different-colour \
+         pair: {exhibiting_13} of {dry_land_13}"
+    );
+    println!("first qualifying (lat, lon): {first_13:?}");
+    println!();
+
+    // ---------------------------------------------------------------
+    // Task 6 fix round — "report it, do not fix it": is the flagship band's
+    // colour blackout (0 tinted, 31 withheld) a property of seed 42, or of
+    // where this project sites its flagship settlement? Five seeds.
+    // ---------------------------------------------------------------
+    println!("--- Task 6 fix round: flagship band colour disclosure across five seeds ---");
+    for seed in [42u64, 13, 7, 1, 100] {
+        let w = genesis_for(seed);
+        match flagship_band_colour_counts(&w) {
+            Some((tinted, withheld, bare)) => {
+                println!(
+                    "seed {seed:>3}: {tinted} tinted, {withheld} withheld, {bare} carrying no colour"
+                );
+            }
+            None => println!("seed {seed:>3}: no flagship settlement found"),
+        }
+    }
 }

@@ -17,7 +17,7 @@ use hornvale_kernel::color::standard_observer;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
 use hornvale_kernel::{RoomAddr, Seed, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
-use hornvale_scene::{Sight, SurroundsScene, surrounds_scene_colored_in};
+use hornvale_scene::{Sight, SurroundsScene, surrounds_scene, surrounds_scene_colored_in};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 /// The canonical fixture seed this campaign's spec measures against
@@ -92,3 +92,69 @@ pub fn baseline_band(world: &World) -> SurroundsScene {
     )
     .expect("colored surrounds scene builds over the flagship band")
 }
+
+/// A REAL, non-flagship seed-42 walk band at `(lat, lon)`, coloured the same
+/// way [`baseline_band`] is. Not a duplicate of that function in spirit —
+/// [`baseline_band`] is pinned to the flagship's own address and must stay
+/// that way (Step 0's population guard depends on it); this is the general
+/// "colour a band anywhere on the globe" builder Task 6's fix round needed
+/// once the flagship band turned out to be unusable for H3 (see
+/// [`REAL_H3_BAND_LAT_LON`] and the task-6 report for why).
+pub fn real_band(world: &World, lat: f64, lon: f64) -> SurroundsScene {
+    let ctx = LocaleContext::build(world).expect("world builds a locale context");
+    let depth = ctx.globe_level() + 6;
+    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+
+    let star = hornvale_astronomy::star::generate_star(
+        world.seed.derive(hornvale_astronomy::streams::ROOT),
+    );
+    let light = hornvale_astronomy::illuminant::daylight(&star);
+
+    surrounds_scene_colored_in(
+        world,
+        &ctx,
+        &observer_room,
+        WALK_BAND_RADIUS,
+        WorldTime::GENESIS,
+        &standard_observer(),
+        &light,
+        Sight {
+            observer: "standard".to_string(),
+            channels: 0,
+            chromatic: 0,
+            projection: String::new(),
+            preserves: String::new(),
+            sun_altitude_deg: 0.0,
+        },
+    )
+    .expect("colored surrounds scene builds")
+}
+
+/// The same real band, through the **uncoloured** path — no `Observer` at
+/// all, every cell's `color` stays `None`. The closest honest proxy for "an
+/// observer with no chromatic channel": `hornvale_kernel::color::Observer`
+/// has no constructor for a true zero-chromatic eye (`Observer::with_roles`
+/// refuses a role set with zero `Chromatic` channels), so this is the one
+/// path in the codebase that actually produces the picture such an eye
+/// would leave behind.
+pub fn real_band_uncolored(world: &World, lat: f64, lon: f64) -> SurroundsScene {
+    let ctx = LocaleContext::build(world).expect("world builds a locale context");
+    let depth = ctx.globe_level() + 6;
+    let observer_room = RoomAddr::containing(unit_sphere_from_lat_lon(lat, lon), depth);
+    surrounds_scene(world, &observer_room, WALK_BAND_RADIUS, WorldTime::GENESIS)
+        .expect("uncoloured surrounds scene builds")
+}
+
+/// A real, non-flagship seed-42 observer position whose walk band carries
+/// dry land — Task 6's fix round, Finding 1. The flagship band is unusable
+/// for H3 (it is 100% river on every seed sampled — 42, 13, 7, 1, 100 — so
+/// colour never reaches the picture regardless of chromatic capability; see
+/// the task-6 report). A 288-point globe sweep
+/// (`illumination_probe.rs::h3_real_band_sweep`) found this the FIRST
+/// qualifying point — a dry-land band whose ground cells actually exhibit
+/// the same-glyph/different-colour pairing that makes a coloured render
+/// more distinguishable than a monochrome one. That pairing turned out to be
+/// the modal case, not a rarity: 53 of 53 seed-42 dry-land bands sampled
+/// exhibit it (97 of 101 on seed 13), so this point is representative, not
+/// cherry-picked for the result.
+pub const REAL_H3_BAND_LAT_LON: (f64, f64) = (-52.5, -150.0);

@@ -218,6 +218,28 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
                 sight.observer, sight.channels, sight.chromatic, sight.projection, sight.preserves
             ));
         }
+        // §2.3's own axis-loss disclosure for THIS lens, the counterpart to
+        // the terrain lens's `epistemic:` sentence below. The counts line
+        // above states a fact a reader must still do arithmetic on to
+        // notice ("0 tinted, 0 withheld" reads as an unremarkable band
+        // unless you already suspect the chromatic axis is gone); this line
+        // states the conclusion outright, in the same voice, the moment the
+        // picture carries literally no colour information at all — every
+        // placed cell bare is the strongest, always-correct signal that the
+        // chromatic axis contributed nothing to this render, regardless of
+        // WHY (no observer at all, an observer with zero chromatic
+        // channels, or an observer with channels but no projection — every
+        // one of those is the same loss from the reader's side of the
+        // screen). Never fires when even one cell carries a colour, so it
+        // cannot misfire on a merely water-heavy band that still tints its
+        // dry ground.
+        if !placed.is_empty() && bare == placed.len() {
+            out.push_str(&format!(
+                "  colour: this chart carries no chromatic channel, so no cell is tinted \
+                 regardless of its surface cover — {bare} of {} placed.\n",
+                placed.len()
+            ));
+        }
     }
 
     // The terrain lens's own disclosure — the epistemic counterpart to the
@@ -649,6 +671,31 @@ mod tests {
         let sets = out.matches("\u{1b}[38;2;").count();
         let resets = out.matches("\u{1b}[0m").count();
         assert_eq!(sets, resets, "{sets} colour sets but {resets} resets");
+    }
+
+    #[test]
+    fn the_colour_lens_declares_the_chromatic_axis_lost_when_no_cell_carries_any_colour() {
+        // §2.3: a client that lacks a channel loses that channel's ENTIRE
+        // axis and DECLARES the loss — the counterpart to
+        // `the_terrain_lens_declares_it_carries_no_weight_channel` for the
+        // chromatic axis instead of the epistemic one. The counts line alone
+        // ("0 tinted, 0 withheld, N carrying no colour") is not itself a
+        // declaration — a reader has to notice the zeroes mean something —
+        // so this pins that a SEPARATE, explicit sentence exists and that it
+        // is absent whenever even one cell carries real colour (the positive
+        // control: a coloured render must not also claim the axis is lost).
+        let uncoloured = render_surrounds_ascii(&uncolored_test_scene(), "colour", &[]);
+        let coloured = render_surrounds_ascii(&colored_test_scene(), "colour", &[]);
+        const DECLARATION: &str = "colour: this chart carries no chromatic channel, so no \
+             cell is tinted regardless of its surface cover";
+        assert!(
+            uncoloured.contains(DECLARATION),
+            "an uncoloured render must declare the lost chromatic axis: {uncoloured}"
+        );
+        assert!(
+            !coloured.contains(DECLARATION),
+            "a render with real colour must not also claim the axis is lost: {coloured}"
+        );
     }
 
     #[test]
