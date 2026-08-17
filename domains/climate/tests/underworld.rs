@@ -759,3 +759,75 @@ fn a3_the_underworld_lands_in_the_cave_region() {
         chance * 100.0
     );
 }
+
+/// **The arity ratchet — the denominator `environment_fit`'s mean divides by.**
+///
+/// `hornvale_species::environment_fit` (Task 7) averages per-axis
+/// dissimilarity over the axes a niche and a place **share**. A mean over an
+/// intersection is not comparable across places of differing arity: a chamber
+/// stating two axes can score `1.0` on both while a chamber stating five is
+/// scored on all five, so the sparser vector is systematically advantaged. The
+/// same bias is already recorded on the A-3 test above, where it is a live
+/// effect on the result rather than a caveat.
+///
+/// **Measured 2026-08-17, and the answer is what makes the bias inert for a
+/// single-realm ranking:** the arity of the underworld corpus is **constant**.
+/// All 22 assigned communities state exactly the five axes of [`OCCUPIED`];
+/// the 2 resisters state none, which is the zero vector meaning *unassigned*
+/// rather than a sparse assignment. So ranking chambers for one kind against
+/// this corpus compares equal-arity vectors throughout and the mean's
+/// denominator is the same integer every time.
+///
+/// **The surface corpus is where it varies, and by exactly one axis.** Its
+/// histogram is recorded here rather than described because it is the contrast
+/// that makes the paragraph above mean something: 57 names at arity 5, **7 at
+/// arity 4**, and The Axes' 10 resisters at 0. Any cross-corpus comparison —
+/// A-3 above is one — is therefore comparing unequal denominators on 7 of its
+/// 64 candidates.
+///
+/// Ratchet-style, like the coincidence set: a move here changes what a mean
+/// over this corpus means, and must be a deliberate act.
+#[test]
+fn the_underworld_corpus_has_constant_arity_and_the_surface_corpus_does_not() {
+    let mut underworld: BTreeMap<usize, Vec<&'static str>> = BTreeMap::new();
+    for name in underworld_assignment() {
+        underworld
+            .entry(name.vector.axis_ids().len())
+            .or_default()
+            .push(name.name);
+    }
+    let underworld_counts: Vec<(usize, usize)> = underworld
+        .iter()
+        .map(|(arity, names)| (*arity, names.len()))
+        .collect();
+    println!("underworld arity histogram: {underworld_counts:?}");
+    assert_eq!(
+        underworld_counts,
+        vec![(0, 2), (5, 22)],
+        "the underworld corpus's arity moved. A mean over shared axes is only \
+         comparable across equal-arity vectors, so this is a change in what a \
+         chamber ranking means: record the new histogram and say what moved it."
+    );
+
+    // Non-emptiness is asserted by the pair above (an empty corpus would give
+    // an empty histogram, not this one), but the ARITY claim needs one more
+    // thing said out loud: 5 is the size of `OCCUPIED`, not a coincidence.
+    assert_eq!(
+        OCCUPIED.len(),
+        5,
+        "the constant arity above is the occupied-axis count, and must stay tied to it"
+    );
+
+    let mut surface: BTreeMap<usize, usize> = BTreeMap::new();
+    for name in assignment() {
+        *surface.entry(name.vector.axis_ids().len()).or_default() += 1;
+    }
+    let surface_counts: Vec<(usize, usize)> = surface.into_iter().collect();
+    println!("surface arity histogram: {surface_counts:?}");
+    assert_eq!(
+        surface_counts,
+        vec![(0, 10), (4, 7), (5, 57)],
+        "the surface corpus's arity moved, which changes the denominator bias \
+         every cross-corpus distance in this file carries."
+    );
+}

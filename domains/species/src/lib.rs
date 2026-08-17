@@ -5366,6 +5366,18 @@ fn check_unit_range(value: f64, unit: &'static str) -> Result<(), UnitError> {
 /// axis cannot perturb any existing fit, because no existing fit ever looked
 /// at the basis.
 ///
+/// **That pin is load-bearing a SECOND time, for the bitwise Gower tie above,
+/// and this is the only place it is written down.** The sum here runs in
+/// ascending **axis-id** order, because the niche is a `BTreeMap<u16, _>`;
+/// Task 6's `distance` runs in **basis** order, because it iterates
+/// `environment_v1_basis()`. Float addition is not associative, so two orders
+/// give bit-identical sums only when they are the *same* order — and they are
+/// the same order only because the basis is dense and ascending from zero,
+/// which is precisely what
+/// `the_environment_basis_ids_are_append_only` asserts. A basis that ever
+/// stopped being dense-ascending would leave both instruments individually
+/// correct and no longer bit-comparable.
+///
 /// **An unassigned place scores `0.0`, and so does any place sharing no axis
 /// with the niche.** The zero vector is legal and means *unassigned* — how a
 /// name the axes cannot place is represented, a finding to be counted rather
@@ -5376,6 +5388,30 @@ fn check_unit_range(value: f64, unit: &'static str) -> Result<(), UnitError> {
 /// intersection is **no evidence of fit**, not perfect indifference. `1.0`
 /// would be actively wrong — it would make a place the axes could not describe
 /// outrank every place they could.
+///
+/// # The score is only comparable across places of equal arity
+///
+/// A mean over the **intersection** carries a sparsity bias, and it runs the
+/// same direction every time: a place that states two of the niche's axes is
+/// scored on two terms and can reach `1.0` on both, while a place that states
+/// five is scored on all five and is penalised by every one it misses. **The
+/// sparser vector is systematically advantaged.** Nothing here corrects for
+/// that, and nothing should — the correction would have to invent a value for
+/// an axis the place declined, which is exactly the fabrication the genus rule
+/// exists to refuse.
+///
+/// So: **ranking places against one niche is sound only where the candidates
+/// share an arity**, and a caller comparing across arities is comparing
+/// different denominators. This is measured rather than feared, in
+/// `domains/climate/tests/underworld.rs`'s
+/// `the_underworld_corpus_has_constant_arity_and_the_surface_corpus_does_not`
+/// — the species crate cannot import a sibling domain to assert it here, so
+/// the ratchet lives with the corpus and this paragraph points at it. The
+/// state of that measurement, as a fact about the corpora rather than about
+/// this function: the **underworld** corpus is constant-arity, so a
+/// single-realm chamber ranking is unaffected, while the **surface** corpus is
+/// not, so any cross-corpus comparison carries the bias. Read the current
+/// numbers off that test, never off this comment.
 ///
 /// # This function cannot separate realms, and must not be asked to
 ///
@@ -6275,6 +6311,38 @@ mod tests {
         }
 
         #[test]
+        fn a_repeated_axis_id_overwrites_rather_than_combining() {
+            // `EnvironmentNiche::new`'s doc claims last-write-wins, matching
+            // `EnvironmentVector::new`. A doc claim no test holds is this
+            // campaign's most-repeated defect, so this holds it.
+            let n = a_niche(&[
+                (ENERGY, AxisPreference::graded(0.0)),
+                (ENERGY, AxisPreference::graded(1.0)),
+            ]);
+            assert_eq!(n.axis_ids(), vec![ENERGY.id], "one entry, not two");
+            assert_eq!(
+                n.get(ENERGY),
+                Some(AxisPreference::graded(1.0)),
+                "the LAST write wins"
+            );
+
+            // Observable through the fit, not only through the accessor —
+            // otherwise this would pin the storage and not the behaviour.
+            assert_eq!(environment_fit(&n, &place(&[(ENERGY, 1.0)])), 1.0);
+            assert_eq!(environment_fit(&n, &place(&[(ENERGY, 0.0)])), 0.0);
+
+            // And the overwriting write is validated like any other: it cannot
+            // smuggle a valence mismatch in behind a legal first write.
+            assert!(
+                EnvironmentNiche::new(&[
+                    (SUBSTRATE, AxisPreference::class(0.0)),
+                    (SUBSTRATE, AxisPreference::graded(0.5)),
+                ])
+                .is_err()
+            );
+        }
+
+        #[test]
         fn a_full_range_tolerance_reproduces_gowers_similarity() {
             // The justification for the whole shape: at `tolerance == 1.0` — the
             // whole of an axis's [0, 1] range — `environment_fit` is exactly
@@ -6283,10 +6351,36 @@ mod tests {
             // whose five hand-reproduced values a reviewer verified). BITWISE, not
             // approximately: the implementation accumulates dissimilarity and
             // subtracts once, so the two arithmetics are the same expression.
+            //
+            // READ THIS BEFORE TREATING A GREEN HERE AS AGREEMENT WITH TASK 6.
+            // The reference below is a RE-IMPLEMENTATION, not the instrument.
+            // `domains/species` may not depend on a sibling domain, so the real
+            // `distance` cannot be imported and this is a copy — one that
+            // already differs from the original on purpose (`==` against its
+            // `to_bits()`, which disagree only on `-0.0`). A green here says
+            // "the fit agrees with a faithful transcription", never "the fit
+            // agrees with the shipped instrument".
+            //
+            // SUMMATION ORDER IS PART OF THE TRANSCRIPTION, and getting it
+            // wrong is invisible when it happens to cancel. The original
+            // iterates `environment_v1_basis()`; an earlier draft of this
+            // helper iterated the AUTHORED slice order instead, and one of the
+            // three cases below lists LIGHT (id 4) before SUBSTRATE (id 3). It
+            // passed anyway, because those particular terms summed identically
+            // — but float addition is not associative, so a case with two
+            // non-zero out-of-order terms could have reddened without either
+            // instrument being wrong. Fixed by iterating the basis exactly as
+            // the original does. See `environment_fit`'s doc for why the
+            // implementation's own ascending-id order agrees with basis order
+            // at all: that is a second, separate dependency on The Axes'
+            // append-only pin.
             fn gower(niche: &[(EnvironmentAxis, f64)], p: &EnvironmentVector) -> f64 {
                 let mut total = 0.0;
                 let mut shared = 0usize;
-                for (axis, x) in niche {
+                for axis in environment_v1_basis() {
+                    let Some((_, x)) = niche.iter().find(|(a, _)| a.id == axis.id) else {
+                        continue;
+                    };
                     let Some(y) = p.get(*axis) else { continue };
                     shared += 1;
                     total += match axis.valence {
