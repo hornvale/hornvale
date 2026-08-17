@@ -92,7 +92,8 @@
 //!   moisture: saturated (phreatic) 599 (68.5%)  vadose 275 (31.5%)
 //!   moisture vadose         p10=0.309 p50=0.415 p90=0.781
 //!   distinct moistures (0.001)=214 of 874
-//!   distinct (temperature, moisture) pairs=807 of 874
+//!   distinct (temperature, moisture) pairs=807 of 874   CONTROL (pre-change reading)=691
+//!   surface-temperature buckets carrying >1 distinct chamber reading=135 of 691 (pre-change: 0 by construction)
 //!   drow niche fit  surface mean=0.039  chamber mean=0.056  chamber>surface on 870 (99.5%)
 //!   deltaT by reach decile  shallowest p50=0.7 K (reach<=200 m)  deepest p50=56.0 K (reach>=2272 m)
 //! seed 7: cave columns=1681
@@ -102,7 +103,8 @@
 //!   moisture: saturated (phreatic) 1390 (82.7%)  vadose 291 (17.3%)
 //!   moisture vadose         p10=0.357 p50=0.489 p90=0.790
 //!   distinct moistures (0.001)=222 of 1681
-//!   distinct (temperature, moisture) pairs=1483 of 1681
+//!   distinct (temperature, moisture) pairs=1483 of 1681   CONTROL (pre-change reading)=1323
+//!   surface-temperature buckets carrying >1 distinct chamber reading=263 of 1323 (pre-change: 0 by construction)
 //!   drow niche fit  surface mean=0.032  chamber mean=0.058  chamber>surface on 1681 (100.0%)
 //!   deltaT by reach decile  shallowest p50=5.5 K (reach<=215 m)  deepest p50=57.1 K (reach>=2474 m)
 //! seed 1234: cave columns=1266
@@ -112,7 +114,8 @@
 //!   moisture: saturated (phreatic) 1057 (83.5%)  vadose 209 (16.5%)
 //!   moisture vadose         p10=0.332 p50=0.486 p90=0.783
 //!   distinct moistures (0.001)=184 of 1266
-//!   distinct (temperature, moisture) pairs=1172 of 1266
+//!   distinct (temperature, moisture) pairs=1172 of 1266   CONTROL (pre-change reading)=1030
+//!   surface-temperature buckets carrying >1 distinct chamber reading=180 of 1030 (pre-change: 0 by construction)
 //!   drow niche fit  surface mean=0.036  chamber mean=0.061  chamber>surface on 1266 (100.0%)
 //!   deltaT by reach decile  shallowest p50=0.8 K (reach<=202 m)  deepest p50=58.4 K (reach>=2694 m)
 //! ```
@@ -136,15 +139,34 @@
 //!
 //! ## Five findings
 //!
-//! **1. Chambers can now be told apart, and it is temperature that does it.**
-//! 807 / 1483 / 1172 distinct `(temperature, moisture)` readings over 874 /
-//! 1681 / 1266 cave columns — 88–93%. Before this task every chamber in a
-//! world read `(that cell's surface temperature, 0.90)`, so the only thing
-//! separating two chambers was the surface reading they had not yet left.
-//! Temperature carries most of the separation on its own (776 / 1387 / 1137
-//! distinct at 0.01 °C) because it composes three independently-varying
-//! per-cell terms — the climate datum, the geothermal gradient and the depth
-//! budget — so `cave_depth_reach_m`'s clamp atoms do not survive into it.
+//! **1. The headline is the depth gradient, not the pair count — and the
+//! first version of this file got that wrong by omitting a control.**
+//!
+//! The pair count rose from **691 → 807, 1323 → 1483, 1030 → 1172** (+16.8 /
+//! +12.1 / +13.8%). The control is not a second world: before this task a
+//! chamber read `(that cell's own surface temperature, SUBTERRANEAN_MOISTURE)`,
+//! so with moisture constant the pre-change pair count is exactly the number
+//! of distinct surface temperatures, computed here from the same field on the
+//! same worlds. **The surface temperature already varied per cell, so the
+//! "before" figure was never 1**, and the sentence "807/874 carry a distinct
+//! reading where before there was one value" — which this file, the task
+//! report and spec §4.3 all carried — is wrong. A real but modest rise is what
+//! the pair count shows.
+//!
+//! What the pair count *cannot* show, and what is genuinely new, is that the
+//! chamber reading now carries information the surface reading does not:
+//! **135 / 263 / 180 surface-temperature buckets (17.5–19.9%) carry more than
+//! one distinct chamber reading**, where pre-change there could be **zero by
+//! construction**, the chamber being a pure function of that bucket. That is
+//! the assertion this file now pins, because it is the one the old model fails
+//! necessarily rather than probably.
+//!
+//! **The controlled headline is the ΔT spread by depth: 0.7 → 56.0 K between
+//! the shallowest and deepest reach deciles on seed 42** (5.5 → 57.1 and
+//! 0.8 → 58.4 on the others). Its control is exact and needs no estimate:
+//! pre-change ΔT was **identically 0.0 K at every cave column in every
+//! world**, because temperature passed through. An eighty-fold spread opening
+//! out of a flat zero is the result; the pair count is a corollary of it.
 //!
 //! **2. Moisture varies, but the majority of it is one value.** 68.5 / 82.7 /
 //! 83.5% of cave columns are flooded *at their reach depth* and read
@@ -213,10 +235,19 @@ const CANDIDATE_REACH_M: [f64; 9] = [
     75.0, 150.0, 225.0, 300.0, 450.0, 600.0, 900.0, 1200.0, 2400.0,
 ];
 
-/// How close to an end of the moisture axis counts as "piled against it", in
-/// moisture units. `0.02` is one fiftieth of the axis — small enough that a
-/// genuinely spread population does not register, wide enough that a cluster
-/// does.
+/// **AUTHORED.** How close to an end of the moisture axis counts as "piled
+/// against it", in moisture units.
+///
+/// `0.02` is one fiftieth of the axis — small enough that a genuinely spread
+/// population does not register, wide enough that a cluster does. Nothing
+/// derives it, and it is worth flagging because it is the constant the frozen
+/// criterion's *failed* clause is measured against: the dry-side pile reads
+/// 0.0% at every candidate, and this band is what "0.0%" is 0.0% of. Widening
+/// it would not rescue that clause by any plausible amount — at the shipped
+/// constant the vadose p10 sits at 0.326, eleven bands above the floor, and
+/// even at the smallest candidate on the ladder it is 0.191, four bands above
+/// — but a reader checking whether the clause failed for a real reason or a
+/// narrow window deserves the numbers rather than an assurance.
 const PILE_BAND: f64 = 0.02;
 
 /// Percentile of an ascending slice.
@@ -305,6 +336,80 @@ fn cave_cells(seed_value: u64, wc: &WorldComponents) -> CaveCells {
             .push((cave.depth_reach_m, water_table_m, porosity));
     }
     out
+}
+
+/// The one seed the non-heavy live-path guard below builds. Named rather than
+/// spelled inline so it is obviously ONE world and not a sweep.
+const LIVE_GUARD_SEED: u64 = 42;
+
+/// claim: structural(seed: 42) — one world, one build, no sweep.
+///
+/// **The only live-path guard in this file that either gate can reach**, and
+/// it exists because a mutation showed the seam was otherwise unguarded:
+/// neutralising the depth `subterranean_substrate_field` derives from a cave's
+/// reach left all 614 worldgen tests green. The two assertions that catch it
+/// live in `what_does_a_chamber_read`, which carries the canonical heavy
+/// ignore token and therefore runs only under `make heavy-remote` — off
+/// `gate-commit` and off the stage gate. (Spelling that attribute out here,
+/// even inside backticks and with an ellipsis for its reason, reddens
+/// `cli/tests/heavy_tier.rs`: its scan is source-level and cannot tell a
+/// mention from a use. Found the hard way; do not restore it.) A guard nothing routinely runs is a guard with the reach of
+/// a comment, so the cheapest half is duplicated here without the ignore.
+///
+/// It is cheap because one `BuildDepth::Terrain` world costs about a second —
+/// the same posture `warren_gate.rs` already takes for a non-ignored
+/// live-worldgen test. **Its reach is the stage gate**, and `gate-commit` only
+/// once the sub-floor roster has a recorded duration for it; coverage is the
+/// stage gate's job by design (root `CLAUDE.md`), so that is the honest
+/// statement of where this runs rather than a claim that it runs everywhere.
+///
+/// Deliberately ONE seed and TWO assertions: the distribution work, the
+/// calibration and the readout stay heavy, because those are what cost. This
+/// asks only the question the mutation exposed — does the live field still
+/// carry a depth at all.
+#[test]
+fn the_live_substrate_field_carries_depth() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let cells = cave_cells(LIVE_GUARD_SEED, &wc);
+    let n = cells.chamber.len();
+    assert!(n > 0, "seed {LIVE_GUARD_SEED} has no caves");
+
+    let mut delta_t: Vec<f64> = cells
+        .chamber
+        .iter()
+        .zip(&cells.surface)
+        .map(|(c, s)| c.temperature_c - s.temperature_c)
+        .collect();
+    delta_t.sort_by(f64::total_cmp);
+    assert!(
+        pct(&delta_t, 0.10) > 1.0,
+        "the coldest tenth of chambers sit only {:.3} K above their surface \
+         datum — the geothermal term is not reaching the live substrate field",
+        pct(&delta_t, 0.10)
+    );
+
+    // And the half a constant depth would pass: deeper caves must be hotter.
+    let mut by_reach: Vec<(f64, f64)> = cells
+        .hydrology
+        .iter()
+        .zip(&cells.surface)
+        .zip(&cells.chamber)
+        .map(|((hydro, s), c)| (hydro.0, c.temperature_c - s.temperature_c))
+        .collect();
+    by_reach.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let decile = (n / 10).max(1);
+    let mut shallow: Vec<f64> = by_reach[..decile].iter().map(|&(_, dt)| dt).collect();
+    let mut deep: Vec<f64> = by_reach[n - decile..].iter().map(|&(_, dt)| dt).collect();
+    shallow.sort_by(f64::total_cmp);
+    deep.sort_by(f64::total_cmp);
+    assert!(
+        pct(&deep, 0.50) > pct(&shallow, 0.50) + 1.0,
+        "the deepest tenth of caves ({:.3} K above datum) is not warmer than \
+         the shallowest tenth ({:.3} K) — depth is not reaching the chamber's \
+         temperature in a real world",
+        pct(&deep, 0.50),
+        pct(&shallow, 0.50)
+    );
 }
 
 /// claim: readout(off-gate, heavy:, prints the sweep, asserts only that the
@@ -484,13 +589,41 @@ fn what_does_a_chamber_read() {
         // The campaign's actual question: can two chambers be told apart? A
         // pair bucketed at (0.01 C, 0.001 moisture) is the resolution below
         // which a difference is not a difference.
+        //
+        // AND ITS CONTROL, which the first version of this probe did not take
+        // and which made its headline wrong. The PRE-CHANGE chamber reading
+        // was `(that cell's own surface temperature, SUBTERRANEAN_MOISTURE)` —
+        // the temperature already varied per cell, so the "before" count was
+        // never 1. With moisture constant, the pre-change pair count is
+        // exactly the number of distinct surface temperatures at the same
+        // bucket width, computable here from the surface field the probe
+        // already holds. No before-arm build is needed; it is the same world,
+        // read the way the old code read it.
         let mut pairs: std::collections::BTreeSet<(i64, i64)> = std::collections::BTreeSet::new();
-        for s in &cells.chamber {
-            pairs.insert((
-                (s.temperature_c * 100.0).round() as i64,
-                (s.moisture * 1000.0).round() as i64,
-            ));
+        // Chamber readings grouped by the surface temperature bucket that,
+        // before this change, DETERMINED them. A bucket carrying two distinct
+        // chamber readings is information the surface reading does not have —
+        // and pre-change there could be none, by construction, because the
+        // chamber reading was a pure function of that bucket.
+        let mut by_surface: std::collections::BTreeMap<
+            i64,
+            std::collections::BTreeSet<(i64, i64)>,
+        > = std::collections::BTreeMap::new();
+        for (c, s) in cells.chamber.iter().zip(&cells.surface) {
+            let pair = (
+                (c.temperature_c * 100.0).round() as i64,
+                (c.moisture * 1000.0).round() as i64,
+            );
+            pairs.insert(pair);
+            by_surface
+                .entry((s.temperature_c * 100.0).round() as i64)
+                .or_default()
+                .insert(pair);
         }
+        // The pre-change counterfactual: distinct (surface temperature, 0.90)
+        // pairs === distinct surface temperatures.
+        let control_pairs = distinct(&surface_t, 0.01);
+        let informative_buckets = by_surface.values().filter(|set| set.len() > 1).count();
 
         let surface_fit: f64 = cells.surface.iter().map(fit).sum::<f64>() / n as f64;
         let chamber_fit: f64 = cells.chamber.iter().map(fit).sum::<f64>() / n as f64;
@@ -538,25 +671,34 @@ fn what_does_a_chamber_read() {
             distinct(&all_moisture, 0.001)
         );
         println!(
-            "  distinct (temperature, moisture) pairs={} of {n}",
+            "  distinct (temperature, moisture) pairs={} of {n}   CONTROL (pre-change reading)={control_pairs}",
             pairs.len()
+        );
+        println!(
+            "  surface-temperature buckets carrying >1 distinct chamber reading={informative_buckets} of {} (pre-change: 0 by construction)",
+            by_surface.len()
         );
         println!(
             "  drow niche fit  surface mean={surface_fit:.3}  chamber mean={chamber_fit:.3}  chamber>surface on {better_below} ({:.1}%)",
             100.0 * better_below as f64 / n as f64,
         );
 
-        // The one assertion, and it is the campaign's own headline claim
-        // rather than a number: chambers must be tellable apart. Before this
-        // task every chamber in a world read `(surface temperature, 0.90)`,
-        // so this held only as far as the surface datum varied and moisture
-        // contributed nothing at all. A model that regressed to a constant
-        // would collapse this count.
+        // THE CONTROLLED FORM OF THE HEADLINE. The first version of this
+        // assertion was `pairs.len() > n / 2`, which the pre-change code would
+        // very likely have passed too — the surface temperature alone already
+        // separated most columns — so it pinned nothing this task did.
+        //
+        // What this task actually did is make the chamber reading carry
+        // information the surface reading does not. Pre-change that was
+        // impossible BY CONSTRUCTION, not by measurement: the chamber was
+        // `(surface temperature, one constant)`, so every surface-temperature
+        // bucket mapped to exactly one chamber reading and this count was
+        // necessarily 0. Any positive value falsifies the old model.
         assert!(
-            pairs.len() > n / 2,
-            "seed {seed_value}: only {} distinct chamber readings over {n} cave \
-             columns — chambers are not tellable apart",
-            pairs.len()
+            informative_buckets > 0,
+            "seed {seed_value}: no surface-temperature bucket carries more than \
+             one chamber reading, so the chamber reading is still a function of \
+             the surface reading alone — which is the pre-Underworld model"
         );
         // And moisture specifically must not be back to one value.
         assert!(

@@ -386,15 +386,29 @@ fn the_blast_radius_readout() {
     // the sole determinant." Measured on rust-monster over seed 42's
     // cave-bearing cells (`warren_liebig_probe.rs`):
     //
-    //     surface       temp .7327  moist .5850  insol .4670  elev .2498
-    //     subterranean  temp .7327  moist .7865  insol .8399  elev .2498
+    //     surface       temp .6943  moist .6781  insol .4666  elev .2469
+    //     subterranean  temp .4673  moist .7551  insol .8399  elev .2469
     //     sovereignty floor = .466288
     //
-    // Going underground does exactly what it was built to do — moisture and
-    // insolation improve substantially — and the minimum never sees it,
-    // because the unfloored elevation term sits below the floor and
-    // `subterranean_substrate` passes `height_asl_m` through unchanged. That
-    // is still true after The Underworld's Task 5, but for a different reason
+    // RE-MEASURED 2026-08-17 (The Underworld, Task 5). The previous figures
+    // here — subterranean temp .7327 equal to surface, moist .7865 from the
+    // retired `SUBTERRANEAN_MOISTURE` constant — were falsified by that task
+    // and are replaced rather than annotated. Re-run
+    // `warren_liebig_probe.rs`'s battery to regenerate them; do not hand-edit.
+    //
+    // The qualitative story changed with them, and only the third clause of it
+    // survives. Insolation still improves substantially (.4666 -> .8399, the
+    // one axis a chamber wins outright). **Temperature now DEGRADES** — this
+    // chamber sits at a depth its gradient warms past rust-monster's cool
+    // optimum — and **moisture is now mixed** rather than uniformly better:
+    // over the four cells this probe prints, it rises on two and falls on two,
+    // because a chamber high above its water table in tight rock is drier than
+    // the surface above it. Going underground is a trade now, not a gift.
+    //
+    // What did NOT change is the thing this tripwire pins: the minimum never
+    // sees any of it, because the unfloored elevation term sits below the
+    // floor and `subterranean_substrate` passes `height_asl_m` through
+    // unchanged. That is still true after Task 5, but for a different reason
     // than The Deep Realm's: a real depth coordinate now EXISTS (a chamber's
     // depth in metres reaches temperature and moisture), and it is
     // deliberately not subtracted from `height_asl_m`, which is scored against

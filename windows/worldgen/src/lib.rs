@@ -2733,9 +2733,17 @@ const SEEPAGE_REACH_M: f64 = 225.0;
 ///
 /// **What this richer reading does NOT yet do: move a world.** Every one of
 /// the 614 tests in this crate stayed green across this change, and that is
-/// not because nothing moved — `underworld_conditions_probe` measures 88–93%
-/// of cave columns carrying a distinct `(temperature, moisture)` reading where
-/// before they carried one value. It is because the live consumer cannot see
+/// not because nothing moved. `underworld_conditions_probe` measures the move
+/// against a control: the ΔT between the shallowest and deepest reach deciles
+/// spreads **0.7 → 56.0 K** on seed 42 (5.5 → 57.1 and 0.8 → 58.4 on the other
+/// two), out of a pre-change ΔT that was identically 0.0 K at every cave
+/// column in every world; and 17.5–19.9% of surface-temperature buckets now
+/// carry more than one chamber reading, which pre-change was impossible by
+/// construction. (The distinct-pair count rises too — 691 → 807, 1323 → 1483,
+/// 1030 → 1172 — but only modestly, because the surface temperature already
+/// varied per cell and so the pre-change reading was never one value. An
+/// earlier draft of this doc said it was; that claim had no control behind
+/// it.) The reason nothing moved is that the live consumer cannot see any of
 /// it. [`tolerance_liebig`] (The Tilth, stage 5) floors temperature, moisture
 /// and insolation by the sovereignty floor and calls elevation with floor
 /// `0.0`, so on a cave-bearing cell the unfloored elevation term sits below the
@@ -2811,6 +2819,16 @@ pub fn chamber_moisture(depth_m: f64, water_table_m: f64, porosity: f64) -> f64 
 /// **calibration-free form**, so the sweep that chose [`SEEPAGE_REACH_M`] is
 /// reproducible from the tree rather than from six hand-edits of a private
 /// constant.
+///
+/// **`pub` for reproducibility, not for a production caller, and there is no
+/// production caller.** Both this and [`chamber_moisture`] are reached only by
+/// [`subterranean_substrate`] (which is in this module and needs no export)
+/// and by `underworld_conditions_probe`. Stated rather than left to be
+/// discovered: a `pub` surface with only test consumers is exactly the shape
+/// this campaign keeps finding, and the justification here is that the
+/// alternative — a private constant swept by six hand-edits — produced one
+/// drafted-from-estimate sweep and one formatter-defeated probe edit inside
+/// this same campaign.
 ///
 /// This is the same posture `hornvale_terrain::earth_table_depth_m` takes for
 /// `UNDERWORLD_DRYNESS_GAIN`, adopted for the same stated reason: this

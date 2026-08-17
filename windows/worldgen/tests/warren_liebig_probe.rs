@@ -14,9 +14,12 @@
 //! moisture and deliberately not the altitude axis.
 //!
 //! This prints all four terms for rust-monster on cave-bearing cells, surface
-//! against subterranean, and shows the two things that matter together:
-//! moisture and insolation improve substantially, and the minimum does not
-//! move at all.
+//! against subterranean, and shows the two things that matter together: the
+//! three floored axes move — since The Underworld, in BOTH directions, with
+//! insolation the only one a chamber wins outright, temperature degrading
+//! where the gradient warms past a cool optimum, and moisture rising or
+//! falling with the chamber's height above its water table — and the minimum
+//! does not move at all.
 //!
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry points
 //! directly to build its own world state, the same way `warren_gate.rs` and

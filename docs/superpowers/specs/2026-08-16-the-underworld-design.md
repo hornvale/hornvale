@@ -320,15 +320,31 @@ description rather than a coordinate to sample conditions at. Found by the
 implementer, not by review.
 
 **AND A CONSUMER-SIDE FINDING THAT BINDS §4.7.** Task 5 made chambers differ
-at the substrate — 807/874, 1483/1681 and 1172/1266 cave columns now carry a
-distinct (temperature, moisture) reading where before there was one value —
-and **no live consumer can see it.** `tolerance_liebig` floors
-temperature/moisture/insolation at `sovereignty_floor(mass, potency)` but
-passes elevation a literal `0.0`, so for any kind whose elevation devotion
+at the substrate — the ΔT between the shallowest and deepest cave-reach
+deciles spreads **0.7 → 56.0 K** on seed 42 (5.5 → 57.1 and 0.8 → 58.4 on
+seeds 7 and 1234), out of a pre-change ΔT that was **identically 0.0 K at
+every cave column in every world**, and 17.5–19.9% of surface-temperature
+buckets now carry more than one chamber reading where pre-change that was
+impossible by construction — and **no live consumer can see it.**
+`tolerance_liebig` floors temperature/moisture/insolation at
+`sovereignty_floor(mass, potency)` but passes elevation a literal `0.0`, so
+for any kind whose elevation devotion
 sits below its own floor, elevation is the Liebig minimum on every cell and no
 improvement to the other three axes can reach the score. Drow's devotion is
 0.30 against a floor of 0.424802; `warren_readout`'s P1 tripwire reads
 ratio = 1.000 before and after, unchanged to six figures.
+
+*Corrected 2026-08-17, same day.* The paragraph above first read "807/874,
+1483/1681 and 1172/1266 cave columns now carry a distinct (temperature,
+moisture) reading **where before there was one value**". The distinct-pair
+figures are right and the comparison was never taken: pre-change a chamber
+read `(that cell's own surface temperature, one constant)`, and the surface
+temperature already varied per cell, so the "before" count was 691 / 1323 /
+1030 rather than 1. The rise is real but modest (+16.8 / +12.1 / +13.8%), and
+it was the wrong statistic to lead with. The controlled quantities are the two
+above, and `underworld_conditions_probe` now prints the control beside every
+figure it reports. Right measurement, wrong attribution — this project's most
+common failure, committed here at the spec level.
 
 **Consequence for §4.7, and it is a precondition rather than a preference:
 Mountain and Duergar must be authored with `devotion_elev >
