@@ -13,7 +13,7 @@ Tropical rainforest — buttressed canopy, damp — in the lands of Dooga. The s
 No direction here is closed; the nearest ground lies E, NW, SW.
 > map
 [lens: colour · depth 12 · radius 4 · lattice-aligned, not north-up]
-  colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+  colour: each cell's surface cover, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
   +++++
  +++++++
@@ -97,7 +97,7 @@ Tropical rainforest — a stream gully, shaded, damp, in a hollow — in the lan
 No direction here is closed; the nearest ground lies NE, W, SE.
 > map out 2
 [lens: colour · depth 10 · radius 4 · lattice-aligned, not north-up]
-  colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+  colour: each cell's surface cover, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
   + + +
  +++++++

@@ -12,8 +12,8 @@
  * withholds it itself.
  *
  * **The ground rule, stated once here because both panes apply it:** the
- * sim's colour describes a SURFACE — the walk chart's is the cell's bedrock
- * reflectance (`windows/scene/src/surrounds_ascii.rs`'s `terrain_glyph`
+ * sim's colour describes a SURFACE — the walk chart's is the cell's surface
+ * cover reflectance (`windows/scene/src/surrounds_ascii.rs`'s `terrain_glyph`
  * names this explicitly), the floor plan's is a palette entry's cell-type
  * colour (`windows/vessel/src/plan.rs::PaletteEntry::color`). Either way it
  * is a truthful claim about the cell only while `glyph` is actually drawing
@@ -21,7 +21,7 @@
  * standing on the cell instead — the observer (`@`), a creature, water
  * covering the ground — the surface's colour describes something the
  * reader can no longer see, and gets forced to `null` regardless of what
- * the payload sent. A river tinted the colour of the rock beneath it, or a
+ * the payload sent. A river tinted the colour of the ground beneath it, or a
  * creature tinted the colour of the floor it stands on, is the failure this
  * rule exists to prevent. Each call site below is one instance of this one
  * rule, not an independent decision. */

@@ -354,13 +354,13 @@ Deno.test("a chart cell carries the sim's colour, and only where it is ground", 
   assertEquals(
     water.color,
     null,
-    "the tint is BEDROCK; a river must not be drawn the colour of the rock beneath it",
+    "the tint is the SURFACE; a river must not be drawn the colour of the ground beneath it",
   );
 });
 
 Deno.test("the observer's own cell withholds colour even when the payload supplies one", () => {
   // Ground rule (see `PaneCell`'s doc in `pane_cell.ts`): `@` names the
-  // observer, not the bedrock beneath them. The payload supplies a real
+  // observer, not the surface beneath them. The payload supplies a real
   // colour here on purpose — an absent colour would let this pass whether
   // or not the withholding actually ran, which is not a discriminating
   // assertion (fix-round 1 verified this by mutation: see the task report).

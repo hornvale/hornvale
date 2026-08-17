@@ -164,10 +164,10 @@ function parseCell(raw: unknown): ChartCell | null {
  * cell and for any water glyph, `true` for land — the caller uses this to
  * decide whether `cell.color` is a truthful claim to carry. */
 function glyphFor(cell: ChartCell, waterLegend: string[]): { glyph: string; ground: boolean } {
-  // Not ground: `@` names the observer, not the bedrock beneath them.
+  // Not ground: `@` names the observer, not the surface beneath them.
   if (cell.state === "here") return { glyph: YOU, ground: false };
   const water = waterLegend[cell.water];
-  // Not ground: water covers the bedrock the colour would describe.
+  // Not ground: water covers the surface the colour would describe.
   if (water !== undefined && WATER_KINDS.has(water)) return { glyph: "~", ground: false };
   return { glyph: cell.state === "remembered" ? "," : ".", ground: true };
 }

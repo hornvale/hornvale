@@ -96,7 +96,7 @@ struct Placed {
     /// The cell's `color`, straight from the document; `None` when the
     /// scene was built through an uncoloured path.
     color: Option<[u8; 3]>,
-    /// Whether `glyph` draws the bedrock `color` describes — see
+    /// Whether `glyph` draws the surface `color` describes — see
     /// [`terrain_glyph`].
     ground: bool,
     /// Whether the cell is `remembered` rather than currently sensed — the
@@ -184,12 +184,14 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
     ));
 
     // The colour lens's own disclosure, and the reason it is a caption line
-    // rather than a footnote: the tint is BEDROCK, and the chart draws plenty
-    // of glyphs that are not bedrock. Rather than let the picture claim a
-    // river is granite-coloured and retract it underneath, the lens withholds
-    // the tint from every non-ground glyph and says how many it withheld. The
-    // three counts partition the placed cells, so a reader can check the
-    // sentence against the picture instead of trusting it.
+    // rather than a footnote: the tint is the cell's SURFACE cover
+    // (vegetation, litter, snow, sand or silt over the mineral blend — see
+    // `windows/locale/src/surface.rs`), and the chart draws plenty of glyphs
+    // whose surface is not the one on screen. Rather than let the picture
+    // claim a river is meadow-coloured and retract it underneath, the lens
+    // withholds the tint from every non-ground glyph and says how many it
+    // withheld. The three counts partition the placed cells, so a reader can
+    // check the sentence against the picture instead of trusting it.
     if lens == "colour" {
         let tinted = placed
             .values()
@@ -201,8 +203,8 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
             .count();
         let bare = placed.values().filter(|p| p.color.is_none()).count();
         out.push_str(&format!(
-            "  colour: each cell's bedrock, tinted only where the glyph draws that ground — \
-             {tinted} tinted, {withheld} withheld (water, a mark, or you), \
+            "  colour: each cell's surface cover, tinted only where the glyph draws that \
+             ground — {tinted} tinted, {withheld} withheld (water, a mark, or you), \
              {bare} carrying no colour.\n"
         ));
         // The sight declaration, read from the document rather than assumed:
@@ -543,8 +545,8 @@ mod tests {
              ladder is not reading micro.relief: {by_roughness:?}"
         );
         assert_eq!(
-            terrain_glyph(&s, &land_cell(2, 1.0, 0.7)).0,
-            terrain_glyph(&s, &land_cell(2, 1.0, -0.7)).0,
+            terrain_glyph(&s, &land_cell(2, 1.0, 1.0)).0,
+            terrain_glyph(&s, &land_cell(2, 1.0, -1.0)).0,
             "a hollow and a rise of equal magnitude must draw the same rung"
         );
     }
@@ -678,14 +680,14 @@ mod tests {
     }
 
     #[test]
-    fn the_colour_lens_withholds_the_bedrock_tint_from_water_a_mark_and_you() {
-        // The colour a cell carries is the reflectance of its BEDROCK.
-        // Tinting a river glyph with the colour of the granite under it
+    fn the_colour_lens_withholds_the_surface_tint_from_water_a_mark_and_you() {
+        // The colour a cell carries is the reflectance of its SURFACE cover.
+        // Tinting a river glyph with the colour of the meadow under it
         // would have the picture assert something the reader cannot see —
         // precisely what RENDER-9's caption rule exists to prevent — and
         // water colour is a deferred registry row, so the honest move is
         // to withhold rather than to invent. The same reasoning covers a
-        // mark (the glyph names a settlement, not the rock it stands on)
+        // mark (the glyph names a settlement, not the ground it stands on)
         // and the observer's own '@'.
         let mut s = uncolored_test_scene();
         s.cells[1].water = 2; // river
