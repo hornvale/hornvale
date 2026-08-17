@@ -14,10 +14,16 @@ use hornvale_lab::tongue_distance::{assignment_accuracy, wordlists_from_dictiona
 /// The committed reference corpus.
 const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 
-/// The pre-campaign baseline, measured 2026-08-16 on the committed
-/// dictionary at `0e7d5757`. Pinned from the first run per decision 0016;
-/// never tuned.
-const BASELINE: f64 = 0.7201897018970189;
+/// Stage 1 baseline: 0.7201897018970189 (18 tongues, pre-epoch), measured
+/// 2026-08-16 on the committed dictionary at `0e7d5757`.
+///
+/// Stage 2 (trill ungated + sonorant floor, ROOT_EPOCH v4): 0.6795392953929539.
+/// Accuracy **fell**, opposite the direction P2 predicts — see spec §6. The
+/// floor is a *global* rule, so it pushes every quiet tongue toward holding
+/// the same segment, which makes inventories more alike, not less; §3.7
+/// documents why no word actually gained a liquid despite the inventory
+/// change. Pinned from the measured run per decision 0016; never tuned.
+const BASELINE: f64 = 0.6795392953929539;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

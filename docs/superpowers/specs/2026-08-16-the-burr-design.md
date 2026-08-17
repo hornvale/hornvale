@@ -392,10 +392,43 @@ identified. Deterministic, seeded, Lab-resident.
   families. If accuracy rises uniformly *including* `concatenative`, the
   instrument is measuring the epoch bump rather than the bundles, and P2 is
   **not** confirmed.
+
+  **Stage 2 readout (2026-08-17): assignment accuracy fell**, from
+  0.7201897018970189 to 0.6795392953929539, over the same 18-tongue roster.
+  That is the direction *opposite* P2's prediction. Recorded plainly, not
+  hedged: the bundles this campaign's central claim is about do not exist
+  until Stage 3, so Stage 2 is not a test of P2 — but the fall is real
+  measured data and belongs here rather than being absorbed into Stage 3's
+  eventual number. The mechanism is not mysterious: `ensure_minimum_sonorants`
+  is a *global* floor, applied uniformly across every quiet tongue regardless
+  of family, and a uniform change applied to a diverse population is a
+  homogenising force — it makes inventories more alike, which is exactly what
+  a distinguishability classifier penalizes. §3.7 shows the floor moved
+  inventories without moving the wordlists that would need to differ for the
+  classifier to notice.
+
+  There is a genuine reading under which this *supports* the campaign's
+  premise rather than undercuts it: if character is typological (a
+  per-family rule) rather than parametric (a single global knob), then a
+  global parametric change should be expected to homogenise, and a per-bundle
+  change should be expected to differentiate — which is precisely what Stage
+  3 tests next. That is an **interpretation**, offered as one, not a result;
+  the result is the fall itself.
 - **P3 (sonorant fraction).** `sonorant-open` tongues reach a non-zero
   sonorant-segment fraction on every seed in the sweep. This is the one
   prediction with a hard floor: **any** seed producing a liquid-free
   `sonorant-open` tongue falsifies the §4.3 floor outright.
+
+  **Stage 2 readout (2026-08-17): liquid-bearing-word coverage is unchanged
+  at 3 of 18 tongues** (human, red-dragon, kobold — no elf, no dwarf),
+  byte-identical to the Task 4 measurement (§3.7). This is a **partial**
+  reading of P3, not a verdict on it: `sonorant-open` does not exist until
+  Task 7, so there is no bundle yet whose sweep this prediction actually
+  describes. What Stage 2 does establish is the mechanism §3.7 documents —
+  the sonorant floor changes *inventories*, not the proto's phonotactic
+  templates that gate which inherited words can host a liquid — which is the
+  fact P3's eventual reading will have to reckon with once `sonorant-open`
+  ships.
 - **P4 (the control).** `concatenative` tongues' relative pairwise distances
   are unchanged beyond what the epoch bump forces. This is what distinguishes
   "we built typology" from "we perturbed the seed".
