@@ -9,6 +9,7 @@ pub mod carve;
 pub mod cave_depth;
 pub mod channel;
 pub mod crust;
+pub mod delve;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
@@ -47,6 +48,9 @@ pub use channel::{
     BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
     FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,
     channel_half_width, confinement,
+};
+pub use delve::{
+    DelveRung, HABITABLE_CEILING_K, delta_t_range_of, rung_at_delta_t, rung_at_depth, rungs,
 };
 pub use features::{
     Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
