@@ -150,7 +150,7 @@ reap() {
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     # shellcheck source=scripts/census-canonical-host.sh
     . "$(dirname "$0")/census-canonical-host.sh"
-    require_canonical_census_host || exit 1
+    require_canonical_census_host census || exit 1
 
     # Serialize with any other heavy run on this box (decision 0081). This
     # script is one of three entry points that write census goldens and was
