@@ -17,6 +17,7 @@ pub mod study;
 pub mod summary;
 pub mod synthetic;
 pub mod timings;
+pub mod tongue_distance;
 
 pub use blackbox::record_failure;
 pub use census_guard::{
