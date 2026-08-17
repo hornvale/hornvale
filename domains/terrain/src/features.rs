@@ -54,32 +54,67 @@ impl CaveKind {
 ///
 /// A mismatched pair is therefore impossible to build by accident, and
 /// possible to build only through [`Cave::from_parts_unchecked`], whose name
-/// says so at the call site. Exactly one caller uses it. The guarantee is
-/// proved by the `compile_fail,E0639` doctest below rather than asserted, with
-/// the sanctioned constructor beside it as the positive control — a
-/// `compile_fail` block that fails for the wrong reason (a typo, a moved path)
-/// would otherwise pass silently.
+/// says so at the call site. Exactly one caller uses it.
 ///
-/// ```compile_fail,E0639
+/// **How that is proved: a differential pair.** The two blocks below are
+/// identical in every line — same imports, same fixture, same trailing
+/// assertions — except one. The *control* binds `subject` through the
+/// sanctioned [`Cave::from_reach`] and must compile and run; the *subject*
+/// binds it through the forbidden struct expression and must not compile.
+/// Because every other line is shared, any incidental breakage — a typo, a
+/// moved import, a renamed type, a changed signature — breaks the control and
+/// is caught there, which leaves the construction path as the only difference
+/// that can explain the subject's refusal.
+///
+/// `domains/terrain/tests/cave_construction_proof.rs` is what makes that
+/// argument load-bearing instead of aspirational. It re-reads this file and
+/// fails unless the two blocks still differ on exactly one line, that line is
+/// still a `Cave` struct expression in the subject and still a sanctioned
+/// constructor call in the control, and the control's fence still carries no
+/// info string while the subject's carries exactly `compile_fail`. Without it
+/// the pair would be a convention, and an unrelated compile error dropped into
+/// the subject would go unnoticed.
+///
+/// **The residual, stated rather than left to be discovered.** This is
+/// genuinely weaker than a compile-error-matching harness. `trybuild` is the
+/// tool for that job and the dependency allowlist forbids it (decision 0004),
+/// so what is here does not close the gap — it narrows it. On stable rustdoc,
+/// `compile_fail` passes when compilation fails for *any* reason, and it does
+/// **not** verify an error code written after the comma. That was measured,
+/// not assumed: a block annotated `compile_fail,E0639` whose violating
+/// expression had been swapped for an undefined identifier — an `E0425` —
+/// still reported `ok`. So the pair does not prove the subject fails
+/// *because of* `E0639`. It proves that the subject fails for a reason the
+/// control does not share, and that the one unshared line is a `Cave` struct
+/// expression. Observed by hand the error is `E0639`; nothing automated
+/// confirms that, and the fence deliberately carries no error code so it
+/// cannot be misread as an assertion.
+///
+/// The control — the sanctioned constructor, which must compile:
+///
+/// ```
+/// # // differential-pair: control
 /// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
 /// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
 /// let honest = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
-/// // A band that disagrees with the budget: refused by the compiler.
-/// let _lie = Cave {
-///     deepest_band: BandKind::Regolith,
-///     ..honest
-/// };
+/// let subject = Cave::from_reach(CaveKind::Fracture, honest.depth_reach_m, &col);
+/// assert_eq!(subject.deepest_band, BandKind::Basement);
+/// assert!(subject.band_agrees_with_reach(&col));
 /// ```
 ///
-/// The positive control — the same fixture, built the sanctioned way, compiles
-/// and satisfies the invariant:
+/// The subject — the same text but for the one line, naming a band that
+/// disagrees with the budget, which must **not** compile. Its assertions never
+/// execute; they are present only so the two blocks stay line-for-line
+/// comparable:
 ///
-/// ```
+/// ```compile_fail
+/// # // differential-pair: subject
 /// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
 /// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
-/// let cave = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
-/// assert_eq!(cave.deepest_band, BandKind::Basement);
-/// assert!(cave.band_agrees_with_reach(&col));
+/// let honest = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
+/// let subject = Cave { deepest_band: BandKind::Regolith, ..honest };
+/// assert_eq!(subject.deepest_band, BandKind::Basement);
+/// assert!(subject.band_agrees_with_reach(&col));
 /// ```
 ///
 /// `Eq` is gone since The Underworld added `depth_reach_m`: the depth
