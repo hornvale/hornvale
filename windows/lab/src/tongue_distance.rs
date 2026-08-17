@@ -53,21 +53,34 @@ fn similarity(a: &BTreeMap<String, f64>, b: &BTreeMap<String, f64>) -> f64 {
 }
 
 /// Held-out assignment accuracy: for each word of each tongue, rebuild every
-/// tongue's profile **with that word withheld from its own tongue**, then ask
-/// which profile the word's own trigrams sit closest to. The reported value is
-/// the fraction assigned back correctly.
+/// tongue's profile with that word withheld, then ask which profile(s) the
+/// word's own trigrams sit closest to. The reported value is the mean, over
+/// every word, of the fraction of the top-scoring tongues that are the
+/// word's true tongue.
 ///
-/// Leave-one-out is load-bearing rather than fastidious: without it a word
-/// contributes to the profile it is then scored against, so a tongue with few
-/// words scores near-perfectly by memorising itself, and the instrument would
-/// report a high number for exactly the impoverished tongues this campaign
-/// exists to fix.
+/// **Withholding is symmetric across tongues, not just the word's own.** Any
+/// *other* tongue whose word list contains an exact copy of the tested word
+/// has every matching entry stripped from it too (all occurrences, not just
+/// one) before its profile is built. Withholding only from the word's own
+/// tongue would leave a sibling tongue that happens to share the word with
+/// an unwithheld literal copy — cosine similarity favors that copy
+/// unconditionally, which biases assignment *away* from the true tongue
+/// rather than leaving the two indistinguishable. That asymmetry is an
+/// artifact of the withholding, not a fact about the languages, which is why
+/// it is removed on both sides.
 ///
-/// Ties go to the **later** tongue in slice order, deterministically, so an
-/// instrument reading identical tongues cannot drift with input ordering.
+/// **A tie for the top score is scored as ambiguity, never resolved by an
+/// arbitrary tie-break.** A probe tying across `k` tongues' profiles
+/// contributes `1/k` credit if its true tongue is among those `k` leaders,
+/// `0` otherwise. This is why two tongues built from the same word list
+/// score at exactly the `k`-way chance floor (`1/k`) — every shared word
+/// ties across all `k` — rather than at a number that depends on which
+/// index the input happened to place a tongue at. An index-based tie-break
+/// would report a *different* accuracy for the same two tongues passed in
+/// the opposite order, which is not a property of the tongues.
 /// type-audit: bare-ok(identifier-text: tongues), bare-ok(ratio: return)
 pub fn assignment_accuracy(tongues: &[(String, Vec<String>)]) -> f64 {
-    let mut correct: u64 = 0;
+    let mut correct: f64 = 0.0;
     let mut total: u64 = 0;
     for (i, (_, words)) in tongues.iter().enumerate() {
         for (w_idx, word) in words.iter().enumerate() {
@@ -84,30 +97,30 @@ pub fn assignment_accuracy(tongues: &[(String, Vec<String>)]) -> f64 {
                             .collect();
                         trigram_profile(&held)
                     } else {
-                        // A different tongue that happens to carry the exact
-                        // same word (the negative control constructs this
-                        // deliberately) must not keep an unwithheld literal
-                        // copy: doing so hands it a leaked exact match while
-                        // the word's own tongue only sees the word withheld,
-                        // which biases assignment *away* from the true
-                        // tongue instead of leaving the two indistinguishable.
+                        // Strip every occurrence of the same word from a
+                        // sibling tongue too — see the symmetric-withholding
+                        // paragraph above.
                         let held: Vec<String> = ws.iter().filter(|s| *s != word).cloned().collect();
                         trigram_profile(&held)
                     }
                 })
                 .collect();
             let probe = trigram_profile(std::slice::from_ref(word));
-            let mut best = 0usize;
-            let mut best_score = f64::NEG_INFINITY;
-            for (j, p) in profiles.iter().enumerate() {
-                let s = similarity(&probe, p);
-                if s >= best_score {
-                    best_score = s;
-                    best = j;
-                }
-            }
-            if best == i {
-                correct += 1;
+            let scores: Vec<f64> = profiles.iter().map(|p| similarity(&probe, p)).collect();
+            let best_score = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            // Exact equality is deliberate, not fuzzed: every score being
+            // compared here came from the identical code path (`similarity`)
+            // run over identical-in-content inputs, so a genuine tie is
+            // bit-identical, and an `f64::EPSILON` fuzz would blur ties into
+            // near-ties that are not actually the same computation.
+            let tied: Vec<usize> = scores
+                .iter()
+                .enumerate()
+                .filter(|(_, s)| **s == best_score)
+                .map(|(j, _)| j)
+                .collect();
+            if tied.contains(&i) {
+                correct += 1.0 / tied.len() as f64;
             }
             total += 1;
         }
@@ -115,7 +128,7 @@ pub fn assignment_accuracy(tongues: &[(String, Vec<String>)]) -> f64 {
     if total == 0 {
         0.0
     } else {
-        correct as f64 / total as f64
+        correct / total as f64
     }
 }
 
@@ -153,5 +166,31 @@ mod tests {
             ("beta".to_string(), shared),
         ];
         assert_eq!(assignment_accuracy(&tongues), 0.5);
+    }
+
+    /// The tie-break must not be an index accident: two tongues that share
+    /// exactly one word tie on that word (and on nothing else), and the
+    /// reported accuracy must come out identical whichever order the two
+    /// tongues are passed in. An index-based tie-break ("later tongue wins")
+    /// fails this — it silently favors whichever tongue lands at the higher
+    /// slice index, so the same two tongues would score differently
+    /// depending on argument order alone. Fractional credit does not have an
+    /// order to depend on.
+    #[test]
+    fn shared_word_accuracy_is_order_independent() {
+        let alpha = (
+            "alpha".to_string(),
+            vec!["cat".to_string(), "xqzv".to_string(), "xqzw".to_string()],
+        );
+        let beta = (
+            "beta".to_string(),
+            vec!["cat".to_string(), "wvtp".to_string(), "wvtq".to_string()],
+        );
+        let forward = vec![alpha.clone(), beta.clone()];
+        let reversed = vec![beta, alpha];
+        assert_eq!(
+            assignment_accuracy(&forward),
+            assignment_accuracy(&reversed)
+        );
     }
 }
