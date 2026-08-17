@@ -6,6 +6,7 @@
 pub mod boundaries;
 pub mod branch;
 pub mod carve;
+pub mod cave_depth;
 pub mod channel;
 pub mod crust;
 pub mod drainage;
@@ -41,6 +42,7 @@ pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
+pub use cave_depth::cave_depth_reach_m;
 pub use channel::{
     BANK_WIDTH_RATIO, CHANNEL_WIDTH_COEFF, CHANNEL_WIDTH_EXPONENT, ChannelNetwork,
     FLOODPLAIN_MAX_RATIO, GORGE_SLOPE, MEANDER_AMPLITUDE_RATIO, Transverse, band_edges,

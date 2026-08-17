@@ -39,6 +39,14 @@ const BAND_LADDER: [BandKind; 5] = [
     BandKind::Underneath,
 ];
 
+/// Metre budget carried by the hand-built caves below. `chamber_exists` and
+/// `chamber_at` read `deepest_band` and nothing else (see `chamber.rs`'s module
+/// doc), so this is a placeholder chosen to be plainly in range — it is
+/// deliberately NOT made consistent with `band`, which the generator could
+/// never pair with a 1 km reach for the deeper rungs. The lattice walk below is
+/// what measures the budget.
+const FIXTURE_REACH_M: f64 = 1000.0;
+
 /// A cave with no formation opinion — `Cave::kind` is not read by
 /// `chamber_exists`/`chamber_at` (see `chamber.rs`'s module doc) — reaching
 /// exactly `band`.
@@ -46,6 +54,7 @@ fn cave_reaching(band: BandKind) -> Cave {
     Cave {
         kind: CaveKind::Fracture,
         deepest_band: band,
+        depth_reach_m: FIXTURE_REACH_M,
     }
 }
 

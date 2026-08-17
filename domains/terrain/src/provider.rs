@@ -294,6 +294,11 @@ impl GeneratedTerrain {
     /// existence is gated on that kind's own proneness against a uniformized
     /// noise sample, and depth reads the cell's stratigraphic column — the
     /// three repairs of The Hollow (spec §3).
+    ///
+    /// Since The Underworld (spec §4.0) depth is a budget in **metres**
+    /// ([`crate::cave_depth::cave_depth_reach_m`]) rather than a band index,
+    /// and it does not read `proneness` — the band is derived from the budget.
+    /// `proneness` reaches the presence gate below and nothing else.
     pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
         if self.is_ocean(id) {
             return None;
@@ -316,9 +321,12 @@ impl GeneratedTerrain {
         if noise >= prob {
             return None;
         }
+        let column = self.column_at(id);
+        let material = self.material_at(id);
         Some(crate::features::Cave {
             kind,
-            deepest_band: crate::features::cave_depth(kind, &self.column_at(id), proneness),
+            deepest_band: crate::features::cave_depth(kind, &column, &material),
+            depth_reach_m: crate::cave_depth::cave_depth_reach_m(kind, &material, &column),
         })
     }
 
@@ -866,12 +874,13 @@ mod tests {
                         crate::features::CAVE_GATE_FREQ,
                         crate::features::CAVE_GATE_OCTAVES,
                     ));
+                    let column = terrain.column_at(cell);
+                    let material = terrain.material_at(cell);
                     (noise < prob).then(|| crate::features::Cave {
                         kind,
-                        deepest_band: crate::features::cave_depth(
-                            kind,
-                            &terrain.column_at(cell),
-                            proneness,
+                        deepest_band: crate::features::cave_depth(kind, &column, &material),
+                        depth_reach_m: crate::cave_depth::cave_depth_reach_m(
+                            kind, &material, &column,
                         ),
                     })
                 })

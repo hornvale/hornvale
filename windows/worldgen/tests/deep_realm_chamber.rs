@@ -19,6 +19,13 @@ use hornvale_worldgen::chamber::{
     ChamberAddr, ChamberOrigin, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
 };
 
+/// Metre budget carried by the hand-built caves below. `chamber_exists` and
+/// `chamber_at` read `deepest_band` and nothing else (see `chamber.rs`'s module
+/// doc), so this is a placeholder chosen to be plainly in range — it is
+/// deliberately NOT made consistent with each fixture's band, which the
+/// generator could never pair with a 1 km reach for the deeper rungs.
+const FIXTURE_REACH_M: f64 = 1000.0;
+
 /// The rule The Salt, 0102 and The Tolerance each learned separately:
 /// generation order is never an identity. A `ChamberAddr` names a PLACE in a
 /// lattice that exists before anything is generated into it, so nothing
@@ -36,10 +43,12 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     let shallow = Cave {
         kind: CaveKind::Karst,
         deepest_band: BandKind::Basement,
+        depth_reach_m: FIXTURE_REACH_M,
     };
     let deep = Cave {
         kind: CaveKind::Karst,
         deepest_band: BandKind::Roots,
+        depth_reach_m: FIXTURE_REACH_M,
     };
 
     // Basement's rank is 2, so bands 0..=2 (Regolith, Cover, Basement) are
@@ -86,6 +95,7 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
     let cave = Cave {
         kind: CaveKind::Fracture,
         deepest_band: BandKind::Roots,
+        depth_reach_m: FIXTURE_REACH_M,
     };
 
     let mut existing_counts = Vec::new();
@@ -143,6 +153,7 @@ fn every_passage_is_traversable_in_both_directions() {
     let cave = Cave {
         kind: CaveKind::Fracture,
         deepest_band: BandKind::Roots,
+        depth_reach_m: FIXTURE_REACH_M,
     };
 
     for raw_seed in [1u64, 2, 3, 4, 5] {
@@ -203,6 +214,7 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
     let cave = Cave {
         kind: CaveKind::Fracture,
         deepest_band: BandKind::Roots,
+        depth_reach_m: FIXTURE_REACH_M,
     };
 
     let mut reached = 0u32;
@@ -289,6 +301,7 @@ fn an_override_wins_over_the_derived_default() {
     let cave = Cave {
         kind: CaveKind::Fracture,
         deepest_band: BandKind::Roots,
+        depth_reach_m: FIXTURE_REACH_M,
     };
     let cell = CellId(4);
 
