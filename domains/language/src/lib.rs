@@ -79,6 +79,10 @@ pub mod schemas;
 /// Seed-derivation labels for this crate (PROC-17): the centralized
 /// `StreamLabel` constants every draw site derives through.
 pub mod streams;
+/// Typology bundles (The Burr, Stage 3): which rules build a family's
+/// words, as against which values a shared rule uses. Four authored rows,
+/// keyed by family label exactly as `family_proto()` is keyed.
+pub mod typology;
 
 pub use accession::{EPOCH_COHORTS, concept_epoch};
 pub use account::{
@@ -144,6 +148,10 @@ pub use phonology::{
     tone_inventory,
 };
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
+pub use typology::{
+    ALL_BUNDLE_NAMES, CodaLaw, Harmony, Morphology, OnsetLaw, Orthography, Typology,
+    family_typology, typology_for,
+};
 // `schemas::Manner` (a cyclic deity's told pace) is deliberately NOT
 // re-exported unqualified here — it would collide with `phoneme::Manner`
 // (articulatory manner) above; reach it as `schemas::Manner` or

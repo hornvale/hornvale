@@ -1328,3 +1328,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T16:56:50Z | sluice:heavy | 1881.494 | 30431.045 | 689.016 | 16.54 | 0 | 66b8f193 |  | lefford | 40 |
 | 2026-08-17T19:46:42Z | rebaseline | 54.960 | 211.327 | 10.893 | 4.04 | 0 | d5886f17 | campaign/the-burr | MacBookPro | 10 |
 | 2026-08-17T19:49:23Z | gate-commit | 153.628 | 131.445 | 119.317 | 1.63 | 0 | d5886f17 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T19:59:39Z | rebaseline | 233.843 | 214.753 | 12.289 | 0.97 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:03:36Z | gate-commit | 32.656 | 89.607 | 17.448 | 3.28 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:09:29Z | gate-commit | 244.754 | 37.610 | 10.082 | 0.19 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:10:07Z | gate-commit | 20.953 | 36.423 | 8.654 | 2.15 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
+| 2026-08-17T20:14:38Z | rebaseline | 64.228 | 226.765 | 12.697 | 3.73 | 0 | bec57a47 | campaign/the-burr | MacBookPro | 10 |
