@@ -5,7 +5,7 @@
 **Status:** spec, at G3
 **Date:** 2026-08-16
 
-A burr is a rolled /r/ — the exact segment eighteen of the nineteen shipped
+A burr is a rolled /r/ — the exact segment seventeen of the eighteen shipped
 tongues do not have — and also what we call a regional accent. Both readings
 are the campaign.
 
@@ -61,7 +61,7 @@ it, and is not reachable by tuning the continuous articulation vector.**
 Each of these was measured, not reasoned. The command is given because the
 reasoning was in several cases confidently wrong before the command was run.
 
-### 3.1 Eighteen of nineteen tongues have zero liquid-bearing words
+### 3.1 Seventeen of eighteen tongues have zero liquid-bearing words
 
 ```
 awk -F'|' '/^## /{s=$0; sub(/^## /,"",s)} NF>6 && $4 ~ /[A-Z]/ {
@@ -71,7 +71,7 @@ awk -F'|' '/^## /{s=$0; sub(/^## /,"",s)} NF>6 && $4 ~ /[A-Z]/ {
 ```
 
 Every tongue returns exactly `1/N` except Kobold at `75/86`. The `1` is the
-table's own `| Word |` header — so the true figure is **0 of ~85 for eighteen
+table's own `| Word |` header — so the true figure is **0 of ~85 for seventeen
 tongues**, and Kobold is the sole exception. Kobold is also the only species
 that drew `ExoticManner::Trill`.
 
@@ -80,6 +80,24 @@ finding read `1/85` and was nearly written into the spec as "one liquid word
 per tongue", which would have been a plausible, specific, and entirely
 fictitious number. The header row is the whole difference. Any downstream
 count taken from a Markdown artifact must exclude the header explicitly.
+
+**And the same error was then made one level up, by the author of this
+paragraph.** Every version of this finding through spec approval read "18 of
+19", because the `awk` above emits one row per `## ` heading and the
+dictionary has nineteen of them — the nineteenth being `## Cognates`, which
+is a cross-family comparison table, not a tongue. The roster is **eighteen**.
+Caught during Task 2's pre-dispatch verification, after the wrong figure had
+already reached the spec, the plan, an idea-registry row, a board post, and
+three commit messages.
+
+Nothing about the finding changes: seventeen tongues with no liquid at all,
+against one with 75 of 86. But the shape is worth recording, because it is
+not the same mistake twice — it is the same mistake at two different scales,
+and the second one was made while writing the warning about the first. The
+generalisation both instances share: **a section count is not an entity
+count, and a row count is not a datum count.** Whatever the loop iterates
+over needs one explicit exclusion test, written down, per level of nesting.
+`the_baseline_roster_is_eighteen_tongues` (Task 3) exists to hold this one.
 
 ### 3.2 The sonority penalty makes sonorants unreachable for quiet species
 
@@ -296,7 +314,7 @@ accuracy** — given a word, how reliably can the tongue that produced it be
 identified. Deterministic, seeded, Lab-resident.
 
 - **P1 (baseline, descriptive).** Assignment accuracy today is low relative to
-  a nineteen-way chance floor of 5.3%. The exact figure is Stage 1's output
+  an eighteen-way chance floor of 5.6%. The exact figure is Stage 1's output
   and is *not* predicted here — predicting a number this spec could instead
   simply measure would be theatre.
 - **P2 (the campaign's central claim).** Accuracy rises significantly under
