@@ -1113,6 +1113,104 @@ git commit -m "feat(palimpsest): the readout battery"
 
 ---
 
+### Task 6b: The unit-corrected exploratory readout
+
+**ADDED BY CONTROLLER RULING AFTER TASK 6's READOUT, WITH NATHAN'S EXPLICIT
+AUTHORISATION.** Read this framing before the steps; it is the whole point of
+the task.
+
+**What was found.** Task 6's readout is dimensionally incoherent, and the
+defect is in the SPEC, not the implementation:
+
+```
+derive.rs:294    width seeded from ladder.span(FINEST)     -> STD DAYS (~0.88)
+amplitude.rs:53  gen_span returns (fh - ft).abs() / g      -> GENERATIONS
+accumulate.rs:77 precision_at compares span.get() <= width -> STD DAYS
+```
+
+So the accumulator adds generations to days and compares the sum against days.
+Spec §5.1 defines the amplitude in generations, §5.2 puts the rungs in days,
+§5.3 compares them, and **no section specifies a conversion.** The implementer
+implemented the spec faithfully.
+
+**Why it matters beyond tidiness.** With coherent units one median step is
+~9,131 days against a generation rung of ~11,362, so a few steps saturate the
+ladder exactly as spec §3.7 predicted. Dimensionless, the width crawls from ~1
+to ~50 against rungs at 0.88 and 16–42 and can only ever reach rung 0 or 1. So
+additive and quadrature did not *disconfirm* §3.7 — **they never tested it.**
+And multiplicative escapes only because `(1+span)` products are scale-free,
+which means the one rule that confirmed H2 is the one the defect happens not to
+touch.
+
+**THE RULE THIS TASK OBEYS, AND IT IS NOT NEGOTIABLE.** Task 6's readout is the
+**preregistered** result and it stands exactly as measured. This task produces
+a **post-hoc exploratory** result, run after unblinding, and the two are
+reported side by side and **never merged**. Nothing here edits Task 6's
+battery, its numbers, or its committed output. A reader must be able to tell at
+a glance which number was frozen before the code and which was not.
+
+If at any point you find yourself wanting to replace Task 6's numbers with
+these, stop — that is the move this project forbids, and it is the reason the
+defect was reported rather than quietly repaired.
+
+**Files:**
+- Create: `windows/hearsay/tests/palimpsest_readout_units.rs`
+- Do NOT modify: `windows/hearsay/tests/palimpsest_readout.rs`, or any
+  `src/` file whose behaviour Task 6 measured.
+
+- [ ] **Step 1: Establish the conversion, and put it in one place**
+
+The amplitude is in generations; the ladder is in std days. Convert the
+amplitude to days at the point it is consumed, by multiplying by the teller's
+people's generation length in std days — the same quantity
+`PeopleDurations::get` already returns.
+
+Write this as a small local helper in the new test file. **Do not change
+`gen_span`, `Accumulation::step`, `precision_at`, or
+`variants_about_accumulating`** — Task 6's readout must keep measuring exactly
+what it measured. This task re-derives the walk locally with corrected units.
+
+- [ ] **Step 2: Sanity-check the scale BEFORE running the panel**
+
+The failure this whole campaign keeps repeating is a number that looks
+plausible and measures nothing. So check the arithmetic on one seed first and
+print it:
+
+- the median single-step width contribution, in days
+- the ladder's rung spans, in days
+- how many steps it takes a median path to pass each rung
+
+**Decision rule:** if a single median step already exceeds the coarsest rung,
+you have re-created the days-scale saturation spec §3.6 measured (p50 = 9,131
+against a 368-day year) — that is a real result, report it, do not tune it. If
+a median step is under the finest rung, the conversion is inverted; stop and
+report.
+
+- [ ] **Step 3: Run the same 40-seed panel, same four quantities**
+
+Same panel (census seeds 0–39), same four quantities per rule (H1 rho, distinct
+rungs, saturated fraction, H3 rho), so the two readouts are comparable
+line-for-line. Same verbatim heavy-tier `#[ignore]` reason.
+
+Print a header that says, in the output itself, that this is the **post-hoc
+unit-corrected** readout and that Task 6's is the preregistered one.
+
+- [ ] **Step 4: Report both, side by side**
+
+In your report, put the two readouts in one table with a column saying which
+is preregistered and which is exploratory. Do not editorialise about which is
+"right" — they measure different things and both are now facts about the code.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cargo fmt && make quick
+git add windows/hearsay/tests/palimpsest_readout_units.rs
+git commit -m "feat(palimpsest): the unit-corrected exploratory readout"
+```
+
+---
+
 ### Task 7: Type-audit tags and artifact regeneration
 
 **Files:**

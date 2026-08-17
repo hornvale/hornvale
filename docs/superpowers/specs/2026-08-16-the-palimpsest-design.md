@@ -332,6 +332,61 @@ count. With content varying more, the relationship should survive.
 
 Per §6.1 the value 0.662 is **not** a threshold; H3 is a direction test only.
 
+## 6.6 ERRATUM — the frozen model's units are incoherent, found at readout
+
+**This section was added AFTER unblinding.** It records a defect in §5, not a
+change to it: the model below is what was frozen and what §6's readout
+measured, and it is left exactly as it was.
+
+The accumulator adds two different quantities:
+
+```
+derive.rs:294     width seeded from ladder.span(FINEST)      -> STD DAYS (~0.88)
+amplitude.rs:53   gen_span returns (fh - ft).abs() / g       -> GENERATIONS
+accumulate.rs:77  precision_at compares span.get() <= width  -> STD DAYS
+```
+
+**The defect is in this spec.** §5.1 defines the amplitude in generations, §5.2
+puts the rungs in days, §5.3 compares them, and no section specifies a
+conversion. The implementation is faithful to the text.
+
+**What it costs the readout.** With coherent units a median step is ~9,131 days
+against a generation rung of ~11,362, so a path of 8–13 generations saturates
+the ladder — exactly §3.7's prediction. Dimensionless, the width crawls from
+~1 to ~50 against rungs at 0.88 and 16–42 and cannot pass rung 1. So:
+
+- **additive and quadrature did not disconfirm §3.7 — they never tested it.**
+  Their `saturated fraction = 0.0000` is a fact about the units, not the world.
+- **multiplicative is unaffected**, because `width * (1 + span)` is scale-free.
+  It is therefore the only rule whose readout means what §6 intended — and it
+  is also the only rule that confirmed H2, which makes the defect
+  uncomfortably load-bearing on that hypothesis.
+- **H1 is the most robust of the three results**, because it correlates a
+  people's generation length against the retained rung, and the mismatch
+  rescales every people's width by the same factor. It is confirmed under all
+  three rules with no sign disagreement across 40 seeds.
+
+**What was done about it, and why.** Nothing to the frozen model. Changing a
+model after seeing its readout is the move this project forbids, and campaign
+2 set the precedent by reporting its boundary-vs-accumulation mismatch rather
+than repairing it. A **post-hoc exploratory** re-measurement with corrected
+units is reported alongside (§6.7), explicitly labelled, never merged into the
+preregistered numbers.
+
+**For campaign 4.** The fix is one conversion — multiply the amplitude by the
+teller's generation length in std days before accumulating — and it should be
+frozen, with its own preregistration, by someone who has not seen §6.7.
+
+## 6.7 The exploratory readout
+
+Post-hoc, run after unblinding, on the same 40-seed panel and the same four
+quantities. **Not preregistered.** It exists because the erratum above makes
+two of the three frozen rules untested rather than falsified, and reporting
+only the frozen numbers would leave that unmeasured.
+
+It never replaces §6's numbers. Both appear side by side in the chronicle,
+each labelled.
+
 ## 7. Carried forward
 
 - **The signed amplitude.** `gen_span` is symmetric — it does not care which
