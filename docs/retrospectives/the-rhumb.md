@@ -267,3 +267,65 @@ is a single session's work — the cost is not conflicts, it is premises going
 stale under you. Grep every name in a brief before dispatching it. And when
 summarising an implementer's report for a human, quote the sentence rather
 than characterising it.
+
+## 11. A phrase that named a set it did not own
+
+The stage gate held red on the `clients` phase — the first `kind=stage`
+request this repository ever ran, failing on its first real use, which is the
+best possible outcome for a new instrument.
+
+`clients/vessel/wasm/drive.mjs` line 65:
+
+```js
+const ways = golden.match(/^Ways on: (.+)\.$/m);
+assert.notEqual(ways, null, "opening lists its ways on");
+```
+
+Task 5 changed that sentence deliberately: `go` now accepts all eight compass
+points, so a three-item list implied five were closed, which was false.
+
+**The instruction was followed correctly and the outcome was still wrong.**
+The brief said: *if the existing test suite has tests asserting the old
+sentence, update them and list every one.* The implementer did exactly that —
+four Rust tests, found, fixed, listed. But "the existing test suite" silently
+denoted the **cargo workspace**, and `clients/` is outside it by construction:
+decision 0055 puts the determinism boundary at the repo boundary, and
+`Cargo.toml`'s `exclude` list is what made the phrase wrong. The scope of an
+English noun phrase was set by a manifest nobody reads while writing prose.
+
+This is not "we forgot to grep `clients/`". A reader checking the instruction
+against the code could not have found the gap, because the gap is in neither —
+it is in the correspondence between them.
+
+**Five consumers, one assertion.** Beyond `drive.mjs`: `transcript.ts` was
+misclassifying the new line as body prose rather than meta, `entry.rs`'s module
+doc described protecting a sentence that no longer exists, and two Rust tests
+parsed it. Only the wasm smoke had an assertion, which is why only it went red.
+
+**The counterintuitive half is that every schema check passed.** A key-path
+diff put the vessel goldens at **133 key paths identical** with **1 of 888 leaf
+values** moved — `.narration.prose`. The wire was provably fine. What broke was
+a consumer parsing prose out of a correctly-shaped payload: exactly the failure
+a schema guarantee cannot exclude, and one the cross-repo scene-contract
+discipline does not cover either, since that governs *shape* and this was
+*content* in a field whose content is the point.
+
+**The rule earned:** a change to any `describe_*` sentence is a cross-tree
+change. Grep its consumers across `.ts`, `.mjs` and `.js` as well as `.rs`.
+The only gate that can catch it is the sluice's `clients` phase, and
+discovering it there costs a slot on a serial resource every campaign shares.
+
+**The repair was the stronger kind, not a re-pin.** The comment above that
+parse justified itself: it avoided hardcoding a compass point because *"a
+worldgen epoch may reshape the seed-42 opening room's exits."* That reason is
+precisely what this campaign abolished. So the driver now sends a fixed `go n`
+and pins the exits sentence separately — a regression in any of the eight now
+fails the smoke, where a parse quietly followed the prose wherever it went. A
+test that could not fail was replaced with one that can.
+
+**Credit:** the queue operator ran `make vessel-check` against `main` alone
+before attributing the red, having previously held an innocent candidate for a
+trunk defect. Without that control the failure could not have been attributed
+from the campaign's side. It also disclosed its method so the verdict could be
+discounted, and offered a re-run in case of a flake — declined, because a fixed
+regex against a deliberately changed string is deterministic by construction.
