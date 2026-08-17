@@ -12,9 +12,13 @@
 //! 1. **A continuation marker on the last visible row** — draw as much
 //!    prose as fits, then replace the final row with an honest "more
 //!    below, not shown" marker ([`TRUNCATION_MARKER`]).
-//! 2. **Protect the `Ways on:` line specifically** — the prose's own
-//!    convention puts the exit list last, so always draw *that* line even
-//!    when the body between it and the fold is clipped.
+//! 2. **Protect the prose's own trailing exit-list sentence specifically**
+//!    — the prose's own convention puts that sentence last (it read
+//!    `"Ways on: …"` everywhere when this was written; since The Rhumb it
+//!    reads `"No direction here is closed; …"` out of doors and `"Ways on:
+//!    …"` indoors, underground, and while submerged — one convention, more
+//!    than one wording), so always draw *that* line even when the body
+//!    between it and the fold is clipped.
 //!
 //! This module takes the first option. The second is kinder to a player
 //! who only cares about exits, but it requires *knowing* that the last
@@ -142,9 +146,9 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// since-deleted `Source::WaysOn`, on the theory that the command line
 /// represents the character's own "ways on" — see [`Source::Chrome`]'s doc
 /// for why that was a false provenance claim.) This module never
-/// special-cases the prose's own trailing `"Ways on:"` sentence (see the
-/// module doc), so that exit list is carried as ordinary [`Source::Prose`]
-/// text, same as the rest of the passage.
+/// special-cases the prose's own trailing exit-list sentence, under either
+/// of its wordings (see the module doc), so that sentence is carried as
+/// ordinary [`Source::Prose`] text, same as the rest of the passage.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
