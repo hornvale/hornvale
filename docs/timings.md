@@ -1225,3 +1225,6 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T02:04:09Z | quick | 15.813 | 16.248 | 6.798 | 1.46 | 0 | 07776a15 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T02:04:33Z | quick | 11.294 | 10.337 | 0.357 | 0.95 | 0 | 07776a15 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T02:05:38Z | gate-commit | 48.315 | 65.962 | 28.116 | 1.95 | 0 | 07776a15 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T02:09:40Z | quick | 19.431 | 16.579 | 7.499 | 1.24 | 0 | 97476e12 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T02:10:44Z | gate-commit | 52.606 | 66.132 | 30.190 | 1.83 | 0 | 97476e12 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T02:15:37Z | quick | 14.391 | 16.952 | 4.844 | 1.51 | 0 | 31a37c9e | campaign/the-palimpsest | MacBookPro | 10 |
