@@ -97,6 +97,21 @@ So the rule this campaign implements is:
 > **Two encoding channels — colour carries the nominal axis, glyph carries
 > the ordinal axis — and one modulator, weight, which applies to both.**
 
+**A fourth channel, named because stage 3 is entirely about it.** Placement
+carries the **spatial** axis, and it degrades by the same rule: a client
+that cannot project loses the spatial axis and must say so — it gets a list,
+not a chart. Stage 3's north-up work is a change to this channel and nothing
+else, which is exactly why §5.3's control (a *shape* comparison, blind to
+vocabulary) is the right instrument for it.
+
+**One interaction this rule does not settle, and stage 1 must.** Mark
+salience and epistemic weight are both live and can disagree: a
+`remembered` cell holding the flagship settlement is bold-because-salient
+and dim-because-remembered at once, and `chart.rs::draw`'s second pass
+already ranks by salience for collisions. Decide it against fixtures and
+pin it; do not let each renderer answer it separately, because that is a
+divergence in the *rule*, which §2.3 does not license.
+
 **The consequence that matters.** A remembered cell **dims its colour and
 its glyph**. It does not substitute a *different* glyph. That deletes
 `surrounds_ascii.rs::faded()`, whose seven substitutions
@@ -286,6 +301,37 @@ at `scene/surrounds/v2`:
   distance_rad  f64        great-circle angular distance from the observer
 ```
 
+**And extend `Sight` with the calibration, or `signal` is decoration.**
+Writing the wire out as a notation exposes an unfilled required slot:
+
+```
+  cell.signal   [f64]     INCOMPLETE  <- what is index 0?
+  sight.channels    u32   a COUNT
+  sight.chromatic   u32   a COUNT
+  sight.projection  Str   a NAME
+  sight.preserves   Str   a CAPTION
+```
+
+A client receiving `signal: [0.31, 0.44, 0.09]` cannot tell which index is
+chromatic, nor which drives R, G and B. `Sight` carries counts and a name —
+enough to caption a lost axis, not enough to reproject. `Observer::roles()`
+exists (`kernel/src/color.rs:565`) and `Projection` holds the rgb slot
+indices and its carried norms; **none of it reaches the wire today.** So
+rung 2 as originally specified is uninterpretable, and the entire argument
+for shipping the post-eye signal — that the client owns its projection —
+fails without it.
+
+`Sight` therefore gains the per-channel roles and the projection's basis.
+The exact encoding is a stage-2 task against the real `Observer`, but the
+requirement is not negotiable: **ship the signal, the producer's own render,
+and the calibration between them, or ship only the render.**
+
+**The domain that already settled this is raw photography.** A camera emits
+sensor data *and* the manufacturer's JPEG — our rungs 2 and 3, our argument
+exactly. DNG carries `ColorMatrix1` and `CalibrationIlluminant` because raw
+values are meaningless without them; DICOM pairs raw values with a
+presentation state. Every instance ships three parts. We were shipping two.
+
 `bearing_deg` and `distance_rad` are `Option`-free and present on **every**
 cell including seams; `signal` and `cover` follow `color`'s existing
 `skip_serializing_if` discipline so an uncoloured document's bytes do not
@@ -301,6 +347,16 @@ Three reasons, in ascending order of importance.
 cli clients`). So adding fields is invisible to every existing consumer,
 and each renderer opts in on its own schedule. Decision 0055: "additive-or-
 versioned only."
+
+**One cost of additive, stated because it cuts the other way.** Additive is
+a **ratchet**: you cannot un-add a field from a published contract, whereas
+an experimental `v3` could be abandoned wholesale with v2 untouched. On the
+reversibility axis, additive is the *less* reversible choice. That does not
+reverse the decision — `pane_chart.ts`'s single-tag allowlist still makes a
+bump expensive for every client at once — but it means the cost of getting
+`signal`'s shape wrong is paid forever, which is exactly why the
+calibration gap above must be closed before stage 2 lands rather than
+after.
 
 **It makes the migration control stronger.**
 `RENDER-appearance-signal-protocol` proposes the control as "projecting a
@@ -423,17 +479,33 @@ Two consequences:
   projection axis alone, and stages 1 and 3 do not confound each other.
 - **Stage 3 must move `REFERENCE_SHAPE`.** A deliberate projection change
   moves the sim's output by construction, so "never rebaseline" is
-  unsatisfiable as literally stated. The rule that *is* satisfiable and
-  still protective is directional:
+  unsatisfiable as literally stated. The satisfiable rule is directional:
+  re-capture from the sim's own render, never from the client's output.
 
-> Re-capture `REFERENCE_SHAPE` from **the sim's own render**, never from the
-> client's output. The client's projection is written independently and must
-> then agree.
+**But make it a mechanism rather than a discipline.** `REFERENCE_SHAPE` is
+a hand-pasted raw-string literal at `clients/game/core/tests/chart.rs:81` —
+the *replica* holding a copy of the *authority's* answer, maintained by
+whoever remembers the rule. Meanwhile
+`clients/game/core/tests/fixtures/` is **already** written by
+`scripts/regenerate-artifacts.sh` and **already** in
+`docs/generated-paths.txt`, so it is drift-checked on every commit.
 
-Pasting `chart.rs`'s output into `REFERENCE_SHAPE` would make the test
-vacuous — that is the failure it exists to prevent, and the module doc
-records a plausible-looking wrong formula that once passed every other test
-in its file.
+So stage 3 moves the reference into that fixture directory, generated from
+the sim's own renderer. Three things follow, none of which depend on anyone
+remembering anything:
+
+- It **cannot** be re-captured from the client, because the generator is
+  the sim. The directional rule stops being advice.
+- A stale reference reddens the artifact drift check rather than waiting
+  for someone to notice.
+- `make rebaseline` regenerates it, so the reference moves in the same
+  commit as the projection that moved it.
+
+Pasting `chart.rs`'s output into the reference would make the test vacuous
+— that is the failure it exists to prevent, and the module doc records a
+plausible-looking wrong formula that once passed every other test in its
+file. Converting the literal into a sim-generated artifact removes the
+opportunity rather than warning against it.
 
 ---
 
@@ -759,8 +831,13 @@ down, and taken on report rather than measured.
 
 **Stage 1 — the vocabulary and what colour means** (no wire change)
 1. Probe §6.1, §6.2, §6.3 against a running possession; record real output.
-2. Surface endmembers and the cover-weighting in `windows/locale`;
-   `reflectance_at` gains a day.
+2a. **Stop integrating early** — `reflectance_at` keeps the `Mixture` and
+   integrates at the end. A pure refactor: assert the emitted colours are
+   **byte-identical** before and after. This is the positive control for
+   2b, and separating them is what lets a colour change be attributed to
+   the cover weighting rather than to a disturbed mineral path.
+2b. Surface endmembers and the cover-weighting; `reflectance_at` gains a
+   day. Colours move here, and only here.
 3. Epistemic moves to weight in `surrounds_ascii.rs`; `faded()` deleted;
    the impedance ladder (§2.2) designed against fixtures.
 4. The bedrock→surface sweep of §3.3's five sites, `.ts`/`.mjs`/`.js`
