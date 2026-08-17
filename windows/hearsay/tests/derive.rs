@@ -1,6 +1,6 @@
 mod common;
 
-use common::{chain_with_foundings, eid, ledger_with, put, put_on};
+use common::{chain_with_a_survivor_shortcut, chain_with_foundings, eid, ledger_with, put, put_on};
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::derive::{claims_about, variants_about, witnesses_of};
 use hornvale_hearsay::ladder::PrecisionLadder;
@@ -570,4 +570,42 @@ fn every_rule_preserves_precision_rank_monotonicity_along_a_path() {
             rule.label()
         );
     }
+}
+
+#[test]
+fn a_holder_reachable_by_two_paths_keeps_the_least_corrupted_telling() {
+    // 2 is a survivor of 1's ending, so both 1 and 2 are witnesses; 3, founded
+    // later from 2, is reachable both the long way (1 -> 2 -> 3, 2 hops) and
+    // the short way (2 -> 3, 1 hop, directly from witness 2). The short route
+    // skips the 1 -> 2 step entirely, so its accumulated width is strictly
+    // smaller -- it must be the telling 3 ends up holding.
+    let led = chain_with_a_survivor_shortcut();
+    let lin = lineage_of(&led);
+    let mut d = hornvale_hearsay::durations::PeopleDurations::default();
+    d.insert("human", Some(StdDays::new(50.0).expect("positive")), None);
+    let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
+
+    let out = hornvale_hearsay::derive::variants_about_accumulating(
+        &led,
+        &lin,
+        &ladders,
+        &d,
+        hornvale_hearsay::accumulate::Accumulation::Additive,
+        eid(1),
+        hornvale_history::OCC_ENDED,
+    );
+    let three = out
+        .iter()
+        .find(|c| c.holder == eid(3))
+        .expect("3 is reachable and must hold a claim");
+    assert_eq!(
+        three.hops, 1,
+        "the short direct route from witness 2 must win, not the long route through 1"
+    );
+    assert_eq!(
+        three.precision.rung(),
+        0,
+        "the short route's width (41.0) stays inside the day rung; the long \
+         route's width (43.0) would cross into the moon rung"
+    );
 }
