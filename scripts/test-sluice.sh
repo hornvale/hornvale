@@ -47,7 +47,11 @@ trap 'rm -rf "$tmp"; \
             "$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"; \
       env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true; \
       env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/empty 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true' EXIT
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/trailer 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/nudge 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/stranded 2>/dev/null || true; \
+      rm -f "$repo_root/scripts/.sluice-request-trailer-mutant-for-test.sh"' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
 # THE BOARD READ IS OFF FOR THE WHOLE FILE, and this is a hermeticity guard,
@@ -60,6 +64,17 @@ export HV_SLUICE_DIR="$tmp/state"
 # `scripts/CLAUDE.md`'s board incident records. Exported once, here, so a
 # section added later inherits it without having to remember.
 export HV_SLUICE_SKIP_BOARD=1
+
+# AND THE FETCH IS OFF FOR THE WHOLE FILE, for the same reason and with a
+# sharper lesson attached. `sluice-request.sh` refreshes the base before
+# searching for the headline trailer, and this suite drives that script dozens
+# of times: left on, every one is a network round trip, and against an https
+# remote with no cached credential `git fetch` PROMPTS rather than failing —
+# which in a non-interactive test run is an unbounded hang, not a slow test.
+# Measured: 17.9 s to past 20 minutes with no output. Skipping only degrades
+# the trailer search to the range this repo already has, which is exactly what
+# every assertion here constructs deliberately anyway.
+export HV_SLUICE_SKIP_FETCH=1
 
 # A scratch repo with a main line and two campaign commits on one branch.
 scratch="$tmp/repo"; mkdir -p "$scratch"; cd "$scratch"
@@ -786,6 +801,13 @@ echo "test-sluice: chamber origin is $(g -C "$chamber_repo" remote get-url origi
 mkdir -p "$chamber_repo/scripts"
 cp "$repo_root/scripts/census-canonical-host.sh" "$chamber_repo/scripts/census-canonical-host.sh"
 cp "$repo_root/scripts/timed.sh" "$chamber_repo/scripts/timed.sh"
+# EVERY HELPER sluice-run.sh SOURCES MUST BE ON THIS LIST, and the list has no
+# way to know that. Adding `sluice-headline.sh` without this line failed the
+# whole chamber section at once — `set -e` plus a missing `.` source, so the
+# run exited 1 before its first phase and four downstream assertions read as
+# unrelated failures (out-of-order phases, an empty last-pushed). If you add a
+# `. "$repo_root/scripts/…"` to sluice-run.sh, add its copy here.
+cp "$repo_root/scripts/sluice-headline.sh" "$chamber_repo/scripts/sluice-headline.sh"
 
 chamber_host_file="$tmp/chamber-host.txt"
 printf '%s\n' "$(hostname -s)" > "$chamber_host_file"
@@ -1925,7 +1947,23 @@ esac
 FAKESSH
 chmod +x "$tmp/bin/ssh"
 
-pushed_ref="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse origin/campaign/the-sluice)"
+# A pushed ref THAT CARRIES A HEADLINE TRAILER. These tests are about the
+# enqueue path — how sluice-request.sh reacts to ssh's exit code — and they
+# must reach the ssh call to test anything. Since the headline check now
+# refuses a kind=merge submission with no `Sluice-Headline:` trailer, a bare
+# real ref (origin/campaign/the-sluice, which predates the convention) is
+# turned away before the ssh call and every assertion below it reads as an
+# enqueue failure. Mint a commit on top of that ref with the trailer, and
+# publish it under refs/remotes/ so the is-it-pushed check passes too. Its
+# parent is an ancestor of `main`, so the `main..sha` range the check runs
+# over is exactly this one commit.
+pushed_base="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse origin/campaign/the-sluice)"
+pushed_ref="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree \
+    "$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse "$pushed_base^{tree}")" \
+    -p "$pushed_base" -m "chore: a commit for the enqueue-path tests
+
+Sluice-Headline: a headline so these tests reach the enqueue step")"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/nudge "$pushed_ref"
 
 if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=fail \
     bash "$repo_root/scripts/sluice-request.sh" campaign/x "$pushed_ref" \
@@ -2059,35 +2097,113 @@ env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/slu
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/empty "$empty_sha"
 env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/good "$good_sha"
 
-if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$wip_sha" 2>"$tmp/wip.err"; then
-    bad "a submission whose commit subject is 'wip' (junk) was accepted"
+# HV_SLUICE_BASE IS PINNED TO HEAD FOR EVERY INVOCATION IN THIS SECTION, and
+# that is hermeticity rather than convenience. The trailer is searched over
+# `$HV_SLUICE_BASE..$sha`, and these commits are minted with `-p HEAD`, so
+# pinning the base to HEAD makes the range exactly the one minted commit
+# wherever this suite runs. Without it the range is `origin/main..$sha`, and
+# inside a chamber phase HEAD is the MERGE PRODUCT — so the range would
+# include the candidate's own commits, which under this very convention carry
+# a `Sluice-Headline:` trailer. A junk-subject commit would then inherit
+# somebody else's headline and be accepted, and the refusal test would go
+# green for a reason that has nothing to do with what it is testing.
+req() { HV_SLUICE_BASE=HEAD bash "$repo_root/scripts/sluice-request.sh" "$@"; }
+
+if req campaign/x "$wip_sha" 2>"$tmp/wip.err"; then
+    bad "a submission whose commit subject is 'wip' (junk), with no trailer, was accepted"
 else
-    ok "a submission whose commit subject is 'wip' (junk) is refused"
+    ok "a submission whose commit subject is 'wip' (junk), with no trailer, is refused"
 fi
-if grep -q 'not a real headline' "$tmp/wip.err"; then
-    ok "the wip refusal names the reason (and points at the census-epoch-label consequence)"
+if grep -q 'Sluice-Headline' "$tmp/wip.err"; then
+    ok "the refusal names the trailer to add (and points at the census-epoch-label consequence)"
 else
-    bad "no 'not a real headline' message refusing the wip commit"
+    bad "the refusal does not name Sluice-Headline, so it does not tell the author what to do"
 fi
 
-if bash "$repo_root/scripts/sluice-request.sh" campaign/x "$empty_sha" 2>"$tmp/empty.err"; then
-    bad "a submission with a genuinely EMPTY commit subject (headline-less) was accepted"
+if req campaign/x "$empty_sha" 2>"$tmp/empty.err"; then
+    bad "a submission with a genuinely EMPTY commit subject and no trailer was accepted"
 else
-    ok "a submission with a genuinely empty commit subject (headline-less) is refused"
-fi
-if grep -q 'not a real headline' "$tmp/empty.err"; then
-    ok "the empty-headline refusal names the reason"
-else
-    bad "no 'not a real headline' message refusing the empty-subject commit"
+    ok "a submission with a genuinely empty commit subject and no trailer is refused"
 fi
 
+# THE CONTRACT CHANGE, PINNED. `good_sha` carries a perfectly respectable
+# subject — `feat(sluice): a real headline for testing` — and no trailer. The
+# OLD rule accepted exactly this, and that is precisely how a tidy-up commit
+# became a permanent label: the junk check knows placeholder WORDS, and an
+# ordinary subject is not a placeholder word. Under the new rule a subject,
+# however good, is not an authored headline.
+if req campaign/x "$good_sha" >/dev/null 2>"$tmp/goodsubj.err"; then
+    bad "a real-looking SUBJECT with no trailer was accepted — this is the old rule, and the failure it caused"
+else
+    ok "a real-looking subject with no trailer is refused: a subject is not an authored headline"
+fi
+
+# The accepting case: an unremarkable subject, with the trailer that matters.
+# This is the displacement failure in miniature — the commit's own subject is
+# the kind of thing that used to become a permanent label, and the trailer is
+# what actually gets used.
+trailer_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD \
+    -m "chore: tidy up after the real work
+
+Sluice-Headline: the thing that actually landed")"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/trailer "$trailer_sha"
 if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok \
-    bash "$repo_root/scripts/sluice-request.sh" campaign/x "$good_sha" \
-    >"$tmp/goodheadline.out" 2>"$tmp/goodheadline.err"; then
-    ok "a submission with a real headline is accepted — reaches the (mocked) enqueue step"
+    req campaign/x "$trailer_sha" >"$tmp/trailer.out" 2>"$tmp/trailer.err"; then
+    ok "a submission carrying a Sluice-Headline: trailer is accepted, whatever its subject says"
 else
-    bad "a submission with a real headline was wrongly refused: $(cat "$tmp/goodheadline.err")"
+    bad "a submission with a valid trailer was wrongly refused: $(cat "$tmp/trailer.err")"
 fi
+
+# THE PLACEMENT TRAP, PINNED IN BOTH DIRECTIONS. git's trailer parser reads
+# only the message's LAST block, so a `Sluice-Headline:` stranded above a
+# blank line and another trailer is silently invisible — an unparsed trailer
+# and an absent one are indistinguishable. The commit that introduced this
+# whole convention was written that way and its own headline did not resolve.
+# Since the mechanism cannot be made forgiving without abandoning git's own
+# semantics, the trap is instead made LOUD: refused, with the reason named.
+stranded_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD \
+    -m "chore: a commit whose trailer is in the wrong block
+
+Sluice-Headline: this line is stranded above a blank line
+
+Claude-Session: https://example.invalid/session")"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/stranded "$stranded_sha"
+if req campaign/x "$stranded_sha" 2>"$tmp/stranded.err"; then
+    bad "a Sluice-Headline stranded outside the final block was ACCEPTED — it would silently fall back at merge time"
+else
+    ok "a Sluice-Headline outside the message's final block is refused, not silently ignored"
+fi
+if grep -q 'LAST block' "$tmp/stranded.err"; then
+    ok "the refusal explains the placement rule, so the author is not left guessing why a trailer they wrote did nothing"
+else
+    bad "the refusal does not mention block placement — the trap stays silent in practice"
+fi
+
+echo "== request: MUTATION — the pre-fix tip-subject rule accepts the commit the real one refuses"
+# Non-vacuity for the contract change above. Revert ONLY the headline
+# derivation to the old `git log -1 --format=%s` and confirm `good_sha` — a
+# fine subject with no trailer — sails through, which is the behaviour that
+# put a doubled label and three malformed ones on main.
+hmut="$repo_root/scripts/.sluice-request-trailer-mutant-for-test.sh"
+# `#` as the sed delimiter, NOT `|`: the replacement text contains `||`, and
+# a `|`-delimited s/// ends at the first one — "unknown option to `s'", which
+# is how this was caught. The replacement must stay single-quoted so `$ref`
+# and `$repo_root` reach the mutant as literal shell, not this script's values.
+# shellcheck disable=SC2016
+sed -e 's#^    headline="\$(sluice_headline_of .*)"$#    headline="$(git -C "$repo_root" log -1 --format=%s "$ref" 2>/dev/null || true)"#' \
+    "$repo_root/scripts/sluice-request.sh" > "$hmut"
+if grep -q 'log -1 --format=%s' "$hmut"; then
+    ok "test setup: the mutant carries the old tip-subject derivation (so an accept below means the rule, not a dead script)"
+else
+    bad "the mutation sed did not apply — the assertion below would pass vacuously"
+fi
+if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok HV_SLUICE_BASE=HEAD \
+    bash "$hmut" campaign/x "$good_sha" >/dev/null 2>&1; then
+    ok "MUTATION CONFIRMED: the old tip-subject rule accepts a trailer-less commit (the real one refuses it — see above)"
+else
+    bad "the mutant also refused — the test above is not pinning the trailer requirement"
+fi
+rm -f "$hmut"
 
 echo "== request: a kind=stage submission with the SAME junk headline is ACCEPTED (Task 12)"
 # The exemption's own test, and it is the reason the refusal above needed one
