@@ -14,15 +14,13 @@ use std::collections::BTreeMap;
 pub const SURROUNDS_LENSES: [&str; 2] = ["terrain", "colour"];
 
 /// The glyph a cell draws under the `terrain` lens, before fading, paired
-/// with whether that glyph is drawing the **ground itself**.
-///
-/// The pairing is what keeps the `colour` lens honest. `SurroundsCell.color`
-/// is the reflectance of the cell's *bedrock*, so it is a truthful claim
-/// about the thing drawn only when the thing drawn is that ground. Where the
-/// glyph has been overridden to name something else — the observer, a mark
-/// standing on the cell, or the water covering it — the bedrock colour
-/// describes something the reader cannot see, and the `colour` lens withholds
-/// it rather than tinting a river with the colour of the rock beneath it.
+/// with whether the colour lens may tint it — the colour it withholds tint
+/// from otherwise names something the reader cannot see (the observer, a
+/// mark, or the water covering the ground). `bool` no longer means "draws
+/// the bedrock": since colour was recomposed as a surface mixture (surface
+/// cover over the mineral blend, not raw rock), it means "the colour
+/// describes what this glyph draws" — true only on the land arm below,
+/// where the glyph really is the ground the surface colour was mixed for.
 fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> (char, bool) {
     if cell.state == "here" {
         return ('@', false);
@@ -43,16 +41,49 @@ fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> (char, 
         "ocean" => ('~', false),
         "salt-basin" => ('=', false),
         "river" => ('+', false),
-        _ => (
-            match cell.relief {
-                0 | 1 => '_',
-                2 => '.',
-                3 => ':',
-                4 => '^',
-                _ => 'A',
-            },
-            true,
-        ),
+        _ => (impedance_glyph(cell), true),
+    }
+}
+
+/// The **ordinal** a dry-land cell draws: impedance, not relief alone —
+/// "how hard this ground is to cross," absorbing canopy and roughness into
+/// the one ranked answer spec §2.2 calls for. Reuses the five glyphs the
+/// pre-impedance relief ladder already spent (`_ . : ^ A`), because the
+/// survey this ladder was designed against (Task 4 report) found every
+/// relief band, from `shelf` to `alpine`, carrying a full [-1, 1] spread on
+/// both `micro.openness` and `micro.relief` — five bands' worth of real
+/// spread, no more, no fewer.
+///
+/// `cell.relief` (0..=5) is the base term: elevation is the coarsest, most
+/// reliable difficulty signal a room carries. Two `Micro` terms perturb it,
+/// each bounded to at most one band of movement, so impedance never crosses
+/// two elevation bands at once from vegetation or terrain roughness alone:
+///
+///   - **canopy** — `micro.openness` (`-1` closed .. `+1` open) contributes
+///     `(1 - openness) / 2` (`0` in the open, `1` under closed canopy):
+///     thick cover is a real obstacle to a walker, open ground is not.
+///   - **roughness** — `micro.relief` (`-1` hollow .. `+1` rise) contributes
+///     `|micro.relief|` (`0` flat, `1` at either extreme): a hollow and a
+///     rise are equally uneven underfoot, so only the magnitude counts, not
+///     the sign. `micro.aspect` (sun exposure) is deliberately not used
+///     here — it says which way a slope faces, not how hard the ground
+///     itself is to cross, and folding it in would let shade alone raise a
+///     cell's rung.
+///
+/// The two perturbations are weighted `0.5` each, so a cell at its very
+/// worst (closed canopy AND maximal roughness) rounds up at most one band
+/// above its bare relief, and the flattest, most open cell of a given
+/// relief band renders identically to the pre-impedance ladder.
+fn impedance_glyph(cell: &crate::SurroundsCell) -> char {
+    let canopy = (1.0 - cell.micro.openness) / 2.0;
+    let roughness = cell.micro.relief.abs();
+    let impedance = f64::from(cell.relief) + 0.5 * canopy + 0.5 * roughness;
+    match impedance.round() as i64 {
+        0 | 1 => '_',
+        2 => '.',
+        3 => ':',
+        4 => '^',
+        _ => 'A',
     }
 }
 
@@ -439,6 +470,82 @@ mod tests {
         assert!(
             out.contains("1 cell beyond a face seam"),
             "an unplaceable cell must be stated, not dropped silently: {out}"
+        );
+    }
+
+    #[test]
+    fn the_impedance_ladder_is_monotone_in_cost() {
+        // Assert the ORDER, not the characters: for cells whose impedance
+        // inputs are strictly ordered, the rendered glyph's rank in the
+        // ladder is non-decreasing. Pinning specific glyphs would make this
+        // test a second copy of the implementation.
+        //
+        // Exercised one axis at a time (relief, then canopy, then
+        // roughness), each with the other two held at a neutral baseline,
+        // rather than pinning the formula's exact weights — this only
+        // relies on each axis being individually non-decreasing in
+        // difficulty, which is the actual contract `impedance_glyph` makes.
+        fn rank(glyph: char) -> usize {
+            ['_', '.', ':', '^', 'A']
+                .iter()
+                .position(|&g| g == glyph)
+                .unwrap_or_else(|| panic!("{glyph} is not a land-ladder rung"))
+        }
+        fn land_cell(relief: u32, openness: f64, micro_relief: f64) -> SurroundsCell {
+            let mut c = cell(0, 0, 0, true, "sensed", relief); // water: 3 (dry-land)
+            c.micro.openness = openness;
+            c.micro.relief = micro_relief;
+            c
+        }
+        fn assert_non_decreasing(label: &str, glyphs: &[char]) {
+            assert!(
+                glyphs.windows(2).all(|w| rank(w[0]) <= rank(w[1])),
+                "{label} axis must be non-decreasing in impedance: {glyphs:?}"
+            );
+        }
+        let s = scene(vec![]);
+
+        // Axis 1: relief worsens (0..=5), canopy fully open and ground flat.
+        let by_relief: Vec<char> = (0..=5)
+            .map(|r| terrain_glyph(&s, &land_cell(r, 1.0, 0.0)).0)
+            .collect();
+        assert_non_decreasing("relief", &by_relief);
+
+        // Axis 2: canopy closes (open -> closed), relief and roughness held.
+        let by_canopy: Vec<char> = [1.0, 0.5, 0.0, -0.5, -1.0]
+            .iter()
+            .map(|&o| terrain_glyph(&s, &land_cell(2, o, 0.0)).0)
+            .collect();
+        assert_non_decreasing("canopy", &by_canopy);
+        // A positive control: "non-decreasing" alone is satisfied trivially
+        // by a CONSTANT sequence, which is exactly what the pre-impedance,
+        // relief-only ladder would produce here (it never read `micro` at
+        // all). Pin that closing the canopy actually moves the glyph.
+        assert_ne!(
+            by_canopy.first(),
+            by_canopy.last(),
+            "closing the canopy from fully open to fully closed never moved \
+             the glyph — the ladder is not reading micro.openness: {by_canopy:?}"
+        );
+
+        // Axis 3: ground roughens (|micro.relief| 0 -> 1), relief and
+        // canopy held. Sign must not matter, only magnitude: a hollow and
+        // a rise of the same magnitude must draw the same rung.
+        let by_roughness: Vec<char> = [0.0, 0.3, 0.6, 0.9, 1.0]
+            .iter()
+            .map(|&m| terrain_glyph(&s, &land_cell(2, 1.0, m)).0)
+            .collect();
+        assert_non_decreasing("roughness", &by_roughness);
+        assert_ne!(
+            by_roughness.first(),
+            by_roughness.last(),
+            "roughening from flat to maximal never moved the glyph — the \
+             ladder is not reading micro.relief: {by_roughness:?}"
+        );
+        assert_eq!(
+            terrain_glyph(&s, &land_cell(2, 1.0, 0.7)).0,
+            terrain_glyph(&s, &land_cell(2, 1.0, -0.7)).0,
+            "a hollow and a rise of equal magnitude must draw the same rung"
         );
     }
 
