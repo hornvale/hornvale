@@ -1212,3 +1212,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T00:49:26Z | quick | 9.764 | 31.311 | 5.397 | 3.76 | 0 | 1e92c152 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T00:50:07Z | quick | 17.314 | 19.765 | 2.725 | 1.30 | 0 | 1e92c152 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T00:55:51Z | gate-commit | 322.604 | 1034.289 | 82.552 | 3.46 | 0 | 1e92c152 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T00:58:26Z | gate-commit | 58.497 | 54.374 | 14.222 | 1.17 | 0 | 1e92c152 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T01:30:42Z | quick | 14.088 | 10.873 | 0.611 | 0.82 | 0 | b63d47a0 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T01:42:31Z | quick | 31.229 | 28.725 | 12.595 | 1.32 | 0 | b180a013 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T01:43:33Z | quick | 16.976 | 11.473 | 1.051 | 0.74 | 0 | b180a013 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T01:46:39Z | gate-commit | 152.638 | 216.968 | 49.814 | 1.75 | 0 | b180a013 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T01:47:39Z | gate-commit | 44.977 | 38.816 | 9.770 | 1.08 | 0 | b180a013 | campaign/the-palimpsest | MacBookPro | 10 |

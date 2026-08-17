@@ -8,6 +8,7 @@
 
 pub mod derive;
 pub mod divergence;
+pub mod durations;
 pub mod ladder;
 pub mod lineage;
 pub mod stance;
