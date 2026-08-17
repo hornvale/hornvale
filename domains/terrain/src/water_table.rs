@@ -41,6 +41,24 @@
 //!   cells upstream, so it is the model's own measure of how much water passes
 //!   through this column.
 //!
+//! ### The one calibration in the whole derivation
+//!
+//! Both terms run over `[0, 1)`-ish ranges and neither carries a scale of its
+//! own, so the model's entire calibration is the statement that they are
+//! **comparable at par**: recharge's maximum is worth exactly as much as
+//! drawdown's unit. That is not arbitrary, and it is what the constants'
+//! half-points are chosen to express. Take the reference column — mean land
+//! elevation ([`RELIEF_HALF_M`], relief = 0.5), median rock (transmissivity =
+//! 1), carrying exactly [`crate::RIVER_MIN_DRAINAGE`] (wetness = 0.5). The two
+//! terms cancel and the table sits at the ground.
+//!
+//! **Which is the definition of a river.** `crate::water::classify` already
+//! declares that accumulation to be where a perennial watercourse appears, and
+//! a perennial watercourse *is* the water table intersecting the surface. So
+//! the par is pinned to a claim the model had already committed to, in a
+//! constant this module reads rather than restates, rather than to a knob
+//! turned until the output looked right.
+//!
 //! ## Why the floor at zero is physics and not a rail
 //!
 //! Where recharge beats drawdown the expression goes negative, which says the
@@ -409,6 +427,25 @@ mod tests {
             "a dry porous upland gave {d} m"
         );
         assert!(!is_phreatic(d / 2.0, d), "half the window should be vadose");
+    }
+
+    /// The module doc's one calibration claim, pinned rather than asserted in
+    /// prose: the reference column — mean land elevation, median rock, carrying
+    /// exactly a river's worth of flow — has its table at the ground. Held to a
+    /// millimetre rather than to `0.0` because the softplus makes `relief`
+    /// approach one half from above rather than reach it.
+    #[test]
+    fn the_reference_river_column_sits_exactly_at_the_ground() {
+        let at_par = water_table_depth_m(RIVER_MIN_DRAINAGE, 0.5, RELIEF_HALF_M);
+        assert!(at_par < 0.001, "reference column gave {at_par} m");
+        assert!(
+            water_table_depth_m(RIVER_MIN_DRAINAGE * 1.01, 0.5, RELIEF_HALF_M) == 0.0,
+            "a hair more flow should drown the reference column outright"
+        );
+        assert!(
+            water_table_depth_m(RIVER_MIN_DRAINAGE * 0.99, 0.5, RELIEF_HALF_M) > 0.001,
+            "a hair less flow should leave a walkable window"
+        );
     }
 
     /// The scale constant sets the magnitude and cannot move which columns are
