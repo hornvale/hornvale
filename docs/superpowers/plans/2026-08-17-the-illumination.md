@@ -53,6 +53,24 @@ read it alongside this plan. Every task argues from a numbered section there.
   §9.1). New tests are absent from the sub-floor roster and are therefore
   compiled and not run. Always run new tests directly:
   `cargo test -p <crate> --test <name>`.
+- **ANY TASK THAT MOVES A COLOUR RUNS BOTH REGENERATION PATHS** —
+  `make rebaseline` *and then* `make rebaseline-goldens`. Not one of them.
+  Learned the hard way inside this campaign: Task 2b moved colours, ran only
+  the first, and left `windows/vessel/tests/fixtures/session-seed-42.json`
+  pinning `[58,58,2]` against a live `[36,36,1]` across two whole tasks.
+  Nothing caught it, and the reason is structural rather than an oversight:
+  - `windows/vessel/tests/fixtures/` is **not** in
+    `docs/generated-paths.txt` (verified, zero matches), so `make rebaseline`
+    never writes it and `git diff --exit-code` over that list is blind to it.
+  - Only `make rebaseline-goldens` regenerates it (`Makefile:601`).
+  - Neither failing test is in the sub-floor roster, so `gate-commit` stayed
+    green over 1440+ tests the entire time.
+
+  It surfaced only because a later task's implementer ran an unrelated suite
+  as due diligence. Do not rely on that happening twice. **When accepting a
+  golden, review the diff first**: colour-only movement is artifact drift; a
+  key appearing, disappearing or renaming is a `vessel/session/v2` shape move
+  and a different argument entirely.
 
 ---
 
