@@ -495,36 +495,42 @@ count cells landing in an occupied box.
 ### 6.5 The recycled-worktree hazard, already paid once
 
 `make worktree-take` printed a freshness warning for this campaign's
-worktree and **its printed remedy does not work**: re-running exits at
-`worktree-take.sh:43-46` before the invalidation step ever runs. 756 files
-under `target/debug/deps` were still baking a foreign path afterwards.
+worktree, and **its first suggested fix does not work**: re-running exits
+at `worktree-take.sh:43-46` before the invalidation step. The same sentence
+(line 149) offers a **second** fix — force a rebuild of the affected crates
+— and that one is sound. So the hazard is the **asymmetry**: a reader
+taking the dead clause does nothing and *believes they have acted*, and the
+resulting failures read exactly like a red main, as lines 146-147 say.
 
-The warning (line 149) offers **two** fixes in one sentence — re-run
-`make worktree-take`, *or* force a rebuild of the affected crates — and the
-second clause is sound. So the defect is narrow: one of two offered fixes
-is dead, and a reader who takes the live one is fine.
+**A second, latent defect, measured rather than reasoned about.** Line 135
+is `echo "$hits" | sed 's/^/  /' | head -10`, under this file's
+`set -euo pipefail` (line 38). When `head` exits after ten lines and `sed`
+still has data to write, `sed` takes SIGPIPE and returns 141; `pipefail`
+propagates it and `set -e` kills the script **before the explanation and
+the fix line print at all**. Remediation becomes unreachable exactly when
+contamination is worst. Measured on the identical construct: 359 paths
+(~42 KB) exits 0 and continues; 700 (~83 KB) exits 141 and does not —
+consistent with a 64 KiB pipe buffer. Fix is one character of plumbing
+(`sed 10q`), not a redesign.
 
-What makes it worth knowing anyway is the **asymmetry**. A reader who takes
-the dead clause does nothing and *believes they have acted*, which is worse
-than an error: the tree stays contaminated and its failures read exactly
-like a red main — as lines 146-147 of the script itself say.
+**It did not fire here, and the reason is a correction worth keeping.** An
+earlier draft of this section said 756 contaminated files. That is not the
+script's finding — it is a `grep -rl` over *every* file under `deps/`,
+including the `.rlib`/`.rmeta`/`.d` entries the script deliberately
+excludes. By the script's own criterion (`find -maxdepth 1 -type f -perm
+-u+x`) the count is **361**, about 42 KB, under the threshold. Verified by
+re-running: full trailer printed, exit 1.
 
-One caveat on the live clause: line 135 caps the offending-binary listing
-at `head -10` **per deps directory with no "and N more" marker**, so a
-reader rebuilding "the affected crates" works from a silently partial list
-(10 shown against 756 hits here). Not fatal, because the two scans differ
-in kind — the checker flags any executable *containing* the path, debug
-info included, while only sources that actually *read* the three macros are
-genuinely broken.
+**Force a rebuild before trusting any red** — these failures read exactly
+like a red main and are not one. The working invalidation, applied here
+(52 files touched): `grep -rl` for `CARGO_MANIFEST_DIR`,
+`CARGO_TARGET_TMPDIR`, `CARGO_BIN_EXE_` and `touch` the hits.
 
-The working fix, already applied to this worktree (52 files touched):
-`grep -rl` for `CARGO_MANIFEST_DIR`, `CARGO_TARGET_TMPDIR`,
-`CARGO_BIN_EXE_` and `touch` the hits.
-
-Board technique `9370de8a` is the settled version; it supersedes
-`e7c5bcb8` and `5fd03dec`, **both of which overstated this**. Running the
-checker by hand without an argument is *not* a defect — its usage header
-(lines 5-20) documents that fallback and names its resolution.
+Board technique `dd9135db` is the settled account; it supersedes
+`e7c5bcb8`, `5fd03dec` and `9370de8a`. Note for a reader tempted by the
+obvious inference: running the checker by hand *without* an argument
+returning "clean" is **not** a defect — its usage header (lines 5-20)
+documents that fallback and names its resolution.
 
 **Force a rebuild before trusting any red** — these failures read exactly
 like a red main and are not one.
