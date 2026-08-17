@@ -1236,3 +1236,9 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T03:01:17Z | quick | 3.309 | 2.297 | 0.267 | 0.77 | 0 | 3c4636d9 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T03:01:53Z | quick | 21.038 | 12.426 | 0.685 | 0.62 | 0 | 3c4636d9 | campaign/the-palimpsest | MacBookPro | 10 |
 | 2026-08-17T03:05:16Z | gate-commit | 29.691 | 51.911 | 13.483 | 2.20 | 0 | 3c4636d9 | campaign/the-palimpsest | MacBookPro | 10 |
+| 2026-08-17T11:39:43Z | quick | 97.876 | 12.851 | 2.724 | 0.16 | 0 | a6d2fe14 | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T11:41:38Z | gate-commit | 85.172 | 52.858 | 19.405 | 0.85 | 0 | a6d2fe14 | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T12:01:10Z | quick | 127.559 | 11.614 | 1.412 | 0.10 | 0 | cfa414c9 | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T12:04:30Z | gate-commit | 182.261 | 52.435 | 18.655 | 0.39 | 0 | cfa414c9 | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T12:16:48Z | rebaseline | 106.849 | 229.591 | 14.861 | 2.29 | 0 | 6d6a3dd3 | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T12:17:19Z | quick | 11.145 | 10.174 | 0.367 | 0.95 | 0 | 6d6a3dd3 | campaign/the-palimpsest | Greyjoy | 10 |
