@@ -44,16 +44,49 @@ impl CaveKind {
 /// one through [`Cave::new`] or [`Cave::from_reach`] and the invariant holds
 /// by construction — neither can produce a pair that disagrees.
 ///
-/// The fields stay `pub` because `deepest_band` is read across the workspace
-/// and because one test — `deep_realm_mutation`'s pipeline half — must
-/// *deliberately* fabricate a cave that violates the invariant, which is the
-/// entire content of that mutation. Every other construction site uses a
-/// constructor, and [`Cave::band_agrees_with_reach`] is the checkable form.
+/// **`#[non_exhaustive]` is what makes that a guarantee rather than a
+/// convention.** Outside `hornvale-terrain` the compiler refuses any struct
+/// expression for `Cave` — both a plain literal and functional-update syntax
+/// (`Cave { deepest_band: …, ..other }`) — with `E0639`. Field *reads* are
+/// untouched, which is why 26 read sites across the workspace needed no change
+/// and the fields stay `pub`. Inside this crate literals still compile; this is
+/// the crate that owns the invariant and routes through [`Cave::from_reach`].
+///
+/// A mismatched pair is therefore impossible to build by accident, and
+/// possible to build only through [`Cave::from_parts_unchecked`], whose name
+/// says so at the call site. Exactly one caller uses it. The guarantee is
+/// proved by the `compile_fail,E0639` doctest below rather than asserted, with
+/// the sanctioned constructor beside it as the positive control — a
+/// `compile_fail` block that fails for the wrong reason (a typo, a moved path)
+/// would otherwise pass silently.
+///
+/// ```compile_fail,E0639
+/// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
+/// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
+/// let honest = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
+/// // A band that disagrees with the budget: refused by the compiler.
+/// let _lie = Cave {
+///     deepest_band: BandKind::Regolith,
+///     ..honest
+/// };
+/// ```
+///
+/// The positive control — the same fixture, built the sanctioned way, compiles
+/// and satisfies the invariant:
+///
+/// ```
+/// # use hornvale_terrain::{Cave, CaveKind, BandKind, column, RockClass, Basement};
+/// let col = column(35.0, 0.3, true, 400.0, 1.0, RockClass::Sandstone, Basement::Continental);
+/// let cave = Cave::from_reach(CaveKind::Fracture, 2000.0, &col);
+/// assert_eq!(cave.deepest_band, BandKind::Basement);
+/// assert!(cave.band_agrees_with_reach(&col));
+/// ```
 ///
 /// `Eq` is gone since The Underworld added `depth_reach_m`: the depth
 /// coordinate is a metre budget now, and `f64` has no total equality.
 /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub struct Cave {
     /// Which process opened it.
     pub kind: CaveKind,
@@ -98,10 +131,40 @@ impl Cave {
         }
     }
 
+    /// Build a `Cave` from parts **without deriving the band from the budget**
+    /// — the named escape hatch from the derived-field invariant, and the only
+    /// way to construct a disagreeing pair outside this crate.
+    ///
+    /// **It exists for exactly one caller**, and should stay that way:
+    /// `windows/worldgen/tests/deep_realm_mutation.rs`'s pipeline half, whose
+    /// entire content is fabricating a budget the generator did not author and
+    /// showing that the chamber lattice can tell the difference. That test is
+    /// only meaningful against a state the generator *cannot* produce, so the
+    /// hatch is load-bearing rather than a concession.
+    ///
+    /// `_unchecked` is in the name so the violation is visible at the call site
+    /// instead of incidental. This is a modelling escape hatch, not an unsafe
+    /// one: nothing here can cause undefined behaviour, only an incoherent
+    /// cave. Use [`Cave::new`] or [`Cave::from_reach`] for every other purpose,
+    /// and [`Cave::band_agrees_with_reach`] to check what you were handed.
+    /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
+    pub fn from_parts_unchecked(
+        kind: CaveKind,
+        deepest_band: BandKind,
+        depth_reach_m: f64,
+    ) -> Cave {
+        Cave {
+            kind,
+            deepest_band,
+            depth_reach_m,
+        }
+    }
+
     /// Whether this cave's band is the one its budget actually reaches in
     /// `column` — the invariant, in checkable form. A cave built through
-    /// either constructor satisfies it; a hand-fabricated one may not, and
-    /// exactly one test relies on that.
+    /// [`Cave::new`] or [`Cave::from_reach`] satisfies it; one built through
+    /// [`Cave::from_parts_unchecked`] may not, and exactly one test relies on
+    /// that.
     /// type-audit: bare-ok(flag: return)
     pub fn band_agrees_with_reach(&self, column: &crate::strata::StratigraphicColumn) -> bool {
         self.deepest_band == band_at_depth(column, self.depth_reach_m)

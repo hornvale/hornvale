@@ -252,18 +252,22 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
          genuine downgrade; pick a different cell/seed"
     );
 
-    // THE ONE DELIBERATE VIOLATION of `Cave`'s derived-field invariant in the
-    // workspace, and it is the content of the mutation: a struct literal that
-    // forces `deepest_band` away from the band the cave's own budget reaches,
-    // producing a pair no constructor would ever emit. That is precisely the
-    // fabrication being detected — if anything downstream substituted a
-    // default budget for terrain's, the real and fabricated caves would be
-    // indistinguishable. Every other construction site goes through
-    // `Cave::new`/`Cave::from_reach`.
-    let fabricated_cave = Cave {
-        deepest_band: BandKind::Regolith,
-        ..real_cave
-    };
+    // ┌──────────────────────────────────────────────────────────────────────┐
+    // │ THE ONE DELIBERATE VIOLATION of `Cave`'s derived-field invariant in   │
+    // │ the whole workspace. `Cave` is `#[non_exhaustive]`, so a struct       │
+    // │ literal here does not compile at all (E0639) — reaching for           │
+    // │ `from_parts_unchecked` is the only way, and that is the point: the    │
+    // │ violation is named at the call site instead of looking like ordinary  │
+    // │ construction. If this is ever the SECOND caller of that function,     │
+    // │ something has gone wrong.                                             │
+    // └──────────────────────────────────────────────────────────────────────┘
+    //
+    // It is the content of the mutation: force `deepest_band` away from the
+    // band the cave's own budget reaches, producing a pair the generator
+    // cannot author. If anything downstream substituted a default budget for
+    // terrain's, the real and fabricated caves would be indistinguishable.
+    let fabricated_cave =
+        Cave::from_parts_unchecked(real_cave.kind, BandKind::Regolith, real_cave.depth_reach_m);
     assert!(
         !fabricated_cave.band_agrees_with_reach(&terrain.column_at(cell)),
         "the fabrication must actually violate the invariant, or it is not a \
