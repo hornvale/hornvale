@@ -706,6 +706,16 @@ fn the_water_column_is_a_place_you_can_be() {
         "the surface and the water below it rendered identically"
     );
 
+    // F1: the submerged render must not claim a direction is open when `go`
+    // refuses every lateral direction there (`SUBMERGED_LATERAL_REFUSAL`,
+    // asserted two lines below). Decision 0141's "the listing now says what
+    // is true" must hold in this band too, not only out of doors.
+    assert!(
+        !under.contains("No direction here is closed"),
+        "the submerged render claims no direction is closed, but go refuses \
+         all of them here: {under}"
+    );
+
     // Lateral movement is refused while under, and says so diegetically.
     let lateral = match s.handle(&lateral_dir) {
         Turn::Out(t) => t,

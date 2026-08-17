@@ -1661,22 +1661,39 @@ impl<'w> Session<'w> {
             vantage,
         )?;
         let f = self.focalizer.render(&v);
-        let ways: Vec<String> = v
-            .locale
-            .exits
-            .iter()
-            .filter(|e| e.kind == ExitKind::Edge)
-            .filter_map(|e| match e.direction {
-                Direction::Compass(c) => Some(format!("{c:?}").to_uppercase()),
-                _ => None,
-            })
-            .collect();
+        // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
+        // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
+        // under, `go` and a bare compass token both refuse EVERY lateral
+        // direction (`SUBMERGED_LATERAL_REFUSAL`) — the walk-band mesh's own
+        // laterals do not reach a submerged cell at all. Claiming "no
+        // direction here is closed" there would be false the instant the
+        // player tried one, which is exactly the class of defect decision
+        // 0141 exists to remove. `Ways on: surface.` mirrors
+        // `describe_underground_here`'s `Ways on: out.` — the one way on this
+        // band actually leads anywhere.
+        let closing = if self.submerged.is_some() {
+            "Ways on: surface.".to_string()
+        } else {
+            let ways: Vec<String> = v
+                .locale
+                .exits
+                .iter()
+                .filter(|e| e.kind == ExitKind::Edge)
+                .filter_map(|e| match e.direction {
+                    Direction::Compass(c) => Some(format!("{c:?}").to_uppercase()),
+                    _ => None,
+                })
+                .collect();
+            format!(
+                "No direction here is closed; the nearest ground lies {}.",
+                ways.join(", ")
+            )
+        };
         Ok(format!(
-            "[room {}, day {}]\n{}\nNo direction here is closed; the nearest ground lies {}.",
+            "[room {}, day {}]\n{}\n{closing}",
             v.locale.id,
             self.day.day(),
             f.prose,
-            ways.join(", ")
         ))
     }
 
