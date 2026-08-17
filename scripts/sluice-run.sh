@@ -449,9 +449,33 @@ export HV_CENSUS_LOCK_HELD=$$
 # from `git log --follow --first-parent main -- <path>` — and under --no-ff
 # the campaign's own commit is no longer on that line, so THIS subject
 # becomes the label. It must read correctly as a census epoch label standing
-# alone.
-campaign="${branch#campaign/}"
-headline="${HV_SLUICE_HEADLINE:-$(git log -1 --format=%s "$sha")}"
+# alone. (Path-scoped, so only a merge that MOVES the census mints a label;
+# the subject is permanent and human-read either way.)
+#
+# THE SUBJECT IS AUTHORED, NOT INFERRED. It comes from a `Sluice-Headline:`
+# trailer anywhere in the range, and `sluice-request.sh` refuses a merge
+# submission without one — see scripts/sluice-headline.sh for why the old
+# rule (the tip commit's subject) failed on four of the first four merges.
+# Both sides call the SAME helper so the mouth's refusal is about the string
+# the chamber actually uses.
+#
+# The fallback is deliberately still here and deliberately still the tip
+# subject. The mouth is the enforcement point; this is the chamber, and a
+# chamber that refuses to compose a message is a chamber that abandons a
+# candidate holding the box. A `stage` run legitimately has no trailer at all
+# (it is exempt at the mouth, since its merge commit is discarded), and
+# HV_SLUICE_HEADLINE stays for the tests that drive this file directly.
+# `sluice_strip_merge_prefix` applies to every path, so the doubling that
+# landed permanently on 9aae0d27 cannot recur however the string arrives.
+# shellcheck source=scripts/sluice-headline.sh
+. "$repo_root/scripts/sluice-headline.sh"
+campaign="$(sluice_short_name "$branch")"
+headline="${HV_SLUICE_HEADLINE:-$(sluice_headline_of "$repo_root" "$base_ref" "$sha")}"
+if [ -z "$headline" ]; then
+    headline="$(git log -1 --format=%s "$sha")"
+    echo "sluice-run: no Sluice-Headline: trailer in $base_ref..${sha:0:12}; falling back to the tip subject." >&2
+fi
+headline="$(sluice_strip_merge_prefix "$headline")"
 merge_msg="merge($campaign): $headline
 
 Gated as the merge product by sluice job $job_id.

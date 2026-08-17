@@ -61,6 +61,23 @@ run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
 # the real claim the enclosing run is already holding. It SKIPs cleanly on a
 # host without flock, which is why it costs nothing on a Mac.
 run "sluice queue"     bash scripts/test-sluice.sh
+# THE SHELL LINT, for the same reason and with the proof attached. The
+# `make shellcheck` target was in the Makefile's .PHONY list and NOWHERE
+# else — no gate, no set, no hook ran it — and it was RED on `main` when this
+# line was written (SC2119 at two call sites, unnoticed for as long as it took
+# to write them).
+#
+# (A comment line here must not START with the linter's own name followed by a
+# space: that is the syntax for an inline directive, and shellcheck fails the
+# whole file with SC1073 when it cannot parse one. Learned immediately.)
+# A lint nothing runs is a lint that reports on whatever the last person to
+# type it happened to see. 8.16 s, against this set's ~24 s.
+#
+# `scripts/**` is the connective tissue of every gate, the census, and this
+# queue, and none of it is covered by `cargo clippy` — the workspace lint
+# stops at the Rust boundary, so shell is the one language here with no
+# automatic checker at all.
+run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then
     echo "outboard: $fails suite(s) failed" >&2
