@@ -29,11 +29,18 @@ fn load() -> Vec<(String, Vec<String>)> {
 }
 
 /// P1 (descriptive): the pre-campaign baseline, pinned exactly.
+///
+/// Exact equality, not a tolerance, is safe here: `assignment_accuracy`
+/// computes a single IEEE-754 division of two small integers (correct
+/// assignments over total words), single-threaded, with no ties
+/// contributing fractional credit and no summation-order sensitivity — so
+/// the result is bit-reproducible, not merely numerically close. Do not
+/// widen this back into a tolerance without re-establishing that.
 #[test]
 fn the_baseline_assignment_accuracy_is_pinned() {
     let acc = assignment_accuracy(&load());
-    assert!(
-        (acc - BASELINE).abs() < 1e-9,
+    assert_eq!(
+        acc, BASELINE,
         "baseline moved: expected {BASELINE}, measured {acc}. \
          If generation code changed, this is the campaign's readout, not a \
          failure — update the pin in the SAME commit as the change that moved \
