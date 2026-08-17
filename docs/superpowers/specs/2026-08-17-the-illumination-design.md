@@ -499,22 +499,32 @@ worktree and **its printed remedy does not work**: re-running exits at
 `worktree-take.sh:43-46` before the invalidation step ever runs. 756 files
 under `target/debug/deps` were still baking a foreign path afterwards.
 
-The trap is that **both** recovery paths a reader naturally reaches for
-fail. The warning sends you to `make worktree-take`, which early-exits and
-does nothing. Re-running the checker itself
-(`scripts/test-worktree-freshness.sh`) by hand returns **clean** — and that
-one is *not* a bug: its usage header (lines 5-20) documents the fallback,
-explains that `worktree-take.sh` passes the old path as `$recycled`
-(line 224), and says a caller without that knowledge may omit it and get
-sibling-only behaviour. Pass the old worktree path as `argv1` or you are
-running the documented sibling-only mode. So one recovery path does
-nothing, and the other quietly reports a pass.
+The warning (line 149) offers **two** fixes in one sentence — re-run
+`make worktree-take`, *or* force a rebuild of the affected crates — and the
+second clause is sound. So the defect is narrow: one of two offered fixes
+is dead, and a reader who takes the live one is fine.
+
+What makes it worth knowing anyway is the **asymmetry**. A reader who takes
+the dead clause does nothing and *believes they have acted*, which is worse
+than an error: the tree stays contaminated and its failures read exactly
+like a red main — as lines 146-147 of the script itself say.
+
+One caveat on the live clause: line 135 caps the offending-binary listing
+at `head -10` **per deps directory with no "and N more" marker**, so a
+reader rebuilding "the affected crates" works from a silently partial list
+(10 shown against 756 hits here). Not fatal, because the two scans differ
+in kind — the checker flags any executable *containing* the path, debug
+info included, while only sources that actually *read* the three macros are
+genuinely broken.
 
 The working fix, already applied to this worktree (52 files touched):
 `grep -rl` for `CARGO_MANIFEST_DIR`, `CARGO_TARGET_TMPDIR`,
-`CARGO_BIN_EXE_` and `touch` the hits. Board technique `e7c5bcb8`,
-**corrected by `5fd03dec`** — the original post called the argument-less
-clean a second defect, which it is not.
+`CARGO_BIN_EXE_` and `touch` the hits.
+
+Board technique `9370de8a` is the settled version; it supersedes
+`e7c5bcb8` and `5fd03dec`, **both of which overstated this**. Running the
+checker by hand without an argument is *not* a defect — its usage header
+(lines 5-20) documents that fallback and names its resolution.
 
 **Force a rebuild before trusting any red** — these failures read exactly
 like a red main and are not one.
