@@ -6911,7 +6911,6 @@ fn bake_history_from(
                 &species_affinity,
             )
             .into_iter()
-            .map(|(_tag, map)| map)
             // REALM-AWARE CAPACITY (spec §4.6): "capacity for an underworld
             // community is computed against the chamber's conditions and its
             // energy base, not the surface cell's". `per_species_capacity_at`
@@ -6924,8 +6923,25 @@ fn bake_history_from(
             //
             // A surface people's multiplier is exactly 1.0, an IEEE-754 no-op,
             // which is what makes this inert above ground.
+            //
+            // THE TAG IS CHECKED RATHER THAN DISCARDED. `per_species_capacity_at`
+            // tags each result by its `.enumerate()` position over the slice it
+            // was handed, and `seatings` was built by a separate `.enumerate()`
+            // over `peoples`; indexing one by the other's position is only
+            // correct because both derive from `peoples` in one order-preserving
+            // pass. `bake`'s own assert checks LENGTHS, which cannot see a
+            // permutation — so the identity is asserted here, at the one place
+            // the two orderings meet, rather than left to the two derivations
+            // staying in step by inspection.
             .enumerate()
-            .map(|(i, map)| scale_capacity(geo, &map, &seatings[i].multiplier))
+            .map(|(i, (tag, map))| {
+                debug_assert_eq!(
+                    tag as usize, i,
+                    "per_species_capacity_at's tag must be its position in `peoples`, \
+                     which is the position `seatings` is indexed by"
+                );
+                scale_capacity(geo, &map, &seatings[i].multiplier)
+            })
             .collect()
         })
         .collect();

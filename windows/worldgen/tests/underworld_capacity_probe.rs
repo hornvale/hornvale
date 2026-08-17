@@ -293,6 +293,45 @@ fn where_underworld_communities_found_and_what_they_cut() {
         println!("  founded below the table {under_water} / {underworld_records}",);
         println!("  Made chambers {made}  (of which below the table: {drained})");
 
+        // THE BAND THE PLAYER CAN REACH, and the reason this is here rather
+        // than in prose. `windows/vessel`'s `delve_at` enters at a hardcoded
+        // `band: 0` and there is no descent verb, so a player reaches exactly
+        // one chamber per column and it is always the shallowest rung. If NO
+        // occupied column seats at band 0, then handing `delve_at` the real
+        // overrides would pass it an empty map in this world — a call site that
+        // makes spec §4.2.1 clause 2's seam look closed while changing nothing
+        // observable. That was the measurement the decision not to wire it
+        // rests on, so it is committed rather than narrated.
+        let mut occupied_bands: BTreeMap<u8, usize> = BTreeMap::new();
+        let mut columns: std::collections::BTreeSet<(KindId, hornvale_kernel::CellId)> =
+            std::collections::BTreeSet::new();
+        for record in &history.records {
+            if seating.contains_key(&record.core.people) {
+                columns.insert((record.core.people, record.core.site));
+            }
+        }
+        for (people, cell) in &columns {
+            let Some(cave) = terrain.cave_at(*cell) else {
+                continue;
+            };
+            let table = water_table_depth_m(
+                terrain.drainage_at(*cell),
+                terrain.material_at(*cell).porosity,
+                terrain.elevation_at(*cell).get() - sea,
+            );
+            let niche = niches.get(people).expect("a seated people carries a niche");
+            if let Some(seat) = seat_at(niche, &cave, terrain.geothermal_gradient_at(*cell), table)
+                && let Some(band) = hornvale_worldgen::chamber::rung_rank(seat.rung)
+            {
+                *occupied_bands.entry(band).or_default() += 1;
+            }
+        }
+        let reachable = occupied_bands.get(&0).copied().unwrap_or(0);
+        println!(
+            "  occupied columns by lattice band {occupied_bands:?}  \
+             (band 0 — the only band `delve_at` enters — holds {reachable})"
+        );
+
         assert!(
             underworld_records > 0,
             "seed {seed_value}: no underworld community founded at all — the \

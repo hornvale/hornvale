@@ -356,6 +356,41 @@ pub fn seating_for(
 /// maker — only the *claim* lapses — which is the persistence asymmetry
 /// [`crate::chamber::resolve_origin`]'s docs name as what a future dig
 /// campaign will be reading. A hall does not refill because its people died.
+///
+/// # NOTHING IN THE SHIPPED PATH CALLS THIS, AND THAT IS THE WHOLE DISCLOSURE
+///
+/// The only callers are `underworld_capacity_probe.rs` (`#[ignore]`d) and this
+/// module's own tests. `bake_history_from` does not call it; `windows/vessel`'s
+/// `delve_at` — the one production caller of [`crate::chamber::chamber_at`]
+/// anywhere in the tree — hands it a freshly-constructed **empty**
+/// [`ChamberOverrides`]. **So in every world a player can reach, every chamber
+/// still resolves `Found`.** Spec §4.2.1 clause 2 required this task to *write*
+/// `Made`, and what shipped writes it into a value no shipped code path
+/// constructs. That is a WRITER WITH NO CALL SITE, which is one level worse
+/// than a value with no reader, and it is stated here rather than left to be
+/// discovered.
+///
+/// **Wiring `delve_at` alone would have been VACUOUS, and that is measured
+/// rather than argued.** `delve_at` enters at a hardcoded `band: 0`
+/// (`Undercroft`), `describe_underground_here` renders `"Ways on: out."`, the
+/// only other underground verb is `climb`, and
+/// [`crate::chamber::passages_from`] has no production caller — so a player
+/// reaches exactly one chamber per column and it is always the shallowest rung.
+/// Meanwhile **every** settled underworld column in the campaign's three seeds
+/// seats at `Shallows` (band 1): 14 / 8 / 7 occupied columns on seeds 42 / 7 /
+/// 1234, band histogram `{1: N}` in all three. Passing the real overrides into
+/// a band-0 lookup would therefore have produced an empty map in every measured
+/// world — a call site that makes the seam look closed while changing nothing
+/// observable, which is exactly the shape this campaign exists to name.
+///
+/// **What closing it actually needs**, so the next campaign can price it: a
+/// descent verb walking [`crate::chamber::passages_from`]; chamber state that
+/// tracks an *address* rather than one `Chamber`; prose that distinguishes a cut
+/// hall from a found void; and a home for the overrides themselves — either
+/// derived per column off the committed ledger (`occupations_at` + [`seat_at`],
+/// ~30 lines, cheap enough for one verb) or committed as dig facts, which
+/// [`ChamberOverrides`]'s own doc defers. That is a `windows/vessel` campaign,
+/// not a capacity task.
 pub fn made_chambers(
     seed: hornvale_kernel::Seed,
     terrain: &GeneratedTerrain,
