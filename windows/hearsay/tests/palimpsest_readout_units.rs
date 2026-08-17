@@ -55,21 +55,47 @@
 //! how many steps a median path needs to pass each rung. Two decision rules
 //! govern the reading, and they were fixed before the run:
 //!
-//! - a median step already past the coarsest rung **re-creates the days-scale
-//!   saturation spec §3.6 measured** (p50 = 9,131 days against a 368-day
-//!   year). That is a result. It is reported, never tuned away.
+//! - a median step already past the coarsest rung is **the saturation §3.7
+//!   predicts** — a ladder built only from durations the world contains cannot
+//!   hold a chain that outlives every one of them. That is a result. It is
+//!   reported, never tuned away. (Spec §3.6's day-scale figures are not a
+//!   comparator for it: those are path-weighted, this column is one unweighted
+//!   entry per lineage edge. See [`single_step_days`].)
 //! - a median step under the FINEST rung means the conversion is inverted.
 //!   That is a broken instrument, not a finding, so it is the one thing this
 //!   file asserts about scale — the run stops there rather than printing a
 //!   panel nobody could interpret.
 //!
+//! **MULTIPLICATIVE IS NOT UNIT-CORRECTED HERE, AND ITS EXPLORATORY ROW IS NOT
+//! A COUNTERPART TO THE FROZEN ONE.** This is a correction to spec §6.6, found
+//! in review after the first run. `Accumulation::Multiplicative` is
+//! `width * (1 + span)`; with the frozen dimensionless `span` that is
+//! days × dimensionless = **days, already coherent**. Substituting `span_days`
+//! uniformly — which is what this battery does, deliberately, so that exactly
+//! one thing changes across all three rules — turns it into
+//! `width * (1 + span_days)`, i.e. a duration added to a pure number. That is
+//! a THIRD, differently-incoherent model, not a repair: growth runs ~2.7e4 per
+//! step and ~1e66 over fifteen, unrelated to any rung on any ladder. The tell
+//! was in the first run's numbers and was missed — §6.6 calls multiplicative
+//! the rule the defect does not touch, yet it moved the most (H2 median
+//! 5.0 → 4.0, saturation 0.13 → 0.79). The computation is left exactly as it
+//! is and the number stands; only its LABEL was wrong. Read the multiplicative
+//! rows as a third model, never as "multiplicative, corrected".
+//!
 //! As in the frozen battery, the hypotheses themselves are REPORTED and the
-//! assertions are substrate controls only.
+//! assertions are substrate controls only. Two of those controls are NOT
+//! `#[ignore]`d and run in every gate, because the 77-line local walk below is
+//! a hand transcription of the project's most subtle function and the panel
+//! that exercises it is heavy-tier: [`the_local_walk_matches_the_frozen_one_when_a_generation_is_one_day`]
+//! pins the transcription, and [`the_conversion_actually_moves_the_walk_when_a_generation_is_not_one_day`]
+//! pins the conversion being applied at all. Neither builds a world.
+
+mod common;
 
 use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::accumulate::{Accumulation, precision_at};
 use hornvale_hearsay::amplitude::gen_span;
-use hornvale_hearsay::derive::witnesses_of;
+use hornvale_hearsay::derive::{variants_about_accumulating, witnesses_of};
 use hornvale_hearsay::divergence::maximum_antichain;
 use hornvale_hearsay::durations::PeopleDurations;
 use hornvale_hearsay::ladder::{PeopleLadders, PrecisionLadder};
@@ -413,9 +439,25 @@ fn percentile(sorted: &[f64], fraction: f64) -> f64 {
     sorted[index]
 }
 
-/// Every single-step contribution in this world, in std days: one entry per
-/// parent -> child founding edge, which is exactly the population the walk's
-/// `path.windows(2)` steps over.
+/// Every single-step contribution in this world, in std days: **one entry per
+/// parent -> child founding edge of the lineage, unweighted**.
+///
+/// **This is NOT the population the walk steps over, and the difference is
+/// large enough to matter.** The walk's `path.windows(2)` visits an edge once
+/// per (event, witness, descendant) path that crosses it, so a step near the
+/// root of a deep line is counted many times and an edge on no
+/// witness-to-descendant path is not counted at all — a path-weighted
+/// distribution. This function counts each edge exactly once whether the walk
+/// traverses it or not, including edges whose founding facts are missing (they
+/// enter as 0.0). Seed 0 has 655 edges here; the path-weighted population on a
+/// comparable world runs into the tens of thousands.
+///
+/// Both are distributions of the same per-edge quantity and neither is wrong,
+/// but they are not interchangeable and their percentiles must not be compared
+/// across the two. What this one is FOR is the scale question — is the
+/// converted amplitude on the order of a rung, or orders of magnitude off it —
+/// and for that an unweighted per-edge median is the honest instrument,
+/// because it is not dominated by whichever lines happen to be deepest.
 fn single_step_days(ledger: &Ledger, read: &WorldRead) -> Vec<f64> {
     let mut out: Vec<f64> = Vec::new();
     for occ in read.lineage.all() {
@@ -598,9 +640,15 @@ fn print_scale_check(seed: u64, components: &hornvale_worldgen::WorldComponents)
         median / finest,
     );
     println!(
-        "  DECISION RULE (fixed before the run): median past the coarsest rung re-creates spec \
-         §3.6's days-scale saturation and is REPORTED, not tuned; median under the finest rung \
-         means an inverted conversion and stops the run."
+        "  DECISION RULE (fixed before the run): median past the coarsest rung is the saturation \
+         §3.7 predicts and is REPORTED, not tuned; median under the finest rung means an \
+         inverted conversion and stops the run."
+    );
+    println!(
+        "  POPULATION CAVEAT: this column is ONE ENTRY PER LINEAGE EDGE, UNWEIGHTED, including \
+         edges no walk traverses. Spec §3.6's day-scale figures are PATH-WEIGHTED (one entry per \
+         step of every witness-to-descendant path). Same per-edge quantity, different \
+         distributions — do not compare percentiles across the two."
     );
 
     assert!(
@@ -641,6 +689,19 @@ fn the_palimpsest_unit_corrected_exploratory_readout() {
         "THE ONE DELTA        : the amplitude is multiplied by the teller's people's generation \
          length in std days before accumulating. Panel, predicate, rules, quantities and \
          antichain code are identical to the frozen battery."
+    );
+    println!(
+        "MULTIPLICATIVE CAVEAT: the multiplicative rows below are NOT a unit-corrected \
+         counterpart to the frozen ones. `width * (1 + span)` with a DIMENSIONLESS span was \
+         ALREADY coherent (days x dimensionless = days); substituting span_days makes it \
+         `width * (1 + span_days)`, a duration added to a pure number — a THIRD, differently \
+         incoherent model. Its numbers stand; its label was wrong (correcting spec §6.6)."
+    );
+    println!(
+        "H2 CAVEAT            : under additive and quadrature the occupied rung set is exactly \
+         {{finest}} u {{the top three rungs}} on all 40 seeds, so distinct_rungs is a constant 4 \
+         carrying NO per-seed information. '4 >= 3' is NOT evidence for §6.3 — H2's evidence \
+         lives in the frozen column."
     );
 
     let median_step = print_scale_check(PANEL[0], &components);
@@ -690,9 +751,28 @@ fn the_palimpsest_unit_corrected_exploratory_readout() {
     for (index, rule) in Accumulation::ALL.iter().enumerate() {
         let rows = &per_rule[index];
         println!(
-            "\n=== RULE: {} (unit-corrected, exploratory) ===",
-            rule.label()
+            "\n=== RULE: {} ({}, exploratory) ===",
+            rule.label(),
+            match rule {
+                Accumulation::Multiplicative =>
+                    "NOT unit-corrected — a THIRD model; see the multiplicative caveat above",
+                _ => "unit-corrected",
+            }
         );
+        if *rule == Accumulation::Multiplicative {
+            println!(
+                "  CAVEAT: frozen multiplicative was already dimensionally coherent \
+                 (days x dimensionless). Substituting span_days INTRODUCES an incoherence \
+                 rather than removing one, so these rows are not a corrected counterpart to \
+                 the frozen multiplicative rows — they are a third model."
+            );
+        } else {
+            println!(
+                "  CAVEAT: distinct_rungs is a constant 4 on every seed — the occupied set is \
+                 exactly {{finest}} u {{the top three rungs}} — so it carries no per-seed \
+                 information and is not evidence for §6.3."
+            );
+        }
         println!(
             "  {:<6} {:>8} {:>9} {:>7} {:>10} {:>7} {:>11}  rung histogram",
             "seed", "held", "H1 rho", "H2 rgs", "saturated", "events", "H3 rho"
@@ -783,6 +863,164 @@ fn the_palimpsest_unit_corrected_exploratory_readout() {
         assert!(
             total > 0,
             "control: rule {} produced no held claims at all",
+            rule.label()
+        );
+    }
+}
+
+// ===========================================================================
+// THE TRANSCRIPTION CONTROLS. Cheap, hand-built, and NOT `#[ignore]`d — these
+// are the only things in this file any gate ever executes.
+//
+// `variants_about_accumulating_in_days` is 77 hand-copied lines reproducing
+// `derive::variants_about_accumulating`, the most subtle walk in the project:
+// witness seeding, the ancestry slice, and a three-key multi-path tie-break.
+// A slip in any of them changes WHICH claim a holder keeps without changing
+// how many, so it would surface only as a plausible number in a report nobody
+// can re-derive. The panel that would exercise it is heavy-tier and runs
+// nowhere by default.
+//
+// The two controls below pin the two things that can independently be wrong,
+// and NEITHER SUBSUMES THE OTHER:
+//
+//   1. the transcription — is the local walk the frozen walk?
+//   2. the conversion — is it applied at all?
+//
+// The first is exact by construction. When every people's generation length
+// is 1.0 std day, `gen_span` divides by 1.0 and `amplitude_days` multiplies
+// by 1.0, so the two amplitudes are identically equal and the two walks must
+// return claim-for-claim identical vectors. **But that also means the first
+// control cannot see a FORGOTTEN conversion** — deleting the `* generation`
+// factor is a no-op at g = 1.0, and the equivalence would still hold. That is
+// what the second control is for: at g != 1.0 the two walks must DIFFER, and
+// they differ in `precision`, so dropping the factor turns the second control
+// red immediately. Round 1 review proposed the first alone as covering both;
+// it does not, and the pair is the honest version.
+// ===========================================================================
+
+/// A ledger whose peoples all have generation length `generation` std days,
+/// paired with the ladders and durations both walks read.
+///
+/// `common::chain_with_foundings` is a six-deep single line (lossy steps
+/// accumulate over five retellings) and
+/// `common::chain_with_a_survivor_shortcut` is the branched fixture whose
+/// descendant `3` is reachable by two genuinely different routes — the one
+/// shape that exercises the multi-path tie-break at all. Both commit
+/// `occ-people = "human"` on every occupation, so one duration entry covers
+/// each.
+fn fixture(ledger: Ledger, generation: f64) -> (Ledger, Lineage, PeopleLadders, PeopleDurations) {
+    let mut durations = PeopleDurations::default();
+    durations.insert(
+        "human",
+        StdDays::new(generation).ok(),
+        StdDays::new(generation * 3.0).ok(),
+    );
+    let lineage = lineage_of(&ledger);
+    let ladders = PeopleLadders::of(&ledger, &durations);
+    (ledger, lineage, ladders, durations)
+}
+
+/// The subject both fixtures put an `occ-ended` on.
+fn ended_subject() -> EntityId {
+    EntityId::new(1).expect("nonzero")
+}
+
+/// Run both walks over one fixture and hand back their results in order
+/// (frozen, local).
+fn both_walks(ledger: Ledger, generation: f64, rule: Accumulation) -> (Vec<Claim>, Vec<Claim>) {
+    let (led, lineage, ladders, durations) = fixture(ledger, generation);
+    let frozen = variants_about_accumulating(
+        &led,
+        &lineage,
+        &ladders,
+        &durations,
+        rule,
+        ended_subject(),
+        PREDICATE,
+    );
+    let local = variants_about_accumulating_in_days(
+        &led,
+        &lineage,
+        &ladders,
+        &durations,
+        rule,
+        ended_subject(),
+        PREDICATE,
+    );
+    (frozen, local)
+}
+
+/// CONTROL 1 — the transcription. At a generation length of exactly one std
+/// day the conversion is the identity, so the local walk must reproduce the
+/// frozen walk claim for claim: holder, precision, hops, grade and object all
+/// equal, in the same order.
+///
+/// Vector equality rather than length equality is the point. The multi-path
+/// tie-break decides WHICH of two tellings a holder keeps, so a slip there
+/// changes a claim's precision and hops while leaving the count untouched —
+/// exactly the failure a length check cannot see.
+#[test]
+fn the_local_walk_matches_the_frozen_one_when_a_generation_is_one_day() {
+    for rule in Accumulation::ALL {
+        for (name, ledger) in [
+            ("deep chain", common::chain_with_foundings()),
+            (
+                "survivor shortcut",
+                common::chain_with_a_survivor_shortcut(),
+            ),
+        ] {
+            let (frozen, local) = both_walks(ledger, 1.0, rule);
+
+            // Substrate: a walk that returned nothing, or that never retold
+            // anything, would satisfy equality vacuously.
+            assert!(
+                frozen.len() >= 3,
+                "{name}/{}: the fixture produced {} claims — too few to pin a walk",
+                rule.label(),
+                frozen.len()
+            );
+            assert!(
+                frozen.iter().any(|c| c.hops > 0),
+                "{name}/{}: no claim was ever retold, so no step was ever accumulated",
+                rule.label()
+            );
+
+            assert_eq!(
+                local,
+                frozen,
+                "{name}/{}: the local walk diverged from `variants_about_accumulating` on a \
+                 fixture where the conversion is the identity (generation = 1.0 std day, so \
+                 `gen_span` divides by 1 and `amplitude_days` multiplies by 1). The \
+                 transcription is wrong, not the units.",
+                rule.label()
+            );
+        }
+    }
+}
+
+/// CONTROL 2 — the conversion is applied. At a generation length of 50 std
+/// days the two amplitudes differ by a factor of 50, so the two walks must
+/// reach different rungs. Deleting `* generation.get()` from
+/// [`amplitude_days`] makes this test red; control 1 alone would stay green.
+#[test]
+fn the_conversion_actually_moves_the_walk_when_a_generation_is_not_one_day() {
+    for rule in Accumulation::ALL {
+        let (frozen, local) = both_walks(common::chain_with_foundings(), 50.0, rule);
+        assert_eq!(
+            frozen.len(),
+            local.len(),
+            "{}: the two walks disagree on how many holders exist, which is a transcription \
+             fault rather than a units one",
+            rule.label()
+        );
+        assert!(
+            frozen
+                .iter()
+                .zip(&local)
+                .any(|(a, b)| a.precision != b.precision),
+            "{}: the corrected walk landed on exactly the frozen walk's rungs with a 50-day \
+             generation, where the amplitudes differ 50-fold. The conversion is not being \
+             applied — check that `amplitude_days` still multiplies by the generation length.",
             rule.label()
         );
     }
