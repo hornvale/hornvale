@@ -91,7 +91,13 @@ read it alongside this plan. Every task argues from a numbered section there.
 ## Task 1: Probe before designing
 
 **Files:**
-- Create: `windows/locale/examples/illumination_probe.rs`
+- Create: `windows/scene/examples/illumination_probe.rs`
+
+**Why `windows/scene`, not `windows/locale`:** `windows/scene/Cargo.toml`
+declares `hornvale-locale`, and locale declares no dependency on scene. A
+probe that builds a `SurroundsScene` therefore cannot live in `locale` —
+it would be a layering inversion that does not compile. `windows/scene`
+already carries six examples; `profile_scene.rs` is the closest model.
 
 **Interfaces:**
 - Consumes: nothing.
@@ -105,14 +111,23 @@ is a **branch table, not a prediction** — record what you actually see.
 
 ```rust
 //! Illumination task-1 probe. Answers spec §6.1, §6.2, §6.3 with real
-//! output. Not a test: it measures, it does not assert.
+//! output, and captures H1's bedrock baseline. Not a test: it measures,
+//! it does not assert.
+//!
+//! Run: `cargo run -p hornvale-scene --example illumination_probe`
 use hornvale_worldgen::build_world;
 
 fn main() {
-    // Build seed 42 at the depth the walk band uses. Follow whatever
-    // `windows/scene`'s own tests use to construct a LocaleContext — read
-    // `windows/scene/tests/` first and copy that construction exactly
-    // rather than inventing one.
+    // Verified signatures — use these, do not invent:
+    //   build_world(seed: Seed, pins: &SkyPins, sky: SkyChoice,
+    //               terrain_pins: &TerrainPins,
+    //               settlement_pins: &SettlementPins) -> Result<World, _>
+    //       (windows/worldgen/src/lib.rs:7922)
+    //   hornvale_locale::LocaleContext::build(&world) -> Result<_, _>
+    //       (as windows/scene/tests/golden.rs:227 does it)
+    // Copy the construction from `windows/scene/tests/golden.rs` rather
+    // than inventing one; `examples/profile_scene.rs` is the closest
+    // example-shaped model.
 
     // §6.1 — does seed 42 have a visible season at its high ground?
     // For the highest-relief land cells reachable in a walk band, print
@@ -124,6 +139,16 @@ fn main() {
 
     // §6.3 — is `color` populated in the committed fixtures?
     // Print whether the scene built by the committed path carries Some(color).
+
+    // §7/H1 BASELINE — the bedrock-era distinct-colour count.
+    // THIS IS THE ONLY MOMENT IT CAN BE TAKEN: every later task changes
+    // colour, and the pre-change value is unrecoverable afterwards.
+    // Over the seed-42 walk band at the shipped radius, print:
+    //   cells.len()
+    //   cells.iter().map(|c| c.color).collect::<BTreeSet<_>>().len()
+    // Define that band ONCE here, in a `pub fn baseline_band(..)` this file
+    // exports, because Task 6 must count over the IDENTICAL population —
+    // a floor measured on a different cell set is vacuous.
 }
 ```
 
@@ -585,8 +610,12 @@ Commit all moved paths together.
 fn h1_the_surface_mixture_increases_distinguishable_colours() {
     // Over a fixed seed-42 walk band at the shipped radius:
     //   let distinct = cells.iter().map(|c| c.color).collect::<BTreeSet<_>>().len();
-    // Floor:   distinct > BEDROCK_BASELINE  (a constant recorded from the
-    //          pre-Task-2b run, with its ref in a comment)
+    // Floor:   distinct > BEDROCK_BASELINE
+    //   BEDROCK_BASELINE is the number TASK 1's PROBE PRINTED, pasted here
+    //   as a literal with the commit SHA it was taken at in the comment.
+    //   Count over the IDENTICAL band the probe used — reuse its exported
+    //   `baseline_band(..)`, do not rebuild one. A floor measured on a
+    //   different population is vacuous (ledger F1).
     // Ceiling: distinct != cells.len()
     // The ceiling is load-bearing: a unique colour per cell means the
     // mixture is tracking address noise, not cover — a defect dressed as
