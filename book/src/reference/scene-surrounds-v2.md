@@ -54,10 +54,18 @@ and would do it differently in every part of the world.
 What governs that variation is the **local triangle's orientation**, not
 latitude. [The Rhumb](../chronicle/the-rhumb.md) measured this directly while
 chasing a different question, and the distinction matters because latitude is
-the intuitive answer and it is wrong: two addresses at latitude *exactly* zero
-behave identically to each other and differently from a third at the same
-latitude on another base face. The lattice also alternates orientation between
-neighbours, so a walker meets two different triads on alternate steps.
+the intuitive answer and it is wrong: an address at the *same* latitude as
+another can behave entirely differently, depending only on which base face it
+sits on — the campaign's own fixture, at 31.7°, tracks a rhumb bound cleanly
+(0.851 step-lengths, bounded forever), while its face-16 mirror, same
+latitude, different orientation, is among the worst addresses in an 80-address
+sweep. Latitude *alone* is not even a reliable predictor of its own
+exceedance rate — two addresses at latitude exactly zero show zero
+exceedances, while four between 31.7° and 58.3° show 19 of 40 — but the sibling
+comparison is what pins the mechanism to orientation rather than latitude,
+since it holds latitude fixed and varies only the base face. The lattice also
+alternates orientation between neighbours, so a walker meets two different
+triads on alternate steps.
 
 That campaign is also why a **player-facing** heading is not constrained by
 this. `go` accepts all eight compass points from every cell and resolves each

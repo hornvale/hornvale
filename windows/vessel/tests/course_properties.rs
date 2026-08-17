@@ -20,7 +20,7 @@
 use hornvale_kernel::{GeoCoord, RoomAddr, math, quantize};
 use hornvale_locale::Compass;
 use hornvale_vessel::course::{bearing_of, nearest_neighbour, rhumb_advance, step_length_rad};
-use hornvale_vessel::{PossessOpts, Session, Turn};
+use hornvale_vessel::{PossessOpts, Session, Turn, WorldContext};
 
 mod common;
 
@@ -495,29 +495,112 @@ fn bearing_based_resolution_escapes_the_fixed_priority_attractor() {
 /// reading `go` and by a 300,000-room walk that never met a refusal it
 /// did not cause itself.
 ///
+/// **Strengthened to its preregistered shape (spec §7, final review F3).**
+/// This shipped at one seed, at most nine cells along one eastward
+/// trajectory — an order of magnitude under H2's frozen text ("at least 200
+/// walk-band cells across at least 8 seeds"), and reduced on exactly the
+/// axis (`≥8 seeds`) the spec pre-emptively defended: "one world is an
+/// anecdote, and a triangle's orientation is exactly the kind of property a
+/// single trajectory can fail to vary." The reduction shipped unrecorded;
+/// this is the correction, not a new finding — the claim itself was never in
+/// doubt (a triangular mesh's three edges are always the candidate set for
+/// `nearest_neighbour`, so resolution cannot fail by construction), but
+/// preregistration exists to stop a claim shipping "likely true" instead of
+/// measured.
+///
+/// Now the first 8 seeds that build (the same search discipline as
+/// `common::world_where`) times 26 cells each = 208 walk-band cells, both
+/// bounds cleared. Measured cost on this
+/// Mac: **27.6 s** for an identically-shaped 200-cell/8-seed probe (see the
+/// campaign's fix-final-review report) — cheap enough to live in the suite
+/// outright, so there is no §7.2 reduction to record. It is not in the
+/// sub-floor roster (course_properties.rs has none), so `gate-commit` never
+/// pays for it; the stage/merge tier does.
+///
+/// **Why one session per seed, not one per (cell, direction) as the reduced
+/// version had.** `Session::start` pays for a fresh `WorldContext` (terrain
+/// sculpt, climate fit, demography fit) every call — ~920 ms measured, the
+/// dominant cost by two orders of magnitude. `Session::start_in` over one
+/// `WorldContext` built once per seed cuts that to ~15 ms; walking forward
+/// with `go e` and probing each of the eight directions with `go <dir>` +
+/// `back` (which clears the course and restores `agent.position` from the
+/// trail) avoids re-deriving anything per probe while still exercising the
+/// same `Session::go` an isolated fresh-session probe would. This is a cost
+/// optimisation only — the property under test (`go <dir>` never refuses
+/// laterally) is unchanged, and `back` is exercised elsewhere
+/// (`back_clears_the_course` in `session.rs`) so its own correctness is not
+/// resting on this test alone.
+///
 /// FIRES WHEN: someone adds a passability check without a decision record.
+///
+/// claim: invariant(forall-seed) — H2 is universally quantified over the
+/// sample: every one of the eight compass points must resolve to a
+/// neighbour from every sampled walk-band cell, across the first 8 seeds
+/// that build (decision 0093).
 #[test]
 fn no_lateral_refusal_survives_anywhere_on_the_walk_band() {
-    let world = common::build(42).expect("seed 42 builds");
-    // Walk a path, and at each cell along it start a FRESH session, replay
-    // the path, and try all eight. `Session` is not `Clone` and must not be
-    // made so — it carries caches whose duplication is a real cost — so the
-    // probe re-walks rather than forks.
-    for cells in 0..8usize {
-        for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
-            let (mut s, _) =
-                Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
-            for _ in 0..cells {
-                s.handle("go e");
+    /// Seeds attempted, in order, until [`H2_SEEDS_WANTED`] have built —
+    /// wide enough that "fewer than 8 seeds build in here" would itself be a
+    /// finding about the sim, not about the sample. Mirrors
+    /// `common::SIGHT_SEEDS`'s own search discipline.
+    const H2_SEED_RANGE: std::ops::Range<u64> = 0..32;
+    /// How many distinct, successfully-built seeds H2 needs — the spec's own
+    /// floor.
+    const H2_SEEDS_WANTED: usize = 8;
+    /// Walk-band cells sampled per seed. `H2_SEEDS_WANTED * H2_CELLS_PER_SEED`
+    /// (208) clears the spec's 200-cell floor with a small margin.
+    const H2_CELLS_PER_SEED: usize = 26;
+
+    let mut seeds_tried = 0usize;
+    let mut total_cells = 0usize;
+    for seed in H2_SEED_RANGE {
+        if seeds_tried >= H2_SEEDS_WANTED {
+            break;
+        }
+        let Some(world) = common::build(seed) else {
+            continue;
+        };
+        let Ok(ctx) = WorldContext::build(&world) else {
+            continue;
+        };
+        let Ok((mut s, _)) = Session::start_in(&ctx, &PossessOpts::default()) else {
+            continue;
+        };
+        seeds_tried += 1;
+        for cell in 0..H2_CELLS_PER_SEED {
+            match s.handle("go e") {
+                Turn::Out(t) => assert!(
+                    !t.contains("No way"),
+                    "seed {seed}, advancing to cell {cell}: go e refused: {t}"
+                ),
+                Turn::Released(t) => panic!("seed {seed}: go e released the possession: {t}"),
             }
-            let text = match s.handle(&format!("go {dir}")) {
-                Turn::Out(t) => t,
-                Turn::Released(t) => panic!("go {dir} released the possession: {t}"),
-            };
-            assert!(
-                !text.contains("No way"),
-                "after {cells} steps east, go {dir} refused: {text}"
-            );
+            total_cells += 1;
+            for dir in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+                let text = match s.handle(dir) {
+                    Turn::Out(t) => t,
+                    Turn::Released(t) => {
+                        panic!("seed {seed}, cell {cell}: {dir} released the possession: {t}")
+                    }
+                };
+                assert!(
+                    !text.contains("No way"),
+                    "seed {seed}, cell {cell}: {dir} refused: {text}"
+                );
+                // Undo the probe so the next direction (and the next
+                // advance) starts from the same cell, not wherever the
+                // probe landed.
+                s.handle("back");
+            }
         }
     }
+    assert!(
+        seeds_tried >= H2_SEEDS_WANTED,
+        "only {seeds_tried} of {H2_SEED_RANGE:?} seeds built and possessed — \
+         H2 needs at least {H2_SEEDS_WANTED}"
+    );
+    assert!(
+        total_cells >= 200,
+        "sampled only {total_cells} walk-band cells — H2 needs at least 200"
+    );
 }

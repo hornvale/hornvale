@@ -23,10 +23,21 @@ touching the geometry the world is made of.
   bearing match.
 - Repeated stepping in one direction tracks a line of constant bearing:
   walking east forty times leaves you east, not somewhere on a random walk.
-- The walk-band chart is drawn **north-up** rather than lattice-aligned, so
-  the picture and the compass agree.
-- Seam cells become drawable, because a bearing exists where a lattice
-  coordinate does not.
+
+**Correction (final review F4, 2026-08-16): the two bullets below did NOT
+ship.** They described Task 6, which the status header above already marks
+deferred — but this section itself went unedited when that deferral was
+decided, so a reader who starts at "what this campaign produces" (as the
+section is named) was told two false things. Left here, struck through,
+rather than silently deleted, because the deferral is a real fact about this
+campaign and §8/the registry rows it points to are the load-bearing record
+of it, not this list:
+
+- ~~The walk-band chart is drawn **north-up** rather than lattice-aligned, so
+  the picture and the compass agree.~~ Not shipped — see the status header
+  and `NAV-north-up-needs-per-cell-position`.
+- ~~Seam cells become drawable, because a bearing exists where a lattice
+  coordinate does not.~~ Not shipped — same reason.
 
 It changes no world. No new seeded draw, no new stream label, no epoch.
 

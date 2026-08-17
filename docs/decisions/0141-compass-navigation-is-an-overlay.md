@@ -111,10 +111,10 @@ mutation rather than by reading.
 ## See also
 
 `windows/vessel/src/course.rs` (`rhumb_advance`, `step_length_rad`,
-`nearest_neighbour`, `bearing_of`, `Course`, `POLE_LIMIT`, `normalize_lon`,
-`wrapped_lon_diff_deg`), `windows/vessel/src/session.rs` (`go`'s resolution
+`nearest_neighbour`, `bearing_of`, `Course`, `POLE_LIMIT`, `normalize_lon`),
+`windows/vessel/src/session.rs` (`go`'s resolution
 arm, the `course()` accessor, `back` clearing the course),
 `windows/vessel/tests/course_properties.rs` (H1 and its positive control,
-direction fidelity, the H3 attractor control),
+direction fidelity, the H3 attractor control, `wrapped_lon_diff_deg`),
 `docs/superpowers/specs/2026-08-16-the-rhumb-design.md` §3, §7.1, §11,
 [the chronicle](../../book/src/chronicle/the-rhumb.md).
