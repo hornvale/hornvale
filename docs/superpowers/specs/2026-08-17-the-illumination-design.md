@@ -642,6 +642,29 @@ edited at all.
   colour.
 - Seam cells are drawn, asserted on a band known to contain one.
 
+### 9.1 Every test this campaign writes is invisible to `gate-commit`
+
+`scripts/subfloor-roster.sh` states its own direction in its header: "it
+selects *tests present in the roster*. A test ABSENT from the roster is not
+selected — the exclude-unknown rule. That is deliberate (a new test enters
+on the next green stage gate) and it means this script can never be read as
+'the commit gate covers everything new'."
+
+So a green `make gate-commit` immediately after writing a test says
+**nothing about that test**. It was compiled and not run. Run new tests
+directly — `cargo test -p <crate> --test <name>` — and treat the roster
+entry as arriving later, at the first green stage gate of that stage.
+
+This is not a defect; it is the commit gate's design (coverage is the stage
+gate's job, spec §4.3). It is recorded because the failure mode is a
+*vacuous green*, which is the same shape as §6.5's dead remediation clause
+and, on the day this spec was written, three other instances across two
+sessions. The roster currently holds 28 rows for `hornvale-scene`, 26 for
+`hornvale-locale` and 352 for `hornvale-vessel` — and note that **a row is
+not a test**: one row may select more than one, so the roster's row count
+and the tier's executed-test count legitimately differ (2,748 rows against
+2,758 tests as of this writing). Do not read a shortfall from that gap.
+
 ---
 
 ## 10. Out of scope, carried forward
