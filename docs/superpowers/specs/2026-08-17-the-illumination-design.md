@@ -652,18 +652,45 @@ on the next green stage gate) and it means this script can never be read as
 
 So a green `make gate-commit` immediately after writing a test says
 **nothing about that test**. It was compiled and not run. Run new tests
-directly — `cargo test -p <crate> --test <name>` — and treat the roster
-entry as arriving later, at the first green stage gate of that stage.
+directly — `cargo test -p <crate> --test <name>`.
 
-This is not a defect; it is the commit gate's design (coverage is the stage
-gate's job, spec §4.3). It is recorded because the failure mode is a
-*vacuous green*, which is the same shape as §6.5's dead remediation clause
-and, on the day this spec was written, three other instances across two
-sessions. The roster currently holds 28 rows for `hornvale-scene`, 26 for
-`hornvale-locale` and 352 for `hornvale-vessel` — and note that **a row is
-not a test**: one row may select more than one, so the roster's row count
-and the tier's executed-test count legitimately differ (2,748 rows against
-2,758 tests as of this writing). Do not read a shortfall from that gap.
+**This is not hypothetical.** The Begat (landed 2026-08-17) reported a
+green `gate-commit` over 1,281 tests with **zero `hornvale-hearsay::`
+lines**; the equivalence oracle that was the entire correctness argument
+of its change ran only because it invoked `cargo test -p hornvale-hearsay`
+by hand. A byte-identity thesis, and its oracle was compiled and not run.
+
+**It is a one-boundary lag, not a standing condition.** The chamber's
+`gate` phase now rewrites the roster and commits it with the merge product.
+Verified by tracing the file rather than taking it on report:
+
+```
+  894b482e  2026-08-14  rows=2748  hearsay=0   <- hand-authored, the only one
+  cd8b7d06  2026-08-15  rows=2843  hearsay=32
+  f905923a  2026-08-16  rows=2904  hearsay=48
+  068d1b8c  2026-08-16  rows=2919  hearsay=48
+  b60af966  2026-08-17  rows=2921  hearsay=48  <- current
+```
+
+Five automated rewrites across three days, so the mechanism is working
+repeatedly rather than once. **Consequence for this campaign:** each stage's
+tests enter the roster at that stage's gate, so by stage 3 the stage-1 tests
+are in the commit gate. Plan for one boundary of lag, not permanent exile.
+
+**Give each stage boundary a falsifiable read-out.** Name the tests you
+expect the roster to pick up *in advance*, then check them **by name** in
+the roster commit afterwards. The weaker question — "did a roster commit
+appear?" — passes even when the mechanism records a subset, which is the
+same vacuous-green shape this section exists to warn about.
+
+**A row is not a test.** One row may select more than one, so the roster's
+row count and the tier's executed-test count legitimately differ. Do not
+read a shortfall from that gap. Counts here are **non-comment, non-blank
+lines at `b60af966`**: 2,921 total, of which `hornvale-scene` 28,
+`hornvale-locale` 26, `hornvale-vessel` 352. The criterion and the ref are
+stated because an earlier draft of this section carried "2,748 rows" — true
+at `894b482e` on 2026-08-14, six commits stale by the time it was written
+down, and taken on report rather than measured.
 
 ---
 
