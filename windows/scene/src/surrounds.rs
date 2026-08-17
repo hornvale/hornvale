@@ -530,10 +530,22 @@ pub fn surrounds_scene_in(
             // wire. So the disclosure stays field-shaped and silent about
             // marks; `the_chart_declares_which_fields_are_grid_resolution`
             // pins this so a future change cannot add either by accident.
-            grid_resolution_fields: ["biome", "color", "water"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            //
+            // `"color"` was REMOVED here by the illumination campaign's
+            // Task 2b fix round (a wire VALUE change, not a shape change —
+            // the `grid_resolution_fields` key itself is untouched, its
+            // contents shrink by one entry). Before that campaign colour was
+            // read from a room's dominant *canonical-grid* corner alone, so
+            // it genuinely was constant below grid resolution and belonged
+            // in this list. `surface::cover_weights` now composes in the
+            // room's own `MicroField`, which — like `relief`, deliberately
+            // NOT in this list — genuinely varies below the grid. Leaving
+            // `"color"` here after that change would have this document
+            // actively lie to a cross-repo client (`scene/surrounds/v2` is
+            // a cross-repo contract): a client entitled to read one colour
+            // per grid cell and reuse it would render a flat chart while the
+            // sim disagrees.
+            grid_resolution_fields: ["biome", "water"].iter().map(|s| s.to_string()).collect(),
         },
     })
 }
@@ -1004,8 +1016,12 @@ mod tests {
         // serde skip_serializing_if means an absent colour emits no key at
         // all, so the committed gallery JSON cannot move. Checked as a KEY
         // (`"color":`), not a bare substring: `resolution.grid_resolution_fields`
-        // legitimately carries the string "color" as an array element, which
-        // a bare `"\"color\""` search would also match.
+        // used to carry the string "color" as an array element (removed by
+        // the illumination campaign's Task 2b fix round, FINDING 0 — see
+        // `the_chart_declares_which_fields_are_grid_resolution`), which a
+        // bare `"\"color\""` search would also have matched. Checked as a
+        // KEY rather than a substring on principle, not because the
+        // collision is live today.
         let w = world();
         let s = surrounds_scene(&w, &observer(&w), 1, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1155,14 +1171,24 @@ mod tests {
              the micro-field modulation (surface::cover_weights) is absent or \
              is not reaching the colour layer"
         );
-        // The tiered design (`surface.rs::tier3`) bounds one climate regime
-        // to at most 3 (aspect) x 3 (openness) x 3 (wetness) = 27 distinguishable
-        // mixtures; 20 is a generous ceiling under that worst case, chosen so
-        // this test catches "painting raw address noise" (H1's ceiling: a
-        // colour per cell) without being brittle to which of those 27
-        // combinations survive 8-bit sRGB rounding on this particular world.
+        // `9`, not a round "generous" number — chosen and PROVEN to fire on
+        // the regression it names, not merely asserted to (Task 2b fix
+        // round, FINDING 1). The tiered design (`surface.rs::tier3`) bounds
+        // one climate regime to at most 3 (aspect) x 3 (openness) x 3
+        // (wetness) = 27 combinations in the worst case, but this specific
+        // band (unfrozen, so aspect's snow-only effect never activates)
+        // measures 3 today. The design this guard exists to catch — reading
+        // `aspect`/`openness`/`wetness` continuously instead of banding them
+        // into tiers — was reinstated on this exact band as an experiment
+        // and measured **18** distinct colours, comfortably under an
+        // earlier, unproven `<= 20` ceiling (which is why that ceiling was
+        // wrong: 15-18 colours from address noise passed it silently). `9`
+        // sits strictly between the shipped design's 3 and the rejected
+        // design's 18, and was confirmed to redden the continuous variant
+        // and stay green on the shipped one before landing — see the Task
+        // 2b fix-round report for both runs.
         assert!(
-            walk_colors <= 20,
+            walk_colors <= 9,
             "a radius-8 walking-depth chart drew {walk_colors} colours across \
              one climate cell — that reads as address noise (H1's ceiling), \
              not a bounded regime perturbation"
@@ -1368,9 +1394,11 @@ mod tests {
         // path must emit not one extra byte. This is what protects the three
         // committed gallery charts and the gallery scene JSON. `color` is
         // checked as a KEY (`"color":`), not a bare substring: `resolution.
-        // grid_resolution_fields` legitimately carries the string "color" as
-        // an array element, which a bare `"\"color\""` search would also
-        // match.
+        // grid_resolution_fields` used to carry the string "color" as an
+        // array element (removed by the illumination campaign's Task 2b fix
+        // round, FINDING 0), which a bare `"\"color\""` search would also
+        // have matched. Checked as a KEY on principle, not because the
+        // collision is live today.
         let (w, ctx, room) = fixture_world();
         let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime::GENESIS).unwrap();
         let json = crate::surrounds_json(&s);
@@ -1580,6 +1608,26 @@ mod tests {
                 .grid_resolution_fields
                 .contains(&"relief".to_string()),
             "relief is banded from the blend and DOES vary below the grid"
+        );
+        // The illumination campaign, Task 2b fix round (FINDING 0): before
+        // that campaign, colour was read from a room's dominant
+        // canonical-grid corner alone (bedrock only), so it genuinely
+        // belonged in this list. `surface::cover_weights` now composes in
+        // the room's own MicroField, which — like `relief` above — varies
+        // below the grid, so declaring `"color"` here would state a
+        // falsehood a cross-repo client is entitled to optimise on (read
+        // one colour per grid cell and reuse it). This assertion did NOT
+        // exist before the fix round; its absence is exactly why removing
+        // `"color"` from the production array did not turn this test red —
+        // nothing here was checking for it. Added now so a future
+        // regression (re-adding `"color"` to the list) is caught.
+        assert!(
+            !s.resolution
+                .grid_resolution_fields
+                .contains(&"color".to_string()),
+            "color now varies below grid resolution (the room's own MicroField), \
+             so it must NOT be declared grid-resolution — a cross-repo client is \
+             entitled to read a declared field as constant below the grid"
         );
         // The Grain, Task 3: a cave is ALSO a dominant-corner fact, and it is
         // deliberately NOT declared here — see the comment at this field's

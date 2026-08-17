@@ -289,10 +289,7 @@ mod tests {
             resolution: Resolution {
                 grid_level: 6,
                 depth_below_grid: 6,
-                grid_resolution_fields: ["biome", "color", "water"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                grid_resolution_fields: ["biome", "water"].iter().map(|s| s.to_string()).collect(),
             },
         }
     }

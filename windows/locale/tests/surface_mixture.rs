@@ -222,24 +222,30 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
         sorted.dedup_by(|a, b| (*a - *b).abs() < 1e-12);
         sorted.len()
     };
+    // This is the load-bearing assertion. `distinct > 1` genuinely could
+    // fail — if snow cover were annual (keyed only on `snow_fraction_at`)
+    // rather than seasonal, or if `is_frozen_at` never flipped across the
+    // sampled year at this cell, every sample would compose the identical
+    // mixture and this would go red. Task 1's own report measured that
+    // crossing at this exact cell before this test was written.
     assert!(
         distinct > 1,
         "reflectance must vary across the year at a cell with a measured seasonal \
-         freeze/thaw crossing; got {lightness:?}"
+         freeze/thaw crossing; got lightness={lightness:?} temps_c={temps_c:?}"
     );
 
-    let (brightest_i, _) = lightness
-        .iter()
-        .enumerate()
-        .max_by(|a, b| a.1.total_cmp(b.1))
-        .expect("SAMPLES > 0");
-    let mean_temp: f64 = temps_c.iter().sum::<f64>() / temps_c.len() as f64;
-    assert!(
-        temps_c[brightest_i] < mean_temp,
-        "the brightest sampled day (temperature {:.3} C, day {:.2}) must fall in the \
-         cold half of the year (mean temperature {mean_temp:.3} C); \
-         temps={temps_c:?} lightness={lightness:?}",
-        temps_c[brightest_i],
-        year_length * brightest_i as f64 / SAMPLES as f64,
-    );
+    // A directional "the brightest day falls in the cold half" clause was
+    // removed here (Task 2b fix round, FINDING 3). `is_frozen_at(c, d)` is
+    // literally `temperature_at(c, d) <= 0.0`, and snow is gated exactly on
+    // that boolean, so the brightest sampled day is *by construction*
+    // always a frozen day, always at temperature <= 0. Such a clause can
+    // therefore only ever fail when the SAMPLED MEAN temperature is itself
+    // <= 0 — at this cell (annual mean -0.001 C) that depends on exactly
+    // which days land in a fixed-count sample, not on whether the seasonal
+    // mechanism is real. Measured: the 32-sample mean here is +0.042 C, so
+    // the clause passed, but one different sampling choice could flip that
+    // sign for reasons unrelated to physics. An assertion that cannot fail
+    // for the reason it claims is worse than no assertion — it reads as
+    // evidence it is not standing for. `distinct > 1` above is what
+    // actually tests the seasonal claim.
 }

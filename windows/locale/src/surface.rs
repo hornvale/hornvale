@@ -483,12 +483,18 @@ mod tests {
         let climate = climate_seed_42();
         let cell = find_cell(&climate, |c| {
             climate.biome_expr_at(c).formation == Formation::Desert && !climate.is_frozen_at(c, 0.0)
-        });
-        let Some(cell) = cell else {
-            // A null is a legitimate finding, not a test bug: seed 42 may
-            // simply have no desert cell. Skip rather than fail the sweep.
-            return;
-        };
+        })
+        // FINDING 5 (Task 2b fix round): this used to `return` silently on
+        // `None`, on the reasoning that "seed 42 may simply have no desert
+        // cell" is a legitimate finding. Measured: seed 42 has 15 Desert
+        // cells of 40962 (0.037%) — rare, but real, so a silent skip here
+        // was one climate tune away from this test going permanently green
+        // without ever running its own assertions. `expect` makes that
+        // failure loud instead: a future seed/tune with zero desert cells
+        // now fails this test explicitly, which is the correct outcome —
+        // it means the test needs a different cell-finding strategy, not
+        // that it should quietly stop checking anything.
+        .expect("seed 42 must have at least one unfrozen Desert cell (measured: 15 of 40962)");
         let micro = neutral();
         let cover = cover_weights(&climate, cell, &micro, WorldTime::GENESIS);
         let has_chlorophyll = cover
