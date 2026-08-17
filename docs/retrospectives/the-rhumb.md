@@ -198,7 +198,59 @@ own tree after absorption rather than against a board post.
   wait for Task 7, because a branch carrying three known reds is how a fourth,
   real red gets lost.
 
-## 9. Deferred, with homes
+## 9. The stage gate caught a real defect that no local gate could
+
+The close ran green locally — `gate-commit` 1425/1425, `docs_consistency`
+23/23, drift clean — and the stage gate came back **held**: `clients phase
+rc=2 (vessel-check-run)`.
+
+It was ours, and the mechanism is worth the space.
+`clients/vessel/wasm/drive.mjs` — the Casement's wasm smoke driver — walked
+the possessed character by **parsing a direction out of the opening prose**:
+
+```js
+const ways = golden.match(/^Ways on: (.+)\.$/m);
+assert.notEqual(ways, null, "opening lists its ways on");
+const dir = ways[1].split(", ")[0].toLowerCase();
+```
+
+Task 5 deleted that sentence. The opening now reads *"No direction here is
+closed; the nearest ground lies E, NW, SW."*, so the regex matched nothing and
+the driver died on its own assertion. A/B against `main` confirms attribution
+rather than assuming it: `Ways on:` appears 8× in main's committed transcript
+and 2× in ours, and the two survivors are chamber-band (`out, further in`),
+which this campaign never touched.
+
+**Why nothing local saw it.** `clients/` is outside the cargo workspace with
+its own toolchains, so `make vessel-check` is in none of the three gates —
+it is exactly the "gate freshness ≠ complete" class this project already
+knows about, and the campaign regenerated `clients/game/core/tests/fixtures/`
+diligently while never running the *sibling* client's smoke test. The
+generated-artifact discipline covers committed fixtures; it says nothing about
+a hand-written driver that **parses** one.
+
+**The repair is not a re-pin.** The comment above that parse explained itself:
+it avoided hardcoding a compass point because "a worldgen epoch may reshape the
+seed-42 opening room's exits, and this smoke asserts *walking works*, not any
+particular geography." That reason is exactly what this campaign abolished —
+after 0141 all eight points resolve from every walk-band cell — so the driver
+now sends a fixed `go n` and pins the exits sentence separately. Hardcoding is
+the *stronger* check here, not the lazier one: if any of the eight ever stops
+resolving, the smoke fails, whereas a parse would quietly follow the prose
+wherever it went. Verified by running it, not by reasoning: full
+`clients-check-run` (vessel + world + game + atlas) exits 0.
+
+**The generalisable lesson.** A test that derives its input by parsing
+human-facing prose has a dependency the type system cannot see and no
+drift-check will report, because the prose is *allowed* to change. Grep for
+consumers of a sentence before rewriting it — and note that this campaign's
+own §1 lesson (grep every name in the brief) would not have caught this one,
+because the coupling is to a *string*, not a symbol. The instrument that
+caught it was the merge-product gate, which is the argument for the sluice in
+one line: a branch tip that gates green locally is not evidence about the
+object that lands.
+
+## 10. Deferred, with homes
 
 Every one has a registry row, which is the point of listing them:
 `NAV-north-up-needs-per-cell-position` (Task 6's blocker, and the successor
