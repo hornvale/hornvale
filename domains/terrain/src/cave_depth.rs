@@ -31,10 +31,23 @@
 //! **The unifying physics is void closure under lithostatic load.** A void
 //! survives to the depth where the weight of the overburden exceeds what the
 //! surrounding rock mass can carry around an opening; below that it creeps,
-//! spalls and shuts. That gives a closure depth `z = S / (ρ g)` from a single
-//! rock-strength axis, and rock strength is the quantity in this whole problem
-//! that genuinely spans orders of magnitude — which is why the derivation
-//! spreads where a band index could not.
+//! spalls and shuts. That gives `z = S / (ρ g)` from a single rock-strength
+//! axis, and rock strength is the quantity in this whole problem that genuinely
+//! spans orders of magnitude — which is why the derivation spreads where a band
+//! index could not.
+//!
+//! **`z = S / (ρ g)` is a first-order UPPER BOUND on void survival, not the
+//! closure depth**, and the module says so rather than letting the arithmetic
+//! imply otherwise. It compares rock strength against the *far-field*
+//! lithostatic stress, and stress does not stay far-field at the wall of an
+//! opening: the Kirsch solution puts the tangential stress around a circular
+//! hole at roughly **2× the far field** (3× at the springline for a hydrostatic
+//! field). A void therefore fails at some fraction of the depth this expression
+//! names. Applying that factor is a deliberate deferral, not an oversight — it
+//! would roughly halve every reach, move the whole distribution, and needs its
+//! own calibration review — so what the budget rests on today is the **relative
+//! ordering** of competences, which the factor does not change, plus the Earth
+//! anchors below acting as a check that the absolute scale is not absurd.
 //!
 //! Each kind then states what *limits* it below that mechanical ceiling:
 //! dissolution needs soluble rock, a tube is a near-surface primary void, and a
@@ -126,9 +139,20 @@ const LAVATUBE_CEILING_M: f64 = 200.0;
 /// `cave_depth`, which made the same claim with a band instead of a number.
 const PALEOKARST_GAIN: f64 = 1.6;
 
-/// The depth (m) at which lithostatic load closes a void in rock of this
-/// competence: `z = S / (ρ g)`, with `S` interpolated log-linearly across
-/// [`STRENGTH_SPAN`] (see that constant for why the scale is logarithmic).
+/// A first-order **upper bound** (m) on the depth at which lithostatic load
+/// closes a void in rock of this competence: `z = S / (ρ g)`, with `S`
+/// interpolated log-linearly across [`STRENGTH_SPAN`] (see that constant for
+/// why the scale is logarithmic).
+///
+/// **Not the closure depth, and the name is shorthand.** The expression sets
+/// rock strength against the *far-field* lithostatic stress, omitting the
+/// stress concentration at the wall of the opening — the Kirsch solution gives
+/// roughly 2× the far field around a circular hole, so a real void closes
+/// shallower than this by something of that order. The factor is deliberately
+/// not applied yet (it would halve every reach and needs its own calibration
+/// review); the module doc records that deferral. What survives the omission,
+/// and what the budget actually rests on, is the **ordering**: a rock twice as
+/// competent still holds a void deeper, by the same ratio, factor or no factor.
 ///
 /// This is the shared half of every kind's budget — what the *rock* permits,
 /// before the process's own limit applies.
@@ -168,8 +192,11 @@ fn closure_depth_m(induration: f64) -> f64 {
 ///   column's `depth_to_basement_m`: that measures soil plus **sedimentary**
 ///   cover, and a basalt flow is neither.
 /// - **Fracture.** The reference case, with no reduction. A fault void is
-///   nothing but an aperture held open against confining stress, so the closure
-///   depth *is* its budget — the fault supplies the opening for free.
+///   nothing but an aperture held open against confining stress, so
+///   [`closure_depth_m`] *is* its budget — the fault supplies the opening for
+///   free. (Which means the fracture arm inherits that function's bound
+///   directly, undamped by any other term: it is where the omitted
+///   stress-concentration factor would bite hardest.)
 ///
 /// type-audit: bare-ok(diagnostic-value: return)
 pub fn cave_depth_reach_m(
