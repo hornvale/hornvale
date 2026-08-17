@@ -1249,3 +1249,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T00:38:35Z | gate-commit | 23.484 | 51.058 | 12.983 | 2.73 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
 | 2026-08-17T00:38:49Z | vessel-check | 14.159 | 14.825 | 0.702 | 1.10 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
 | 2026-08-17T00:39:31Z | game-check | 42.139 | 118.535 | 2.752 | 2.88 | 0 | 3908bdd4 | campaign/the-rhumb | MacBookPro | 10 |
+| 2026-08-17T02:24:01Z | sluice:artifacts | 95.909 | 731.079 | 33.577 | 7.97 | 0 | 9aae0d27 |  | lefford | 40 |
