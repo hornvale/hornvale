@@ -130,6 +130,20 @@ would make them disagree.
 The compounding variant was not built. Changing the model after seeing the
 readout, to produce a richer number, is the move this project forbids.
 
+**Corrected by The Palimpsest, which built the compounding variant.** Three
+claims above need amending, and the amendments matter more than the errors.
+The ceiling of one is correct for *held* claims and wrong for paths: 209 paths
+do cross stance twice, when an attacker sits inside a witness's own subtree,
+and they carry no held claim only because retention keeps the least-corrupted
+route per holder. The cause is sharper than an absorbing partition — every
+predicate over the teller/hearer *lineage relation* is constant along a
+single-parent descent walk by construction, so descent-closure is the general
+statement and stance merely an instance of it. And the world is not short of
+contact: a shared tongue is total across peoples and 17 of 474 endings already
+carry a witness of another people. What is missing is a transmission edge that
+is not descent. Once damage accumulates as a continuous width rather than one
+rung per firing, the retained distribution spans up to seven rungs.
+
 ## What this leaves
 
 Corroboration is still not measured, and now for a stated reason rather than a

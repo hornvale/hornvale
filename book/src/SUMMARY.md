@@ -371,6 +371,7 @@
 - [The Compendium](./chronicle/the-compendium.md)
 - [The Sluice](./chronicle/the-sluice.md)
 - [The Begat](./chronicle/the-begat.md)
+- [The Palimpsest](./chronicle/the-palimpsest.md)
 
 # Appendix: The Frontier
 
