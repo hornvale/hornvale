@@ -1192,21 +1192,7 @@ git commit -m "docs(palimpsest): chronicle, retrospective, registry rows"
 Found by checking this plan against spec §9. Each is small and each is easy to
 forget, which is why they get their own task rather than a footnote.
 
-- [ ] **Step 1: Resolve the `hornvale-species` dev-dependency**
-
-Task 1 makes `hearsay` take durations as data, so its **library** never needs
-`hornvale-species`. The dev-dependency added for the substrate probe may still
-be needed by the probe itself.
-
-Run: `cargo build -p hornvale-hearsay` then remove the dev-dependency from
-`windows/hearsay/Cargo.toml` and run `cargo test -p hornvale-hearsay --no-run`.
-
-**Decision rule:** if everything still compiles, leave it removed and
-regenerate the layering golden. If the probe needs it, keep it and say so in a
-comment naming the probe — an unexplained dependency is worse than the
-dependency.
-
-- [ ] **Step 2: Decide the probe's fate, explicitly**
+- [ ] **Step 1: Decide the probe's fate, explicitly**
 
 `windows/hearsay/tests/probe_teller_relations.rs` is a throwaway that now
 carries three positive controls, one of which reproduces campaign 2's
@@ -1215,6 +1201,29 @@ published 3,237. Choose ONE and say why in the commit message:
 - **Delete** — its findings are in spec §3 and the numbers are recorded there.
 
 Do not leave it undecided; spec §9 requires an explicit call.
+
+- [ ] **Step 2: Resolve the `hornvale-species` dev-dependency**
+
+**This step comes after Step 1 deliberately** — whether the dependency can go
+depends on whether the probe survives.
+
+Task 1 makes `hearsay` take durations as data, so its **library** never needs
+`hornvale-species`. Only the probe might.
+
+Run: `cargo build -p hornvale-hearsay`, then remove the dev-dependency from
+`windows/hearsay/Cargo.toml` and run `cargo test -p hornvale-hearsay --no-run`.
+
+**Decision rule:** if everything still compiles, leave it removed. If the probe
+survived Step 1 and needs it, keep it and add a comment naming the probe — an
+unexplained dependency is worse than the dependency.
+
+**Either way, the dependency graph moved**, so regenerate and stage the
+layering golden in this task's commit:
+
+```bash
+make rebaseline-goldens
+git diff --stat -- book/src/reference/layering-generated.md
+```
 
 - [ ] **Step 3: Check the sub-floor roster**
 
@@ -1252,9 +1261,12 @@ are the one thing not to trust, and the last two projections were wrong by
 
 ```bash
 cargo fmt && make quick
-git add windows/hearsay/Cargo.toml
+git add windows/hearsay/Cargo.toml book/src/reference/layering-generated.md
 git commit -m "chore(palimpsest): resolve the dev-dependency, probe fate, and roster"
 ```
+
+If Step 1 chose **delete**, also `git rm windows/hearsay/tests/probe_teller_relations.rs`
+in this commit and say why in the message.
 
 ---
 
