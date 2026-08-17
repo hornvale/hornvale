@@ -43,11 +43,12 @@ use std::path::{Path, PathBuf};
 
 /// Seconds a census may take before this test fails.
 ///
-/// **The policy target is 900 — Nathan's ~15 minutes — and this is TEMPORARILY
-/// 1050, on measurement, with an expiry.** Raised deliberately and recorded
-/// here rather than quietly, which is the discipline `cli/tests/session_cost.rs`
-/// states for its own ceilings: they ratchet DOWN freely, and raising one is an
-/// explicit, reviewed act.
+/// **The policy target is 900 — Nathan's ~15 minutes — and this is 900 again.**
+/// The temporary 1050 was RATCHETED BACK on 2026-08-16, on the census row its
+/// own expiry named. Raised deliberately and lowered deliberately, both
+/// recorded here rather than quietly, which is the discipline
+/// `cli/tests/session_cost.rs` states for its own ceilings: they ratchet DOWN
+/// freely, and raising one is an explicit, reviewed act.
 ///
 /// **Why.** The Glasshouse's temperature epoch (`main` at `63669d2d`) made the
 /// census 12% more expensive — 882.487 s to 979.539 s. That is real work, not
@@ -101,14 +102,26 @@ use std::path::{Path, PathBuf};
 /// unmoved at 91.66 → 91.65 CPU-s. That is a Mac reading on a 40-seed panel and
 /// is deliberately NOT offered as a prediction of the census number.
 ///
-/// **The expiry, unchanged and still open.** The constant below is still 1050
-/// because the ratchet is settled by a census reading on the canonical box
-/// after the fix lands, not by the measurement above — the latest census row is
-/// still the pre-fix 979.539 s, so ratcheting today would simply redden this.
-/// When a post-fix census row exists: under 900, ratchet to 900 and cite the
-/// row; still over 900, that is a finding — the remaining ~49% is inherent
-/// epoch cost and the policy number needs re-deciding on evidence, not another
-/// raise.
+/// **The expiry, DISCHARGED.** The Begat's fix landed on `main` at `1e92c152`
+/// and the next census on the canonical box read **855.533 s** (row stamped
+/// 2026-08-16T23:35:30Z, `cpu_ratio` 32.82 on 40 cores) against the pre-fix
+/// 979.539 s — a 12.7% fall. That is real work removed rather than a quieter
+/// box: `cpu_ratio` was 32.35 before and 32.82 after. **Zero goldens moved** in
+/// that regeneration, so the metric-level win cost no census value — the
+/// byte-identity claim's strongest confirmation, a full 1000-seed canonical
+/// run rather than a probe. The condition written here was met, so the
+/// constant below is 900 again.
+///
+/// **What the ratchet did NOT fix, and it is the live question now.** 900
+/// leaves 44.5 s of headroom over the 855.5 s reading — 5.2% — while the
+/// observed run-to-run spread with *no code change at all* was 882.5–949.6 s,
+/// or 7.6%. The ceiling is therefore still inside the instrument's noise,
+/// which is exactly the condition The Sluice's retrospective named and Nathan
+/// deferred. The fix moved the number without fixing the instrument, so this
+/// may flap. The durable repair is to denominate against `cpu_ratio` so
+/// contention and regression separate — the only one of that retrospective's
+/// three options that distinguishes them. **A flap here is an instrument
+/// defect, not grounds for a raise.**
 ///
 /// **Do not raise this number again to make a red go away.** The first version
 /// of this doc said "do not raise this number" flatly; that was right in spirit
@@ -116,7 +129,7 @@ use std::path::{Path, PathBuf};
 /// increase was real and attributed. The rule that replaces it: a raise must
 /// carry the attribution, the optimisable share, and the condition for ratcheting
 /// back down. This one does.
-const CENSUS_BUDGET_SECS: f64 = 1050.0;
+const CENSUS_BUDGET_SECS: f64 = 900.0;
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
