@@ -1766,8 +1766,16 @@ impl<'a> Bake<'a> {
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
-        // node_index[home.cell] points at the new occupant; close then sees
-        // the cell already re-indexed and does not free it).
+        // node_index[(home.cell, the roller's rung there)] points at the new
+        // occupant; close then sees the PLACE already re-indexed and does not
+        // free it).
+        //
+        // The two rungs are the same one by construction, which is what keeps
+        // that sequencing sound under spec §4.6's wider key: `best_home` found
+        // this holder by looking up `(n, rung_for(pidx, n))` for THIS people,
+        // and the `open` below re-derives the rung from the same people and the
+        // same cell. A holder on another rung of the same column was never a
+        // candidate and is untouched.
         let new_idx = self.open(
             people,
             home.cell,
