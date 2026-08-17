@@ -1128,8 +1128,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1137,6 +1135,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1197,7 +1196,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -1947,6 +1945,7 @@ hornvale-terrain::hornvale_terrain$render::tests::column_png_is_well_formed_and_
 hornvale-terrain::hornvale_terrain$render::tests::every_cave_kind_has_a_distinct_palette_color
 hornvale-terrain::hornvale_terrain$render::tests::every_commodity_has_a_distinct_palette_color
 hornvale-terrain::hornvale_terrain$render::tests::every_rock_class_has_a_distinct_palette_color
+hornvale-terrain::hornvale_terrain$render::tests::features_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$render::tests::interpolation_stays_within_the_candidate_envelope
 hornvale-terrain::hornvale_terrain$render::tests::lithology_png_is_well_formed_and_byte_deterministic
 hornvale-terrain::hornvale_terrain$render::tests::refinement_respects_the_prior
@@ -2029,6 +2028,10 @@ hornvale-topology::route$least_cost_picks_the_cheap_corridor_over_the_expensive_
 hornvale-topology::route$least_cost_reports_the_correct_total_cost_along_the_returned_path
 hornvale-topology::route$least_cost_returns_none_when_the_budget_is_too_small
 hornvale-topology::route$least_cost_skips_impassable_cells_marked_with_u64_max
+hornvale-vessel::course_properties$a_due_north_course_never_leaves_its_meridian
+hornvale-vessel::course_properties$a_fixed_priority_exit_matching_cycle_traps_in_a_closed_room_set
+hornvale-vessel::course_properties$a_memoryless_walk_leaves_the_meridian_that_h1_pins
+hornvale-vessel::course_properties$bearing_based_resolution_escapes_the_fixed_priority_attractor
 hornvale-vessel::hornvale_vessel$band::tests::a_chamber_and_its_ancestor_pack_to_different_ids
 hornvale-vessel::hornvale_vessel$band::tests::an_address_shallower_than_the_walk_band_truncates_to_itself
 hornvale-vessel::hornvale_vessel$band::tests::the_chamber_depth_fits_the_packing_cap
@@ -2055,6 +2058,18 @@ hornvale-vessel::hornvale_vessel$clock::tests::tempo_is_monotone_in_mass_and_uni
 hornvale-vessel::hornvale_vessel$clock::tests::tempo_is_quantized_so_the_rounding_boundary_is_reproducible
 hornvale-vessel::hornvale_vessel$clock::tests::the_local_day_is_an_exact_integer_number_of_ticks
 hornvale-vessel::hornvale_vessel$clock::tests::the_tick_stays_approximately_absolute_across_worlds
+hornvale-vessel::hornvale_vessel$course::tests::a_non_cardinal_course_matches_an_independently_derived_longitude
+hornvale-vessel::hornvale_vessel$course::tests::a_rhumb_stops_at_the_pole_rather_than_crossing_it
+hornvale-vessel::hornvale_vessel$course::tests::a_step_length_is_positive_and_sub_radian
+hornvale-vessel::hornvale_vessel$course::tests::a_step_length_is_the_mean_of_its_three_neighbour_distances
+hornvale-vessel::hornvale_vessel$course::tests::a_sustained_polar_course_converges_in_latitude_and_keeps_moving
+hornvale-vessel::hornvale_vessel$course::tests::aiming_at_a_neighbours_centroid_resolves_to_that_neighbour
+hornvale-vessel::hornvale_vessel$course::tests::due_east_at_sixty_north_covers_twice_the_longitude
+hornvale-vessel::hornvale_vessel$course::tests::due_east_on_the_equator_holds_latitude_and_advances_longitude
+hornvale-vessel::hornvale_vessel$course::tests::due_north_advances_latitude_only
+hornvale-vessel::hornvale_vessel$course::tests::every_compass_point_has_its_canonical_bearing
+hornvale-vessel::hornvale_vessel$course::tests::longitude_normalises_into_the_geocoord_range
+hornvale-vessel::hornvale_vessel$course::tests::resolution_always_returns_a_neighbour_never_the_cell_itself
 hornvale-vessel::hornvale_vessel$fabric::tests::a_threshold_has_no_fabric
 hornvale-vessel::hornvale_vessel$fabric::tests::an_authored_curve_is_a_valid_reflectance
 hornvale-vessel::hornvale_vessel$fabric::tests::an_authored_fabric_ignores_the_ground
