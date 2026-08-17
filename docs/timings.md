@@ -1245,3 +1245,4 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T12:29:44Z | quick | 11.027 | 10.123 | 0.324 | 0.95 | 0 | c5f43256 | campaign/the-palimpsest | Greyjoy | 10 |
 | 2026-08-17T12:46:11Z | quick | 14.231 | 11.052 | 0.684 | 0.82 | 0 | a52eaf16 | campaign/the-palimpsest | Greyjoy | 10 |
 | 2026-08-17T13:03:39Z | quick | 56.188 | 10.219 | 0.333 | 0.19 | 0 | 9fd71a1a | campaign/the-palimpsest | Greyjoy | 10 |
+| 2026-08-17T13:07:19Z | gate-commit | 147.434 | 53.518 | 13.988 | 0.46 | 0 | 9fd71a1a | campaign/the-palimpsest | Greyjoy | 10 |
