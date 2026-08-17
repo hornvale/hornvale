@@ -1237,3 +1237,5 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T18:36:53Z | gate-commit | 306.760 | 254.092 | 313.512 | 1.85 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T18:38:04Z | quick | 11.272 | 10.283 | 0.471 | 0.95 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T18:38:58Z | gate-commit | 22.202 | 50.264 | 12.401 | 2.82 | 0 | d765fc59 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:02:13Z | gate-commit | 419.054 | 628.633 | 314.709 | 2.25 | 0 | 41509877 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T19:03:02Z | gate-commit | 22.513 | 50.382 | 12.460 | 2.79 | 0 | 41509877 | campaign/the-underworld | MacBookPro | 10 |
