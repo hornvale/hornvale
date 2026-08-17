@@ -17,7 +17,13 @@ each leaving a trace.
   lifespan — so the resolution hierarchy is no longer purely astronomical.
 - **Three co-equal preregistered accumulation rules**, all reported. This
   campaign deliberately does not choose between them; §6.4 says why.
-- A readout on the census seed panel, not one world.
+- A readout over a **multi-seed panel**, not one world — delivered as a heavy
+  battery rather than registered census metrics. An earlier draft of this spec
+  said "the census seed panel", which the plan discovered to be far more
+  expensive than intended: nine studies declare `"metrics": "all"` with no
+  opt-out, so a registered metric taxes ~2000 census worlds forever and
+  restages fixtures no drift check covers. Campaign 2's readout is a heavy
+  battery for the same reason; this follows it.
 
 ## 2. Non-goals
 

@@ -14,8 +14,8 @@ width at emit, against a ladder extended with two derived social rungs
 (generation, lifespan) that vary per people. Three accumulation rules are
 implemented side by side and all three are reported.
 
-**Tech Stack:** Rust 2024, `windows/hearsay`, `windows/worldgen`,
-`windows/lab`. No new external dependencies (decision 0004 allows only
+**Tech Stack:** Rust 2024, `windows/hearsay`, `windows/worldgen`. No new
+external dependencies (decision 0004 allows only
 `serde`, `serde_json`, `libm`).
 
 **Spec:** `docs/superpowers/specs/2026-08-16-the-palimpsest-design.md` — read
@@ -78,8 +78,11 @@ one ladder per world but **one ladder per people**. Task 2 introduces
   a sibling of `variants_about` which is left untouched.
 - `windows/worldgen/src/lib.rs` — **modify.** Re-export `descent` so the
   durations can be assembled outside the crate.
-- `windows/lab/src/…` — **modify.** Register the readout metrics.
-- `studies/the-palimpsest.study.json` — **create.** The readout study.
+- `windows/hearsay/tests/palimpsest_readout.rs` — **create.** The readout, as a
+  heavy battery. **NOT a lab metric and NOT a study** — see Task 6's controller
+  ruling: nine studies declare `"metrics": "all"` with no opt-out, so a
+  registered metric taxes ~2000 census worlds forever and restages fixtures
+  that no drift check covers.
 
 Each file has one responsibility and can be tested alone. `durations.rs` is
 deliberately dumb data so `hearsay` never needs the composition root.
@@ -102,9 +105,9 @@ deliberately dumb data so `hearsay` never needs the composition root.
 
 **The visibility decision the spec deferred to this plan.** `descent` is a
 private module in `windows/worldgen` (verified: `error[E0603]: module descent
-is private`). `windows/lab` builds the study and needs the durations, and lab
-may depend on worldgen. So: **re-export the module**, do not move the
-function.
+is private`). The readout battery (Task 6) lives in `windows/hearsay/tests/`,
+which already has `hornvale-worldgen` as a dev-dependency, and it must assemble
+the durations. So: **re-export the module**, do not move the function.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -998,34 +1001,62 @@ git commit -m "feat(palimpsest): the accumulating derivation"
 
 ---
 
-### Task 6: The readout as a lab study
+### Task 6: The readout as a heavy battery
+
+**AMENDED BY CONTROLLER RULING — this task originally registered 12 lab
+metrics. It does not. Read the ruling before the steps.**
+
+**The ruling.** `windows/lab/CLAUDE.md` §"Registering a metric is not a local
+act" makes registration far more expensive than this plan assumed:
+
+- **Nine studies declare `"metrics": "all"` and there is no way to opt out** —
+  `study.rs` resolves `MetricSelection::All(_) => Ok(reg)`, the entire
+  registry unfiltered, and `Metric` carries no cost or opt-in flag. A metric
+  added here runs on every world of `the-census` (~2000) **forever**.
+- Precedent: The Mire's three candidates cost ~3.5 s per world and were
+  **rejected** for adding roughly two hours to every census refresh. The
+  metrics this task would register each walk every ending × every witness ×
+  every descendant — comfortably worse than 3.5 s/world.
+- It reddens every census-reading calibration test (46 `#[test]`s across three
+  binaries) until fixtures are refreshed on the canonical host.
+- It restages **any fixture any campaign has ever frozen against the
+  registry**, including the nine directories under
+  `windows/lab/tests/fixtures/injection/`, which are deliberately absent from
+  `docs/generated-paths.txt` and therefore covered by **no drift check** and
+  untouched by `make rebaseline`. The Hearsay added exactly one metric and
+  staled them; nothing caught it until a full stage gate, after the census
+  refresh had already run.
+
+Against that, the campaign needs a readout, not a permanent census column.
+Campaign 2's own readout is a heavy battery — `the_retelling_readout_on_seed_42`
+in `windows/hearsay/tests/retelling_readout_seed42.rs` — not a registered
+metric. **This task follows that precedent.**
+
+What this costs: the readout is not tracked over time in the census. Accepted
+— a campaign readout answers a frozen hypothesis once. What it saves: a
+permanent per-world tax on ~2000 worlds, 46 reddened tests, an unbounded
+fixture restaging with no drift check, and several canonical-box refreshes.
+
+**Consequence for Task 9:** no metric is registered, so **no census refresh is
+owed**. Task 9 Step 4 is void.
 
 **Files:**
-- Modify: `windows/lab/src/` — register metrics (read `windows/lab/CLAUDE.md`
-  FIRST; it documents the registration mechanism and its traps)
-- Create: `studies/the-palimpsest.study.json`
-- Test: whatever `windows/lab`'s own conventions require for a new metric
+- Create: `windows/hearsay/tests/palimpsest_readout.rs`
+- Test: that file is the test
 
 **Interfaces:**
 - Consumes: Tasks 1–5.
-- Produces: 12 metrics, four per accumulation rule.
+- Produces: the §6 readouts, printed and asserted.
 
-**Why a study and not a heavy test.** Decision 0011: studies are data, metrics
-are code. The census panel is `{from: 0, count: 1000}` — a thousand worlds —
-which is a study's job, not a test's.
+- [ ] **Step 1: Read campaign 2's readout and follow its shape**
 
-**Read `windows/lab/CLAUDE.md` before starting.** It carries the metric
-registration procedure and a documented trap; do not infer the mechanism from
-neighbouring code.
+Read `windows/hearsay/tests/retelling_readout_seed42.rs`. Match its structure,
+its `#[ignore]` reason (verbatim — `cli/tests/heavy_tier.rs` asserts equality
+against one constant), and its reporting style.
 
-- [ ] **Step 1: Read the lab guide and the existing hearsay metrics**
+- [ ] **Step 2: Compute the four quantities, per accumulation rule**
 
-Run: `cargo run -p hornvale -- lab list-metrics | grep -i "hearsay\|claim\|variant"`
-Note the naming convention actually in use and follow it.
-
-- [ ] **Step 2: Register the four metric families**
-
-For each `rule` in `Accumulation::ALL`, register:
+For each `rule` in `Accumulation::ALL`, over every seed in the panel, compute:
 
 - `palimpsest_rho_generation_precision_<rule>` — Spearman rho across held
   claims between the holder's people's generation length and the retained
@@ -1041,24 +1072,29 @@ For each `rule` in `Accumulation::ALL`, register:
 Reuse the existing maximum-antichain implementation in
 `windows/hearsay/src/divergence.rs`; do not write a second one.
 
-- [ ] **Step 3: Write the study JSON**
+- [ ] **Step 3: Choose the seed panel by measuring, not guessing**
 
-Create `studies/the-palimpsest.study.json`, matching the field shape of
-`studies/the-census.study.json` (`name`, `description`, `seeds`, `pin_sets`,
-`metrics`).
+**Start with 5 seeds and time it.** Then scale.
 
-**Decision rule for the seed panel, and it is a real decision:** start at
-`{"from": 0, "count": 40}`. Forty worlds is the panel The Pyx used for a
-cross-platform probe and is enough to see whether a direction is consistent.
-**Do not set it to 1000 without measuring first** — nothing in this campaign
-has measured the per-world cost of these metrics, and CLAUDE.md is explicit
-that census cost must be read from `docs/timings.md` rather than assumed. If
-a 40-world run is cheap, raising the count is a one-line change.
+Nothing in this campaign has measured the per-world cost of building a world
+and walking every ending's transmission tree three times (once per rule). The
+substrate probe did one seed and took ~4 s of test time on a warm build, but
+that is one data point on one machine and it did not run the accumulating
+derivation at all.
 
-- [ ] **Step 4: Run the study and check it produces numbers**
+**Decision rule:** run 5 seeds, note the wall time, and extrapolate.
+- Under ~2 minutes for 5 → use 40 seeds.
+- 2–10 minutes for 5 → use 20 seeds and say so in the report.
+- Over 10 minutes for 5 → STOP and report; the readout needs a cheaper shape
+  and that is a controller decision, not yours to absorb.
 
-Run: `cargo run -p hornvale -- lab run studies/the-palimpsest.study.json`
-Expected: a CSV with 12 metric columns and 40 rows.
+Whatever you land on, **state the panel and the measured wall time in the test's
+own printed output**, so the number is in the artifact rather than only in a
+report that dies with the worktree.
+
+- [ ] **Step 4: Run it and check it produces real numbers**
+
+Run: `cargo test -p hornvale-hearsay --test palimpsest_readout -- --ignored --nocapture`
 
 **Decision rule on the result:**
 - All three rules give `saturated_fraction` near 1.0 → this is spec §3.7's
@@ -1071,8 +1107,8 @@ Expected: a CSV with 12 metric columns and 40 rows.
 
 ```bash
 cargo fmt && make quick
-git add windows/lab studies/the-palimpsest.study.json
-git commit -m "feat(palimpsest): the readout study and its twelve metrics"
+git add windows/hearsay/tests/palimpsest_readout.rs
+git commit -m "feat(palimpsest): the readout battery"
 ```
 
 ---
@@ -1252,23 +1288,23 @@ lands with the merge product — do NOT hand-edit it. If the coverage test
 reddens for a crate with no entry, that is the guard working; report it rather
 than editing the TSV.
 
-- [ ] **Step 4: Decide the census refresh**
+- [ ] **Step 4: VOID — no census refresh is owed**
 
-Task 6 registers 12 new metrics. CLAUDE.md: a census refresh at the pre-merge
-close is required **if a metric is registered**.
+This step originally required a census refresh because Task 6 registered
+metrics. **Task 6 no longer registers any metric** (see its controller
+ruling), so the trigger does not fire: CLAUDE.md requires the refresh *if a
+metric is registered*, and none is.
 
-**This is a carve-out — it costs the canonical box and it is Nathan's call.**
-Do not dispatch it unprompted. When authorised, it runs on lefford only:
+Confirm rather than assume, since the whole point of the amendment was cost:
 
 ```bash
-ssh lefford 'cd ~/Projects/hornvale && HV_CENSUS_WORKTREE=canonical \
-  HV_CENSUS_REF=<full-sha> scripts/census-run.sh'
+git diff --stat 1e92c152..HEAD -- windows/lab/src/metrics.rs studies/
 ```
 
-Read the cost from `docs/timings.md` (`grep '| census |' docs/timings.md | tail`),
-never from CLAUDE.md's prose — that file says explicitly that its own figures
-are the one thing not to trust, and the last two projections were wrong by
-2.2x and 6.7x in opposite directions.
+**Decision rule:** empty output → no refresh owed, record that and move on.
+Any output at all → a metric or study DID land, the trigger fires after all,
+and that is a carve-out requiring Nathan's authorisation — STOP and report
+rather than dispatching it.
 
 - [ ] **Step 5: Commit**
 
