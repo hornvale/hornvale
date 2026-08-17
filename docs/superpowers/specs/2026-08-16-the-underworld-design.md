@@ -259,6 +259,48 @@ not the same everywhere (a wet karst cell drowns shallow, a dry craton cell is
 open to the Deeps), and **sumps** — a chamber below the table, which the
 passage graph represents as a missing edge rather than a new type.
 
+#### 4.2.1 AMENDED 2026-08-17, POST-TASK-3 — the underworld is allowed to be dry
+
+Task 3 shipped H3 passing (29.9 / 45.5 / 42.5% of cave-bearing columns wholly
+phreatic) and surfaced a consequence H3 does not test: with the table topping
+out near 500 m against rung floors at 1042 m and 2083 m, **no `Underdeep` or
+`Sunless` chamber is dry in any of the three worlds**, and `Deeps` is dry on
+0–13.5%. A people whose identity is depth would then be a people living
+underwater, and §5's H2 would fail by construction rather than by measurement.
+
+Nathan's ruling, and it has three parts.
+
+**1. The relief calibration is corrected on physical grounds.** Vadose-zone
+thickness in karst is set by elevation above the local base level, and on Earth
+that reaches ~2 km in high-relief massifs — Krubera-Voronja (2197 m) and
+Veryovkina (2212 m) are air-filled almost to the bottom, with sumps only at
+depth, because the Arabika Massif stands ~2300 m above its base level.
+`RELIEF_HALF_M = 800.0` saturates the relief term far below that, so the model
+under-deepens the vadose zone exactly where deep caves occur. **This is a
+correction, not a rescue, and it is held to that standard: the calibration must
+be argued from karst physics alone, H3 and the distribution's shape must be
+re-measured after, and only then may the effect on rung dryness be looked at.
+If the correction breaks H3, the correction is wrong.**
+
+**2. A made chamber may be drained.** `ChamberOrigin::Made` — shipped by The
+Deep Realm with a seam and no writer — now carries a meaning: a chamber cut for
+a purpose can be dry regardless of the water table, because keeping a working
+depth dry is what mining *is*. This makes a dwarven hall something a people
+**does**, not merely a place it finds, and it closes the third of this
+campaign's three no-producer seams.
+**The producer is not optional and is not deferred silently:** §4.6's capacity
+task must write `Made` for a settled subterranean community's own chambers. A
+drainage rule with no producer would be a fourth dangling seam in a campaign
+whose stated finding is that three already existed.
+
+**3. This is a fantasy RPG, and its underworld may be larger and drier than
+Earth's.** Earth calibration is a *floor on plausibility*, not a ceiling on
+scale: the model may carry large subterranean spaces at varied moisture, and a
+derivation that produces only Earth-typical vadose depths is under-serving the
+genre rather than being admirably rigorous. Where the two pull apart, say which
+one a number serves. A constant chosen for playability is authored and its doc
+says so — the same discipline every other authored constant here carries.
+
 ### 4.3 Chamber conditions stop being constants
 
 `subterranean_substrate` gains the chamber's delve rung and routes temperature

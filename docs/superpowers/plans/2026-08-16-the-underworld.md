@@ -972,8 +972,19 @@ git commit -m "feat(the-underworld): EnvironmentNiche — the consumer The Axes 
 - Modify: `windows/worldgen/src/history_bake.rs` (`node_index` :1139, `vacant_habitable` :1377, and the insert/remove sites at :2221, :2261)
 
 **Interfaces:**
-- Consumes: `DelveRung` (Task 2, with its `Surface` variant).
-- Produces: `node_index: BTreeMap<(CellId, DelveRung), usize>`.
+- Consumes: `DelveRung` (Task 2, with its `Surface` variant); `ChamberOrigin`
+  (`windows/worldgen/src/chamber.rs`).
+- Produces: `node_index: BTreeMap<(CellId, DelveRung), usize>`; **a writer for
+  `ChamberOrigin::Made`**.
+
+**ACCEPTANCE CRITERION ADDED 2026-08-17 (spec §4.2.1 clause 2), and it is not
+a note.** Task 3b gives a *made* chamber the right to be dry regardless of the
+water table. That rule needs a producer, and this is the task that has one: a
+settled subterranean community's own chambers resolve to `ChamberOrigin::Made`.
+Ship the rule without the writer and the campaign has created a fourth
+no-producer seam while its headline finding is that three already existed.
+Verify a `Made` chamber is actually produced in a live world and report the
+count — do not infer it from the code path.
 
 **Surface density must not change.** That is this task's acceptance criterion
 and the thing most likely to go wrong silently.
