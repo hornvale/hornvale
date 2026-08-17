@@ -339,6 +339,42 @@ Per §6.1 the value 0.662 is **not** a threshold; H3 is a direction test only.
   the only clock"*. The guard takes the ledger, and the ledger carries founding
   and ending days — a second clock in world-time. Whether the campaign wants
   regularisation-then-re-embellishment is open; that it is unreachable is not.
+- **THE CONTACT SCARCITY IS A PROPERTY OF THE TRANSMISSION GRAPH, NOT OF THE
+  WORLD'S ABILITY TO COMMUNICATE — and campaigns 1, 2 and 3 have all leaned on
+  the stronger reading.** Campaign 2's chronicle says "the world remains short
+  of the contact that would make them disagree," and §2 of this spec repeats
+  it. That is true of what the model *walks*: `variants_about` and its
+  accumulating sibling only ever step parent→child down the founding tree, so
+  a claim structurally cannot reach another people.
+
+  It is **not** true of the world. `domains/language/src/common_vocab.rs`
+  gives every people a shared tongue, and `cli/tests/common_is_total.rs`
+  enforces that totality — `every_registered_concept_has_a_common_word`, with
+  one declared exception. There is no *linguistic* barrier to cross-people
+  transmission at all; every concept a claim could carry is already sayable to
+  a stranger. (Undercommon is not modelled; only Common.)
+
+  Nor is contact itself absent from the ledger: campaign 2 §3.1 measured 17 of
+  474 endings carrying a **foreign witness**, which is exactly the raid seam —
+  a perpetrator of one people witnessing another people's ending. Those
+  witnesses exist and hold claims at hop 0. What no model has ever done is let
+  a claim travel *from* one along any edge but descent.
+
+  So the honest statement is: **accounts cannot diverge across peoples because
+  the transmission model has no cross-people edge, not because the world lacks
+  the contact or the language to carry one.** A campaign that adds such an edge
+  — raid-seam transmission is the cheapest, since the witnesses are already
+  there — would unblock corroboration and the ingroup/outgroup direction
+  together, which `KNOW-mismatch-needs-contact` currently treats as blocked on
+  the world rather than on the model.
+
+  **This also makes §5.1's teller-vs-hearer choice load-bearing in the future
+  even though it is free today.** The reason it is free is that fission never
+  crosses a people boundary, so teller and hearer always share a generation
+  length. Add one cross-people edge and that stops being true, and which party
+  the amplitude reads starts changing every number. This campaign pins the
+  choice with a deliberately artificial test for exactly that reason.
+
 - **Blind reconstruction** (`KNOW-lectio-difficilior`), **subject-drift
   misattribution** (`KNOW-misattribution-drift`) — unchanged from campaign 2 §7.
 - **`KNOW-descendants-with-path`** was reported by campaign 2's handoff as

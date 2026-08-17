@@ -1153,7 +1153,14 @@ Add rows to `book/src/frontier/idea-registry.md` for:
 - species-varying memory resolution as a divergence source needing no contact;
 - the signed/directional amplitude (spec §7);
 - non-monotone distortion being reachable, correcting campaign 2 §7's stated
-  reason.
+  reason;
+- **the contact scarcity being a property of the transmission graph rather
+  than of the world** (spec §7). Common is a total shared tongue —
+  `cli/tests/common_is_total.rs` enforces that every registered concept has a
+  Common word — and 17 of 474 endings already carry a foreign witness, so
+  neither language nor contact is missing; only a cross-people transmission
+  EDGE is. This row should say so plainly, because `KNOW-mismatch-needs-contact`
+  currently reads as blocked on the world when it is blocked on the model.
 
 **Constraints, enforced by `cli/tests/docs_consistency.rs`:** exactly five
 columns counting `\|` as an escape; Idea cell ≤ 600 characters; Status from
