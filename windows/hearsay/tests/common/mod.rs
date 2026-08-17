@@ -84,3 +84,76 @@ pub fn put_on(led: &mut Ledger, subject: u64, predicate: &str, object: Value) {
     )
     .expect("commit");
 }
+
+/// A single descent chain of six occupations (1 -> 2 -> 3 -> 4 -> 5 -> 6),
+/// each `occ-people` `"human"`, with widening (roughly doubling)
+/// `occ-founded` gaps, an `occ-ended` on the root, and a real sky (day
+/// length, one moon, a year — the same trio `tests/derive.rs`'s stance-
+/// boundary tests commit on entity 9) so a [`hornvale_hearsay::ladder::PrecisionLadder`]
+/// has astronomical rungs regardless of which social durations a caller
+/// supplies on top.
+///
+/// Built for Task 5's accumulating derivation, which needs founding days and
+/// a people on every occupation to produce any generational span at all.
+/// `ledger_with` alone cannot serve it: it commits only `occ-founded-from`,
+/// so [`hornvale_hearsay::amplitude::gen_span`] would read no founding day
+/// anywhere and return `0.0` on every step, leaving every claim at
+/// `Precision::FINEST` no matter what the accumulation rule does with it.
+pub fn chain_with_foundings() -> Ledger {
+    let mut led = ledger_with(&[
+        (1, None),
+        (2, Some(1)),
+        (3, Some(2)),
+        (4, Some(3)),
+        (5, Some(4)),
+        (6, Some(5)),
+    ]);
+    for (occ, day) in [
+        (1, 0.0),
+        (2, 200.0),
+        (3, 600.0),
+        (4, 1400.0),
+        (5, 3000.0),
+        (6, 6200.0),
+    ] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_FOUNDED,
+            Value::Number(day),
+        );
+    }
+    for occ in [1u64, 2, 3, 4, 5, 6] {
+        put(
+            &mut led,
+            occ,
+            hornvale_history::OCC_PEOPLE,
+            Value::Text("human".to_string()),
+        );
+    }
+    put(
+        &mut led,
+        1,
+        hornvale_history::OCC_ENDED,
+        Value::Number(6300.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::DAY_LENGTH_STD,
+        Value::Number(1.0),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::MOON_PERIOD_STD,
+        Value::Number(41.7),
+    );
+    put_on(
+        &mut led,
+        9,
+        hornvale_astronomy::facts::YEAR_LENGTH_STD,
+        Value::Number(372.4),
+    );
+    led
+}

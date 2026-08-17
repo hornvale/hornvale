@@ -220,3 +220,108 @@ pub fn variants_about(
 
     best.into_values().map(|(_, c)| c).collect()
 }
+
+/// Campaign 3's accumulating sibling of [`variants_about`].
+///
+/// Each retelling widens a continuous damage width by the step's generational
+/// span ([`crate::amplitude::gen_span`]) under `rule`, and the reported
+/// [`Precision`] is resolved from that width at emit against the TELLER's
+/// people's ladder. Where campaign 2 spends a whole rung per lossy step —
+/// welding firing rate to firing depth — this separates them, so a frequent
+/// small-amplitude step costs little and a rare large one costs a lot.
+///
+/// The width starts at the finest rung's span rather than zero, because
+/// `Accumulation::Multiplicative` cannot move a zero width.
+///
+/// Multi-path holders keep the LEAST-corrupted telling, ordered by (1)
+/// smallest final width, (2) fewest hops, (3) smallest witness `EntityId` —
+/// the same shape as `variants_about`, with width replacing lossy-step count
+/// because width is now the thing that varies.
+///
+/// type-audit: bare-ok(identifier-text: predicate)
+pub fn variants_about_accumulating(
+    ledger: &Ledger,
+    lineage: &Lineage,
+    ladders: &crate::ladder::PeopleLadders,
+    durations: &crate::durations::PeopleDurations,
+    rule: crate::accumulate::Accumulation,
+    subject: EntityId,
+    predicate: &str,
+) -> Vec<Claim> {
+    let Some(object) = ledger.value_of(subject, predicate) else {
+        return Vec::new();
+    };
+    let base = Claim {
+        holder: subject,
+        subject,
+        predicate: predicate.to_string(),
+        object: object.clone(),
+        grade: Provenance::Witnessed,
+        hops: 0,
+        precision: Precision::FINEST,
+    };
+    let witnesses = witnesses_of(ledger, lineage, subject, predicate);
+    let mut best: BTreeMap<EntityId, ((u64, u32, EntityId), Claim)> = BTreeMap::new();
+
+    for w in &witnesses {
+        let mut c = base.clone();
+        c.holder = *w;
+        best.insert(*w, ((0, 0, *w), c));
+    }
+
+    for w in &witnesses {
+        for d in lineage.descendants_of(*w) {
+            if witnesses.contains(&d) {
+                continue;
+            }
+            let ancestry = lineage.ancestry(d);
+            let Some(pos) = ancestry.iter().position(|a| a == w) else {
+                continue;
+            };
+            let mut path: Vec<EntityId> = ancestry[..=pos].to_vec();
+            path.reverse();
+
+            let people = match ledger.value_of(*w, hornvale_history::OCC_PEOPLE) {
+                Some(Value::Text(p)) => p.clone(),
+                _ => String::new(),
+            };
+            let ladder = ladders.for_people(&people);
+            // NOT `.map(|s| s.get())` — a bare `s` closure parameter
+            // false-positives `cli/tests/claim_shape.rs`'s seed-loop detector,
+            // which then demands a `claim:` tag that would be inaccurate here.
+            // Task 1 hit this in the plan's own sample code.
+            let mut width = ladder
+                .span(Precision::FINEST)
+                .map(|days| days.get())
+                .unwrap_or(0.0);
+
+            let mut c = base.clone();
+            c.holder = *w;
+            for pair in path.windows(2) {
+                let (teller, hearer) = (pair[0], pair[1]);
+                width = rule.step(
+                    width,
+                    crate::amplitude::gen_span(ledger, durations, teller, hearer),
+                );
+                let precision = crate::accumulate::precision_at(ladder, width);
+                let object = match &c.object {
+                    Value::Number(day) => Value::Number(ladder.apply(precision, *day)),
+                    other => other.clone(),
+                };
+                c = c.retold_by_lossy(hearer, precision, object);
+            }
+
+            // f64 has no total order for a BTreeMap key; `to_bits` on a
+            // non-negative finite width is monotone, so it orders correctly.
+            let key = (width.to_bits(), c.hops, *w);
+            match best.get(&d) {
+                Some((best_key, _)) if *best_key <= key => {}
+                _ => {
+                    best.insert(d, (key, c));
+                }
+            }
+        }
+    }
+
+    best.into_values().map(|(_, c)| c).collect()
+}

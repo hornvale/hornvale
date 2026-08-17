@@ -1,6 +1,7 @@
 mod common;
 
-use common::{eid, ledger_with, put, put_on};
+use common::{chain_with_foundings, eid, ledger_with, put, put_on};
+use hornvale_astronomy::units::StdDays;
 use hornvale_hearsay::derive::{claims_about, variants_about, witnesses_of};
 use hornvale_hearsay::ladder::PrecisionLadder;
 use hornvale_hearsay::lineage::lineage_of;
@@ -488,5 +489,85 @@ fn witnesses_hold_first_hand_and_are_never_demoted() {
         assert_eq!(v.hops, 0, "{w:?} is a witness");
         assert_eq!(v.grade, Provenance::Witnessed);
         assert_eq!(v.precision, Precision::FINEST);
+    }
+}
+
+#[test]
+fn accumulating_distortion_can_pass_more_than_one_rung() {
+    // A chain deep enough that campaign 2's boundary model would stop at one
+    // rung. The property under test is that the accumulating model does not.
+    let led = chain_with_foundings();
+    let lin = lineage_of(&led);
+    let mut d = hornvale_hearsay::durations::PeopleDurations::default();
+    d.insert(
+        "human",
+        Some(StdDays::new(50.0).expect("positive")),
+        Some(StdDays::new(500.0).expect("positive")),
+    );
+    let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
+
+    let out = hornvale_hearsay::derive::variants_about_accumulating(
+        &led,
+        &lin,
+        &ladders,
+        &d,
+        hornvale_hearsay::accumulate::Accumulation::Additive,
+        eid(1),
+        hornvale_history::OCC_ENDED,
+    );
+    let deepest = out
+        .iter()
+        .map(|c| c.precision.rung())
+        .max()
+        .expect("claims");
+    assert!(
+        deepest >= 2,
+        "expected multi-rung accumulation, got {deepest}"
+    );
+}
+
+#[test]
+fn every_rule_preserves_precision_rank_monotonicity_along_a_path() {
+    // On a SINGLE chain, hop count orders the holders, so precision must be
+    // non-decreasing in hops. Asserting `rung() >= 0` would be vacuous —
+    // `rung()` returns u8 — and a vacuous guard is the exact failure campaign
+    // 2's retrospective is about.
+    let led = chain_with_foundings();
+    let lin = lineage_of(&led);
+    let mut d = hornvale_hearsay::durations::PeopleDurations::default();
+    d.insert("human", Some(StdDays::new(50.0).expect("positive")), None);
+    let ladders = hornvale_hearsay::ladder::PeopleLadders::of(&led, &d);
+
+    for rule in hornvale_hearsay::accumulate::Accumulation::ALL {
+        let mut out = hornvale_hearsay::derive::variants_about_accumulating(
+            &led,
+            &lin,
+            &ladders,
+            &d,
+            rule,
+            eid(1),
+            hornvale_history::OCC_ENDED,
+        );
+        out.sort_by_key(|c| c.hops);
+        let mut seen = 0u8;
+        for c in &out {
+            assert!(
+                c.precision.rung() >= seen,
+                "{}: precision went FINER at hop {} ({} < {})",
+                rule.label(),
+                c.hops,
+                c.precision.rung(),
+                seen
+            );
+            seen = c.precision.rung();
+        }
+        // Positive control: the assertion above is only meaningful if the
+        // precision actually moves. If nothing coarsens, this test proves
+        // nothing about monotonicity.
+        assert!(
+            seen > 0,
+            "{}: no coarsening happened at all — the test is vacuous",
+            rule.label()
+        );
     }
 }
