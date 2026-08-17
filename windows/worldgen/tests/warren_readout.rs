@@ -393,9 +393,14 @@ fn the_blast_radius_readout() {
     // Going underground does exactly what it was built to do — moisture and
     // insolation improve substantially — and the minimum never sees it,
     // because the unfloored elevation term sits below the floor and
-    // `subterranean_substrate` passes `height_asl_m` through unchanged (The
-    // Deep Realm's deliberate choice: a real depth coordinate was out of its
-    // scope).
+    // `subterranean_substrate` passes `height_asl_m` through unchanged. That
+    // is still true after The Underworld's Task 5, but for a different reason
+    // than The Deep Realm's: a real depth coordinate now EXISTS (a chamber's
+    // depth in metres reaches temperature and moisture), and it is
+    // deliberately not subtracted from `height_asl_m`, which is scored against
+    // elevation niches authored on surface altitude. So this tripwire is
+    // untouched by that task — measured, not assumed: the ratios below are
+    // unchanged to six figures across it.
     //
     // So the campaign ships HALF its mechanism live: the cave-availability
     // gate (P2 below) works, and the substrate swap is inert until a tolerance

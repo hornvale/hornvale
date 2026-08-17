@@ -648,9 +648,10 @@ fn only_the_dwarf_and_elf_families_depart_from_pure_allometry() {
 
 #[test]
 fn the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow() {
-    // THE WARREN: C2a re-authored these two for true darkness and
-    // SUBTERRANEAN_MOISTURE and nothing scored them there. This store is the
-    // consumer half. It ships with exactly these two, and adding a row is a
+    // THE WARREN: C2a re-authored these two for true darkness and for what was
+    // then a fixed `SUBTERRANEAN_MOISTURE` (retired by The Underworld, whose
+    // chamber moisture is derived per cell), and nothing scored them there.
+    // This store is the consumer half. It ships with exactly these two, and adding a row is a
     // deliberate edit.
     //
     // C2c (THE DELVERS) WAS EXPECTED TO ADD TWO ROWS AND ADDED NONE. Its

@@ -777,11 +777,26 @@ fn xorn_condition_niche() -> ConditionNiche {
 /// creature against directly:
 ///
 /// - **moisture** moves from a mild `0.45` "somewhat wet" lean to `0.90` —
-///   exactly [`hornvale_worldgen::subterranean_substrate`]'s fixed
-///   `SUBTERRANEAN_MOISTURE`, so a real chamber is now a genuine match
-///   rather than an approximation of one — with devotion raised to `0.60`:
-///   this is meant as a real preference now that a real reading exists to
-///   have one about.
+///   which was, when authored, exactly
+///   [`hornvale_worldgen::subterranean_substrate`]'s fixed
+///   `SUBTERRANEAN_MOISTURE`, so a real chamber was a genuine match rather
+///   than an approximation of one — with devotion raised to `0.60`: this is
+///   meant as a real preference now that a real reading exists to have one
+///   about.
+///
+///   **That constant is gone (The Underworld, spec §4.3).** A chamber's
+///   moisture is now derived from its distance above the water table and the
+///   rock's porosity: saturated where the chamber is flooded (68–84% of cave
+///   columns at their reach depth, on the campaign's three seeds) and spread
+///   over roughly `[0.3, 0.8]` where it is not. So `0.90` is no longer the
+///   value every chamber reports; it is an authored preference that a wet
+///   chamber meets and a dry one does not, which is what a preference is
+///   supposed to be. **It is deliberately not re-authored here**: moving a
+///   species' curve at the same moment the reading beneath it moves would
+///   make the two changes unattributable, and nothing measures this curve
+///   today anyway — `warren_readout`'s P1 tripwire shows the Liebig minimum
+///   is bound by the unfloored elevation axis on every cave-bearing cell, so
+///   moisture does not reach the result at all.
 /// - **insolation** moves from `0.03` (the darkest available *surface*
 ///   cells, a proxy for "inside a cave") to `0.0` exactly — the true
 ///   subterranean reading — with devotion raised to `0.70`, the strongest
@@ -802,7 +817,9 @@ fn rust_monster_condition_niche() -> ConditionNiche {
             width: 20.0,
             devotion: 0.50,
         },
-        // Mirrors SUBTERRANEAN_MOISTURE exactly — see the frame note above.
+        // Mirrored `SUBTERRANEAN_MOISTURE` when authored; that constant was
+        // retired by The Underworld and this is now an ordinary authored
+        // preference — see the frame note above.
         moisture: ConditionResponse {
             optimum: 0.90,
             width: 0.22,
