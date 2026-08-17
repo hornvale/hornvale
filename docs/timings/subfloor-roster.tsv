@@ -1280,6 +1280,7 @@ hornvale-lab::hornvale_lab$metrics::tests::seed_42_moons_admitted_is_text
 hornvale-lab::hornvale_lab$metrics::tests::seed_42_star_class_is_text
 hornvale-lab::hornvale_lab$metrics::tests::spearman_over_ranks_is_invariant_to_a_positive_rescaling
 hornvale-lab::hornvale_lab$metrics::tests::syllable_count_reads_maximal_vowel_runs
+hornvale-lab::hornvale_lab$metrics::tests::the_analytic_channel_area_matches_the_sampled_one
 hornvale-lab::hornvale_lab$metrics::tests::the_contour_metrics_are_registered_and_full_rung
 hornvale-lab::hornvale_lab$metrics::tests::the_deep_metrics_are_registered
 hornvale-lab::hornvale_lab$metrics::tests::the_eclipse_seasons_metrics_extract_on_seed_42
