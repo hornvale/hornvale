@@ -676,3 +676,25 @@ edited at all.
 9. Artifacts, chronicle, retrospective, book freshness sweep, close.
 
 Absorb main at every stage boundary via `make sluice-stage BRANCH=… REF=<full-sha>`.
+
+### 12.1 Two queue requirements that postdate The Rhumb
+
+Both verified against `origin/main` at `3c91bb3b`, not taken on report.
+
+- **A merge submission needs a `Sluice-Headline:` trailer.** Landed as
+  `58feb338`. `scripts/sluice-request.sh:142` refuses at the mouth without
+  one, in milliseconds, before the box is taken. Three properties, each
+  load-bearing: it need not be the last commit and a later commit does not
+  displace it; it must sit **adjacent to other trailers with no blank line
+  between**, because the check reads git's trailer parser and that only
+  sees the message's final block; and it carries **no `merge(...)` prefix**
+  — the chamber composes `merge(<branch-leaf>): <text>`, which is what
+  fixes the doubled headline The Rhumb landed permanently.
+  A **`sluice-stage` request is exempt** — `sluice-request.sh:118` guards
+  the check with `kind = "merge"`, because a stage merge commit is
+  discarded and no subject it carries can become permanent.
+- **`make shellcheck` now runs in the `outboard` phase** of every stage
+  gate and merge (`scripts/lane-outboard.sh:80`). It had been in `.PHONY`
+  and nowhere else, so nothing ran it. Relevant here only if the
+  `TOOL-worktree-take-remedy-is-a-no-op` followup is taken up inside this
+  campaign, since that fix edits `scripts/`; run it locally first if so.
