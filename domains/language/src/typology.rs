@@ -1,9 +1,10 @@
 //! Typology bundles: which **rules** build a family's words, as against which
 //! **values** a shared rule uses.
 //!
-//! A bundle is a named authored row, never a point in a product space. Five
-//! morphologies × three coda laws × three harmonies × three orthographies is
-//! 135 combinations and four ship; admitting the cross-product would leave 131
+//! A bundle is a named authored row, never a point in a product space. The
+//! variants across its five fields — 4 morphologies × 3 onset laws × 4 coda
+//! laws × 2 harmonies × 3 orthographies — multiply to **288** combinations,
+//! of which **four** ship; admitting the cross-product would leave 284
 //! unexercised paths that read to the next campaign as supported. Authoring
 //! rows rather than admitting combinations is the same discipline
 //! `family_proto()` uses and decision 0011 applies to studies.
