@@ -359,21 +359,54 @@ Expected: FAIL — cover is not yet weighted, so every day is identical.
 `cover_weights` returns endmember/weight pairs. The **shape** is fixed here;
 the coefficients are yours to fit against Task 1's numbers:
 
+**CLIMATE ALONE WOULD MAKE H1 FAIL BY CONSTRUCTION — read this first.**
+Task 1 measured the seed-42 walk band as **31 cells, 1 distinct colour**,
+because all 31 rooms resolve to the *same* dominant canonical-grid corner
+(globe level 6, room depth 12: `4^6` sub-rooms share one corner).
+`reflectance_at` keys on `dominant_corner(&weights).0`, so bedrock colour is
+constant across a band by construction. Every climate accessor —
+`biome_expr_at`, `snow_fraction_at`, `temperature_at`, `moisture_at` — is
+keyed on that same `cell`. **A cover model built from climate alone
+therefore returns one colour for the whole band, exactly as bedrock does,
+and H1 fails.**
+
+So climate sets the cover **regime** for the cell (what can grow there, how
+much snow it carries) and the per-room `MicroField` **modulates within it**:
+
 ```rust
-/// The surface cover at `cell` on `at`, as endmember/weight pairs summing
-/// to the covered fraction. The bare-ground remainder is the caller's
-/// mineral mixture, weighted `1 - covered`.
+/// The surface cover at `cell` on `at`, modulated by this room's own
+/// sub-cell micro-field, as endmember/weight pairs summing to the covered
+/// fraction. The bare-ground remainder is the caller's mineral mixture,
+/// weighted `1 - covered`.
+///
+/// `micro` is what makes two rooms in one canonical cell differ at all —
+/// see the plan's F3. `MicroField` is `windows/locale/src/regime.rs:95`
+/// (`relief`, `aspect`, `wetness`, `openness`, each -1..=+1), reached from
+/// a room as `locale.regime.micro`, so this is all inside this crate.
 pub(crate) fn cover_weights(
     climate: &GeneratedClimate,
     cell: CellId,
+    micro: &crate::regime::MicroField,
     at: WorldTime,
 ) -> Vec<(Reflectance, f64)> {
     // Snow first: it occludes everything under it, so it takes its weight
     // off the top rather than competing. `is_frozen_at` is the seasonal
-    // term; `snow_fraction_at` is the annual one.
-    // Then vegetation from the formation, split chlorophyll/litter.
-    // Then sand and silt from the variant and moisture.
+    // term; `snow_fraction_at` is the annual one. Modulate by
+    // `micro.aspect` — a sunlit face holds less snow than a shaded one.
+    // Then vegetation from the formation, split chlorophyll/litter, with
+    // `micro.openness` setting the split: a closed canopy is greener, an
+    // open one shows more litter and ground.
+    // Then sand and silt from the variant and `micro.wetness`.
     // Every weight non-negative; the total must not exceed 1.0.
+    //
+    // BOUND THE MODULATION. `relief`, `aspect` and `openness` are address
+    // noise (`regime.rs:90` — "from address noise"); only `wetness` is
+    // partly grounded in hydrology since The Rill. Weighting raw noise
+    // heavily gives 31 unique colours over 31 cells, which is exactly the
+    // H1 CEILING breach the plan calls "a defect dressed as a success".
+    // Aim for a handful of distinguishable colours across a band, not a
+    // continuum: the modulation perturbs a climate-set regime, it does not
+    // replace it.
 }
 ```
 
@@ -413,14 +446,29 @@ it and say why in the commit message.
 
 - [ ] **Step 7: Regenerate and review by eye**
 
+**The committed surrounds fixtures will NOT move, and that is expected.**
+Task 1 measured it: `windows/scene/tests/fixtures/surrounds-seed-1.json` and
+`…-seed-42-flagship.json` carry **no per-cell `color` key at all**, because
+they are built by `surrounds_scene`/`surrounds_scene_in` and only
+`surrounds_scene_colored_in` ever populates `color`. **Do not read an empty
+diff there as "the colour did not change"** — it is a vacuous diff against a
+field that was never emitted.
+
+Observe the change through Task 1's `baseline_band` (which builds a
+*coloured* scene) and through the gallery transcript, not through those
+fixtures.
+
 Run: `make rebaseline` then open `book/src/gallery/possession-seed-42.md`.
 Branch table:
 - *Colours moved and read plausibly* (green where forest, white on peaks) →
   proceed.
-- *Everything went one colour* → the covered fraction is saturating; check
-  the total, not the curves.
-- *Nothing moved* → `cover_weights` is returning empty. That is a bug, not a
-  null; the null is "no seasonal variation", which Task 1 already settled.
+- *Everything went one colour* → either the covered fraction is saturating
+  (check the total, not the curves) **or the micro modulation is absent** —
+  re-read F3, because climate alone cannot vary within a band.
+- *Every cell got a distinct colour* → the micro modulation is
+  over-weighted; you are painting address noise. This breaches H1's ceiling.
+- *Nothing moved anywhere, including the coloured band* → `cover_weights` is
+  returning empty. That is a bug, not a null.
 
 - [ ] **Step 8: Commit**
 
