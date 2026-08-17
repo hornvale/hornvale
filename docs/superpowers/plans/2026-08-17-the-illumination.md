@@ -645,11 +645,53 @@ Commit all moved paths together.
 ## Task 6: Stage 1 measurement and the stage gate
 
 **Files:**
-- Create: `windows/locale/tests/illumination_hypotheses.rs`
+- Create: `windows/scene/tests/illumination_hypotheses.rs`
+- Create: `windows/scene/tests/common/mod.rs` (holds `baseline_band`)
+
+**Why `windows/scene`, not `windows/locale` — and why this is not code
+reuse:** Task 1's `baseline_band` lives in an `examples/` **binary** target.
+Cargo examples are not importable as libraries — not cross-crate, and not
+even from tests in their own crate — so "reuse the probe's exported
+`baseline_band`" (an earlier draft of this task) does not compile. The
+precedented pattern in this repo is a per-crate `tests/common/mod.rs`
+(`windows/vessel/`, `windows/hearsay/`, `windows/lab/`); there is no
+`#[path]` usage anywhere in the tree. `SurroundsScene` is scene's type, so
+the tests belong here.
+
+**Transcribe `baseline_band` verbatim** from
+`windows/scene/examples/illumination_probe.rs` into `tests/common/mod.rs`.
+That is a deliberate one-time duplication, and the guard against the two
+copies drifting is **an assertion, not shared code** — see Step 0.
 
 **Interfaces:**
 - Consumes: Tasks 2b–5.
 - Produces: H1/H2/H3 results for the chronicle.
+
+- [ ] **Step 0: Assert the population BEFORE comparing any colour**
+
+The bedrock baseline is unrecoverable — it can never be re-measured — so a
+band that has silently changed shape would compare today's colour count
+against a *different* population and report a meaningless result. Guard it
+with the one property that is invariant across every change this campaign
+makes:
+
+```rust
+#[test]
+fn the_h1_band_is_still_the_population_the_baseline_was_taken_over() {
+    let scene = common::baseline_band(&world);
+    assert_eq!(
+        scene.cells.len(),
+        31,
+        "the H1 band changed shape; the bedrock baseline of 1 distinct \
+         colour over 31 cells was measured at b0f20c71 and cannot be \
+         re-taken. Do not compare colour counts until this is explained."
+    );
+}
+```
+
+This is what makes the transcription of `baseline_band` safe: if the two
+copies drift, this fails loudly instead of the comparison quietly running
+over the wrong cells.
 
 - [ ] **Step 1: Write H1 as a count with a floor AND a ceiling**
 
