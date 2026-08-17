@@ -1261,3 +1261,12 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T12:52:31Z | sluice:seam-guard | 951.506 | 19365.811 | 1049.211 | 21.46 | 0 | b60af966 |  | lefford | 40 |
 | 2026-08-17T12:56:28Z | sluice:clients | 236.774 | 425.152 | 32.391 | 1.93 | 0 | 7a1c35a9 |  | lefford | 40 |
 | 2026-08-17T13:28:09Z | sluice:heavy | 1900.933 | 29954.184 | 695.520 | 16.12 | 0 | b5ee7d2f |  | lefford | 40 |
+| 2026-08-17T15:59:51Z | prewarm | 61.449 | 357.186 | 34.023 | 6.37 | 0 | f92bc68c | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:16:57Z | gate-commit | 208.061 | 97.512 | 71.261 | 0.81 | 0 | b0f20c71 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:18:14Z | gate-commit | 45.070 | 50.399 | 12.455 | 1.39 | 0 | b0f20c71 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:23:31Z | gate-commit | 47.009 | 50.430 | 12.038 | 1.33 | 0 | 5e2f9fa4 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:24:13Z | gate-commit | 25.894 | 51.456 | 12.771 | 2.48 | 0 | 5e2f9fa4 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:40:50Z | rebaseline | 133.009 | 224.918 | 16.460 | 1.81 | 0 | 11653fb0 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:43:06Z | gate-commit | 115.454 | 232.597 | 71.301 | 2.63 | 0 | 11653fb0 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:44:04Z | gate-commit | 40.018 | 52.896 | 13.285 | 1.65 | 0 | 11653fb0 | campaign/the-illumination | MacBookPro | 10 |
+| 2026-08-17T16:51:01Z | gate-commit | 49.555 | 51.478 | 12.628 | 1.29 | 0 | 890be043 | campaign/the-illumination | MacBookPro | 10 |
