@@ -373,6 +373,32 @@ The Axes' five occupied axes take underworld readings from §3.8's inputs:
 - **substrate** takes the band's `RockClass` with `induration` and
   `metamorphic_grade`; an ore-bearing chamber reads differently from barren
   gneiss.
+
+  **CORRECTED 2026-08-17, POST-TASK-6 — the ore/gneiss difference does not
+  land on this axis.** The clause sits under the *substrate* bullet, so it
+  asserts the difference on `SUBSTRATE`, and that is wrong. `SUBSTRATE` is
+  `AxisValence::Nominal` and its six classes are soil / sand / evaporite /
+  rock / ice / organic; **a metallic ore body in a silicate host is nominally
+  rock**, exactly as barren gneiss is. Task 6's `ore-vein-chamber` and
+  `gneiss-void` both read `S_ROCK` and always would.
+
+  Where the difference actually lands, measured on the shipped corpus, is the
+  other three axes: `PHYSIOGNOMY` (sulphide and gangue crusts on the vein
+  walls against nothing at all), `ENERGY` (sulphide oxidation is a genuine
+  chemolithotroph base at a depth where nothing arrives from above, against a
+  `metamorphic_grade`~1 rock with no reactive sulphide and no buried carbon —
+  `E_RICH` against `E_INERT`, the widest gap on that axis), and `WATER` (a
+  vein is a fossil fluid conduit with elevated `porosity`, against pore space
+  that has closed — `W_MESIC` against `W_NONE`). The prediction that an ore
+  chamber reads differently from barren gneiss **holds**; only its placement
+  on the substrate axis was wrong.
+
+  Two commodities *do* move the nominal class, and they are the exceptions
+  that show the rule: `Commodity::Coal` reads organic (it is biogenic
+  sediment) and `Salt` / `RockClass::Evaporite` reads evaporite. A spec
+  sentence that had said "an ore-bearing chamber reads differently" without
+  naming an axis would have been right; naming the wrong one is the defect,
+  and it is the spec's, not the implementation's.
 - **physiognomy** follows process: karst dissolves into rounded galleries, a
   lava tube is a smooth tube with collapse sections, a fracture cave is
   angular and fault-aligned.

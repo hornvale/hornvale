@@ -359,6 +359,64 @@ fn energy_is_not_monotone_in_depth() {
     assert!(rises && falls, "the inversion must hold name-wise too");
 }
 
+/// The inversion's sharpest single statement, asserted rather than narrated.
+///
+/// `sump-gallery` (Deeps) and `deep-karst-void` (Sunless) are the same void in
+/// the same rock at two depths: identical on PHYSIOGNOMY, WATER, SUBSTRATE and
+/// LIGHT, and **differing only on ENERGY**, with the deeper one strictly
+/// richer. That is spec §4.4's sentence — *the deep is not poorer, it is
+/// differently powered* — reduced to a single controlled comparison, with
+/// four of the five axes held fixed as the control.
+///
+/// It lived only in prose until a reviewer verified it by hand. Prose a
+/// reviewer has to check is a missing assertion.
+#[test]
+fn the_same_void_at_two_depths_differs_on_energy_alone() {
+    let find = |n: &str| -> &'static UnderworldName {
+        underworld_assignment()
+            .iter()
+            .find(|u| u.name == n)
+            .unwrap_or_else(|| panic!("{n} left the corpus"))
+    };
+    let shallower = find("sump-gallery");
+    let deeper = find("deep-karst-void");
+
+    assert!(
+        shallower.zone < deeper.zone,
+        "the pair must straddle the ladder: {:?} vs {:?}",
+        shallower.zone,
+        deeper.zone
+    );
+    for axis in [PHYSIOGNOMY, WATER, SUBSTRATE, LIGHT] {
+        assert_eq!(
+            shallower.vector.get(axis).map(f64::to_bits),
+            deeper.vector.get(axis).map(f64::to_bits),
+            "the control fails: the pair differs on {}, so ENERGY is not the \
+             only thing separating them and this is no longer a controlled \
+             comparison",
+            axis.label
+        );
+    }
+    assert!(
+        energy(deeper) > energy(shallower),
+        "the deeper void must be RICHER: {} at {} vs {} at {}",
+        deeper.name,
+        energy(deeper),
+        shallower.name,
+        energy(shallower)
+    );
+    println!(
+        "the controlled pair: {} ({:?}) ENERGY {:.2} -> {} ({:?}) ENERGY {:.2}, \
+         four axes held fixed",
+        shallower.name,
+        shallower.zone,
+        energy(shallower),
+        deeper.name,
+        deeper.zone,
+        energy(deeper)
+    );
+}
+
 fn energy(n: &UnderworldName) -> f64 {
     n.vector.get(ENERGY).expect("assigned names carry ENERGY")
 }
@@ -405,13 +463,32 @@ fn distance(a: &EnvironmentVector, b: &EnvironmentVector) -> f64 {
     total / shared as f64
 }
 
-/// The control that makes the A-3 distance below mean anything: the underworld
-/// corpus must quantise onto the **same value grid** the surface corpus uses.
+/// **A GRID control, and only a grid control.** The underworld corpus must
+/// quantise onto the same numeric **levels** the surface corpus uses: if it had
+/// invented its own — 0.35 where the surface uses 0.4 — every A-3 number would
+/// be an artifact of the regrading and would look like a real displacement.
+/// Proven able to fire (an off-grid 0.35 reddens it; see the task report).
 ///
-/// A distance between two points in "the same space" is only a distance if the
-/// two were placed on the same rulers. If the underworld had invented its own
-/// levels — 0.35 where the surface uses 0.4 — every A-3 number would be an
-/// artifact of the regrading, and would look like a real displacement.
+/// **What it does NOT control, stated because an earlier version of this doc
+/// claimed it did.** It called itself "the control that makes A-3 a
+/// measurement rather than an artifact of the regrading", which is false in
+/// the way this campaign keeps finding: it checks that the *levels* coincide —
+/// which was never in doubt, both corpora were authored from the same
+/// constants — while `PHYSIOGNOMY`'s **semantics** demonstrably differ between
+/// them. Sharing a ruler is not sharing a meaning. That made it a grid control
+/// wearing a semantic control's label, and this campaign's ninth instrument
+/// that read as evidence for something it could not see.
+///
+/// **A-3 is therefore computed across a semantic regrounding on one axis, and
+/// across a grain change on the same one.** `axes.rs` reads `PHYSIOGNOMY` off
+/// vegetation structure on land and animal structure in the sea (`coral-head`
+/// = closed, `vent`/`tubeworm-thicket` = shrub-equivalent); this corpus reads
+/// it off *void morphology*, which is abiotic. And `karst-cave` is a
+/// **formation** read from the surface classifier while `flowstone-hall` is a
+/// **community inside one**, so every A-3 distance's `PHYSIOGNOMY` component
+/// compares a morphology reading against a vegetation reading **at a different
+/// grain**. Nothing here or anywhere else controls for that; it is a stated
+/// limitation of the A-3 verdict, not a defect in it.
 #[test]
 fn the_underworld_uses_the_surface_corpus_value_grid() {
     let mut grid: BTreeMap<u16, BTreeSet<u64>> = BTreeMap::new();
@@ -465,6 +542,15 @@ fn the_underworld_uses_the_surface_corpus_value_grid() {
 /// Separating them needs a REALM discriminator the six-axis basis does not
 /// carry.
 ///
+/// **Nothing shipped is broken by it, and that is checkable rather than
+/// hopeful:** `axes::assignment()` has **no production consumer**. Grep over
+/// the tree (`axes::assignment|hornvale_climate::axes`, excluding `target/`)
+/// finds it only in this crate's four test files —
+/// `coarse_constrains_fine.rs`, `held_out_marine.rs`, `preregistration.rs`,
+/// this one — and `windows/worldgen/tests/axis_geometry.rs`. Every hit is a
+/// test. Vector distinctness across the two corpora is a
+/// property of a measurement instrument, not of any world.
+///
 /// Recorded as an exact set, ratchet-style: a change here is a change to what
 /// the basis can resolve, and must be a deliberate one.
 #[test]
@@ -503,22 +589,44 @@ fn three_underworld_names_are_indistinguishable_from_a_surface_name() {
 /// ungated. This campaign evaluates it and states the result either way.
 ///
 /// Operationalised as: for each underworld community, its nearest neighbour
-/// among The Axes' 74 surface/marine names under [`distance`]. A-3 holds for a
-/// name iff that nearest neighbour is one of the three cave formations.
+/// among the surface corpus's **64 assigned** names under [`distance`] (74
+/// less The Axes' 10 resisters, which carry the zero vector and are not
+/// candidates). A-3 holds for a name iff that nearest neighbour is one of the
+/// three cave formations.
 ///
-/// **Two controls, because a rate with no denominator is not a result.**
-/// (1) The chance rate — 3 of the 74 surface names are cave formations, so a
-/// corpus scattered at random would score ~4.1%. (2) The corpus's mean
-/// distance to the cave region against its mean distance to the other 71
-/// names; if the first is not smaller, "lands in the cave region" is false
-/// even before the nearest-neighbour count is read.
+/// [`distance`] is Gower's distance over the shared axes, `Nominal` handled as
+/// 0-or-1. Read its doc before reading a number off this test.
+///
+/// **THE WEAK FORM RESTS ON THE NEAREST-NEIGHBOUR COUNT ALONE.** The chance
+/// rate is its denominator: **3 of the 64 candidate names are cave
+/// formations, so a corpus scattered at random scores 4.7%.** (An earlier
+/// version of this doc divided by 74 and reported 4.1%; the candidate set was
+/// already filtered to assigned names, so the denominator did not match the
+/// thing being measured. Corrected 2026-08-17. The verdict does not move.)
+///
+/// **The mean-distance comparison below is NOT a second, independent
+/// control, and is no longer presented as one.** The three caves are a tight
+/// cluster in the dark/rocky/low-physiognomy corner while the other 61 names
+/// span the lit, warm, vegetated half of the space, so *any* dark rocky corpus
+/// beats it — it cannot distinguish "landed in the cave region" from "landed
+/// anywhere dark". It is kept as a sanity floor, because a corpus that
+/// **failed** it would falsify A-3 outright, and it is asserted first for that
+/// reason. It corroborates nothing.
+///
+/// **One real bias in [`distance`], measured rather than hypothesised.** The
+/// mean is taken over *shared* axes, so a surface name that DECLINES an axis
+/// is scored on fewer terms and is systematically advantaged. Four of the 13
+/// misses are exactly such names — `temperate-forest` and `open-water` decline
+/// `SUBSTRATE`, `ice` declines `LIGHT` — so this is a live effect on the
+/// result, not a theoretical caveat. It cuts against A-3 rather than for it.
 ///
 /// **Result, measured 2026-08-17: A-3 holds in the weak form and FAILS in the
 /// strong one, systematically.** The assertions below hold the weak form. The
 /// per-name print is the finding: the communities that miss are the
-/// chemolithotroph half, and they miss toward `vent` and its variants — the
-/// sea's own chemolithotroph community. That is the right answer for the wrong
-/// region, and it is reported rather than papered.
+/// chemolithotroph and phreatic halves, and they miss toward `vent` and its
+/// variants and the deep pelagic ladder — the sea's own dark, hot,
+/// rock-floored communities. That is the right answer for the wrong region,
+/// and it is reported rather than papered.
 #[test]
 fn a3_the_underworld_lands_in_the_cave_region() {
     let surface = assignment();
@@ -537,6 +645,24 @@ fn a3_the_underworld_lands_in_the_cave_region() {
         "the non-cave comparison set: 74 names less 3 caves less 10 resisters"
     );
 
+    // THE CANDIDATE SET, named once and used for both the loop below and the
+    // chance denominator. Keeping these two the same object is the whole fix
+    // for the 4.1%-vs-4.7% defect: the denominator must be the set the
+    // nearest-neighbour search actually draws from, and when they were two
+    // expressions they drifted apart silently.
+    let candidates: Vec<&AssignedName> = surface
+        .iter()
+        .filter(|a| !a.vector.is_unassigned())
+        .collect();
+    assert_eq!(
+        candidates.len(),
+        caves.len() + others.len(),
+        "the candidate set must be exactly the caves plus the comparison set, \
+         or the chance rate is computed against a different population than \
+         the search ran over"
+    );
+    assert_eq!(candidates.len(), 64, "74 names less The Axes' 10 resisters");
+
     let names = assigned();
     assert!(!names.is_empty(), "A-3 over an empty corpus is vacuous");
 
@@ -548,7 +674,7 @@ fn a3_the_underworld_lands_in_the_cave_region() {
         // Deterministic tie-break by name, so a tie never depends on corpus
         // order — the workspace's float-sort rule applied to an argmin.
         let mut best: Option<(&'static str, f64)> = None;
-        for other in surface.iter().filter(|a| !a.vector.is_unassigned()) {
+        for other in &candidates {
             let d = distance(&name.vector, &other.vector);
             let better = match best {
                 None => true,
@@ -592,25 +718,36 @@ fn a3_the_underworld_lands_in_the_cave_region() {
         );
     }
     let rate = in_region as f64 / names.len() as f64;
-    let chance = caves.len() as f64 / surface.len() as f64;
+    let chance = caves.len() as f64 / candidates.len() as f64;
     mean_cave_total /= names.len() as f64;
     mean_other_total /= names.len() as f64;
     println!(
         "A-3: {in_region}/{} nearest-neighbour hits = {:.1}% against a {:.1}% \
-         chance rate; mean distance to the cave region {mean_cave_total:.3} vs \
-         {mean_other_total:.3} to the other {} names",
+         chance rate (3 caves in {} candidates), a lift of {:.1}x. \
+         SANITY FLOOR ONLY, not corroboration: mean distance to the cave \
+         region {mean_cave_total:.3} vs {mean_other_total:.3} to the other {} \
+         names.",
         names.len(),
         rate * 100.0,
         chance * 100.0,
+        candidates.len(),
+        rate / chance,
         others.len()
     );
 
+    // THE SANITY FLOOR, asserted first because a corpus failing it would
+    // falsify A-3 outright. It is NOT independent evidence for the weak form:
+    // the 3 caves cluster in the dark/rocky/low-physiognomy corner and the 61
+    // others span the lit/warm/vegetated half, so any dark rocky corpus clears
+    // it. See this test's doc.
     assert!(
         mean_cave_total < mean_other_total,
-        "A-3 FALSIFIED in its weakest form: the corpus is no closer to the \
-         cave region ({mean_cave_total:.3}) than to the rest of the space \
+        "A-3 FALSIFIED outright: the corpus is no closer to the cave region \
+         ({mean_cave_total:.3}) than to the rest of the space \
          ({mean_other_total:.3})"
     );
+    // THE WEAK FORM, and it rests on this clause alone. The 4x bound was
+    // written before the corpus was authored; the measured lift is ~8.7x.
     assert!(
         rate > chance * 4.0,
         "A-3 FALSIFIED: {in_region}/{} = {:.1}% of the corpus has a cave \

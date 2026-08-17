@@ -321,7 +321,23 @@ pub struct EnvironmentAxis {
     pub valence: AxisValence,
 }
 
-/// Vegetation structure: how the living cover is built, open to closed.
+/// **Habitat structural complexity**: how much structure stands between bare
+/// ground and a closed habitat, open to closed.
+///
+/// **Widened 2026-08-17 (The Underworld, Task 6). This line previously read
+/// "Vegetation structure: how the living cover is built", and that was already
+/// false in the sea before the underworld existed** — `hornvale-climate`'s
+/// marine corpus reads `coral-head` as closed and `vent`/`tubeworm-thicket` as
+/// shrub-equivalent, which is *animal* structure, not vegetation. The
+/// underworld takes one further step: a decorated karst gallery genuinely
+/// offers more habitat structure than a glazed lava tube, and the structure is
+/// abiotic (speleothems). Vegetation is the **terrestrial realizer** of this
+/// axis, not its definition.
+///
+/// The ordinal reading is unchanged and is what makes the widening safe: every
+/// realm still ranks the same quantity, low to high, on the same levels. No
+/// value moves; this is a doc-only correction to text a later campaign would
+/// otherwise read as a constraint.
 pub const PHYSIOGNOMY: EnvironmentAxis = EnvironmentAxis {
     id: 0,
     label: "physiognomy",
