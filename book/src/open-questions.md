@@ -2934,7 +2934,8 @@ perpetrator descendant, and a bystander that is the subject's own parent has a
 victim-line child. Only the first of those can produce a path that crosses
 stance twice — the 209 that were measured all take it. The second breaks
 closure just as really, but `VictimLine` *is* descent-closed, so a path that
-steps into it crosses once and can never cross back. The law that actually holds is narrower — any predicate over the
+steps into it crosses once and can never cross back. The law that actually
+holds is narrower — any predicate over the
 teller/hearer *lineage relation* is constant along a single-parent walk by
 construction — and stance is not such a predicate. It merely behaves like one
 because the label that breaks closure holds exactly one community, the named
