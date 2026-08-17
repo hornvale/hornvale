@@ -96,17 +96,28 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
     // Walk away from the settlement until a locale reports nothing built.
     //
     // The walk is NORTHWARD-BIASED across three compass points rather than a
-    // bare `go n`, and that is load-bearing, not tidying. This mesh is
-    // triangular: every cell offers exactly one of two exit triads, `{N, SW,
-    // SE}` or `{NE, NW, S}`, so a single fixed direction is absent from half
-    // the cells outright. The Tense flipped the parity of the starting cell
-    // (the same flip `the_purview.rs` records at both its rungs), which left
-    // the old `go n` loop answering "No way n from here." twelve times and the
-    // walker standing exactly where it began — a search that had quietly
-    // stopped searching. `the_water_column_is_a_place_you_can_be` already
-    // carries this warning in its own comment; this test had the bug and no
-    // guard. Biasing over `n`/`ne`/`nw` means at least one point is always
-    // available whichever triad the cell offers.
+    // bare `go n` — HISTORICAL reasoning, kept for the record rather than
+    // silently deleted (final review F4: this comment used to describe live
+    // behaviour and stopped being true when The Rhumb shipped). At the time
+    // this was written, the mesh's exit-triad model meant every cell offered
+    // exactly one of two labelled triads, `{N, SW, SE}` or `{NE, NW, S}`, so a
+    // single fixed direction was absent from half the cells outright: The
+    // Tense flipped the parity of the starting cell (the same flip
+    // `the_purview.rs` records at both its rungs), which left the old `go n`
+    // loop answering "No way n from here." twelve times and the walker
+    // standing exactly where it began — a search that had quietly stopped
+    // searching. Biasing over `n`/`ne`/`nw` was the fix, on the theory that at
+    // least one point was always available whichever triad the cell offered.
+    //
+    // Since decision 0141, `go` resolves all eight compass points from every
+    // walk-band cell via a carried rhumb course rather than exact-matching a
+    // labelled triad — there is no longer a triad a direction can be "absent"
+    // from, so the loop below's `starts_with("No way ")` branch (and the
+    // identical one in `enter_somewhere_built` above) is now dead: `go`
+    // never emits that sentence outdoors. Left as three directions rather
+    // than trimmed back to a bare `go n`, because the loop still needs to
+    // reach wilderness and the bias is harmless, not because it is still
+    // load-bearing.
     let mut refusal = None;
     for _ in 0..12 {
         let reply = out(session.handle("enter"));

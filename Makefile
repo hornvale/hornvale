@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-status sluice-log nextest-check prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -614,6 +614,10 @@ lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STU
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
+
+shapecheck: ## Compare the key-path SHAPE of two JSON docs (usage: make shapecheck OLD=a.json NEW=b.json)
+	@test -n "$(OLD)" && test -n "$(NEW)" || { echo "usage: make shapecheck OLD=<path> NEW=<path>"; exit 2; }
+	@python3 scripts/shapecheck.py "$(OLD)" "$(NEW)"
 
 census: ## Build the analysis DB from committed censuses and open DuckDB on it
 	@bash tools/census/build.sh

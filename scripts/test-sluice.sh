@@ -132,6 +132,117 @@ else
     bad "id4 was wrongly superseded — branch-name-only matching would do this; ancestry must not"
 fi
 
+echo "== queue: an UNRESOLVABLE ancestor sha is stamped indeterminate, never silently ignored"
+# THE DEFECT THIS PINS, observed live on 2026-08-16. `--is-ancestor` is
+# three-valued (0 yes, 1 no, 128 cannot-resolve), and the original code read
+# it under `if ...; then`, which buckets 128 with 1 — so "I do not have that
+# object" was indistinguishable from "not an ancestor", and the `2>/dev/null`
+# threw away the `fatal:` that said which. Since nothing in the request path
+# fetched, the canonical box routinely lacked a just-pushed commit and
+# silently declined to coalesce. campaign/the-rhumb queued THREE stage
+# requests in one ancestry chain and none coalesced; the author confirmed
+# exit 0 for each pair on their own machine.
+#
+# WHY THE FIVE COALESCING TESTS ABOVE COULD NOT CATCH IT: every one of them
+# mints both commits locally with `git commit-tree`/`commit`, so both objects
+# always resolve. The harness guaranteed the exact precondition production
+# does not — the test environment supplied what the real path was missing.
+# This test is the one that removes that guarantee.
+g checkout -q -b campaign/absent main
+printf 'q\n' >> f.txt; g commit -qam "real"; REAL="$(g rev-parse HEAD)"
+# Well-formed, validates fine, and no such object exists in this repo — which
+# is precisely the shape a not-yet-fetched push has from the box's point of
+# view. `add` does not require the sha to exist, by design (the queue must
+# stay durable), so this is reachable without faking anything.
+GHOST=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+id_ghost="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/absent "$GHOST")"
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/absent "$REAL" >/dev/null
+note_of() { bash "$repo_root/scripts/sluice-queue.sh" list | awk -F'\t' -v i="$1" '$2==i{print $7}'; }
+case "$(note_of "$id_ghost")" in
+    *"coalescing indeterminate"*)
+        ok "an unanswerable ancestry question stamps the row instead of passing as a silent no" ;;
+    "")
+        bad "the row was left untouched with an empty note — this is the original defect: 128 read as 1" ;;
+    *)
+        bad "unexpected note on the indeterminate row: '$(note_of "$id_ghost")'" ;;
+esac
+if [ "$(state_of "$id_ghost")" = "queued" ]; then
+    ok "an indeterminate row stays queued — unanswerable must not mean superseded either"
+else
+    bad "an indeterminate row was moved to '$(state_of "$id_ghost")'; it must stay queued for a human to judge"
+fi
+
+echo "== queue: MUTATION — the pre-fix two-valued read leaves the row silent, reddening the test above"
+# Non-vacuity for the section above, in this file's established style: revert
+# ONLY the three-way read to the original `if ...; then` form and confirm the
+# indeterminate row comes back empty-noted. Without this, the test could pass
+# for reasons unrelated to the exit-code discrimination.
+mutant="$repo_root/scripts/.sluice-queue-anc-mutant-for-test.sh"
+# shellcheck disable=SC2016  # $rsha/$sha must stay LITERAL in the mutant's
+# source text — expanding them here would bake this test's values into the
+# mutated script instead of reproducing the pre-fix code.
+sed -e 's|^            anc_rc=0$|            anc_rc=0; if env -u GIT_DIR -u GIT_INDEX_FILE git merge-base --is-ancestor "$rsha" "$sha" >/dev/null 2>\&1; then anc_rc=0; else anc_rc=1; fi; true \\|' \
+    "$repo_root/scripts/sluice-queue.sh" > "$mutant"
+HV_SLUICE_DIR="$tmp/mutant-queue" bash "$mutant" add campaign/absent "$GHOST" >/dev/null 2>&1 || true
+mut_ghost="$(HV_SLUICE_DIR="$tmp/mutant-queue" bash "$mutant" list 2>/dev/null | awk -F'\t' '$4=="'"$GHOST"'"{print $2}' | head -1)"
+HV_SLUICE_DIR="$tmp/mutant-queue" bash "$mutant" add campaign/absent "$REAL" >/dev/null 2>&1 || true
+mut_note="$(HV_SLUICE_DIR="$tmp/mutant-queue" bash "$mutant" list 2>/dev/null | awk -F'\t' -v i="$mut_ghost" '$2==i{print $7}')"
+# THE MUTANT MUST ACTUALLY RUN. Without this guard the section below passes
+# vacuously the moment the `sed` produces a script that does not parse: a
+# dead mutant enqueues nothing, `mut_note` is empty for that reason, and an
+# empty note is exactly what the assertion treats as success. Pin that the
+# mutant reached the queue at all before reading anything off it.
+if [ -n "$mut_ghost" ]; then
+    ok "test setup: the mutant runs and enqueues (so an empty note below means the read, not a dead script)"
+else
+    bad "the mutant did not enqueue — the mutation assertion below would pass vacuously"
+fi
+if [ -n "$mut_ghost" ] && [ -z "$mut_note" ]; then
+    ok "MUTATION CONFIRMED: the two-valued read leaves an unresolvable ancestor unstamped (the real one stamps it — see above)"
+else
+    bad "the mutant also stamped the row ('$mut_note') — the test above is not pinning the exit-code discrimination"
+fi
+rm -f "$mutant"
+
+echo "== queue: a HELD request IS superseded by its descendant"
+# The state test used to be `= "queued"`, which excluded `held` BY OMISSION
+# rather than by decision. A held request is one the chamber reddened, so the
+# author fixes it and resubmits — the descendant IS the replacement, and
+# leaving the held row forever means every red accretes a permanent row
+# nobody will ever act on. Found while superseding campaign/the-rhumb's held
+# clients-red request by hand: even with the objects present and the fetch in
+# place, coalescing still would not have touched it.
+g checkout -q -b campaign/heldy main
+printf 'h\n' >> f.txt; g commit -qam "held one"; HELD_OLD="$(g rev-parse HEAD)"
+printf 'i\n' >> f.txt; g commit -qam "held two"; HELD_NEW="$(g rev-parse HEAD)"
+id_held="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/heldy "$HELD_OLD")"
+bash "$repo_root/scripts/sluice-queue.sh" set-state "$id_held" held "clients rc=2"
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/heldy "$HELD_NEW" >/dev/null
+if [ "$(state_of "$id_held")" = "superseded" ]; then
+    ok "a held request is superseded by its descendant, so a fixed red does not leave a permanent row"
+else
+    bad "a held ancestor stayed '$(state_of "$id_held")' — held rows will accrete forever"
+fi
+
+echo "== queue: a RUNNING request is still never superseded (the held change must not widen this)"
+# Guarding the blast radius of the change above: widening the state test from
+# one value to two must not have widened it to three. A running request is an
+# authoring job already inside the chamber; superseding it orphans a job
+# mid-write. The suite already asserts this further down for its own reasons;
+# asserted again HERE, adjacent to the change, so a future widening of the
+# `case` is caught by a test that names why.
+g checkout -q -b campaign/runny main
+printf 'r\n' >> f.txt; g commit -qam "run one"; RUN_OLD="$(g rev-parse HEAD)"
+printf 's\n' >> f.txt; g commit -qam "run two"; RUN_NEW="$(g rev-parse HEAD)"
+id_run="$(bash "$repo_root/scripts/sluice-queue.sh" add campaign/runny "$RUN_OLD")"
+bash "$repo_root/scripts/sluice-queue.sh" set-state "$id_run" running
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/runny "$RUN_NEW" >/dev/null
+if [ "$(state_of "$id_run")" = "running" ]; then
+    ok "a running request is still not superseded after held became supersedable"
+else
+    bad "a running request became '$(state_of "$id_run")' — an authoring job would be orphaned mid-write"
+fi
+
 echo "== queue: a note cannot corrupt the queue file"
 # The reviewer's finding: set-state's note was written into the TSV
 # unsanitized. A physical newline in the note splits the row in two on the

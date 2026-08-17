@@ -232,6 +232,22 @@ launch), then terminates tagged instances — that order is asserted by
 `test/test_panic.sh` and must not be reversed. Setup/teardown are
 confirmation-gated in the Makefile.
 
+## Utility scripts
+
+- **`shapecheck.py`** — compares the key-path SHAPE of two JSON documents
+  (dicts/lists/scalars, values ignored), so a drifted byte-golden's diff can
+  be answered structurally rather than by eyeballing a large single-line
+  file: did the wire shape move, or only a value? Standard-library only, no
+  venv, no install. The Rhumb used it to establish that a drifted
+  `vessel/session/v2` fixture had 133 identical key paths on both sides with
+  1 of 888 leaf values differing (`.narration.prose`), so the golden's move
+  was a value, not a schema change. Not part of any gate — it informs the
+  human call a golden's drift always needs (epoch vs. moved value), the same
+  judgment `CLAUDE.md`'s "Deliberate regeneration uses an epoch suffix"
+  line names. Run it via `make shapecheck OLD=<path> NEW=<path>` or
+  directly: `scripts/shapecheck.py OLD.json NEW.json` (exit 0 identical
+  shapes, 1 differ, 2 usage/parse error).
+
 ## Shell conventions
 
 - Every script must pass `make shellcheck` (all of `scripts/**`). Prefer
