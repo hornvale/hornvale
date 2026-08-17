@@ -600,6 +600,15 @@ impl LocaleContext {
         &self,
         addr: &RoomAddr,
     ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        Ok(self.reflectance_mixture_at(addr)?.integrate())
+    }
+
+    /// The surface mixture at `addr`, un-integrated, so a caller can reach
+    /// the components. [`LocaleContext::reflectance_at`] is this, integrated.
+    pub fn reflectance_mixture_at(
+        &self,
+        addr: &RoomAddr,
+    ) -> Result<hornvale_kernel::color::Mixture, LocaleError> {
         let geo = self.climate.geosphere();
         let weights = addr
             .corner_weights(geo, &self.index)
@@ -607,7 +616,7 @@ impl LocaleContext {
         let cell = dominant_corner(&weights).0;
         let buffer = self.terrain.material_at(cell);
         let rock = self.terrain.rock_at(cell);
-        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock).integrate())
+        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock))
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water
