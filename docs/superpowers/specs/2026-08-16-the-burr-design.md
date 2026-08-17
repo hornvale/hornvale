@@ -178,6 +178,41 @@ and any census metric reading name text. It is an **artifact-drift event, not
 a stream-consumption epoch.** Those are different things with different
 handling and the distinction is load-bearing in §5.
 
+### 3.7 The proto's phonotactic templates cap every daughter's lexicon
+
+Measured after Stage 2 landed, and the campaign's deepest defect — deeper than
+either §3.2 or §3.3.
+
+```
+cargo run -q -p hornvale -- proto elf | sed -n '/## Inventory/,/## Phonotactics/p' | grep -i trill
+cargo run -q -p hornvale -- proto elf | grep -E 'Onsets|Codas'
+cargo run -q -p hornvale -- proto elf | awk -F'|' 'NF>4 && $4 ~ /\*/ {print $4}' | grep -c '[rR]'
+```
+
+Proto-elf's inventory **does** contain `r` after the sonorant floor. Its onset
+templates are `sibilant, stop, nasal` and its codas `stop`. So **no template
+slot any trill can fill**, and the third command returns **0** — not one
+proto-elf root carries a liquid.
+
+The consequence is the finding: **a segment in the inventory that no drawn
+template can host is unreachable, and for inherited vocabulary the gating
+templates are the *proto's*, not the daughter's.** Snow-elf's own inventory
+carries `r` *and* its onset template is literally `fricative+trill`, and it
+still shows zero liquid-bearing words — because its words are evolved from
+proto roots that never had one. A people can be entirely able to pronounce a
+sound and possess no word containing it.
+
+Two corrections this forced, both recorded rather than absorbed:
+
+1. **Stage 2 delivers no audible liquid, and never could have.** Liquid
+   coverage after Task 5 is 3 of 18, byte-identical to Task 4, with no elf or
+   dwarf among them. Advice given mid-campaign to "land Stage 2 and stop" was
+   withdrawn on this measurement.
+2. **`ensure_minimum_sonorants`' own doc comment said so** — "says nothing
+   about whether the phonotactic templates will ever *use* the sonorant it
+   adds" — and Task 5's dispatch prose asserted the opposite one screen later.
+   The limitation was known, written down, and then contradicted by its author.
+
 ## 4. Design
 
 ### 4.1 A bundle is a named authored row, not a point in a product space
@@ -216,12 +251,23 @@ four free knobs either.
 
 ### 4.2 The four bundles
 
-| Bundle | Family | Morphology | Coda law | Harmony |
-|---|---|---|---|---|
-| `templatic` | dwarf | consonantal skeleton × vocalic template | obstruent, obligatory | none |
-| `sonorant-open` | elf | agglutinative, affixing | closed sonorant set, optional | front/back |
-| `isolating-tonal` | draconic | isolating; tone carries contrast | open or single nasal | none |
-| `concatenative` | goblinoid, plant, unfamilied | today's engine | today's draw | none |
+| Bundle | Family | Morphology | Onset law | Coda law | Harmony |
+|---|---|---|---|---|---|
+| `templatic` | dwarf | consonantal skeleton × vocalic template | drawn | obstruent, obligatory | none |
+| `sonorant-open` | elf | agglutinative, affixing | **second slot is a sonorant** | closed sonorant set, optional | front/back |
+| `isolating-tonal` | draconic | isolating; tone carries contrast | single slot | open or single nasal | none |
+| `concatenative` | goblinoid, plant, unfamilied | today's engine | today's draw | today's draw | none |
+
+**The onset column is an amendment, added after Stage 2 measured why it is
+needed (2026-08-17).** It was in the design as presented and approved, and was
+lost in transcription to this table — a drafting omission, not a scope
+decision. Stage 2 then made it load-bearing rather than merely nice:
+`ensure_minimum_sonorants` put `/r/` into proto-elf's *inventory* and liquid
+coverage did not move at all, because proto-elf's drawn onset templates are
+`sibilant, stop, nasal` and its codas `stop` — **no slot any trill can fill**,
+so zero of its roots carry one, and every daughter inherits that. A coda law
+alone would fix the count (words ending in `-r`); it would not produce the
+`Cr-`/`Cl-` onsets that are most of what the region sounds like. See §3.7.
 
 `concatenative` exists to name the status quo, not to change it. Its handling
 must be byte-identical to today wherever the other three changes do not force
