@@ -1,4 +1,5 @@
 [lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
+  epistemic: this lens carries no weight channel, so remembered cells draw identically to sensed ones — 0 of 19 placed.
   ~
  ~~~
 ~~~~@

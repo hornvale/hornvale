@@ -87,10 +87,19 @@ fn colored(glyph: char, rgb: [u8; 3]) -> String {
 
 /// Wrap `s` in the terminal's dim attribute and a reset.
 ///
-/// This is the epistemic channel's whole encoding (spec §2): a `remembered`
-/// cell dims — it does not substitute a different glyph. Composed *around*
-/// [`colored`]'s output rather than replacing it, so a remembered cell that
-/// also carries colour gets both: `\x1b[2m\x1b[38;2;r;g;bm<glyph>\x1b[0m\x1b[0m`.
+/// This is the epistemic channel's encoding (spec §2) on a lens that HAS a
+/// weight channel: a `remembered` cell dims — it does not substitute a
+/// different glyph. Composed *around* [`colored`]'s output rather than
+/// replacing it, so a remembered cell that also carries colour gets both:
+/// `\x1b[2m\x1b[38;2;r;g;bm<glyph>\x1b[0m\x1b[0m`.
+///
+/// Only the `colour` lens calls this. The `terrain` lens is documented
+/// elsewhere (`windows/vessel/src/session.rs`'s `Eyes::Off` fallback) as
+/// emitting zero escape sequences — the posture a screen reader takes — so
+/// per spec §2.3 it **loses the epistemic axis entirely** rather than
+/// recovering it through an escape the surface promised not to emit; see
+/// the `epistemic:` caption line `render_surrounds_ascii` adds for that
+/// lens.
 fn dimmed(s: &str) -> String {
     format!("\u{1b}[2m{s}\u{1b}[0m")
 }
@@ -178,6 +187,22 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         }
     }
 
+    // The terrain lens's own disclosure — the epistemic counterpart to the
+    // colour lens's tint disclosure above. This lens carries no weight
+    // channel (it is the escape-free surface `Eyes::Off` picks for exactly
+    // that reason, per `windows/vessel/src/session.rs`), so per spec §2.3 it
+    // loses the epistemic axis entirely rather than recovering it some other
+    // way — the count is what makes the sentence checkable against the
+    // picture instead of trusted on its word.
+    if lens == "terrain" {
+        let remembered = placed.values().filter(|p| p.remembered).count();
+        out.push_str(&format!(
+            "  epistemic: this lens carries no weight channel, so remembered cells draw \
+             identically to sensed ones — {remembered} of {} placed.\n",
+            placed.len()
+        ));
+    }
+
     if placed.is_empty() {
         out.push_str("  (nothing placeable in view)\n");
     } else {
@@ -202,7 +227,12 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
                             ("colour", Some(rgb), true) => colored(p.glyph, rgb),
                             _ => p.glyph.to_string(),
                         };
-                        if p.remembered {
+                        // Weight is gated on the LENS carrying a weight
+                        // channel at all, not on whether this particular
+                        // cell happens to be coloured — `terrain` never
+                        // dims, `colour` always does for a remembered cell,
+                        // coloured or not.
+                        if lens == "colour" && p.remembered {
                             line.push_str(&dimmed(&drawn));
                         } else {
                             line.push_str(&drawn);
@@ -325,6 +355,13 @@ mod tests {
         // (weight), not a peer of the ordinal (glyph) channel, so a
         // remembered cell must draw the same glyph as a sensed one, only
         // dimmer — it must not substitute a different mark.
+        //
+        // Rendered through `colour`, not `terrain`: §2.3 (a client that
+        // lacks a channel loses that channel's ENTIRE axis) means the
+        // escape-free `terrain` lens must not distinguish the two states at
+        // all — see `the_terrain_lens_declares_it_carries_no_weight_channel`
+        // and `the_terrain_lens_emits_no_escape_sequences` for that half.
+        // `colour` is the lens that actually carries the weight channel.
         let sensed = scene(vec![
             cell(0, 0, 0, true, "here", 2),
             cell(-1, 0, 0, false, "sensed", 2),
@@ -333,8 +370,8 @@ mod tests {
             cell(0, 0, 0, true, "here", 2),
             cell(-1, 0, 0, false, "remembered", 2),
         ]);
-        let out_sensed = render_surrounds_ascii(&sensed, "terrain", &[]);
-        let out_remembered = render_surrounds_ascii(&remembered, "terrain", &[]);
+        let out_sensed = render_surrounds_ascii(&sensed, "colour", &[]);
+        let out_remembered = render_surrounds_ascii(&remembered, "colour", &[]);
 
         // Clause 1: the glyph CHARACTER at that position is identical once
         // any weight escapes are stripped away. This pins the rule.
@@ -435,13 +472,60 @@ mod tests {
 
     #[test]
     fn the_terrain_lens_emits_no_escape_sequences() {
-        // The three committed gallery charts render through this lens.
-        // An escape here moves all of them.
-        let scene = colored_test_scene();
+        // The three committed gallery charts render through this lens, and
+        // `windows/vessel/src/session.rs`'s `Eyes::Off` picks it specifically
+        // because it promises "no observer, no tint, no escape sequence —
+        // the same posture a screen reader takes." A remembered cell is
+        // included deliberately: Task 3's first pass dimmed unconditionally,
+        // which would have put an escape on exactly this path while this
+        // test's fixture (`colored_test_scene()` alone, no remembered cell)
+        // stayed green throughout. See the fix-round report for the RED-then-
+        // GREEN proof this guard now actually catches that.
+        let mut scene = colored_test_scene();
+        scene.cells[1].state = "remembered".to_string();
         let out = render_surrounds_ascii(&scene, "terrain", &[]);
         assert!(
             !out.contains('\u{1b}'),
-            "the terrain lens emitted an escape"
+            "the terrain lens emitted an escape: {out}"
+        );
+    }
+
+    #[test]
+    fn the_terrain_lens_declares_it_carries_no_weight_channel() {
+        // §2.3: a client that lacks a channel loses that channel's ENTIRE
+        // axis and says so — it does not recover the axis some other way.
+        // Pin both halves: the PICTURE is byte-identical for a sensed vs a
+        // remembered cell (no per-cell distinction at all, not even a
+        // fainter glyph — chart_body strips only the caption block), and
+        // the caption states the loss with a checkable count rather than
+        // staying silent about it or lying with a constant one.
+        let sensed = scene(vec![
+            cell(0, 0, 0, true, "here", 2),
+            cell(-1, 0, 0, false, "sensed", 2),
+        ]);
+        let remembered = scene(vec![
+            cell(0, 0, 0, true, "here", 2),
+            cell(-1, 0, 0, false, "remembered", 2),
+        ]);
+        let out_sensed = render_surrounds_ascii(&sensed, "terrain", &[]);
+        let out_remembered = render_surrounds_ascii(&remembered, "terrain", &[]);
+        assert_eq!(
+            chart_body(&out_sensed),
+            chart_body(&out_remembered),
+            "the terrain lens has no weight channel, so a remembered cell's \
+             PICTURE must be identical to a sensed one's: \
+             sensed={out_sensed:?} remembered={out_remembered:?}"
+        );
+        assert!(
+            out_sensed.contains("epistemic: this lens carries no weight channel")
+                && out_sensed.contains("0 of 2 placed"),
+            "the sensed render's disclosure must count zero remembered: {out_sensed}"
+        );
+        assert!(
+            out_remembered.contains("epistemic: this lens carries no weight channel")
+                && out_remembered.contains("1 of 2 placed"),
+            "the disclosure's count must be checkable against the scene, not \
+             a constant sentence: {out_remembered}"
         );
     }
 
@@ -564,12 +648,17 @@ mod tests {
     }
 
     /// Everything but the caption block: the grid and the footers. The
-    /// caption line opens with '[' and the colour disclosure with `colour:`;
-    /// no grid row can begin with either, since every glyph is drawn from
-    /// the terrain alphabet.
+    /// caption line opens with '[', the colour disclosure with `colour:`,
+    /// and the terrain lens's epistemic disclosure with `epistemic:`; no
+    /// grid row can begin with any of these, since every glyph is drawn
+    /// from the terrain alphabet.
     fn chart_body(s: &str) -> String {
         s.lines()
-            .filter(|l| !l.starts_with('[') && !l.trim_start().starts_with("colour:"))
+            .filter(|l| {
+                !l.starts_with('[')
+                    && !l.trim_start().starts_with("colour:")
+                    && !l.trim_start().starts_with("epistemic:")
+            })
             .collect::<Vec<_>>()
             .join("\n")
     }
