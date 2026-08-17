@@ -560,6 +560,20 @@ fn cave_substrate_meets_preregistered_criteria() {
     // way the original was, because `cave_depth_reach_m` is a continuous
     // function with no finite range of outputs.
     //
+    // HOW STRONG CLAUSE 1'S EVIDENCE ACTUALLY IS, stated rather than implied.
+    // 0138 clause 1 asks for the property verified "by a measurement other
+    // than the failing statistic", and the corroboration used was
+    // `depth_reach_m`'s own distribution over these same 30 worlds: 48,316
+    // caves, 1,914 distinct values, p05 30.8 m to p95 2588.3 m, printed by
+    // `report` above. That is a different STATISTIC from the band count, but
+    // it is the SAME UNDERLYING QUANTITY this criterion bins — so it
+    // corroborates that the property (depth variety) is intact; it does not
+    // independently validate the new estimator. No truly independent
+    // instrument exists, because everything downstream of depth derives from
+    // the reach. Clause 2 (the retired estimator's arity) and clause 3 (the
+    // injected collapse) are what carry the restatement; clause 1 here is
+    // corroboration, and reading it as more than that would overstate it.
+    //
     // RESOLUTION, and where it is blind (0138's second consequence): with five
     // 600 m bins this resolves a collapse of the budget onto fewer than three
     // 600 m-wide classes. A distribution spread across three bins but degenerate

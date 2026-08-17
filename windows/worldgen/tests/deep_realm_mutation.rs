@@ -39,23 +39,33 @@ const BAND_LADDER: [BandKind; 5] = [
     BandKind::Underneath,
 ];
 
-/// Metre budget carried by the hand-built caves below. `chamber_exists` and
-/// `chamber_at` read `deepest_band` and nothing else (see `chamber.rs`'s module
-/// doc), so this is a placeholder chosen to be plainly in range — it is
-/// deliberately NOT made consistent with `band`, which the generator could
-/// never pair with a 1 km reach for the deeper rungs. The lattice walk below is
-/// what measures the budget.
-const FIXTURE_REACH_M: f64 = 1000.0;
+/// The column the hand-built caves below are built against: 401 m of cover on
+/// 35 km of continental crust, an ordinary land column the generator produces
+/// in quantity. Band tops `[0, 1, 401, 17700.5, 35000]` m.
+fn fixture_column() -> hornvale_terrain::StratigraphicColumn {
+    hornvale_terrain::column(
+        35.0,
+        0.3,
+        true,
+        400.0,
+        1.0,
+        hornvale_terrain::RockClass::Sandstone,
+        hornvale_terrain::Basement::Continental,
+    )
+}
 
 /// A cave with no formation opinion — `Cave::kind` is not read by
-/// `chamber_exists`/`chamber_at` (see `chamber.rs`'s module doc) — reaching
-/// exactly `band`.
-fn cave_reaching(band: BandKind) -> Cave {
-    Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: band,
-        depth_reach_m: FIXTURE_REACH_M,
-    }
+/// `chamber_exists`/`chamber_at` (see `chamber.rs`'s module doc) — carrying a
+/// depth budget of `reach_m`, with its `deepest_band` **derived from that
+/// budget** by `Cave::from_reach`.
+///
+/// The derivation is the point (The Underworld, spec §4.0). This used to be
+/// `cave_reaching(band)`, a struct literal pairing a chosen band with a fixed
+/// 1 km budget — which for `Roots` names a world no generator can produce, and
+/// which would let this test go green over a broken model the moment anything
+/// downstream reads the budget instead of the band.
+fn cave_reaching_m(reach_m: f64) -> Cave {
+    Cave::from_reach(CaveKind::Fracture, reach_m, &fixture_column())
 }
 
 /// Every chamber address that exists over the whole five-band lattice at
@@ -104,35 +114,79 @@ fn deepest_reached(seed: Seed, cave: &Cave, cell: CellId) -> Option<BandKind> {
     })
 }
 
-/// **The derivation half.** Two hand-built `Cave`s differing only in
-/// `deepest_band` prove `chamber_exists`/`chamber_at` read their `cave`
-/// argument: a `Roots`-reaching budget grows a strictly larger chamber
-/// graph than a `Regolith`-reaching one, and the shallow cave never reaches
-/// past its own single in-budget band.
+/// A budget stopping inside the cover — derives `BandKind::Cover`, rank 1.
+const SHALLOW_REACH_M: f64 = 200.0;
+/// A budget cutting past the 401 m basement contact — derives
+/// `BandKind::Basement`, rank 2, the deepest band a metre budget can reach.
+const DEEP_REACH_M: f64 = 2000.0;
+
+/// **The derivation half.** Two hand-built `Cave`s differing only in their
+/// depth budget prove `chamber_exists`/`chamber_at` read their `cave`
+/// argument: the deeper budget grows a strictly larger chamber graph, and the
+/// shallow cave never reaches past its own in-budget bands.
 ///
-/// **What this does NOT prove**, and why the pipeline half below exists:
-/// `BandKind::Regolith` never occurs in a live-generated cave (0 of 55,947,
-/// Task 0), so the "shallow" case here perturbs a value no real world holds.
-/// A green result here is necessary but not sufficient — see
-/// `the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored`.
+/// **Re-derived by The Underworld (spec §4.0), and it got stronger.** The pair
+/// used to be `Roots` against `Regolith`, and its own doc conceded that
+/// `Regolith` "never occurs in a live-generated cave (0 of 55,947)" — a
+/// mutation over a value no real world holds. `Roots` is now unreachable too
+/// (17.7 km against a 3 km budget). Both ends of the comparison are now bands
+/// the generator actually produces in quantity: over 30 worlds, `Cover` 1,830
+/// and `Basement` 46,486. That closes half of the caveat this test used to
+/// carry.
+///
+/// **What it still does NOT prove**, and why the pipeline half below exists:
+/// a hand-built pair says nothing about whether the pipeline hands
+/// `chamber_exists` the budget terrain actually authored.
+/// claim: behavior(seed-pooled) — a deeper depth budget admits strictly more
+/// chamber addresses than a shallower one, pooled over a small fixed seed set
+/// because one seed separates adjacent bands by only a chamber or two
+/// (seedless sweep: builds no world)
 #[test]
 fn a_shallow_cave_has_a_shallow_graph() {
     let seed = Seed(90210);
     let cell = CellId(9);
 
-    let deep = chamber_count(seed, &cave_reaching(BandKind::Roots), cell);
-    let shallow = chamber_count(seed, &cave_reaching(BandKind::Regolith), cell);
+    let deep_cave = cave_reaching_m(DEEP_REACH_M);
+    let shallow_cave = cave_reaching_m(SHALLOW_REACH_M);
+    // The fixtures must actually differ in band, or the comparison is vacuous.
+    assert_eq!(deep_cave.deepest_band, BandKind::Basement);
+    assert_eq!(shallow_cave.deepest_band, BandKind::Cover);
+
+    let deep = chamber_count(seed, &deep_cave, cell);
+    let shallow = chamber_count(seed, &shallow_cave, cell);
     println!(
-        "derivation half (seed {}, cell {}): Roots budget = {deep} chambers, \
-         Regolith budget = {shallow} chambers",
+        "derivation half (seed {}, cell {}): {DEEP_REACH_M} m budget (Basement) \
+         = {deep} chambers, {SHALLOW_REACH_M} m budget (Cover) = {shallow} chambers",
         seed.0, cell.0
     );
-    assert!(deep > shallow, "Roots gave {deep}, Regolith gave {shallow}");
+    assert!(
+        deep > shallow,
+        "the {DEEP_REACH_M} m budget gave {deep}, the {SHALLOW_REACH_M} m budget gave {shallow}"
+    );
 
-    assert_eq!(
-        deepest_reached(seed, &cave_reaching(BandKind::Regolith), cell),
-        Some(BandKind::Regolith),
-        "a Regolith cave reached deeper — the budget is not being read"
+    // Existence is a coin flip per address, so one (seed, cell) separates the
+    // two budgets by only a chamber or two — 6 against 5 here. Pooling several
+    // seeds makes the claim about the BUDGET rather than about one draw. The
+    // retired Roots/Regolith pair differed by three whole bands and did not
+    // need this; Basement/Cover differ by one, and does.
+    let (mut pooled_deep, mut pooled_shallow) = (0usize, 0usize);
+    for raw in [90210u64, 1, 2, 3, 4, 5, 6, 7] {
+        pooled_deep += chamber_count(Seed(raw), &deep_cave, cell);
+        pooled_shallow += chamber_count(Seed(raw), &shallow_cave, cell);
+    }
+    println!("  pooled over 8 seeds: deep = {pooled_deep}, shallow = {pooled_shallow}");
+    assert!(
+        pooled_deep > pooled_shallow,
+        "pooled over 8 seeds the deeper budget gave {pooled_deep} and the \
+         shallower {pooled_shallow} — the budget is not being read"
+    );
+
+    // …and the shallow cave never reaches past its own in-budget bands.
+    let reached = deepest_reached(seed, &shallow_cave, cell);
+    assert!(
+        matches!(reached, Some(BandKind::Regolith) | Some(BandKind::Cover)),
+        "a Cover-budget cave reached {reached:?} — either the budget is not \
+         being read, or no chamber exists at all and this arm is vacuous"
     );
 }
 
@@ -198,10 +252,25 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
          genuine downgrade; pick a different cell/seed"
     );
 
+    // THE ONE DELIBERATE VIOLATION of `Cave`'s derived-field invariant in the
+    // workspace, and it is the content of the mutation: a struct literal that
+    // forces `deepest_band` away from the band the cave's own budget reaches,
+    // producing a pair no constructor would ever emit. That is precisely the
+    // fabrication being detected — if anything downstream substituted a
+    // default budget for terrain's, the real and fabricated caves would be
+    // indistinguishable. Every other construction site goes through
+    // `Cave::new`/`Cave::from_reach`.
     let fabricated_cave = Cave {
         deepest_band: BandKind::Regolith,
         ..real_cave
     };
+    assert!(
+        !fabricated_cave.band_agrees_with_reach(&terrain.column_at(cell)),
+        "the fabrication must actually violate the invariant, or it is not a \
+         mutation — real band {:?}, budget {} m",
+        real_cave.deepest_band,
+        real_cave.depth_reach_m
+    );
 
     let authored_count = chamber_count(seed, &real_cave, cell);
     let fabricated_count = chamber_count(seed, &fabricated_cave, cell);

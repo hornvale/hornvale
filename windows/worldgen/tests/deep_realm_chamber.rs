@@ -19,44 +19,69 @@ use hornvale_worldgen::chamber::{
     ChamberAddr, ChamberOrigin, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
 };
 
-/// Metre budget carried by the hand-built caves below. `chamber_exists` and
-/// `chamber_at` read `deepest_band` and nothing else (see `chamber.rs`'s module
-/// doc), so this is a placeholder chosen to be plainly in range — it is
-/// deliberately NOT made consistent with each fixture's band, which the
-/// generator could never pair with a 1 km reach for the deeper rungs.
-const FIXTURE_REACH_M: f64 = 1000.0;
+/// The column every fixture below is built against: 401 m of cover on 35 km
+/// of continental crust, which is an ordinary land column the generator
+/// produces in quantity. Band tops are `[0, 1, 401, 17700.5, 35000]` m.
+///
+/// **Fixtures are built through `Cave::from_reach` against this column**, so
+/// each one's `deepest_band` is derived from its own metre budget and the pair
+/// is a state the generator could actually author (The Underworld, spec §4.0).
+/// Before that they were struct literals pairing a 1 km budget with
+/// `BandKind::Roots`, whose top on any real column is ~14–20 km — an
+/// impossible world, and exactly the shape that lets a suite go green over a
+/// broken model once something downstream starts reading the budget.
+fn fixture_column() -> hornvale_terrain::StratigraphicColumn {
+    hornvale_terrain::column(
+        35.0,
+        0.3,
+        true,
+        400.0,
+        1.0,
+        hornvale_terrain::RockClass::Sandstone,
+        hornvale_terrain::Basement::Continental,
+    )
+}
+
+/// A budget that stops inside the cover — `deepest_band` comes out `Cover`
+/// (rank 1). Near the middle of the measured lava-tube/shallow-karst range.
+const SHALLOW_REACH_M: f64 = 200.0;
+
+/// A budget that cuts past the 401 m basement contact — `deepest_band` comes
+/// out `Basement` (rank 2). This is the median fault-void reach the 30-world
+/// readout measures, not an invented number.
+///
+/// **`Basement` is the deepest band any cave can reach**, because a budget
+/// capped at 3 km cannot get to `Roots` (~17.7 km on this column). Fixtures
+/// that used to say `Roots` say this instead.
+const DEEP_REACH_M: f64 = 2000.0;
 
 /// The rule The Salt, 0102 and The Tolerance each learned separately:
 /// generation order is never an identity. A `ChamberAddr` names a PLACE in a
 /// lattice that exists before anything is generated into it, so nothing
 /// about which chambers happen to exist can move another chamber's address.
 ///
-/// Two caves differing ONLY in `deepest_band` (their measured depth budget)
-/// both admit every address with `band <= 2` (`Basement`'s own rank). A
-/// chamber at one of those addresses must come out byte-identical under
-/// either cave — its content cannot have been renumbered by the deeper cave
-/// having more chambers available to it.
+/// Two caves differing ONLY in their depth budget both admit every address
+/// with `band <= 1` (`Cover`'s own rank). A chamber at one of those addresses
+/// must come out byte-identical under either cave — its content cannot have
+/// been renumbered by the deeper cave having more chambers available to it.
 #[test]
 fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     let seed = Seed(90210);
     let cell = CellId(9);
-    let shallow = Cave {
-        kind: CaveKind::Karst,
-        deepest_band: BandKind::Basement,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
-    let deep = Cave {
-        kind: CaveKind::Karst,
-        deepest_band: BandKind::Roots,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
+    let col = fixture_column();
+    let shallow = Cave::from_reach(CaveKind::Karst, SHALLOW_REACH_M, &col);
+    let deep = Cave::from_reach(CaveKind::Karst, DEEP_REACH_M, &col);
+    assert_eq!(shallow.deepest_band, BandKind::Cover);
+    assert_eq!(deep.deepest_band, BandKind::Basement);
 
-    // Basement's rank is 2, so bands 0..=2 (Regolith, Cover, Basement) are
-    // in BOTH caves' budget; Roots's rank 3 gives `deep` a fourth band
-    // `shallow` cannot reach at all. Every address checked here therefore
-    // sits in the region shared by both caves' budgets.
+    // Cover's rank is 1, so bands 0..=1 (Regolith, Cover) are in BOTH caves'
+    // budget; Basement's rank 2 gives `deep` a third band `shallow` cannot
+    // reach at all. Every address checked here therefore sits in the region
+    // shared by both caves' budgets. (The pair used to be Basement/Roots over
+    // bands 0..=2; `Roots` is unreachable under a metre budget, so the whole
+    // comparison moved one rung up — the property is identical.)
     let no_overrides = BTreeMap::new();
-    for band in 0..=2u8 {
+    for band in 0..=1u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
                 cell,
@@ -82,28 +107,24 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 
 /// The lattice is a fixed size regardless of what any particular cave
 /// realizes; occupancy within it is sparse and varies by seed. Over a cave
-/// reaching `BandKind::Roots`, the address space checked here is
-/// `SLOTS_PER_BAND * 4` (bands `0..=3`, `Regolith..=Roots`) — constant
-/// across every seed — while the number of addresses that EXIST is
-/// strictly less than that, and differs seed to seed.
+/// reaching `BandKind::Basement` — the deepest band a metre budget can reach —
+/// the address space checked here is `SLOTS_PER_BAND * 3` (bands `0..=2`,
+/// `Regolith..=Basement`) — constant across every seed — while the number of
+/// addresses that EXIST is strictly less than that, and differs seed to seed.
 /// claim: invariant(forall-seed) — lattice size is fixed, existence is
 /// sparse and seed-varying (seedless sweep, audit §5: builds no world;
 /// named explicitly in the task brief)
 #[test]
 fn the_lattice_is_fixed_and_existence_is_sparse() {
     let cell = CellId(42);
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
 
     let mut existing_counts = Vec::new();
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         let mut total = 0u32;
         let mut existing = 0u32;
-        for band in 0..=3u8 {
+        for band in 0..=2u8 {
             for slot in 0..SLOTS_PER_BAND {
                 total += 1;
                 let addr = ChamberAddr {
@@ -119,9 +140,9 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
         }
         assert_eq!(
             total,
-            u32::from(SLOTS_PER_BAND) * 4,
-            "the address space over a Roots-reaching cave must be a constant \
-             SLOTS_PER_BAND * 4"
+            u32::from(SLOTS_PER_BAND) * 3,
+            "the address space over a Basement-reaching cave must be a constant \
+             SLOTS_PER_BAND * 3"
         );
         assert!(
             existing < total,
@@ -150,17 +171,13 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
 /// hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn every_passage_is_traversable_in_both_directions() {
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
 
     for raw_seed in [1u64, 2, 3, 4, 5] {
         let seed = Seed(raw_seed);
         for raw_cell in [0u32, 1, 9, 42] {
             let cell = CellId(raw_cell);
-            for band in 0..=3u8 {
+            for band in 0..=2u8 {
                 for slot in 0..SLOTS_PER_BAND {
                     let addr = ChamberAddr {
                         cell,
@@ -211,11 +228,7 @@ fn every_passage_is_traversable_in_both_directions() {
 /// over a hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn a_cave_mouth_reaches_at_least_one_chamber() {
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
 
     let mut reached = 0u32;
     let mut probed = 0u32;
@@ -298,17 +311,13 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
 #[test]
 fn an_override_wins_over_the_derived_default() {
     let seed = Seed(2026);
-    let cave = Cave {
-        kind: CaveKind::Fracture,
-        deepest_band: BandKind::Roots,
-        depth_reach_m: FIXTURE_REACH_M,
-    };
+    let cave = Cave::from_reach(CaveKind::Fracture, DEEP_REACH_M, &fixture_column());
     let cell = CellId(4);
 
     // Find two addresses that both exist under this (seed, cave, cell) —
     // one to override, one to leave alone as the "unaffected" witness.
     let mut existing = Vec::new();
-    for band in 0..=3u8 {
+    for band in 0..=2u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
                 cell,

@@ -82,13 +82,22 @@ const LITHOSTATIC_MPA_PER_M: f64 = 0.026_5;
 
 /// Absolute ceiling (m) on any cave's depth budget — a rail, not a target.
 /// Spec §4.0 states the window the delve ladder covers as 0–3 km, and Earth's
-/// deepest known cave system (Veryovkina, 2212 m) sits inside it. The closure
-/// term alone would reach 3774 m at `induration = 1`, so the clamp is real —
-/// but it binds on **37 of 48,316 caves (0.077%) over 30 worlds**
+/// deepest known cave system (Veryovkina, 2212 m) sits inside it.
+///
+/// **It binds on 37 of 48,316 caves (0.077%) over 30 worlds**
 /// (`hollow_readout`'s `at-ceiling` figure), which makes it a guarantee about
 /// the function's range rather than something that shapes the distribution.
 /// The three probe seeds alone showed a maximum of 2732 m and no binding at
 /// all; the 30-world figure is the one to quote.
+///
+/// **Which cases bind, since the obvious guess is wrong.** Not the closure
+/// term running away — that reaches 3774 m only at `induration = 1`, and the
+/// highest induration in any measured world is 0.9292, giving 2732 m. The
+/// 37 are **paleokarst**: [`PALEOKARST_GAIN`] applied to a well-indurated
+/// carbonate, which clamps once `closure * 0.7 * 1.6 > 3000`, i.e. above
+/// `induration ≈ 0.924` — just inside the karst maximum of 0.9268. So the
+/// ceiling's only live customer is the one multiplier in this module that is
+/// authored rather than derived.
 ///
 /// **Public because it is the function's declared range**, and a consumer that
 /// wants to partition the budget must read the range from here rather than
@@ -145,8 +154,15 @@ fn closure_depth_m(induration: f64) -> f64 {
 /// Per kind, on top of [`closure_depth_m`]:
 ///
 /// - **Karst.** Dissolution can only remove the soluble fraction of the rock,
-///   so the mechanically-available depth is scaled by `carbonate`. An
-///   unconformity multiplies it by [`PALEOKARST_GAIN`].
+///   so the mechanically-available depth is scaled by `carbonate`. **The
+///   direction is physical; the proportionality is authored.** That reach
+///   should rise with solubility follows from the process; that it should rise
+///   *linearly*, so a rock half carbonate reaches exactly half as deep, is a
+///   modelling choice with no more backing than [`PALEOKARST_GAIN`] has — no
+///   published scale sets it, and a sub-linear law would be equally
+///   defensible. It is the second authored number in this module, and the
+///   first one that does not say so at its own definition, because it has no
+///   definition to say it at.
 /// - **LavaTube.** The tube is a near-surface void inside the flow that drained
 ///   out of it, capped at [`LAVATUBE_CEILING_M`]. Note the cap is *not* the
 ///   column's `depth_to_basement_m`: that measures soil plus **sedimentary**

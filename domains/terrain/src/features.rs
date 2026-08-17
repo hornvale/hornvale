@@ -38,6 +38,18 @@ impl CaveKind {
 
 /// A located cave at a cell.
 ///
+/// **Carries a derived-field invariant:** `deepest_band ==
+/// band_at_depth(column, depth_reach_m)`. The depth coordinate is the metre
+/// budget; the band is a lookup of it against the column (spec §4.0). Build
+/// one through [`Cave::new`] or [`Cave::from_reach`] and the invariant holds
+/// by construction — neither can produce a pair that disagrees.
+///
+/// The fields stay `pub` because `deepest_band` is read across the workspace
+/// and because one test — `deep_realm_mutation`'s pipeline half — must
+/// *deliberately* fabricate a cave that violates the invariant, which is the
+/// entire content of that mutation. Every other construction site uses a
+/// constructor, and [`Cave::band_agrees_with_reach`] is the checkable form.
+///
 /// `Eq` is gone since The Underworld added `depth_reach_m`: the depth
 /// coordinate is a metre budget now, and `f64` has no total equality.
 /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
@@ -51,6 +63,49 @@ pub struct Cave {
     /// How far below the surface the void actually reaches, in metres
     /// ([`crate::cave_depth::cave_depth_reach_m`]).
     pub depth_reach_m: f64,
+}
+
+impl Cave {
+    /// The sanctioned constructor: derives the metre budget from the rock and
+    /// the column, then derives the band from that same budget. Both fields
+    /// come from one number, so they cannot disagree.
+    pub fn new(
+        kind: CaveKind,
+        buf: &MaterialBuffer,
+        column: &crate::strata::StratigraphicColumn,
+    ) -> Cave {
+        Cave::from_reach(
+            kind,
+            crate::cave_depth::cave_depth_reach_m(kind, buf, column),
+            column,
+        )
+    }
+
+    /// Build from a stated budget, deriving the band from it. For callers that
+    /// want to name a depth directly — chiefly test fixtures exercising the
+    /// chamber lattice, which care about the budget and not the rock that
+    /// produced it. Still invariant-preserving by construction.
+    /// type-audit: bare-ok(diagnostic-value: depth_reach_m)
+    pub fn from_reach(
+        kind: CaveKind,
+        depth_reach_m: f64,
+        column: &crate::strata::StratigraphicColumn,
+    ) -> Cave {
+        Cave {
+            kind,
+            deepest_band: band_at_depth(column, depth_reach_m),
+            depth_reach_m,
+        }
+    }
+
+    /// Whether this cave's band is the one its budget actually reaches in
+    /// `column` — the invariant, in checkable form. A cave built through
+    /// either constructor satisfies it; a hand-fabricated one may not, and
+    /// exactly one test relies on that.
+    /// type-audit: bare-ok(flag: return)
+    pub fn band_agrees_with_reach(&self, column: &crate::strata::StratigraphicColumn) -> bool {
+        self.deepest_band == band_at_depth(column, self.depth_reach_m)
+    }
 }
 
 /// Felsic index at or below which rock reads as mafic enough to have flowed
@@ -193,10 +248,14 @@ pub fn fracture_stress(nearest_boundary: Option<(u32, BoundaryKind)>) -> f64 {
 ///   stress term reads as increasing. The product was zero at `hops = 0` — on
 ///   a plate contact, the most faulted place in the model, no fault cave could
 ///   exist — and peaked at `hops = 4`, where the overprint has just run out.
-///   Its maximum over all land was ~0.39, below
-///   `DEEP_PROCESS_PRONENESS` (0.5), so [`BandKind::Roots`] was not rare but
-///   *unreachable*: a ceiling below the threshold that reads it, which is the
-///   spec's own §2.2 failure reproduced in new code.
+///   Its maximum over all land was ~0.39, below the 0.5 the then-current
+///   `cave_depth` needed to place a cave in [`BandKind::Roots`], so `Roots` was
+///   not rare but *unreachable*: a ceiling below the threshold that reads it,
+///   which is the spec's own §2.2 failure reproduced in new code. (That
+///   threshold was `DEEP_PROCESS_PRONENESS`, deleted by The Underworld with the
+///   rest of the depth/proneness weld. Its only surviving home is the verbatim
+///   fixture in `hollow_readout::the_retired_h2_estimator_is_satisfied_by_its_own_generator`,
+///   which needs it to enumerate the retired function's range.)
 ///
 /// Competence is what keeps a void open: cemented, indurated rock holds a
 /// fracture; soft, poorly consolidated rock closes it by creep. `induration`
@@ -275,12 +334,26 @@ pub fn cave_depth(
     column: &crate::strata::StratigraphicColumn,
     buf: &MaterialBuffer,
 ) -> BandKind {
-    let reach = crate::cave_depth::cave_depth_reach_m(kind, buf, column);
+    band_at_depth(
+        column,
+        crate::cave_depth::cave_depth_reach_m(kind, buf, column),
+    )
+}
+
+/// The deepest band of `column` that a void reaching `depth_m` below the
+/// surface penetrates: the last band whose top lies at or above that depth.
+///
+/// The single definition of the `Cave` derived-field invariant — [`cave_depth`]
+/// and [`Cave::from_reach`] both go through it, so nothing can compute the band
+/// two ways. `bands[0].top_depth_m` is 0.0 and every reach is non-negative, so
+/// the reverse scan always finds one.
+/// type-audit: bare-ok(diagnostic-value: depth_m)
+pub fn band_at_depth(column: &crate::strata::StratigraphicColumn, depth_m: f64) -> BandKind {
     column
         .bands
         .iter()
         .rev()
-        .find(|b| b.top_depth_m <= reach)
+        .find(|b| b.top_depth_m <= depth_m)
         .map(|b| b.kind)
         .unwrap_or(BandKind::Regolith)
 }
@@ -612,7 +685,8 @@ mod tests {
     /// fracture cave.
     ///
     /// **Re-derived by The Underworld (spec §4.0), and the deletion is the
-    /// finding.** This used to assert `p >= DEEP_PROCESS_PRONENESS` and then
+    /// finding.** This used to assert `p >= DEEP_PROCESS_PRONENESS` (0.5, the
+    /// retired threshold, deleted with the weld) and then
     /// that `cave_depth` returned [`BandKind::Roots`], because depth was a band
     /// chosen by the *presence* proneness — the weld `MAP-cave-depth-weld`
     /// names. Both halves went with it: `Roots` on this column starts at
