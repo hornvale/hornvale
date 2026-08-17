@@ -488,6 +488,72 @@ a failure that would otherwise read as a spectacular success.
 why.** That is the outcome The Delvers reached the expensive way; reaching it
 cheaply is a success, not a failure.
 
+#### H2 STRENGTHENED 2026-08-17, PRE-UNBLINDING, POST-TASK-8
+
+Task 8 measured that a kind's seated rung is **constant across cells** for
+drow. If a kind's rung were a pure function of its authored niche, H2's floor
+— "the modal rungs differ" — would be satisfied by authoring two different
+niches, measuring the authoring rather than the world. That is this campaign's
+signature defect, found seven times already.
+
+**Review established the constancy is INCIDENTAL, not structural**, and the
+distinction decides everything. `seat_at` takes `argmax chamber_fit` over the
+rungs a column's cave *reaches*; `chamber_fit` is pure over
+`(niche, CaveKind, DelveRung)` — 15 values, no per-cell term — but the
+reachable set is a **prefix** of the ΔT-ascending ladder. Drow's argmax is
+`Shallows` (rung 2 of 5) for all three formations, and every cave reaches rung
+2, so truncation never fires. **A kind authored deep is the opposite case**:
+Task 1's chamber spread `[77, 131, 399, 53, 214]` makes deep reach the
+minority, so truncation would bite constantly and such a kind *would* spread.
+So "a single kind does not spread across rungs" is true of drow and **false in
+general**, and must not be carried into §4.7 as a general fact.
+
+The clause can therefore fail, and is not vacuous — but it is **weakly
+discriminating**. The world enters only one-directionally, since truncation can
+push a kind shallower and never deeper, so the modal rung is the authored
+argmax censored by terrain. Roughly speaking it is 80% a restatement of "two
+different argmaxes were authored".
+
+**H2 is NOT restated, and the reason is decision 0138's own test.** That
+decision permits repairing a mis-specified estimator and forbids rescuing an
+inconvenient result, and it requires three things *in the same sitting*: the
+property independently verified intact, the estimator defect demonstrated
+rather than asserted, and the restatement re-proved by injected failure. **All
+three are unsatisfiable today, because Mountain and Duergar do not exist.** The
+defect can only be inferred from a kind with a shallow niche, and no injection
+can re-prove a restatement against kinds not yet authored. Restating on a proxy
+subject before the measurement is neither repair nor rescue — it is a guess.
+
+Instead, four requirements bind §4.7 and §8's Task 9. Adding a **stricter**
+clause before unblinding is permitted by 0016; weakening one is not.
+
+**H2c (new, preregistered) — the world must be able to falsify the seating.**
+Each kind's seated rung takes **more than one distinct value** across the cells
+of every seed. This is a terrain property (does prefix truncation actually
+bite?) rather than an authoring one, and unlike the modal-rung clause it cannot
+be satisfied by choosing niches.
+
+**Mandatory disclosure.** Compute and record each candidate niche's 3×5
+`chamber_fit` table and its argmax **before building any world**. If the
+measured modal rung equals the fit-table argmax for both kinds, the readout
+must say **the floor was decided by authoring** — not report a pass.
+
+**The overlap statistic is guarded or withheld.** Under near-constant seating a
+kind's multiplier takes at most 6 distinct values (3 cave kinds × works/not),
+so top-quartile ranking is decided by the *pre-campaign* base capacity field
+rather than by anything this campaign shipped — and §4.3's finding (elevation
+is drow's Liebig minimum on every cell) raises a live risk that the field is
+flat for a subterranean kind. Report the distinct capacity values per kind and
+the tie size at the quartile boundary. **If the boundary falls inside a tie the
+overlap is undefined and must be reported as undefined, never computed.**
+Clearing ≥20% must not be reported as evidence the delve axis works.
+
+**A structural obstacle to the "one family" half.** `maybe_raid`
+(`history_bake.rs:3184`) now looks up only the raider's own rung, so **two
+dwarf kinds at different modal rungs can never interact.** H2's overlap clause
+exists to check they remain one family; this may suppress that by construction.
+Task 9 must state whether it does.
+
 **H3 — the water table is not degenerate.** Neither fewer than 5% nor more
 than 95% of cave-bearing columns are wholly phreatic.
 
