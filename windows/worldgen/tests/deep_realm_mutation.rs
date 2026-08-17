@@ -19,25 +19,41 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{BandKind, Cave, CaveKind, TerrainPins};
+use hornvale_terrain::{
+    BandKind, Cave, CaveKind, DelveRung, GeothermalGradient, TerrainPins, rung_at_depth,
+};
 use hornvale_worldgen::chamber::{ChamberAddr, SLOTS_PER_BAND, chamber_exists};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
 
-/// The permanent band ladder, top to bottom. `chamber.rs`'s own
-/// `band_rank`/`band_of_rank` bijection is private to that module (the
-/// practical notes above this task confirm it), so this file restates the
-/// same five-variant order rather than reaching for it — the ladder itself
-/// is `hornvale_climate::Realm::UNDERDARK.strata()`'s order, pinned
-/// independently by `domains/climate/tests/facets.rs`.
-const BAND_LADDER: [BandKind; 5] = [
-    BandKind::Regolith,
-    BandKind::Cover,
-    BandKind::Basement,
-    BandKind::Roots,
-    BandKind::Underneath,
+/// The permanent lattice ladder, top to bottom — **the DELVE ladder since
+/// `chamber/v2`** (The Underworld, spec §4.1), which is what
+/// `ChamberAddr.band` indexes. `chamber.rs`'s own `rung_rank`/`rung_of_rank`
+/// bijection is private to that module, so this file restates the same
+/// five-variant order rather than reaching for it; the order itself is pinned
+/// independently by `hornvale_terrain::rungs`.
+///
+/// It used to be `BandKind`'s five variants, because the gate used to be
+/// `band_rank(cave.deepest_band)`. Restating a ladder is only safe while the
+/// restatement names the ladder the gate actually uses — this file is the
+/// reason that caveat is worth writing down.
+const BAND_LADDER: [DelveRung; 5] = [
+    DelveRung::Undercroft,
+    DelveRung::Shallows,
+    DelveRung::Deeps,
+    DelveRung::Underdeep,
+    DelveRung::Sunless,
 ];
+
+/// The geothermal gradient every hand-built fixture below is placed under,
+/// K/km — 24.0, the measured median band across the three preregistered seeds
+/// (gradient p50 = 24.419 / 25.004 / 23.082, `underworld_ladder_probe.rs`).
+/// `chamber_exists` gates on the delve ladder, so a budget in metres only
+/// decides a cave's reach once a cell's gradient turns it into a ΔT.
+fn fixture_gradient() -> GeothermalGradient {
+    GeothermalGradient::new(24.0)
+}
 
 /// The column the hand-built caves below are built against: 401 m of cover on
 /// 35 km of continental crust, an ordinary land column the generator produces
@@ -73,7 +89,7 @@ fn cave_reaching_m(reach_m: f64) -> Cave {
 /// `cave.deepest_band` — `chamber_exists` itself gates on the budget, so a
 /// full walk measures exactly what the budget lets through rather than
 /// baking the ladder's shape into this helper too.
-fn chamber_count(seed: Seed, cave: &Cave, cell: CellId) -> usize {
+fn chamber_count(seed: Seed, cave: &Cave, gradient: GeothermalGradient, cell: CellId) -> usize {
     let mut count = 0usize;
     for band in 0..BAND_LADDER.len() as u8 {
         for slot in 0..SLOTS_PER_BAND {
@@ -83,7 +99,7 @@ fn chamber_count(seed: Seed, cave: &Cave, cell: CellId) -> usize {
                 band,
                 slot,
             };
-            if chamber_exists(seed, cave, addr) {
+            if chamber_exists(seed, cave, gradient, addr) {
                 count += 1;
             }
         }
@@ -96,12 +112,18 @@ fn chamber_count(seed: Seed, cave: &Cave, cell: CellId) -> usize {
 /// sparse (a coin-flip density per address), so an arbitrary probe cell can
 /// legitimately come back empty; callers that need a guaranteed nonempty
 /// result pick a `(seed, cell)` this is known to return `Some` for.
-fn deepest_reached(seed: Seed, cave: &Cave, cell: CellId) -> Option<BandKind> {
+fn deepest_reached(
+    seed: Seed,
+    cave: &Cave,
+    gradient: GeothermalGradient,
+    cell: CellId,
+) -> Option<DelveRung> {
     (0..BAND_LADDER.len() as u8).rev().find_map(|band| {
         let reached = (0..SLOTS_PER_BAND).any(|slot| {
             chamber_exists(
                 seed,
                 cave,
+                gradient,
                 ChamberAddr {
                     cell,
                     entrance: 0,
@@ -114,10 +136,24 @@ fn deepest_reached(seed: Seed, cave: &Cave, cell: CellId) -> Option<BandKind> {
     })
 }
 
-/// A budget stopping inside the cover — derives `BandKind::Cover`, rank 1.
+/// A budget stopping inside the cover — derives `BandKind::Cover`, and the
+/// `Shallows` rung at [`fixture_gradient`].
 const SHALLOW_REACH_M: f64 = 200.0;
+
+/// The fabricated budget the pipeline half downgrades a real cave to: 1 m.
+///
+/// Chosen to land on the top rung under ANY gradient in the physical band —
+/// 1 m is ΔT = 0.015 K at 15 K/km and 0.030 K at 30 K/km, both inside
+/// `Undercroft`'s `[0, 2)` K — so the mutation is a genuine downgrade for
+/// every cell the probe could pick, not only for the one it happens to. The
+/// real measured minimum reach is 200 m (`underworld_ladder_probe.rs`,
+/// reach-p10 = 200.0 / 215.3 / 201.7), so no generated cave is anywhere near
+/// it.
+const FABRICATED_REACH_M: f64 = 1.0;
 /// A budget cutting past the 401 m basement contact — derives
-/// `BandKind::Basement`, rank 2, the deepest band a metre budget can reach.
+/// `BandKind::Basement` (the deepest band a metre budget can reach), and the
+/// `Underdeep` rung at [`fixture_gradient`], two rungs below
+/// [`SHALLOW_REACH_M`].
 const DEEP_REACH_M: f64 = 2000.0;
 
 /// **The derivation half.** Two hand-built `Cave`s differing only in their
@@ -148,12 +184,23 @@ fn a_shallow_cave_has_a_shallow_graph() {
 
     let deep_cave = cave_reaching_m(DEEP_REACH_M);
     let shallow_cave = cave_reaching_m(SHALLOW_REACH_M);
-    // The fixtures must actually differ in band, or the comparison is vacuous.
+    // The fixtures must actually differ on the axis the GATE reads, or the
+    // comparison is vacuous. Both are asserted: the band pair is the archive
+    // fact these fixtures have always carried, and the rung pair is what
+    // `chamber_exists` now gates on.
     assert_eq!(deep_cave.deepest_band, BandKind::Basement);
     assert_eq!(shallow_cave.deepest_band, BandKind::Cover);
+    assert_eq!(
+        rung_at_depth(deep_cave.depth_reach_m, fixture_gradient()),
+        DelveRung::Underdeep
+    );
+    assert_eq!(
+        rung_at_depth(shallow_cave.depth_reach_m, fixture_gradient()),
+        DelveRung::Shallows
+    );
 
-    let deep = chamber_count(seed, &deep_cave, cell);
-    let shallow = chamber_count(seed, &shallow_cave, cell);
+    let deep = chamber_count(seed, &deep_cave, fixture_gradient(), cell);
+    let shallow = chamber_count(seed, &shallow_cave, fixture_gradient(), cell);
     println!(
         "derivation half (seed {}, cell {}): {DEEP_REACH_M} m budget (Basement) \
          = {deep} chambers, {SHALLOW_REACH_M} m budget (Cover) = {shallow} chambers",
@@ -171,8 +218,8 @@ fn a_shallow_cave_has_a_shallow_graph() {
     // need this; Basement/Cover differ by one, and does.
     let (mut pooled_deep, mut pooled_shallow) = (0usize, 0usize);
     for raw in [90210u64, 1, 2, 3, 4, 5, 6, 7] {
-        pooled_deep += chamber_count(Seed(raw), &deep_cave, cell);
-        pooled_shallow += chamber_count(Seed(raw), &shallow_cave, cell);
+        pooled_deep += chamber_count(Seed(raw), &deep_cave, fixture_gradient(), cell);
+        pooled_shallow += chamber_count(Seed(raw), &shallow_cave, fixture_gradient(), cell);
     }
     println!("  pooled over 8 seeds: deep = {pooled_deep}, shallow = {pooled_shallow}");
     assert!(
@@ -181,11 +228,14 @@ fn a_shallow_cave_has_a_shallow_graph() {
          shallower {pooled_shallow} — the budget is not being read"
     );
 
-    // …and the shallow cave never reaches past its own in-budget bands.
-    let reached = deepest_reached(seed, &shallow_cave, cell);
+    // …and the shallow cave never reaches past its own in-budget rungs.
+    let reached = deepest_reached(seed, &shallow_cave, fixture_gradient(), cell);
     assert!(
-        matches!(reached, Some(BandKind::Regolith) | Some(BandKind::Cover)),
-        "a Cover-budget cave reached {reached:?} — either the budget is not \
+        matches!(
+            reached,
+            Some(DelveRung::Undercroft) | Some(DelveRung::Shallows)
+        ),
+        "a Shallows-budget cave reached {reached:?} — either the budget is not \
          being read, or no chamber exists at all and this arm is vacuous"
     );
 }
@@ -199,13 +249,24 @@ fn a_shallow_cave_has_a_shallow_graph() {
 /// cell, at whatever band that happens to be (never `Regolith`, per Task 0).
 ///
 /// The mutation: a **fabricated** copy of that same real cave, with
-/// `deepest_band` forced down to `Regolith` — a budget the generator did
-/// not author for this cell. If chamber_exists (or anything upstream of it)
-/// silently substituted a default/constant budget instead of the one
-/// terrain measured, feeding it the *real* cave and the *fabricated* one
-/// would be indistinguishable. It is not: the real, terrain-authored budget
-/// grows a strictly larger graph and reaches strictly deeper than the
+/// `depth_reach_m` forced down to [`FABRICATED_REACH_M`] — a budget the
+/// generator did not author for this cell. If chamber_exists (or anything
+/// upstream of it) silently substituted a default/constant budget instead of
+/// the one terrain measured, feeding it the *real* cave and the *fabricated*
+/// one would be indistinguishable. It is not: the real, terrain-authored
+/// budget grows a strictly larger graph and reaches strictly deeper than the
 /// fabricated downgrade of the identical cave.
+///
+/// **The mutated FIELD moved in The Underworld, and it had to.** This used to
+/// force `deepest_band` down to `Regolith`, because the gate was
+/// `band_rank(cave.deepest_band)`. Since `chamber/v2` the gate reads
+/// `depth_reach_m` and classifies it on the delve ladder, so a `deepest_band`
+/// mutation now perturbs nothing the gate consults — it would have left this
+/// test green while proving nothing at all, which is the precise failure mode
+/// the whole file exists to prevent (a mutation proves only what it
+/// perturbs). The violation is the same shape as before: an invariant-breaking
+/// `(band, reach)` pair, built the one sanctioned way, only now broken from
+/// the other side.
 ///
 /// **Scope note, stated rather than silently assumed:** this crate cannot
 /// reach `windows/vessel`'s `delve_at` directly — `vessel` depends on
@@ -244,12 +305,14 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
         .find_map(|c| terrain.cave_at(c).map(|cave| (c, cave)))
         .expect("seed 42 has at least one land cave cell at BuildDepth::Terrain");
 
-    assert_ne!(
-        real_cave.deepest_band,
-        BandKind::Regolith,
-        "cell {cell:?}'s real cave was already Regolith — Task 0 measured this \
-         at 0 of 55,947 caves, so this probe cell no longer demonstrates a \
-         genuine downgrade; pick a different cell/seed"
+    let real_gradient = terrain.geothermal_gradient_at(cell);
+    assert!(
+        rung_at_depth(real_cave.depth_reach_m, real_gradient) > DelveRung::Undercroft,
+        "cell {cell:?}'s real cave already sits on the top rung ({} m at {} K/km), \
+         so a downgrade to {FABRICATED_REACH_M} m is not a genuine mutation; pick \
+         a different cell/seed",
+        real_cave.depth_reach_m,
+        real_gradient.get()
     );
 
     // ┌──────────────────────────────────────────────────────────────────────┐
@@ -262,31 +325,38 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
     // │ something has gone wrong.                                             │
     // └──────────────────────────────────────────────────────────────────────┘
     //
-    // It is the content of the mutation: force `deepest_band` away from the
-    // band the cave's own budget reaches, producing a pair the generator
-    // cannot author. If anything downstream substituted a default budget for
-    // terrain's, the real and fabricated caves would be indistinguishable.
+    // It is the content of the mutation: force `depth_reach_m` away from the
+    // budget terrain authored while leaving `deepest_band` where it was,
+    // producing a pair the generator cannot author. If anything downstream
+    // substituted a default budget for terrain's, the real and fabricated
+    // caves would be indistinguishable.
     let fabricated_cave =
-        Cave::from_parts_unchecked(real_cave.kind, BandKind::Regolith, real_cave.depth_reach_m);
+        Cave::from_parts_unchecked(real_cave.kind, real_cave.deepest_band, FABRICATED_REACH_M);
     assert!(
         !fabricated_cave.band_agrees_with_reach(&terrain.column_at(cell)),
         "the fabrication must actually violate the invariant, or it is not a \
-         mutation — real band {:?}, budget {} m",
+         mutation — real band {:?}, real budget {} m, fabricated budget \
+         {FABRICATED_REACH_M} m",
         real_cave.deepest_band,
         real_cave.depth_reach_m
     );
 
-    let authored_count = chamber_count(seed, &real_cave, cell);
-    let fabricated_count = chamber_count(seed, &fabricated_cave, cell);
-    let authored_deepest = deepest_reached(seed, &real_cave, cell);
-    let fabricated_deepest = deepest_reached(seed, &fabricated_cave, cell);
+    let authored_count = chamber_count(seed, &real_cave, real_gradient, cell);
+    let fabricated_count = chamber_count(seed, &fabricated_cave, real_gradient, cell);
+    let authored_deepest = deepest_reached(seed, &real_cave, real_gradient, cell);
+    let fabricated_deepest = deepest_reached(seed, &fabricated_cave, real_gradient, cell);
 
     println!(
-        "pipeline half (seed {}, cell {}): terrain authored deepest_band = \
-         {:?} ({authored_count} chambers, deepest reached {authored_deepest:?}); \
-         fabricated Regolith downgrade of the SAME cave = {fabricated_count} \
-         chambers, deepest reached {fabricated_deepest:?}",
-        seed.0, cell.0, real_cave.deepest_band
+        "pipeline half (seed {}, cell {}): terrain authored depth_reach_m = \
+         {} m at {} K/km, rung {:?} ({authored_count} chambers, deepest reached \
+         {authored_deepest:?}); fabricated {FABRICATED_REACH_M} m downgrade of \
+         the SAME cave = {fabricated_count} chambers, deepest reached \
+         {fabricated_deepest:?}",
+        seed.0,
+        cell.0,
+        real_cave.depth_reach_m,
+        real_gradient.get(),
+        rung_at_depth(real_cave.depth_reach_m, real_gradient)
     );
 
     assert!(

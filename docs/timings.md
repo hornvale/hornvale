@@ -1216,3 +1216,8 @@ the preamble is the only position that survives both Markdown and the writer.
 | 2026-08-17T03:03:46Z | gate-commit | 26.257 | 52.069 | 13.358 | 2.49 | 0 | 8dbeff4f | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T03:45:33Z | gate-commit | 78.904 | 51.838 | 20.791 | 0.92 | 0 | 34368559 | campaign/the-underworld | MacBookPro | 10 |
 | 2026-08-17T03:57:11Z | gate-commit | 356.923 | 108.235 | 164.853 | 0.77 | 0 | 26fb1fed | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T06:42:35Z | gate-commit | 3857.559 | 202.440 | 264.206 | 0.12 | 0 | 37796ef1 | campaign/the-underworld | MacBookPro | 10 |
+| 2026-08-17T11:39:46Z | gate-commit | 308.026 | 56.019 | 20.056 | 0.25 | 0 | 37796ef1 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T12:08:46Z | gate-commit | 630.172 | 210.931 | 175.901 | 0.61 | 0 | 7bc88170 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T12:41:28Z | gate-commit | 441.057 | 220.603 | 342.501 | 1.28 | 0 | 060bf5d9 | campaign/the-underworld | Greyjoy | 10 |
+| 2026-08-17T13:29:22Z | rebaseline | 54.213 | 216.266 | 11.116 | 4.19 | 0 | eb9921af | campaign/the-underworld | Greyjoy | 10 |

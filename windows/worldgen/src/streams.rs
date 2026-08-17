@@ -32,7 +32,17 @@ hornvale_kernel::stream_labels! {
     /// ChamberAddr — a place in a fixed lattice, never a generation
     /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
     /// the composed key is spelled.
-    CHAMBER = "chamber/v1" => "the underworld chamber derivation";
+    ///
+    /// **Epoch v2 (The Underworld, spec §4.1).** `ChamberAddr.band` used to
+    /// index the stratigraphic ladder (`BandKind`/`Stratum`) and now indexes
+    /// the **delve ladder** (`hornvale_terrain::DelveRung`), whose rungs are
+    /// ΔT thresholds above the surface datum rather than rock units. The
+    /// composed key therefore spells a different set of names for the same
+    /// `(cell, entrance, slot)`, which re-derives every chamber in every
+    /// world — exactly the case `chamber_key`'s own doc said would be "an
+    /// epoch, not a fix to that assertion". `chamber/v1` is retired and must
+    /// never be reused.
+    CHAMBER = "chamber/v2" => "the underworld chamber derivation, keyed on a delve-ladder address";
     /// The volcano-identity derivation (The Repose). Keyed on the edifice's
     /// **source contact cell** — a place in the fixed geosphere, never a
     /// generation ordinal, and never the query cell a caller happened to ask
