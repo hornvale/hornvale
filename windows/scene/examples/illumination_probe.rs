@@ -233,6 +233,38 @@ fn sample_year(
     (min_t, max_t, frozen_count)
 }
 
+/// Sample `temperature_at`/`is_frozen_at` at `cell` on each of `days`
+/// (arbitrary, not necessarily evenly spaced over a whole year — used both
+/// for a full-year resample and for a dense look at one narrow window),
+/// print every sample, and return `(min_c, day_of_min, frozen_count,
+/// first_frozen_day)`.
+fn sample_days(
+    ctx: &LocaleContext,
+    cell: hornvale_kernel::CellId,
+    days: &[f64],
+) -> (f64, f64, usize, Option<f64>) {
+    let mut min_t = f64::INFINITY;
+    let mut min_day = f64::NAN;
+    let mut frozen_count = 0usize;
+    let mut first_frozen_day = None;
+    for &day in days {
+        let temp = ctx.climate().temperature_at(cell, day).get();
+        let frozen = ctx.climate().is_frozen_at(cell, day);
+        println!("  day {day:8.2}  temperature_c {temp:8.3}  is_frozen_at {frozen}");
+        if temp < min_t {
+            min_t = temp;
+            min_day = day;
+        }
+        if frozen {
+            frozen_count += 1;
+            if first_frozen_day.is_none() {
+                first_frozen_day = Some(day);
+            }
+        }
+    }
+    (min_t, min_day, frozen_count, first_frozen_day)
+}
+
 fn main() {
     let world = genesis();
     let ctx = LocaleContext::build(&world).expect("seed 42 builds a locale context");
@@ -284,6 +316,50 @@ fn main() {
     let (marginal_cell, marginal_mean) = nearest_to_freezing_land_cell(&ctx);
     println!("nearest-to-freezing land cell: {marginal_cell:?}, annual mean {marginal_mean:.3} C");
     sample_year(&ctx, marginal_cell, year_length);
+    println!();
+
+    // -----------------------------------------------------------------
+    // §6.1 addendum (post-report): the controller flagged that the 8-day
+    // §6.1c sweep above declines MONOTONICALLY across all 8 samples,
+    // which a periodic function sampled over only 87.5% of its period
+    // does unless the minimum sits in the unsampled 12.5% tail (day
+    // 322.05 .. year_length). Resample at higher resolution, on the SAME
+    // cell, to find out whether the tail goes negative (undersampling)
+    // or the mean/day-path discrepancy is real (a code-level finding).
+    // -----------------------------------------------------------------
+    println!(
+        "--- §6.1 addendum: cell {marginal_cell:?}, 32 evenly spaced days across the full year ---"
+    );
+    let days_32: Vec<f64> = (0..32).map(|i| year_length * (i as f64) / 32.0).collect();
+    let (min_32, min_32_day, frozen_32, first_frozen_32) =
+        sample_days(&ctx, marginal_cell, &days_32);
+    println!(
+        "  min = {min_32:.3} C at day {min_32_day:.2}; frozen {frozen_32}/32; first frozen day = {first_frozen_32:?}"
+    );
+    println!();
+
+    println!(
+        "--- §6.1 addendum: cell {marginal_cell:?}, 16 days densely covering 322 .. {year_length:.2} ---"
+    );
+    let tail_start = 322.0;
+    let days_tail: Vec<f64> = (0..16)
+        .map(|i| tail_start + (year_length - tail_start) * (i as f64) / 15.0)
+        .collect();
+    let (min_tail, min_tail_day, frozen_tail, first_frozen_tail) =
+        sample_days(&ctx, marginal_cell, &days_tail);
+    println!(
+        "  min = {min_tail:.3} C at day {min_tail_day:.2}; frozen {frozen_tail}/16; first frozen day = {first_frozen_tail:?}"
+    );
+    println!();
+
+    println!(
+        "--- §6.1 addendum: GLOBAL max-elevation cell {global_cell:?}, 32 evenly spaced days across the full year ---"
+    );
+    let (min_g32, min_g32_day, frozen_g32, first_frozen_g32) =
+        sample_days(&ctx, global_cell, &days_32);
+    println!(
+        "  min = {min_g32:.3} C at day {min_g32_day:.2}; frozen {frozen_g32}/32; first frozen day = {first_frozen_g32:?}"
+    );
     println!();
 
     // ---------------------------------------------------------------
