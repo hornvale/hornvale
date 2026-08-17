@@ -148,20 +148,43 @@ const GAP: &str = "—";
 ///
 /// The `Cognates` section is skipped: its rows carry one column per daughter,
 /// so its third cell is a proto form rather than one tongue's word.
-/// **No heading recognized at all is an error**, not an empty vector: it
-/// means the `## Heading` shape itself changed under us, and a silent empty
-/// list would propagate as a plausible-looking zero-tongue baseline. A
-/// heading that *is* recognized but whose tongue turns out all-gap is not
-/// this case — that tongue is omitted from the returned list (see above),
-/// and an otherwise-valid document is still `Ok`, possibly with an empty
-/// list, rather than erroring on a document shape that parsed fine. This is
-/// the only `Err` path, and it is the reason this function returns `Result`
-/// at all.
+///
+/// **Two independent shape checks, each catching a different way the
+/// artifact can break, each with its own message.** Neither is "the parse
+/// produced nothing" — that conflated two failure modes in an earlier draft
+/// (see the fix commit) and broke the legitimate all-gap case below.
+/// - **No `## ` heading was ever seen.** The heading syntax itself changed;
+///   nothing downstream can be trusted, so this errors even before any table
+///   is examined.
+/// - **At least one heading was seen, but no table row (inside a non-
+///   `Cognates` section) ever reached the point of being cell-indexed** — a
+///   row counts here the moment it starts with `|` and splits into at least
+///   five `|`-delimited cells, *regardless* of whether cell three then turns
+///   out to be the header text, the `---` separator, a gap, or a real word.
+///   A row missing its leading `|` (or otherwise short) never reaches that
+///   point and does not count, so a document whose headings survived but
+///   whose table syntax broke is caught here rather than silently returning
+///   `Ok(vec![])`.
+///
+/// **What this does NOT catch, and what does instead.** A row that keeps the
+/// `| ... | ... |` shape but carries wrong *content* — a shifted column, a
+/// corrupted word — still counts as a seen row and parses without error.
+/// This function has no way to know a cell's content is wrong, only that its
+/// shape is intact. That is Task 3's job: `the_baseline_roster_is_eighteen_
+/// tongues` catches a roster that gained or lost a tongue, and
+/// `the_baseline_sits_between_chance_and_certainty` catches an accuracy
+/// figure a content-level corruption would produce.
+///
+/// A heading that *is* recognized but whose tongue turns out all-gap hits
+/// neither `Err` path: its rows were seen (so `saw_row` is true), it is
+/// simply omitted from the returned list (see above), and an otherwise-valid
+/// document is still `Ok`, possibly with an empty list.
 /// type-audit: bare-ok(prose: return), bare-ok(identifier-text: md)
 pub fn wordlists_from_dictionary(md: &str) -> Result<Vec<(String, Vec<String>)>, String> {
     let mut out: Vec<(String, Vec<String>)> = Vec::new();
     let mut current: Option<(String, Vec<String>)> = None;
     let mut saw_heading = false;
+    let mut saw_row = false;
     for line in md.lines() {
         if let Some(rest) = line.strip_prefix("## ") {
             saw_heading = true;
@@ -183,6 +206,7 @@ pub fn wordlists_from_dictionary(md: &str) -> Result<Vec<(String, Vec<String>)>,
         if cells.len() < 5 {
             continue;
         }
+        saw_row = true;
         let word = cells[3].trim();
         if word.is_empty() || word == GAP || word == "Word" || word.starts_with("---") {
             continue;
@@ -195,7 +219,12 @@ pub fn wordlists_from_dictionary(md: &str) -> Result<Vec<(String, Vec<String>)>,
         out.push(t);
     }
     if !saw_heading {
-        return Err("no tongues parsed — the dictionary's shape changed".to_string());
+        return Err("no `## ` heading found — the dictionary's heading shape changed".to_string());
+    }
+    if !saw_row {
+        return Err(
+            "headings found but no table rows — the dictionary's table shape changed".to_string(),
+        );
     }
     Ok(out)
 }
@@ -299,6 +328,28 @@ mod tests {
         assert!(
             lists.is_empty(),
             "all-gap tongue must be omitted, got {lists:?}"
+        );
+    }
+
+    /// A heading that survives alongside table rows that do not (every row
+    /// here is missing its leading `|`, so none ever reaches the point of
+    /// being cell-indexed) must error, and the error must name the table —
+    /// not the heading — shape as what broke, distinguishing it from the
+    /// "no heading at all" failure mode. Asserting only `is_err()` would pass
+    /// even if the two `Err` paths were swapped.
+    #[test]
+    fn malformed_table_rows_are_a_distinct_error() {
+        let md = "\
+## Gamma
+
+Concept | Gloss | Word | IPA | Proto | Derivation |
+---|---|---|---|---|---|
+`fire` | flame | Baba | /baba/ | Baba | no change |
+";
+        let err = wordlists_from_dictionary(md).expect_err("malformed rows must error");
+        assert!(
+            err.contains("row"),
+            "error must name the table/row shape as what broke, got: {err}"
         );
     }
 }
