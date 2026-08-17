@@ -380,13 +380,15 @@ much snow it carries) and the per-room `MicroField` **modulates within it**:
 /// weighted `1 - covered`.
 ///
 /// `micro` is what makes two rooms in one canonical cell differ at all —
-/// see the plan's F3. `MicroField` is `windows/locale/src/regime.rs:95`
-/// (`relief`, `aspect`, `wetness`, `openness`, each -1..=+1), reached from
-/// a room as `locale.regime.micro`, so this is all inside this crate.
+/// see the plan's F3. `MicroField` is defined at
+/// `windows/locale/src/regime.rs:95` (`relief`, `aspect`, `wetness`,
+/// `openness`, each -1..=+1); the `regime` module is private but the type
+/// is re-exported at `windows/locale/src/lib.rs:9`, so it is
+/// `crate::MicroField` here and `hornvale_locale::MicroField` from scene.
 pub(crate) fn cover_weights(
     climate: &GeneratedClimate,
     cell: CellId,
-    micro: &crate::regime::MicroField,
+    micro: &crate::MicroField,
     at: WorldTime,
 ) -> Vec<(Reflectance, f64)> {
     // Snow first: it occludes everything under it, so it takes its weight
@@ -433,8 +435,32 @@ pub(crate) fn cover_weights(
     }
 ```
 
-Thread `at: WorldTime` to every caller Task 1 §6.2 found.
-`surrounds_scene_colored_in` already holds one (`surrounds.rs:599`).
+Thread `at: WorldTime` to every caller Task 1 §6.2 found — there is exactly
+one production caller, `surrounds_scene_colored_in`, which already holds an
+`at` (`surrounds.rs:599`).
+
+**Where the `MicroField` comes from at that call site — do NOT call
+`describe` again.** `surrounds_scene_colored_in` is a **second pass** over
+`scene.cells` (`surrounds.rs:609-618`); the `Locale` that carries
+`regime.micro` was built and dropped in `surrounds_scene_in`'s own loop
+(`surrounds.rs:388`). Re-deriving it would rebuild the entire locale —
+including its prose descriptor — once per cell, for every cell in the band.
+
+You do not need to: **`cell.micro` is already populated** on every cell
+(`surrounds.rs:471`, copied from `locale.regime.micro`). Invert that same
+mapping at the call site:
+
+```rust
+let micro = hornvale_locale::MicroField {
+    relief: cell.micro.relief,
+    aspect: cell.micro.aspect,
+    wetness: cell.micro.wetness,
+    openness: cell.micro.openness,
+};
+```
+
+If you find yourself reaching for `ctx.describe(..)` inside the colour loop,
+stop — that is the duplicated-work path this note exists to prevent.
 
 - [ ] **Step 6: Run the tests**
 
