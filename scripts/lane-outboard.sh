@@ -42,6 +42,25 @@ run() {
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
 run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
+# THE QUEUE'S OWN SUITE, which until now was run by NOBODY. `test-sluice.sh`
+# was referenced only from prose — no make target, no set, no phase — so the
+# 151 property tests guarding the merge queue ran only when someone
+# remembered. That is not a theoretical gap: the coalescing defect this line
+# ships alongside (exit 128 read as exit 1) survived because the suite that
+# would have hosted its test was never executed after Task 12 wrote it.
+#
+# It belongs HERE rather than in a heavier set because it is genuinely fast —
+# measured 17.86 s wall on the canonical box, against `outboard`'s own 5.5-20 s
+# — and because the queue is the CAS/append path, where a bug means silent
+# write loss rather than a loud failure. Same reasoning that put `tools/board`
+# on this line.
+#
+# It is safe to run INSIDE a chamber phase despite driving a chamber of its
+# own: every path it touches is overridden to scratch (HV_SLUICE_REPO_ROOT,
+# HV_SLUICE_WORKTREE, HV_CENSUS_CLAIM_PATH, HV_CENSUS_LOCK), so it never takes
+# the real claim the enclosing run is already holding. It SKIPs cleanly on a
+# host without flock, which is why it costs nothing on a Mac.
+run "sluice queue"     bash scripts/test-sluice.sh
 
 if [ "$fails" -ne 0 ]; then
     echo "outboard: $fails suite(s) failed" >&2
