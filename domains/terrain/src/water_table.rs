@@ -21,10 +21,11 @@
 //!
 //! ## The derivation
 //!
-//! One dimensionless competition, scaled once into metres:
+//! Two opposed terms, each with its own metre scale:
 //!
 //! ```text
-//! depth = TABLE_SCALE_M * max(0, transmissivity(porosity) * relief(height) - wetness(drainage))
+//! depth = max(0, DRAWDOWN_SCALE_M * transmissivity(porosity) * relief(height)
+//!                - RECHARGE_RISE_M * wetness(drainage))
 //! ```
 //!
 //! The physical statement is the classical topography-driven view of regional
@@ -41,23 +42,31 @@
 //!   cells upstream, so it is the model's own measure of how much water passes
 //!   through this column.
 //!
-//! ### The one calibration in the whole derivation
+//! ### Two datums fix the two scales, and neither is a knob
 //!
-//! Both terms run over `[0, 1)`-ish ranges and neither carries a scale of its
-//! own, so the model's entire calibration is the statement that they are
-//! **comparable at par**: recharge's maximum is worth exactly as much as
-//! drawdown's unit. That is not arbitrary, and it is what the constants'
-//! half-points are chosen to express. Take the reference column — mean land
-//! elevation ([`RELIEF_HALF_M`], relief = 0.5), median rock (transmissivity =
-//! 1), carrying exactly [`crate::RIVER_MIN_DRAINAGE`] (wetness = 0.5). The two
-//! terms cancel and the table sits at the ground.
+//! The dimensionless terms carry no metres, so exactly two numbers have to come
+//! from outside. Each is solved from one observation, and each solve is a test
+//! rather than a comment — move a shape constant and the test names the new
+//! root.
 //!
-//! **Which is the definition of a river.** `crate::water::classify` already
-//! declares that accumulation to be where a perennial watercourse appears, and
-//! a perennial watercourse *is* the water table intersecting the surface. So
-//! the par is pinned to a claim the model had already committed to, in a
-//! constant this module reads rather than restates, rather than to a knob
-//! turned until the output looked right.
+//! **The par datum → [`RECHARGE_RISE_M`].** A column at Earth's mean land
+//! elevation, in median rock, carrying exactly [`crate::RIVER_MIN_DRAINAGE`],
+//! has its table at the ground. `crate::water::classify` already declares that
+//! accumulation to be where a perennial watercourse appears, and a perennial
+//! watercourse *is* the water table intersecting the surface — so the par is
+//! pinned to a claim the model had already committed to.
+//!
+//! **The vadose datum → [`DRAWDOWN_SCALE_M`].** An Arabika-like column — 2300 m
+//! above base level, high-permeability karst, on a recharge plateau — has a
+//! ~2.2 km vadose zone. Krubera-Voronja (2197 m) and Veryovkina (2212 m) are
+//! air-filled almost to the bottom, with sumps only at depth.
+//!
+//! Spec §4.2.1 added the second one. The first landing had only the par datum
+//! and inferred the depth scale from a global *median* water-table survey,
+//! which is a statement about the ordinary column and says nothing about the
+//! extraordinary one; a karst massif is exactly the extraordinary column, and
+//! it is the only kind a cave campaign cares about. See [`RELIEF_HALF_M`] for
+//! the shape defect that went with it.
 //!
 //! ## Why the floor at zero is physics and not a rail
 //!
@@ -78,39 +87,26 @@
 //! measures it, along with the rest of the distribution's shape, and records
 //! the reading in its own module doc.
 //!
-//! **Measured, seeds 42 / 7 / 1234.** H3 holds: 29.9% / 45.5% / 42.5% of
-//! cave-bearing columns are wholly phreatic, against bounds of 5% and 95%.
-//! Above the floor the distribution is genuinely spread rather than lumpy —
-//! 491–586 distinct values at 0.1 m resolution over 874–1681 columns, and the
-//! fattest *non-zero* value holds 3.7% of a seed at worst, against the 23.1%
-//! one reach value holds in [`crate::cave_depth_reach_m`]'s output.
-//!
-//! **The finding that is not H3, and matters more downstream:** the walkable
-//! share of a cave column has a median of 0.2–4.9%, and the table never
-//! exceeds ~500 m while `DelveRung::Underdeep` begins near 1 km. Every
-//! `Underdeep` and `Sunless` chamber in all three worlds is therefore below
-//! the table. Spec §4.2 makes that a *missing edge* rather than an
-//! uninhabitable place, so it is a statement about reaching the deep rather
-//! than about living there — but it is a whole-population statement and the
-//! campaign should decide about it deliberately. See [`TABLE_SCALE_M`].
+//! **Measured** — the reading lives in the probe's own module doc rather than
+//! here, because it moves whenever the calibration does and a second copy would
+//! go stale. What is stable enough to state: H3 holds on all three seeds, and
+//! above the floor the distribution is a spread rather than a row of spikes.
 //!
 //! ## What each constant does and does not control
 //!
-//! [`TABLE_SCALE_M`] is the only constant carrying metres, so it cannot move
-//! **H3's statistic**: the sign of `drawdown - recharge` is independent of it,
-//! so the set of drowned columns is the same at any value. Only the three
-//! dimensionless shapes can move that fraction, and each of their scales is
-//! pinned to a datum outside this campaign: an existing published constant
-//! ([`crate::RIVER_MIN_DRAINAGE`]), Earth's mean land elevation, and the
-//! log-spacing of hydraulic conductivity across rock types.
+//! **Neither metre scale decides H3 — their ratio does**, and that ratio is
+//! fixed by the par datum rather than chosen.
+//! `the_par_ratio_and_not_the_magnitudes_decides_who_drowns` holds it. The
+//! first landing made the stronger claim that its single scale could not move
+//! H3 at all; with two scales that claim is no longer available, and it is
+//! withdrawn here rather than left standing.
 //!
-//! **That is not the same as "it changes nothing else."** It sets how deep the
-//! table gets, and therefore which delve rungs can ever be dry — see its own
-//! doc, which carries the measured consequence. And [`RELIEF_SOFT_M`], which
-//! looks like a pure smoothing detail, moves the drowned share by 10–20 points
-//! across a 20× sweep, because a sixth of all cave columns sit at *exactly*
-//! sea level; its doc carries that sweep. Both of those were claims this
-//! module made loosely in an earlier draft and now states from measurement.
+//! [`DRAWDOWN_SCALE_M`] sets the absolute depth of every table, and therefore
+//! which delve rungs can ever be dry. [`RELIEF_SOFT_M`], which looks like a
+//! pure smoothing detail, moved the drowned share by 10–20 points across a 20×
+//! sweep, because a sixth of all cave columns sit at *exactly* sea level; its
+//! doc carries that sweep. Both were claims this module made loosely in an
+//! earlier draft and now states from measurement.
 //!
 //! ## Monotonicity, stated exactly
 //!
@@ -123,35 +119,88 @@
 use crate::water::RIVER_MIN_DRAINAGE;
 use hornvale_kernel::math;
 
-/// The one constant in metres: the depth to water beneath a column that stands
-/// at [`RELIEF_HALF_M`] above sea level, in rock of median transmissivity, with
-/// no upslope inflow at all, is half of this.
+// ---------------------------------------------------------------------------
+// The calibration DATUMS. These five are observations, not shipped parameters:
+// the numbers this module actually applies are the two metre scales below, and
+// each was solved from these. They are `#[cfg(test)]` because the solve is a
+// test — see `the_vadose_datum_is_reproduced` and
+// `the_reference_river_column_sits_exactly_at_the_ground` — and they live here,
+// beside the values they produced, rather than inside the test block, so a
+// reader meets the provenance before the result.
+// ---------------------------------------------------------------------------
+
+/// Earth's mean land elevation, ~840 m rounded to 800 — a hypsometric datum,
+/// and it is used **only** as the elevation coordinate of the river par datum
+/// (see the module doc). It is *not* the relief term's half-saturation point;
+/// conflating those two was the defect [`RELIEF_HALF_M`] records.
+#[cfg(test)]
+const MEAN_LAND_ELEVATION_M: f64 = 800.0;
+
+/// The vadose datum's height above base level: the Arabika Massif stands
+/// ~2300 m above the base level its karst drains to.
+#[cfg(test)]
+const ARABIKA_RELIEF_M: f64 = 2300.0;
+
+/// The vadose datum's measured thickness. Krubera-Voronja (2197 m) and
+/// Veryovkina (2212 m) are air-filled almost to the bottom, with sumps only at
+/// depth, so the Arabika vadose zone is ~2.2 km thick. **An observation, not a
+/// target chosen to make anything downstream come out.**
+#[cfg(test)]
+const ARABIKA_VADOSE_M: f64 = 2200.0;
+
+/// The porosity coordinate the vadose datum is instantiated at. **The datum is
+/// Earth's; this number is the model's**, and the distinction is deliberate:
+/// Arabika is high-permeability karst limestone, and "high-permeability karst"
+/// in this model means the top of the porosity axis, which
+/// `underworld_water_table_probe` measures at 0.819 over the three seeds. Using
+/// a literal Earth porosity would calibrate against a rock the model cannot
+/// produce.
+#[cfg(test)]
+const ARABIKA_POROSITY: f64 = 0.819;
+
+/// The drainage coordinate the vadose datum is instantiated at. A massif's
+/// entrance plateau is a *recharge* area by definition — water enters there and
+/// leaves underground — so it carries essentially no upslope contributing area.
+/// `1.0` is the smallest accumulation a land cell can have (itself).
+#[cfg(test)]
+const ARABIKA_DRAINAGE: f64 = 1.0;
+
+/// Metres of drawdown at unit dimensionless drawdown — **solved from the
+/// Arabika datum**, not authored, and pinned by
+/// `the_vadose_datum_is_reproduced`.
 ///
-/// **The magnitude is authored, and it is the only authored magnitude here.**
-/// Its anchor is the global water-table survey of Fan, Li & Miguez-Macho
-/// (2013): humid lowlands sit within a few metres of the surface, while arid
-/// uplands and continental interiors run from tens of metres to a few hundred.
-/// 200 m puts the dry mid-elevation reference column at 100 m and leaves the
-/// upper tail — high, porous, unwatered rock — in the low hundreds, which is
-/// the band that survey reports and the band the delve ladder's habitable rungs
-/// occupy.
+/// The solve: require `water_table_depth_m(ARABIKA_DRAINAGE, ARABIKA_POROSITY,
+/// ARABIKA_RELIEF_M) == ARABIKA_VADOSE_M`. Everything else in that equation is
+/// already fixed by the shape constants, so it has exactly one root, and this
+/// is it. Change any shape constant and the test that pins this will tell you
+/// the new root rather than letting it drift.
 ///
-/// **It cannot move H3**, and there is a test for that
-/// (`the_metre_scale_never_decides_whether_a_column_is_drowned`). Every term it
-/// multiplies is dimensionless and the zero-crossing is a comparison between
-/// two of them, so this constant scales the distribution without changing which
-/// columns are drowned.
+/// **What it decides, since the previous single scale's doc had to be corrected
+/// on exactly this point:** the absolute depth of every table, and therefore
+/// which delve rungs can ever be dry. It cannot decide H3 — that is
+/// [`RECHARGE_RISE_M`]'s *ratio* to this, not either magnitude — and
+/// `the_par_ratio_and_not_the_magnitudes_decides_who_drowns` holds that.
+const DRAWDOWN_SCALE_M: f64 = 2482.9;
+
+/// Metres the table rises at full upslope inflow — **solved from the river par
+/// datum**, given [`DRAWDOWN_SCALE_M`], and pinned by
+/// `the_reference_river_column_sits_exactly_at_the_ground`.
 ///
-/// **What it DOES decide, so that "magnitude only" is not read as
-/// "harmless":** the deepest the table ever gets, and therefore which rungs of
-/// the delve ladder can ever be dry. At this value the probe measures a maximum
-/// table depth of **422–501 m** across the three seeds, while
-/// `DelveRung::Underdeep` begins near 1 km — so **no `Underdeep` or `Sunless`
-/// chamber is vadose in any measured world** (0.0% on every seed). That is a
-/// real consequence of an Earth-calibrated water table meeting a
-/// kilometre-scale habitation ladder, not an accident of arithmetic, and it is
-/// recorded here rather than left for a downstream campaign to discover.
-const TABLE_SCALE_M: f64 = 200.0;
+/// The solve: require a column at `MEAN_LAND_ELEVATION_M`, in median rock,
+/// carrying exactly [`crate::RIVER_MIN_DRAINAGE`], to have its table at the
+/// ground — which is what a perennial river *is*. That fixes
+/// `RECHARGE_RISE_M = DRAWDOWN_SCALE_M * relief(MEAN_LAND_ELEVATION_M) / 0.5`.
+///
+/// **Why this is a second constant now, when the first landing had one.** The
+/// two terms were collapsed onto a single scale because `RELIEF_HALF_M` was
+/// simultaneously the relief term's half-point *and* the par datum's elevation,
+/// which made `relief(par) = 0.5` exactly and the two scales equal. Correcting
+/// the half-point on karst grounds separates those roles, and the scales come
+/// apart with them. That is a consequence of the correction rather than a knob
+/// added for room: how deep a massif can drain and how far inflow can lift a
+/// table are different physical quantities, and the collapse only ever looked
+/// elegant because one constant was doing two jobs.
+const RECHARGE_RISE_M: f64 = 411.7;
 
 /// Ratio between the transmissivity of the most and least porous rock the
 /// `porosity` axis describes — the span of `100 ^ (porosity - 0.5)`, so the
@@ -179,12 +228,32 @@ const TABLE_SCALE_M: f64 = 200.0;
 /// does not have.
 const TRANSMISSIVITY_SPAN: f64 = 100.0;
 
-/// Height above sea level (m) at which the relief term reaches half its
-/// maximum. **Earth's mean land elevation, ~840 m, rounded to 800** — a datum,
-/// not a fit. It is the elevation at which "high ground" stops being a useful
-/// description, and using it means the term is near its midpoint over the bulk
-/// of any world's land rather than saturated at one end.
-const RELIEF_HALF_M: f64 = 800.0;
+/// Height above base level (m) at which base-level control on vadose thickness
+/// half-saturates. **Earth's highest land, 8848 m** — the point past which no
+/// terrestrial column exists to be described, so the term is effectively
+/// proportional across all real relief and saturates only at the top of the
+/// world.
+///
+/// **This was 800 m, and 800 m was a category error** (spec §4.2.1, clause 1).
+/// That figure is Earth's *mean land elevation* — a hypsometric datum, a
+/// statement about where land sits — and it was used as the half-point of a
+/// *vadose-thickness* term, which is a statement about how thick an unsaturated
+/// zone gets. Nothing licensed the substitution, and karst directly contradicts
+/// it: vadose thickness tracks height above local base level with no observed
+/// plateau up to ~2.2 km. Krubera-Voronja (2197 m) and Veryovkina (2212 m) are
+/// air-filled almost to the bottom because the Arabika Massif stands ~2300 m
+/// above its base level. A half-point at 800 m asserts that base-level control
+/// has already half-expired at the height of an ordinary hill, so a 2300 m
+/// massif drains only 1.48× as deep as an 800 m upland where the observations
+/// say ~2.8×. The term saturated exactly across the range where deep vadose
+/// caves live, which is the one range it had to resolve.
+///
+/// **The test the value is chosen against, stated so it can be re-run:** across
+/// the karst range a doubling of height above base level must still roughly
+/// double the vadose thickness. At `h = 1150 → 2300` this value gives a ratio
+/// of **1.79** against the proportional ideal of 2.0; at 800 m it gave 1.32.
+/// `the_relief_term_stays_proportional_across_the_karst_range` holds it.
+const RELIEF_HALF_M: f64 = 8848.0;
 
 /// The scale (m) over which the relief term is smoothed through sea level.
 ///
@@ -208,11 +277,13 @@ const RELIEF_HALF_M: f64 = 800.0;
 ///       200 m        19.6%    36.5%     32.9%
 /// ```
 ///
-/// H3 holds across that whole span, which is the claim worth making; the
+/// H3 held across that whole span, which is the claim worth making; the
 /// *value* of the statistic is not robust to it, which is the claim that would
-/// have been wrong. 50 m is kept — it is 1/16 of [`RELIEF_HALF_M`], so it
+/// have been wrong. 50 m is kept — it is small against [`RELIEF_HALF_M`], so it
 /// perturbs the term only near sea level — and the sweep is recorded rather
-/// than used to choose.
+/// than used to choose. **The sweep predates the §4.2.1 recalibration**; the
+/// shares it lists are the pre-correction ones and it is kept as the record of
+/// why this constant is not treated as negligible, not as a current reading.
 const RELIEF_SOFT_M: f64 = 50.0;
 
 /// Flow accumulation at which the recharge term reaches half its maximum.
@@ -278,9 +349,9 @@ fn wetness(drainage: f64) -> f64 {
 ///
 /// type-audit: bare-ok(count: drainage), bare-ok(ratio: porosity), bare-ok(diagnostic-value: height_asl_m), bare-ok(diagnostic-value: return)
 pub fn water_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f64 {
-    let drawdown = transmissivity(porosity) * relief(height_asl_m);
-    let net = drawdown - wetness(drainage);
-    TABLE_SCALE_M * net.max(0.0)
+    let drawdown = DRAWDOWN_SCALE_M * transmissivity(porosity) * relief(height_asl_m);
+    let recharge = RECHARGE_RISE_M * wetness(drainage);
+    (drawdown - recharge).max(0.0)
 }
 
 /// Whether a point at `depth_m` below the surface lies in the flooded
@@ -429,36 +500,87 @@ mod tests {
         assert!(!is_phreatic(d / 2.0, d), "half the window should be vadose");
     }
 
-    /// The module doc's one calibration claim, pinned rather than asserted in
-    /// prose: the reference column — mean land elevation, median rock, carrying
-    /// exactly a river's worth of flow — has its table at the ground. Held to a
-    /// millimetre rather than to `0.0` because the softplus makes `relief`
-    /// approach one half from above rather than reach it.
+    /// **The vadose datum** (spec §4.2.1, clause 1). An Arabika-like column —
+    /// 2300 m above base level, high-permeability karst, on a recharge plateau
+    /// — must have a ~2.2 km vadose zone, because Krubera-Voronja and
+    /// Veryovkina are air-filled almost to the bottom.
+    ///
+    /// This test *is* the solve for [`DRAWDOWN_SCALE_M`]: the equation has one
+    /// root and the failure message names it, so a change to any shape constant
+    /// reports the new root rather than silently drifting off the datum.
     #[test]
-    fn the_reference_river_column_sits_exactly_at_the_ground() {
-        let at_par = water_table_depth_m(RIVER_MIN_DRAINAGE, 0.5, RELIEF_HALF_M);
-        assert!(at_par < 0.001, "reference column gave {at_par} m");
+    fn the_vadose_datum_is_reproduced() {
+        let got = water_table_depth_m(ARABIKA_DRAINAGE, ARABIKA_POROSITY, ARABIKA_RELIEF_M);
+        let error = (got - ARABIKA_VADOSE_M).abs() / ARABIKA_VADOSE_M;
+        // Re-solve for the scale that would land exactly on the datum, so a
+        // reader who moves a shape constant is told the answer.
+        let unit = transmissivity(ARABIKA_POROSITY) * relief(ARABIKA_RELIEF_M);
+        let recharge = RECHARGE_RISE_M * wetness(ARABIKA_DRAINAGE);
+        let solved = (ARABIKA_VADOSE_M + recharge) / unit;
         assert!(
-            water_table_depth_m(RIVER_MIN_DRAINAGE * 1.01, 0.5, RELIEF_HALF_M) == 0.0,
-            "a hair more flow should drown the reference column outright"
-        );
-        assert!(
-            water_table_depth_m(RIVER_MIN_DRAINAGE * 0.99, 0.5, RELIEF_HALF_M) > 0.001,
-            "a hair less flow should leave a walkable window"
+            error < 0.005,
+            "Arabika datum: wanted {ARABIKA_VADOSE_M} m, got {got} m \
+             ({:.2}% off). DRAWDOWN_SCALE_M should be {solved:.1}",
+            100.0 * error
         );
     }
 
-    /// The scale constant sets the magnitude and cannot move which columns are
-    /// drowned — the claim the module doc makes about H3's independence from
-    /// [`TABLE_SCALE_M`]. Checked by re-deriving the sign of the competition
-    /// without the constant and requiring it to agree everywhere.
+    /// The shape requirement [`RELIEF_HALF_M`] is chosen against, argued from
+    /// karst alone: vadose thickness tracks height above base level with no
+    /// observed plateau below ~2.2 km, so across the karst range a doubling of
+    /// relief must still roughly double the term.
+    ///
+    /// The floor is 1.75 against a proportional ideal of 2.0. The retired 800 m
+    /// half-point scored 1.32 and would fail this.
     #[test]
-    fn the_metre_scale_never_decides_whether_a_column_is_drowned() {
+    fn the_relief_term_stays_proportional_across_the_karst_range() {
+        let ratio = relief(ARABIKA_RELIEF_M) / relief(ARABIKA_RELIEF_M / 2.0);
+        assert!(
+            (1.75..=2.0).contains(&ratio),
+            "doubling relief multiplied the term by {ratio}, not ~2"
+        );
+    }
+
+    /// **The par datum**, preserved through the recalibration: the reference
+    /// column — mean land elevation, median rock, carrying exactly a river's
+    /// worth of flow — has its table at the ground, which is what a perennial
+    /// river is. This test is the solve for [`RECHARGE_RISE_M`] the same way
+    /// the one above solves for [`DRAWDOWN_SCALE_M`].
+    #[test]
+    fn the_reference_river_column_sits_exactly_at_the_ground() {
+        let at_par = water_table_depth_m(RIVER_MIN_DRAINAGE, 0.5, MEAN_LAND_ELEVATION_M);
+        let solved = DRAWDOWN_SCALE_M * relief(MEAN_LAND_ELEVATION_M) / wetness(RIVER_MIN_DRAINAGE);
+        assert!(
+            at_par < 1.0,
+            "reference column gave {at_par} m; RECHARGE_RISE_M should be {solved:.1}"
+        );
+        assert!(
+            water_table_depth_m(RIVER_MIN_DRAINAGE * 1.05, 0.5, MEAN_LAND_ELEVATION_M) == 0.0,
+            "a little more flow should drown the reference column outright"
+        );
+        assert!(
+            water_table_depth_m(RIVER_MIN_DRAINAGE * 0.9, 0.5, MEAN_LAND_ELEVATION_M) > 1.0,
+            "a little less flow should leave a walkable window"
+        );
+    }
+
+    /// Neither magnitude decides who drowns — only their **ratio** does, and
+    /// that ratio is fixed by the par datum rather than chosen. Checked by
+    /// re-deriving the sign of the competition with both scales divided out and
+    /// requiring it to agree everywhere.
+    ///
+    /// This replaces the first landing's stronger claim that the single scale
+    /// could not move H3 at all. With two scales that claim is no longer
+    /// available, and pretending otherwise would be the kind of stale doc this
+    /// module has already had to correct twice.
+    #[test]
+    fn the_par_ratio_and_not_the_magnitudes_decides_who_drowns() {
+        let par = RECHARGE_RISE_M / DRAWDOWN_SCALE_M;
         for &q in &[0.0, 1.0, 15.0, 200.0] {
             for &p in &[0.0, 0.3, 0.46, 0.8] {
                 for &h in &[-100.0, 0.0, 300.0, 2000.0] {
                     let drowned = water_table_depth_m(q, p, h) == 0.0;
-                    let dimensionless = transmissivity(p) * relief(h) - wetness(q) <= 0.0;
+                    let dimensionless = transmissivity(p) * relief(h) - par * wetness(q) <= 0.0;
                     assert_eq!(drowned, dimensionless, "disagreed at {q}/{p}/{h}");
                 }
             }
