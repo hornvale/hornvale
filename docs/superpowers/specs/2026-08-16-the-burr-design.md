@@ -314,9 +314,11 @@ accuracy** — given a word, how reliably can the tongue that produced it be
 identified. Deterministic, seeded, Lab-resident.
 
 - **P1 (baseline, descriptive).** Assignment accuracy today is low relative to
-  an eighteen-way chance floor of 5.6%. The exact figure is Stage 1's output
-  and is *not* predicted here — predicting a number this spec could instead
-  simply measure would be theatre.
+  an eighteen-way chance floor of 5.6%. The exact figure was Stage 1's output
+  and was *not* predicted here — predicting a number this spec could instead
+  simply measure would have been theatre. Stage 1 measured it: **0.7201897018970189**
+  (72.02%), on 2026-08-16, over the committed dictionary at commit
+  `0e7d5757`.
 - **P2 (the campaign's central claim).** Accuracy rises significantly under
   the four bundles, and the rise is concentrated in the three non-control
   families. If accuracy rises uniformly *including* `concatenative`, the
