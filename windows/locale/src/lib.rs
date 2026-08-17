@@ -12,6 +12,8 @@ mod substrate;
 
 mod micro;
 
+mod surface;
+
 mod grammar;
 
 mod budget;
@@ -596,18 +598,40 @@ impl LocaleContext {
     /// would name a rock that is not there. Sharing that one rule is what
     /// makes the colour and the prose agree about which ground a room
     /// stands on.
+    ///
+    /// `micro` is the room's own sub-cell [`MicroField`] (`describe`'s
+    /// `Locale::regime.micro` on a `Locale` already built for this address,
+    /// or [`crate::surface`]'s doc for why a *second* `describe` call is the
+    /// wrong way to get one) and `at` is when to read the seasonal cover
+    /// term at (spec §3.2) — see [`Self::reflectance_mixture_at`], which
+    /// this integrates.
     pub fn reflectance_at(
         &self,
         addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
     ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
-        Ok(self.reflectance_mixture_at(addr)?.integrate())
+        Ok(self.reflectance_mixture_at(addr, micro, at)?.integrate())
     }
 
-    /// The surface mixture at `addr`, un-integrated, so a caller can reach
-    /// the components. [`LocaleContext::reflectance_at`] is this, integrated.
+    /// The surface mixture at `addr` on `at`, un-integrated, so a caller can
+    /// reach the components. [`LocaleContext::reflectance_at`] is this,
+    /// integrated.
+    ///
+    /// Composes the mineral mixture [`hornvale_terrain::lithology::
+    /// reflectance`] already produced with a surface cover layer
+    /// ([`surface::cover_weights`]) weighted by the covered fraction, per
+    /// spec §3.2: `mineral * (1 - covered) + cover`, integrated once. Takes
+    /// `micro` from the caller rather than re-deriving it (which would mean
+    /// either re-running the whole `describe`/`grammar::render` pipeline, or
+    /// duplicating the wetness-grounding call into `hornvale_terrain::
+    /// branch::rill_reading` a second time for the same room) — see
+    /// [`surface`]'s module doc.
     pub fn reflectance_mixture_at(
         &self,
         addr: &RoomAddr,
+        micro: &MicroField,
+        at: WorldTime,
     ) -> Result<hornvale_kernel::color::Mixture, LocaleError> {
         let geo = self.climate.geosphere();
         let weights = addr
@@ -616,7 +640,22 @@ impl LocaleContext {
         let cell = dominant_corner(&weights).0;
         let buffer = self.terrain.material_at(cell);
         let rock = self.terrain.rock_at(cell);
-        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock))
+        let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
+        let cover = surface::cover_weights(&self.climate, cell, micro, at);
+        let covered: f64 = cover.iter().map(|(_, w)| w).sum();
+        let mut components: Vec<hornvale_kernel::color::Reflectance> =
+            mineral.components().to_vec();
+        let mut mix_weights: Vec<f64> = mineral
+            .weights()
+            .iter()
+            .map(|w| w * (1.0 - covered))
+            .collect();
+        for (r, w) in cover {
+            components.push(r);
+            mix_weights.push(w);
+        }
+        hornvale_kernel::color::Mixture::new(components, mix_weights)
+            .map_err(|e| LocaleError::Build(e.to_string()))
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water
@@ -1805,12 +1844,29 @@ mod tests {
     /// rather than one fixed address: a single room's three corner weights
     /// can coincidentally agree across categories even when the underlying
     /// wiring has split, so one address is not enough to trust a pass.
+    ///
+    /// **The final block is narrowed, not deleted, by the illumination
+    /// campaign's Task 2b.** `reflectance_at`/`reflectance_mixture_at` now
+    /// compose a surface cover layer above the mineral mixture
+    /// (`surface::cover_weights`), so `reflectance_at(addr)` no longer
+    /// equals the bare mineral reflectance of the dominant cell whenever
+    /// anything covers it — legitimately: a forested cell reads green now,
+    /// not granite-grey, and that is the whole point of this campaign. The
+    /// exact byte-identity assertion this test used to make (colour layer's
+    /// rock == recomputed mineral reflectance) still holds, but only where
+    /// `covered == 0.0` — an uncovered cell (open water, unfrozen, since
+    /// `on_land` gates vegetation/sand-silt and freezing gates snow) has no
+    /// cover layer to disturb it. `bare_checked` is the positive control
+    /// that this narrowed subset is not empty (see the memory note "an
+    /// empty diff needs a positive control" — a vacuously-true narrowed
+    /// assertion would be worse than no assertion at all).
     #[test]
     fn describe_and_reflectance_agree_on_one_dominant_cell() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let geo = ctx.climate.geosphere();
         let mut checked = 0;
+        let mut bare_checked = 0;
         for i in 0..200u32 {
             let t = i as f64;
             let dir = [
@@ -1841,20 +1897,38 @@ mod tests {
                 "substrate must name the dominant corner at {addr:?}"
             );
 
-            let reflectance = ctx.reflectance_at(&addr).unwrap();
+            let micro = locale.regime.micro;
+            let reflectance = ctx
+                .reflectance_at(&addr, &micro, WorldTime::GENESIS)
+                .unwrap();
             let buffer = ctx.terrain.material_at(expected_cell);
             let rock = ctx.terrain.rock_at(expected_cell);
             let expected_reflectance =
                 hornvale_terrain::lithology::reflectance(&buffer, rock).integrate();
-            assert_eq!(
-                reflectance, expected_reflectance,
-                "the colour layer's rock must name the dominant corner at {addr:?}"
+            let cover = crate::surface::cover_weights(
+                &ctx.climate,
+                expected_cell,
+                &micro,
+                WorldTime::GENESIS,
             );
+            let covered: f64 = cover.iter().map(|(_, w)| w).sum();
+            if covered == 0.0 {
+                assert_eq!(
+                    reflectance, expected_reflectance,
+                    "the colour layer's rock must name the dominant corner at {addr:?} \
+                     (uncovered — bare mineral ground)"
+                );
+                bare_checked += 1;
+            }
             checked += 1;
         }
         assert!(
             checked > 50,
             "too few addresses resolved on the grid to trust this test"
+        );
+        assert!(
+            bare_checked > 0,
+            "no uncovered address was sampled — the covered == 0.0 narrowing would be vacuous"
         );
     }
 

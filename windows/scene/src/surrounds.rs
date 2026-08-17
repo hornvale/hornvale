@@ -611,8 +611,24 @@ pub fn surrounds_scene_colored_in(
         let addr = hornvale_kernel::RoomId(cell.room)
             .unpack()
             .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?;
+        // `cell.micro` was already computed once, for every cell, in the
+        // first pass this scene came from (`surrounds_scene_in`'s own build
+        // loop, which drops the `Locale` it came from after copying this
+        // struct-for-struct). Re-deriving it here via `ctx.describe(&addr,
+        // at)` would rebuild an entire `Locale` — prose descriptor,
+        // strangeness placement, and all — once per cell just to read four
+        // floats already sitting on `cell`. Inverting the copy back into
+        // `hornvale_locale::MicroField` is the cheap, correct alternative:
+        // both are the same four axes in the same order, so this is a
+        // straight field-for-field re-tag, not a re-derivation.
+        let micro = hornvale_locale::MicroField {
+            relief: cell.micro.relief,
+            aspect: cell.micro.aspect,
+            wetness: cell.micro.wetness,
+            openness: cell.micro.openness,
+        };
         let reflectance = ctx
-            .reflectance_at(&addr)
+            .reflectance_at(&addr, &micro, at)
             .map_err(|e| SceneError::Build(e.to_string()))?;
         cell.color = observer.to_srgb(&observer.sense(&reflectance, light));
     }
@@ -1073,25 +1089,38 @@ mod tests {
         assert_eq!(plain, stripped);
     }
 
-    /// **A colour chart at walking depth is one flat wash, and that is the
-    /// honest answer.**
+    /// **A colour chart at walking depth is now a HANDFUL of distinct
+    /// colours, not one flat wash — that flatness was the H1 defect the
+    /// illumination campaign's Task 2b exists to fix, and this test's own
+    /// name and assertion predate that campaign.**
     ///
-    /// Rock class is read from the room's dominant *canonical-grid* corner
-    /// (`LocaleContext::reflectance_at`), and the vessel walks at
-    /// `globe_level + 6` — rooms roughly 64× finer per axis than a globe
-    /// cell. A radius-8 neighbourhood of those rooms (109 cells) lies inside
-    /// a single grid cell, so it reports one rock, one biome, one water
-    /// kind, one relief band — and now one colour. Measured on seed 42: at
-    /// `globe_level + 6` every radius from 2 to 8 yields exactly one
-    /// distinct sRGB value (`#828074`), while at `globe_level` a radius-4
-    /// chart yields six.
+    /// Before Task 2b, rock class was the *only* colour input, read from the
+    /// room's dominant *canonical-grid* corner
+    /// (`LocaleContext::reflectance_at`), so a radius-8 walking-depth
+    /// neighbourhood (109 cells, `globe_level + 6` — rooms roughly 64× finer
+    /// per axis than a globe cell) reported one rock, one biome, one water
+    /// kind, one relief band, and one colour: colour was exactly as
+    /// spatially resolved as every OTHER categorical field the chart
+    /// carried. Task 2b composes a surface-cover layer above the mineral
+    /// mixture, weighted in part by each room's own [`Micro`] field — which,
+    /// unlike rock class, biome, water kind or relief, is already emitted
+    /// at ROOM grain (this module's own doc on [`SurroundsCell::micro`]) —
+    /// so colour is now deliberately finer-grained than the categorical
+    /// fields it used to match exactly. `walk_biomes == 1` still holds:
+    /// nothing about *categorical* resolution moved, only colour's.
     ///
-    /// This test exists so a consumer cannot mistake the flatness for a bug
-    /// in the colour layer. The colour is exactly as spatially resolved as
-    /// every categorical field the chart already carried; a finer colour
-    /// would need a finer lithology, not a different builder.
+    /// The colour count is bounded, not unbounded, by design (spec §3's H1
+    /// ceiling: a band must not read as address noise, "31 cells, 31
+    /// colours"): `surface::cover_weights` bands the micro-field's three
+    /// perturbing axes (aspect, openness, wetness) into three tiers each
+    /// (`surface.rs::tier3`), so one climate regime can produce at most a
+    /// handful of distinguishable mixtures, never a continuum. Measured on
+    /// this world: a radius-8 walking-depth chart around the flagship now
+    /// draws **3** distinct colours (was 1 pre-Task-2b); a radius-4
+    /// grid-level chart still draws several more, unaffected (colour there
+    /// was already varying with climate/lithology, not micro).
     #[test]
-    fn the_color_is_no_finer_grained_than_the_chart_already_was() {
+    fn the_color_now_varies_within_one_grid_cell_via_the_micro_field() {
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let gl = ctx.globe_level();
@@ -1117,12 +1146,26 @@ mod tests {
             (colors.len(), biomes.len())
         };
 
-        // At walking depth the whole neighbourhood is one grid cell.
+        // At walking depth the whole neighbourhood is one grid cell — still
+        // true of every CATEGORICAL field, but no longer true of colour.
         let (walk_colors, walk_biomes) = distinct(gl + 6, 8);
-        assert_eq!(
-            walk_colors, 1,
-            "a radius-8 walking-depth chart drew {walk_colors} colours; the \
-             fixture is one flat wash"
+        assert!(
+            walk_colors > 1,
+            "a radius-8 walking-depth chart drew only {walk_colors} colour(s); \
+             the micro-field modulation (surface::cover_weights) is absent or \
+             is not reaching the colour layer"
+        );
+        // The tiered design (`surface.rs::tier3`) bounds one climate regime
+        // to at most 3 (aspect) x 3 (openness) x 3 (wetness) = 27 distinguishable
+        // mixtures; 20 is a generous ceiling under that worst case, chosen so
+        // this test catches "painting raw address noise" (H1's ceiling: a
+        // colour per cell) without being brittle to which of those 27
+        // combinations survive 8-bit sRGB rounding on this particular world.
+        assert!(
+            walk_colors <= 20,
+            "a radius-8 walking-depth chart drew {walk_colors} colours across \
+             one climate cell — that reads as address noise (H1's ceiling), \
+             not a bounded regime perturbation"
         );
         assert_eq!(
             walk_biomes, 1,
