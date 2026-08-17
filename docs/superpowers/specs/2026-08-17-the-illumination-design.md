@@ -662,20 +662,44 @@ by hand. A byte-identity thesis, and its oracle was compiled and not run.
 
 **It is a one-boundary lag, not a standing condition.** The chamber's
 `gate` phase now rewrites the roster and commits it with the merge product.
-Verified by tracing the file rather than taking it on report:
+Verified by tracing the file — and then re-tracing it, because the first
+trace answered the wrong question:
 
 ```
-  894b482e  2026-08-14  rows=2748  hearsay=0   <- hand-authored, the only one
-  cd8b7d06  2026-08-15  rows=2843  hearsay=32
-  f905923a  2026-08-16  rows=2904  hearsay=48
-  068d1b8c  2026-08-16  rows=2919  hearsay=48
-  b60af966  2026-08-17  rows=2921  hearsay=48  <- current
+  commit    author date  rows  hearsay  what it actually is
+  --------  -----------  ----  -------  --------------------------------
+  894b482e  2026-08-14   2748     0     hand-authored
+  cd8b7d06  2026-08-15   2843    32     HAND HARVEST of a roster a stage
+                                        gate wrote and discarded
+  f905923a  2026-08-16   2904    48     chamber
+  b52c5a5c  2026-08-16   2904    48     chamber  (count unchanged)
+  81c4d1f2  2026-08-16   2904    48     chamber  (count unchanged)
+  068d1b8c  2026-08-16   2919    48     chamber
+  b60af966  2026-08-17   2921    48     chamber  <- current
 ```
 
-Five automated rewrites across three days, so the mechanism is working
-repeatedly rather than once. **Consequence for this campaign:** each stage's
-tests enter the roster at that stage's gate, so by stage 3 the stage-1 tests
-are in the commit gate. Plan for one boundary of lag, not permanent exile.
+**Five chamber rewrites**, all of which landed *after* `6b36ac1f`; only the
+hand-authored `894b482e` was on main before it (`git merge-base
+--is-ancestor <c> 6b36ac1f^1`). So the mechanism is repeatedly evidenced
+rather than inferred from one run, and hearsay converged 0 → 32 → 48 — but
+**the 32 is the hand harvest, not the chamber.** A stage gate never pushes,
+so that commit is the record of a human rescuing output the chamber threw
+away.
+
+Two traps this trace walked into, both worth more than the conclusion:
+
+- **Sampling by row count hides commits.** `b52c5a5c` and `81c4d1f2` moved
+  content without moving the count, so a trace keyed on `rows` cannot see
+  them. Two of seven were invisible to the first pass.
+- **Author dates are not landings.** `cd8b7d06` reads 2026-08-15 and did not
+  reach main until the batch carried it in on a branch. An earlier draft of
+  this section claimed "five rewrites across three days" on that basis; the
+  span was branch author dates. For "is this mechanism working", the only
+  question is **what landed on main, and when** — ancestry, not `%ci`.
+
+**Consequence for this campaign:** each stage's tests enter the roster at
+that stage's gate, so by stage 3 the stage-1 tests are in the commit gate.
+Plan for one boundary of lag, not permanent exile.
 
 **Give each stage boundary a falsifiable read-out.** Name the tests you
 expect the roster to pick up *in advance*, then check them **by name** in
