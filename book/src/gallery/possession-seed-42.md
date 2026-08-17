@@ -101,7 +101,7 @@ No direction here is closed; the nearest ground lies NE, W, SE.
   sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
   + + +
  +++++++
-++++@%+++
+++++@[2m&[0m+++
  +++++++
   +++++
   ways on: NE, W, SE

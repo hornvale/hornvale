@@ -59,7 +59,8 @@ fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> (char, 
 /// One placed glyph: what to draw, the colour its cell carries (if any), and
 /// whether the glyph is drawing the ground that colour describes.
 struct Placed {
-    /// The character drawn at this position, already faded if remembered.
+    /// The character drawn at this position — the same character regardless
+    /// of epistemic state; see [`dimmed`].
     glyph: char,
     /// The cell's `color`, straight from the document; `None` when the
     /// scene was built through an uncoloured path.
@@ -67,6 +68,9 @@ struct Placed {
     /// Whether `glyph` draws the bedrock `color` describes — see
     /// [`terrain_glyph`].
     ground: bool,
+    /// Whether the cell is `remembered` rather than currently sensed — the
+    /// epistemic channel, which dims rather than substituting a glyph.
+    remembered: bool,
 }
 
 /// Wrap `glyph` in a 24-bit foreground colour and a reset.
@@ -81,18 +85,14 @@ fn colored(glyph: char, rgb: [u8; 3]) -> String {
     )
 }
 
-/// A glyph's memory twin — what a `remembered` cell draws instead.
-fn faded(g: char) -> char {
-    match g {
-        '~' | '=' | '+' | '_' => '-',
-        '.' => ',',
-        ':' => ';',
-        '^' => 'n',
-        'A' => 'a',
-        '#' => 'o',
-        '&' => '%',
-        other => other,
-    }
+/// Wrap `s` in the terminal's dim attribute and a reset.
+///
+/// This is the epistemic channel's whole encoding (spec §2): a `remembered`
+/// cell dims — it does not substitute a different glyph. Composed *around*
+/// [`colored`]'s output rather than replacing it, so a remembered cell that
+/// also carries colour gets both: `\x1b[2m\x1b[38;2;r;g;bm<glyph>\x1b[0m\x1b[0m`.
+fn dimmed(s: &str) -> String {
+    format!("\u{1b}[2m{s}\u{1b}[0m")
 }
 
 /// Render `scene` through `lens`. `ways` are the compass names of the
@@ -123,13 +123,13 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         let row = -w;
         let col = 2 * v + i64::from(!up) + w;
         let (g, ground) = terrain_glyph(scene, c);
-        let g = if c.state == "remembered" { faded(g) } else { g };
         placed.insert(
             (row, col),
             Placed {
                 glyph: g,
                 color: c.color,
                 ground,
+                remembered: c.state == "remembered",
             },
         );
     }
@@ -198,9 +198,14 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
                     Some(p) => {
                         line.push_str(&trailing_blanks);
                         trailing_blanks.clear();
-                        match (lens, p.color, p.ground) {
-                            ("colour", Some(rgb), true) => line.push_str(&colored(p.glyph, rgb)),
-                            _ => line.push(p.glyph),
+                        let drawn = match (lens, p.color, p.ground) {
+                            ("colour", Some(rgb), true) => colored(p.glyph, rgb),
+                            _ => p.glyph.to_string(),
+                        };
+                        if p.remembered {
+                            line.push_str(&dimmed(&drawn));
+                        } else {
+                            line.push_str(&drawn);
                         }
                     }
                 }
@@ -314,16 +319,40 @@ mod tests {
     }
 
     #[test]
-    fn a_remembered_cell_fades() {
-        let s = scene(vec![
+    fn a_remembered_cell_keeps_its_glyph_and_changes_only_its_weight() {
+        // Build one scene twice, identical but for a cell's `state`
+        // ("sensed" vs "remembered"). §2's rule: epistemic is a modulator
+        // (weight), not a peer of the ordinal (glyph) channel, so a
+        // remembered cell must draw the same glyph as a sensed one, only
+        // dimmer — it must not substitute a different mark.
+        let sensed = scene(vec![
+            cell(0, 0, 0, true, "here", 2),
+            cell(-1, 0, 0, false, "sensed", 2),
+        ]);
+        let remembered = scene(vec![
             cell(0, 0, 0, true, "here", 2),
             cell(-1, 0, 0, false, "remembered", 2),
         ]);
-        let out = render_surrounds_ascii(&s, "terrain", &[]);
-        assert!(out.contains('@'), "the observer is drawn");
-        assert!(
-            out.contains(','),
-            "a remembered lowland fades '.' -> ',': {out}"
+        let out_sensed = render_surrounds_ascii(&sensed, "terrain", &[]);
+        let out_remembered = render_surrounds_ascii(&remembered, "terrain", &[]);
+
+        // Clause 1: the glyph CHARACTER at that position is identical once
+        // any weight escapes are stripped away. This pins the rule.
+        assert_eq!(
+            strip_escapes(&out_sensed),
+            strip_escapes(&out_remembered),
+            "a remembered cell must draw the same glyph as a sensed one, only \
+             dimmer — sensed={out_sensed:?} remembered={out_remembered:?}"
+        );
+
+        // Clause 2: the raw renders must still differ — the weight moved
+        // onto the remembered cell as a dim escape. Without this clause the
+        // test would pass vacuously if the renderer stopped distinguishing
+        // the two states at all.
+        assert_ne!(
+            out_sensed, out_remembered,
+            "a remembered cell must still render differently from a sensed \
+             one (dimmed), not identically: {out_sensed:?}"
         );
     }
 
