@@ -153,6 +153,57 @@ should say so as one finding, not three fixes.
 
 ## 4. The design
 
+### 4.0 A cave's depth is a budget in metres — AMENDED 2026-08-16, POST-TASK-1
+
+**This section did not exist when the spec was written. Task 1's measurement
+required it, and Nathan authorized the scope change.**
+
+§4.1 below was written on an assumption Task 1 falsified: that spacing the
+ladder by temperature would redistribute chambers across it. It does not,
+because ΔT = gradient × depth and the measured gradient spread is **1.27×**
+(p10 21.795 → p90 27.780 K/km) against a depth spread of **~10⁴×**. ΔT is
+therefore depth rescaled by a near-constant, and inherits depth's bimodality
+exactly: two occupied classes, `[0, 2) K` holding 62–75% of caves and
+`[50, ∞) K` holding 24–38%, with the middle rungs holding 1–25 caves out of
+874–1681. The `[50, ∞)` count matches the `Roots` band count essentially 1:1
+on every seed, so the heat ladder was reproducing the band ladder rather than
+refining it.
+
+§3.1's diagnosis was right as a description and wrong as a cause. There is a
+13 km hole in the ladder; re-spacing rungs cannot populate a hole that no
+chamber's depth ever lands in. `top_depth_m(deepest_band)` is effectively
+two-valued because `dtb = soil + sediment` is ~0 almost everywhere and
+`roots_top ≈ moho/2 ≈ 14 km`, and any monotone function of a two-valued input
+is two-valued.
+
+**So a cave gets a depth reach in METRES, derived independently of the
+stratigraphic band boundaries.** This is `MAP-cave-depth-weld`, which §7
+listed as a non-goal; that row's own **Where** cell states it was waiting for
+a consumer to "supply the evidence for or against a split", and Task 1 is that
+evidence. Taking it now is the smallest change that makes §4.1 work.
+
+Three constraints on the derivation:
+
+- **It must not read the presence proneness.** That shared scalar *is* the
+  weld: the presence gate and the depth budget want opposite calibrations, and
+  reading one field for both is why `Fracture` could not be tuned without
+  flooding its share.
+- **Prefer a pure function of fields terrain already owns** — cave kind,
+  lithology, relief — in the manner of `geothermal_gradient`. A pure
+  derivation adds no draw, so it cannot perturb stream consumption order. Only
+  if a pure derivation proves degenerate should a draw be added, and then it
+  takes its own stream label.
+- **The physical anchors, which are Earth trivia used as a sanity ceiling and
+  not as a derivation:** lava tubes form inside a flow and are shallow (tens
+  to a few hundred metres); karst follows dissolution and reaches ~1–2.2 km
+  (Veryovkina, 2212 m); fracture voids are fault-controlled and close under
+  lithostatic load within a few km. A budget landing in 0–3 km is the target,
+  because that is the window §4.1's ladder covers.
+
+`deepest_band` stays, and becomes *derived from* the depth budget by comparing
+it against the column — so the archive keeps answering "which bands does this
+void penetrate" correctly while no longer being the depth coordinate itself.
+
 ### 4.1 The delve ladder — spaced by heat
 
 `BandKind` keeps its five stratigraphic rungs and its entire archival job
@@ -355,8 +406,11 @@ not a corruption**. The bill:
   `&[]`. Captured as `MAP-underworld-dressing`.
 - **Breathing caves.** Blocked on terrain: `ChamberAddr.entrance` is a `u8`
   whose every caller passes `0`. Captured as `MAP-cave-breathing`.
-- **`MAP-cave-depth-weld`.** Splitting the ladders does not fix the existence
-  gate sharing a scalar with the depth budget. Cross-referenced, still open.
+- ~~**`MAP-cave-depth-weld`.**~~ **PROMOTED INTO SCOPE 2026-08-16 by §4.0**,
+  after Task 1 measured that the ladder cannot work without it. It was listed
+  here on the reasoning that splitting the ladders does not require splitting
+  the weld — true, and beside the point, because splitting the ladders does
+  not *achieve* anything without it either.
 - **The underworld's own chart.** `MAP-underworld-chart` is unresolved and
   this campaign does not resolve it; the pane still shows the country
   overhead.
@@ -367,6 +421,7 @@ not a corruption**. The bill:
 
 ```
 0  measure the ladder            probe; the rung table is its output
+0b a metre depth budget          §4.0; added after Task 1 falsified §4.1
 1  the delve ladder              BandKind untouched; ChamberAddr re-pointed
 2  the water table               vadose/phreatic split, sumps as missing edges
 3  chamber conditions            subterranean_substrate stops being constant

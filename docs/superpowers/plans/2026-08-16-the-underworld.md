@@ -255,6 +255,172 @@ git commit -m "test(the-underworld): measure the column in kelvin before authori
 
 ---
 
+## Task 1b: A real cave depth budget in metres
+
+*Added 2026-08-16, after Task 1's measurement falsified the premise Task 2 was
+written on. Authorized by Nathan as a scope change. See spec §4.0.*
+
+**Files:**
+- Create: `domains/terrain/src/cave_depth.rs`
+- Modify: `domains/terrain/src/features.rs` (`Cave`, `cave_depth`), `domains/terrain/src/lib.rs`, `domains/terrain/src/provider.rs`
+
+**Interfaces:**
+- Consumes: nothing from earlier tasks.
+- Produces:
+  - `pub fn cave_depth_reach_m(kind: CaveKind, buf: &MaterialBuffer, column: &StratigraphicColumn) -> f64`
+  - `Cave { kind, deepest_band, depth_reach_m }`
+  - `cave_depth` keeps its name and return type but derives `BandKind` **from
+    the metre reach** against the column, instead of from `proneness`.
+
+**Why this exists.** Task 1 measured that ΔT = gradient × depth is bimodal
+because depth is, and depth is bimodal because it was a *band*, not a
+quantity. `cave_depth` currently reads the same `proneness` scalar the
+presence gate reads — that shared read is `MAP-cave-depth-weld`, and it is why
+`Fracture` could never be calibrated without flooding its share.
+
+**Three constraints, from spec §4.0:**
+1. **`cave_depth_reach_m` must not take `proneness`.** Its signature is the
+   enforcement: if the parameter is absent, the weld cannot be re-formed.
+2. **Prefer a pure derivation from owned fields** — `MaterialBuffer` and the
+   column — in the manner of `geothermal_gradient`. A pure function adds no
+   draw and so cannot perturb stream consumption order. If and only if a pure
+   derivation proves degenerate, add a draw with its own stream label and say
+   so in the report.
+3. **Target the 0–3 km window**, which is what the delve ladder covers. Earth
+   anchors, used as a sanity ceiling and not as a derivation: lava tubes form
+   inside a flow and are shallow; karst reaches ~2.2 km; fracture voids close
+   under lithostatic load within a few km.
+
+- [ ] **Step 1: Write the failing tests**
+
+These are literal, not sketches — every one asserts.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::features::CaveKind;
+
+    /// A carbonate-rich, porous, moderately indurated buffer.
+    fn karstic() -> crate::lithology::MaterialBuffer { /* build one; see
+        `features.rs`'s own test helpers for the established idiom */ }
+    /// A mafic, fine-grained, young-flow buffer.
+    fn basaltic() -> crate::lithology::MaterialBuffer { /* likewise */ }
+
+    #[test]
+    fn a_lava_tube_is_shallower_than_a_karst_system() {
+        let col = crate::strata::column(40.0, 0.5, true, 300.0, 5.0,
+            crate::lithology::RockClass::Limestone, crate::strata::Basement::Continental);
+        let tube = cave_depth_reach_m(CaveKind::LavaTube, &basaltic(), &col);
+        let karst = cave_depth_reach_m(CaveKind::Karst, &karstic(), &col);
+        assert!(tube < karst, "tube={tube} karst={karst}");
+    }
+
+    #[test]
+    fn karst_reach_grows_with_carbonate() {
+        let col = crate::strata::column(40.0, 0.5, true, 300.0, 5.0,
+            crate::lithology::RockClass::Limestone, crate::strata::Basement::Continental);
+        let mut poor = karstic();
+        poor.carbonate = 0.1;
+        let mut rich = karstic();
+        rich.carbonate = 0.9;
+        let a = cave_depth_reach_m(CaveKind::Karst, &poor, &col);
+        let b = cave_depth_reach_m(CaveKind::Karst, &rich, &col);
+        assert!(b > a, "carbonate 0.9 gave {b}, carbonate 0.1 gave {a}");
+    }
+
+    #[test]
+    fn every_reach_is_finite_non_negative_and_under_the_ceiling() {
+        // Total over the input domain, and inside the window the delve ladder
+        // covers. 3500 m is the assertion's absurd-HIGH bound, not a target.
+        let col = crate::strata::column(40.0, 0.5, true, 300.0, 5.0,
+            crate::lithology::RockClass::Limestone, crate::strata::Basement::Continental);
+        for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            for buf in [karstic(), basaltic()] {
+                let d = cave_depth_reach_m(kind, &buf, &col);
+                assert!(d.is_finite(), "{kind:?} gave a non-finite reach");
+                assert!((0.0..=3500.0).contains(&d), "{kind:?} gave {d} m");
+            }
+        }
+    }
+
+    #[test]
+    fn the_derived_band_agrees_with_the_columns_own_boundaries() {
+        // `cave_depth` must now be a LOOKUP of the metre reach against the
+        // column, so the two can never disagree.
+        let col = crate::strata::column(40.0, 0.5, true, 300.0, 5.0,
+            crate::lithology::RockClass::Limestone, crate::strata::Basement::Continental);
+        for kind in [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture] {
+            let reach = cave_depth_reach_m(kind, &karstic(), &col);
+            let band = crate::features::cave_depth(kind, &col, &karstic());
+            let idx = match band {
+                crate::strata::BandKind::Regolith => 0,
+                crate::strata::BandKind::Cover => 1,
+                crate::strata::BandKind::Basement => 2,
+                crate::strata::BandKind::Roots => 3,
+                crate::strata::BandKind::Underneath => 4,
+            };
+            assert!(
+                col.bands[idx].top_depth_m <= reach,
+                "{kind:?}: band {band:?} starts at {} m but the reach is {reach} m",
+                col.bands[idx].top_depth_m
+            );
+        }
+    }
+}
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `cargo test -p hornvale-terrain cave_depth 2>&1 | tail -20`
+Expected: FAIL — `cave_depth_reach_m` does not exist.
+
+- [ ] **Step 3: Implement**
+
+`cave_depth_reach_m` as a pure function; `Cave` gains `depth_reach_m`;
+`cave_depth`'s `proneness` parameter is **removed** and its body becomes a
+lookup of the reach against the column's band tops. Fix every call site in the
+same edit — find them with
+`grep -rn "cave_depth\|Cave {" --include=*.rs domains/ windows/`.
+
+- [ ] **Step 4: Run the terrain suite**
+
+Run: `cargo nextest run -p hornvale-terrain --no-fail-fast 2>&1 | tee /tmp/hv-t1b.txt`
+
+**Decision rule:**
+- `cave_depth_differs_by_kind` (the existing test at `features.rs:705`) fails →
+  expected; it was written against the band-returning signature. Re-derive its
+  expectation from the new metre reach, in this commit.
+- A tectonic-properties byte-identity test fails → expected this campaign
+  (terrain bytes move). Re-pin in this commit and name it in the message.
+- A test outside `domains/terrain` fails → **stop**. This task must not reach
+  windows/; if it does, something is deriving depth in the wrong layer.
+
+- [ ] **Step 5: Re-run Task 1's probe — this is the acceptance criterion**
+
+Run: `cargo test -p hornvale-worldgen --test underworld_ladder_probe -- --ignored --nocapture 2>&1 | tee /tmp/hv-ladder2.txt`
+
+**Decision rule — this is what the task is FOR:**
+- The ΔT distribution now spreads across the middle (the `[2,10)`, `[10,25)`
+  and `[25,50)` buckets each hold a meaningful share rather than 1–25 of
+  ~1000) → the budget works. **Append the new table to the probe's module doc
+  BESIDE the old one, dated, both retained** — the before/after pair is this
+  campaign's evidence and deleting the first reading destroys it.
+- The distribution is still two-class → the budget is not doing its job.
+  Report `DONE_WITH_CONCERNS` with the new table. Do not tune constants to
+  chase the shape without saying so; that is metric-chasing after unblinding.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+cargo fmt
+git add -A
+git commit -m "feat(the-underworld)!: a cave's depth is a budget in metres, not a band"
+```
+
+---
+
 ## Task 2: The delve ladder
 
 **Files:**
@@ -377,8 +543,12 @@ Expected: FAIL — `DelveRung` and its functions do not exist.
 
 - [ ] **Step 3: Implement the ladder**
 
-Write `domains/terrain/src/delve.rs` with the rung boundaries **taken from
-Task 1's measured table**, not from the spec's illustration. Every constant
+Write `domains/terrain/src/delve.rs` with the rung boundaries **taken from the
+SECOND table in the probe's module doc — the post-Task-1b re-run**, not from
+the spec's illustration and not from the first reading. The first reading was
+taken before cave depth was a metre budget and is retained only as the
+before-arm; choosing boundaries from it would re-derive the two-class ladder
+Task 1b exists to remove. Every constant
 gets a doc comment naming where its value came from; the ceiling's doc says
 explicitly that 50.0 is an authored fidelity choice, not a derivation.
 
