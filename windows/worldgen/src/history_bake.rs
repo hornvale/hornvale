@@ -37,6 +37,7 @@ use hornvale_history::record::{
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
+use hornvale_terrain::DelveRung;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -923,6 +924,22 @@ struct Community {
     people_idx: usize,
     /// The cell this community currently occupies.
     site: CellId,
+    /// The rung of the delve ladder this community occupies **in that cell**
+    /// (The Underworld, spec §4.6). `DelveRung::Surface` for a surface people
+    /// — the overworld is a rung of the same ladder, not the absence of one.
+    ///
+    /// Denormalised from `Bake::seating[people_idx]` at [`Bake::open`], for
+    /// the same reason `people_idx` is denormalised from the record: every
+    /// index lookup in the hot paths needs it, and it cannot change while a
+    /// community lives (a relocation is a `close` and a fresh `open`, which
+    /// re-derives it at the new seat).
+    ///
+    /// **Live bake state only.** No occupation record carries a rung and none
+    /// should: it is a pure function of `(people, cell)` through the seating,
+    /// so committing it would add a save-format surface for a value that can
+    /// be re-derived exactly — which is what
+    /// [`crate::delve_seating::made_chambers`] does.
+    rung: DelveRung,
     /// The community's own entity handle.
     id: BakeId,
     /// The lineage this community continues (inherited by daughters/refounds).
@@ -1135,8 +1152,30 @@ struct Bake<'a> {
     records: Vec<BakeOccupation>,
     /// Every community's live state, in commit order (dead ones retained).
     communities: Vec<Community>,
-    /// The single alive community per occupied cell (the scan≡index invariant).
-    node_index: BTreeMap<CellId, usize>,
+    /// The single alive community per occupied **place** — a cell *and* a rung
+    /// of the delve ladder (the scan≡index invariant). Decision 0102's
+    /// relaxation, ratified twelve days before this campaign executed it.
+    ///
+    /// **Surface density is unchanged, and that is structural rather than
+    /// hoped for**: `DelveRung::Surface` is one rung, so `(cell, Surface)` is
+    /// one key, so a cell still holds exactly one surface community. What the
+    /// wider key buys is the two things a `BTreeMap<CellId, _>` could not
+    /// express — an underworld community no longer competes with the surface
+    /// one for a cell's single slot, and two underworld communities at
+    /// different rungs can share a column (spec §4.6).
+    ///
+    /// The rung is never `None`. `DelveRung` carries an explicit `Surface`
+    /// variant precisely so the type is total and no reader can mistake "no
+    /// rung recorded" for "the overworld".
+    node_index: BTreeMap<(CellId, DelveRung), usize>,
+    /// Where each people sits in the delve ladder, per cell — one entry per
+    /// entry of `peoples`, in the same order, exactly as `caps_by_era`'s
+    /// slices are. Borrowed off the composition root, which is the only layer
+    /// that may read terrain and the species registries together.
+    ///
+    /// A surface people's seating is `Surface` at every cell, which makes the
+    /// re-key inert for it.
+    seating: &'a [CellMap<DelveRung>],
     /// Next entity id to mint (never reused).
     next_id: u64,
     /// The epoch-dynamics random stream (drawn sequentially in commit order).
@@ -1374,7 +1413,26 @@ impl<'a> Bake<'a> {
     fn vacant_for(&self, era: &EraClimate, cell: CellId, pidx: usize) -> bool {
         Self::factor(era, cell) > 0.0
             && self.caps_now()[pidx].at(cell) > 0.0
-            && !self.node_index.contains_key(&cell)
+            && !self
+                .node_index
+                .contains_key(&(cell, self.rung_for(pidx, cell)))
+    }
+
+    /// The rung **this people** would occupy in **this cell** — the place half
+    /// of every node-index key (spec §4.6).
+    ///
+    /// A place is a cell and a rung, and which rung depends on who is asking:
+    /// a surface people's answer is `Surface` in every cell, and a
+    /// subterranean one's is whichever rung of that column's cave its niche
+    /// scores best (`crate::delve_seating::seat_at`). That asymmetry is the
+    /// whole point — it is what lets a drow hall and a human town stand over
+    /// one another without either evicting the other.
+    ///
+    /// Resolved through the seating rather than off the community, because
+    /// every caller here is asking about a cell the asker does **not** yet
+    /// occupy: which rung would I be on if I went there.
+    fn rung_for(&self, pidx: usize, cell: CellId) -> DelveRung {
+        *self.seating[pidx].get(cell)
     }
 
     /// Walk the era graph outward from `from` in breadth-first **rings** and
@@ -1534,21 +1592,26 @@ impl<'a> Bake<'a> {
                 if value <= 0.0 {
                     continue;
                 }
-                let (score, defender, holder) = match self.node_index.get(&n) {
-                    None => (value, 0.0, None),
-                    Some(&h) => {
-                        let hs = self.strength(h);
-                        if !may_take_held_land
-                            || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
-                        {
-                            continue; // not a fight this people can win, or survive winning
+                // Held BY WHOM, at the rung this roller would occupy here.
+                // A community on another rung of the same column is not a
+                // defender and not an obstacle: it is a neighbour overhead or
+                // underfoot (spec §4.6).
+                let (score, defender, holder) =
+                    match self.node_index.get(&(n, self.rung_for(pidx, n))) {
+                        None => (value, 0.0, None),
+                        Some(&h) => {
+                            let hs = self.strength(h);
+                            if !may_take_held_land
+                                || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
+                            {
+                                continue; // not a fight this people can win, or survive winning
+                            }
+                            if !self.has_spoils(era, h) {
+                                continue; // a husk: nothing to take (spec §4.2a)
+                            }
+                            (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
                         }
-                        if !self.has_spoils(era, h) {
-                            continue; // a husk: nothing to take (spec §4.2a)
-                        }
-                        (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
-                    }
-                };
+                    };
                 let better = match best {
                     None => true,
                     Some(b) => score
@@ -2201,10 +2264,16 @@ impl<'a> Bake<'a> {
         self.records.push(record);
         let community_idx = self.communities.len();
         let people_idx = self.people_idx_of(people);
+        // The place, not just the cell (spec §4.6). Resolved here, at the one
+        // point a community comes into being, so a community's rung is fixed
+        // for its whole life and a relocation — which is a `close` and a fresh
+        // `open` — re-derives it at the seat it actually moved to.
+        let rung = self.rung_for(people_idx, site);
         self.communities.push(Community {
             record: record_idx,
             people_idx,
             site,
+            rung,
             id,
             lineage,
             population,
@@ -2218,7 +2287,7 @@ impl<'a> Bake<'a> {
         // opened mid-epoch has grown nothing yet this epoch, and so owes
         // nothing if it is subordinated before the epoch closes.
         self.epoch_growth.push(0.0);
-        self.node_index.insert(site, community_idx);
+        self.node_index.insert((site, rung), community_idx);
         self.tally.records_total += 1;
         community_idx
     }
@@ -2253,13 +2322,19 @@ impl<'a> Bake<'a> {
         let c = &mut self.communities[idx];
         c.alive = false;
         let site = c.site;
+        // The community's OWN rung, not the seating's current answer for its
+        // people. They agree today — `open` took the rung from the seating and
+        // neither can change while a community lives — but freeing a key by
+        // re-deriving it would make that agreement load-bearing, and the one
+        // thing `close` must never do is free somebody else's place.
+        let place = (site, c.rung);
         let rec = c.record;
         self.records[rec].core.ended = Some(year);
         self.records[rec].core.cause = Some(cause);
         self.records[rec].ended_by = ended_by;
-        // Only free the cell if THIS community is the one indexed there.
-        if self.node_index.get(&site) == Some(&idx) {
-            self.node_index.remove(&site);
+        // Only free the place if THIS community is the one indexed there.
+        if self.node_index.get(&place) == Some(&idx) {
+            self.node_index.remove(&place);
         }
         // …and it is party to no relation, as subordinate or as patron.
         self.tribute.remove(&idx);
@@ -3095,7 +3170,10 @@ impl<'a> Bake<'a> {
         //  and how a raid on it would resolve)
         let mut best: Option<(usize, f64, f64, CellId, Spoil)> = None;
         for n in traversable_neighbors(self.cur(), raider_site) {
-            let Some(&t) = self.node_index.get(&n) else {
+            // A raider reaches only its OWN rung of a neighbouring column
+            // (spec §4.6): what it could take is what it could then hold, and
+            // a hall three rungs below is not a neighbour it can march on.
+            let Some(&t) = self.node_index.get(&(n, self.rung_for(raider_pidx, n))) else {
                 continue;
             };
             // Valued through the RAIDER'S niche, both sides of the comparison
@@ -3438,10 +3516,19 @@ pub fn bake(
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
     peoples: &[KindId],
+    seating: &[CellMap<DelveRung>],
     cfg: &BakeConfig,
     graphs: &[ConnectionGraph],
 ) -> History {
     assert_eq!(graphs.len(), eras.len(), "one graph per era");
+    // Same alignment contract, same reason, same boundary as `caps_by_era`'s
+    // below: a mismatch would silently seat some people at another's rung, and
+    // nothing downstream can detect it.
+    assert_eq!(
+        seating.len(),
+        peoples.len(),
+        "one seating map per people, in the same order"
+    );
     // The index alignment the whole rewire rests on. A length mismatch means the
     // composition root built `caps` and `peoples` from two different orderings,
     // which would silently give some people another's niche — checked here, at
@@ -3463,6 +3550,7 @@ pub fn bake(
         cur_graph: 0,
         caps_by_era,
         peoples,
+        seating,
         river_prox,
         refugia,
         seed,
@@ -3521,7 +3609,10 @@ pub fn bake(
         let mut pool: Vec<CellId> = admissible
             .iter()
             .copied()
-            .filter(|c| bake.caps_now()[pidx].at(*c) > 0.0 && !bake.node_index.contains_key(c))
+            .filter(|c| {
+                bake.caps_now()[pidx].at(*c) > 0.0
+                    && !bake.node_index.contains_key(&(*c, bake.rung_for(pidx, *c)))
+            })
             .collect();
         // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
         // bias, preserved): a river-adjacent cell outranks an equally-fertile one
@@ -3798,6 +3889,7 @@ mod tests {
             disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            seating: surface_seating(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -4020,6 +4112,71 @@ mod tests {
         &IMMEDIATE
     }
 
+    /// The seating a hand-built [`Bake`] is given by default: every people in
+    /// [`all_settlers`] on the `Surface` rung at every cell.
+    ///
+    /// This is the pre-campaign world, restated in the wider key. Every test
+    /// written before spec §4.6 keys `(cell, Surface)` and behaves exactly as
+    /// it did against a `BTreeMap<CellId, _>` — which is what makes those
+    /// tests, unchanged, the re-key's surface-invariance evidence rather than
+    /// a set of expectations that had to be re-pinned.
+    ///
+    /// `Geosphere::new(1)` is every fixture's globe in this module; a
+    /// `OnceLock` keeps the maps borrowable at `'static` without each fixture
+    /// having to own them.
+    fn surface_seating() -> &'static [CellMap<DelveRung>] {
+        static S: std::sync::OnceLock<Vec<CellMap<DelveRung>>> = std::sync::OnceLock::new();
+        S.get_or_init(|| {
+            let geo = Geosphere::new(1);
+            all_settlers()
+                .iter()
+                .map(|_| CellMap::from_fn(&geo, |_| DelveRung::Surface))
+                .collect()
+        })
+    }
+
+    /// A seating in which the named peoples occupy the named rungs everywhere,
+    /// and every other people stays at `Surface` — the fixture for the two
+    /// spec §4.6 capabilities a single-rung index could not express.
+    ///
+    /// Owned rather than `'static`, because the whole point is that it varies
+    /// per test.
+    fn seating_with(rungs: &[(KindId, DelveRung)]) -> Vec<CellMap<DelveRung>> {
+        let geo = Geosphere::new(1);
+        all_settlers()
+            .iter()
+            .map(|people| {
+                let rung = rungs
+                    .iter()
+                    .find(|(k, _)| k == people)
+                    .map_or(DelveRung::Surface, |(_, r)| *r);
+                CellMap::from_fn(&geo, |_| rung)
+            })
+            .collect()
+    }
+
+    /// [`hand_bake`] with an explicit seating — the fixture for the three spec
+    /// §4.6 tests, and the only one in this module that puts a people below
+    /// ground.
+    fn hand_bake_seated<'a>(
+        graphs: &'a [ConnectionGraph],
+        caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+        seating: &'a [CellMap<DelveRung>],
+    ) -> Bake<'a> {
+        let mut bake = hand_bake_spread(
+            graphs,
+            caps,
+            river_prox,
+            refugia,
+            no_disposition(),
+            no_spread(),
+        );
+        bake.seating = seating;
+        bake
+    }
+
     /// A hand-built [`Bake`] over [`cascade_world`]'s inputs, with an empty
     /// record set and a fixed stream.
     fn hand_bake<'a>(
@@ -4056,6 +4213,7 @@ mod tests {
             disposition_spread,
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            seating: surface_seating(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -6310,7 +6468,7 @@ mod tests {
         assert!(
             bake.communities[vassal].alive
                 && bake.communities[vassal].site == vassal_cell
-                && bake.node_index.get(&vassal_cell) == Some(&vassal),
+                && bake.node_index.get(&(vassal_cell, DelveRung::Surface)) == Some(&vassal),
             "the vassal itself never moved — only its lord did"
         );
 
@@ -7900,7 +8058,7 @@ mod tests {
             "the freed subordinate must survive its patron"
         );
         assert_eq!(
-            bake.node_index.get(&cell_b),
+            bake.node_index.get(&(cell_b, DelveRung::Surface)),
             Some(&sub_b),
             "the freed subordinate keeps its cell"
         );
@@ -7968,7 +8126,7 @@ mod tests {
         // population, and the holder is dead and driven off.
         let seated = *bake
             .node_index
-            .get(&CellId(20))
+            .get(&(CellId(20), DelveRung::Surface))
             .expect("the rich cell must be occupied");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8119,7 +8277,7 @@ mod tests {
             );
             let seated = *bake
                 .node_index
-                .get(&CellId(20))
+                .get(&(CellId(20), DelveRung::Surface))
                 .expect("the rich cell is occupied either way");
             let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
@@ -8228,7 +8386,7 @@ mod tests {
         );
         let seated = *bake
             .node_index
-            .get(&CellId(20))
+            .get(&(CellId(20), DelveRung::Surface))
             .expect("the held rich cell must have changed hands");
         assert_eq!(
             bake.records[bake.communities[seated].record].core.people,
@@ -8421,7 +8579,11 @@ mod tests {
             "a roller that beats nobody must pioneer, not prey"
         );
         assert_eq!(
-            bake.communities[*bake.node_index.get(&CellId(20)).expect("still held")].id,
+            bake.communities[*bake
+                .node_index
+                .get(&(CellId(20), DelveRung::Surface))
+                .expect("still held")]
+            .id,
             holder_id,
             "the holder must be untouched"
         );
@@ -8525,7 +8687,7 @@ mod tests {
             // bottom of the ladder is still anywhere in the world.
             let seated = LADDER.map(|cell| {
                 bake.node_index
-                    .get(&cell)
+                    .get(&(cell, DelveRung::Surface))
                     .map(|&i| bake.records[bake.communities[i].record].core.people)
             });
             let terminal_survived = bake
@@ -9041,6 +9203,199 @@ mod tests {
             cascade_sizes(&h),
             [0u64; CASCADE_BINS],
             "hand-built history starts at zero"
+        );
+    }
+    // ============ THE UNDERWORLD, Task 8 — the node-index re-key ============
+    //
+    // Spec §4.6. The three properties the wider key exists to have, each
+    // written so that it can only pass for the right reason: the first fails
+    // if the surface stops being one rung, the second and third fail if the
+    // key collapses back to a cell.
+
+    /// The place the three tests below settle on. Any cell would do — the
+    /// index is keyed on the pair, not on the cell's identity — and naming it
+    /// once keeps the three readable.
+    const COLUMN: CellId = CellId(0);
+
+    /// How many alive communities the index holds in one cell, across every
+    /// rung. The quantity "surface density" and "two at different rungs" are
+    /// both statements about, counted off the index rather than off a scan so
+    /// the assertion is about the thing the bake actually consults.
+    fn held_in_column(bake: &Bake<'_>, cell: CellId) -> Vec<(DelveRung, usize)> {
+        bake.node_index
+            .iter()
+            .filter(|((c, _), _)| *c == cell)
+            .map(|((_, rung), idx)| (*rung, *idx))
+            .collect()
+    }
+
+    /// Spec §4.6: "Surface density is unchanged — `Surface` is a single rung,
+    /// so a cell still holds one surface community."
+    ///
+    /// Two surface peoples, one cell. The first seats; the second must find it
+    /// occupied. This is the assertion that fails if `Surface` ever stops
+    /// being a single rung — give the two peoples different surface keys and
+    /// `vacant_for` starts answering `true` and the column holds two.
+    #[test]
+    fn a_cell_still_holds_exactly_one_surface_community() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let seating = seating_with(&[]); // everybody overhead
+        let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
+        let era = era_at(0.0);
+
+        let goblin = bake.people_idx_of(KindId("goblin"));
+        let kobold = bake.people_idx_of(KindId("kobold"));
+        assert!(
+            bake.vacant_for(&era, COLUMN, kobold),
+            "fixture precondition: the column starts empty for kobold"
+        );
+
+        bake.open(
+            KindId("goblin"),
+            COLUMN,
+            0.0,
+            10.0,
+            Founding::Genesis(COLUMN),
+            None,
+            0.0,
+        );
+
+        assert!(
+            !bake.vacant_for(&era, COLUMN, kobold),
+            "a second SURFACE people must find the cell taken — one rung, one slot"
+        );
+        assert!(
+            !bake.vacant_for(&era, COLUMN, goblin),
+            "and so must the holder's own people"
+        );
+        assert_eq!(
+            held_in_column(&bake, COLUMN),
+            vec![(DelveRung::Surface, 0)],
+            "exactly one community in the column, and it is on the surface rung"
+        );
+    }
+
+    /// The defect decision 0102 named and this task removes: a
+    /// `BTreeMap<CellId, _>` cannot hold two polities, so an underworld
+    /// community could only settle a cell by evicting whoever lived overhead.
+    ///
+    /// Same cell, same era, two peoples — one seated on the surface and one in
+    /// the Deeps. Both must live, and each must still exclude its own rung.
+    #[test]
+    fn a_subterranean_community_no_longer_displaces_a_surface_one() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let seating = seating_with(&[(KindId("kobold"), DelveRung::Deeps)]);
+        let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
+        let era = era_at(0.0);
+
+        let goblin_idx = bake.open(
+            KindId("goblin"),
+            COLUMN,
+            0.0,
+            10.0,
+            Founding::Genesis(COLUMN),
+            None,
+            0.0,
+        );
+        let kobold = bake.people_idx_of(KindId("kobold"));
+        assert!(
+            bake.vacant_for(&era, COLUMN, kobold),
+            "the Deeps are empty however crowded the surface is"
+        );
+
+        let kobold_idx = bake.open(
+            KindId("kobold"),
+            COLUMN,
+            0.0,
+            10.0,
+            Founding::Genesis(COLUMN),
+            None,
+            0.0,
+        );
+
+        assert!(
+            bake.communities[goblin_idx].alive,
+            "the surface community must not have been displaced"
+        );
+        assert_eq!(
+            held_in_column(&bake, COLUMN),
+            vec![
+                (DelveRung::Surface, goblin_idx),
+                (DelveRung::Deeps, kobold_idx),
+            ],
+            "one community per rung, two rungs, one column"
+        );
+        assert!(
+            !bake.vacant_for(&era, COLUMN, kobold),
+            "the Deeps are now taken, for the same reason the surface is"
+        );
+    }
+
+    /// The capability spec §4.7's Mountain and Duergar need in order to exist
+    /// at all: two underworld peoples in one column, at different depths.
+    ///
+    /// The second half is what stops this passing for the wrong reason. If the
+    /// key were widened by PEOPLE rather than by rung, both halves of the
+    /// first assertion would still hold — and two peoples seated on the SAME
+    /// rung would wrongly coexist. So the test asserts both directions.
+    #[test]
+    fn two_underworld_communities_can_share_a_column_at_different_rungs() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let seating = seating_with(&[
+            (KindId("kobold"), DelveRung::Deeps),
+            (KindId("goblin"), DelveRung::Sunless),
+            (KindId("bugbear"), DelveRung::Deeps),
+        ]);
+        let mut bake = hand_bake_seated(&graphs, &capacity, &river_prox, &refugia, &seating);
+        let era = era_at(0.0);
+
+        let deep = bake.open(
+            KindId("kobold"),
+            COLUMN,
+            0.0,
+            10.0,
+            Founding::Genesis(COLUMN),
+            None,
+            0.0,
+        );
+        let deeper = bake.open(
+            KindId("goblin"),
+            COLUMN,
+            0.0,
+            10.0,
+            Founding::Genesis(COLUMN),
+            None,
+            0.0,
+        );
+
+        assert!(
+            bake.communities[deep].alive && bake.communities[deeper].alive,
+            "neither underworld community may displace the other"
+        );
+        assert_eq!(
+            held_in_column(&bake, COLUMN),
+            vec![(DelveRung::Deeps, deep), (DelveRung::Sunless, deeper)],
+            "two underworld communities, two rungs, one column"
+        );
+
+        // …and the exclusion is by RUNG, not by people: bugbear is seated in
+        // the Deeps, where kobold already stands.
+        let bugbear = bake.people_idx_of(KindId("bugbear"));
+        assert!(
+            !bake.vacant_for(&era, COLUMN, bugbear),
+            "a third people seated on an OCCUPIED rung must still be excluded"
         );
     }
 }

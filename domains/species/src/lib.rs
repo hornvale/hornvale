@@ -5449,6 +5449,111 @@ pub fn environment_fit(niche: &EnvironmentNiche, place: &EnvironmentVector) -> f
     (1.0 - total / shared as f64).clamp(0.0, 1.0)
 }
 
+impl Component for EnvironmentNiche {}
+
+/// The sparse environment-niche component: **only** kinds whose habitat is
+/// stated in the environment basis appear (The Underworld, Task 8).
+///
+/// Sparse for the same reason [`habitat_realm_registry`] is — one consumer,
+/// which holds a slice rather than a row — and it is the same consumer one
+/// step further on: worldgen's realm-aware capacity, which scores a
+/// subterranean people's chambers with [`environment_fit`] before deciding
+/// which delve rung it seats at.
+///
+/// **Absence is load-bearing, and it is the campaign's positive control.** A
+/// kind with no row here cannot score a chamber, so it cannot choose a rung,
+/// so it stays at the surface exactly as it did before this campaign. Emptying
+/// this registry therefore reverts the seating without touching capacity,
+/// which is what lets the re-key's surface invariance be measured rather than
+/// argued.
+///
+/// One row today. `rust-monster` and `xorn` are `HabitatRealm::Subterranean`
+/// and are deliberately **absent**: they are fauna, they settle nothing, and
+/// authoring a niche for a kind that places no community would be a value no
+/// consumer reads.
+pub fn environment_niche_registry() -> ComponentStore<KindId, EnvironmentNiche> {
+    [(KindId("drow"), drow_niche())].into_iter().collect()
+}
+
+/// Drow's niche in the environment basis — **every value authored**, on the
+/// same five axes and the same value grid `hornvale_climate`'s underworld
+/// corpus uses, so a fit against one of its 22 communities is a comparison of
+/// two points on one ruler rather than of two vocabularies.
+///
+/// Drow is the store's first and only occupant for the reason
+/// [`habitat_realm_registry`] gives for its own drow row: it is the peopled
+/// subterranean kind that is already shipped, so it is the producer that does
+/// not wait on §4.7's two dwarves being authored.
+///
+/// Per axis, and each is a claim about a people rather than about a cave:
+///
+/// - `PHYSIOGNOMY` **0.6** — standing structure. A city needs something to
+///   build in and on: speleothem stands, gypsum curtains, fungal thickets. A
+///   smooth lava pipe (0.0) offers nothing to hold a settlement, and a fully
+///   decorated gallery (0.8) is a place to walk through rather than to live
+///   in. AUTHORED.
+/// - `ENERGY` **0.5** — a working base. Drow farm; a system with a stream's
+///   organic load or a modest chemical one is what a farmed underworld looks
+///   like. Neither inert rock (0.0) nor a whole channel's load at one point
+///   (1.0), which is a hot spring rather than a country. AUTHORED.
+/// - `WATER` **0.4** — fracture-borne seepage: enough to drink, not enough to
+///   drown in. This is the axis that says drow live in the dry part of a wet
+///   world; `1.0` is below the water table. AUTHORED.
+/// - `SUBSTRATE` **0.6** (rock) — a `Class`, never a magnitude, because the
+///   axis is `AxisValence::Nominal`. A people builds on rock; mud, sand, ice
+///   and buried carbon are floors you cross. AUTHORED.
+/// - `LIGHT` **0.0** — aphotic, which is the one axis drow's existing
+///   authoring already stated in another vocabulary (its cave-dark insolation
+///   response). AUTHORED.
+///
+/// **Every tolerance is the neutral default** ([`AxisPreference::graded`]'s
+/// `1.0`), and that is a refusal rather than an omission: a narrower tolerance
+/// on any axis would be a second, unmeasured calibration authored at the same
+/// moment as the preference it modifies, and nothing in this campaign measures
+/// how fussy a drow is. At the default the fit reduces bit-for-bit to `1 − d`
+/// for the Gower distance Task 6 measured the corpus with, so the number this
+/// niche produces is comparable with that instrument's own.
+///
+/// Stated in the same arity as every row of the underworld corpus — five axes,
+/// all five occupied — so `environment_fit`'s sparsity bias cannot reach a
+/// chamber ranking. `DISTURBANCE` is declined for the reason no corpus can
+/// occupy it: it is the basis's only `Rate`, and a people is a state.
+fn drow_niche() -> EnvironmentNiche {
+    EnvironmentNiche::new(&[
+        (
+            hornvale_kernel::PHYSIOGNOMY,
+            AxisPreference::graded(DROW_PHYSIOGNOMY),
+        ),
+        (hornvale_kernel::ENERGY, AxisPreference::graded(DROW_ENERGY)),
+        (hornvale_kernel::WATER, AxisPreference::graded(DROW_WATER)),
+        (
+            hornvale_kernel::SUBSTRATE,
+            AxisPreference::class(DROW_SUBSTRATE),
+        ),
+        (hornvale_kernel::LIGHT, AxisPreference::graded(DROW_LIGHT)),
+    ])
+    .expect("drow's authored niche is valid: five in-range values, class on the nominal axis")
+}
+
+/// Drow's preferred void form: standing structure. AUTHORED — see
+/// [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_PHYSIOGNOMY: f64 = 0.6;
+/// Drow's preferred energy base: a working one. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_ENERGY: f64 = 0.5;
+/// Drow's preferred moisture: fracture-borne seepage. AUTHORED — see
+/// [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_WATER: f64 = 0.4;
+/// Drow's accepted substrate class: bare rock. A class index, never a
+/// magnitude. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(index)
+const DROW_SUBSTRATE: f64 = 0.6;
+/// Drow's preferred light level: aphotic. AUTHORED — see [`drow_niche`].
+/// type-audit: bare-ok(ratio)
+const DROW_LIGHT: f64 = 0.0;
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -213,7 +213,16 @@ pub struct Chamber {
 /// `None` rather than a numeral is what stops the overworld from silently
 /// becoming address 0. [`rung_at_depth`] never returns it, so the `None` arm is
 /// reachable only through a caller that hands this function `Surface` directly.
-fn rung_rank(rung: DelveRung) -> Option<u8> {
+///
+/// **Made `pub` by The Underworld's Task 8**, which needs it for the same
+/// reason [`chamber_exists`] does and must not grow a second copy: the
+/// `ChamberOrigin::Made` writer turns a settled community's `(cell, rung)`
+/// seat into the [`ChamberAddr`]es beneath it, and that translation is exactly
+/// this mapping. Rule 1a's "one explicit mapping, in one place" is what makes
+/// widening it the right move rather than duplicating it in
+/// [`crate::delve_seating`].
+/// type-audit: bare-ok(index: return)
+pub fn rung_rank(rung: DelveRung) -> Option<u8> {
     match rung {
         DelveRung::Surface => None,
         DelveRung::Undercroft => Some(0),

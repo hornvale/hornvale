@@ -508,6 +508,16 @@ fn river_exposure_tracks_real_proximity() {
 /// name is not the assertion** — the named partition below is. A reviewer
 /// checking only that the name still reads true would have seen nothing
 /// here.
+///
+/// **THE UNDERWORLD re-measure (Task 8, spec §4.6's node-index re-key).**
+/// `spring` holds at 5 root/10 gap for the second consecutive re-measure, and
+/// for the second consecutive re-measure the membership swapped underneath the
+/// count: goblin and gnoll gap it, desert-dwarf (`Shnaqdog`) and kobold
+/// (`Roraaxaa`) gain it. **hill-dwarf keeps `Maqtog` and snow-elf keeps
+/// `Booz`**, both byte-identical. The count-shaped name is stable across a
+/// change that replaced two-fifths of the set — for the second time — which is
+/// the hazard the paragraph above names; the named partition below is the
+/// assertion, never the name. Re-measured wholesale, not hand-edited.
 #[test]
 fn spring_is_a_root_at_seed_42_for_five_peoples() {
     let w = world();
@@ -529,13 +539,13 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
         gapped,
         vec![
             "bugbear",
-            "desert-dwarf",
             "desert-elf",
             "drow",
+            "gnoll",
+            "goblin",
             "gully-dwarf",
             "high-elf",
             "human",
-            "kobold",
             "sea-elf",
             "wood-elf",
         ],
@@ -544,10 +554,10 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("gnoll", "Dzhaap".to_string()),
-            ("goblin", "Nebao".to_string()),
+            ("desert-dwarf", "Shnaqdog".to_string()),
             ("hill-dwarf", "Maqtog".to_string()),
             ("hobgoblin", "Negao".to_string()),
+            ("kobold", "Roraaxaa".to_string()),
             ("snow-elf", "Booz".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
@@ -648,8 +658,27 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
 /// and a people beside a landform roots the word for it. That is the whole
 /// causal chain this file exists to expose, running forwards for once
 /// instead of being read backwards out of a drift.
+///
+/// **THE UNDERWORLD re-measure (Task 8, spec §4.6's node-index re-key).**
+/// `hill` moves 2/15 Root → 1/15: drow gaps it, leaving hobgoblin alone with
+/// its **byte-identical `Nootea`** — an eighth re-measure without that word
+/// moving. Renamed from `..._for_hobgoblin_and_drow`. Re-measured wholesale,
+/// not hand-edited.
+///
+/// The cause is the same one running through all four of this file's concepts
+/// this time, and it runs the OPPOSITE way to `k`'s: re-keying the deep-history
+/// node index on `(cell, rung)` takes drow out of the competition for surface
+/// cells, and seed 42's settlement volume falls with it (521 occupations
+/// across 217 sites, against 826 across 302). Less settlement is fewer peoples
+/// standing beside a landform, and drow — the people that moved underground —
+/// is the one that stops rooting the word for a hill. That is the causal chain
+/// read forwards again, and it is worth noticing that the four concepts did
+/// NOT move together this time: `hill` fell, `valley` fell, `spring` held its
+/// count with two swaps, and `marsh` held its count while breaking a
+/// seven-re-measure invariant. A single cause need not move four measures the
+/// same way.
 #[test]
-fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
+fn hill_is_a_root_at_seed_42_for_hobgoblin_alone() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -675,6 +704,7 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
             "bugbear",
             "desert-dwarf",
             "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
@@ -690,10 +720,7 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
     );
     assert_eq!(
         rooted,
-        vec![
-            ("drow", "Godgoo".to_string()),
-            ("hobgoblin", "Nootea".to_string()),
-        ],
+        vec![("hobgoblin", "Nootea".to_string()),],
         "the set of peoples rooting 'hill' at seed 42 moved"
     );
 }
@@ -768,8 +795,17 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
 /// sea-elf's `Nadbbeus`, the latter still unmoved across the whole of this
 /// file's history. Renamed from `..._for_three_peoples`. Re-measured
 /// wholesale, not hand-edited.
+///
+/// **THE UNDERWORLD re-measure (Task 8, spec §4.6's node-index re-key).**
+/// `valley` moves 5 root/10 gap → 3 root/12 gap: drow and human gap it, and
+/// gnoll does not return. All three survivors keep their words —
+/// high-elf's `Mazbveos`, hobgoblin's `Konoa`, and **sea-elf's `Nadbbeus`,
+/// still unmoved across the whole of this file's history**. Renamed back to
+/// `..._for_three_peoples`, which is the same name it carried two re-measures
+/// ago over a DIFFERENT set: the count returning is not the set returning.
+/// Re-measured wholesale, not hand-edited.
 #[test]
-fn valley_is_a_root_at_seed_42_for_five_peoples() {
+fn valley_is_a_root_at_seed_42_for_three_peoples() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -791,10 +827,12 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
             "bugbear",
             "desert-dwarf",
             "desert-elf",
+            "drow",
             "gnoll",
             "goblin",
             "gully-dwarf",
             "hill-dwarf",
+            "human",
             "kobold",
             "snow-elf",
             "wood-elf",
@@ -804,10 +842,8 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Gadbvoo".to_string()),
             ("high-elf", "Mazbveos".to_string()),
             ("hobgoblin", "Konoa".to_string()),
-            ("human", "Ngaatae".to_string()),
             ("sea-elf", "Nadbbeus".to_string()),
         ],
         "the set of peoples rooting 'valley' at seed 42 moved"
@@ -931,8 +967,25 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
 /// file holds and the reason the clause is in the test's name. Renamed from
 /// `..._for_five_peoples_and_no_dwarf`. Re-measured wholesale, not
 /// hand-edited.
+///
+/// **THE UNDERWORLD re-measure (Task 8, spec §4.6's node-index re-key), and
+/// THE LONGEST-RUNNING INVARIANT IN THIS FILE HAS BROKEN.** `marsh` holds at
+/// 6 root/9 gap, but for the first time in eight re-measures **a dwarf roots
+/// it — two of them**: desert-dwarf (`Dag`) and hill-dwarf (`Tag`), which
+/// gain it as bugbear, desert-elf and gnoll gap it. drow's `Goo`, hobgoblin's
+/// `Qaneo` and kobold's `Rorora` are byte-identical.
+///
+/// That clause was in the test's NAME, so the name moves with the value rather
+/// than being left to say something false — renamed from
+/// `..._for_six_peoples_and_no_dwarf`. Recorded as a finding rather than
+/// explained: this file asserts no mechanism for any of these partitions, and
+/// the honest statement is that seed 42's settlement volume fell by a third
+/// under the node-index re-key, the set of peoples standing beside a marsh
+/// re-rolled with it, and two dwarves landed on the right side of it this
+/// time. A run of seven is a run, not a law. Re-measured wholesale, not
+/// hand-edited.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_six_peoples_including_two_dwarves() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -951,13 +1004,13 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     assert_eq!(
         gapped,
         vec![
-            "desert-dwarf",
+            "bugbear",
+            "desert-elf",
+            "gnoll",
             "goblin",
             "gully-dwarf",
             "high-elf",
-            "hill-dwarf",
             "human",
-            "kobold",
             "sea-elf",
             "wood-elf",
         ],
@@ -966,11 +1019,11 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     assert_eq!(
         rooted,
         vec![
-            ("bugbear", "Qadoo".to_string()),
-            ("desert-elf", "Geesh".to_string()),
+            ("desert-dwarf", "Dag".to_string()),
             ("drow", "Goo".to_string()),
-            ("gnoll", "Gshoovzngaov".to_string()),
+            ("hill-dwarf", "Tag".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
+            ("kobold", "Rorora".to_string()),
             ("snow-elf", "Boosh".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \

@@ -5375,6 +5375,23 @@ mod tests {
         // cardinality check would have reported no change at all, while two
         // peoples' religious lives in fact swapped. That is the argument for
         // pinning the LINES rather than the tallies.
+        //
+        // THE UNDERWORLD (Task 8, spec §4.6's node-index re-key): still
+        // FIFTEEN placed, and ELEVEN organized — the Kxoqboq gain a priesthood
+        // run, and nothing else at this seed moves. Both witnessed counts (81
+        // and 49) and the taught day (36337) are unchanged for the fifth
+        // consecutive re-pin, so the reckoning arithmetic is untouched again
+        // and only the caste threshold moved.
+        //
+        // **The Kxoqboq are the drow**, and this line is one of exactly two
+        // surfaces that moved in that whole task. `worldgen::diachronic`'s
+        // 75-row `LADDER_TABLE` moved exactly ONE row in the same run — seed 2
+        // drow, `Counted` -> `Predictive`, 81 witnessed and unchanged — and a
+        // culture crossing to `Predictive` is a culture gaining a priesthood.
+        // Two surfaces, one fact, each re-pinned from its own scaffold and
+        // neither from the other. Re-keying the deep-history node index on
+        // `(cell, rung)` takes drow out of the competition for surface cells;
+        // its congregation at this seed is what crossed the caste threshold.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5386,6 +5403,9 @@ mod tests {
                 "Among the Wazwo, the sky has darkened, now and again.".to_string(),
                 "Among the Feqboq, the sky has darkened, now and again.".to_string(),
                 "Among the Kxoqboq, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kxoqboq numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.".to_string(),
                 "Among the Loshjo, the sky has darkened, now and again.".to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
@@ -5430,6 +5450,7 @@ mod tests {
             seed2.reckoning[1].margin,
             vec![
                 "In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
+                "In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),
                 "In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.".to_string(),

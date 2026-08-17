@@ -332,6 +332,28 @@ type Row = (
 // nothing here decomposes WHY desert-elf's flagships are small, and this
 // table asserts no mechanism for it.
 //
+// THE UNDERWORLD, TASK 8 re-measure (spec §4.6's node-index re-key,
+// 2026-08-17). The row COUNT is unchanged at 75 and **exactly ONE of the 75
+// rows moved**:
+//
+//   seed 2 drow          Counted    -> Predictive (81 witnessed, unchanged)
+//
+// **Every witnessed COUNT held, for the seventh re-measure running.** This is
+// the narrowest movement this table has ever recorded, and it is narrow for a
+// legible reason: the re-key changes WHO COMPETES FOR A CELL, not what any
+// world's eclipse arithmetic is, and the one people it moves out of the
+// surface competition is drow. One row, and it is drow's. The movement is
+// one-way this time only because there is one of it.
+//
+// **Corroborated on a second surface in the same run, and the two were
+// measured independently.** `book::the_reckoning_renders_the_epoch_pair`'s
+// seed-2 volume gains exactly one priesthood run — the Kxoqboq's — while
+// every other autonym, both witnessed counts (81 and 49) and the taught day
+// (36337) stay byte-identical. A culture crossing to `Predictive` is a
+// culture gaining a priesthood, so the two surfaces are the same fact seen
+// from either end, and each was re-pinned from its own scaffold rather than
+// from the other.
+//
 // The seed-1 row is independently corroborated on three other surfaces —
 // `book::seed_1_doctrine_sections_render` (organized 12 -> 11),
 // `book::the_reckoning_renders_the_epoch_pair` (the Beba's priesthood run
@@ -590,9 +612,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "drow",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         81,
-        None,
+        Some(36337.174658835705),
     ),
     (
         2,

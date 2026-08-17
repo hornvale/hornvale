@@ -85,6 +85,7 @@ pub mod chamber;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
+pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod graph_derive;
@@ -6869,6 +6870,33 @@ fn bake_history_from(
         insolation_scalar,
         &regime,
     );
+    // THE DELVE SEATING (The Underworld, spec §4.6). Which rung of the ladder
+    // each settling people occupies at each cell, and the factor its capacity
+    // there is scaled by. Built here because it is the one derivation that
+    // needs terrain, the species registries and the underworld corpus at once,
+    // which is the composition root's whole job.
+    //
+    // `environment_niche_registry` is read directly rather than through
+    // `WorldComponents`, following `dispersion_registry`'s precedent one
+    // function up: it is not one of the integrity-checked components, and
+    // widening `from_stores`' arity for every caller would buy nothing.
+    //
+    // A people absent from that registry — which is every surface people, and
+    // both subterranean FAUNA kinds — seats at `Surface` on every cell at
+    // multiplier 1.0, so this is an exact no-op for it.
+    let niches = hornvale_species::environment_niche_registry();
+    let seatings: Vec<crate::delve_seating::Seating> = peoples
+        .iter()
+        .enumerate()
+        .map(|(i, k)| match species_realm[i] {
+            hornvale_species::HabitatRealm::Surface => {
+                crate::delve_seating::Seating::all_surface(geo)
+            }
+            hornvale_species::HabitatRealm::Subterranean => {
+                crate::delve_seating::seating_for(geo, terrain, niches.get(k))
+            }
+        })
+        .collect();
     let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
         .iter()
         .map(|adjust| {
@@ -6884,6 +6912,20 @@ fn bake_history_from(
             )
             .into_iter()
             .map(|(_tag, map)| map)
+            // REALM-AWARE CAPACITY (spec §4.6): "capacity for an underworld
+            // community is computed against the chamber's conditions and its
+            // energy base, not the surface cell's". `per_species_capacity_at`
+            // already scores a subterranean kind against the subterranean
+            // substrate and gates it on a cave existing; what the seating adds
+            // is the two things only a rung can say — how well the chamber's
+            // own community suits this kind (`environment_fit`, Task 7's first
+            // production consumer) and whether it has to be kept dry
+            // (`is_sump`, spec §4.2.1 clause 2).
+            //
+            // A surface people's multiplier is exactly 1.0, an IEEE-754 no-op,
+            // which is what makes this inert above ground.
+            .enumerate()
+            .map(|(i, map)| scale_capacity(geo, &map, &seatings[i].multiplier))
             .collect()
         })
         .collect();
@@ -6925,6 +6967,8 @@ fn bake_history_from(
             )
         })
         .collect();
+    let seating_rungs: Vec<hornvale_kernel::CellMap<hornvale_terrain::DelveRung>> =
+        seatings.into_iter().map(|s| s.rung).collect();
     Ok(history_bake::bake(
         seed,
         geo,
@@ -6933,9 +6977,35 @@ fn bake_history_from(
         &eras,
         &paleo.refugia,
         &peoples,
+        &seating_rungs,
         &cfg,
         &graphs,
     ))
+}
+
+/// One people's capacity field scaled by its delve seating — the arithmetic
+/// half of realm-aware capacity (spec §4.6).
+///
+/// Separate from the loop that calls it so the multiplication is stated once
+/// and so the surface no-op is visible: a `Seating::all_surface` multiplier is
+/// exactly `1.0`, and `x * 1.0` is `x` bit for bit for every finite `x`, which
+/// is what lets this sit unconditionally in the path of every people rather
+/// than behind a realm branch that could drift from the one that built the
+/// seating.
+///
+/// `expect` rather than a `Result`: the inputs are a validated `CapacityMap`
+/// (finite, non-negative) and a multiplier in `[0, 1]`, so the product is
+/// finite and non-negative by construction. A failure here would mean the
+/// seating produced a NaN, which is a defect rather than a world.
+fn scale_capacity(
+    geo: &Geosphere,
+    capacity: &hornvale_kernel::ecology::CapacityMap,
+    multiplier: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::ecology::CapacityMap {
+    hornvale_kernel::ecology::CapacityMap::new(hornvale_kernel::CellMap::from_fn(geo, |c| {
+        capacity.at(c) * multiplier.get(c)
+    }))
+    .expect("a validated capacity scaled by a [0, 1] seating multiplier stays valid")
 }
 
 /// Build a world just deep enough for the deep-history bake ([`BuildDepth::Terrain`])
@@ -10121,7 +10191,22 @@ mod tests {
         // generated name. +61 glosses against +85 occupations is the right
         // order of magnitude for that cause and no other. Post-unblinding
         // re-measure, declared per decision 0016.
-        assert_eq!(count("name-gloss"), 366);
+        //
+        // THE UNDERWORLD (Task 8, spec §4.6): 366 -> 317, and the three counts
+        // above are again UNCHANGED at 145 — the same split, one campaign on.
+        // The node index is re-keyed on `(cell, rung)`, so drow (the roster's
+        // one settled subterranean people) stops competing for the surface
+        // cell it used to displace someone from. The peopled ROSTER does not
+        // move, which is why the pantheon and the three counts do not; what
+        // moves is settlement VOLUME, because every people seeded after drow
+        // in genesis order now draws from a different pool of vacant cells
+        // (521 occupations across 217 sites, against 826 across 302). -49
+        // glosses against -305 occupations and -85 sites: a gloss is emitted
+        // per generated NAME, so it tracks distinct sites rather than
+        // occupations, and -16% of glosses against -28% of sites is the right
+        // order of magnitude for that cause. Post-unblinding re-measure,
+        // declared per decision 0016.
+        assert_eq!(count("name-gloss"), 317);
     }
 
     #[test]

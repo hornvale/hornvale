@@ -122,7 +122,7 @@ No way ne from here.
 > back
 You have not walked anywhere yet.
 > wait 90
-Time passes. You sense movement nearby (183 stirred).
+Time passes. You sense movement nearby (248 stirred).
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows

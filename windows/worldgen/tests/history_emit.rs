@@ -778,8 +778,21 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // the tree that has absorbed main (50 commits, The Repose); the identical
     // figure pre-absorption is one of the corroborations that the absorption
     // moved no physics. Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE UNDERWORLD, Task 8 (spec §4.6's node-index re-key): 2 -> 0, over
+    // 5569 pairs compared (UP from 4353, and worth noting because it runs the
+    // opposite way to seed 42's own settlement count, which fell by a third —
+    // this test compares pairs across its whole corpus, not seed 42 alone).
+    // Recorded as a COST and NOT rescued, the same way the first, third and
+    // sixth readings were: with nothing tying, the per-tie assertions in the
+    // loop above are vacuous, and pretending otherwise by hunting a seed that
+    // ties would be choosing the witness to keep an assertion busy. The
+    // sequence is now 1 -> 0 -> 2 -> 0 -> 1 -> 0 -> 1 -> 2 -> 0 across nine
+    // changes; it has still never held a value twice running, which is the
+    // standing reading restated once more by a ninth reading rather than
+    // narrated. Post-unblinding re-measure, declared per decision 0016.
     assert_eq!(
-        ties, 2,
+        ties, 0,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1037,9 +1050,23 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // distinguish 1 from 4 in any case (decision 0097's existence-claim-near-
     // a-threshold reading, which is what the sweep-widening advice above is
     // for). Post-unblinding re-measure, declared per decision 0016.
+    //
+    // THE UNDERWORLD re-pin, Task 8 (spec §4.6's node-index re-key):
+    // [1, 2, 1] -> [0, 0, 0], total 4 -> 0. Taking drow out of the competition
+    // for surface cells re-placed settlements a fifth time and left no site in
+    // any of the three worlds where the material fourth key reorders the
+    // stratigraphy at all. Recorded, not narrated, per the paragraph above:
+    // zero is no more "better" for `barely moves` than 4 was "worse", and
+    // three seeds still cannot distinguish 0 from 4 (decision 0097). What it
+    // DOES cost is stated plainly — at a total of zero the per-site
+    // comparisons this test performs find nothing to compare, so the witness
+    // is vacuous at this reading, exactly as the tie-count witness above is at
+    // the same commit. Both are recorded as costs rather than rescued by
+    // hunting a seed that would keep them busy. Post-unblinding re-measure,
+    // declared per decision 0016.
     assert_eq!(
         measured,
-        vec![(42u64, 1usize), (7, 2), (1000, 1)],
+        vec![(42u64, 0usize), (7, 0), (1000, 0)],
         "the per-seed order-change counts moved"
     );
 }

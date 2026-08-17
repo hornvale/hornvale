@@ -19,7 +19,7 @@ The connections of cell 13980
 
 cell 13980 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-cell 13980's region holds only 1 cell -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5548 cells). 25 real regions divide the known world in all.
+cell 13980's region holds only 1 cell -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5549 cells). 25 real regions divide the known world in all.
 ```
 
 ## A hub on a different shore
@@ -35,7 +35,7 @@ The connections of cell 28435
 
 cell 28435 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-cell 28435's region holds only 1 cell -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5548 cells). 25 real regions divide the known world in all.
+cell 28435's region holds only 1 cell -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (5549 cells). 25 real regions divide the known world in all.
 ```
 
 ## The world, in sum
@@ -47,5 +47,5 @@ travel divides this world into, the largest, and the rest.
 The reach of the map
 ---------------------
 
-Natural travel divides the known world into 24 real regions (below 2 cells, a "region" is just an island cell no sea-lane reaches -- not counted here). The largest spans 5548 cells; the rest, smaller and cut off from it, run 1876, 1654, 914, 638, and 417 cells -- plus 18 smaller still.
+Natural travel divides the known world into 24 real regions (below 2 cells, a "region" is just an island cell no sea-lane reaches -- not counted here). The largest spans 5549 cells; the rest, smaller and cut off from it, run 1876, 1654, 914, 638, and 417 cells -- plus 18 smaller still.
 ```

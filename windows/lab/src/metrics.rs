@@ -10681,9 +10681,22 @@ mod tests {
         // 2.3225806` — the same value, quantized to 8 significant digits at
         // the emit boundary. So this is no longer a single live computation
         // on one machine: it agrees with the canonical host's own reading.
+        //
+        // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
+        // 2.3225806451612905 (72/31) -> 2.3846153846153846 (62/26). Same
+        // mechanism a fourth time: re-keying the deep-history node index on
+        // `(cell, rung)` takes drow out of the competition for surface cells,
+        // every people seeded after it draws from a different pool, and goblin
+        // names a different — and smaller — set of sites (26 against 31).
+        // Still inside the 2-3 target, which is the row's actual claim; the
+        // exact value is a world-byte tripwire. **NOT corroborated against a
+        // canonical census**: this campaign's refresh has not been run yet, so
+        // like the two Glasshouse re-pins before the last one this is a single
+        // live computation on one machine, and the corroboration paragraph
+        // above describes the PREVIOUS value, not this one.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.3225806451612905)
+            MetricValue::Number(2.3846153846153846)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -10848,9 +10861,29 @@ mod tests {
         // and `name-syllables-goblin = 2.3225806` — both this file's values at
         // the 8-significant-digit emit boundary. Every pin in this test is
         // now a canonical-host reading rather than a single local one.
+        //
+        // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
+        // 2.347826086956522 -> 2.5714285714285716, and **the margin the
+        // paragraphs above have been tracking has NARROWED again** — kobold
+        // now sits 0.429 below the 3 ceiling, against 0.652 at the last pass.
+        // Still inside the 2-3 target, and still live rather than Absent,
+        // which is the whole of the row's claim; the standing instruction
+        // stands with it — a pass that takes kobold above 3 falsifies the
+        // target and is a finding to report, not a bound to widen.
+        //
+        // Goblin RISES too (2.3225806451612905 -> 2.3846153846153846), so the
+        // two move together for the first time since the thermostat. Read that
+        // as the sample, not the machinery: re-keying the node index takes
+        // drow out of the competition for surface cells, seed 42 settles
+        // fewer sites (521 occupations across 217, against 826 across 302),
+        // and BOTH peoples are naming a smaller set. Nothing in this campaign
+        // touches phonology, wear or the namer. **Not corroborated against a
+        // canonical census** — this campaign's refresh has not been run, so
+        // the corroboration paragraph above describes the previous pair of
+        // values, not this one.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.347826086956522)
+            MetricValue::Number(2.5714285714285716)
         );
     }
 
@@ -11039,7 +11072,22 @@ mod tests {
         // **AND NOW CORROBORATED.** The refreshed canonical census
         // (`c0211b18`) reads `name-transparency = 0.65560166` at seed 42 —
         // this exact value at the 8-significant-digit emit boundary.
-        assert_eq!(share, 0.6556016597510373, "seed 42 transparency drifted");
+        //
+        // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
+        // 0.6556016597510373 (158/241) -> 0.6510416666666666 (125/192). A
+        // FIFTH distinct placement, and the first whose denominator FALLS
+        // (241 -> 192): re-keying the deep-history node index on `(cell, rung)`
+        // takes drow out of the surface-cell competition, so seed 42 settles
+        // fewer sites (521 occupations across 217, against 826 across 302).
+        // The value barely moves — 0.6556 -> 0.6510,
+        // under half a percentage point — across a 20% fall in n, which is
+        // itself the cleanest statement yet of the reading this comment has
+        // argued across four re-pins: the transparency share is a property of
+        // the naming grammar, and the wobble in it was the denominator. **Not
+        // corroborated against a canonical census**: this campaign's refresh
+        // has not been run, so the corroboration paragraph above describes the
+        // PREVIOUS value, not this one.
+        assert_eq!(share, 0.6510416666666666, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -11638,7 +11686,19 @@ mod tests {
             // "valley", so this reading is narrower than the last despite
             // being the same size — which is the reason the set is pinned
             // rather than its cardinality.
-            vec!["river", "ford", "marsh", "spring"],
+            //
+            // THE UNDERWORLD re-pin (Task 8, spec §4.6's node-index re-key):
+            // FIVE — "valley" returns beside "river", "ford", "marsh" and
+            // "spring", the widest this precondition has read since the 2026-
+            // 08-04 merge. Re-keying the deep-history node index on
+            // `(cell, rung)` takes drow out of the competition for surface
+            // cells, so every people seeded after it draws from a different
+            // pool and seed 7's goblins reach wider ground again — the eighth
+            // oscillation. Re-pin the set, do not swap the seed, per the
+            // precedent this comment has now followed through all eight.
+            // Coverage is the best it has been at any reading: the river,
+            // elevation and karst/wetland gate classes are all exercised.
+            vec!["river", "ford", "valley", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -11696,6 +11756,73 @@ mod tests {
     /// the pair this witness needs; taking the earliest rather than a
     /// hand-picked one keeps the choice reproducible and free of selection.
     /// The species changed only because the seed did — nothing in the claim is
+    /// The sweep that re-witnesses
+    /// [`the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them`]
+    /// when the ground moves under it — which has now happened **seven
+    /// times**, every one of them re-swept "by the identical method" by hand,
+    /// off-repo, leaving only a prose list behind.
+    ///
+    /// That is the same defect its sibling had, and it is fixed the same way:
+    /// `sweep_for_the_independent_reading_witness` above is the staple
+    /// battery's shipped method, and this is the island/hill one. A procedure
+    /// described but never shipped is a procedure the next reader has to
+    /// reconstruct from a paragraph, and that reconstruction is where a
+    /// witness silently becomes a choice.
+    ///
+    /// The rule, unchanged and deliberately selection-free: a pair
+    /// `(seed, species)` qualifies when the species roots **and** independently
+    /// steeps BOTH `island` and `hill`; the witness is the EARLIEST qualifying
+    /// pair in seed order, then species order within a seed. The range is
+    /// `0..60`, which is the range every previous pass used.
+    #[test]
+    #[ignore = "re-witness sweep: builds up to 60 FullView worlds (minutes); \
+                run by hand only when the witness assertion below has gone red"]
+    fn sweep_for_the_island_and_hill_witness() {
+        let mut qualifying: Vec<(u64, &'static str)> = Vec::new();
+        for seed in 0..60u64 {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let mut daughters = all_daughters(&view);
+            daughters.sort_unstable();
+            for species in daughters {
+                let (Ok(lexicon), Some(steeped)) = (
+                    lex(&view, species),
+                    independently_steeped_concepts(&view, species),
+                ) else {
+                    continue;
+                };
+                let both = ["island", "hill"].iter().all(|concept| {
+                    matches!(lexicon.entry(concept), Some(LexEntry::Root { .. }))
+                        && steeped.contains(*concept)
+                });
+                if both {
+                    qualifying.push((seed, species));
+                }
+            }
+        }
+        println!("== qualifying (seed, species) pairs over 0..60 ==");
+        for (seed, species) in &qualifying {
+            println!("   ({seed}, {species})");
+        }
+        println!("   count = {}", qualifying.len());
+        match qualifying.first() {
+            Some((seed, species)) => println!(
+                "\n   WITNESS = ({seed}, {species}) — the earliest qualifying pair.\n   \
+                 Same-seed corroborator: {}",
+                if qualifying.iter().filter(|(s, _)| s == seed).count() > 1 {
+                    "yes"
+                } else {
+                    "none — this witness is load-bearing alone"
+                }
+            ),
+            None => println!(
+                "\n   NO QUALIFYING PAIR IN 0..60. Widen the range before \
+                 weakening the criterion."
+            ),
+        }
+    }
+
     /// about kobolds, and the gates being witnessed are terrain gates.
     #[test]
     fn the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them() {
@@ -11848,14 +11975,48 @@ mod tests {
         // world re-placed twice since. Same-seed corroboration is back and is
         // DOUBLE this time: (2, gnoll) and (2, high-elf) both qualify in the
         // same world, so this witness is not load-bearing alone.
-        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        //
+        // SEVENTH PASS (The Underworld, Task 8, spec §4.6's node-index
+        // re-key). Re-keying the deep-history node index on `(cell, rung)`
+        // takes drow out of the competition for surface cells, re-placing
+        // every world, and seed 2's bugbear stopped rooting `island`. The
+        // precondition below caught it rather than letting the test pass on
+        // nothing — the seventh time it has done so.
+        //
+        // **AND THIS PASS SHIPPED THE METHOD.** Every one of the six passes
+        // above re-swept "by the identical method" BY HAND, off-repo, leaving
+        // only a prose list of qualifying pairs behind — the same defect the
+        // sibling staple test diagnosed in itself and fixed by shipping
+        // `sweep_for_the_independent_reading_witness`. This pass adds
+        // `sweep_for_the_island_and_hill_witness` above and is re-derived from
+        // it (`--ignored --release`, 130.85 s), so the eighth pass reads a
+        // number off a run instead of reconstructing the rule from a
+        // paragraph.
+        //
+        // **FIFTY-TWO qualifying pairs over 0..60** — against nineteen,
+        // fourteen, twenty-one, twenty-six, twenty-three and twenty-one
+        // before it, so this population is by a wide margin the largest this
+        // test has ever recorded, and the reason is the shipped sweep rather
+        // than the world: the previous passes' counts came from a hand-rolled
+        // procedure whose exact shape nobody can now re-run, and this one
+        // does not claim to be comparable with them. Read the WITNESS, not the
+        // count, until the ninth pass gives the count a like-for-like
+        // predecessor.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 2 -> 1; the species stays
+        // bugbear. Witness is **(1, bugbear)** — the earliest qualifying pair,
+        // the same selection-free rule every pass above used. No same-seed
+        // second species at 1, so this witness is load-bearing alone; (2,
+        // gully-dwarf) is the nearest corroborator, and selecting it over the
+        // earliest pair would be a choice this test does not make.
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
+        let lexicon = lex(&view, "bugbear").expect("seed 1 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 2 bugbears must root {concept} for this test to bite"
+                "seed 1 bugbears must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -14038,10 +14199,33 @@ mod tests {
         // which is the first time any witness generation has had a survivor.
         // It is still selected by the same earliest-pair rule, not because it
         // survived.
-        let view = FullView::build(Seed(26), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "hobgoblin").expect("seed 26 hobgoblins hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "hobgoblin")
-            .expect("hobgoblin is placed at seed 26");
+        //
+        // ELEVENTH PASS (The Underworld, Task 8, spec §4.6's node-index
+        // re-key). Re-keying the deep-history node index on `(cell, rung)`
+        // takes drow out of the competition for surface cells, re-placing
+        // every world, and seed 26's hobgoblin lost its barley band. Re-swept
+        // 0..150 with `sweep_for_the_independent_reading_witness` above — the
+        // shipped method, run with `--ignored --release` (333.60 s), the
+        // second pass to use it rather than a hand-rolled off-repo one.
+        //
+        // **TWO qualifying pairs — (78, goblin) and (133, hobgoblin) — so the
+        // count reads 3 -> 4 -> 7 -> 11 -> 3 -> 15 -> 9 -> 5 -> 10 -> 2 -> 2.**
+        // The tenth pass's warning stands unchanged and is now a second
+        // consecutive reading rather than a one-off: at n = 2 this test is one
+        // world away from having no witness at all. Neither of the previous
+        // pass's two survives, so the survivor note above describes the tenth
+        // pass and not this one.
+        //
+        // **THE SUBJECT MOVED, NOT A VALUE.** Seed 26 -> 78 and hobgoblin ->
+        // goblin: a different world AND a different people, so nothing below
+        // is comparable line-for-line with the previous commit. Witness is
+        // **(78, goblin)** — the earliest qualifying pair, the same
+        // selection-free rule every pass above used. No same-seed second
+        // species at 78, so this witness is load-bearing alone.
+        let view = FullView::build(Seed(78), &SkyPins::default()).unwrap();
+        let lexicon = lex(&view, "goblin").expect("seed 78 goblins hold a lexicon");
+        let steeped =
+            independently_steeped_concepts(&view, "goblin").expect("goblin is placed at seed 78");
         for staple in STAPLE_CONCEPTS {
             // The sweep's own criterion, asserted rather than assumed: this
             // test bites only where WORLDGEN steeps the staple, and a lexicon
@@ -14051,7 +14235,7 @@ mod tests {
             // wrong one.
             assert!(
                 matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                "seed 26 hobgoblins must root {staple} for this test to bite"
+                "seed 78 goblins must root {staple} for this test to bite"
             );
             assert!(
                 steeped.contains(staple),

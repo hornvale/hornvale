@@ -425,7 +425,7 @@ The Tetas are wood elfs — neighbors.
 Xoaboa is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Qaxvavvox walks the sky, slowly.
-The day returns because Goovbata strides the sky, briskly.
+The day returns because Goovbat strides the sky, briskly.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -616,7 +616,7 @@ The Petash are sea elfs — neighbors.
 The Bzhonopsho are snow elfs — ourselves.
 The Tetas are wood elfs — neighbors.
 Xoaboa is the earth with two moons.
-The moons cross because Togo strides the sky, slowly.
+The moons cross because Togo stalks the sky, slowly.
 The day returns, as all things return.
 
 *In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -918,6 +918,32 @@ The Kopnop are snow elfs — rivals.
 The Keqnguq are wood elfs — rivals.
 Boaboo is the earth with one moon.
 The moon crosses because it is Kxokxop's kin.
+
+*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+##### As the priesthood of the Kxoqboq teach it
+
+Boaboo Za Pop Kxopbo. ("Boaboo is the earth — as it is taught.")
+
+The Bobboo are bugbears — rivals.
+The Wazwo are desert dwarfs — rivals.
+The Feqboq are desert elfs — rivals.
+The Kxoqboq are drows — ourselves.
+The Loshjo are gnolls — rivals.
+The Mepmee are goblins — rivals.
+The Njanjo are gully dwarfs — rivals.
+The Xeqmoq are high elfs — rivals.
+The Wanwo are hill dwarfs — rivals.
+The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
+The Dngooqdngo are kobolds — rivals.
+The Xeqmu are sea elfs — rivals.
+The Kopnop are snow elfs — rivals.
+The Keqnguq are wood elfs — rivals.
+Boaboo is the earth with one moon.
+The moon crosses because Kxokxop strides the sky, slowly.
+
+— though the folk say The moon crosses because it is Kxokxop's kin.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -1418,6 +1444,9 @@ The Bobboo's own priesthood taught wrongly, and could be shown wrong by any who 
 Among the Wazwo, the sky has darkened, now and again.
 Among the Feqboq, the sky has darkened, now and again.
 Among the Kxoqboq, the sky has darkened, now and again.
+The priesthood of the Kxoqboq numbers the darkenings: 81.
+The next darkening, it teaches, comes on day 36337.
+The Kxoqboq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Loshjo, the sky has darkened, now and again.
 Among the Mepmee, the sky has darkened, now and again.
 The priesthood of the Mepmee numbers the darkenings: 49.
@@ -1458,6 +1487,7 @@ The next darkening, it teaches, comes on day 36337.
 The Keqnguq's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
 *In truth, the Bobboo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Kxoqboq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Njanjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Xeqmoq's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
@@ -1653,7 +1683,7 @@ The Fzaakzue are sea elfs — rivals.
 The Pnaaknoo are snow elfs — rivals.
 The Daaxdue are wood elfs — rivals.
 Zao is the earth with one moon.
-The moon crosses because Zhoopnoa walks the sky, slowly.
+The moon crosses because Zhoopno walks the sky, slowly.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -1677,7 +1707,7 @@ The Fzaakzue are sea elfs — rivals.
 The Pnaaknoo are snow elfs — rivals.
 The Daaxdue are wood elfs — rivals.
 Zao is the earth with one moon.
-The moon crosses because Zhoopnoa walks the sky, slowly.
+The moon crosses because Zhoopno walks the sky, slowly.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -2081,7 +2111,7 @@ The Fzaakzue are sea elfs — neighbors.
 The Pnaaknoo are snow elfs — ourselves.
 The Daaxdue are wood elfs — neighbors.
 Zao is the earth with one moon.
-The moon crosses because it is Boopno's kin.
+The moon crosses because it is Boopnoa's kin.
 The day returns because the sky must be crossed.
 
 *In truth, Zao is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
