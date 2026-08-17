@@ -269,9 +269,11 @@ Append to `windows/hearsay/tests/ladder.rs`:
 #[test]
 fn social_rungs_append_above_the_astronomical_ones() {
     let led = sky(Some(1.0), &[41.7], Some(372.4));
-    let gen = StdDays::new(11362.0).expect("positive");
+    // NOT `let gen = ...` — `gen` is a RESERVED KEYWORD in Rust edition 2024
+    // and will not compile. Task 1 hit this in the plan's own sample code.
+    let generation = StdDays::new(11362.0).expect("positive");
     let life = StdDays::new(25399.0).expect("positive");
-    let l = PrecisionLadder::with_social(&led, Some(gen), Some(life));
+    let l = PrecisionLadder::with_social(&led, Some(generation), Some(life));
     assert_eq!(l.labels(), vec!["day", "moon 1", "year", "generation", "lifespan"]);
 }
 
@@ -288,8 +290,8 @@ fn social_rungs_sort_by_span_like_every_other_rung() {
     // A generation SHORTER than the year must sort below it. Nothing about
     // a rung's origin gives it a fixed position.
     let led = sky(Some(1.0), &[41.7], Some(372.4));
-    let gen = StdDays::new(100.0).expect("positive");
-    let l = PrecisionLadder::with_social(&led, Some(gen), None);
+    let generation = StdDays::new(100.0).expect("positive");
+    let l = PrecisionLadder::with_social(&led, Some(generation), None);
     assert_eq!(l.labels(), vec!["day", "moon 1", "generation", "year"]);
 }
 ```
@@ -942,9 +944,13 @@ pub fn variants_about_accumulating(
                 _ => String::new(),
             };
             let ladder = ladders.for_people(&people);
+            // NOT `.map(|s| s.get())` — a bare `s` closure parameter
+            // false-positives `cli/tests/claim_shape.rs`'s seed-loop detector,
+            // which then demands a `claim:` tag that would be inaccurate here.
+            // Task 1 hit this in the plan's own sample code.
             let mut width = ladder
                 .span(Precision::FINEST)
-                .map(|s| s.get())
+                .map(|days| days.get())
                 .unwrap_or(0.0);
 
             let mut c = base.clone();
