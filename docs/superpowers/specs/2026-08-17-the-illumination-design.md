@@ -291,6 +291,16 @@ sentence must be rewritten to match whatever it becomes.
 
 ### 4.1 The decision
 
+**Ratified by Nathan at G3, 2026-08-17**, after the ideonomy pass surfaced
+the ratchet cost and the calibration gap. Two consequences are now binding
+rather than advisory:
+
+- `signal` and its calibration land **together, in stage 2**. Shipping the
+  signal without the per-channel roles and projection basis would publish
+  an unreadable field into a contract that cannot un-publish it.
+- `signal`'s shape gets its scrutiny **before** it lands, not after. There
+  is no cheap second attempt.
+
 Add four fields to `SurroundsCell`, keep `color`, and keep the schema tag
 at `scene/surrounds/v2`:
 
