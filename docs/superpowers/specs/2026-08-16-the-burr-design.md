@@ -319,6 +319,29 @@ identified. Deterministic, seeded, Lab-resident.
   simply measure would have been theatre. Stage 1 measured it: **0.7201897018970189**
   (72.02%), on 2026-08-16, over the committed dictionary at commit
   `0e7d5757`.
+  **Measured 2026-08-16 (Stage 1, dictionary at `0e7d5757`): 0.7202 over 18
+  tongues.** Recorded here after the fact, as this bullet promised, and it
+  carries a consequence nobody could have known before the measurement ran:
+  **P2's headroom is 0.28, not ~0.95.** The metric was already near its
+  ceiling before the campaign started.
+
+  This is not a contradiction of the campaign's premise — it is the empirical
+  form of it. A machine separates these tongues at 72%; a reader cannot
+  separate them at all. Those were always different claims, and only one was
+  ever in doubt. It is the third failure mode `LANG-character-is-not-capacity`
+  records — genuinely diverse output whose whole reachable region is narrow —
+  and this number is that row's evidence.
+
+  **P2 is deliberately left as written.** Re-scoping a preregistered
+  prediction after seeing the baseline is exactly what decision 0016 exists to
+  prevent, so the honest course is to let it stand and report at close that it
+  was a weak instrument for a reason Stage 1 could only discover by running.
+  What this number *does* change is the weight §6's closing caution carries:
+  the tongues are already highly distinguishable and are still not lovely, so
+  "necessary but not sufficient" is now measured rather than argued. Stages
+  2–4 are justified by §3.2, §3.3 and §3.4 — defects that stand on their own —
+  never by P2.
+
 - **P2 (the campaign's central claim).** Accuracy rises significantly under
   the four bundles, and the rise is concentrated in the three non-control
   families. If accuracy rises uniformly *including* `concatenative`, the
