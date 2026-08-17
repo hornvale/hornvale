@@ -1,0 +1,50 @@
+{
+  // Hornvale's build output is enormous and there is a lot of it: a single
+  // worktree's `target/debug/deps` was measured at 112,264 files, and the
+  // repo normally carries three to five campaign worktrees under
+  // `.claude/worktrees/` on top of this checkout, each with its own `target/`.
+  // Anything that walks that tree takes minutes per pass.
+  //
+  // WHAT OCCASIONED THIS FILE: on 2026-08-17 an extension spawned 826
+  // concurrent `rg` processes against VS Code's own bundled ripgrep, all
+  // children of one extension host, with ages spanning 3 s to 2 h 58 m — they
+  // were hanging, not churning — and took the machine to a load average of
+  // 417 on ten cores.
+  //
+  // HONEST LIMIT OF THIS FILE: these two settings bind VS Code's own search
+  // and file watcher, and extensions that go through the search API inherit
+  // them. An extension that spawns the ripgrep binary directly with its own
+  // arguments does NOT — it can pass `--no-ignore` and walk everything
+  // regardless. So this narrows the blast radius; it is not a guarantee, and
+  // it should not be mistaken for having fixed the storm's cause, which is
+  // still unidentified.
+
+  // File watching. Excluding a path here is cheap and has no downside for
+  // these directories: nothing in them is hand-edited.
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/.claude/worktrees/**": true,
+    "**/book/book/**": true,
+    "**/node_modules/**": true
+  },
+
+  // Search. `target/` and the built book are generated, so hits in them are
+  // noise. `.claude/worktrees/` is deliberately NOT excluded here — those are
+  // real checkouts and searching across live campaigns is sometimes exactly
+  // what you want, even though it returns duplicate hits.
+  "search.exclude": {
+    "**/target": true,
+    "**/book/book": true
+  },
+
+  // rust-analyzer indexes what it is pointed at; the worktrees are separate
+  // checkouts of this same workspace and re-indexing them buys nothing.
+  "rust-analyzer.files.excludeDirs": [".claude/worktrees"],
+
+  // The repo is Rust 2024 with a workspace-wide fmt discipline — `cargo fmt`
+  // as the final step before every commit is a project rule, and fmt-gate
+  // skips have historically been the most common review finding.
+  "[rust]": {
+    "editor.formatOnSave": true
+  }
+}
