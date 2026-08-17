@@ -508,6 +508,43 @@ fn ensure_minimum_consonants(candidates: &[Segment], inventory: &mut Vec<Segment
     }
 }
 
+/// The minimum number of sonorant consonants (trill or approximant) an
+/// inventory retains when the language's typology asks for one.
+const MIN_SONORANTS: usize = 1;
+
+/// Top up `inventory` to [`MIN_SONORANTS`] sonorants, drawing only from
+/// `candidates` (already envelope-permitted), in canonical order.
+///
+/// Deterministic and **draw-free**, exactly like [`ensure_minimum_consonants`]
+/// beside it: it consumes no stream, so adding it perturbs no sibling stream
+/// and the phonotactics draw downstream is untouched.
+///
+/// The direction this enforces, stated so it cannot be mistaken for a
+/// guarantee it does not make: it puts a **floor** under sonorant count. It
+/// does not cap it, does not order the inventory, and says nothing about
+/// whether the phonotactic templates will ever *use* the sonorant it adds —
+/// that is Task 10's job.
+fn ensure_minimum_sonorants(candidates: &[Segment], inventory: &mut Vec<Segment>) {
+    let is_sonorant = |s: &Segment| {
+        matches!(
+            s,
+            Segment::Consonant {
+                manner: Manner::Trill | Manner::Approximant,
+                ..
+            }
+        )
+    };
+    let count = |inv: &[Segment]| inv.iter().filter(|s| is_sonorant(s)).count();
+    for seg in candidates {
+        if count(inventory) >= MIN_SONORANTS {
+            return;
+        }
+        if is_sonorant(seg) && !inventory.contains(seg) {
+            inventory.push(*seg);
+        }
+    }
+}
+
 /// The distinct manners present among `inventory`'s consonants, in
 /// canonical (`Manner`'s declared) order, for phonotactic template draws.
 fn consonant_manners(inventory: &[Segment]) -> Vec<Manner> {
@@ -690,6 +727,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
         }
     }
     ensure_minimum_consonants(&candidates, &mut inventory);
+    ensure_minimum_sonorants(&candidates, &mut inventory);
 
     let mut phonotactics_stream = phonology_seed.derive(streams::PHONOTACTICS).stream();
     let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory);
@@ -912,6 +950,62 @@ mod tests {
             backness,
             rounded: false,
             tone: Tone::Neutral,
+        }
+    }
+
+    /// Whether a segment is a sonorant consonant (trill or approximant).
+    fn is_sonorant_seg(s: &Segment) -> bool {
+        matches!(
+            s,
+            Segment::Consonant {
+                manner: Manner::Trill | Manner::Approximant,
+                ..
+            }
+        )
+    }
+
+    /// The quietest envelope the roster carries (elf proto, voice_loudness
+    /// 0.35) must still be able to hold a liquid. Before the floor, the
+    /// approximant keep-probability there is 0.128, and the region
+    /// "quiet AND sonorant-rich" — most of what a Quenya-like tongue is —
+    /// was unreachable by construction (spec §3.2).
+    ///
+    /// **Seed 1, not 42.** Seed 42 draws a sonorant here even before the
+    /// floor exists — Task 4's ungating alone happens to suffice at that
+    /// seed, which would make this test prove nothing. Seed 1 was found by
+    /// scanning `0..64` for a seed that genuinely fails pre-floor (34 of the
+    /// 64 do); it is the lowest of them.
+    #[test]
+    fn a_quiet_envelope_still_draws_a_sonorant() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            vowel_space: 0.70,
+            ..manikin_env()
+        };
+        let ph = draw_phonology(&Seed(1), "quiet-probe", &env);
+        assert!(
+            ph.inventory.iter().any(is_sonorant_seg),
+            "a quiet envelope drew no sonorant at all; inventory: {:?}",
+            ph.inventory
+        );
+    }
+
+    /// The floor is a claim about every seed, not the one in the test above.
+    /// claim: invariant(forall-seed) — the sonorant floor holds for every
+    /// seed in 0..64 under the quietest envelope the roster carries.
+    #[test]
+    fn the_sonorant_floor_holds_across_seeds() {
+        let env = Envelope {
+            voice_loudness: 0.35,
+            vowel_space: 0.70,
+            ..manikin_env()
+        };
+        for seed in 0..64u64 {
+            let ph = draw_phonology(&Seed(seed), "quiet-probe", &env);
+            assert!(
+                ph.inventory.iter().any(is_sonorant_seg),
+                "seed {seed} drew no sonorant"
+            );
         }
     }
 

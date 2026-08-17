@@ -544,6 +544,11 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
     // The Burr (Task 4): the trill epoch reseeds every family's root
     // assignment. Which peoples root vs. gap 'spring' is unchanged — only
     // the drawn words moved.
+    //
+    // The Burr (Task 5): the sonorant floor tops up every envelope short of
+    // a trill/approximant, which reseeds phonotactics' manner list again —
+    // only snow-elf's word moved (`Ngaash` -> `Saat`); the rooter/gapper
+    // partition is unchanged.
     assert_eq!(
         rooted,
         vec![
@@ -551,7 +556,7 @@ fn spring_is_a_root_at_seed_42_for_five_peoples() {
             ("goblin", "Tebae".to_string()),
             ("hill-dwarf", "Ngabgob".to_string()),
             ("hobgoblin", "Qebae".to_string()),
-            ("snow-elf", "Ngaash".to_string()),
+            ("snow-elf", "Saat".to_string()),
         ],
         "the set of peoples rooting 'spring' at seed 42 moved"
     );
@@ -694,10 +699,14 @@ fn hill_is_a_root_at_seed_42_for_hobgoblin_and_drow() {
     // The Burr (Task 4): the trill epoch reseeds every family's root
     // assignment, "Godgoo" -> "Godpoo" and "Nootea" -> "Noono". Which
     // peoples root vs. gap 'hill' is unchanged — only the drawn words moved.
+    //
+    // The Burr (Task 5): the sonorant floor reseeds phonotactics' manner
+    // list again — only drow's word moved (`Godpoo` -> `Zhodpoo`); the
+    // rooter/gapper partition is unchanged.
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Godpoo".to_string()),
+            ("drow", "Zhodpoo".to_string()),
             ("hobgoblin", "Noono".to_string()),
         ],
         "the set of peoples rooting 'hill' at seed 42 moved"
@@ -810,14 +819,19 @@ fn valley_is_a_root_at_seed_42_for_five_peoples() {
     // The Burr (Task 4): the trill epoch reseeds every family's root
     // assignment. Which peoples root vs. gap 'valley' is unchanged — only
     // the drawn words moved.
+    //
+    // The Burr (Task 5): the sonorant floor reseeds phonotactics' manner
+    // list again — drow, high-elf and sea-elf's words moved (`Poosdo` ->
+    // `Poopdo`, `Doosdoz` -> `Doobdod`, `Tuusdud` -> `Tuupdut`); the
+    // rooter/gapper partition is unchanged.
     assert_eq!(
         rooted,
         vec![
-            ("drow", "Poosdo".to_string()),
-            ("high-elf", "Doosdoz".to_string()),
+            ("drow", "Poopdo".to_string()),
+            ("high-elf", "Doobdod".to_string()),
             ("hobgoblin", "Ganee".to_string()),
             ("human", "Xeke".to_string()),
-            ("sea-elf", "Tuusdud".to_string()),
+            ("sea-elf", "Tuupdut".to_string()),
         ],
         "the set of peoples rooting 'valley' at seed 42 moved"
     );
@@ -975,15 +989,20 @@ fn marsh_is_a_root_at_seed_42_for_six_peoples_and_no_dwarf() {
     // The Burr (Task 4): the trill epoch reseeds every family's root
     // assignment. Which peoples root vs. gap 'marsh' is unchanged — only
     // the drawn words moved.
+    //
+    // The Burr (Task 5): the sonorant floor reseeds phonotactics' manner
+    // list again — desert-elf, drow and snow-elf's words moved (`Zkeaz` ->
+    // `Ngop`, `Koa` -> `Go`, `Bfoaz` -> `Ngob`); the rooter/gapper
+    // partition is unchanged.
     assert_eq!(
         rooted,
         vec![
             ("bugbear", "Godoa".to_string()),
-            ("desert-elf", "Zkeaz".to_string()),
-            ("drow", "Koa".to_string()),
+            ("desert-elf", "Ngop".to_string()),
+            ("drow", "Go".to_string()),
             ("gnoll", "Dshoopdshop".to_string()),
             ("hobgoblin", "Kotoa".to_string()),
-            ("snow-elf", "Bfoaz".to_string()),
+            ("snow-elf", "Ngob".to_string()),
         ],
         "the set of peoples rooting 'marsh' at seed 42 moved, and no dwarf \
          is among them"

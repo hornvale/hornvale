@@ -24,212 +24,213 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | Low/Central/unrounded | `a` | `a` | low central vowel |
 | Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
 | High/Back/rounded | `u` | `u` | high back rounded vowel |
+| Alveolar/Trill/voiced | `r` | `r` | voiced alveolar trill |
 
 ## Phonotactics
 
-- **Onsets:** nasal, stop, stop+fricative
+- **Onsets:** sibilant, stop, nasal
 - **Nuclei:** v, v+v
-- **Codas:** sibilant
+- **Codas:** stop
 
 ## Proto-root table
 
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
-| `abyssal` | a biome class | *Daz | /daz/ |
-| `abyssal-plain` | The flat floor of the deep ocean. | *Doz | /doz/ |
-| `alpine` | a biome class | *Gez | /gez/ |
-| `bait-ball` | A dense turning mass of fish. | *Tuashtaazh | /tuaʃtaaʒ/ |
-| `barley` | a staple crop | *Tvaozh | /tvaoʒ/ |
-| `bathypelagic` | a biome class | *Ngoos | /ŋoos/ |
-| `black-dragon-kind` | a black dragon | *Doash | /doaʃ/ |
-| `blood` | the circulating fluid of a body | *Beeztush | /beeztuʃ/ |
-| `blue` | the color term for blue | *Ngas | /ŋas/ |
-| `bone` | the rigid frame of a body | *Dvezgxuas | /dvezgxuas/ |
-| `boreal-stand` | A stand of northern conifers. | *Doazh | /doaʒ/ |
-| `brown` | the color term for brown | *Ngaazhpoesh | /ŋaaʒpoeʃ/ |
-| `bugbear-kind` | a bugbear | *Ngozh | /ŋoʒ/ |
-| `burn` | Ground recovering from fire. | *Ngaus | /ŋaus/ |
-| `carrion-crawler-kind` | a carrion crawler | *Txeuzpoezh | /txeuzpoeʒ/ |
-| `child` | one's son or daughter | *Ngezh | /ŋeʒ/ |
-| `closed-canopy` | Tall closed-canopy tropical forest. | *Bos | /bos/ |
-| `coast` | where the land meets the sea | *Nguash | /ŋuaʃ/ |
-| `cold` | felt, biting chill | *Ngoes | /ŋoes/ |
-| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Dashngaz | /daʃŋaz/ |
-| `coral-head` | A massive coral colony standing proud of the reef. | *Gveezngoz | /gveezŋoz/ |
-| `coral-reef` | a biome class | *Bxuash | /bxuaʃ/ |
-| `crevasse-field` | Ice split by crevasses. | *Nguazhguezh | /ŋuaʒgueʒ/ |
-| `damp-hollow` | A shaded, wet fold in the forest floor. | *Tuosh | /tuoʃ/ |
-| `dark` | the color term for black/dark hues | *Nguspvesh | /ŋuspveʃ/ |
-| `day` | the light half of the day-night cycle | *Nguostaush | /ŋuostauʃ/ |
-| `desert` | a biome class | *Nguazhgxoezh | /ŋuaʒgxoeʒ/ |
-| `desert-dwarf-kind` | a desert dwarf | *Dxues | /dxues/ |
-| `desert-elf-kind` | a desert elf | *Ngaes | /ŋaes/ |
-| `die` | to cease living | *Gaozhgaosh | /gaoʒgaoʃ/ |
-| `dire-wolf-kind` | a dire wolf | *Gxospazh | /gxospaʒ/ |
-| `drink` | to swallow liquid | *Ngestezh | /ŋesteʒ/ |
-| `drow-kind` | a drow | *Goz | /goz/ |
-| `earth` | the ground underfoot | *Ngueshngus | /ŋueʃŋus/ |
-| `east` | the direction of increasing longitude | *Dxasgus | /dxasgus/ |
-| `eat` | to consume food | *Pashpes | /paʃpes/ |
-| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Deash | /deaʃ/ |
-| `epipelagic` | a biome class | *Teshbvuush | /teʃbvuuʃ/ |
-| `erg` | A sand sea of dunes. | *Pxezh | /pxeʒ/ |
-| `eye` | the organ of sight | *Ngouzh | /ŋouʒ/ |
-| `felsenmeer` | A field of frost-shattered boulders. | *Ngoas | /ŋoas/ |
-| `fire` | flame and heat | *Buz | /buz/ |
-| `fire-scrub` | Scrub regrowing after fire. | *Besnguezh | /besŋueʒ/ |
-| `fish-shoal` | A shoal moving as one body. | *Nguzhtoz | /ŋuʒtoz/ |
-| `foot` | the walking limb-end | *Pxezngazh | /pxezŋaʒ/ |
-| `ford` | where a river runs shallow enough to cross | *Tvazhtvees | /tvaʒtvees/ |
-| `forest-gap` | A break in the canopy where light reaches the ground. | *Tush | /tuʃ/ |
-| `frost-heave` | Ground churned and patterned by freezing. | *Ngauzbush | /ŋauzbuʃ/ |
-| `gallery-forest` | Forest following a watercourse. | *Gaz | /gaz/ |
-| `giant-constrictor-snake-kind` | a giant constrictor snake | *Gush | /guʃ/ |
-| `giant-crocodile-kind` | a giant crocodile | *Taozdxuez | /taozdxuez/ |
-| `giant-elk-kind` | a giant elk | *Ngeashpuus | /ŋeaʃpuus/ |
-| `giant-goat-kind` | a giant goat | *Boes | /boes/ |
-| `giant-hyena-kind` | a giant hyena | *Dxaznguz | /dxazŋuz/ |
-| `giant-octopus-kind` | a giant octopus | *Ngosh | /ŋoʃ/ |
-| `giant-scorpion-kind` | a giant scorpion | *Tvosgxoash | /tvosgxoaʃ/ |
-| `giant-squid-kind` | a giant squid | *Dauzhpxeoz | /dauʒpxeoz/ |
-| `gloom` | the deepest, starless dark | *Teosgosh | /teosgoʃ/ |
-| `gnoll-kind` | a gnoll | *Dvozh | /dvoʒ/ |
-| `goblin-kind` | a goblin | *Dvouzhdaoz | /dvouʒdaoz/ |
-| `god` | a deity | *Doozhpos | /dooʒpos/ |
-| `grass-sward` | Open grassland, unbroken by trees. | *Ngaosh | /ŋaoʃ/ |
-| `great` | large in size or extent | *Dozngas | /dozŋas/ |
-| `green` | the color term for green | *Dozhpoosh | /doʒpooʃ/ |
-| `gully-dwarf-kind` | a gully dwarf | *Ngozpvaz | /ŋozpvaz/ |
-| `hadal-trench` | a biome class | *Dvesh | /dveʃ/ |
-| `hamada` | A stony desert pavement of bare rock. | *Bxeush | /bxeuʃ/ |
-| `hand` | the manipulating limb-end | *Txeuz | /txeuz/ |
-| `hearth` | the fire at the center of a home | *Deozh | /deoʒ/ |
-| `heat` | felt, oppressive warmth | *Ngauzh | /ŋauʒ/ |
-| `high` | far above the ground | *Ngosngaz | /ŋosŋaz/ |
-| `high-elf-kind` | a high elf | *Ngoozhnguzh | /ŋooʒŋuʒ/ |
-| `hill` | ground that rises above what surrounds it | *Ngeztouz | /ŋeztouz/ |
-| `hill-dwarf-kind` | a hill dwarf | *Gvuash | /gvuaʃ/ |
-| `hobgoblin-kind` | a hobgoblin | *Ngeoshnguosh | /ŋeoʃŋuoʃ/ |
-| `holdfast-tangle` | The anchored base of a kelp forest. | *Dxaushngeaz | /dxauʃŋeaz/ |
-| `home` | one's dwelling | *Nguzhdaosh | /ŋuʒdaoʃ/ |
-| `human-kind` | a human | *Dvostuz | /dvostuz/ |
-| `hydrothermal-vent` | a biome class | *Peeshngeos | /peeʃŋeos/ |
-| `ice` | frozen water | *Bush | /buʃ/ |
-| `ice-lead` | A channel of open water through sea ice. | *Gxoeshdezh | /gxoeʃdeʒ/ |
-| `island` | land the water surrounds | *Pxeshngoz | /pxeʃŋoz/ |
-| `kelp-canopy` | The floating canopy of a kelp forest. | *Gvezhgezh | /gveʒgeʒ/ |
-| `kelp-forest` | a biome class | *Nguesteuzh | /ŋuesteuʒ/ |
-| `killer-whale-kind` | a killer whale | *Dxaashguezh | /dxaaʃgueʒ/ |
-| `kobold-kind` | a kobold | *Ngaez | /ŋaez/ |
-| `lake` | still water held in a hollow that has no outlet to the sea | *Ngeezh | /ŋeeʒ/ |
-| `liana-forest` | Tropical forest tangled with climbing vines. | *Ngezgxuz | /ŋezgxuz/ |
-| `light` | the color term for white/light hues | *Pxooz | /pxooz/ |
-| `lightless-water` | Water below all light. | *Pvaezhdvuash | /pvaeʒdvuaʃ/ |
-| `little` | small in size or extent | *Nguztosh | /ŋuztoʃ/ |
-| `low` | near the ground | *Puazhtvos | /puaʒtvos/ |
-| `many` | an indefinitely large count | *Gauzgxaz | /gauzgxaz/ |
-| `marine-snow` | Organic debris drifting endlessly down. | *Tazh | /taʒ/ |
-| `marsh` | soft wet ground | *Dxeaz | /dxeaz/ |
-| `melt-pond` | A pool of meltwater on sea ice. | *Bauzhdxush | /bauʒdxuʃ/ |
-| `mesopelagic` | a biome class | *Puoshnguazh | /puoʃŋuaʒ/ |
-| `millet` | a staple crop | *Ngezhngeosh | /ŋeʒŋeoʃ/ |
-| `moon` | a moon | *Gxesh | /gxeʃ/ |
-| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Pees | /pees/ |
-| `mountain` | high ground | *Ngoespxash | /ŋoespxaʃ/ |
-| `mouth` | the organ of eating and speech | *Guazgush | /guazguʃ/ |
-| `move` | to go from one place to another | *Pvas | /pvas/ |
-| `muskeg` | Waterlogged peat ground in the boreal forest. | *Deuzhdozh | /deuʒdoʒ/ |
-| `name` | a word that identifies one who bears it | *Gvuosh | /gvuoʃ/ |
-| `new` | recently come to be | *Gaozpxaus | /gaozpxaus/ |
-| `night` | the dark half of the day-night cycle | *Ngash | /ŋaʃ/ |
-| `nodule-field` | Seafloor strewn with mineral nodules. | *Guoshnguash | /guoʃŋuaʃ/ |
-| `north` | toward the pole of increasing latitude | *Dazhpes | /daʒpes/ |
-| `north-east` | between north and east | *Ngueshgaush | /ŋueʃgauʃ/ |
-| `north-west` | between north and west | *Ngoshgxozh | /ŋoʃgxoʒ/ |
-| `old` | long in existence | *Txaezbxuuzh | /txaezbxuuʒ/ |
-| `old-growth` | Mature forest, closed above and open beneath. | *Poshngezh | /poʃŋeʒ/ |
-| `one` | the cardinal number 1 | *Pesh | /peʃ/ |
-| `open-blue` | Open sunlit water, far from any shore. | *Dvuoshguus | /dvuoʃguus/ |
-| `otyugh-kind` | an otyugh | *Bus | /bus/ |
-| `over` | above; atop | *Peez | /peez/ |
-| `owlbear-kind` | an owlbear | *Nguuz | /ŋuuz/ |
-| `parent` | one's father or mother | *Dozngozh | /dozŋoʒ/ |
-| `person` | a person; a member of a people (the autonym root) | *Nguzbas | /ŋuzbas/ |
-| `plankton-bloom` | Water thick with plankton. | *Puozpuos | /puozpuos/ |
-| `playa` | A dry lake bed of salt and cracked clay. | *Bvuzhnguez | /bvuʒŋuez/ |
-| `pressure-ridge` | Sea ice buckled into a ridge. | *Ngooz | /ŋooz/ |
-| `rafted-floe` | Ice floes driven over one another. | *Duozh | /duoʒ/ |
-| `rain` | liquid precipitation | *Nguzh | /ŋuʒ/ |
-| `red` | the color term for red | *Gushdvozh | /guʃdvoʒ/ |
-| `red-dragon-kind` | a red dragon | *Pashdosh | /paʃdoʃ/ |
-| `reef-rubble` | Broken coral debris behind a reef. | *Gxoash | /gxoaʃ/ |
-| `reef-shark-kind` | a reef shark | *Tvoezngus | /tvoezŋus/ |
-| `reg` | A desert floor of wind-swept gravel. | *Buspxuzh | /buspxuʒ/ |
-| `rest` | to stop and recover strength | *Gvosgvosh | /gvosgvoʃ/ |
-| `rhinoceros-kind` | a rhinoceros | *Ngouzduzh | /ŋouzduʒ/ |
-| `rice` | a staple crop | *Gaeshgxosh | /gaeʃgxoʃ/ |
-| `river` | fresh water running across land | *Peuspauzh | /peuspauʒ/ |
-| `rust-monster-kind` | a rust monster | *Ngeos | /ŋeos/ |
-| `sargassum-drift` | A drifting raft of floating weed. | *Pusguaz | /pusguaz/ |
-| `savanna` | a biome class | *Gvuz | /gvuz/ |
-| `scattering-layer` | The daily-rising layer of small sea life. | *Ngezhnguaz | /ŋeʒŋuaz/ |
-| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Daazhdxuz | /daaʒdxuz/ |
-| `scoured-ice` | Ice swept bare and carved by wind. | *Pozngaash | /pozŋaaʃ/ |
-| `sea` | a body of salt water | *Ngazh | /ŋaʒ/ |
-| `sea-elf-kind` | a sea elf | *Bxezhdus | /bxeʒdus/ |
-| `sea-ice` | a biome class | *Nguzhposh | /ŋuʒpoʃ/ |
-| `shadow` | cast dark, distinct from open gloom | *Bustez | /bustez/ |
-| `shrieker-kind` | a shrieker | *Nguuzgeaz | /ŋuuzgeaz/ |
-| `shrubland` | a biome class | *Pos | /pos/ |
-| `sibling` | one's brother or sister | *Nguestvozh | /ŋuestvoʒ/ |
-| `sleep` | to rest unconscious | *Geozhtxeesh | /geoʒtxeeʃ/ |
-| `smoker-field` | A field of hydrothermal chimneys. | *Guzh | /guʒ/ |
-| `snow` | frozen precipitation | *Beozh | /beoʒ/ |
-| `snow-elf-kind` | a snow elf | *Ngozngezh | /ŋozŋeʒ/ |
-| `snowfield` | An unbroken field of snow. | *Poashbvez | /poaʃbvez/ |
-| `south` | toward the pole of decreasing latitude | *Pxash | /pxaʃ/ |
-| `south-east` | between south and east | *Dxazh | /dxaʒ/ |
-| `south-west` | between south and west | *Dozhdeazh | /doʒdeaʒ/ |
-| `spirit` | a lesser or unseen supernatural presence | *Bveesh | /bveeʃ/ |
-| `spring` | where water rises from the ground | *Ngaash | /ŋaaʃ/ |
-| `spur-and-groove` | The ribbed seaward face of a reef. | *Ngouznguzh | /ŋouzŋuʒ/ |
-| `staghorn-stand` | A thicket of branching coral. | *Tezpvash | /tezpvaʃ/ |
-| `star` | a fixed point of light in the night sky | *Ngasnguez | /ŋasŋuez/ |
-| `starlit` | dark faintly lit by stars | *Deezngus | /deezŋus/ |
-| `stone` | rock | *Peeshdvoaz | /peeʃdvoaz/ |
-| `sun` | the sun | *Tuzngaez | /tuzŋaez/ |
-| `taiga` | a biome class | *Ngoespvesh | /ŋoespveʃ/ |
-| `temperate-forest` | a biome class | *Ngozhngues | /ŋoʒŋues/ |
-| `temperate-grassland` | a biome class | *Nguzhduz | /ŋuʒduz/ |
-| `temperate-rainforest` | a biome class | *Ngeuz | /ŋeuz/ |
-| `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuosdezh | /tuosdeʒ/ |
-| `tide` | the rise and fall of the waters under the moons | *Pezbxoz | /pezbxoz/ |
-| `treant-kind` | a treant | *Geosh | /geoʃ/ |
-| `tree` | a woody plant | *Dezngees | /dezŋees/ |
-| `trench-floor` | The deepest floor of an ocean trench. | *Ngoezhngos | /ŋoeʒŋos/ |
-| `trench-wall` | The steep side of an ocean trench. | *Bxoz | /bxoz/ |
-| `tropical-rainforest` | a biome class | *Bxazdvus | /bxazdvus/ |
-| `tropical-seasonal-forest` | a biome class | *Duznguazh | /duzŋuaʒ/ |
-| `tuber` | a staple crop | *Ngoosbezh | /ŋoosbeʒ/ |
-| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Tosh | /toʃ/ |
-| `tundra` | a biome class | *Dxuezhngaoz | /dxueʒŋaoz/ |
-| `twig-blight-kind` | a twig blight | *Ngoz | /ŋoz/ |
-| `twilight-water` | Water at the edge of the light. | *Toz | /toz/ |
-| `two` | the cardinal number 2 | *Paz | /paz/ |
-| `under` | beneath; below | *Dxusgeuzh | /dxusgeuʒ/ |
-| `upwelling` | a biome class | *Paozbxuzh | /paozbxuʒ/ |
-| `urchin-barren` | Seabed grazed bare of kelp. | *Tvaeshtes | /tvaeʃtes/ |
-| `valley` | low ground between heights | *Toosduz | /toosduz/ |
-| `vent-plume` | Shimmering hot water rising from a vent. | *Ngoez | /ŋoez/ |
-| `vine` | a staple crop | *Guozhngas | /guoʒŋas/ |
-| `water` | the drinkable liquid | *Tvez | /tvez/ |
-| `west` | the direction of decreasing longitude | *Pxushbouz | /pxuʃbouz/ |
-| `wheat` | a staple crop | *Ngos | /ŋos/ |
-| `white-dragon-kind` | a white dragon | *Toosh | /tooʃ/ |
-| `wind` | moving air | *Dazgaz | /dazgaz/ |
-| `wind-scour` | Ground swept bare by wind. | *Tus | /tus/ |
-| `wood-elf-kind` | a wood elf | *Ngashpazh | /ŋaʃpaʒ/ |
-| `wooded-grassland` | Grassland with scattered trees. | *Ngeoz | /ŋeoz/ |
-| `woolly-mammoth-kind` | a woolly mammoth | *Ngez | /ŋez/ |
-| `xorn-kind` | a xorn | *Ngasnguzh | /ŋasŋuʒ/ |
-| `yellow` | the color term for yellow | *Bazh | /baʒ/ |
+| `abyssal` | a biome class | *Dat | /dat/ |
+| `abyssal-plain` | The flat floor of the deep ocean. | *Dob | /dob/ |
+| `alpine` | a biome class | *Geb | /geb/ |
+| `bait-ball` | A dense turning mass of fish. | *Tuaptaag | /tuaptaag/ |
+| `barley` | a staple crop | *Ngup | /ŋup/ |
+| `bathypelagic` | a biome class | *Shoot | /ʃoot/ |
+| `black-dragon-kind` | a black dragon | *Sod | /sod/ |
+| `blood` | the circulating fluid of a body | *Beettub | /beettub/ |
+| `blue` | the color term for blue | *Shag | /ʃag/ |
+| `bone` | the rigid frame of a body | *Ngegtaab | /ŋegtaab/ |
+| `boreal-stand` | A stand of northern conifers. | *Doad | /doad/ |
+| `brown` | the color term for brown | *Zaappoeb | /zaappoeb/ |
+| `bugbear-kind` | a bugbear | *Sot | /sot/ |
+| `burn` | Ground recovering from fire. | *Saut | /saut/ |
+| `carrion-crawler-kind` | a carrion crawler | *Ngaetpuod | /ŋaetpuod/ |
+| `child` | one's son or daughter | *Zhep | /ʒep/ |
+| `closed-canopy` | Tall closed-canopy tropical forest. | *Bop | /bop/ |
+| `coast` | where the land meets the sea | *Shuat | /ʃuat/ |
+| `cold` | felt, biting chill | *Shoet | /ʃoet/ |
+| `cold-upwelling` | Cold nutrient-rich water rising from below. | *Dagzhag | /dagʒag/ |
+| `coral-head` | A massive coral colony standing proud of the reef. | *Ngubngag | /ŋubŋag/ |
+| `coral-reef` | a biome class | *Nguub | /ŋuub/ |
+| `crevasse-field` | Ice split by crevasses. | *Zuatguep | /zuatguep/ |
+| `damp-hollow` | A shaded, wet fold in the forest floor. | *Tuod | /tuod/ |
+| `dark` | the color term for black/dark hues | *Zubngot | /zubŋot/ |
+| `day` | the light half of the day-night cycle | *Suobtaud | /suobtaud/ |
+| `desert` | a biome class | *Suatnguog | /suatŋuog/ |
+| `desert-dwarf-kind` | a desert dwarf | *Nguut | /ŋuut/ |
+| `desert-elf-kind` | a desert elf | *Saeg | /saeg/ |
+| `die` | to cease living | *Gaobgaog | /gaobgaog/ |
+| `dire-wolf-kind` | a dire wolf | *Shad | /ʃad/ |
+| `drink` | to swallow liquid | *Shebted | /ʃebted/ |
+| `drow-kind` | a drow | *Gog | /gog/ |
+| `earth` | the ground underfoot | *Shuegzhup | /ʃuegʒup/ |
+| `east` | the direction of increasing longitude | *Ngedsap | /ŋedsap/ |
+| `eat` | to consume food | *Patped | /patped/ |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Deab | /deab/ |
+| `epipelagic` | a biome class | *Tebngud | /tebŋud/ |
+| `erg` | A sand sea of dunes. | *Ngeep | /ŋeep/ |
+| `eye` | the organ of sight | *Soub | /soub/ |
+| `felsenmeer` | A field of frost-shattered boulders. | *Zod | /zod/ |
+| `fire` | flame and heat | *Bub | /bub/ |
+| `fire-scrub` | Scrub regrowing after fire. | *Bepshueg | /bepʃueg/ |
+| `fish-shoal` | A shoal moving as one body. | *Sugtop | /sugtop/ |
+| `foot` | the walking limb-end | *Ngoetsag | /ŋoetsag/ |
+| `ford` | where a river runs shallow enough to cross | *Ngopsheat | /ŋopʃeat/ |
+| `forest-gap` | A break in the canopy where light reaches the ground. | *Tud | /tud/ |
+| `frost-heave` | Ground churned and patterned by freezing. | *Shaubbud | /ʃaubbud/ |
+| `gallery-forest` | Forest following a watercourse. | *Gag | /gag/ |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | *Gup | /gup/ |
+| `giant-crocodile-kind` | a giant crocodile | *Taodngaud | /taodŋaud/ |
+| `giant-elk-kind` | a giant elk | *Zeabpuut | /zeabpuut/ |
+| `giant-goat-kind` | a giant goat | *Boed | /boed/ |
+| `giant-hyena-kind` | a giant hyena | *Ngoabshud | /ŋoabʃud/ |
+| `giant-octopus-kind` | a giant octopus | *Tobngeup | /tobŋeup/ |
+| `giant-scorpion-kind` | a giant scorpion | *Ngetzud | /ŋetzud/ |
+| `giant-squid-kind` | a giant squid | *Daupngaeg | /daupŋaeg/ |
+| `gloom` | the deepest, starless dark | *Teoggop | /teoggop/ |
+| `gnoll-kind` | a gnoll | *Ngot | /ŋot/ |
+| `goblin-kind` | a goblin | *Ngapzhet | /ŋapʒet/ |
+| `god` | a deity | *Dootpop | /dootpop/ |
+| `grass-sward` | Open grassland, unbroken by trees. | *Saot | /saot/ |
+| `great` | large in size or extent | *Dotsab | /dotsab/ |
+| `green` | the color term for green | *Dobpood | /dobpood/ |
+| `gully-dwarf-kind` | a gully dwarf | *Zopngot | /zopŋot/ |
+| `hadal-trench` | a biome class | *Ngop | /ŋop/ |
+| `hamada` | A stony desert pavement of bare rock. | *Ngaeg | /ŋaeg/ |
+| `hand` | the manipulating limb-end | *Ngueb | /ŋueb/ |
+| `hearth` | the fire at the center of a home | *Deog | /deog/ |
+| `heat` | felt, oppressive warmth | *Zaub | /zaub/ |
+| `high` | far above the ground | *Shogsab | /ʃogsab/ |
+| `high-elf-kind` | a high elf | *Zhoodsug | /ʒoodsug/ |
+| `hill` | ground that rises above what surrounds it | *Zhedtoud | /ʒedtoud/ |
+| `hill-dwarf-kind` | a hill dwarf | *Ngug | /ŋug/ |
+| `hobgoblin-kind` | a hobgoblin | *Zeodshuob | /zeodʃuob/ |
+| `holdfast-tangle` | The anchored base of a kelp forest. | *Nguagguep | /ŋuagguep/ |
+| `home` | one's dwelling | *Zuddaob | /zuddaob/ |
+| `human-kind` | a human | *Ngopsog | /ŋopsog/ |
+| `hydrothermal-vent` | a biome class | *Peegzeob | /peegzeob/ |
+| `ice` | frozen water | *Bud | /bud/ |
+| `ice-lead` | A channel of open water through sea ice. | *Nguobgoeg | /ŋuobgoeg/ |
+| `island` | land the water surrounds | *Ngeepsot | /ŋeepsot/ |
+| `kelp-canopy` | The floating canopy of a kelp forest. | *Ngegngoed | /ŋegŋoed/ |
+| `kelp-forest` | a biome class | *Zuebteup | /zuebteup/ |
+| `killer-whale-kind` | a killer whale | *Nguagtab | /ŋuagtab/ |
+| `kobold-kind` | a kobold | *Zhaeg | /ʒaeg/ |
+| `lake` | still water held in a hollow that has no outlet to the sea | *Zeep | /zeep/ |
+| `liana-forest` | Tropical forest tangled with climbing vines. | *Shebngout | /ʃebŋout/ |
+| `light` | the color term for white/light hues | *Ngaob | /ŋaob/ |
+| `lightless-water` | Water below all light. | *Ngapngub | /ŋapŋub/ |
+| `little` | small in size or extent | *Zhuptop | /ʒuptop/ |
+| `low` | near the ground | *Puapnget | /puapŋet/ |
+| `many` | an indefinitely large count | *Shug | /ʃug/ |
+| `marine-snow` | Organic debris drifting endlessly down. | *Tap | /tap/ |
+| `marsh` | soft wet ground | *Ngob | /ŋob/ |
+| `melt-pond` | A pool of meltwater on sea ice. | *Baudngoug | /baudŋoug/ |
+| `mesopelagic` | a biome class | *Puopzuap | /puopzuap/ |
+| `millet` | a staple crop | *Zegzeob | /zegzeob/ |
+| `moon` | a moon | *Taabzaop | /taabzaop/ |
+| `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Bog | /bog/ |
+| `mountain` | high ground | *Soetngead | /soetŋead/ |
+| `mouth` | the organ of eating and speech | *Guatgud | /guatgud/ |
+| `move` | to go from one place to another | *Shogngat | /ʃogŋat/ |
+| `muskeg` | Waterlogged peat ground in the boreal forest. | *Deubdot | /deubdot/ |
+| `name` | a word that identifies one who bears it | *Ngap | /ŋap/ |
+| `new` | recently come to be | *Gaogngaap | /gaogŋaap/ |
+| `night` | the dark half of the day-night cycle | *Zhag | /ʒag/ |
+| `nodule-field` | Seafloor strewn with mineral nodules. | *Guopzhuag | /guopʒuag/ |
+| `north` | toward the pole of increasing latitude | *Dadpeg | /dadpeg/ |
+| `north-east` | between north and east | *Zhot | /ʒot/ |
+| `north-west` | between north and west | *Sopngoob | /sopŋoob/ |
+| `old` | long in existence | *Ngaagpad | /ŋaagpad/ |
+| `old-growth` | Mature forest, closed above and open beneath. | *Pobsep | /pobsep/ |
+| `one` | the cardinal number 1 | *Ngaug | /ŋaug/ |
+| `open-blue` | Open sunlit water, far from any shore. | *Ngatdeg | /ŋatdeg/ |
+| `otyugh-kind` | an otyugh | *Shoab | /ʃoab/ |
+| `over` | above; atop | *Peet | /peet/ |
+| `owlbear-kind` | an owlbear | *Suup | /suup/ |
+| `parent` | one's father or mother | *Dotzhop | /dotʒop/ |
+| `person` | a person; a member of a people (the autonym root) | *Subbag | /subbag/ |
+| `plankton-bloom` | Water thick with plankton. | *Shog | /ʃog/ |
+| `playa` | A dry lake bed of salt and cracked clay. | *Ngepgud | /ŋepgud/ |
+| `pressure-ridge` | Sea ice buckled into a ridge. | *Sood | /sood/ |
+| `rafted-floe` | Ice floes driven over one another. | *Duod | /duod/ |
+| `rain` | liquid precipitation | *Zhut | /ʒut/ |
+| `red` | the color term for red | *Gutngob | /gutŋob/ |
+| `red-dragon-kind` | a red dragon | *Pagdog | /pagdog/ |
+| `reef-rubble` | Broken coral debris behind a reef. | *Ngaod | /ŋaod/ |
+| `reef-shark-kind` | a reef shark | *Ngagzot | /ŋagzot/ |
+| `reg` | A desert floor of wind-swept gravel. | *Budngeut | /budŋeut/ |
+| `rest` | to stop and recover strength | *Ngepngop | /ŋepŋop/ |
+| `rhinoceros-kind` | a rhinoceros | *Zoubdud | /zoubdud/ |
+| `rice` | a staple crop | *Gaedngeod | /gaedŋeod/ |
+| `river` | fresh water running across land | *Peugpaud | /peugpaud/ |
+| `rust-monster-kind` | a rust monster | *Zheot | /ʒeot/ |
+| `sargassum-drift` | A drifting raft of floating weed. | *Pudguag | /pudguag/ |
+| `savanna` | a biome class | *Nget | /ŋet/ |
+| `scattering-layer` | The daily-rising layer of small sea life. | *Sedzuad | /sedzuad/ |
+| `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | *Daagngoug | /daagŋoug/ |
+| `scoured-ice` | Ice swept bare and carved by wind. | *Potshaap | /potʃaap/ |
+| `sea` | a body of salt water | *Zab | /zab/ |
+| `sea-elf-kind` | a sea elf | *Ngoepdub | /ŋoepdub/ |
+| `sea-ice` | a biome class | *Sugpot | /sugpot/ |
+| `shadow` | cast dark, distinct from open gloom | *Bubtep | /bubtep/ |
+| `shrieker-kind` | a shrieker | *Zuupgeap | /zuupgeap/ |
+| `shrubland` | a biome class | *Pod | /pod/ |
+| `sibling` | one's brother or sister | *Suedngob | /suedŋob/ |
+| `sleep` | to rest unconscious | *Geotnguep | /geotŋuep/ |
+| `smoker-field` | A field of hydrothermal chimneys. | *Gug | /gug/ |
+| `snow` | frozen precipitation | *Beod | /beod/ |
+| `snow-elf-kind` | a snow elf | *Zotsheb | /zotʃeb/ |
+| `snowfield` | An unbroken field of snow. | *Poagngot | /poagŋot/ |
+| `south` | toward the pole of decreasing latitude | *Ngeat | /ŋeat/ |
+| `south-east` | between south and east | *Zhadngaog | /ʒadŋaog/ |
+| `south-west` | between south and west | *Dotdeab | /dotdeab/ |
+| `spirit` | a lesser or unseen supernatural presence | *Sob | /sob/ |
+| `spring` | where water rises from the ground | *Saat | /saat/ |
+| `spur-and-groove` | The ribbed seaward face of a reef. | *Soutzhub | /soutʒub/ |
+| `staghorn-stand` | A thicket of branching coral. | *Tedngop | /tedŋop/ |
+| `star` | a fixed point of light in the night sky | *Zhatsueb | /ʒatsueb/ |
+| `starlit` | dark faintly lit by stars | *Deegsud | /deegsud/ |
+| `stone` | rock | *Peedngug | /peedŋug/ |
+| `sun` | the sun | *Tupzhaed | /tupʒaed/ |
+| `taiga` | a biome class | *Zhoegngob | /ʒoegŋob/ |
+| `temperate-forest` | a biome class | *Shobshuep | /ʃobʃuep/ |
+| `temperate-grassland` | a biome class | *Subdut | /subdut/ |
+| `temperate-rainforest` | a biome class | *Zheub | /ʒeub/ |
+| `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuoddeb | /tuoddeb/ |
+| `tide` | the rise and fall of the waters under the moons | *Pegngeod | /pegŋeod/ |
+| `treant-kind` | a treant | *Geob | /geob/ |
+| `tree` | a woody plant | *Debsheep | /debʃeep/ |
+| `trench-floor` | The deepest floor of an ocean trench. | *Zhoebsob | /ʒoebsob/ |
+| `trench-wall` | The steep side of an ocean trench. | *Ngeot | /ŋeot/ |
+| `tropical-rainforest` | a biome class | *Ngoadngot | /ŋoadŋot/ |
+| `tropical-seasonal-forest` | a biome class | *Dubzhuad | /dubʒuad/ |
+| `tuber` | a staple crop | *Zhoopbep | /ʒoopbep/ |
+| `tubeworm-thicket` | Vent fauna crowded around hot water. | *Tot | /tot/ |
+| `tundra` | a biome class | *Nguutsaat | /ŋuutsaat/ |
+| `twig-blight-kind` | a twig blight | *Zhob | /ʒob/ |
+| `twilight-water` | Water at the edge of the light. | *Tob | /tob/ |
+| `two` | the cardinal number 2 | *Saod | /saod/ |
+| `under` | beneath; below | *Ngeudgeub | /ŋeudgeub/ |
+| `upwelling` | a biome class | *Paodngoud | /paodŋoud/ |
+| `urchin-barren` | Seabed grazed bare of kelp. | *Ngadngug | /ŋadŋug/ |
+| `valley` | low ground between heights | *Toopdut | /toopdut/ |
+| `vent-plume` | Shimmering hot water rising from a vent. | *Zhoed | /ʒoed/ |
+| `vine` | a staple crop | *Guopshab | /guopʃab/ |
+| `water` | the drinkable liquid | *Sab | /sab/ |
+| `west` | the direction of decreasing longitude | *Ngeutboug | /ŋeutboug/ |
+| `wheat` | a staple crop | *Shop | /ʃop/ |
+| `white-dragon-kind` | a white dragon | *Toot | /toot/ |
+| `wind` | moving air | *Daggap | /daggap/ |
+| `wind-scour` | Ground swept bare by wind. | *Tug | /tug/ |
+| `wood-elf-kind` | a wood elf | *Tut | /tut/ |
+| `wooded-grassland` | Grassland with scattered trees. | *Seob | /seob/ |
+| `woolly-mammoth-kind` | a woolly mammoth | *Sheb | /ʃeb/ |
+| `xorn-kind` | a xorn | *Sagzup | /sagzup/ |
+| `yellow` | the color term for yellow | *Bat | /bat/ |

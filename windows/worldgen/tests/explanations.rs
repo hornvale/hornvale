@@ -257,6 +257,11 @@ fn moons_explained_only_where_kept() {
     //
     // Re-pinned again at The Burr (Task 4): the trill epoch reseeds every
     // belief-agent draw, "Gngoo" -> "Dsaasgngo". Same story once more.
+    //
+    // Re-pinned again at The Burr (Task 5): the sonorant floor reseeds
+    // phonotactics' manner list once more, "Dsaasgngo" -> "Ngorngo". Same
+    // story once more — `underlying`, `schema`, `lexeme` and `manner`
+    // compare byte-identical; only `agent` moved.
     let w = generated(2);
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -281,7 +286,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Dsaasgngo".to_string()),
+            agent: Some("Ngorngo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

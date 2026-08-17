@@ -11070,7 +11070,14 @@ mod tests {
         // wear eats a name's gloss. Still strictly between 0 and 1 — the
         // distribution property this test guards. Not yet corroborated
         // against a canonical census.
-        assert_eq!(share, 0.8049792531120332, "seed 42 transparency drifted");
+        //
+        // The Burr re-pin (Task 5): 0.8049792531120332 -> 0.8091286307053942
+        // (a small increase). The sonorant floor tops up any envelope short
+        // of a trill/approximant, which reseeds `consonant_manners`' output
+        // for every under-supplied species and so moves the phonotactics
+        // draw downstream — the same class of mover as Task 4's, not a
+        // placement reshuffle. Still strictly between 0 and 1.
+        assert_eq!(share, 0.8091286307053942, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

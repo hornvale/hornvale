@@ -28,19 +28,19 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Doabo** — tropical-seasonal-forest
 - **Sngoqo** — shrubland
 - **Snaddngodqaddnoq** — shrubland
-- **Ngeozngoeshngospvez** — temperate-grassland
-- **Goozhngaspvazhpvees** — temperate-grassland
-- **Ngaosh** — temperate-grassland
-- **Bogaoshgko** — tropical-seasonal-forest
-- **Dodgo** — tropical-seasonal-forest
+- **Seopshoegzhopsap** — temperate-grassland
+- **Goopshapngopsheap** — temperate-grassland
+- **Saop** — temperate-grassland
+- **Bogaodgoo** — tropical-seasonal-forest
+- **Dobzhoa** — tropical-seasonal-forest
 - **Dzhap** — shrubland
 - **Na (21.6°S, 44.4°W)** — temperate-forest
 - **Naadee** — temperate-forest
 - **Babo (14.0°S, 48.6°W)** — temperate-forest
 - **Ta** — tropical-seasonal-forest
 - **Qabnnoqta** — shrubland
-- **Mozhmoedvazhdvee** — temperate-forest
-- **Dvemoeshmodozmae** — temperate-forest
+- **Shobshoemobshea** — temperate-forest
+- **Sashoegzhodobzhae** — temperate-forest
 - **Mashngamobbog** — temperate-forest
 - **Tabngotobqob** — temperate-forest
 - **Naabee** — temperate-forest
@@ -51,16 +51,16 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Pero (29.0°N, 143.7°W)** — temperate-forest
 - **Xaxaro** — taiga
 - **Xoora (21.1°N, 144.0°W)** — temperate-forest
-- **Bkuash** — coral-reef
-- **Bbeednudnueshnusdbed** — coral-reef
-- **Dudnaed** — kelp-forest
-- **Ngaozboshbfoozngaoz** — tundra
-- **Tozngaozngoosbboshboozboz** — taiga
-- **Bfoozngaoz (54.5°S, 9.9°E)** — tundra
-- **Bfoozngaoz (59.6°N, 101.2°E)** — tundra
-- **Nguznguengu** — temperate-forest
-- **Teustau** — temperate-forest
-- **Teustauddazddee** — temperate-forest
+- **Nuub** — coral-reef
+- **Nubnabshuebzhubsab** — coral-reef
+- **Dubzhaed** — kelp-forest
+- **Shaobbobngootsaat** — tundra
+- **Tobzaobzoobngobboobbot** — taiga
+- **Ngootsaat (54.5°S, 9.9°E)** — tundra
+- **Ngootsaat (59.6°N, 101.2°E)** — tundra
+- **Sudsuesu** — temperate-forest
+- **Teugtau** — temperate-forest
+- **Teugtaungutsea** — temperate-forest
 - **Shngaax (9.3°N, 171.3°W)** — shrubland
 - **Gaebaenoe** — tropical-seasonal-forest
 - **Qata** — temperate-forest
@@ -68,52 +68,52 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Qata** — tropical-seasonal-forest
 - **Tabngatsmot** — temperate-forest
 - **Perareko** — temperate-forest
-- **Poospao** — temperate-forest
+- **Poogpao** — temperate-forest
 - **Ngotobbotsngog** — temperate-forest
 - **Do** — temperate-forest
 - **Reko** — temperate-forest
-- **Dadga (17.5°S, 32.6°E)** — temperate-forest
+- **Dagga (17.5°S, 32.6°E)** — temperate-forest
 - **Po** — temperate-forest
-- **Dadga** — temperate-rainforest
+- **Dagga** — temperate-rainforest
 - **Neno (19.1°S, 42.8°W)** — temperate-forest
 - **Bobababo** — temperate-forest
 - **Qado (20.6°N, 145.1°E)** — tropical-rainforest
-- **Poosdo** — temperate-forest
+- **Poopdo** — temperate-forest
 - **Raaxora (18.3°N, 124.0°E)** — temperate-forest
-- **Gooshgovo** — temperate-forest
-- **Dadgaposhgo** — temperate-forest
-- **Gozhgoo (17.9°S, 35.6°E)** — temperate-forest
+- **Shoogzhosa** — temperate-forest
+- **Daggapobso** — temperate-forest
+- **Shobshoo (17.9°S, 35.6°E)** — temperate-forest
 - **Naeno** — temperate-forest
 - **Bodo (25.8°N, 150.2°E)** — temperate-forest
-- **Godpovo** — temperate-forest
+- **Zhopposa** — temperate-forest
 - **Bote (25.0°N, 13.6°E)** — temperate-forest
 - **Bago (26.0°N, 13.7°E)** — temperate-forest
 - **Bodoqadago** — tropical-rainforest
-- **Dadga (14.6°S, 31.7°E)** — temperate-forest
-- **Goozhga** — temperate-forest
+- **Dagga (14.6°S, 31.7°E)** — temperate-forest
+- **Goopsha** — temperate-forest
 - **Bago (27.3°N, 15.6°E)** — temperate-forest
 - **Na (28.0°N, 16.4°E)** — temperate-forest
 - **Dad** — shrubland
 - **Qaddnoq** — shrubland
 - **Roere** — temperate-forest
-- **Poshgogozhgoo (16.4°S, 30.7°E)** — temperate-forest
+- **Pobsoshobshoo (16.4°S, 30.7°E)** — temperate-forest
 - **Daadoo** — temperate-forest
 - **Shngodopdodsngogdngagdashngogsngop** — shrubland
 - **Da (21.3°N, 138.7°E)** — temperate-forest
 - **Poo** — temperate-forest
-- **Gozhgoo (15.2°S, 32.6°E)** — temperate-forest
+- **Shobshoo (15.2°S, 32.6°E)** — temperate-forest
 - **Gaoda (20.0°N, 144.0°E)** — tropical-rainforest
 - **Bote (22.5°N, 140.7°E)** — temperate-forest
 - **Bobabago** — temperate-forest
 - **Perakare** — temperate-forest
 - **Perafato** — temperate-forest
 - **Doo (20.3°N, 139.0°E)** — tropical-seasonal-forest
-- **Poshgogozhgoo (16.4°S, 32.6°E)** — temperate-forest
-- **Vazhpvoo** — temperate-forest
+- **Pobsoshobshoo (16.4°S, 32.6°E)** — temperate-forest
+- **Gopshoa** — temperate-forest
 - **Bago (26.9°N, 16.6°E)** — tropical-rainforest
 - **Noe** — tropical-seasonal-forest
 - **Takeno** — tropical-seasonal-forest
-- **Go** — temperate-forest
+- **Sho** — temperate-forest
 - **Qada** — tropical-rainforest
 - **Bodoqadoaba** — tropical-rainforest
 - **Doaba** — tropical-rainforest
@@ -123,7 +123,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Nenobabo** — temperate-forest
 - **Kaenenona** — temperate-forest
 - **Naneno** — temperate-forest
-- **Dadga (17.6°N, 131.5°E)** — temperate-forest
+- **Dagga (17.6°N, 131.5°E)** — temperate-forest
 - **Ga (18.5°S, 30.8°E)** — tropical-rainforest
 - **Smo** — shrubland
 - **Pero (25.2°N, 15.6°W)** — temperate-forest
@@ -134,7 +134,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Zhmo** — savanna
 - **Zhmosngax** — savanna
 - **Psaxqzha** — shrubland
-- **Goozhgavazhpvoo** — temperate-forest
+- **Goopshagopshoa** — temperate-forest
 - **Pero (26.0°N, 13.7°W)** — temperate-forest
 - **Boababo** — temperate-forest
 - **Da (26.9°N, 150.2°E)** — temperate-forest
@@ -148,7 +148,7 @@ Some 16% of the surface is habitable — land with water and a tolerable season.
 - **Nabote** — temperate-forest
 - **Xao (19.0°N, 121.7°E)** — temperate-forest
 - **Dabago (21.1°N, 144.0°E)** — temperate-forest
-- **Poshgo** — temperate-forest
+- **Pobso** — temperate-forest
 - **Raaxora (20.2°N, 126.6°E)** — temperate-forest
 - **Dzoxgzhoppso** — savanna
 - **Bobeqa** — tropical-rainforest
@@ -314,19 +314,19 @@ The residue's dominant hazard is structural collapse — 735 layers so afflicted
 The land holds 242 settlement(s).
 The chief bugbear settlement, Daadoo, holds 70 souls amid tropical-rainforest.
 The chief desert-dwarf settlement, Sngoqo, holds 63 souls amid shrubland.
-The chief desert-elf settlement, Ngeozngoeshngospvez, holds 24 souls amid temperate-grassland.
-The chief drow settlement, Bogaoshgko, holds 24 souls amid tropical-seasonal-forest.
+The chief desert-elf settlement, Seopshoegzhopsap, holds 24 souls amid temperate-grassland.
+The chief drow settlement, Bogaodgoo, holds 24 souls amid tropical-seasonal-forest.
 The chief gnoll settlement, Dzhap, holds 30 souls amid shrubland.
 The chief goblin settlement, Na, holds 40 souls amid temperate-forest.
 The chief gully-dwarf settlement, Ta, holds 37 souls amid tropical-seasonal-forest.
-The chief high-elf settlement, Mozhmoedvazhdvee, holds 35 souls amid temperate-forest.
+The chief high-elf settlement, Shobshoemobshea, holds 35 souls amid temperate-forest.
 The chief hill-dwarf settlement, Mashngamobbog, holds 37 souls amid temperate-forest.
 The chief hobgoblin settlement, Naabee, holds 83 souls amid temperate-forest.
 The chief human settlement, Perevae, holds 36 souls amid temperate-forest.
 The chief kobold settlement, Xaxaro, holds 43 souls amid taiga.
-The chief sea-elf settlement, Bkuash, holds 33 souls amid coral-reef.
-The chief snow-elf settlement, Ngaozboshbfoozngaoz, holds 25 souls amid tundra.
-The chief wood-elf settlement, Nguznguengu, holds 30 souls amid temperate-forest.
+The chief sea-elf settlement, Nuub, holds 33 souls amid coral-reef.
+The chief snow-elf settlement, Shaobbobngootsaat, holds 25 souls amid tundra.
+The chief wood-elf settlement, Sudsuesu, holds 30 souls amid temperate-forest.
 
 The bugbear lair of **Daadoo**, population 70.
 
@@ -340,15 +340,15 @@ Sngoqo lives by fishing.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
-The desert-elf wellcamp of **Ngeozngoeshngospvez**, population 24.
+The desert-elf wellcamp of **Seopshoegzhopsap**, population 24.
 
-Ngeozngoeshngospvez lives by farming.
+Seopshoegzhopsap lives by farming.
 Its roles, lowest to highest: waterfinder, pathkeeper.
 The desert-elf run a basal metabolism of 64 W; slow, long-lived, and sparse, lifespan ~317 yr, matures ~63 yr.
 
-The drow hold of **Bogaoshgko**, population 24.
+The drow hold of **Bogaodgoo**, population 24.
 
-Bogaoshgko lives by farming.
+Bogaodgoo lives by farming.
 Its roles, lowest to highest: delver, dark-speaker, matron.
 The drow run a basal metabolism of 66 W; slow, long-lived, and sparse, lifespan ~320 yr, matures ~64 yr.
 
@@ -370,9 +370,9 @@ Ta lives by farming.
 Its roles, lowest to highest: scrounger, mutterer, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
-The high-elf citadel of **Mozhmoedvazhdvee**, population 35.
+The high-elf citadel of **Shobshoemobshea**, population 35.
 
-Mozhmoedvazhdvee lives by farming.
+Shobshoemobshea lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
@@ -400,21 +400,21 @@ Xaxaro lives by farming.
 Its roles, lowest to highest: digger, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The sea-elf haven of **Bkuash**, population 33.
+The sea-elf haven of **Nuub**, population 33.
 
-Bkuash lives by fishing.
+Nuub lives by fishing.
 Its roles, lowest to highest: netter, provider.
 The sea-elf run a basal metabolism of 71 W; slow, long-lived, and sparse, lifespan ~329 yr, matures ~66 yr.
 
-The snow-elf wintering of **Ngaozboshbfoozngaoz**, population 25.
+The snow-elf wintering of **Shaobbobngootsaat**, population 25.
 
-Ngaozboshbfoozngaoz lives by foraging.
+Shaobbobngootsaat lives by foraging.
 Its roles, lowest to highest: herder, hearthkeeper.
 The snow-elf run a basal metabolism of 73 W; slow, long-lived, and sparse, lifespan ~332 yr, matures ~66 yr.
 
-The wood-elf grove of **Nguznguengu**, population 30.
+The wood-elf grove of **Sudsuesu**, population 30.
 
-Nguznguengu lives by farming.
+Sudsuesu lives by farming.
 Its roles, lowest to highest: gatherer, greenspeaker, boughgiver.
 The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
@@ -422,7 +422,7 @@ The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifes
 
 In the lair of **Daadoo**, an organized priesthood tends its own pantheon:
 
-> Bagodoqa the Kvodoqa is: Bagodoqa the Kvodoqa is always watching. That's how it's always been. That's how it's always been. Bagodoqa is a great one among the gods.
+> Bagodoqa the Shrodoqa is: Bagodoqa the Shrodoqa is always watching. That's how it's always been. That's how it's always been. Bagodoqa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -432,15 +432,15 @@ The waterhold of **Sngoqo** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-The wellcamp of **Ngeozngoeshngospvez** keeps its own folk pantheon:
+The wellcamp of **Seopshoegzhopsap** keeps its own folk pantheon:
 
-> Pkooz Pozngaez is: Pkooz Pozngaez is always watching. That's how it's always been. That's how it's always been. Pkooz is a great one among the gods.
+> Ngaop Popzhaez is: Ngaop Popzhaez is always watching. That's how it's always been. That's how it's always been. Ngaop is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the hold of **Bogaoshgko**, an organized priesthood tends its own pantheon:
+In the hold of **Bogaodgoo**, an organized priesthood tends its own pantheon:
 
-> Poosgo the Kxvaopoosgo is felt, not counted. So it was, so it is.
+> Pooggo the Kxraopooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *heat*
 
@@ -466,9 +466,9 @@ In the midden of **Ta**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *heat*
 
-In the citadel of **Mozhmoedvazhdvee**, an organized priesthood tends its own pantheon:
+In the citadel of **Shobshoemobshea**, an organized priesthood tends its own pantheon:
 
-> Dozma Dozmaebxoo is ever: Dozma Dozmaebxoo watches unceasing. So it was, so it is.
+> Dobzhae Dobzhaemao is ever: Dobzhae Dobzhaemao watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -496,21 +496,21 @@ The warren of **Xaxaro** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-The haven of **Bkuash** keeps its own folk pantheon:
+The haven of **Nuub** keeps its own folk pantheon:
 
-> Bkuuddudnaed Bkuuddudnaed is: Bkuuddudnaed Bkuuddudnaed is always watching. That's how it's always been. That's how it's always been. Bkuuddudnaed is a great one among the gods.
+> Naubdubzhaed Naubdubzhaed is: Naubdubzhaed Naubdubzhaed is always watching. That's how it's always been. That's how it's always been. Naubdubzhaed is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-The wintering of **Ngaozboshbfoozngaoz** keeps its own folk pantheon:
+The wintering of **Shaobbobngootsaat** keeps its own folk pantheon:
 
-> Bfooz Tozngaozbfooz is: Bfooz Tozngaozbfooz is always watching. That's how it's always been. That's how it's always been. Bfooz is a great one among the gods.
+> Ngaob Tobzaobngaob is: Ngaob Tobzaobngaob is always watching. That's how it's always been. That's how it's always been. Ngaob is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the grove of **Nguznguengu**, an organized priesthood tends its own pantheon:
+In the grove of **Sudsuesu**, an organized priesthood tends its own pantheon:
 
-> Txuuduznga Duznga is: Txuuduznga Duznga is always watching. That's how it's always been. That's how it's always been. Txuuduznga is a great one among the gods.
+> Ngaudutzae Dutzae is: Ngaudutzae Dutzae is always watching. That's how it's always been. That's how it's always been. Ngaudutzae is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

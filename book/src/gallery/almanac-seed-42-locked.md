@@ -60,13 +60,13 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 
 - **Gaodao** — tropical-seasonal-forest
 - **Qaddnoqdngagda (21.1°S, 53.7°W)** — savanna
-- **Ngeozpvazhpvees** — savanna
-- **Ngaosh** — savanna
-- **Gvozpeospaozh** — savanna
-- **Gozhgoo** — desert
-- **Poospao** — savanna
-- **Poospao** — desert
-- **Gooshgovobospko** — desert
+- **Seopngopsheap** — savanna
+- **Saop** — savanna
+- **Ngeppeogpaoz** — savanna
+- **Dogdoo** — desert
+- **Poogpao** — savanna
+- **Poogpao** — desert
+- **Shoogzhosabodgoo** — desert
 - **Psosngashma** — savanna
 - **Snga** — savanna
 - **Deota** — taiga
@@ -74,8 +74,8 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Tataba** — savanna
 - **Ngogtngobngotobqob** — savanna
 - **Babotngogtngob** — savanna
-- **Mezhmeo** — tropical-seasonal-forest
-- **Dvazhdveemo** — temperate-forest
+- **Zegzeo** — tropical-seasonal-forest
+- **Mobsheasho** — temperate-forest
 - **Babotngogsngob** — savanna
 - **Totbaq** — taiga
 - **Qabsmoq** — tropical-seasonal-forest
@@ -86,32 +86,32 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Perorore** — alpine
 - **Roatorore** — alpine
 - **Rooxaro** — savanna
-- **Nueshnusdbeddudnaed** — coral-reef
-- **Dudnaed** — coral-reef
-- **Bkuash** — coral-reef
-- **Ngaateustau** — tropical-seasonal-forest
-- **Guuznganguzngue** — temperate-forest
+- **Shuebzhubsabdubzhaed** — coral-reef
+- **Dubzhaed** — coral-reef
+- **Nuub** — coral-reef
+- **Saateugtau** — tropical-seasonal-forest
+- **Guutsasudsue** — temperate-forest
 - **Dzha** — savanna
-- **Dvazhdveemozhmoe** — temperate-forest
+- **Mobsheashobshoe** — temperate-forest
 - **Favae** — alpine
-- **Ngau** — savanna
+- **Sau** — savanna
 - **Qata** — tropical-seasonal-forest
-- **Ngezhngeoshpozngaez** — savanna
+- **Zegzeoppopzhaez** — savanna
 - **Xao (25.0°S, 77.3°W)** — alpine
-- **Momozhmoe** — temperate-forest
-- **Bee** — temperate-forest
+- **Shoshobshoe** — temperate-forest
+- **Bo** — temperate-forest
 - **Xooxo** — taiga
 - **Vaeroere** — savanna
 - **Babo** — tropical-seasonal-forest
 - **Shnaddagqaddnoq** — alpine
 - **Qaddnoq (51.6°S, 18.6°E)** — savanna
-- **Dozma (40.3°S, 75.6°W)** — temperate-forest
+- **Dobzhae (40.3°S, 75.6°W)** — temperate-forest
 - **Babobodeta** — tropical-seasonal-forest
 - **Ga** — tropical-seasonal-forest
-- **Dozma (41.2°S, 76.2°W)** — temperate-forest
+- **Dobzhae (41.2°S, 76.2°W)** — temperate-forest
 - **Qaddnoq (21.4°S, 51.6°W)** — savanna
 - **Dngagda (21.0°S, 50.5°W)** — savanna
-- **Boshngoz** — temperate-forest
+- **Bobsob** — temperate-forest
 - **Naabee** — tropical-seasonal-forest
 - **Qaddnoqdod** — savanna
 - **Shngogsngoddadsngad** — savanna
@@ -122,8 +122,8 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Noabe (37.2°S, 66.1°W)** — tropical-seasonal-forest
 - **Dngagda (20.6°S, 49.3°W)** — savanna
 - **Nobebagokoto** — tropical-seasonal-forest
-- **Boosbaoz** — taiga
-- **Ngoosboz** — taiga
+- **Boobbaob** — taiga
+- **Zoobbob** — taiga
 - **Doo** — tropical-seasonal-forest
 - **Dngagda (20.2°S, 48.1°W)** — savanna
 - **Doaba** — tropical-rainforest
@@ -136,7 +136,7 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Bagonobe** — tropical-seasonal-forest
 - **Bodoqa** — savanna
 - **Qobao** — tropical-seasonal-forest
-- **Ngoosbozboozboz** — taiga
+- **Zoobbobboobbot** — taiga
 - **Dadngagda** — savanna
 - **Xao (24.9°S, 76.1°W)** — alpine
 - **Doabo (55.1°S, 42.7°E)** — tropical-seasonal-forest
@@ -186,8 +186,8 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Rararo** — alpine
 - **Raxa (25.6°S, 74.1°W)** — alpine
 - **Take (54.3°S, 67.3°E)** — tropical-seasonal-forest
-- **Ngoosbozboaz** — taiga
-- **Boaztozngaoz** — taiga
+- **Zobbobbob** — taiga
+- **Bobtobzab** — taiga
 - **Noabe (57.0°S, 63.5°E)** — tropical-seasonal-forest
 - **Ga (56.1°S, 34.7°E)** — savanna
 - **Bago (54.3°S, 65.5°E)** — tropical-seasonal-forest
@@ -204,7 +204,7 @@ Some 5% of the surface is habitable — land with water and a tolerable season.
 - **Xoxora** — temperate-forest
 - **Xoora** — temperate-forest
 - **Take** — tropical-rainforest
-- **Mae** — temperate-forest
+- **Zhae** — temperate-forest
 - **Dobododo** — savanna
 - **Dago (56.6°S, 36.3°E)** — savanna
 - **Bodoqadagodobo** — savanna
@@ -270,19 +270,19 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 The land holds 163 settlement(s).
 The chief bugbear settlement, Gaodao, holds 66 souls amid tropical-seasonal-forest.
 The chief desert-dwarf settlement, Qaddnoqdngagda, holds 57 souls amid savanna.
-The chief desert-elf settlement, Ngeozpvazhpvees, holds 27 souls amid savanna.
-The chief drow settlement, Gozhgoo, holds 14 souls amid desert.
+The chief desert-elf settlement, Seopngopsheap, holds 27 souls amid savanna.
+The chief drow settlement, Dogdoo, holds 14 souls amid desert.
 The chief gnoll settlement, Psosngashma, holds 30 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
 The chief gully-dwarf settlement, Ngogtngobngotobqob, holds 35 souls amid savanna.
-The chief high-elf settlement, Mezhmeo, holds 24 souls amid tropical-seasonal-forest.
+The chief high-elf settlement, Zegzeo, holds 24 souls amid tropical-seasonal-forest.
 The chief hill-dwarf settlement, Babotngogsngob, holds 35 souls amid savanna.
 The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
 The chief kobold settlement, Rooxaro, holds 45 souls amid savanna.
-The chief sea-elf settlement, Nueshnusdbeddudnaed, holds 33 souls amid coral-reef.
-The chief snow-elf settlement, Boshngoz, holds 17 souls amid temperate-forest.
-The chief wood-elf settlement, Ngaateustau, holds 24 souls amid tropical-seasonal-forest.
+The chief sea-elf settlement, Shuebzhubsabdubzhaed, holds 33 souls amid coral-reef.
+The chief snow-elf settlement, Bobsob, holds 17 souls amid temperate-forest.
+The chief wood-elf settlement, Saateugtau, holds 24 souls amid tropical-seasonal-forest.
 
 The bugbear lair of **Gaodao**, population 66.
 
@@ -296,15 +296,15 @@ Qaddnoqdngagda lives by farming.
 Its roles, lowest to highest: well-tender, waterwarden.
 The desert-dwarf run a basal metabolism of 79 W; slow, long-lived, and sparse, lifespan ~272 yr, matures ~54 yr.
 
-The desert-elf wellcamp of **Ngeozpvazhpvees**, population 27.
+The desert-elf wellcamp of **Seopngopsheap**, population 27.
 
-Ngeozpvazhpvees lives by farming.
+Seopngopsheap lives by farming.
 Its roles, lowest to highest: waterfinder, pathkeeper.
 The desert-elf run a basal metabolism of 64 W; slow, long-lived, and sparse, lifespan ~317 yr, matures ~63 yr.
 
-The drow hold of **Gozhgoo**, population 14.
+The drow hold of **Dogdoo**, population 14.
 
-Gozhgoo lives by herding.
+Dogdoo lives by herding.
 Its roles, lowest to highest: delver, matron.
 The drow run a basal metabolism of 66 W; slow, long-lived, and sparse, lifespan ~320 yr, matures ~64 yr.
 
@@ -326,9 +326,9 @@ Ngogtngobngotobqob lives by farming.
 Its roles, lowest to highest: scrounger, eldest.
 The gully-dwarf run a basal metabolism of 75 W; slow, long-lived, and sparse, lifespan ~268 yr, matures ~54 yr.
 
-The high-elf citadel of **Mezhmeo**, population 24.
+The high-elf citadel of **Zegzeo**, population 24.
 
-Mezhmeo lives by farming.
+Zegzeo lives by farming.
 Its roles, lowest to highest: steward, loresinger, archivist.
 The high-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
@@ -356,21 +356,21 @@ Rooxaro lives by farming.
 Its roles, lowest to highest: digger, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The sea-elf haven of **Nueshnusdbeddudnaed**, population 33.
+The sea-elf haven of **Shuebzhubsabdubzhaed**, population 33.
 
-Nueshnusdbeddudnaed lives by fishing.
+Shuebzhubsabdubzhaed lives by fishing.
 Its roles, lowest to highest: netter, provider.
 The sea-elf run a basal metabolism of 71 W; slow, long-lived, and sparse, lifespan ~329 yr, matures ~66 yr.
 
-The snow-elf wintering of **Boshngoz**, population 17.
+The snow-elf wintering of **Bobsob**, population 17.
 
-Boshngoz lives by farming.
+Bobsob lives by farming.
 Its roles, lowest to highest: herder, frostspeaker, hearthkeeper.
 The snow-elf run a basal metabolism of 73 W; slow, long-lived, and sparse, lifespan ~332 yr, matures ~66 yr.
 
-The wood-elf grove of **Ngaateustau**, population 24.
+The wood-elf grove of **Saateugtau**, population 24.
 
-Ngaateustau lives by farming.
+Saateugtau lives by farming.
 Its roles, lowest to highest: gatherer, greenspeaker, boughgiver.
 The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifespan ~325 yr, matures ~65 yr.
 
@@ -378,23 +378,23 @@ The wood-elf run a basal metabolism of 69 W; slow, long-lived, and sparse, lifes
 
 In the lair of **Gaodao**, an organized priesthood tends its own pantheon:
 
-> Dooga the Bvaodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Shraodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Dooga the Gvadoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Shradoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Dooga the Kvaodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+> Dooga the Shraodoga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bago the Vngaadoqabago is: Bago the Vngaadoqabago is always watching. That's how it's always been. That's how it's always been. Bago is a great one among the gods.
+> Bago the Shraadoqabago is: Bago the Shraadoqabago is always watching. That's how it's always been. That's how it's always been. Bago is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dado the Vngaodado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dado the Shraodado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -420,43 +420,43 @@ The waterhold of **Qaddnoqdngagda** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *heat*
 
-The wellcamp of **Ngeozpvazhpvees** keeps its own folk pantheon:
+The wellcamp of **Seopngopsheap** keeps its own folk pantheon:
 
-> Pkooz Pozngaez is: Pkooz Pozngaez is always watching. That's how it's always been. That's how it's always been. Pkooz is a great one among the gods.
+> Ngaop Popzhaez is: Ngaop Popzhaez is always watching. That's how it's always been. That's how it's always been. Ngaop is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Pospez Pospez comes back every 71.04 days. That's how it's always been. That's how it's always been. Pospez is a great one among the gods.
+> Poppep Poppep comes back every 71.04 days. That's how it's always been. That's how it's always been. Poppep is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Pospez Pospez comes back every 1991.56 days. That's how it's always been. That's how it's always been. Pospez is a great one among the gods.
+> Poppep Poppep comes back every 1991.56 days. That's how it's always been. That's how it's always been. Poppep is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Peosgosh Peosgosh is felt more than seen. That's how it's always been. That's how it's always been. Peosgosh is a great one among the gods.
+> Peoggop Peoggop is felt more than seen. That's how it's always been. That's how it's always been. Peoggop is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Peosgosh Peosgosh is felt more than seen. That's how it's always been. That's how it's always been. Peosgosh is a great one among the gods.
+> Peoggop Peoggop is felt more than seen. That's how it's always been. That's how it's always been. Peoggop is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-The hold of **Gozhgoo** keeps its own folk pantheon:
+The hold of **Dogdoo** keeps its own folk pantheon:
 
-> Poosgo the Kxzhookxpoosgo is felt, not counted. So it was, so it is.
+> Pooggo the Pvooshpooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Poosgo the Vopoosgo is felt, not counted. So it was, so it is.
+> Pooggo the Sopooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *heat*
 
-> Poosgo the Kxshoakxpoosgo is felt, not counted. So it was, so it is.
+> Pooggo the Kvoaspooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Poosgo the Kxvopoosgo is felt, not counted. So it was, so it is.
+> Pooggo the Kxropooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -542,29 +542,29 @@ The midden of **Ngogtngobngotobqob** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the citadel of **Mezhmeo**, an organized priesthood tends its own pantheon:
+In the citadel of **Zegzeo**, an organized priesthood tends its own pantheon:
 
-> Dozma Dozmaebxoo is ever: Dozma Dozmaebxoo watches unceasing. So it was, so it is.
+> Dobzhae Dobzhaemao is ever: Dobzhae Dobzhaemao watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bosde Bosde returns every 71.04 days. So it was, so it is.
+> Bobde Bobde returns every 71.04 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Bosde Bosde returns every 1991.56 days. So it was, so it is.
+> Bobde Bobde returns every 1991.56 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Deosgo Deosgo is felt, not counted. So it was, so it is.
+> Deoggo Deoggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Deosgo Deosgo is felt, not counted. So it was, so it is.
+> Deoggo Deoggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *heat*
 
-> Deosgo Deosgo is felt, not counted. So it was, so it is.
+> Deoggo Deoggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -664,81 +664,81 @@ The warren of **Rooxaro** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The haven of **Nueshnusdbeddudnaed** keeps its own folk pantheon:
+The haven of **Shuebzhubsabdubzhaed** keeps its own folk pantheon:
 
-> Bkuuddudnaed Bkuuddudnaed is: Bkuuddudnaed Bkuuddudnaed is always watching. That's how it's always been. That's how it's always been. Bkuuddudnaed is a great one among the gods.
+> Naubdubzhaed Naubdubzhaed is: Naubdubzhaed Naubdubzhaed is always watching. That's how it's always been. That's how it's always been. Naubdubzhaed is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Busded Busded comes back every 71.04 days. That's how it's always been. That's how it's always been. Busded is a great one among the gods.
+> Bubdeb Bubdeb comes back every 71.04 days. That's how it's always been. That's how it's always been. Bubdeb is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Busded Busded comes back every 1991.56 days. That's how it's always been. That's how it's always been. Busded is a great one among the gods.
+> Bubdeb Bubdeb comes back every 1991.56 days. That's how it's always been. That's how it's always been. Bubdeb is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Deusbush Deusbush is felt more than seen. That's how it's always been. That's how it's always been. Deusbush is a great one among the gods.
+> Deubbub Deubbub is felt more than seen. That's how it's always been. That's how it's always been. Deubbub is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Deusbush Deusbush is felt more than seen. That's how it's always been. That's how it's always been. Deusbush is a great one among the gods.
+> Deubbub Deubbub is felt more than seen. That's how it's always been. That's how it's always been. Deubbub is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Deusbush Deusbush is felt more than seen. That's how it's always been. That's how it's always been. Deusbush is a great one among the gods.
+> Deubbub Deubbub is felt more than seen. That's how it's always been. That's how it's always been. Deubbub is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-In the wintering of **Boshngoz**, an organized priesthood tends its own pantheon:
+In the wintering of **Bobsob**, an organized priesthood tends its own pantheon:
 
-> Bfooz Tozngaozbfooz is: Bfooz Tozngaozbfooz is always watching. That's how it's always been. That's how it's always been. Bfooz is a great one among the gods.
+> Ngaob Tobzaobngaob is: Ngaob Tobzaobngaob is always watching. That's how it's always been. That's how it's always been. Ngaob is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bostoz Bostoz comes back every 71.04 days. That's how it's always been. That's how it's always been. Bostoz is a great one among the gods.
+> Bobtob Bobtob comes back every 71.04 days. That's how it's always been. That's how it's always been. Bobtob is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Bostoz Bostoz comes back every 1991.56 days. That's how it's always been. That's how it's always been. Bostoz is a great one among the gods.
+> Bobtob Bobtob comes back every 1991.56 days. That's how it's always been. That's how it's always been. Bobtob is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Toosbosh Toosbosh is felt more than seen. That's how it's always been. That's how it's always been. Toosbosh is a great one among the gods.
+> Toobbob Toobbob is felt more than seen. That's how it's always been. That's how it's always been. Toobbob is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Toosbosh Toosbosh is felt more than seen. That's how it's always been. That's how it's always been. Toosbosh is a great one among the gods.
+> Toobbob Toobbob is felt more than seen. That's how it's always been. That's how it's always been. Toobbob is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Toosbosh Toosbosh is felt more than seen. That's how it's always been. That's how it's always been. Toosbosh is a great one among the gods.
+> Toobbob Toobbob is felt more than seen. That's how it's always been. That's how it's always been. Toobbob is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-In the grove of **Ngaateustau**, an organized priesthood tends its own pantheon:
+In the grove of **Saateugtau**, an organized priesthood tends its own pantheon:
 
-> Deusgu Deusgu is felt more than seen. That's how it's always been. That's how it's always been. Deusgu is a great one among the gods.
+> Deuggu Deuggu is felt more than seen. That's how it's always been. That's how it's always been. Deuggu is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Txuu Duznga is: Txuu Duznga is always watching. That's how it's always been. That's how it's always been. Txuu is a great one among the gods.
+> Ngau Dutzae is: Ngau Dutzae is always watching. That's how it's always been. That's how it's always been. Ngau is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dusde Dusde comes back every 71.04 days. That's how it's always been. That's how it's always been. Dusde is a great one among the gods.
+> Dudde Dudde comes back every 71.04 days. That's how it's always been. That's how it's always been. Dudde is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Deusgu Deusgu is felt more than seen. That's how it's always been. That's how it's always been. Deusgu is a great one among the gods.
+> Deuggu Deuggu is felt more than seen. That's how it's always been. That's how it's always been. Deuggu is a great one among the gods.
 >
 > — derived from the phenomenon *heat*
 
-> Dusde Dusde comes back every 1991.56 days. That's how it's always been. That's how it's always been. Dusde is a great one among the gods.
+> Dudde Dudde comes back every 1991.56 days. That's how it's always been. That's how it's always been. Dudde is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Deusgu Deusgu is felt more than seen. That's how it's always been. That's how it's always been. Deusgu is a great one among the gods.
+> Deuggu Deuggu is felt more than seen. That's how it's always been. That's how it's always been. Deuggu is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
