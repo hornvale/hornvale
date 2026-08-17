@@ -19,83 +19,125 @@
 //! state (a spring, a marsh, a lake — see `hornvale_terrain::water_table`), so
 //! this counts drowned columns rather than an artifact of a rail.
 //!
-//! ## Measured, 2026-08-17, seeds 42 / 7 / 1234
+//! ## Measured, 2026-08-17, seeds 42 / 7 / 1234 — AFTER spec §4.2.1
 //!
-//! **H3 holds on every seed** — 29.9% / 45.5% / 42.5% wholly phreatic, well
-//! inside `[5%, 95%]`.
+//! Taken after the relief recalibration (§4.2.1 clause 1) and the drainage rule
+//! (clause 2) landed. The pre-correction reading is kept below as the
+//! before-arm; deleting it would destroy the evidence that the correction
+//! did not buy H3 at the cost of anything else.
 //!
-//! **The distribution is not three atoms.** 491–586 distinct values at 0.1 m
-//! resolution over 874–1681 columns. The only large atom is `0.0` itself, which
-//! *is* H3's statistic rather than an artifact; the fattest **non-zero** value
-//! holds 3.7% of a seed at worst. For contrast, one reach value holds 23.1% of
-//! seed 42 in the cave-depth budget this campaign had to work around.
+//! **H3 holds on every seed** — 31.9% / 43.6% / 41.5% wholly phreatic, well
+//! inside `[5%, 95%]`, and essentially unmoved by the recalibration
+//! (29.9 / 45.5 / 42.5 before). That is the result the correction had to
+//! survive and did.
+//!
+//! **The distribution is not three atoms, and got finer.** 527–757 distinct
+//! values at 0.1 m over 874–1681 columns (was 491–586). The only large atom is
+//! `0.0`, which *is* H3's statistic rather than an artifact; the fattest
+//! **non-zero** value holds 3.7% of a seed at worst, unchanged. For contrast,
+//! one reach value holds 23.1% of seed 42 in the cave-depth budget.
 //!
 //! **The inputs carry one atom the derivation inherits:** 16.4–18.6% of
 //! cave-bearing columns sit at `height_asl_m == 0.0` exactly, because the
-//! carve's marine trim pins cells to sea level. That is why `RELIEF_SOFT_M`
-//! is not the negligible smoothing constant it looks like — see its doc.
+//! carve's marine trim pins cells to sea level.
 //!
-//! **The reading that is not H3.** The walkable share of a cave column has a
-//! median of 0.002–0.049, and no `Underdeep` or `Sunless` rung is dry in any
-//! of the three worlds. Reported, not asserted: nothing preregistered a
-//! per-rung criterion, and inventing one after seeing this would be exactly
-//! the move decision 0016 exists to prevent.
+//! **Rung dryness, looked at only after the two above** (spec §4.2.1 requires
+//! that order, and the calibration was committed before this probe was run so
+//! the order is a fact about the history):
+//!
+//! ```text
+//! rung         before §4.2.1        after §4.2.1
+//! Undercroft   100 /100 /100 %      100  /100  /100  %
+//! Shallows      39.5/20.9/23.1      41.8 / 24.9/ 26.1
+//! Deeps         13.5/ 0.0/ 4.7      29.9 /  1.7/ 14.4
+//! Underdeep      0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
+//! Sunless        0.0/ 0.0/ 0.0       0.0 /  0.0/  0.0
+//! ```
+//!
+//! `Deeps` opened; **`Underdeep` and `Sunless` did not, and no scale constant
+//! can open them** — see `UNDERWORLD_DRYNESS_GAIN`'s doc for the 1×–16× sweep
+//! and the reason. The reason is in this readout: the columns reaching
+//! `Sunless` have a median porosity of **0.056** against population medians of
+//! 0.781 / 0.374 / 0.379, because reach rises with `induration` and porosity
+//! falls with it. Deep caves are in rock that cannot shed water.
+//!
+//! **What does open them is the drainage rule** (clause 2), exercised here
+//! through the shipped `is_sump`: a `Made` chamber is dry regardless of the
+//! table, recovering **100% of every reached `Underdeep` and `Sunless`
+//! column**. Nothing writes `Made` yet — that is bound to the capacity task —
+//! so `dry-if-made` measures the size of the population the rule can reach,
+//! not chambers in any world.
+//!
+//! Per-rung figures are REPORTED, never asserted: nothing preregistered a
+//! per-rung criterion, and inventing one after seeing this is the move
+//! decision 0016 exists to prevent.
 //!
 //! ```text
 //! seed 42: cave columns=874
-//!   H3 wholly phreatic: 261/874 = 29.9%
-//!   sumped (cave bottom below the table)=758 (86.7%)  wholly vadose=116 (13.3%)
-//!   table m   p10=0.0 p25=0.0 p50=23.5 p75=248.4 p90=359.6 p99=440.6 max=501.5
-//!   table m (undrowned only, n=613) p10=7.3 p50=115.0 p90=384.6
-//!   distinct 0.1 m values=491
-//!   atoms: 0.0m x261 (29.9%), 23.5m x32 (3.7%), 2.7m x9 (1.0%), 12.5m x9 (1.0%),
-//!          6.7m x6 (0.7%), 3.0m x5 (0.6%)
+//!   H3 wholly phreatic: 279/874 = 31.9%
+//!   sumped (cave bottom below the table)=599 (68.5%)  wholly vadose=275 (31.5%)
+//!   table m   p10=0.0 p25=0.0 p50=49.3 p75=408.7 p90=756.4 p99=1022.4 max=1361.9
+//!   table m (undrowned only, n=595) p10=14.1 p50=284.0 p90=843.1
+//!   distinct 0.1 m values=527
+//!   atoms: 0.0m x279 (31.9%), 16.3m x32 (3.7%), 9.6m x5 (0.6%), 11.6m x5 (0.6%), 11.9m x5 (0.6%), 10.0m x4 (0.5%)
 //!   input atom: height_asl_m == 0.0 on 163 columns (18.6%)
-//!   inputs: height p10=0 p50=597 p90=2123 | drainage p10=1 p50=2 p90=11
-//!         | porosity min=0.055 p10=0.056 p50=0.781 p90=0.819 max=0.819
+//!   inputs: height p10=0 p50=597 p90=2123 | drainage p10=1 p50=2 p90=11 | porosity min=0.055 p10=0.056 p50=0.781 p90=0.819 max=0.819
 //!   reach m   p10=200 p50=483 p90=2272
-//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.049 p75=0.742 p90=1.000
-//!   rung Undercroft: reached by 874 columns, dry at 874 (100.0%)
-//!   rung Shallows: reached by 797 columns, dry at 315 (39.5%)
-//!   rung Deeps: reached by 666 columns, dry at 90 (13.5%)
-//!   rung Underdeep: reached by 267 columns, dry at 0 (0.0%)
-//!   rung Sunless: reached by 214 columns, dry at 0 (0.0%)
+//!   porosity of Sunless-reaching columns (n=214) p10=0.055 p50=0.056 p90=0.381  vs ALL p50=0.781
+//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.041 p75=1.000 p90=1.000
+//!   rung Undercroft: reached by 874 columns, dry at 874 (100.0%), dry-if-made 874 (+0 the drainage rule can recover)
+//!   rung Shallows: reached by 797 columns, dry at 333 (41.8%), dry-if-made 797 (+464 the drainage rule can recover)
+//!   rung Deeps: reached by 666 columns, dry at 199 (29.9%), dry-if-made 666 (+467 the drainage rule can recover)
+//!   rung Underdeep: reached by 267 columns, dry at 0 (0.0%), dry-if-made 267 (+267 the drainage rule can recover)
+//!   rung Sunless: reached by 214 columns, dry at 0 (0.0%), dry-if-made 214 (+214 the drainage rule can recover)
 //! seed 7: cave columns=1681
-//!   H3 wholly phreatic: 765/1681 = 45.5%
-//!   sumped (cave bottom below the table)=1492 (88.8%)  wholly vadose=189 (11.2%)
-//!   table m   p10=0.0 p25=0.0 p50=4.6 p75=43.2 p90=224.7 p99=333.4 max=422.0
-//!   table m (undrowned only, n=916) p10=4.9 p50=28.8 p90=271.9
-//!   distinct 0.1 m values=586
-//!   atoms: 0.0m x765 (45.5%), 19.3m x22 (1.3%), 15.6m x21 (1.2%), 8.3m x20 (1.2%),
-//!          17.0m x16 (1.0%), 4.6m x14 (0.8%)
+//!   H3 wholly phreatic: 733/1681 = 43.6%
+//!   sumped (cave bottom below the table)=1390 (82.7%)  wholly vadose=291 (17.3%)
+//!   table m   p10=0.0 p25=0.0 p50=8.8 p75=98.6 p90=379.2 p99=651.9 max=1070.5
+//!   table m (undrowned only, n=948) p10=8.7 p50=67.7 p90=489.7
+//!   distinct 0.1 m values=757
+//!   atoms: 0.0m x733 (43.6%), 7.1m x22 (1.3%), 11.4m x22 (1.3%), 8.7m x16 (1.0%), 5.2m x5 (0.3%), 11.0m x5 (0.3%)
 //!   input atom: height_asl_m == 0.0 on 277 columns (16.5%)
-//!   inputs: height p10=0 p50=708 p90=2727 | drainage p10=1 p50=2 p90=15
-//!         | porosity min=0.052 p10=0.054 p50=0.374 p90=0.791 max=0.805
+//!   inputs: height p10=0 p50=708 p90=2727 | drainage p10=1 p50=2 p90=15 | porosity min=0.052 p10=0.054 p50=0.374 p90=0.791 max=0.805
 //!   reach m   p10=215 p50=1409 p90=2474
-//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.002 p75=0.123 p90=1.000
-//!   rung Undercroft: reached by 1681 columns, dry at 1681 (100.0%)
-//!   rung Shallows: reached by 1597 columns, dry at 334 (20.9%)
-//!   rung Deeps: reached by 998 columns, dry at 0 (0.0%)
-//!   rung Underdeep: reached by 877 columns, dry at 0 (0.0%)
-//!   rung Sunless: reached by 727 columns, dry at 0 (0.0%)
+//!   porosity of Sunless-reaching columns (n=727) p10=0.054 p50=0.056 p90=0.056  vs ALL p50=0.374
+//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.009 p75=0.172 p90=1.000
+//!   rung Undercroft: reached by 1681 columns, dry at 1681 (100.0%), dry-if-made 1681 (+0 the drainage rule can recover)
+//!   rung Shallows: reached by 1597 columns, dry at 398 (24.9%), dry-if-made 1597 (+1199 the drainage rule can recover)
+//!   rung Deeps: reached by 998 columns, dry at 17 (1.7%), dry-if-made 998 (+981 the drainage rule can recover)
+//!   rung Underdeep: reached by 877 columns, dry at 0 (0.0%), dry-if-made 877 (+877 the drainage rule can recover)
+//!   rung Sunless: reached by 727 columns, dry at 0 (0.0%), dry-if-made 727 (+727 the drainage rule can recover)
 //! seed 1234: cave columns=1266
-//!   H3 wholly phreatic: 538/1266 = 42.5%
-//!   sumped (cave bottom below the table)=1186 (93.7%)  wholly vadose=80 (6.3%)
-//!   table m   p10=0.0 p25=0.0 p50=5.6 p75=71.0 p90=264.0 p99=418.8 max=470.3
-//!   table m (undrowned only, n=728) p10=4.7 p50=46.4 p90=327.5
-//!   distinct 0.1 m values=523
-//!   atoms: 0.0m x538 (42.5%), 23.3m x23 (1.8%), 7.9m x11 (0.9%), 2.5m x9 (0.7%),
-//!          6.9m x9 (0.7%), 7.4m x8 (0.6%)
+//!   H3 wholly phreatic: 525/1266 = 41.5%
+//!   sumped (cave bottom below the table)=1057 (83.5%)  wholly vadose=209 (16.5%)
+//!   table m   p10=0.0 p25=0.0 p50=16.0 p75=144.0 p90=484.9 p99=870.7 max=1078.5
+//!   table m (undrowned only, n=741) p10=13.3 p50=82.9 p90=609.5
+//!   distinct 0.1 m values=618
+//!   atoms: 0.0m x525 (41.5%), 16.0m x23 (1.8%), 15.1m x8 (0.6%), 5.8m x5 (0.4%), 5.2m x4 (0.3%), 13.5m x4 (0.3%)
 //!   input atom: height_asl_m == 0.0 on 207 columns (16.4%)
-//!   inputs: height p10=0 p50=722 p90=2298 | drainage p10=1 p50=2 p90=13
-//!         | porosity min=0.051 p10=0.051 p50=0.379 p90=0.817 max=0.818
+//!   inputs: height p10=0 p50=722 p90=2298 | drainage p10=1 p50=2 p90=13 | porosity min=0.051 p10=0.051 p50=0.379 p90=0.817 max=0.818
 //!   reach m   p10=202 p50=1201 p90=2694
-//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.003 p75=0.172 p90=0.808
-//!   rung Undercroft: reached by 1266 columns, dry at 1266 (100.0%)
-//!   rung Shallows: reached by 1175 columns, dry at 271 (23.1%)
-//!   rung Deeps: reached by 1031 columns, dry at 48 (4.7%)
-//!   rung Underdeep: reached by 665 columns, dry at 0 (0.0%)
-//!   rung Sunless: reached by 536 columns, dry at 0 (0.0%)
+//!   porosity of Sunless-reaching columns (n=536) p10=0.051 p50=0.056 p90=0.377  vs ALL p50=0.379
+//!   walkable share of the cave column  p10=0.000 p25=0.000 p50=0.011 p75=0.338 p90=1.000
+//!   rung Undercroft: reached by 1266 columns, dry at 1266 (100.0%), dry-if-made 1266 (+0 the drainage rule can recover)
+//!   rung Shallows: reached by 1175 columns, dry at 307 (26.1%), dry-if-made 1175 (+868 the drainage rule can recover)
+//!   rung Deeps: reached by 1031 columns, dry at 148 (14.4%), dry-if-made 1031 (+883 the drainage rule can recover)
+//!   rung Underdeep: reached by 665 columns, dry at 0 (0.0%), dry-if-made 665 (+665 the drainage rule can recover)
+//!   rung Sunless: reached by 536 columns, dry at 0 (0.0%), dry-if-made 536 (+536 the drainage rule can recover)
+//! ```
+//!
+//! ## The before-arm: measured 2026-08-17, BEFORE spec §4.2.1
+//!
+//! Retained deliberately. `RELIEF_HALF_M` was 800 m and there was one metre
+//! scale at 200 m.
+//!
+//! ```text
+//! seed 42:   H3 261/874 = 29.9%   table p50=23.5 p90=359.6 max=501.5   distinct=491
+//!            walkable share p50=0.049   rungs dry 100/39.5/13.5/0.0/0.0 %
+//! seed 7:    H3 765/1681 = 45.5%  table p50= 4.6 p90=224.7 max=422.0   distinct=586
+//!            walkable share p50=0.002   rungs dry 100/20.9/ 0.0/0.0/0.0 %
+//! seed 1234: H3 538/1266 = 42.5%  table p50= 5.6 p90=264.0 max=470.3   distinct=523
+//!            walkable share p50=0.003   rungs dry 100/23.1/ 4.7/0.0/0.0 %
 //! ```
 #![allow(clippy::disallowed_methods)]
 
@@ -103,6 +145,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_terrain::{
     DelveRung, TerrainPins, delta_t_range_of, is_phreatic, rungs, water_table_depth_m,
 };
+use hornvale_worldgen::chamber::{ChamberOrigin, is_sump};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -192,6 +235,17 @@ fn the_water_table_is_not_degenerate() {
         // reaches but the table drowns is a sump, not a place to live.
         let mut rung_reached = [0usize; 5];
         let mut rung_vadose = [0usize; 5];
+        // The same rungs judged through the SHIPPED drainage rule with a
+        // `Made` origin (spec §4.2.1, clause 2), so the probe exercises
+        // `is_sump` rather than restating it. Nothing produces `Made` yet, so
+        // this measures the SIZE OF THE POPULATION the rule can reach if the
+        // capacity task writes it — not a count of chambers in any world.
+        let mut rung_dry_if_made = [0usize; 5];
+        // WHY the gain saturates: `cave_depth_reach_m` rises with `induration`
+        // while `assemble_material` builds porosity with a `(1 - induration)`
+        // term, so a deep-reaching cave sits in rock that sheds water badly.
+        // Measured rather than inferred from the two source lines.
+        let mut porosity_deep: Vec<f64> = Vec::new();
         // Columns whose cave bottoms out below the table — the sump
         // population §4.2 exists to produce.
         let mut sumped = 0usize;
@@ -228,8 +282,17 @@ fn the_water_table_is_not_degenerate() {
                     continue;
                 }
                 rung_reached[index] += 1;
-                if !is_phreatic(top_m, table) {
+                if !is_sump(ChamberOrigin::Made, top_m, table) {
+                    rung_dry_if_made[index] += 1;
+                }
+                if !is_sump(ChamberOrigin::Found, top_m, table) {
                     rung_vadose[index] += 1;
+                }
+                // Index 4 is `Sunless`, the deepest rung. A column that reaches
+                // it is a deep-reaching cave; its porosity is the quantity the
+                // anti-correlation claim is about.
+                if index == 4 {
+                    porosity_deep.push(porosity);
                 }
             }
 
@@ -265,6 +328,7 @@ fn the_water_table_is_not_degenerate() {
         porosities.sort_by(f64::total_cmp);
         reaches.sort_by(f64::total_cmp);
         vadose_fraction.sort_by(f64::total_cmp);
+        porosity_deep.sort_by(f64::total_cmp);
 
         println!("seed {seed_value}: cave columns={n}");
         println!(
@@ -325,6 +389,14 @@ fn the_water_table_is_not_degenerate() {
             pct(&reaches, 0.90)
         );
         println!(
+            "  porosity of Sunless-reaching columns (n={}) p10={:.3} p50={:.3} p90={:.3}  vs ALL p50={:.3}",
+            porosity_deep.len(),
+            pct(&porosity_deep, 0.10),
+            pct(&porosity_deep, 0.50),
+            pct(&porosity_deep, 0.90),
+            pct(&porosities, 0.50)
+        );
+        println!(
             "  walkable share of the cave column  p10={:.3} p25={:.3} p50={:.3} p75={:.3} p90={:.3}",
             pct(&vadose_fraction, 0.10),
             pct(&vadose_fraction, 0.25),
@@ -345,8 +417,11 @@ fn the_water_table_is_not_degenerate() {
             } else {
                 100.0 * vadose as f64 / reached as f64
             };
+            let made = rung_dry_if_made[index];
             println!(
-                "  rung {rung:?}: reached by {reached} columns, dry at {vadose} ({share:.1}%)"
+                "  rung {rung:?}: reached by {reached} columns, dry at {vadose} ({share:.1}%), \
+                 dry-if-made {made} (+{} the drainage rule can recover)",
+                made - vadose
             );
         }
 

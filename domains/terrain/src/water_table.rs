@@ -297,6 +297,80 @@ const RELIEF_SOFT_M: f64 = 50.0;
 /// cannot drift apart.
 const DRAINAGE_HALF: f64 = RIVER_MIN_DRAINAGE;
 
+/// How much drier this world's underworld is than Earth's. **Shipped at 1.0 —
+/// Earth — and the measurement that settled that is below.**
+///
+/// **This constant is the labelled home for an AUTHORED, PLAYABILITY choice**,
+/// which is why it has its own name instead of being folded into
+/// [`DRAWDOWN_SCALE_M`], where it would read as part of the calibration. Spec
+/// §4.2.1 clause 3 is the authority: Earth calibration is a *floor on
+/// plausibility, not a ceiling on scale*, and it licenses a drier underworld
+/// than Earth's if the genre wants one.
+///
+/// **The physics is preserved, not overwritten.** [`earth_table_depth_m`] is
+/// the gain-free Earth model and is what both datums are checked against, so
+/// the calibration stays inspectable at any gain and a later campaign can move
+/// the genre without touching the physics or vice versa.
+///
+/// **It cannot move H3, and that is proved twice.** Multiplying a floored
+/// quantity by a positive constant preserves its zero set, so the
+/// wholly-phreatic population is identical at every gain:
+/// `the_dryness_gain_cannot_move_who_drowns` checks the code has that shape,
+/// and the live sweep below confirms it on real worlds — H3 reads 31.9 / 43.6 /
+/// 41.5% at **every** value tried, from 1 to 16.
+///
+/// ## Why it ships at 1.0: the lever does not reach
+///
+/// It was raised to open `Underdeep` and `Sunless`, which clause 1's physical
+/// correction left dry on 0.0% of the columns reaching them. Swept on the three
+/// preregistered seeds — share of columns reaching each rung that are naturally
+/// dry there, seed 42 / 7 / 1234:
+///
+/// ```text
+/// gain    Deeps              Underdeep         Sunless          H3
+///  1.0    29.9/ 1.7/14.4     0.0/0.0/0.0       0.0/0.0/0.0      31.9/43.6/41.5
+///  2.0    38.4/ 6.3/21.4     0.0/0.0/0.0       0.0/0.0/0.0      31.9/43.6/41.5
+///  3.0    40.1/ 9.0/24.2     0.4/0.0/0.3       0.0/0.0/0.0      31.9/43.6/41.5
+///  4.0    41.4/11.9/25.7     1.1/0.1/1.5       0.0/0.0/0.0      31.9/43.6/41.5
+///  8.0    47.9/22.9/37.8     2.6/1.9/4.4       0.0/0.0/0.0      31.9/43.6/41.5
+/// 16.0    54.2/36.1/45.2     8.2/8.2/10.2      0.5/0.0/0.7      31.9/43.6/41.5
+/// ```
+///
+/// **A sixteenfold departure from Earth still leaves `Sunless` at 0.0–0.7% and
+/// `Underdeep` under 11%.** The lever saturates, so the deep rungs are not
+/// dry-inaccessible because the table is calibrated too shallow. Shipping a
+/// large authored departure that fails at the one thing it was authored for
+/// would be a cost with no purchase, so the gain stays at Earth and the finding
+/// is recorded instead.
+///
+/// ## What the real obstacle is, measured rather than reasoned
+///
+/// **Deep-reaching caves sit in rock that cannot shed water, by construction.**
+/// The columns whose caves reach `Sunless` have a median `porosity` of **0.056
+/// on all three seeds**, against population medians of 0.781 / 0.374 / 0.379 —
+/// essentially the aquitard floor (`crate::lithology`'s
+/// `AQUITARD_MAX_POROSITY` is 0.15). So the term this constant multiplies is
+/// already ~8× below median at exactly the columns that need it.
+///
+/// The mechanism is two shipped lines pulling opposite ways, and neither is
+/// wrong on its own: [`crate::cave_depth_reach_m`]'s reach rises with
+/// `induration` (competent rock holds a void open deeper), while
+/// `crate::lithology`'s `assemble_material` builds porosity with a
+/// `(1 - induration)` term (cemented rock has less pore space). Depth of reach
+/// and capacity to drain are therefore anti-correlated in this model. That is
+/// physically defensible and it is nobody's defect, but it means **no value of
+/// this constant can open the deep rungs**, and a campaign that wants them
+/// opened by hydrology would have to revisit that coupling — Task 1b's
+/// territory, not this module's.
+///
+/// **What does open them is spec §4.2.1's clause 2**, the drainage rule: a
+/// `ChamberOrigin::Made` chamber is dry regardless of the table, and the probe
+/// measures that it recovers **100% of every reached `Underdeep` and `Sunless`
+/// column** (267/877/665 and 214/727/536). The deep is reached by making, not
+/// by finding — which is the reading clause 2 states, arrived at here from the
+/// other direction.
+const UNDERWORLD_DRYNESS_GAIN: f64 = 1.0;
+
 /// `ln(1 + e^x)`, evaluated in the stable branch for each sign so a large
 /// positive argument cannot overflow the exponential. Monotone, strictly
 /// positive, and asymptotic to `x` above and to `0` below.
@@ -349,6 +423,18 @@ fn wetness(drainage: f64) -> f64 {
 ///
 /// type-audit: bare-ok(count: drainage), bare-ok(ratio: porosity), bare-ok(diagnostic-value: height_asl_m), bare-ok(diagnostic-value: return)
 pub fn water_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f64 {
+    UNDERWORLD_DRYNESS_GAIN * earth_table_depth_m(drainage, porosity, height_asl_m)
+}
+
+/// The **gain-free Earth model** — the same derivation with
+/// [`UNDERWORLD_DRYNESS_GAIN`] divided out.
+///
+/// It exists so the physical calibration stays separately inspectable from the
+/// genre choice layered on it: the Arabika datum is checked against *this*, not
+/// against the shipped function, so a later campaign can move the gain without
+/// silently invalidating the physics, or retune the physics without having to
+/// disentangle it from the gain first.
+fn earth_table_depth_m(drainage: f64, porosity: f64, height_asl_m: f64) -> f64 {
     let drawdown = DRAWDOWN_SCALE_M * transmissivity(porosity) * relief(height_asl_m);
     let recharge = RECHARGE_RISE_M * wetness(drainage);
     (drawdown - recharge).max(0.0)
@@ -488,16 +574,48 @@ mod tests {
     }
 
     /// The complement: high, porous, unwatered rock keeps a walkable window
-    /// hundreds of metres deep. Asserted as a band, with an absurd-high bound
-    /// as well as a low one, so a runaway is a failure rather than a pass.
+    /// deep enough to hold habitation rungs. Asserted as a band, with an
+    /// absurd-high bound as well as a low one, so a runaway is a failure rather
+    /// than a pass.
+    ///
+    /// The band is stated against the SHIPPED function, gain included, because
+    /// what it guards is the playable outcome; the gain-free physics has its own
+    /// pin in `the_vadose_datum_is_reproduced`. Both bounds moved with §4.2.1:
+    /// this column read ~288 m before the correction and reads ~355 m after, so
+    /// the band is set wide enough to be a sanity rail rather than a second,
+    /// unstated calibration — and it would catch a runaway from
+    /// [`UNDERWORLD_DRYNESS_GAIN`] being raised without review.
     #[test]
     fn a_dry_porous_upland_keeps_a_deep_walkable_window() {
         let d = water_table_depth_m(1.0, 0.46, 2000.0);
         assert!(
-            (100.0..=600.0).contains(&d),
+            (150.0..=900.0).contains(&d),
             "a dry porous upland gave {d} m"
         );
         assert!(!is_phreatic(d / 2.0, d), "half the window should be vadose");
+    }
+
+    /// [`UNDERWORLD_DRYNESS_GAIN`] scales every table and moves no column into
+    /// or out of the drowned set, so H3's statistic is bit-identical at every
+    /// gain. Multiplying a `max(0, ·)` by a positive constant preserves its zero
+    /// set; this checks that the code actually has that shape rather than
+    /// trusting the algebra, which is the difference between this and a comment.
+    ///
+    /// It is what licenses shipping a genre choice on top of a calibrated model
+    /// without re-opening a preregistered criterion.
+    #[test]
+    fn the_dryness_gain_cannot_move_who_drowns() {
+        for &q in &[0.0, 1.0, 2.0, 15.0, 200.0, 5000.0] {
+            for &p in &[0.0, 0.05, 0.3, 0.46, 0.78, 0.82, 1.0] {
+                for &h in &[-500.0, 0.0, 27.0, 48.0, 300.0, 2000.0, 8000.0] {
+                    assert_eq!(
+                        water_table_depth_m(q, p, h) == 0.0,
+                        earth_table_depth_m(q, p, h) == 0.0,
+                        "the gain changed the drowned verdict at {q}/{p}/{h}"
+                    );
+                }
+            }
+        }
     }
 
     /// **The vadose datum** (spec §4.2.1, clause 1). An Arabika-like column —
@@ -510,7 +628,10 @@ mod tests {
     /// reports the new root rather than silently drifting off the datum.
     #[test]
     fn the_vadose_datum_is_reproduced() {
-        let got = water_table_depth_m(ARABIKA_DRAINAGE, ARABIKA_POROSITY, ARABIKA_RELIEF_M);
+        // Against the GAIN-FREE model: the datum is Earth's, and
+        // UNDERWORLD_DRYNESS_GAIN is a genre choice that must not be able to
+        // make the physics look calibrated when it is not.
+        let got = earth_table_depth_m(ARABIKA_DRAINAGE, ARABIKA_POROSITY, ARABIKA_RELIEF_M);
         let error = (got - ARABIKA_VADOSE_M).abs() / ARABIKA_VADOSE_M;
         // Re-solve for the scale that would land exactly on the datum, so a
         // reader who moves a shape constant is told the answer.
@@ -548,7 +669,8 @@ mod tests {
     /// the one above solves for [`DRAWDOWN_SCALE_M`].
     #[test]
     fn the_reference_river_column_sits_exactly_at_the_ground() {
-        let at_par = water_table_depth_m(RIVER_MIN_DRAINAGE, 0.5, MEAN_LAND_ELEVATION_M);
+        // Gain-free, for the same reason the vadose datum is.
+        let at_par = earth_table_depth_m(RIVER_MIN_DRAINAGE, 0.5, MEAN_LAND_ELEVATION_M);
         let solved = DRAWDOWN_SCALE_M * relief(MEAN_LAND_ELEVATION_M) / wetness(RIVER_MIN_DRAINAGE);
         assert!(
             at_par < 1.0,

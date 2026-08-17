@@ -147,10 +147,17 @@ pub enum ChamberOrigin {
     /// chamber `chamber_at` produces without a matching override resolves to
     /// this.
     Found,
-    /// Recorded by an override: a maker cut this chamber for a purpose. This
-    /// campaign ships no writer, so nothing in the shipped generation path
-    /// produces `Made` — it exists for a future dig fact to set, and for
-    /// [`resolve_origin`]'s absorbing rule to be stated over.
+    /// Recorded by an override: a maker cut this chamber for a purpose.
+    ///
+    /// **It now carries a consequence, not just a label** (spec §4.2.1, clause
+    /// 2): a made chamber is dry regardless of the water table — see
+    /// [`is_sump`]. Keeping a working depth dry is what mining is, and this is
+    /// what lets a people inhabit a depth the hydrology would otherwise flood.
+    ///
+    /// **The writer is bound to spec §4.6's capacity task as an acceptance
+    /// criterion**, not deferred again: a settled subterranean community's own
+    /// chambers resolve to `Made`. Until that lands, nothing in the shipped
+    /// generation path produces this variant.
     Made,
 }
 
@@ -444,6 +451,49 @@ pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> Ch
     over.unwrap_or(ChamberOrigin::Found)
 }
 
+/// Whether a chamber at `depth_m` below the surface is a **sump** — flooded,
+/// and therefore something the passage graph renders as a missing edge rather
+/// than as a different kind of place (spec §4.2).
+///
+/// **A made chamber is never a sump, and that is the whole rule** (spec §4.2.1,
+/// clause 2). A chamber cut for a purpose is kept dry regardless of where the
+/// water table sits, because keeping a working depth dry is what mining *is* —
+/// adits, sumps in the mining sense, wheels, pumps, and the drainage levels
+/// that are among the oldest large engineering works there are. This makes a
+/// dwarven hall something a people **does** rather than a place it happens to
+/// find, which is the difference between a species with a habitat and a species
+/// with a craft.
+///
+/// A found chamber gets the plain hydrology, [`hornvale_terrain::is_phreatic`].
+///
+/// **Why the rule lives here and not in `domains/terrain`.** The layering is
+/// constitutional: terrain owns the water table and knows nothing of chambers,
+/// and [`ChamberOrigin`] is a worldgen concept. So terrain answers "is this
+/// depth below the table" and this function answers "does that flood *this*
+/// chamber" — the hydrology is a fact about the rock, the exemption is a fact
+/// about the maker.
+///
+/// **This ships the rule; the producer is spec §4.6's capacity task**, as an
+/// acceptance criterion rather than a note. Nothing in the shipped path emits
+/// `Made` yet, so *today* this function is `is_phreatic` with an unreachable
+/// arm — and that is precisely the shape (`ChamberOrigin` itself,
+/// `EnvironmentNiche`, `temperature_at_depth`) this campaign's §3.9 finding is
+/// about. It is written down here so the next reader sees a deadline rather
+/// than a fourth dangling seam.
+///
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(diagnostic-value: water_table_m), bare-ok(flag: return)
+pub fn is_sump(origin: ChamberOrigin, depth_m: f64, water_table_m: f64) -> bool {
+    match origin {
+        // Drained by whoever cut it. Deliberately not "drained if shallow
+        // enough to drain": a threshold here would be a second, unmeasured
+        // calibration, and the interesting version of that question — what a
+        // people can afford to keep dry — belongs to capacity, which is the
+        // task that gains the writer.
+        ChamberOrigin::Made => false,
+        ChamberOrigin::Found => hornvale_terrain::is_phreatic(depth_m, water_table_m),
+    }
+}
+
 /// A chamber's resolved content at `addr`, under `cave`'s measured depth
 /// budget — `None` when [`chamber_exists`] is `false`, else the
 /// address-derived [`Chamber`], with `origin` resolved through `overrides`
@@ -690,6 +740,49 @@ mod tests {
             None,
             "the overworld is not an underground address"
         );
+    }
+
+    /// The drainage rule (spec §4.2.1, clause 2), stated over the whole
+    /// two-by-two: a `Found` chamber tracks the hydrology in both directions,
+    /// and a `Made` chamber is dry in both — including the case that carries
+    /// the meaning, a made chamber a kilometre below a surface water table.
+    #[test]
+    fn a_made_chamber_is_dry_however_deep_the_water_table_is_above_it() {
+        // Above the table: nobody is flooded.
+        assert!(!is_sump(ChamberOrigin::Found, 10.0, 50.0));
+        assert!(!is_sump(ChamberOrigin::Made, 10.0, 50.0));
+        // Below the table: only what nobody cut.
+        assert!(is_sump(ChamberOrigin::Found, 100.0, 50.0));
+        assert!(!is_sump(ChamberOrigin::Made, 100.0, 50.0));
+        // The case the rule exists for: a drowned column (table at the
+        // surface) and a chamber a kilometre down.
+        assert!(is_sump(ChamberOrigin::Found, 1000.0, 0.0));
+        assert!(
+            !is_sump(ChamberOrigin::Made, 1000.0, 0.0),
+            "a hall is kept dry by the people who cut it, not by the rock"
+        );
+    }
+
+    /// The rule must not have quietly become "made chambers are shallow" or
+    /// any other predicate on depth: a made chamber is dry at every depth the
+    /// ladder reaches, and a found one is flooded at every depth below the
+    /// table. Swept rather than sampled, because the two-by-two above cannot
+    /// tell a constant from a threshold that happens to sit outside it.
+    #[test]
+    fn the_drainage_exemption_is_unconditional_in_depth() {
+        for depth in [0.0, 1.0, 130.0, 1042.0, 2083.0, 3000.0] {
+            for table in [0.0, 50.0, 500.0, 5000.0] {
+                assert!(
+                    !is_sump(ChamberOrigin::Made, depth, table),
+                    "made chamber flooded at depth {depth} under table {table}"
+                );
+                assert_eq!(
+                    is_sump(ChamberOrigin::Found, depth, table),
+                    depth > table,
+                    "found chamber disagreed with the hydrology at {depth}/{table}"
+                );
+            }
+        }
     }
 
     /// `resolve_origin`'s full truth table (spec §3.3). The two rows that
